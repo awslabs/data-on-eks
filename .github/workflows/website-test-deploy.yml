@@ -4,15 +4,15 @@ on:
   pull_request:
     branches:
       - main
-defaults:
-  run:
-    shell: bash
-    working-directory: website
 
 jobs:
   test-deploy:
     name: Test deployment
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: website
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v3
