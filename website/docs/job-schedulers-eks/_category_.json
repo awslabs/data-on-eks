@@ -1,0 +1,8 @@
+{
+  "label": "Job Schedulers on EKS",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Build, deploy and scale JOb Scheduler platforms on Amazon EKS"
+  }
+}

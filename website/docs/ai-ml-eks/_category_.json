@@ -1,0 +1,8 @@
+{
+  "label": "AI/ML on EKS",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Build, deploy and scale AI/ML platforms on Amazon EKS"
+  }
+}

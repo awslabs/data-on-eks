@@ -1,0 +1,8 @@
+{
+  "label": "Amazon EMR on EKS",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Build, deploy and scale Amazon EMR on EKS Clusters on EKS"
+  }
+}
