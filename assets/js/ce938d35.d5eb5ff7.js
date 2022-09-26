@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[433],{5737:e=>{e.exports=JSON.parse('{"label":"Amazon Managed Prometheus","permalink":"/blog/tags/amazon-managed-prometheus","allTagsPath":"/blog/tags","count":2}')}}]);
