@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[56],{5571:e=>{e.exports=JSON.parse('{"label":"Observability","permalink":"/data-on-eks/blog/tags/observability","allTagsPath":"/data-on-eks/blog/tags","count":2}')}}]);

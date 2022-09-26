@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[8162],{591:s=>{s.exports=JSON.parse('{"label":"aws","permalink":"/data-on-eks/blog/tags/aws","allTagsPath":"/data-on-eks/blog/tags","count":1}')}}]);
