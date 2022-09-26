@@ -16,7 +16,7 @@ jobs:
     name: Get example directories
     runs-on: ubuntu-latest
     # Do not remove environment setup without considering changes to pull_request_target and checkout of PR, as it may lead to checks running automatically against malicious code in PRs.
-    environment: EKS Blueprints Test
+    environment: DoEKS Test
     # Skip running on forks since it won't have access to secrets
     if: github.repository == 'awslabs/data-on-eks'
     outputs:
