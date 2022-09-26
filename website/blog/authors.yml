@@ -1,0 +1,12 @@
+
+vara-bonthu:
+  name: Vara Bonthu
+  title: Maintainer of Data on EKS @ AWS
+  url: https://github.com/vara-bonthu
+  image_url: https://github.com/vara-bonthu.png
+
+aws:
+  name: aws
+  title: Amazon Web Services
+  url: https://github.com/aws/aws-emr-containers-best-practices
+  image_url: https://github.com/aws.png

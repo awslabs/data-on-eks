@@ -1,0 +1,111 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-benchmark-data-generation-1t
+  namespace: analytics-team-a
+  labels:
+    yunikorn.apache.org/username: "vara"
+    queue: "root.analytics"
+spec:
+  type: Scala
+#  pythonVersion: "3"
+  mode: cluster
+  image: ghcr.io/aws-samples/eks-analytics-benchmark:3.1.2
+  sparkVersion: "3.1.2"
+  imagePullPolicy: Always
+  mainClass: com.amazonaws.eks.tpcds.DataGeneration
+  mainApplicationFile: local:///opt/analytics/examples/jars/eks-analytics-benchmark-assembly-1.0.jar
+  batchScheduler: "yunikorn"
+  arguments:
+    # TPC-DS data location
+    - "s3://<ENTER_YOUR_BUCKET_NAME>/TPCDS-TEST-1G"
+    # Path to kit in the docker image
+    - "/opt/tpcds-kit/tools"
+    # Data Format
+    - "parquet"
+    # Scale factor (in GB)
+    - "1"
+    # Generate data num partitions
+    - "50"
+    # Create the partitioned fact tables
+    - "false"
+    # Shuffle to get partitions coalesced into single files.
+    - "false"
+    # Logging set to WARN
+    - "true"
+  hadoopConf:
+    # IRSA configuration
+    # "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+    "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.InstanceProfileCredentialsProvider"
+    "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "mapreduce.fileoutputcommitter.algorithm.version": "2"
+  sparkConf:
+    "spark.speculation": "false"
+    "spark.network.timeout": "2400"
+    # S3 Configs
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    "spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a": "org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory"
+    "spark.sql.execution.arrow.pyspark.enabled": "true"
+    "spark.sql.execution.arrow.pyspark.fallback.enabled": "true"
+    # "analytics.eventLog.enabled": "true"
+    # "analytics.eventLog.dir": "s3a://<ENTER_YOUR_BUCKET_NAME>/analytics-event-logs/"
+    # "analytics.kubernetes.driver.label.queue": "root.analytics"
+    # "analytics.kubernetes.driver.label.yunikorn.apache.org/username": "vara"
+    # "analytics.kubernetes.executor.label.queue": "root.analytics"
+    # "analytics.kubernetes.executor.label.yunikorn.apache.org/username": "vara"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  volumes:  # using NVMe instance storage mounted on /local1
+    - name: analytics-local-dir-1
+      hostPath:
+        path: /local1/datagen
+        type: DirectoryOrCreate
+  driver:
+    volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
+      - name: analytics-local-dir-1
+        mountPath: /local1/datagen
+    initContainers:
+      - name: volume-permissions
+        image: public.ecr.aws/y4g4v0z7/busybox
+        command: [ 'sh', '-c', 'chown -R 185 /local1/datagen' ]
+        volumeMounts:
+          - mountPath: "/local1/datagen"
+            name: "analytics-local-dir-1"
+    cores: 1
+    memory: "10g"
+    memoryOverhead: "2g"
+    serviceAccount: analytics-team-a
+    labels:
+      version: 3.1.1
+    nodeSelector:
+      "NodeGroupType": "analytics"
+  executor:
+    volumeMounts:
+      - name: analytics-local-dir-1
+        mountPath: /local1/datagen
+    initContainers:
+      - name: volume-permissions
+        image: public.ecr.aws/y4g4v0z7/busybox
+        command: [ 'sh', '-c', 'chown -R 185 /local1/datagen' ]
+        volumeMounts:
+          - mountPath: "/local1/datagen"
+            name: "analytics-local-dir-1"
+    cores: 1
+    instances: 10
+    memory: "6g"
+    memoryOverhead: "2g"
+    serviceAccount: analytics-team-a
+    labels:
+      version: 3.1.1
+    nodeSelector:
+      "NodeGroupType": "analytics"

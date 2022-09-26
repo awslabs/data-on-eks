@@ -1,0 +1,8 @@
+{
+  "label": "Apache Spark on EKS",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Build, deploy and scale Apache Spark Clusters on EKS"
+  }
+}

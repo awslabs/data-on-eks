@@ -1,0 +1,15 @@
+.features {
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+  width: 100%;
+}
+
+.featureSvg {
+  height: 250px;
+  width: 250px;
+}
+
+.heading {
+  font-weight: bold;
+}
