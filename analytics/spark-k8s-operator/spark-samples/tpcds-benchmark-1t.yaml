@@ -2,21 +2,21 @@ apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
   name: tpcds-benchmark-10g
-  namespace: analytics-team-a
+  namespace: spark-team-a
   labels:
     yunikorn.apache.org/username: "vara"
-    queue: "root.analytics-team-a"
+    queue: "root.spark-team-a"
 spec:
   type: Scala
   pythonVersion: "3"
   sparkVersion: "3.1.2"
   mode: cluster
-  image: ghcr.io/aws-samples/eks-analytics-benchmark:3.1.2
+  image: ghcr.io/aws-samples/eks-spark-benchmark:3.1.2
   imagePullPolicy: Always
   mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
-  mainApplicationFile: local:///opt/analytics/examples/jars/eks-analytics-benchmark-assembly-1.0.jar
+  mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   #  volumes:
-  #    - name: "analytics-local-dir-1"     # Support mapping analytics.local.dir to hostPath volume
+  #    - name: "spark-local-dir-1"     # Support mapping spark.local.dir to hostPath volume
   #      hostPath:
   #        path: "/tmp/mnt-1"
   batchScheduler: yunikorn
@@ -52,7 +52,7 @@ spec:
   sparkConf:
     "spark.speculation": "false"
     "spark.network.timeout": "2400"
-    #    "analytics.kubernetes.local.dirs.tmpfs": "true"
+    #    "spark.kubernetes.local.dirs.tmpfs": "true"
     # TPCDs Specific
     "spark.sql.broadcastTimeout": "7200"
     "spark.sql.crossJoin.enabled": "true"
@@ -67,9 +67,9 @@ spec:
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "spark.sql.execution.arrow.pyspark.enabled": "true"
     # YuniKorn Config
-    "spark.kubernetes.driver.label.queue": "root.analytics-team-a"
+    "spark.kubernetes.driver.label.queue": "root.spark-team-a"
     "spark.kubernetes.driver.label.yunikorn.apache.org/username": "vara"
-    "spark.kubernetes.executor.label.queue": "root.analytics-team-a"
+    "spark.kubernetes.executor.label.queue": "root.spark-team-a"
     "spark.kubernetes.executor.label.yunikorn.apache.org/username": "vara"
   restartPolicy:
     type: OnFailure
@@ -78,13 +78,13 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
   volumes: # using NVMe instance storage mounted on /local1
-    - name: analytics-local-dir-1
+    - name: spark-local-dir-1
       hostPath:
         path: /local1/benchmark
         type: DirectoryOrCreate
   driver:
     volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
-      - name: analytics-local-dir-1
+      - name: spark-local-dir-1
         mountPath: /local1/benchmark
     initContainers:
       - name: volume-permissions
@@ -92,18 +92,18 @@ spec:
         command: [ 'sh', '-c', 'chown -R 185 /local1/benchmark' ]
         volumeMounts:
           - mountPath: "/local1/benchmark"
-            name: "analytics-local-dir-1"
+            name: "spark-local-dir-1"
     cores: 1
     memory: "10g"
     memoryOverhead: "2g"
-    serviceAccount: analytics-team-a
+    serviceAccount: spark-team-a
     labels:
       version: 3.1.1
     nodeSelector:
-      "NodeGroupType": "analytics"
+      "NodeGroupType": "spark"
   executor:
     volumeMounts:
-      - name: analytics-local-dir-1
+      - name: spark-local-dir-1
         mountPath: /local1/benchmark
     initContainers:
       - name: volume-permissions
@@ -111,13 +111,13 @@ spec:
         command: [ 'sh', '-c', 'chown -R 185 /local1/benchmark' ]
         volumeMounts:
           - mountPath: "/local1/benchmark"
-            name: "analytics-local-dir-1"
+            name: "spark-local-dir-1"
     cores: 1
     instances: 10
     memory: "6g"
     memoryOverhead: "2g"
-    serviceAccount: analytics-team-a
+    serviceAccount: spark-team-a
     labels:
       version: 3.1.1
     nodeSelector:
-      "NodeGroupType": "analytics"
+      "NodeGroupType": "spark"

@@ -3,17 +3,17 @@ apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
   name: catalog-sales-test1
-  namespace: analytics-team-a
+  namespace: spark-team-a
 spec:
   batchScheduler: "yunikorn"
   type: Python
   sparkVersion: "3.1.1"
   pythonVersion: "3"
   mode: cluster
-  # Public docker image used from datamechanics/analytics:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest and pushed to ECR repo
-  image: "public.ecr.aws/r1l5w1y9/analytics-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
+  # Public docker image used from datamechanics/spark:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest and pushed to ECR repo
+  image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://<ENTER_YOUR_BUCKET>/analytics-catalog-sales.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<ENTER_YOUR_BUCKET>/spark-catalog-sales.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
     - "s3a://<ENTER_YOUR_BUCKET>/TPCDS-TEST-1T/catalog_sales/" # Copy your Input parquet sample data before executing the job
     - "s3a://<ENTER_YOUR_BUCKET>/output/catalog_sales/"
@@ -32,16 +32,16 @@ spec:
     "spark.hadoop.fs.s3a.input.fadvise": "random"
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     # YuniKorn Config
-    "spark.kubernetes.driver.label.queue": "root.analytics-team-a"
+    "spark.kubernetes.driver.label.queue": "root.spark-team-a"
     "spark.kubernetes.driver.label.yunikorn.apache.org/username": "vara"
-    "spark.kubernetes.executor.label.queue": "root.analytics-team-a"
+    "spark.kubernetes.executor.label.queue": "root.spark-team-a"
     "spark.kubernetes.executor.label.yunikorn.apache.org/username": "vara"
     #Event logs
     "spark.local.dir": "/local1/catalog-sales1"
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<ENTER_YOUR_BUCKET>/analytics-event-logs"
-  #    "analytics.eventLog.rolling.enabled": "true"
-  #    "analytics.eventLog.rolling.maxFileSize": "128m"
+    "spark.eventLog.dir": "s3a://<ENTER_YOUR_BUCKET>/spark-event-logs"
+  #    "spark.eventLog.rolling.enabled": "true"
+  #    "spark.eventLog.rolling.maxFileSize": "128m"
   restartPolicy:
     type: OnFailure
     onFailureRetries: 3
@@ -49,14 +49,14 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
   volumes:  # using NVMe instance storage mounted on /local1
-    - name: analytics-local-dir-1
+    - name: spark-local-dir-1
       hostPath:
         path: /local1/catalog-sales1
         type: DirectoryOrCreate
 
   driver:
     volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
-      - name: analytics-local-dir-1
+      - name: spark-local-dir-1
         mountPath: /local1/catalog-sales1
     initContainers:
       - name: volume-permissions
@@ -64,18 +64,18 @@ spec:
         command: [ 'sh', '-c', 'chown -R 185 /local1/catalog-sales1' ]
         volumeMounts:
           - mountPath: "/local1/catalog-sales1"
-            name: "analytics-local-dir-1"
+            name: "spark-local-dir-1"
     cores: 1
     memory: "10g"
     memoryOverhead: "2g"
-    serviceAccount: analytics-team-a
+    serviceAccount: spark-team-a
     labels:
       version: 3.1.1
     nodeSelector:
-      "NodeGroupType": "analytics"
+      "NodeGroupType": "spark"
   executor:
     volumeMounts:
-      - name: analytics-local-dir-1
+      - name: spark-local-dir-1
         mountPath: /local1/catalog-sales1
     initContainers:
       - name: volume-permissions
@@ -83,13 +83,13 @@ spec:
         command: [ 'sh', '-c', 'chown -R 185 /local1/catalog-sales1' ]
         volumeMounts:
           - mountPath: "/local1/catalog-sales1"
-            name: "analytics-local-dir-1"
+            name: "spark-local-dir-1"
     cores: 1
     instances: 10
     memory: "6g"
     memoryOverhead: "2g"
-    serviceAccount: analytics-team-a
+    serviceAccount: spark-team-a
     labels:
       version: 3.1.1
     nodeSelector:
-      "NodeGroupType": "analytics"
+      "NodeGroupType": "spark"

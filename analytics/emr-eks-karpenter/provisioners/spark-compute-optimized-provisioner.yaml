@@ -1,0 +1,50 @@
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: spark-compute-optimized
+  namespace: karpenter # Same namespace as Karpenter add-on installed
+spec:
+  kubeletConfiguration:
+    containerRuntime: containerd
+    #    podsPerCore: 2
+    #    maxPods: 20
+  requirements:
+    - key: "topology.kubernetes.io/zone"
+      operator: In
+      values: [${azs}a] #Update the correct region and zones
+    - key: "karpenter.sh/capacity-type"
+      operator: In
+      values: ["spot", "on-demand"]
+    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
+      operator: In
+      values: ["c5d.large","c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
+    - key: "kubernetes.io/arch"
+      operator: In
+      values: ["amd64"]
+  limits:
+    resources:
+      cpu: 1000
+  providerRef:
+    name: spark-compute-optimized
+  labels:
+    type: karpenter
+    provisioner: spark-compute-optimized
+    NodeGroupType: SparkComputeOptimized
+  taints:
+    - key: spark-compute-optimized
+      value: 'true'
+      effect: NoSchedule
+  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
+
+---
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: spark-compute-optimized
+  namespace: karpenter
+spec:
+  subnetSelector:
+    Name: "${eks_cluster_id}-private*"       # required
+  launchTemplate: "${launch_template_name}"  # optional, see Launch Template documentation
+  tags:
+    InstanceType: "spark-compute-optimized"   # optional, add tags for your own use

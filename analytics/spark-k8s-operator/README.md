@@ -1,88 +1,5 @@
 # Spark on K8s Operator with EKS
-
-This example deploys an EKS Cluster running the Spark K8s operator into a new VPC.
-
-- Creates a new sample VPC, 3 Private Subnets and 3 Public Subnets
-- Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
-- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with one managed node group
-- Deploys Metrics server, Cluster Autoscaler, Spark-k8s-operator, Yunikorn and Prometheus
-
-This will install the Kubernetes Operator for Apache Spark into the namespace spark-operator.
-The operator by default watches and handles SparkApplications in all namespaces.
-If you would like to limit the operator to watch and handle SparkApplications in a single namespace, e.g., default instead, add the following option to the helm install command:
-
-## Prerequisites
-
-Ensure that you have installed the following tools on your machine.
-
-1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
-2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
-3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
-
-## Step 1: Deploy EKS Cluster with Spark-K8s-Operator feature
-
-Clone the repository
-
-```
-git clone https://github.com/awslabs/data-on-eks.git
-```
-
-Navigate into one of the example directories and run `terraform init`
-
-```
-cd analytics/spark-k8s-operator
-terraform init
-```
-
-Run Terraform plan to verify the resources created by this execution.
-
-```
-export AWS_REGION=<enter-your-region>   # Select your own region
-terraform plan
-```
-
-**Deploy the pattern**
-
-```sh
-terraform apply
-```
-
-Enter `yes` to apply.
-
-## Execute Sample Spark Job on EKS Cluster with Spark-k8s-operator
-
-```sh
-  cd analytics/analytics-k8s-operator/analytics-samples
-  kubectl apply -f pyspark-pi-job.yaml
-```
-
-- Verify the Spark job status
-
-```sh
-  kubectl get sparkapplications -n analytics-team-a
-
-  kubectl describe sparkapplication pyspark-pi -n analytics-team-a
-```
-
-## Cleanup
-
-To clean up your environment, destroy the Terraform modules in reverse order.
-
-Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
-
-```sh
-terraform destroy -target="module.eks_blueprints_kubernetes_addons" -auto-approve
-terraform destroy -target="module.eks_blueprints" -auto-approve
-terraform destroy -target="module.vpc" -auto-approve
-```
-
-Finally, destroy any additional resources that are not in the above modules
-
-```sh
-terraform destroy -auto-approve
-```
-
----
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
@@ -144,11 +61,11 @@ terraform destroy -auto-approve
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.22"` | no |
+| <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.23"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"spark-k8s-operator"` | no |
 | <a name="input_private_subnets"></a> [private\_subnets](#input\_private\_subnets) | Private Subnets CIDRs. 16382 IPs per Subnet | `list(string)` | <pre>[<br>  "10.1.0.0/18",<br>  "10.1.64.0/18",<br>  "10.1.128.0/18"<br>]</pre> | no |
 | <a name="input_public_subnets"></a> [public\_subnets](#input\_public\_subnets) | Public Subnets CIDRs. 4094 IPs per Subnet | `list(string)` | <pre>[<br>  "10.1.192.0/20",<br>  "10.1.208.0/20",<br>  "10.1.224.0/20"<br>]</pre> | no |
-| <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
+| <a name="input_region"></a> [region](#input\_region) | region | `string` | `"eu-west-1"` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR | `string` | `"10.1.0.0/16"` | no |
 
 ## Outputs

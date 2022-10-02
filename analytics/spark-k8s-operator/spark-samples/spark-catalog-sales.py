@@ -36,7 +36,7 @@ def main(args):
         .getOrCreate()
 
     spark.sparkContext.setLogLevel("INFO")
-    logger.info("Starting analytics application")
+    logger.info("Starting spark application")
 
     # do something here
     logger.info("Reading parquet file from S3")
@@ -52,8 +52,8 @@ def main(args):
     df_catalog_sales_date.repartition(4).write.mode("overwrite").parquet(transform_output_folder)
     # .partitionBy("app_country", "source_file_dt", "source_file_ts")
 
-    logger.info("Ending analytics application")
-    # end analytics code
+    logger.info("Ending spark application")
+    # end spark code
     spark.stop()
 
     return None
@@ -62,7 +62,7 @@ def main(args):
 if __name__ == "__main__":
     print(len(sys.argv))
     if len(sys.argv) != 3:
-        print("Usage: analytics-etl [input-folder] [output-folder]")
+        print("Usage: spark-etl [input-folder] [output-folder]")
         sys.exit(0)
 
     main(sys.argv)

@@ -14,7 +14,7 @@ webhook:
 # resources -- Pod resource requests and limits
 # Note, that each job submission will spawn a JVM within the Spark Operator Pod using "/usr/local/openjdk-11/bin/java -Xmx128m".
 # Kubernetes may kill these Java processes at will to enforce resource limits. When that happens, you will see the following error:
-# 'failed to run analytics-submit for SparkApplication [...]: signal: killed' - when this happens, you may want to increase memory limits.
+# 'failed to run spark-submit for SparkApplication [...]: signal: killed' - when this happens, you may want to increase memory limits.
 resources:
    limits:
      cpu: 200m
@@ -24,5 +24,5 @@ resources:
      memory: 512Mi
 
 batchScheduler:
-  # -- Enable batch scheduler for analytics jobs scheduling. If enabled, users can specify batch scheduler name in analytics application
+  # -- Enable batch scheduler for spark jobs scheduling. If enabled, users can specify batch scheduler name in spark application
   enable: true

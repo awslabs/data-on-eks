@@ -10,7 +10,7 @@ imagePullSecrets:
 
 userLabelKey: "yunikorn.apache.org/username"
 
-operatorPlugins: "general,analytics-k8s-operator"
+operatorPlugins: "general,spark-k8s-operator"
 
 serviceAccount: yunikorn-admin
 admissionControllerServiceAccount: yunikorn-admission-controller
