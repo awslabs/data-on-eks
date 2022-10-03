@@ -8,10 +8,11 @@ Data on Amazon EKS (DoEKS) is an open source repository to build, deploy and sca
 
 This repo provides the Terraform templates to build scalable data platform on Amazon EKS for the following categories.
 
+# Features
 
 🚀 [EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html)
 
-🚀 [Spark on EKS](https://spark.apache.org/docs/latest/running-on-kubernetes.html)
+🚀 [Open Source Spark on EKS](https://spark.apache.org/docs/latest/running-on-kubernetes.html)
 
 🚀 Custom Kubernetes Schedulers (e.g., [Apache YuniKorn](https://yunikorn.apache.org/), [Volcano](https://volcano.sh/en/))
 
@@ -25,4 +26,4 @@ This repo provides the Terraform templates to build scalable data platform on Am
 
 # Getting Started
 
-Checkout the documentation for each section to deploy and run sample Spark/ML jobs.
+Checkout the documentation for each section to deploy infrastructure and run sample Spark/ML jobs.
