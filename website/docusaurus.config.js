@@ -4,7 +4,7 @@
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
-/** @type {import('@docusaurus/types').Config} */
+/** @type {{onBrokenLinks: string, organizationName: string, plugins: string[], title: string, url: string, onBrokenMarkdownLinks: string, i18n: {defaultLocale: string, locales: string[]}, trailingSlash: boolean, baseUrl: string, presets: [string,Options][], githubHost: string, tagline: string, themeConfig: ThemeConfig & UserThemeConfig & AlgoliaThemeConfig, projectName: string}} */
 const config = {
   title: 'Data on EKS (DoEKS)',
   tagline: 'Accelerate your Data journey on Amazon EKS',
@@ -38,16 +38,18 @@ const config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/awslabs/data-on-eks/blob/main/website/docs/',
+            'https://github.com/awslabs/data-on-eks/blob/main/website/',
         },
         blog: {
           blogSidebarTitle: 'All posts',
           blogSidebarCount: 'ALL',
           showReadingTime: true,
+          readingTime: ({content, frontMatter, defaultReadingTime}) =>
+              defaultReadingTime({content, options: {wordsPerMinute: 300}}),
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-              'https://github.com/awslabs/data-on-eks/blob/main/website/blog/',
+              'https://github.com/awslabs/data-on-eks/blob/main/website/',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
@@ -116,6 +118,11 @@ const config = {
           },
         ],
       },
+      docs: {
+        sidebar: {
+          hideable: true,
+        }
+        },
       footer: {
         style: 'dark',
         links: [
@@ -155,10 +162,7 @@ const config = {
       },
     }),
  // TODO Search plugin not working. Fix this
- //  plugins: [
- //    // ...
- //    '@aldridged/docusaurus-plugin-lunr'
- //  ],
+  plugins: [require.resolve('docusaurus-lunr-search')],
 };
 
 module.exports = config;
