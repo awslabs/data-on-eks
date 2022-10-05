@@ -54,7 +54,7 @@ aws s3 sync ./spark-scripts/scripts "${SPARK_JOB_S3_PATH}/scripts"
 mkdir -p "spark-scripts/input"
 
 # Download the input data from public data set to local folders
-max=40
+max=20
 for (( i=1; i <= $max; ++i ))
 do
     wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "spark-scripts/input/yellow_tripdata_2022-${i}.parquet"

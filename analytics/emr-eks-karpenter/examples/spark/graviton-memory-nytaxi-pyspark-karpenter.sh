@@ -51,16 +51,16 @@ aws s3 sync ./spark-scripts/scripts "${SPARK_JOB_S3_PATH}/scripts"
 # Download sample input data from https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page
 #--------------------------------------------
 # Create folder locally to store the input data
-# mkdir -p "spark-scripts/input"
-#
-# # Download the input data from public data set to local folders
-# max=40
-# for (( i=1; i <= $max; ++i ))
-# do
-#     wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "spark-scripts/input/yellow_tripdata_2022-${i}.parquet"
-# done
-#
-# aws s3 sync ./spark-scripts/input "${SPARK_JOB_S3_PATH}/input"
+mkdir -p "spark-scripts/input"
+
+# Download the input data from public data set to local folders
+max=20
+for (( i=1; i <= $max; ++i ))
+do
+    wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "spark-scripts/input/yellow_tripdata_2022-${i}.parquet"
+done
+
+aws s3 sync ./spark-scripts/input "${SPARK_JOB_S3_PATH}/input"
 
 #--------------------------------------------
 # Execute Spark job
