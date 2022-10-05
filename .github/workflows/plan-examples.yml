@@ -76,7 +76,7 @@ jobs:
         if: steps.changes.outputs.src== 'true'
         with:
           role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
-          aws-region: us-west-2
+          aws-region: eu-west-1
           role-duration-seconds: 3600
           role-session-name: GithubActions-Session
 

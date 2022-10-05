@@ -2,8 +2,9 @@ locals {
   name   = var.name
   region = var.region
 
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  vpc_cidr        = var.vpc_cidr
+  azs             = slice(data.aws_availability_zones.available.names, 0, 3)
+  core_node_group = "core-node-group"
 
   tags = merge(var.tags, {
     Blueprint  = local.name
@@ -62,13 +63,19 @@ module "eks_blueprints" {
     }
   }
 
+
+  # Add karpenter.sh/discovery tag so that we can use this as securityGroupSelector in karpenter provisioner
+  node_security_group_tags = {
+    "karpenter.sh/discovery/${local.name}" = local.name
+  }
+
   managed_node_groups = {
     # EKS MANAGED NODE GROUPS
     # We recommend to have a MNG to place your critical workloads and add-ons
     # Then rely on Karpenter to scale your workloads
     # You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
     mng1 = {
-      node_group_name = "core-node-grp"
+      node_group_name = local.core_node_group
       subnet_ids      = module.vpc.private_subnets
 
       instance_types = ["m5.xlarge"]
@@ -105,7 +112,7 @@ module "eks_blueprints" {
         "k8s.io/cluster-autoscaler/experiments"                          = "owned"
         "k8s.io/cluster-autoscaler/enabled"                              = "true"
       }
-    },
+    }
   }
 
   #---------------------------------------

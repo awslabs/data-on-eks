@@ -202,7 +202,7 @@ data "kubectl_path_documents" "karpenter_provisioners" {
   vars = {
     azs                  = "eu-west-1"
     eks_cluster_id       = local.name
-    instance_profile     = "emr-on-eks-core-node-grp" # module.eks_blueprints.managed_node_group_iam_instance_profile_id[0]
+    instance_profile     = format("%s-%s", local.name, local.core_node_group) # This is using core-node-group instance profile
     launch_template_name = format("%s-%s", "karpenter", local.name)
   }
 }

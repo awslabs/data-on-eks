@@ -9,8 +9,13 @@ sidebar_label: Karpenter with EMR on EKS
 
 In this pattern, you will learn how to deploy, configure and use multiple [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs with EMR on EKS.
 
-This pattern deploys two Karpenter provisioners with `taints`.
-Multiple teams within the organization can run Spark jobs on the selected Karpenter provisioners using `tolerations` specified in the pod templates example.
+Multiple Data teams within the organization can run Spark jobs on the selected Karpenter provisioners using `tolerations` specified in the pod templates example.
+
+This pattern deploys three Karpenter provisioners. 
+
+- `spark-compute-optimized` provisioner to run spark jobs on `c5d` instances.
+- `spark-memory-optimized` provisioner to run spark jobs on `r5d` instances.
+- `spark-graviton-memory-optimized` provisioner to run spark jobs on `r6gd` Graviton instances(`ARM64`).
 
 Let's review the Karpenter provisioner for computed optimized instances deployed by this pattern.
 
