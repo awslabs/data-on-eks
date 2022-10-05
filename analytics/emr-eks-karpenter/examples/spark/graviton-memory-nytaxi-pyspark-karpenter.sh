@@ -51,7 +51,6 @@ aws s3 sync ./spark-scripts/scripts "${SPARK_JOB_S3_PATH}/scripts"
 # Download sample input data from https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page
 #--------------------------------------------
 # Create folder locally to store the input data
-#
 # mkdir -p "spark-scripts/input"
 #
 # # Download the input data from public data set to local folders
@@ -88,11 +87,11 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
           {
             "classification": "spark-defaults",
             "properties": {
-              "spark.kubernetes.driver.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/compute-driver-pod.yaml",
-              "spark.kubernetes.executor.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/compute-executor-pod.yaml",
+              "spark.kubernetes.driver.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/graviton-memory-driver-pod.yaml",
+              "spark.kubernetes.executor.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/graviton-memory-executor-pod.yaml",
               "spark.driver.memory":"2g",
               "spark.executor.memory":"4g",
-              "spark.local.dir" : "/data1",
+              "spark.local.dir" : "/data1,/data2",
 
               "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
               "spark.ui.prometheus.enabled":"true",
