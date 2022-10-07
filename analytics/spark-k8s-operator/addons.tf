@@ -10,24 +10,9 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------------------------------
   # EKS Addons
-  enable_amazon_eks_vpc_cni = true
-  amazon_eks_vpc_cni_config = {
-    addon_version     = data.aws_eks_addon_version.latest["vpc-cni"].version
-    resolve_conflicts = "OVERWRITE"
-  }
-
-  enable_amazon_eks_coredns = true
-  amazon_eks_coredns_config = {
-    addon_version     = data.aws_eks_addon_version.latest["coredns"].version
-    resolve_conflicts = "OVERWRITE"
-  }
-
-  enable_amazon_eks_kube_proxy = true
-  amazon_eks_kube_proxy_config = {
-    addon_version     = data.aws_eks_addon_version.default["kube-proxy"].version
-    resolve_conflicts = "OVERWRITE"
-  }
-
+  enable_amazon_eks_vpc_cni            = true
+  enable_amazon_eks_coredns            = true
+  enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
 
   #---------------------------------------------------------------

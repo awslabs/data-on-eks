@@ -1,3 +1,9 @@
+# NOTE: This example requires the following prerequisites before executing the jobs
+# 1. Ensure spark-team-a name space exists
+# 2. replace <ENTER_YOUR_BUCKET> with your bucket name
+# 3. Ensure you run "analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml" to generate the INPUT data in S3 bucket and update INPUT argument(      "s3a://<ENTER_YOUR_BUCKET>/TPCDS-TEST-1T/catalog_sales/") path in the below yaml
+
+---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:

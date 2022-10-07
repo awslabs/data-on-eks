@@ -14,12 +14,13 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_coredns    = true
   enable_amazon_eks_kube_proxy = true
 
-  enable_metrics_server               = true
-  enable_cluster_autoscaler           = true
-  enable_aws_efs_csi_driver           = true
-  enable_aws_for_fluentbit            = true
-  enable_aws_load_balancer_controller = true
-  enable_prometheus                   = true
+  enable_metrics_server                = true
+  enable_cluster_autoscaler            = true
+  enable_amazon_eks_aws_ebs_csi_driver = true
+  enable_aws_efs_csi_driver            = true
+  enable_aws_for_fluentbit             = true
+  enable_aws_load_balancer_controller  = true
+  enable_prometheus                    = true
 
   # Apache Airflow add-on with custom helm config
   enable_airflow = true
