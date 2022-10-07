@@ -1,13 +1,6 @@
-data "aws_eks_cluster_auth" "this" {
-  name = module.eks_blueprints.eks_cluster_id
-}
-
-data "aws_availability_zones" "available" {}
-data "aws_caller_identity" "current" {}
-
 locals {
   name   = var.name
-  region = var.region
+  region = "us-east-1"
 
   vpc_cidr    = var.vpc_cidr
   azs         = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -19,44 +12,6 @@ locals {
   }
 }
 
-#---------------------------------------------------------------
-# EKS Blueprints
-#---------------------------------------------------------------
-
-module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.10.0"
-
-  cluster_name    = local.name
-  cluster_version = "1.22"
-
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
-
-  # https://github.com/awslabs/data-on-eks/issues/485
-  # https://github.com/awslabs/data-on-eks/issues/494
-  cluster_kms_key_additional_admin_arns = [data.aws_caller_identity.current.arn]
-
-  # Add MWAA IAM Role to aws-auth configmap
-  map_roles = [
-    {
-      rolearn  = module.mwaa.mwaa_role_arn
-      username = "mwaa-role"
-      groups   = ["system:masters"]
-    }
-  ]
-
-  managed_node_groups = {
-    mg5 = {
-      node_group_name = "mg5"
-      instance_types  = ["m5.large"]
-      min_size        = "2"
-      disk_size       = 100
-    }
-  }
-
-  tags = local.tags
-}
-
 #------------------------------------------------------------------------
 # AWS MWAA Module
 #------------------------------------------------------------------------
@@ -65,7 +20,7 @@ module "mwaa" {
   source  = "aws-ia/mwaa/aws"
   version = "0.0.1"
 
-  name                  = "basic-mwaa"
+  name                  = "eks-emr-mwaa"
   airflow_version       = "2.2.2"
   environment_class     = "mw1.medium"  # mw1.small / mw1.medium / mw1.large
   webserver_access_mode = "PUBLIC_ONLY" # Default PRIVATE_ONLY for production environments
@@ -121,69 +76,7 @@ module "mwaa" {
   tags = local.tags
 }
 
-#------------------------------------------------------------------------
-# Create K8s Namespace and Role
-#------------------------------------------------------------------------
 
-resource "kubernetes_namespace_v1" "mwaa" {
-  metadata {
-    name = "mwaa"
-  }
-}
-
-resource "kubernetes_role_v1" "mwaa" {
-  metadata {
-    name      = "mwaa-role"
-    namespace = kubernetes_namespace_v1.mwaa.metadata[0].name
-  }
-
-  rule {
-    api_groups = [
-      "",
-      "apps",
-      "batch",
-      "extensions",
-    ]
-    resources = [
-      "jobs",
-      "pods",
-      "pods/attach",
-      "pods/exec",
-      "pods/log",
-      "pods/portforward",
-      "secrets",
-      "services",
-    ]
-    verbs = [
-      "create",
-      "delete",
-      "describe",
-      "get",
-      "list",
-      "patch",
-      "update",
-    ]
-  }
-}
-
-resource "kubernetes_role_binding_v1" "mwaa" {
-  metadata {
-    name      = "mwaa-role-binding"
-    namespace = kubernetes_namespace_v1.mwaa.metadata[0].name
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "Role"
-    name      = kubernetes_namespace_v1.mwaa.metadata[0].name
-  }
-
-  subject {
-    kind      = "User"
-    name      = "mwaa-service"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
 
 #------------------------------------------------------------------------
 # Dags and Requirements
