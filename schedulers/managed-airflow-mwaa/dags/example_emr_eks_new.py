@@ -21,13 +21,9 @@ import os
 from datetime import timedelta
 
 from airflow import DAG
+from airflow.hooks.base import BaseHook
 from airflow.providers.amazon.aws.operators.emr_containers import EMRContainerOperator
 from airflow.utils.dates import days_ago
-
-# [START howto_operator_emr_eks_env_variables]
-VIRTUAL_CLUSTER_ID = '<your emr virtual cluster id>'
-JOB_ROLE_ARN = os.getenv("JOB_ROLE_ARN", "<your emr execution role>")
-# [END howto_operator_emr_eks_env_variables]
 
 
 # [START howto_operator_emr_eks_config]
@@ -67,12 +63,13 @@ with DAG(
     # An example of how to get the cluster id and arn from an Airflow connection
     # VIRTUAL_CLUSTER_ID = '{{ conn.emr_eks.extra_dejson["virtual_cluster_id"] }}'
     # JOB_ROLE_ARN = '{{ conn.emr_eks.extra_dejson["job_role_arn"] }}'
-
+    c = BaseHook.get_connection("emr_eks")
+    cluster_args = c.extra_dejson
     # [START howto_operator_emr_eks_jobrun]
     job_starter = EMRContainerOperator(
         task_id="start_job",
-        virtual_cluster_id=VIRTUAL_CLUSTER_ID,
-        execution_role_arn=JOB_ROLE_ARN,
+        virtual_cluster_id=cluster_args.get('virtual_cluster_id'),
+        execution_role_arn=cluster_args.get('job_role_arn'),
         release_label="emr-6.3.0-latest",
         job_driver=JOB_DRIVER_ARG,
         configuration_overrides=CONFIGURATION_OVERRIDES_ARG,
