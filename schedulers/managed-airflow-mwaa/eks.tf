@@ -84,7 +84,7 @@ module "eks_blueprints" {
       additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
     }
   }
-  
+
   tags = local.tags
 }
 

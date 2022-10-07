@@ -77,7 +77,7 @@ module "mwaa" {
 }
 
 #------------------------------------------------------------------------
-# Additional IAM policies for MWAA execution role to run emr on eks job 
+# Additional IAM policies for MWAA execution role to run emr on eks job
 #------------------------------------------------------------------------
 resource "aws_iam_policy" "mwaa_emrjob" {
   name        = format("%s-%s", local.name, "mwaa-emrjob-iam-policies")
