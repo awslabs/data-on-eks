@@ -1,3 +1,7 @@
+# NOTE: This example requires the following prerequisites before executing the jobs
+# 1. Ensure spark-team-a name space exists
+# 2. replace <ENTER_YOUR_BUCKET> with your bucket name
+
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:

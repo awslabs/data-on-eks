@@ -1,3 +1,4 @@
+# YAML Config for setting up a new Data team
 ---
 apiVersion: v1
 kind: Namespace

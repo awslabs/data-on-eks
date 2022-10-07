@@ -10,22 +10,6 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
-data "aws_eks_addon_version" "latest" {
-  for_each = toset(["vpc-cni", "coredns"])
-
-  addon_name         = each.value
-  kubernetes_version = module.eks_blueprints.eks_cluster_version
-  most_recent        = true
-}
-
-data "aws_eks_addon_version" "default" {
-  for_each = toset(["kube-proxy"])
-
-  addon_name         = each.value
-  kubernetes_version = module.eks_blueprints.eks_cluster_version
-  most_recent        = false
-}
-
 data "aws_secretsmanager_secret_version" "admin_password_version" {
   secret_id = aws_secretsmanager_secret.grafana.id
 

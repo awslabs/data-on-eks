@@ -11,7 +11,7 @@ In this pattern, you will learn how to deploy, configure and use multiple [Karpe
 
 Multiple Data teams within the organization can run Spark jobs on the selected Karpenter provisioners using `tolerations` specified in the pod templates example.
 
-This pattern deploys three Karpenter provisioners. 
+This pattern deploys three Karpenter provisioners.
 
 - `spark-compute-optimized` provisioner to run spark jobs on `c5d` instances.
 - `spark-memory-optimized` provisioner to run spark jobs on `r5d` instances.
