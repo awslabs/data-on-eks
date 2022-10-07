@@ -6,7 +6,7 @@ sidebar_position: 1
 
 The example demonstrates how to use [Amazon Managed Workflows for Apache Airflow (MWAA)](https://docs.aws.amazon.com/mwaa/latest/userguide/what-is-mwaa.html) to assign jobs to Amazon EKS in two ways.
 1. Directly create a job and deploy to EKS.
-2. Register EKS as a virtual cluster in EMR and assign a spark job to EMR on EKS. 
+2. Register EKS as a virtual cluster in EMR and assign a spark job to EMR on EKS.
 
 ### Considerations
 
@@ -42,7 +42,7 @@ The following components are provisioned in your environment:
 - EKS Managed Add-ons: VPC_CNI, CoreDNS, Kube_Proxy, EBS_CSI_Driver
 - K8S metrics server and cluster autoscaler
 - A MWAA environment in version 2.2.2
-- An EMR virtual cluster registered with the newly created EKS 
+- An EMR virtual cluster registered with the newly created EKS
 - A S3 bucket with DAG code
 
 ## Validate
