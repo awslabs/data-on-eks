@@ -49,3 +49,17 @@ data "aws_iam_policy_document" "emr_on_eks" {
     ]
   }
 }
+
+data "aws_iam_policy_document" "mwaa_emrjob" {
+  statement {
+      actions = [
+          "emr-containers:StartJobRun",
+          "emr-containers:ListJobRuns",
+          "emr-containers:DescribeJobRun",
+          "emr-containers:CancelJobRun"
+      ]
+      resources = ["*"]
+      effect    = "Allow"
+  }
+  
+}

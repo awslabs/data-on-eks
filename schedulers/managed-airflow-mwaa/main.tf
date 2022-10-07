@@ -20,7 +20,7 @@ module "mwaa" {
   source  = "aws-ia/mwaa/aws"
   version = "0.0.1"
 
-  name                  = "eks-emr-mwaa"
+  name                  = "eks-emr-mwaa01"
   airflow_version       = "2.2.2"
   environment_class     = "mw1.medium"  # mw1.small / mw1.medium / mw1.large
   webserver_access_mode = "PUBLIC_ONLY" # Default PRIVATE_ONLY for production environments
@@ -76,7 +76,20 @@ module "mwaa" {
   tags = local.tags
 }
 
+#------------------------------------------------------------------------
+# Additional IAM policies for MWAA execution role to run emr on eks job 
+#------------------------------------------------------------------------
+resource "aws_iam_policy" "mwaa_emrjob" {
+  name        = format("%s-%s", local.name, "mwaa-emrjob-iam-policies")
+  description = "IAM policy for MWAA RUN EMR on EKS Job execution"
+  path        = "/"
+  policy      = data.aws_iam_policy_document.mwaa_emrjob.json
+}
 
+resource "aws_iam_role_policy_attachment" "policy-attach" {
+  role       = module.mwaa.mwaa_role_name
+  policy_arn = aws_iam_policy.mwaa_emrjob.arn
+}
 
 #------------------------------------------------------------------------
 # Dags and Requirements
