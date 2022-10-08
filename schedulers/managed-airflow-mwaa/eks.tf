@@ -17,7 +17,7 @@ module "eks_blueprints" {
   map_roles = [
     {
       rolearn  = module.mwaa.mwaa_role_arn
-      username = "mwaa-role"
+      username = "mwaa-service"
       groups   = ["system:masters"]
     }
   ]
