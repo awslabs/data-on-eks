@@ -1,5 +1,6 @@
 ---
-sidebar_position: 1
+title: Amazon Manged Workflows for Apache Airflow (MWAA)
+sidebar_position: 2
 ---
 
 # Amazon Manged Workflows for Apache Airflow (MWAA)
@@ -81,6 +82,9 @@ You should see output similar to the following:
 NAME                                             READY   STATUS      RESTARTS   AGE
 mwaa-pod-test.4bed823d645844bc8e6899fd858f119d   0/1     Completed   0          25s
 ```
+
+### Run EMR on EKS job with MWAA
+
 
 ## Destroy
 

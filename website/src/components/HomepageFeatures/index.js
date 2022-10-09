@@ -8,7 +8,7 @@ const FeatureList = [
         // Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
         description: (
             <>
-                Build, deploy and scale Spark workloads with multi-tenant Amazon EMR on EKS Clusters with optimized EMR runtime.<br/>
+                Easily build, deploy and scale Spark workloads with Amazon EMR on EKS multi-tenant clusters and optimized EMR runtime.<br/>
                 Simplify Management, Reduce Costs and faster performance with optimized EMR Spark.
             </>
         ),

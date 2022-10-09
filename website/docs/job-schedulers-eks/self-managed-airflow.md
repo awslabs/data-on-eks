@@ -1,5 +1,6 @@
 ---
-sidebar_position: 2
+title: Airflow on EKS
+sidebar_position: 3
 ---
 
 # Self-managed Apache Airflow deployment for EKS
