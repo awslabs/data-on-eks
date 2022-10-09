@@ -1,7 +1,6 @@
 #---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
-
 module "eks_blueprints" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.10.0"
 
@@ -78,9 +77,9 @@ module "eks_blueprints" {
   #---------------------------------------
   enable_emr_on_eks = true
   emr_on_eks_teams = {
-    emr-wmaa-team = {
-      namespace               = "emr-wmaa"
-      job_execution_role      = "emr-eks-wmaa-team"
+    emr-mwaa-team = {
+      namespace               = "emr-mwaa"
+      job_execution_role      = "emr-eks-mwaa-team"
       additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
     }
   }
@@ -99,13 +98,17 @@ module "eks_blueprints_kubernetes_addons" {
   eks_oidc_provider    = module.eks_blueprints.oidc_provider
   eks_cluster_version  = module.eks_blueprints.eks_cluster_version
 
+  # EKS Managed Add-ons
+  enable_amazon_eks_vpc_cni            = true
+  enable_amazon_eks_coredns            = true
+  enable_amazon_eks_kube_proxy         = true
+  enable_amazon_eks_aws_ebs_csi_driver = true
+
   enable_metrics_server     = true
   enable_cluster_autoscaler = true
 
   tags = local.tags
 }
-
-
 #---------------------------------------------------------------
 # Example IAM policies for EMR job execution
 #---------------------------------------------------------------
@@ -120,7 +123,7 @@ resource "aws_iam_policy" "emr_on_eks" {
 # Create EMR on EKS Virtual Cluster
 #---------------------------------------------------------------
 resource "aws_emrcontainers_virtual_cluster" "this" {
-  name = format("%s-%s", module.eks_blueprints.eks_cluster_id, "emr-wmaa-team")
+  name = format("%s-%s", module.eks_blueprints.eks_cluster_id, "emr-mwaa-team")
 
   container_provider {
     id   = module.eks_blueprints.eks_cluster_id
@@ -128,13 +131,11 @@ resource "aws_emrcontainers_virtual_cluster" "this" {
 
     info {
       eks_info {
-        namespace = "emr-wmaa"
+        namespace = "emr-mwaa"
       }
     }
   }
 }
-
-
 #------------------------------------------------------------------------
 # Create K8s Namespace and Role for mwaa access directly
 #------------------------------------------------------------------------

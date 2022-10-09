@@ -3,6 +3,7 @@ sidebar_position: 1
 ---
 
 # Amazon Manged Workflows for Apache Airflow (MWAA)
+Amazon Managed Workflows for Apache Airflow (MWAA) is a managed orchestration service for Apache Airflow1 that makes it easier to set up and operate end-to-end data pipelines in the cloud at scale. Apache Airflow is an open-source tool used to programmatically author, schedule, and monitor sequences of processes and tasks referred to as “workflows.” With Managed Workflows, you can use Airflow and Python to create workflows without having to manage the underlying infrastructure for scalability, availability, and security.
 
 The example demonstrates how to use [Amazon Managed Workflows for Apache Airflow (MWAA)](https://docs.aws.amazon.com/mwaa/latest/userguide/what-is-mwaa.html) to assign jobs to Amazon EKS in two ways.
 1. Directly create a job and deploy to EKS.
@@ -73,14 +74,14 @@ kubectl get ns
 
 # Output should look like below
 default           Active   4h38m
-emr-wmaa          Active   4h34m
+emr-mwaa          Active   4h34m
 kube-node-lease   Active   4h39m
 kube-public       Active   4h39m
 kube-system       Active   4h39m
 mwaa              Active   4h30m
 ```
 
-namesapce emr-wmaa will be used by EMR for running spark jobs.<br />
+namesapce emr-mwaa will be used by EMR for running spark jobs.<br />
 namesapce mwaa will be used by MWAA directly.
 
 
@@ -132,7 +133,7 @@ Go back to Airflow UI main page, enable the example DAG emr_eks_pi_job and then 
 While it is running, use the following command to verify the spark jobs:
 
 ```bash
-kubectl get all -n emr-wmaa
+kubectl get all -n emr-mwaa
 ```
 
 You should see output similar to the following:

@@ -1,6 +1,6 @@
 locals {
   name   = var.name
-  region = "us-east-1"
+  region = var.region
 
   vpc_cidr    = var.vpc_cidr
   azs         = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -20,7 +20,7 @@ module "mwaa" {
   source  = "aws-ia/mwaa/aws"
   version = "0.0.1"
 
-  name                  = "eks-emr-mwaa01"
+  name                  = local.name
   airflow_version       = "2.2.2"
   environment_class     = "mw1.medium"  # mw1.small / mw1.medium / mw1.large
   webserver_access_mode = "PUBLIC_ONLY" # Default PRIVATE_ONLY for production environments

@@ -1,13 +1,13 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
   type        = string
-  default     = "managed-airflow-mwaa02"
+  default     = "managed-airflow-mwaa"
 }
 
 variable "region" {
   description = "region"
   type        = string
-  default     = "us-east-1"
+  default     = "us-west-2"
 }
 
 variable "eks_cluster_version" {
