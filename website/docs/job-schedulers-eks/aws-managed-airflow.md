@@ -1,5 +1,6 @@
 ---
-sidebar_position: 1
+title: Amazon Manged Workflows for Apache Airflow (MWAA)
+sidebar_position: 2
 ---
 
 # Amazon Manged Workflows for Apache Airflow (MWAA)

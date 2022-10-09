@@ -7,7 +7,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {{onBrokenLinks: string, organizationName: string, plugins: string[], title: string, url: string, onBrokenMarkdownLinks: string, i18n: {defaultLocale: string, locales: string[]}, trailingSlash: boolean, baseUrl: string, presets: [string,Options][], githubHost: string, tagline: string, themeConfig: ThemeConfig & UserThemeConfig & AlgoliaThemeConfig, projectName: string}} */
 const config = {
   title: 'Data on EKS (DoEKS)',
-  tagline: 'Accelerate your Data journey on Amazon EKS',
+  tagline: 'Accelerate your Data journey on Amazon EKS 🚀',
   url: 'https://awslabs.github.io',
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
@@ -35,8 +35,6 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/awslabs/data-on-eks/blob/main/website/',
         },
@@ -46,8 +44,6 @@ const config = {
           showReadingTime: true,
           readingTime: ({content, frontMatter, defaultReadingTime}) =>
               defaultReadingTime({content, options: {wordsPerMinute: 300}}),
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl:
               'https://github.com/awslabs/data-on-eks/blob/main/website/',
         },
@@ -78,7 +74,7 @@ const config = {
             type: 'doc',
             docId: 'amazon-emr-on-eks/index',
             position: 'left',
-            label: 'EMR on EKS',
+            label: 'EMR on EKS'
           },
           {
             type: 'doc',
@@ -118,9 +114,15 @@ const config = {
           },
         ],
       },
+      colorMode: {
+        defaultMode: 'light',
+        disableSwitch: false,
+        respectPrefersColorScheme: true,
+      },
       docs: {
         sidebar: {
           hideable: true,
+          autoCollapseCategories: true,
         }
         },
       footer: {
@@ -158,10 +160,10 @@ const config = {
       },
       prism: {
         theme: lightCodeTheme,
-        darkTheme: darkCodeTheme,
+        darkTheme: darkCodeTheme
       },
     }),
- // TODO Search plugin not working. Fix this
+
   plugins: [require.resolve('docusaurus-lunr-search')],
 };
 
