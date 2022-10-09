@@ -1,6 +1,6 @@
 # Data on Amazon EKS (DoEKS)
 
-💥Welcome to **Data on Amazon EKS (DoEKS)** 💥
+💥 Welcome to **Data on Amazon EKS (DoEKS)** 💥
 
 Data on Amazon EKS(DoEKS) is a tool for users to build [aws](https://aws.amazon.com/) managed and self-managed scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/).
 This repo provides Infrastructure as Code(IaC) templates(e.g., [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/) etc.),
@@ -22,15 +22,14 @@ Data on EKS(DoEKS) solution is categorized into the following areas.
 ## 🏃‍♀️Getting Started
 In this repository you will find multiple deployment examples for bootstrapping Data platforms with Amazon EKS Cluster and the Kubernetes add-ons.
 
-🚀 [EMR on EKS](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-amp-amg) - Deploy EKS Cluster, EMR on EKS Cluster with multi tenancy and sample Spark scripts.
+🚀 [EMR on EKS](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-amp-amg) - Spark job monitoring for EMR on EKS with Prometheus and Grafana.
+🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Scaling Spark jobs with EMR on EKS and Karpenter.
 
-🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Deploy EKS Cluster, EMR on EKS Cluster with multi tenancy and scale Spark jobs with Karpenter Autoscaler.
+🚀 [EMR on EKS with FSx for Lustre](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-fsx-for-lustre) - EMR on EKS Cluster with FSx for Lustre as a high performance Spark shuffle storage.
 
-🚀 [EMR on EKS with FSx for Lustre](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-fsx-for-lustre) - Deploy EKS Cluster, EMR on EKS Cluster with FSx for Lustre as a high performance spark shuffle storage.
+🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - Spark Operator with Apache YuniKorn on Amazon EKS.
 
-🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - Deploy EKS Cluster, Spark Operator and Apache YuniKorn with sample Spark scripts.
-
-🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](hhttps://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) - Deploy Amazon Managed Workflows for Apache Airflow (MWAA) with EMR on EKS and trigger EMR on EKS jobs.
+🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) - Trigger EMR on EKS jobs with Amazon Managed Workflows for Apache Airflow (MWAA).
 
 🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - Deploy self-managed Apache Airflow with best practices on Amazon EKS.
 
