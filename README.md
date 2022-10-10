@@ -1,10 +1,12 @@
 # Data on Amazon EKS (DoEKS)
 
-💥 Welcome to **Data on Amazon EKS (DoEKS)** 💥
+💥 **Welcome to Data on Amazon EKS (DoEKS)** 💥
 
 Data on Amazon EKS(DoEKS) is a tool for users to build [aws](https://aws.amazon.com/) managed and self-managed scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/).
 This repo provides Infrastructure as Code(IaC) templates(e.g., [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/) etc.),
 sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, Performance Benchmark reports and Best Practices for deploying Data Solutions on Amazon EKS.
+
+> **Note**: Data on EKS is under active development for number of patterns. Please refer to the [issues](https://github.com/awslabs/data-on-eks/issues) section to see the work in progress features.
 
 ## 🌟 Features
 Data on EKS(DoEKS) solution is categorized into the following areas.
@@ -23,6 +25,7 @@ Data on EKS(DoEKS) solution is categorized into the following areas.
 In this repository you will find multiple deployment examples for bootstrapping Data platforms with Amazon EKS Cluster and the Kubernetes add-ons.
 
 🚀 [EMR on EKS](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-amp-amg) - Spark job monitoring for EMR on EKS with Prometheus and Grafana.
+
 🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Scaling Spark jobs with EMR on EKS and Karpenter.
 
 🚀 [EMR on EKS with FSx for Lustre](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-fsx-for-lustre) - EMR on EKS Cluster with FSx for Lustre as a high performance Spark shuffle storage.
@@ -34,8 +37,6 @@ In this repository you will find multiple deployment examples for bootstrapping 
 🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - Deploy self-managed Apache Airflow with best practices on Amazon EKS.
 
 🚀 [Ray on EKS](ai-ml/ray/README.md) - Deploy Ray Operator on EKS with sample scripts.
-
-*NOTE: Please refer to the [issues](https://github.com/awslabs/data-on-eks/issues) section to see the work in progress features.*
 
 ## 🗂️ Documentation
 Checkout the [DoEKS](https://awslabs.github.io/data-on-eks/) Website for instructions to deploy the Data on EKS patterns and run sample tests.
