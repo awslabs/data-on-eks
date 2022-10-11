@@ -10,10 +10,8 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
-data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id = aws_secretsmanager_secret.grafana.id
-
-  depends_on = [aws_secretsmanager_secret_version.grafana]
+data "aws_eks_cluster" "eks_cluster" {
+  name = module.eks_blueprints.eks_cluster_id
 }
 
 #---------------------------------------------------------------

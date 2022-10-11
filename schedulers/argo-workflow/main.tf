@@ -102,66 +102,66 @@ module "eks_blueprints" {
         "k8s.io/cluster-autoscaler/experiments"                          = "owned"
         "k8s.io/cluster-autoscaler/enabled"                              = "true"
       }
-    },
+    }
     #---------------------------------------------------------------
     # Note: This example only uses ON_DEMAND node group for both Spark Driver and Executors.
     #   If you want to leverage SPOT nodes for Spark executors then create ON_DEMAND node group for placing your driver pods and SPOT nodegroup for executors.
     #   Use NodeSelectors to place your driver/executor pods with the help of Pod Templates.
     #---------------------------------------------------------------
-    mng2 = {
-      node_group_name = "spark-node-grp"
-      subnet_ids      = [element(module.vpc.private_subnets, 0)] # Single AZ node group for Spark workloads
-      instance_types  = ["r5d.large"]
-      ami_type        = "AL2_x86_64"
-      capacity_type   = "ON_DEMAND"
+    # mng2 = {
+    #   node_group_name = "spark-node-grp"
+    #   subnet_ids      = [element(module.vpc.private_subnets, 0)] # Single AZ node group for Spark workloads
+    #   instance_types  = ["r5d.large"]
+    #   ami_type        = "AL2_x86_64"
+    #   capacity_type   = "ON_DEMAND"
 
-      format_mount_nvme_disk = true # Mounts NVMe disks to /local1, /local2 etc. for multiple NVMe disks
+    #   format_mount_nvme_disk = true # Mounts NVMe disks to /local1, /local2 etc. for multiple NVMe disks
 
-      # RAID0 configuration is recommended for better performance when you use larger instances with multiple NVMe disks e.g., r5d.24xlarge
-      # Permissions for hadoop user runs the analytics job. user > hadoop:x:999:1000::/home/hadoop:/bin/bash
-      post_userdata = <<-EOT
-        #!/bin/bash
-        set -ex
-        /usr/bin/chown -hR +999:+1000 /local1
-      EOT
+    #   # RAID0 configuration is recommended for better performance when you use larger instances with multiple NVMe disks e.g., r5d.24xlarge
+    #   # Permissions for hadoop user runs the analytics job. user > hadoop:x:999:1000::/home/hadoop:/bin/bash
+    #   post_userdata = <<-EOT
+    #     #!/bin/bash
+    #     set -ex
+    #     /usr/bin/chown -hR +999:+1000 /local1
+    #   EOT
 
-      disk_size = 100
-      disk_type = "gp3"
+    #   disk_size = 100
+    #   disk_type = "gp3"
 
-      max_size     = 9 # Managed node group soft limit is 450; request AWS for limit increase
-      min_size     = 3
-      desired_size = 3
+    #   max_size     = 9 # Managed node group soft limit is 450; request AWS for limit increase
+    #   min_size     = 3
+    #   desired_size = 3
 
-      create_launch_template = true
-      launch_template_os     = "amazonlinux2eks"
+    #   create_launch_template = true
+    #   launch_template_os     = "amazonlinux2eks"
 
-      update_config = [{
-        max_unavailable_percentage = 50
-      }]
+    #   update_config = [{
+    #     max_unavailable_percentage = 50
+    #   }]
 
-      additional_iam_policies = []
-      k8s_taints              = []
+    #   additional_iam_policies = []
+    #   k8s_taints              = []
 
-      k8s_labels = {
-        Environment   = "preprod"
-        Zone          = "test"
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark"
-      }
+    #   k8s_labels = {
+    #     Environment   = "preprod"
+    #     Zone          = "test"
+    #     WorkerType    = "ON_DEMAND"
+    #     NodeGroupType = "spark"
+    #   }
 
-      # Checkout the docs for more details on node-template labels https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
-      additional_tags = {
-        Name                                                             = "spark-node-grp"
-        subnet_type                                                      = "private"
-        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "spark"
-        "k8s.io/cluster-autoscaler/node-template/label/disk"             = "nvme"
-        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-        "k8s.io/cluster-autoscaler/experiments"                          = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                              = "true"
-      }
-    },
+    #   # Checkout the docs for more details on node-template labels https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
+    #   additional_tags = {
+    #     Name                                                             = "spark-node-grp"
+    #     subnet_type                                                      = "private"
+    #     "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
+    #     "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
+    #     "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "spark"
+    #     "k8s.io/cluster-autoscaler/node-template/label/disk"             = "nvme"
+    #     "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
+    #     "k8s.io/cluster-autoscaler/experiments"                          = "owned"
+    #     "k8s.io/cluster-autoscaler/enabled"                              = "true"
+    #   }
+    # },
   }
 
   tags = local.tags
