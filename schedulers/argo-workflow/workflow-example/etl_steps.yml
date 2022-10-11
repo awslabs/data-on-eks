@@ -1,0 +1,51 @@
+ 
+apiVersion: argoproj.io/v1alpha1 
+kind: Workflow 
+metadata: 
+  generateName: stream-batch-parser-  
+  namespace: argo
+spec: 
+  entrypoint: sbp 
+  templates: 
+  - name: sbp 
+    steps: 
+    - - name: request-handler 
+        template: edge-input 
+    - - name: parser-stream 
+        template: stream 
+        when: "{{steps.handle-requests.outputs.result}} <= 163883" 
+      - name: parser-batch 
+        template: parquet 
+        when: "{{steps.handle-requests.outputs.result}} > 163883" 
+  - name: stream 
+    steps: 
+    - - name: avro-parser 
+        template: avro 
+    - - name: wrapper
+        template: wrapper 
+  - name: batch 
+    steps: 
+    - - name: parquet-parser 
+        template: parquet 
+    - - name: wrapper
+        template: wrapper 
+  - name: edge-input
+    container: 
+      image: alpine:3.6 
+      command: [sh, -c]
+      args: ["echo ${RANDOM}"] 
+  - name: parquet 
+    container: 
+      image: alpine:3.6 
+      command: [sh, -c]
+      args: ["echo \"code to parse Parquet\""] 
+  - name: avro 
+    container: 
+      image: alpine:3.6 
+      command: [sh, -c]
+      args: ["echo \"code to parse Avro\""]
+  - name: wrapper
+    container: 
+      image: alpine:3.6 
+      command: [sh, -c]
+      args: ["echo \"code to load into Staging\""] 
