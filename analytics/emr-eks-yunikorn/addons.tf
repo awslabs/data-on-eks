@@ -104,20 +104,55 @@ module "eks_blueprints_kubernetes_addons" {
       operating_system = "linux"
     })]
   }
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics_helm_config = {
+    name       = "aws-cloudwatch-metrics"
+    chart      = "aws-cloudwatch-metrics"
+    repository = "https://aws.github.io/eks-charts"
+    version    = "0.0.7"
+    namespace  = "amazon-cloudwatch"
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {
+      eks_cluster_id = var.name
+    })]
+  }
 
   #---------------------------------------
-  # Enable FSx for Lustre CSI Driver
+  # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_fsx_csi_driver = true
-  aws_fsx_csi_driver_helm_config = {
-    name       = "aws-fsx-csi-driver"
-    chart      = "aws-fsx-csi-driver"
-    repository = "https://kubernetes-sigs.github.io/aws-fsx-csi-driver/"
-    version    = "1.4.2"
-    namespace  = "kube-system"
-    #    values = [templatefile("${path.module}/aws-fsx-csi-driver-values.yaml", {})]
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_helm_config = {
+    name                                      = "aws-for-fluent-bit"
+    chart                                     = "aws-for-fluent-bit"
+    repository                                = "https://aws.github.io/eks-charts"
+    version                                   = "0.1.21"
+    namespace                                 = "aws-for-fluent-bit"
+    aws_for_fluent_bit_cw_log_group           = "/${var.name}/worker-fluentbit-logs" # Optional
+    aws_for_fluentbit_cwlog_retention_in_days = 90
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region                    = var.region,
+      aws_for_fluent_bit_cw_log = "/${var.name}/worker-fluentbit-logs"
+    })]
   }
 
   tags = local.tags
 
+  #---------------------------------------------------------------
+  # Apache YuniKorn Add-on
+  #---------------------------------------------------------------
+  enable_yunikorn = true
+  yunikorn_helm_config = {
+    name       = "yunikorn"
+    repository = "https://apache.github.io/yunikorn-release"
+    chart      = "yunikorn"
+    version    = "0.12.2"
+    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+      image_version    = "0.12.2"
+      operating_system = "linux"
+      node_group_type  = "core"
+    })]
+    timeout = "300"
+  }
 }
