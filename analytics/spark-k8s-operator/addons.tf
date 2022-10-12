@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.10.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.12.2"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -160,7 +160,7 @@ module "eks_blueprints_kubernetes_addons" {
     aws_for_fluent_bit_cw_log_group = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs" # Optional
     create_namespace                = true
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region                    = "${data.aws_region.current.id}"
+      region                    = data.aws_region.current.id
       aws_for_fluent_bit_cw_log = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs"
     })]
     set = [

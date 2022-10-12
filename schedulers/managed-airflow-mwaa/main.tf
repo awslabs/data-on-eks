@@ -79,16 +79,16 @@ module "mwaa" {
 #------------------------------------------------------------------------
 # Additional IAM policies for MWAA execution role to run emr on eks job
 #------------------------------------------------------------------------
-resource "aws_iam_policy" "mwaa_emrjob" {
-  name        = format("%s-%s", local.name, "mwaa-emrjob-iam-policies")
+resource "aws_iam_policy" "this" {
+  name        = format("%s-%s", local.name, "mwaa-emr-job")
   description = "IAM policy for MWAA RUN EMR on EKS Job execution"
   path        = "/"
   policy      = data.aws_iam_policy_document.mwaa_emrjob.json
 }
 
-resource "aws_iam_role_policy_attachment" "policy-attach" {
+resource "aws_iam_role_policy_attachment" "this" {
   role       = module.mwaa.mwaa_role_name
-  policy_arn = aws_iam_policy.mwaa_emrjob.arn
+  policy_arn = aws_iam_policy.this.arn
 }
 
 #------------------------------------------------------------------------

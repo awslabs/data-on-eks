@@ -4,9 +4,9 @@ data "aws_eks_cluster_auth" "this" {
 
 data "aws_availability_zones" "available" {}
 
-data "aws_caller_identity" "current" {}
-
 data "aws_region" "current" {}
+
+data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
@@ -38,18 +38,4 @@ data "aws_iam_policy_document" "emr_on_eks" {
       "logs:PutLogEvents",
     ]
   }
-}
-
-data "aws_iam_policy_document" "mwaa_emrjob" {
-  statement {
-    actions = [
-      "emr-containers:StartJobRun",
-      "emr-containers:ListJobRuns",
-      "emr-containers:DescribeJobRun",
-      "emr-containers:CancelJobRun"
-    ]
-    resources = ["*"]
-    effect    = "Allow"
-  }
-
 }

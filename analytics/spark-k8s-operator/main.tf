@@ -15,7 +15,7 @@ locals {
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.10.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.12.2"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -245,7 +245,7 @@ resource "aws_s3_object" "this" {
 # Creates IAM Role for Service Account. Provides IAM permissions for Spark driver/executor pods
 #---------------------------------------------------------------
 module "irsa" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.12.2"
 
   eks_cluster_id             = local.name
   eks_oidc_provider_arn      = module.eks_blueprints.eks_oidc_provider_arn
