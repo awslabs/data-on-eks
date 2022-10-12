@@ -10,16 +10,6 @@ data "aws_region" "current" {}
 
 data "aws_partition" "current" {}
 
-data "aws_ami" "eks" {
-  owners      = ["amazon"]
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-${module.eks_blueprints.eks_cluster_version}-*"]
-  }
-}
-
 data "aws_iam_policy_document" "emr_on_eks" {
   statement {
     sid       = ""

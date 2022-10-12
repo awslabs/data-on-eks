@@ -340,7 +340,7 @@ resource "aws_security_group" "efs" {
 # IRSA for Airflow S3 logging
 #---------------------------------------------------------------
 module "airflow_irsa" {
-  source                     = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa"
+  source                     = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.12.2"
   eks_cluster_id             = module.eks_blueprints.eks_cluster_id
   eks_oidc_provider_arn      = module.eks_blueprints.eks_oidc_provider_arn
   irsa_iam_policies          = [aws_iam_policy.airflow.arn]
