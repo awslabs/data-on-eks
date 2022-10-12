@@ -43,11 +43,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = true
 
-  #---------------------------------------------------------------
-  # Spark History Server Addon
-  #---------------------------------------------------------------
-  #enable_spark_history_server = true
-  #spark_history_server_s3a_path = "s3a://spark-4-history-server/logs/"
 
   depends_on = [
     module.eks_blueprints
@@ -82,30 +77,30 @@ locals {
     irsa_iam_policies                 = []
   }
 
-  eks_oidc_issuer_url  = replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
+  eks_oidc_issuer_url = replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
 }
 
 module "helm_addon" {
-  source        = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons/helm-addon?ref=v4.12.0"
-  helm_config   = local.default_helm_config
-  irsa_config   = local.irsa_config
+  source      = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons/helm-addon?ref=v4.12.0"
+  helm_config = local.default_helm_config
+  irsa_config = local.irsa_config
 
   addon_context = {
-  aws_caller_identity_account_id = data.aws_caller_identity.current.account_id
-  aws_caller_identity_arn        = data.aws_caller_identity.current.arn
-  aws_eks_cluster_endpoint       = module.eks_blueprints.eks_cluster_endpoint
-  aws_partition_id               = data.aws_partition.current.partition
-  aws_region_name                = data.aws_region.current.name
-  eks_cluster_id                 = module.eks_blueprints.eks_cluster_id
-  eks_oidc_issuer_url            = replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
-  eks_oidc_provider_arn          = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.eks_oidc_issuer_url}"
-  tags                           = local.tags
-  irsa_iam_role_path             = "/"
-  irsa_iam_permissions_boundary  = ""
+    aws_caller_identity_account_id = data.aws_caller_identity.current.account_id
+    aws_caller_identity_arn        = data.aws_caller_identity.current.arn
+    aws_eks_cluster_endpoint       = module.eks_blueprints.eks_cluster_endpoint
+    aws_partition_id               = data.aws_partition.current.partition
+    aws_region_name                = data.aws_region.current.name
+    eks_cluster_id                 = module.eks_blueprints.eks_cluster_id
+    eks_oidc_issuer_url            = replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
+    eks_oidc_provider_arn          = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.eks_oidc_issuer_url}"
+    tags                           = local.tags
+    irsa_iam_role_path             = "/"
+    irsa_iam_permissions_boundary  = ""
   }
-  
+
   depends_on = [
     module.eks_blueprints
   ]
-  
+
 }

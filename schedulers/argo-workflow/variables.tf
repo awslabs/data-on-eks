@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "spark-k8s-operator"
+  default     = "argoworkflows-eks"
   type        = string
 }
 
