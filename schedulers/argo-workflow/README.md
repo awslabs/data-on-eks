@@ -1,5 +1,5 @@
-# Spark on K8s Operator with EKS
-Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) to deploy this pattern and run sample tests.
+# Argo Worklfows on EKS
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/argo-workflows-eks) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
