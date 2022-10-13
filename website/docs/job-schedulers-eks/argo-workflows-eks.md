@@ -7,8 +7,8 @@ argo description
 
 The example demonstrates how to use Argo Workflows to assign jobs to Amazon EKS in three ways.
 1. Directly create a job and deploy to EKS.
-2. spark 
-3. spark operator 
+2. spark
+3. spark operator
 
 ## Prerequisites:
 
@@ -87,16 +87,16 @@ kubectl apply -f workflow-example/argo-spark.yaml
 
 kubectl get wf -n argo
 NAME    STATUS    AGE   MESSAGE
-spark   Running   8s    
+spark   Running   8s  
 
 ![argo-wf-spark](argo-wf-spark.png)
 
 5. deploy argo-spark operator
-kubectl apply -f workflow-example/argo-spark-operator.yaml 
+kubectl apply -f workflow-example/argo-spark-operator.yaml
 
 kubectl get wf -n argo
 NAME             STATUS      AGE     MESSAGE
-spark            Succeeded   3m58s   
-spark-operator   Running     5s      
+spark            Succeeded   3m58s  
+spark-operator   Running     5s  
 
 ![argo-wf-spark-operator](argo-wf-spark-operator.png)
