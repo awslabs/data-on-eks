@@ -68,12 +68,35 @@ kubectl get ns
 
 # Output should look like below
 NAME              STATUS   AGE
-argo              Active   24h
-default           Active   26h
-kube-node-lease   Active   26h
-kube-public       Active   26h
-kube-system       Active   26h
-spark-operator    Active   26h
-spark-team-a      Active   26h
-yunikorn          Active   26h
+argo              Active   28h
+default           Active   30h
+kube-node-lease   Active   30h
+kube-public       Active   30h
+kube-system       Active   30h
+spark-operator    Active   30h
+yunikorn          Active   30h
 ```
+
+4. access argo UI/server, kubectl -n argo port-forward deployment.apps/argo-workflows-server 2746:2746
+- get login token, argo auth token
+Bearer k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZXRDYWxsZXJJZGVudGl0eSZWZXJzaW9uPTIwMTEtMDYtMTUmWC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNWNFhDV1dLUjZGVTRGMiUyRjIwMjIxMDEzJTJGdXMtd2VzdC0yJTJGc3RzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyMjEwMTNUMDIyODAyWiZYLUFtei1FeHBpcmVzPTYwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCUzQngtazhzLWF3cy1pZCZYLUFtei1TaWduYXR1cmU9NmZiNmMxYmQ0MDQyMWIwNTI3NjY4MzZhMGJiNmUzNjg1MTk1YmM0NDQzMjIyMTg5ZDNmZmE1YzJjZmRiMjc4OA
+![argo-workflow-login](argo-workflow-login.png)
+
+5. deploy argo-spark
+kubectl apply -f workflow-example/argo-spark.yaml
+
+kubectl get wf -n argo
+NAME    STATUS    AGE   MESSAGE
+spark   Running   8s    
+
+![argo-wf-spark](argo-wf-spark.png)
+
+5. deploy argo-spark operator
+kubectl apply -f workflow-example/argo-spark-operator.yaml 
+
+kubectl get wf -n argo
+NAME             STATUS      AGE     MESSAGE
+spark            Succeeded   3m58s   
+spark-operator   Running     5s      
+
+![argo-wf-spark-operator](argo-wf-spark-operator.png)

@@ -3,7 +3,6 @@ locals {
   region        = var.region
   azs           = slice(data.aws_availability_zones.available.names, 0, 3)
   vpc_endpoints = ["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]
-  spark_team    = "spark-team-a"
 
   tags = {
     Blueprint  = local.name
@@ -189,6 +188,7 @@ resource "kubernetes_cluster_role" "spark-cluster" {
 resource "kubernetes_role_binding" "spark_role_binding" {
   metadata {
     name = "argo-spark-rolebinding"
+    namespace = local.default_helm_config.namespace
   }
 
   subject {
@@ -206,6 +206,7 @@ resource "kubernetes_role_binding" "spark_role_binding" {
 resource "kubernetes_role_binding" "argo-admin-rolebinding" {
   metadata {
     name = "argo-admin-rolebinding"
+    namespace = local.default_helm_config.namespace
   }
 
   subject {
