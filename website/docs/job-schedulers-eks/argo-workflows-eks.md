@@ -3,12 +3,11 @@ title: Argo Workflows on EKS
 sidebar_position: 4
 ---
 # Argo Workflows on EKS
-argo description
+Argo Workflows is an open source container-native workflow engine for orchestrating parallel jobs on Kubernetes. It is implemented as a Kubernetes CRD (Custom Resource Definition). As a result, Argo workflows can be managed using kubectl and natively integrates with other Kubernetes services such as volumes, secrets, and RBAC.
 
-The example demonstrates how to use Argo Workflows to assign jobs to Amazon EKS in three ways.
-1. Directly create a job and deploy to EKS.
-2. spark
-3. spark operator
+The example demonstrates how to use Argo Workflows to assign jobs to Amazon EKS in two ways.
+1. Use Argo Workflows to create a spark job. 
+2. Use Argo Workflows to create a spark job through spark operator.
 
 ## Prerequisites:
 
@@ -35,10 +34,11 @@ The following components are provisioned in your environment:
 - Internet gateway for Public Subnets and NAT Gateway for Private Subnets
 - EKS Cluster Control plane with one managed node group
 - EKS Managed Add-ons: VPC_CNI, CoreDNS, Kube_Proxy, EBS_CSI_Driver
-- K8S metrics server and cluster autoscaler
-- A MWAA environment in version 2.2.2
-- An EMR virtual cluster registered with the newly created EKS
-- A S3 bucket with DAG code
+- K8S metrics server, cluster autoscaler, Spark Operator and yunikorn scheduler
+- K8s roles and rolebindings for argo workflows
+
+## Install the Argo Workflows CLI 
+Please follow this link: https://github.com/argoproj/argo-workflows/releases/latest
 
 ## Validate
 
@@ -77,26 +77,36 @@ spark-operator    Active   30h
 yunikorn          Active   30h
 ```
 
-4. access argo UI/server, kubectl -n argo port-forward deployment.apps/argo-workflows-server 2746:2746
-- get login token, argo auth token
+4. Argo workflows provide a web UI. You can access by following steps:  
+```bash
+kubectl -n argo port-forward deployment.apps/argo-workflows-server 2746:2746
+argo auth token # get login token
+# result:
 Bearer k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZXRDYWxsZXJJZGVudGl0eSZWZXJzaW9uPTIwMTEtMDYtMTUmWC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNWNFhDV1dLUjZGVTRGMiUyRjIwMjIxMDEzJTJGdXMtd2VzdC0yJTJGc3RzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyMjEwMTNUMDIyODAyWiZYLUFtei1FeHBpcmVzPTYwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCUzQngtazhzLWF3cy1pZCZYLUFtei1TaWduYXR1cmU9NmZiNmMxYmQ0MDQyMWIwNTI3NjY4MzZhMGJiNmUzNjg1MTk1YmM0NDQzMjIyMTg5ZDNmZmE1YzJjZmRiMjc4OA
+```
+
+Open browser and enter http://localhost:2746/ and paste the token
 ![argo-workflow-login](argo-workflow-login.png)
 
-5. deploy argo-spark
+5. Use Argo workflows to create a spark job workflow
+```bash
 kubectl apply -f workflow-example/argo-spark.yaml
 
 kubectl get wf -n argo
 NAME    STATUS    AGE   MESSAGE
 spark   Running   8s  
-
+```
+You can also check the workflow status from web UI
 ![argo-wf-spark](argo-wf-spark.png)
 
-5. deploy argo-spark operator
+6. Create a spark job workflow through spark operator
+```bash
 kubectl apply -f workflow-example/argo-spark-operator.yaml
 
 kubectl get wf -n argo
 NAME             STATUS      AGE     MESSAGE
 spark            Succeeded   3m58s  
 spark-operator   Running     5s  
-
+```
+The workflow status from web UI
 ![argo-wf-spark-operator](argo-wf-spark-operator.png)
