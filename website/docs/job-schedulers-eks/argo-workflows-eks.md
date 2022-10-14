@@ -9,6 +9,8 @@ The example demonstrates how to use Argo Workflows to assign jobs to Amazon EKS 
 1. Use Argo Workflows to create a spark job. 
 2. Use Argo Workflows to create a spark job through spark operator.
 
+[Code repo](https://github.com/awslabs/data-on-eks/tree/main/schedulers/argo-workflow) for this example.
+
 ## Prerequisites:
 
 Ensure that you have the following tools installed locally:

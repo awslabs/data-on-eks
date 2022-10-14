@@ -4,11 +4,13 @@ sidebar_position: 2
 ---
 
 # Amazon Manged Workflows for Apache Airflow (MWAA)
-Amazon Managed Workflows for Apache Airflow (MWAA) is a managed orchestration service for Apache Airflow1 that makes it easier to set up and operate end-to-end data pipelines in the cloud at scale. Apache Airflow is an open-source tool used to programmatically author, schedule, and monitor sequences of processes and tasks referred to as “workflows.” With Managed Workflows, you can use Airflow and Python to create workflows without having to manage the underlying infrastructure for scalability, availability, and security.
+Amazon Managed Workflows for Apache Airflow (MWAA) is a managed orchestration service for Apache Airflow that makes it easier to set up and operate end-to-end data pipelines in the cloud at scale. Apache Airflow is an open-source tool used to programmatically author, schedule, and monitor sequences of processes and tasks referred to as “workflows.” With Managed Workflows, you can use Airflow and Python to create workflows without having to manage the underlying infrastructure for scalability, availability, and security.
 
 The example demonstrates how to use [Amazon Managed Workflows for Apache Airflow (MWAA)](https://docs.aws.amazon.com/mwaa/latest/userguide/what-is-mwaa.html) to assign jobs to Amazon EKS in two ways.
 1. Directly create a job and deploy to EKS.
 2. Register EKS as a virtual cluster in EMR and assign a spark job to EMR on EKS.
+
+[Code repo](https://github.com/awslabs/data-on-eks/tree/main/schedulers/managed-airflow-mwaa) for this example.
 
 ### Considerations
 
@@ -25,9 +27,10 @@ Ensure that you have the following tools installed locally:
 
 ## Deploy
 
-To provision this example:
+To provision this example: 
 
 ```bash
+cd data-on-eks/schedulers/managed-airflow-mwaa
 terraform init
 terraform apply
 ```
