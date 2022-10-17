@@ -8,7 +8,7 @@ grafana:
   ingress:
     enabled: true
     ingressClassName: nginx
-    %{ if hostname != null }
+    %{ if hostname != "" }
     hosts:
       - ray-demo.${hostname}
     %{ endif }

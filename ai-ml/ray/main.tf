@@ -17,7 +17,7 @@ locals {
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.12.2"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version

@@ -2,7 +2,7 @@
 # EKS Blueprints AddOns
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.12.2"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -14,7 +14,7 @@ module "eks_blueprints_kubernetes_addons" {
   enable_kuberay_operator             = true
   enable_ingress_nginx                = true
   enable_aws_load_balancer_controller = true
-  enable_external_dns                 = var.eks_cluster_domain == null ? false : true
+  enable_external_dns                 = var.eks_cluster_domain == "" ? false : true
   enable_kube_prometheus_stack        = true
 
   # Add-on customizations
