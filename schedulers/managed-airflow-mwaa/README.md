@@ -58,7 +58,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.23"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"managed-airflow-mwaa"` | no |
-| <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
+| <a name="input_region"></a> [region](#input\_region) | region | `string` | `"eu-west-1"` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR | `string` | `"10.0.0.0/16"` | no |
 
 ## Outputs
