@@ -1,11 +1,14 @@
-import { Cluster } from "aws-cdk-lib/aws-eks";
+import { Cluster, KubernetesManifest } from "aws-cdk-lib/aws-eks";
 import { ApplicationTeam, ClusterAddOn, ClusterInfo, Team, TeamProps } from "@aws-quickstart/eks-blueprints";
-import { readYamlDocument, loadYaml } from "@aws-quickstart/eks-blueprints/dist/utils"
+import { readYamlDocument, loadYaml, dependable } from "@aws-quickstart/eks-blueprints/dist/utils"
 import { CfnServiceLinkedRole, FederatedPrincipal, IManagedPolicy, IRole, Role } from "aws-cdk-lib/aws-iam";
-import { Aws, CfnJson, Stack } from "aws-cdk-lib";
+import { Aws, CfnJson, CfnOutput, Stack } from "aws-cdk-lib";
 import * as blueprints from '@aws-quickstart/eks-blueprints';
 import * as SimpleBase from 'simple-base';
 import { CfnVirtualCluster } from "aws-cdk-lib/aws-emrcontainers";
+import { EmrEksAddOn } from "../AddOns/emrEksAddOn";
+import { create } from "domain";
+
 
 export interface excutionRoleDefinition {
   excutionRoleName: string,
@@ -28,32 +31,11 @@ export class EmrEksTeam extends ApplicationTeam {
       super(props);
       this.emrTeam = props;
     }
-
+      
     setup(clusterInfo: ClusterInfo): void {
         const cluster = clusterInfo.cluster;
-
-        new CfnServiceLinkedRole(cluster.stack, 'EmrServiceRole', {
-            awsServiceName: 'emr-containers.amazonaws.com',
-          });
-
-        const emrEksServiceRole: IRole = Role.fromRoleArn(
-                cluster.stack,
-                'ServiceRoleForAmazonEMRContainers',
-                `arn:aws:iam::${
-                  Stack.of(cluster.stack).account
-                }:role/AWSServiceRoleForAmazonEMRContainers`,
-              );
-
-        cluster.awsAuth.addRoleMapping(
-          emrEksServiceRole,
-          {
-            username: 'emr-containers',
-            groups : ['']
-          }
-        );
         
-        
-        this.setEmrContainersForNamespace (cluster, this.emrTeam.virtualClusterNamespace, this.emrTeam.createNamespace);
+        const emrVcPrerequisit = this.setEmrContainersForNamespace (cluster, this.emrTeam.virtualClusterNamespace, this.emrTeam.createNamespace);
 
         this.emrTeam.excutionRoles.forEach(excutionRole => {
           this.createExecutionRole(
@@ -63,7 +45,7 @@ export class EmrEksTeam extends ApplicationTeam {
             excutionRole.excutionRoleName);
         });
 
-        new CfnVirtualCluster(cluster.stack, `${this.emrTeam.virtualClusterName}-VirtualCluster`, {
+        const teamVC = new CfnVirtualCluster(cluster.stack, `${this.emrTeam.virtualClusterName}-VirtualCluster`, {
           name: this.emrTeam.virtualClusterName,
           containerProvider: {
             id: cluster.clusterName,
@@ -76,30 +58,40 @@ export class EmrEksTeam extends ApplicationTeam {
           }],
         });
 
+        teamVC.node.addDependency(emrVcPrerequisit)
+
+        new CfnOutput (cluster.stack, `${this.emrTeam.virtualClusterName}-id`, {
+          value: teamVC.attrId
+        })
         
     }
 
-    private setEmrContainersForNamespace(cluster: Cluster, namespace: string, createNamespace: boolean) {
-
-      if(createNamespace) {
-        blueprints.utils.createNamespace(namespace, cluster, true);
-      }
+    private setEmrContainersForNamespace(cluster: Cluster, namespace: string, createNamespace: boolean): KubernetesManifest {
 
       let emrContainersK8sRole = readYamlDocument(`${__dirname}/emrContainersRole.yaml`);
       emrContainersK8sRole =  emrContainersK8sRole.replace('<REPLACE-NAMESPACE>', namespace);
       const emrContainersK8sRoleManifest = loadYaml(emrContainersK8sRole);
 
-      cluster.addManifest('emrContainersK8sRoleManifest', 
+      const emrContainersK8sRoleResource = cluster.addManifest('emrContainersK8sRoleManifest', 
         emrContainersK8sRoleManifest
       );
-
+      
       let emrContainersK8sRoleBinding = readYamlDocument(`${__dirname}/emrContainersRoleBinding.yaml`);
       emrContainersK8sRoleBinding =  emrContainersK8sRoleBinding.replace('<REPLACE-NAMESPACE>', namespace);      
       const emrContainersK8sRoleBindingManifest = loadYaml(emrContainersK8sRoleBinding);
 
-      cluster.addManifest('emrContainersK8sRoleBindingManifest', 
+      const emrContainersK8sRoleBindingResource = cluster.addManifest('emrContainersK8sRoleBindingManifest', 
         emrContainersK8sRoleBindingManifest
       );
+
+      emrContainersK8sRoleBindingResource.node.addDependency(emrContainersK8sRoleResource);
+
+      if(createNamespace) {
+        const namespaceManifest = blueprints.utils.createNamespace(namespace, cluster, true);
+        emrContainersK8sRoleResource.node.addDependency(namespaceManifest);
+      }
+
+      return emrContainersK8sRoleBindingResource;
     }
 
 
@@ -113,7 +105,7 @@ export class EmrEksTeam extends ApplicationTeam {
         },
       });
   
-      // Create an execution role assumable by EKS OIDC provider
+      // Create an execution role assumable by EKS OIDC provider and scoped to the service account of the virtual cluster
       return new Role(stack, `${name}ExecutionRole`, {
         assumedBy: new FederatedPrincipal(
           cluster.openIdConnectProvider.openIdConnectProviderArn,

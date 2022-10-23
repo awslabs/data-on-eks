@@ -1,16 +1,27 @@
 import { Construct } from 'constructs';
 import * as blueprints from '@aws-quickstart/eks-blueprints'
 import { GenericClusterProvider, PlatformTeam, VpcProvider } from '@aws-quickstart/eks-blueprints';
-import { CapacityType, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
-import { InstanceType } from 'aws-cdk-lib/aws-ec2';
+import { CapacityType, Cluster, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
+import { InstanceType, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { ManagedPolicy, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { EmrEksTeam, EmrEksTeamProps } from './teams/emrEksTeam';
 import { ArnFormat, Aws, Stack } from 'aws-cdk-lib';
+import { EmrEksAddOn } from './AddOns/emrEksAddOn';
+
+/** 
+ * show karpenter, CA
+ * Add fargate
+*/
+
+export interface EmrEksBlueprintProps {
+  eksCluster?: Cluster,
+  clusterVpc?: Vpc
+}
+
 
 export default class EmrEksStack {
 
     build (scope: Construct, id: string) {
-
 
         const eksClusterLogging: ClusterLoggingTypes [] = [
             ClusterLoggingTypes.API,
@@ -25,16 +36,19 @@ export default class EmrEksStack {
             version: KubernetesVersion.of('1.21'),
             managedNodeGroups: [
                 {
-                    id: "tooling",
+                    id: "core-ng",
                     amiType: NodegroupAmiType.AL2_X86_64,
                     instanceTypes: [new InstanceType('t3.large')],
                     diskSize: 50
                 },
                 {
                     id: "spark",
-                    instanceTypes: [new InstanceType('r5.xlarge')],
+                    instanceTypes: [new InstanceType('r5d.xlarge')],
                     nodeGroupCapacityType: CapacityType.ON_DEMAND,
-                    diskSize: 50
+                    diskSize: 50,
+                    labels: {
+                      app: 'spark'
+                    }
                     
                 }
             ],
@@ -49,7 +63,7 @@ export default class EmrEksStack {
         const stack = Stack.of(scope);
         
         const policy1 = new ManagedPolicy(scope, 'MyPolicy1', {
-            managedPolicyName: 'myPolicy',
+            managedPolicyName: 'policyAddOn',
             statements: [
               new PolicyStatement({
                 resources: ['*'],
@@ -84,7 +98,7 @@ export default class EmrEksStack {
                 excutionRoles: [
                     {
                         excutionRoleIamPolicy: policy1,
-                        excutionRoleName: 'myExecRole'
+                        excutionRoleName: 'myBlueprintExecRole'
                     }
                 ]
             };
@@ -99,7 +113,8 @@ export default class EmrEksStack {
                     new blueprints.CertManagerAddOn,
                     new blueprints.AwsLoadBalancerControllerAddOn,
                     new blueprints.EbsCsiDriverAddOn,
-                    new blueprints.KubeProxyAddOn)
+                    new blueprints.KubeProxyAddOn,
+                    new EmrEksAddOn)
                 .teams(
                   clusterAdminTeam, 
                   new EmrEksTeam(dataTeam))
