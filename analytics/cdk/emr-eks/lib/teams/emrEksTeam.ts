@@ -1,25 +1,24 @@
 import { Cluster, KubernetesManifest } from "aws-cdk-lib/aws-eks";
-import { ApplicationTeam, ClusterAddOn, ClusterInfo, Team, TeamProps } from "@aws-quickstart/eks-blueprints";
-import { readYamlDocument, loadYaml, dependable } from "@aws-quickstart/eks-blueprints/dist/utils"
-import { CfnServiceLinkedRole, FederatedPrincipal, IManagedPolicy, IRole, Role } from "aws-cdk-lib/aws-iam";
+import { ApplicationTeam, ClusterInfo, TeamProps } from "@aws-quickstart/eks-blueprints";
+import { readYamlDocument, loadYaml } from "@aws-quickstart/eks-blueprints/dist/utils"
+import { FederatedPrincipal, IManagedPolicy, IRole, ManagedPolicy, PolicyStatement, Role } from "aws-cdk-lib/aws-iam";
 import { Aws, CfnJson, CfnOutput, Stack } from "aws-cdk-lib";
 import * as blueprints from '@aws-quickstart/eks-blueprints';
 import * as SimpleBase from 'simple-base';
 import { CfnVirtualCluster } from "aws-cdk-lib/aws-emrcontainers";
-import { EmrEksAddOn } from "../AddOns/emrEksAddOn";
-import { create } from "domain";
 
 
-export interface excutionRoleDefinition {
+export interface ExcutionRoleDefinition {
   excutionRoleName: string,
-  excutionRoleIamPolicy: IManagedPolicy,
+  excutionRoleIamPolicy?: IManagedPolicy 
+  excutionRoleIamPolicyStatement?: PolicyStatement[],
 }
 
 export interface EmrEksTeamProps extends TeamProps {
   virtualClusterNamespace: string,
   createNamespace: boolean,
   virtualClusterName: string,
-  excutionRoles: excutionRoleDefinition []
+  excutionRoles: ExcutionRoleDefinition []
 }
 
 
@@ -38,9 +37,16 @@ export class EmrEksTeam extends ApplicationTeam {
         const emrVcPrerequisit = this.setEmrContainersForNamespace (cluster, this.emrTeam.virtualClusterNamespace, this.emrTeam.createNamespace);
 
         this.emrTeam.excutionRoles.forEach(excutionRole => {
+
+          const executionRolePolicy = excutionRole.excutionRoleIamPolicy ? 
+              excutionRole.excutionRoleIamPolicy : 
+              new ManagedPolicy(cluster.stack, `executionRole-${excutionRole.excutionRoleName}-Policy`, {
+                statements: excutionRole.excutionRoleIamPolicyStatement,
+              });
+
           this.createExecutionRole(
             cluster, 
-            excutionRole.excutionRoleIamPolicy, 
+            executionRolePolicy, 
             this.emrTeam.virtualClusterNamespace, 
             excutionRole.excutionRoleName);
         });

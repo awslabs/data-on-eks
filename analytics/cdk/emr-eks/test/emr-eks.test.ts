@@ -1,17 +1,70 @@
-// import * as cdk from 'aws-cdk-lib';
-// import { Template } from 'aws-cdk-lib/assertions';
-// import * as EmrEks from '../lib/emr-eks-stack';
+/**
+ * Tests EMR on EKS AddOn
+ *
+ * @group unit/emr-eks-addon
+ */
 
-// example test. To run these tests, uncomment this file along with the
-// example resource in lib/emr-eks-stack.ts
-test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new EmrEks.EmrEksStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
+import * as blueprints from '@aws-quickstart/eks-blueprints';
+import * as cdk from 'aws-cdk-lib';
+import { EmrEksAddOn } from '../lib/AddOns/emrEksAddOn';
+import {EmrEksTeam, EmrEksTeamProps} from '../lib/teams/emrEksTeam';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Template } from 'aws-cdk-lib/assertions';
 
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+const app = new cdk.App();
+
+const executionRolePolicyStatement: PolicyStatement [] = [
+      new PolicyStatement({
+        resources: ['*'],
+        actions: ['s3:*'],
+      }),
+      new PolicyStatement({
+        resources: ['*'],   
+        actions: ['glue:*'],
+      }),
+      new PolicyStatement({
+        resources: ['*'],
+        actions: [
+          'logs:*',
+        ],
+      }),
+    ];
+
+const dataTeam: EmrEksTeamProps = {
+        name:'dataTeam',
+        virtualClusterName: 'batchJob',
+        virtualClusterNamespace: 'batchjob',
+        createNamespace: true,
+        excutionRoles: [
+            {
+                excutionRoleIamPolicyStatement: executionRolePolicyStatement,
+                excutionRoleName: 'myBlueprintExecRole'
+            }
+        ]
+    };
+
+const parentStack = blueprints.EksBlueprint.builder()
+        .addOns(
+            new blueprints.VpcCniAddOn(),
+            new blueprints.CoreDnsAddOn(),
+            new blueprints.MetricsServerAddOn,
+            new blueprints.ClusterAutoScalerAddOn,
+            new blueprints.CertManagerAddOn,
+            new blueprints.AwsLoadBalancerControllerAddOn,
+            new blueprints.EbsCsiDriverAddOn,
+            new blueprints.KubeProxyAddOn,
+            new EmrEksAddOn)
+        .teams(
+            new EmrEksTeam(dataTeam))
+        .build(app, "test-emr-eks-blueprint");
+
+const template = Template.fromStack(parentStack);
+
+test('Verify the creation of emr-containters service role', () => {
+    
+    template.hasResourceProperties('AWS::IAM::ServiceLinkedRole', {
+        AWSServiceName: "emr-containers.amazonaws.com"
+      }
+    );
+
 });
