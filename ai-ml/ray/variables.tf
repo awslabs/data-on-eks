@@ -1,7 +1,7 @@
 variable "eks_cluster_domain" {
   description = "Optional Route53 domain for the cluster."
   type        = string
-  default     = null
+  default     = ""
 }
 
 variable "acm_certificate_domain" {
@@ -13,12 +13,12 @@ variable "acm_certificate_domain" {
 variable "region" {
   description = "AWS Region"
   type        = string
-  default     = "us-west-2"
+  default     = "eu-west-1"
 }
 
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "emr-eks-amp-amg"
+  default     = "ray"
   type        = string
 }
 
