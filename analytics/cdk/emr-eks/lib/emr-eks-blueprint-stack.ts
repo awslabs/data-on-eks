@@ -11,7 +11,8 @@ import { StackProps } from 'aws-cdk-lib';
 export interface EmrEksBlueprintProps extends StackProps {
   eksCluster?: GenericClusterProvider,
   clusterVpc?: IVpc,
-  dataTeams: EmrEksTeamProps []
+  dataTeams: EmrEksTeamProps [],
+  eksClusterName?: string,
 }
 
 
@@ -28,7 +29,7 @@ export default class EmrEksStack {
     ];
 
     const emrCluster: GenericClusterProvider = new blueprints.GenericClusterProvider({
-      clusterName: 'eksblue',
+      clusterName: props.eksClusterName ? props.eksClusterName : 'eksBlueprintCluster',
       version: KubernetesVersion.of('1.21'),
       managedNodeGroups: [
         {
@@ -62,6 +63,12 @@ export default class EmrEksStack {
       emrEksBlueprint.resourceProvider(GlobalResources.Vpc, new VpcProvider(props.clusterVpc.vpcId));
     }
 
+    let emrTeams: EmrEksTeam [];
+
+    props.dataTeams.forEach(dataTeam => {
+      emrTeams.push(new EmrEksTeam(dataTeam) )
+    });
+
     emrEksBlueprint = props.eksCluster ?
       emrEksBlueprint.clusterProvider(props.eksCluster) :
       emrEksBlueprint.clusterProvider(emrCluster);
@@ -78,7 +85,7 @@ export default class EmrEksStack {
         new EmrEksAddOn)
       .teams(
         clusterAdminTeam,
-        new EmrEksTeam(props.dataTeams[0]))
+        ...emrTeams!)
       .build(scope, `${id}-emr-eks-blueprint`);
 
   }
