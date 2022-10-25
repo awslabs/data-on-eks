@@ -94,32 +94,10 @@ namesapce mwaa will be used by MWAA directly.
 
 - Open the Environments page on the Amazon MWAA console
 - Choose an environment
-- Under the `Details` section, click the link for the Airflow UI
+- Under the `Details` section, click the link for the Airflow UI<br />
+Note: You will see red error message once login. That is because the EMR connection has not been setup. The message will be gone after following the steps below to set up the connection and login again. 
 
-2. Trigger the DAG workflow to execute job in EKS
-
-In the Airflow UI, enable the example DAG kubernetes_pod_example and then trigger it.
-
-![Enable the DAG kubernetes_pod_example ](kubernetes_pod_example_dag.png)
-
-![Trigger the DAG kubernetes_pod_example ](dag_tree.png)
-
-Verify that the pod was executed successfully
-
-After it runs and completes successfully, use the following command to verify the pod:
-
-```bash
-kubectl get pods -n mwaa
-```
-
-You should see output similar to the following:
-
-```bash
-NAME                                             READY   STATUS      RESTARTS   AGE
-mwaa-pod-test.4bed823d645844bc8e6899fd858f119d   0/1     Completed   0          25s
-```
-
-3. Trigger the DAG workflow to execute job in EMR on EKS
+2. Trigger the DAG workflow to execute job in EMR on EKS
 
 First, you need to set up the connection to EMR virtual cluster in MWAA
 ![add connection](add-connection.PNG)
@@ -128,6 +106,7 @@ Click Add button, <br />
 make sure use emr_eks as Connection Id <br />
 Amazon Web Services as Connection Type <br />
 replace the value in Extra based on your terraform output <br />
+{"virtual_cluster_id":"<emrcontainers_virtual_cluster_id in terraform output>", "job_role_arn":"<emr_on_eks_role_arn in terraform output>"}
 ![Add a new connection](Add-new-connection.PNG)
 
 
@@ -157,6 +136,32 @@ job.batch/000000030tk2ihdmr8g   0/1           92s        92s
 ```
 You can also check the job status in Amazon EMR console. Under the `Virtual clusters` section, click the your Virtual cluster
 ![EMR job status](emr-job-status.PNG)
+
+
+3. Trigger the DAG workflow to execute job in EKS
+
+In the Airflow UI, enable the example DAG kubernetes_pod_example and then trigger it.
+
+![Enable the DAG kubernetes_pod_example ](kubernetes_pod_example_dag.png)
+
+![Trigger the DAG kubernetes_pod_example ](dag_tree.png)
+
+Verify that the pod was executed successfully
+
+After it runs and completes successfully, use the following command to verify the pod:
+
+```bash
+kubectl get pods -n mwaa
+```
+
+You should see output similar to the following:
+
+```bash
+NAME                                             READY   STATUS      RESTARTS   AGE
+mwaa-pod-test.4bed823d645844bc8e6899fd858f119d   0/1     Completed   0          25s
+```
+
+
 
 ## Destroy
 
