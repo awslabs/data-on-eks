@@ -26,7 +26,7 @@ To provision this example:
 ```bash
 cd data-on-eks/schedulers/argo-workflow
 terraform init
-terraform apply
+terraform apply -var region=<aws_region> #defaults to us-west-2
 ```
 
 Enter `yes` at command prompt to apply
@@ -90,7 +90,10 @@ Bearer k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZX
 Open browser and enter http://localhost:2746/ and paste the token
 ![argo-workflow-login](argo-workflow-login.png)
 
-5. Use Argo workflows to create a spark job workflow
+5. Use Argo workflows to create a spark job workflow <br/>
+Modify workflow-example/argo-spark.yaml with your eks api server url
+
+
 ```bash
 kubectl apply -f workflow-example/argo-spark.yaml
 
