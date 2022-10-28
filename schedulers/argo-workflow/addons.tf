@@ -62,7 +62,7 @@ locals {
     chart            = "argo-workflows"
     repository       = "https://argoproj.github.io/argo-helm"
     version          = "v0.20.1"
-    namespace        = "argo"
+    namespace        = "argo-workflows"
     create_namespace = true
     description      = "Argo workflows Helm chart deployment configuration"
   }

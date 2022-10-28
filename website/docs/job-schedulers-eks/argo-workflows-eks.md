@@ -70,7 +70,7 @@ kubectl get ns
 
 # Output should look like below
 NAME              STATUS   AGE
-argo              Active   28h
+argo-workflows    Active   28h
 default           Active   30h
 kube-node-lease   Active   30h
 kube-public       Active   30h
@@ -81,7 +81,7 @@ yunikorn          Active   30h
 
 4. Argo workflows provide a web UI. You can access by following steps:  
 ```bash
-kubectl -n argo port-forward deployment.apps/argo-workflows-server 2746:2746
+kubectl -n argo-workflows port-forward deployment.apps/argo-workflows-server 2746:2746
 argo auth token # get login token
 # result:
 Bearer k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZXRDYWxsZXJJZGVudGl0eSZWZXJzaW9uPTIwMTEtMDYtMTUmWC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNWNFhDV1dLUjZGVTRGMiUyRjIwMjIxMDEzJTJGdXMtd2VzdC0yJTJGc3RzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyMjEwMTNUMDIyODAyWiZYLUFtei1FeHBpcmVzPTYwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCUzQngtazhzLWF3cy1pZCZYLUFtei1TaWduYXR1cmU9NmZiNmMxYmQ0MDQyMWIwNTI3NjY4MzZhMGJiNmUzNjg1MTk1YmM0NDQzMjIyMTg5ZDNmZmE1YzJjZmRiMjc4OA
@@ -97,7 +97,7 @@ Modify workflow-example/argo-spark.yaml with your eks api server url
 ```bash
 kubectl apply -f workflow-example/argo-spark.yaml
 
-kubectl get wf -n argo
+kubectl get wf -n argo-workflows
 NAME    STATUS    AGE   MESSAGE
 spark   Running   8s  
 ```
@@ -108,7 +108,7 @@ You can also check the workflow status from web UI
 ```bash
 kubectl apply -f workflow-example/argo-spark-operator.yaml
 
-kubectl get wf -n argo
+kubectl get wf -n argo-workflows 
 NAME             STATUS      AGE     MESSAGE
 spark            Succeeded   3m58s  
 spark-operator   Running     5s  
