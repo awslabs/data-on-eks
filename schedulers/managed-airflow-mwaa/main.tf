@@ -149,7 +149,18 @@ locals {
     users = [{
       name = "mwaa"
       user = {
-        token = data.aws_eks_cluster_auth.this.token
+        exec = {
+          apiVersion = "client.authentication.k8s.io/v1beta1"
+          command = "aws"
+          args = [
+            "--region",
+            local.region,
+            "eks",
+            "get-token",
+            "--cluster-name",
+            local.name
+          ]
+        }
       }
     }]
   })
