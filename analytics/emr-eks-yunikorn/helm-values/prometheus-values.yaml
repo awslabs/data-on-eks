@@ -11,7 +11,8 @@ server:
     scrape_timeout: 10s
     external_labels:
       cluster_id: ${eks_cluster_id}  # Each cluster should have a unique ID
-  # Server Deployment Strategy type
+
+  # This is required to upgrade the Prometheus version. Avoids the db lock error
   strategy:
     type: Recreate
 
@@ -74,16 +75,3 @@ extraScrapeConfigs: |
     static_configs:
       - targets:
           - yunikorn-service.yunikorn.svc.cluster.local:9080
-
-
-#    - job_name: kubecost
-#      honor_labels: true
-#      scrape_interval: 1m
-#      scrape_timeout: 10s
-#      metrics_path: /metrics
-#      scheme: http
-#      dns_sd_configs:
-#        - names:
-#            - kubecost-cost-analyzer.kubecost.svc
-#          type: 'A'
-#          port: 9003

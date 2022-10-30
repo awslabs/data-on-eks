@@ -10,7 +10,7 @@ locals {
     GithubRepo = "github.com/awslabs/data-on-eks"
   })
 
-  spark_team    = "spark-team-a"
+  spark_team = "spark-team-a"
 
   emr_on_eks_teams = {
     emr-data-team-a = {
@@ -24,7 +24,4 @@ locals {
       additional_iam_policies = [aws_iam_policy.emr_data_team_b.arn]
     }
   }
-
-  kubecost_iam_role_name = format("%s-%s", local.name, "kubecost-irsa")
-  kubecost_iam_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.kubecost_iam_role_name}"
 }
