@@ -47,21 +47,12 @@ aws s3 sync ./spark-scripts/pod-templates "${SPARK_JOB_S3_PATH}/pod-templates"
 aws s3 sync ./spark-scripts/scripts "${SPARK_JOB_S3_PATH}/scripts"
 
 #--------------------------------------------
-# NOTE: This section downloads the test data from AWS Public Dataset. You can comment this `wget` section and bring your own inpout data required for sample PySpark test
-# Download sample input data from https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+# NOTE: This section downloads the test data from AWS Public Dataset. You can comment this section and bring your own input data required for sample PySpark test
+# Uploads data from AWS Public Dataset(us-east-1 region) to your S3 bucket
+# https://registry.opendata.aws/nyc-tlc-trip-records-pds/
+# This process may take sometime depending on the network speed
 #--------------------------------------------
-# Create folder locally to store the input data
-
-mkdir -p "spark-scripts/input"
-
-# Download the input data from public data set to local folders
-max=20
-for (( i=1; i <= $max; ++i ))
-do
-    wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "spark-scripts/input/yellow_tripdata_2022-${i}.parquet"
-done
-
-aws s3 sync ./spark-scripts/input "${SPARK_JOB_S3_PATH}/input"
+aws s3 sync --region us-east-1 "s3://nyc-tlc/trip data/" "${SPARK_JOB_S3_PATH}/input"
 
 #--------------------------------------------
 # Execute Spark job

@@ -9,6 +9,11 @@ server:
     evaluation_interval: 30s
     scrape_interval: 30s
     scrape_timeout: 10s
+    external_labels:
+      cluster_id: ${eks_cluster_id}  # Each cluster should have a unique ID
+  # Server Deployment Strategy type
+  strategy:
+    type: Recreate
 
   resources:
     requests:
@@ -30,13 +35,17 @@ server:
   nodeSelector:
     kubernetes.io/os: ${operating_system}
     NodeGroupType: core
+
   persistentVolume:
     accessModes:
       - ReadWriteOnce
     enabled: true
     mountPath: /data
-    size: 20Gi
+    size: 80Gi
     storageClass: gp2
+  extraArgs:
+    query.max-concurrency: 1
+    query.max-samples: 100000000
 
 alertmanager:
   nodeSelector:
@@ -57,9 +66,24 @@ nodeExporter:
   nodeSelector:
     kubernetes.io/os: ${operating_system}
 
-  # Additional scrape config for Apache YuniKorn Scheduler metrics
-  #      - job_name: 'yunikorn'
-  #        metrics_path: '/ws/v1/metrics'
-  #        static_configs:
-  #          - targets:
-  #              - yunikorn-service.yunikorn.svc.cluster.local:9080
+# Additional scrape config for Apache YuniKorn Scheduler metrics
+extraScrapeConfigs: |
+  - job_name: 'yunikorn'
+    scrape_interval: 1s
+    metrics_path: '/ws/v1/metrics'
+    static_configs:
+      - targets:
+          - yunikorn-service.yunikorn.svc.cluster.local:9080
+
+
+#    - job_name: kubecost
+#      honor_labels: true
+#      scrape_interval: 1m
+#      scrape_timeout: 10s
+#      metrics_path: /metrics
+#      scheme: http
+#      dns_sd_configs:
+#        - names:
+#            - kubecost-cost-analyzer.kubecost.svc
+#          type: 'A'
+#          port: 9003

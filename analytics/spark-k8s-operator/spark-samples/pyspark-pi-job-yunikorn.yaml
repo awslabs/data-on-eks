@@ -22,7 +22,7 @@ spec:
   mainApplicationFile: "s3a://<ENTER_YOUR_BUCKET>/spark-catalog-sales.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
     - "s3a://<ENTER_YOUR_BUCKET>/TPCDS-TEST-1T/catalog_sales/" # Copy your Input parquet sample data before executing the job
-    - "s3a://<ENTER_YOUR_BUCKET>/output/catalog_sales/"
+    - "s3a://<ENTER_YOUR_BUCKET>/TPCDS-OUTPUT/catalog_sales/"
   hadoopConf:
     "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # or  "com.amazonaws.auth.InstanceProfileCredentialsProvider"
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"

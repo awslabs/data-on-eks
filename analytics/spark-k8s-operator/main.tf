@@ -122,7 +122,7 @@ module "eks_blueprints" {
       post_userdata = <<-EOT
         #!/bin/bash
         set -ex
-        /usr/bin/chown -hR +999:+1000 /local1
+        /usr/bin/chown -hR +185:+1000 /local1
       EOT
 
       disk_size = 100

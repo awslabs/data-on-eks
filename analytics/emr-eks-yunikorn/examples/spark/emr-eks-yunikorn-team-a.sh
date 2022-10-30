@@ -47,21 +47,24 @@ aws s3 sync ./spark-scripts/pod-templates "${SPARK_JOB_S3_PATH}/pod-templates"
 aws s3 sync ./spark-scripts/scripts "${SPARK_JOB_S3_PATH}/scripts"
 
 #--------------------------------------------
-# NOTE: This section downloads the test data from AWS Public Dataset. You can comment this `wget` section and bring your own inpout data required for sample PySpark test
-# Download sample input data from https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+# NOTE: This section downloads the test data from AWS Public Dataset. You can comment this section and bring your own input data required for sample PySpark test
+# Uploads data from AWS Public Dataset(us-east-1 region) to your S3 bucket
+# https://registry.opendata.aws/nyc-tlc-trip-records-pds/
+# You can always cancel the sync if it takes longer time after few minutes which will copy atleast few files for your test
 #--------------------------------------------
-# Create folder locally to store the input data
 
-mkdir -p "spark-scripts/input"
+# mkdir -p "spark-scripts/input"
+#
+# wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "spark-scripts/input/yellow_tripdata_2022-1.parquet"
+#
+# # Download the input data from public data set to local folders
+# max=20
+# for (( i=1; i <= $max; ++i ))
+# do
+#     cp spark-scripts/input/yellow_tripdata_2022-1.parquet "spark-scripts/input/yellow_tripdata_2022-${i}.parquet"
+# done
 
-# Download the input data from public data set to local folders
-max=20
-for (( i=1; i <= $max; ++i ))
-do
-    wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "spark-scripts/input/yellow_tripdata_2022-${i}.parquet"
-done
-
-aws s3 sync ./spark-scripts/input "${SPARK_JOB_S3_PATH}/input"
+# aws s3 sync ./spark-scripts/input "${SPARK_JOB_S3_PATH}/input"
 
 #--------------------------------------------
 # Execute Spark job
@@ -80,7 +83,7 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
         "entryPointArguments": ["'"$SPARK_JOB_S3_PATH"'/input/",
           "'"$SPARK_JOB_S3_PATH"'/output/"
         ],
-        "sparkSubmitParameters": "--conf spark.executor.instances=2 --conf spark.executor.cores=1 --conf spark.driver.cores=1"
+        "sparkSubmitParameters": "--conf spark.executor.instances=2"
       }
    }' \
     --configuration-overrides '{
@@ -88,10 +91,12 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
           {
             "classification": "spark-defaults",
             "properties": {
+              "spark.driver.cores":"1",
+              "spark.executor.cores":"1",
+              "spark.driver.memory": "4g",
+              "spark.executor.memory": "4g",
               "spark.kubernetes.driver.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/spark-driver-team-a.yaml",
               "spark.kubernetes.executor.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/spark-executor-team-a.yaml",
-              "spark.driver.memory":"2g",
-              "spark.executor.memory":"4g",
               "spark.local.dir" : "/data1",
 
               "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
