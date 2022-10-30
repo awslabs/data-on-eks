@@ -1,9 +1,14 @@
+# This script requires a TPCDS-TEST-1T input data to be generated in your S3 bucket
+# Use this analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml script to generate the test data
+# Alternatively you can use any test data with your PySpark script.
+# This example will demonstrate the Gang Scheduling. Check the PoD templates for more config
+
 #!/bin/bash
 
 if [ $# -ne 3 ];
 then
   echo "$0: Missing arguments EMR_VIRTUAL_CLUSTER_NAME, S3_BUCKET_NAME and EMR_JOB_EXECUTION_ROLE_ARN"
-  echo "USAGE: ./emr-eks-yunikorn-team-b.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
+  echo "USAGE: ./emr-eks-yunikorn-team-a.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
   exit 1
 else
   echo "We got some argument(s)"
@@ -31,37 +36,39 @@ EMR_VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtu
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
-JOB_NAME='taxidata'
-EMR_EKS_RELEASE_LABEL="emr-6.8.0-latest" # Spark 3.3.0
-SPARK_JOB_S3_PATH="${S3_BUCKET}/emr_virtual_cluster_name=${EMR_VIRTUAL_CLUSTER_NAME}/job_name=${JOB_NAME}"
-
-#--------------------------------------------
-# CLOUDWATCH LOG GROUP NAME
-#--------------------------------------------
+JOB_NAME='emr-yunikorn-gang-scheduling'  # Same name as example folder name
+EMR_EKS_RELEASE_LABEL="emr-6.7.0-latest" # Spark 3.2.1
 CW_LOG_GROUP="/emr-on-eks-logs/${EMR_VIRTUAL_CLUSTER_NAME}" # Create CW Log group if not exist
 
-#--------------------------------------------
-# Copy PySpark script and Pod templates to S3 bucket
-#--------------------------------------------
-aws s3 sync ./spark-scripts/pod-templates "${SPARK_JOB_S3_PATH}/pod-templates"
-aws s3 sync ./spark-scripts/scripts "${SPARK_JOB_S3_PATH}/scripts"
+SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_NAME}/${JOB_NAME}"
+SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
+INPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/input"
+OUTPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/output"
 
 #--------------------------------------------
-# NOTE: This section downloads the test data from AWS Public Dataset. You can comment this `wget` section and bring your own inpout data required for sample PySpark test
-# Download sample input data from https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+# Copy PySpark Scripts, Pod Templates and Input data to S3 bucket
 #--------------------------------------------
-# Create folder locally to store the input data
+aws s3 sync "./" ${SCRIPTS_S3_PATH}
 
-mkdir -p "spark-scripts/input"
+#--------------------------------------------
+# NOTE: This section downloads the test data from AWS Public Dataset. You can comment this section and bring your own input data required for sample PySpark test
+# https://registry.opendata.aws/nyc-tlc-trip-records-pds/
+#--------------------------------------------
 
+mkdir -p "../input"
 # Download the input data from public data set to local folders
+wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
+
+# Making duplicate copies to increase the size of the data.
 max=20
 for (( i=1; i <= $max; ++i ))
 do
-    wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "spark-scripts/input/yellow_tripdata_2022-${i}.parquet"
+    cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
 done
 
-aws s3 sync ./spark-scripts/input "${SPARK_JOB_S3_PATH}/input"
+aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
+
+rm -rf "../input" # delete local input folder
 
 #--------------------------------------------
 # Execute Spark job
@@ -76,11 +83,11 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
     --release-label $EMR_EKS_RELEASE_LABEL \
     --job-driver '{
       "sparkSubmitJobDriver": {
-        "entryPoint": "'"$SPARK_JOB_S3_PATH"'/scripts/sample-spark-taxi-trip.py",
-        "entryPointArguments": ["'"$SPARK_JOB_S3_PATH"'/input/",
-          "'"$SPARK_JOB_S3_PATH"'/output/"
+        "entryPoint": "'"$SCRIPTS_S3_PATH"'/pyspark-taxi-trip.py",
+        "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'",
+          "'"$OUTPUT_DATA_S3_PATH"'"
         ],
-        "sparkSubmitParameters": "--conf spark.executor.instances=20 --conf spark.executor.cores=1 --conf spark.driver.cores=1"
+        "sparkSubmitParameters": "--conf spark.executor.instances=6"
       }
    }' \
     --configuration-overrides '{
@@ -88,11 +95,13 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
           {
             "classification": "spark-defaults",
             "properties": {
-              "spark.kubernetes.driver.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/spark-driver-team-b.yaml",
-              "spark.kubernetes.executor.podTemplateFile":"'"$SPARK_JOB_S3_PATH"'/pod-templates/spark-executor-team-b.yaml",
-              "spark.driver.memory":"2g",
-              "spark.executor.memory":"4g",
-              "spark.local.dir" : "/data1",
+              "spark.driver.cores":"1",
+              "spark.executor.cores":"1",
+              "spark.driver.memory": "10g",
+              "spark.executor.memory": "10g",
+              "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
+              "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
+              "spark.local.dir" : "/emrdata",
 
               "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
               "spark.ui.prometheus.enabled":"true",

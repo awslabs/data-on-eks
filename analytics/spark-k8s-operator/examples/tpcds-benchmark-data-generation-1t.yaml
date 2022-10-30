@@ -1,5 +1,5 @@
 # NOTE: This example requires the following prerequisites before executing the jobs
-# 1. Ensure spark-team-a name space exists
+# 1. Ensure "spark-team-a" namespace exists
 # 2. replace <ENTER_YOUR_BUCKET> with your bucket name
 
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -9,7 +9,7 @@ metadata:
   namespace: spark-team-a
   labels:
     yunikorn.apache.org/username: "vara"
-    queue: "root.spark"
+    queue: "root.dev"
 spec:
   type: Scala
 #  pythonVersion: "3"
@@ -57,12 +57,6 @@ spec:
     "spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a": "org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory"
     "spark.sql.execution.arrow.pyspark.enabled": "true"
     "spark.sql.execution.arrow.pyspark.fallback.enabled": "true"
-    # "spark.eventLog.enabled": "true"
-    # "spark.eventLog.dir": "s3a://<ENTER_YOUR_BUCKET_NAME>/spark-event-logs/"
-    # "spark.kubernetes.driver.label.queue": "root.spark"
-    # "spark.kubernetes.driver.label.yunikorn.apache.org/username": "vara"
-    # "spark.kubernetes.executor.label.queue": "root.spark"
-    # "spark.kubernetes.executor.label.yunikorn.apache.org/username": "vara"
   restartPolicy:
     type: OnFailure
     onFailureRetries: 3

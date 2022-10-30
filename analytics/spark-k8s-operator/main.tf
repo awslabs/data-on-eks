@@ -1,16 +1,3 @@
-locals {
-  name          = var.name
-  region        = var.region
-  azs           = slice(data.aws_availability_zones.available.names, 0, 3)
-  vpc_endpoints = ["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]
-  spark_team    = "spark-team-a"
-
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/awslabs/data-on-eks"
-  }
-}
-
 #---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
@@ -122,7 +109,7 @@ module "eks_blueprints" {
       post_userdata = <<-EOT
         #!/bin/bash
         set -ex
-        /usr/bin/chown -hR +999:+1000 /local1
+        /usr/bin/chown -hR +185:+1000 /local1
       EOT
 
       disk_size = 100

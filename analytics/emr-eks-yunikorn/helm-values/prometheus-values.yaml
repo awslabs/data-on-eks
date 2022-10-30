@@ -9,6 +9,12 @@ server:
     evaluation_interval: 30s
     scrape_interval: 30s
     scrape_timeout: 10s
+    external_labels:
+      cluster_id: ${eks_cluster_id}  # Each cluster should have a unique ID
+
+  # This is required to upgrade the Prometheus version. Avoids the db lock error
+  strategy:
+    type: Recreate
 
   resources:
     requests:
@@ -30,13 +36,17 @@ server:
   nodeSelector:
     kubernetes.io/os: ${operating_system}
     NodeGroupType: core
+
   persistentVolume:
     accessModes:
       - ReadWriteOnce
     enabled: true
     mountPath: /data
-    size: 20Gi
+    size: 80Gi
     storageClass: gp2
+  extraArgs:
+    query.max-concurrency: 1
+    query.max-samples: 100000000
 
 alertmanager:
   nodeSelector:
@@ -57,9 +67,11 @@ nodeExporter:
   nodeSelector:
     kubernetes.io/os: ${operating_system}
 
-  # Additional scrape config for Apache YuniKorn Scheduler metrics
-  #      - job_name: 'yunikorn'
-  #        metrics_path: '/ws/v1/metrics'
-  #        static_configs:
-  #          - targets:
-  #              - yunikorn-service.yunikorn.svc.cluster.local:9080
+# Additional scrape config for Apache YuniKorn Scheduler metrics
+extraScrapeConfigs: |
+  - job_name: 'yunikorn'
+    scrape_interval: 1s
+    metrics_path: '/ws/v1/metrics'
+    static_configs:
+      - targets:
+          - yunikorn-service.yunikorn.svc.cluster.local:9080

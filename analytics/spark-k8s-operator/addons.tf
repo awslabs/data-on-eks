@@ -79,7 +79,7 @@ module "eks_blueprints_kubernetes_addons" {
     name             = "spark-operator"
     chart            = "spark-operator"
     repository       = "https://googlecloudplatform.github.io/spark-on-k8s-operator"
-    version          = "1.1.25"
+    version          = "1.1.26"
     namespace        = "spark-operator"
     timeout          = "300"
     create_namespace = true
@@ -97,12 +97,15 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "yunikorn"
     repository = "https://apache.github.io/yunikorn-release"
     chart      = "yunikorn"
-    version    = "0.12.2"
-    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version    = "0.12.2"
-      operating_system = "linux"
-      node_group_type  = "core"
-    })]
+    version    = "1.1.0"
+    timeout    = "300"
+    values = [
+      templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+        image_version    = "1.1.0"
+        operating_system = "linux"
+        node_group_type  = "core"
+      })
+    ]
     timeout = "300"
   }
 

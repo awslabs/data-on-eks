@@ -75,7 +75,7 @@ Enter `yes` to apply.
 ## Execute Sample Spark Job on EKS Cluster with `spark-k8s-operator`
 
 ```bash
-  cd analytics/spark-k8s-operator/spark-samples
+  cd analytics/spark-k8s-operator/examples
   kubectl apply -f pyspark-pi-job.yaml
 ```
 
@@ -85,6 +85,39 @@ Enter `yes` to apply.
   kubectl get sparkapplications -n spark-team-a
 
   kubectl describe sparkapplication pyspark-pi -n spark-team-a
+```
+
+## Example for EBS Dynamic PVCs for shuffle storage
+_Note: Check the pre-requisites in yaml file before running this job.
+
+```bash
+  cd analytics/spark-k8s-operator/examples
+  kubectl apply -f ebs-ondemand-pvc.yaml
+```
+
+
+## Example for Apache YuniKorn Gang Scheduling with NVMe shuffle storage
+_Note: Check the pre-requisites in yaml file before running this job.
+
+```bash
+  cd analytics/spark-k8s-operator/examples
+  kubectl apply -f NVMe-yunikorn-gang-scheduling.yaml
+```
+
+## Example for TPCDS Test Data Generation tool
+_Note: Check the pre-requisites in yaml file before running this job.
+
+```bash
+  cd analytics/spark-k8s-operator/examples
+  kubectl apply -f tpcds-benchmark-data-generation-1t.yaml
+```
+
+## Example for TPCDS Benchmark test
+_Note: Check the pre-requisites in yaml file before running this job.
+
+```bash
+  cd analytics/spark-k8s-operator/examples
+  kubectl apply -f tpcds-benchmark-1t.yaml
 ```
 
 ## Cleanup
