@@ -1,7 +1,14 @@
-#-------------------------------------------------
-# Argo Workflows Helm Add-on
-#-------------------------------------------------
 locals {
+
+  name          = var.name
+  region        = var.region
+  azs           = slice(data.aws_availability_zones.available.names, 0, 3)
+  vpc_endpoints = ["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]
+
+  tags = {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  }
 
   default_helm_config = {
     name             = "argo-workflows"
@@ -24,19 +31,4 @@ locals {
   }
 
   eks_oidc_issuer_url = replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
-}
-
-#-------------------------------------------------
-# EKS cluster 
-#-------------------------------------------------
-locals {
-  name          = var.name
-  region        = var.region
-  azs           = slice(data.aws_availability_zones.available.names, 0, 3)
-  vpc_endpoints = ["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]
-
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/awslabs/data-on-eks"
-  }
 }
