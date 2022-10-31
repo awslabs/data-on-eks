@@ -50,6 +50,24 @@ kinesis:
 elasticsearch:
   enabled: false
 
+# Use this config to write logs to an S3 bucket.
+# Pre-req
+#  1/ S3 bucket for logging
+#  2/ Additional IAM policy for FluentBit add-on IRSA config
+#  3/ Add this to Terraform to pass additional IAM policy "aws_for_fluentbit_irsa_policies = ["<ENTER_NEW_IAM_POLICY_FOR_S3>"]"
+
+additionalOutputs: |
+  [OUTPUT]
+      Name                            s3
+      Match                           *
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 100M
+      s3_key_format                   /fluentbit-logs/$TAG[4]/year=%Y/month=%m/day=%d/hour=%H/
+      s3_key_format_tag_delimiters    ._
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  10m
+
 serviceAccount:
   create: true
 
