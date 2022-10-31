@@ -57,9 +57,16 @@ nodeExporter:
   nodeSelector:
     kubernetes.io/os: ${operating_system}
 
-  # Additional scrape config for Apache YuniKorn Scheduler metrics
-  #      - job_name: 'yunikorn'
-  #        metrics_path: '/ws/v1/metrics'
-  #        static_configs:
-  #          - targets:
-  #              - yunikorn-service.yunikorn.svc.cluster.local:9080
+# Additional scrape config for KubeCost
+extraScrapeConfigs: |
+  - job_name: kubecost
+    honor_labels: true
+    scrape_interval: 1m
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+    dns_sd_configs:
+      - names:
+          - kubecost-cost-analyzer.kubecost.svc
+        type: 'A'
+        port: 9003

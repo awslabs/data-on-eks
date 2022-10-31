@@ -142,7 +142,37 @@ module "eks_blueprints_kubernetes_addons" {
     })]
   }
 
+  #---------------------------------------
+  # Kubecost
+  #---------------------------------------
+  enable_kubecost = true
+  kubecost_helm_config = {
+    name       = "kubecost"                      # (Required) Release name.
+    repository = "oci://public.ecr.aws/kubecost" # (Optional) Repository URL where to locate the requested chart.
+    chart      = "cost-analyzer"                 # (Required) Chart name to be installed.
+    version    = "1.97.0"                        # (Optional) Specify the exact chart version to install. If this is not specified, it defaults to the version set within default_helm_config: https://github.com/aws-ia/terraform-aws-eks-blueprints/blob/main/modules/kubernetes-addons/kubecost/locals.tf
+    namespace  = "kubecost"                      # (Optional) The namespace to install the release into.
+    timeout    = "300"
+    values = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {
+      iam-role-arn = local.kubecost_iam_role_arn
+    })]
+  }
+
   tags = local.tags
+}
+
+#---------------------------------------------------------------
+# Creates IAM Role for Service Account. Provides IAM permissions for Spark driver/executor pods
+#---------------------------------------------------------------
+module "kubecost_irsa" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.12.2"
+
+  eks_cluster_id             = local.name
+  eks_oidc_provider_arn      = module.eks_blueprints.eks_oidc_provider_arn
+  irsa_iam_policies          = ["arn:aws:iam::aws:policy/AdministratorAccess"]
+  irsa_iam_role_name         = local.kubecost_iam_role_name
+  kubernetes_namespace       = "kubecost"
+  kubernetes_service_account = "kubecost-cost-analyzer"
 }
 
 # Creates Launch templates for Karpenter
