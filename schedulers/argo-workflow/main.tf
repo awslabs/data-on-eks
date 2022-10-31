@@ -1,20 +1,8 @@
-locals {
-  name          = var.name
-  region        = var.region
-  azs           = slice(data.aws_availability_zones.available.names, 0, 3)
-  vpc_endpoints = ["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]
-
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/awslabs/data-on-eks"
-  }
-}
-
 #---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.10.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.14.0"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -107,58 +95,3 @@ module "eks_blueprints" {
   tags = local.tags
 }
 
-
-
-#---------------------------------------------------------------
-# Kubernetes Cluster role for argo workflows
-#---------------------------------------------------------------
-resource "kubernetes_cluster_role" "spark-cluster" {
-  metadata {
-    name = "spark-cluster-role"
-  }
-
-  rule {
-    verbs      = ["*"]
-    api_groups = ["sparkoperator.k8s.io"]
-    resources  = ["sparkapplications"]
-  }
-}
-#---------------------------------------------------------------
-# Kubernetes Cluster Role binding role for argo workflows
-#---------------------------------------------------------------
-resource "kubernetes_role_binding" "spark_role_binding" {
-  metadata {
-    name      = "argo-spark-rolebinding"
-    namespace = local.default_helm_config.namespace
-  }
-
-  subject {
-    kind      = "ServiceAccount"
-    name      = "default"
-    namespace = local.default_helm_config.namespace
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.spark-cluster.id
-  }
-}
-resource "kubernetes_role_binding" "argo-admin-rolebinding" {
-  metadata {
-    name      = "argo-admin-rolebinding"
-    namespace = local.default_helm_config.namespace
-  }
-
-  subject {
-    kind      = "ServiceAccount"
-    name      = "default"
-    namespace = local.default_helm_config.namespace
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "admin"
-  }
-}

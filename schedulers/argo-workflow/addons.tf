@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.10.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.14.0"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -26,12 +26,10 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_metrics_server = true
 
-
   #---------------------------------------------------------------
   # Cluster Autoscaler
   #---------------------------------------------------------------
   enable_cluster_autoscaler = true
-
 
   #---------------------------------------------------------------
   # Spark Operator Add-on
@@ -42,42 +40,6 @@ module "eks_blueprints_kubernetes_addons" {
   # Apache YuniKorn Add-on
   #---------------------------------------------------------------
   enable_yunikorn = true
-
-
-  depends_on = [
-    module.eks_blueprints
-  ]
-  tags = local.tags
-
-}
-
-
-#-------------------------------------------------
-# Argo Workflows Helm Add-on
-#-------------------------------------------------
-locals {
-
-  default_helm_config = {
-    name             = "argo-workflows"
-    chart            = "argo-workflows"
-    repository       = "https://argoproj.github.io/argo-helm"
-    version          = "v0.20.1"
-    namespace        = "argo-workflows"
-    create_namespace = true
-    description      = "Argo workflows Helm chart deployment configuration"
-  }
-
-
-
-  irsa_config = {
-    kubernetes_namespace              = local.default_helm_config["namespace"]
-    kubernetes_service_account        = local.name
-    create_kubernetes_namespace       = try(local.default_helm_config["create_namespace"], true)
-    create_kubernetes_service_account = false
-    irsa_iam_policies                 = []
-  }
-
-  eks_oidc_issuer_url = replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
 }
 
 module "helm_addon" {
@@ -98,9 +60,58 @@ module "helm_addon" {
     irsa_iam_role_path             = "/"
     irsa_iam_permissions_boundary  = ""
   }
+}
 
-  depends_on = [
-    module.eks_blueprints
-  ]
+#---------------------------------------------------------------
+# Kubernetes Cluster role for argo workflows
+#---------------------------------------------------------------
+resource "kubernetes_cluster_role" "spark-cluster" {
+  metadata {
+    name = "spark-cluster-role"
+  }
 
+  rule {
+    verbs      = ["*"]
+    api_groups = ["sparkoperator.k8s.io"]
+    resources  = ["sparkapplications"]
+  }
+}
+#---------------------------------------------------------------
+# Kubernetes Cluster Role binding role for argo workflows
+#---------------------------------------------------------------
+resource "kubernetes_role_binding" "spark_role_binding" {
+  metadata {
+    name      = "argo-spark-rolebinding"
+    namespace = local.default_helm_config.namespace
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = local.default_helm_config.namespace
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role.spark-cluster.id
+  }
+}
+resource "kubernetes_role_binding" "argo-admin-rolebinding" {
+  metadata {
+    name      = "argo-admin-rolebinding"
+    namespace = local.default_helm_config.namespace
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = local.default_helm_config.namespace
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "admin"
+  }
 }
