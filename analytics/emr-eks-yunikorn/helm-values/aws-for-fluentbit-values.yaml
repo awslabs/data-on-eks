@@ -59,7 +59,7 @@ elasticsearch:
 #      Name                            s3
 #      Match                           *
 #      region                          ${region}
-#      bucket                          ${s3_bucket_name}
+#      bucket                          <ENTER_YOUR_BUCKET_NAME>
 #      total_file_size                 100M
 #      s3_key_format                   /fluentbit-logs/$TAG[4]/year=%Y/month=%m/day=%d/hour=%H/
 #      s3_key_format_tag_delimiters    ._
