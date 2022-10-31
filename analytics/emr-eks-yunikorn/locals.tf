@@ -10,8 +10,6 @@ locals {
     GithubRepo = "github.com/awslabs/data-on-eks"
   })
 
-  spark_team = "spark-team-a"
-
   emr_on_eks_teams = {
     emr-data-team-a = {
       namespace               = "emr-data-team-a"
