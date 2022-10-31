@@ -20,7 +20,7 @@ spec:
             --deploy-mode cluster \
             --name sparkapp \
             --class org.apache.spark.examples.SparkPi \
-            --conf spark.kubernetes.namespace=argo \
+            --conf spark.kubernetes.namespace=argo-workflows \
             --conf spark.kubernetes.container.image=apache/spark:v3.2.1 \
             --conf spark.executor.memory=2G \
             --conf spark.executor.cores=2 \
