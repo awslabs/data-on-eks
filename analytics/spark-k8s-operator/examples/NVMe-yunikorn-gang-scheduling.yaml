@@ -2,7 +2,7 @@
 # 1. Ensure spark-team-a name space exists
 # 2. Ensure YuniKorn Helm Chart deployed in your Cluster
 # 3. replace <ENTER_YOUR_BUCKET> with your bucket name
-# 4. Ensure you run "analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml" to generate the INPUT data in S3 bucket and update INPUT argument(      "s3a://<ENTER_YOUR_BUCKET>/TPCDS-TEST-1T/catalog_sales/") path in the below yaml
+# 4. Ensure you run "tpcds-benchmark-data-generation-1t.yaml" to generate the INPUT data in S3 bucket and update INPUT argument(      "s3a://<ENTER_YOUR_S3_BUCKET>/TPCDS-TEST-1T/catalog_sales/") path in the below yaml
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -10,19 +10,24 @@ kind: SparkApplication
 metadata:
   name: catalog-sales-test1
   namespace: spark-team-a
+  labels:
+    app: catalog-sales
+    applicationId: catalog-sales-yunikorn
+    queue: root.test
+
 spec:
   batchScheduler: "yunikorn"
   type: Python
-  sparkVersion: "3.1.1"
+  sparkVersion: "3.2.1"
   pythonVersion: "3"
   mode: cluster
   # Public docker image used from datamechanics/spark:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest and pushed to ECR repo
   image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://<ENTER_YOUR_BUCKET>/spark-catalog-sales.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<ENTER_YOUR_S3_BUCKET>/spark-catalog-sales.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
-    - "s3a://<ENTER_YOUR_BUCKET>/TPCDS-TEST-1T/catalog_sales/" # Copy your Input parquet sample data before executing the job
-    - "s3a://<ENTER_YOUR_BUCKET>/output/catalog_sales/"
+    - "s3a://<ENTER_YOUR_S3_BUCKET>/TPCDS-TEST-1T/catalog_sales/" # Copy your Input parquet sample data before executing the job
+    - "s3a://<ENTER_YOUR_S3_BUCKET>/TPCDS-OUTPUT/catalog_sales/"
   hadoopConf:
     "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # or  "com.amazonaws.auth.InstanceProfileCredentialsProvider"
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
@@ -38,14 +43,14 @@ spec:
     "spark.hadoop.fs.s3a.input.fadvise": "random"
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     # YuniKorn Config
-    "spark.kubernetes.driver.label.queue": "root.spark-team-a"
-    "spark.kubernetes.driver.label.yunikorn.apache.org/username": "vara"
-    "spark.kubernetes.executor.label.queue": "root.spark-team-a"
-    "spark.kubernetes.executor.label.yunikorn.apache.org/username": "vara"
+#    "spark.kubernetes.driver.label.queue": "root.test"
+#    "spark.kubernetes.driver.label.yunikorn.apache.org/username": "vara"
+#    "spark.kubernetes.executor.label.queue": "root.test"
+#    "spark.kubernetes.executor.label.yunikorn.apache.org/username": "vara"
     #Event logs
-    "spark.local.dir": "/local1/catalog-sales1"
+    "spark.local.dir": "/data1"
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<ENTER_YOUR_BUCKET>/spark-event-logs"
+    "spark.eventLog.dir": "s3a://<ENTER_YOUR_S3_BUCKET>/spark-event-logs"
   #    "spark.eventLog.rolling.enabled": "true"
   #    "spark.eventLog.rolling.maxFileSize": "128m"
   restartPolicy:
@@ -57,45 +62,81 @@ spec:
   volumes:  # using NVMe instance storage mounted on /local1
     - name: spark-local-dir-1
       hostPath:
-        path: /local1/catalog-sales1
-        type: DirectoryOrCreate
+        path: /local1
+        type: Directory
 
   driver:
     volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
       - name: spark-local-dir-1
-        mountPath: /local1/catalog-sales1
+        mountPath: /data1
+        readOnly: false
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1/catalog-sales1' ]
+        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
         volumeMounts:
-          - mountPath: "/local1/catalog-sales1"
+          - mountPath: "/local1"
             name: "spark-local-dir-1"
     cores: 1
+    coreLimit: "1200m"
     memory: "10g"
-    memoryOverhead: "2g"
+    memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
-      version: 3.1.1
+      version: 3.2.1
+    annotations:
+      yunikorn.apache.org/schedulingPolicyParameters: "placeholderTimeoutSeconds=30 gangSchedulingStyle=Hard"
+      yunikorn.apache.org/task-group-name: "spark-driver"
+      # minMember should match with driver and executor instances
+      # minResource cpu and memory should match with driver and executor cpu and memory
+      yunikorn.apache.org/task-groups: |-
+        [{
+            "name": "spark-driver",
+            "minMember": 1,
+            "minResource": {
+              "cpu": "1200m",
+              "memory": "14Gi"
+            },
+            "nodeSelector": {
+              "NodeGroupType": "spark"
+            }
+          },
+          {
+            "name": "spark-executor",
+            "minMember": 4,
+            "minResource": {
+              "cpu": "1200m",
+              "memory": "14Gi"
+            },
+            "nodeSelector": {
+              "NodeGroupType": "spark"
+            }
+        }]
     nodeSelector:
       "NodeGroupType": "spark"
   executor:
+    podSecurityContext:
+      fsGroup: 185
     volumeMounts:
       - name: spark-local-dir-1
-        mountPath: /local1/catalog-sales1
+        mountPath: /data1
+        readOnly: false
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1/catalog-sales1' ]
+        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
         volumeMounts:
-          - mountPath: "/local1/catalog-sales1"
+          - mountPath: "/local1"
             name: "spark-local-dir-1"
     cores: 1
-    instances: 10
-    memory: "6g"
-    memoryOverhead: "2g"
+    coreLimit: "1200m"
+    instances: 4
+    memory: "10g"
+    memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
-      version: 3.1.1
+      version: 3.2.1
+    annotations:
+      yunikorn.apache.org/task-group-name: "spark-executor"
     nodeSelector:
       "NodeGroupType": "spark"

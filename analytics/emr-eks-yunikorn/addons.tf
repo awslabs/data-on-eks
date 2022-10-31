@@ -26,10 +26,12 @@ module "eks_blueprints_kubernetes_addons" {
     version    = "1.0.0"
     namespace  = "kube-system"
     timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      operating_system = "linux"
-      target           = "deployment/coredns"
-    })]
+    values = [
+      templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
+        operating_system = "linux"
+        target           = "deployment/coredns"
+      })
+    ]
     description = "Cluster Proportional Autoscaler for CoreDNS Service"
   }
 
@@ -39,14 +41,17 @@ module "eks_blueprints_kubernetes_addons" {
   enable_metrics_server = true
   metrics_server_helm_config = {
     name       = "metrics-server"
-    repository = "https://kubernetes-sigs.github.io/metrics-server/" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "metrics-server"
-    version    = "3.8.2"
-    namespace  = "kube-system"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {
-      operating_system = "linux"
-    })]
+    repository = "https://kubernetes-sigs.github.io/metrics-server/"
+    # (Optional) Repository URL where to locate the requested chart.
+    chart     = "metrics-server"
+    version   = "3.8.2"
+    namespace = "kube-system"
+    timeout   = "300"
+    values = [
+      templatefile("${path.module}/helm-values/metrics-server-values.yaml", {
+        operating_system = "linux"
+      })
+    ]
   }
 
   #---------------------------------------
@@ -55,16 +60,19 @@ module "eks_blueprints_kubernetes_addons" {
   enable_cluster_autoscaler = true
   cluster_autoscaler_helm_config = {
     name       = "cluster-autoscaler"
-    repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "cluster-autoscaler"
-    version    = "9.15.0"
-    namespace  = "kube-system"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region       = var.region,
-      eks_cluster_id   = local.name,
-      operating_system = "linux"
-    })]
+    repository = "https://kubernetes.github.io/autoscaler"
+    # (Optional) Repository URL where to locate the requested chart.
+    chart     = "cluster-autoscaler"
+    version   = "9.15.0"
+    namespace = "kube-system"
+    timeout   = "300"
+    values = [
+      templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
+        aws_region       = var.region,
+        eks_cluster_id   = local.name,
+        operating_system = "linux"
+      })
+    ]
   }
 
   #---------------------------------------
@@ -81,12 +89,15 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "prometheus"
     repository = "https://prometheus-community.github.io/helm-charts"
     chart      = "prometheus"
-    version    = "15.10.1"
+    version    = "15.16.1"
     namespace  = "prometheus"
     timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {
-      operating_system = "linux"
-    })]
+    values = [
+      templatefile("${path.module}/helm-values/prometheus-values.yaml", {
+        operating_system = "linux"
+        eks_cluster_id   = local.name
+      })
+    ]
   }
 
   #---------------------------------------
@@ -100,9 +111,11 @@ module "eks_blueprints_kubernetes_addons" {
     version    = "1.4.0"
     namespace  = "vpa"
     timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/vpa-values.yaml", {
-      operating_system = "linux"
-    })]
+    values = [
+      templatefile("${path.module}/helm-values/vpa-values.yaml", {
+        operating_system = "linux"
+      })
+    ]
   }
   #---------------------------------------
   # CloudWatch metrics for EKS
@@ -114,9 +127,12 @@ module "eks_blueprints_kubernetes_addons" {
     repository = "https://aws.github.io/eks-charts"
     version    = "0.0.7"
     namespace  = "amazon-cloudwatch"
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {
-      eks_cluster_id = var.name
-    })]
+    timeout    = "300"
+    values = [
+      templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {
+        eks_cluster_id = var.name
+      })
+    ]
   }
 
   #---------------------------------------
@@ -129,12 +145,15 @@ module "eks_blueprints_kubernetes_addons" {
     repository                                = "https://aws.github.io/eks-charts"
     version                                   = "0.1.21"
     namespace                                 = "aws-for-fluent-bit"
+    timeout                                   = "300"
     aws_for_fluent_bit_cw_log_group           = "/${var.name}/worker-fluentbit-logs" # Optional
     aws_for_fluentbit_cwlog_retention_in_days = 90
-    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region                    = var.region,
-      aws_for_fluent_bit_cw_log = "/${var.name}/worker-fluentbit-logs"
-    })]
+    values = [
+      templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+        region                    = var.region,
+        aws_for_fluent_bit_cw_log = "/${var.name}/worker-fluentbit-logs"
+      })
+    ]
   }
 
   tags = local.tags
@@ -147,12 +166,15 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "yunikorn"
     repository = "https://apache.github.io/yunikorn-release"
     chart      = "yunikorn"
-    version    = "0.12.2"
-    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version    = "0.12.2"
-      operating_system = "linux"
-      node_group_type  = "core"
-    })]
+    version    = "1.1.0"
+    timeout    = "300"
+    values = [
+      templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+        image_version    = "1.1.0"
+        operating_system = "linux"
+        node_group_type  = "core"
+      })
+    ]
     timeout = "300"
   }
 }

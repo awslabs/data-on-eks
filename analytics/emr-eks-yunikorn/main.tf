@@ -1,29 +1,3 @@
-locals {
-  name   = var.name
-  region = var.region
-
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
-
-  tags = merge(var.tags, {
-    Blueprint  = local.name
-    GithubRepo = "github.com/awslabs/data-on-eks"
-  })
-
-  emr_on_eks_teams = {
-    emr-data-team-a = {
-      namespace               = "emr-data-team-a"
-      job_execution_role      = "emr-eks-data-team-a"
-      additional_iam_policies = [aws_iam_policy.emr_data_team_a.arn]
-    },
-    emr-data-team-b = {
-      namespace               = "emr-data-team-b"
-      job_execution_role      = "emr-eks-data-team-b"
-      additional_iam_policies = [aws_iam_policy.emr_data_team_b.arn]
-    }
-  }
-}
-
 #---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
@@ -124,8 +98,8 @@ module "eks_blueprints" {
     mng2 = {
       node_group_name = "spark-driver-grp"
       subnet_ids      = [module.vpc.private_subnets[0]]
-      instance_types  = ["r6gd.4xlarge"]
-      ami_type        = "AL2_ARM_64"
+      instance_types  = ["r5d.4xlarge"] # YuniKorn Gangschueduling Pause pods are not supporting ARM64 instances
+      ami_type        = "AL2_x86_64"    # Graviton AL2_ARM_64
       capacity_type   = "ON_DEMAND"
       # Enable this option only when you are using NVMe disks
       format_mount_nvme_disk = true # Mounts NVMe disks to /local1, /local2 etc. for multiple NVMe disks
@@ -177,8 +151,8 @@ module "eks_blueprints" {
     mng3 = {
       node_group_name = "spark-exec-spot"
       subnet_ids      = [module.vpc.private_subnets[0]]
-      instance_types  = ["r6gd.4xlarge", "r6gd.8xlarge", "r6gd.12xlarge"]
-      ami_type        = "AL2_ARM_64"
+      instance_types  = ["r5d.4xlarge", "r5d.8xlarge", "r5d.12xlarge"] # Graviton ["r6gd.4xlarge", "r6gd.8xlarge", "r6gd.12xlarge"]
+      ami_type        = "AL2_x86_64"                                   # Graviton AL2_ARM_64
       capacity_type   = "SPOT"
 
       # Enable this option only when you are using NVMe disks

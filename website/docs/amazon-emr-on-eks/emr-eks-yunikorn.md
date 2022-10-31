@@ -18,6 +18,7 @@ Key features as follows...
 4. Resource allocation fairness with priorities
 5. Automatic reservations for outstanding requests
 6. Autoscaling
+7. Gang Scheduling Spark jobs
 
 ## Architecture
 ![Apache YuniKorn](yunikorn.png)
@@ -119,7 +120,7 @@ kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output sho
 Currently, this step is manual. Please follow the steps in this [blog](https://aws.amazon.com/blogs/mt/monitoring-amazon-emr-on-eks-with-amazon-managed-prometheus-and-amazon-managed-grafana/) to create Amazon Managed Grafana with SSO enabled in your account.
 You can visualize the Spark jobs runs and metrics using Amazon Managed Prometheus and Amazon Managed Grafana.
 
-## Execute Sample Spark job on EMR Virtual Cluster
+## Execute EMR Spark Job with Apache YuniKorn Gang Scheduling
 Execute the Spark job using the below shell script.
 
 - This script requires three input parameters in which `EMR_VIRTUAL_CLUSTER_ID` and `EMR_JOB_EXECUTION_ROLE_ARN` values can be extracted from `terraform apply` output values.
@@ -137,13 +138,11 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/emr-eks-yunikorn/examples/spark/
+cd analytics/emr-eks-yunikorn/examples/emr-yunikorn-gang-scheduling/
 
-# EMR Virtual Cluster with Spark 3.3.0
-./emr-eks-yunikorn-team-a.sh emr-eks-yunikorn-emr-data-team-a s3://<S3_BUCKET_NAME> arn:aws:iam::<YOUR_ACCOUNT_ID>:role/emr-eks-yunikorn-emr-eks-data-team-a
+# Execute EMR Spark Job with Apache YuniKorn Gang Scheduling feature
+./emr-eks-yunikorn-gang-scheduling.sh emr-eks-yunikorn-emr-data-team-a s3://<S3_BUCKET_NAME> arn:aws:iam::<YOUR_ACCOUNT_ID>:role/emr-eks-yunikorn-emr-eks-data-team-a
 
-# Execute Second job with EMR Virtual Cluster with Spark 3.1.2
-./emr-eks-yunikorn-team-b.sh emr-eks-yunikorn-emr-data-team-b s3://<S3_BUCKET_NAME> arn:aws:iam::<YOUR_ACCOUNT_ID>:role/emr-eks-yunikorn-emr-eks-data-team-b
 ```
 
 Verify the job execution

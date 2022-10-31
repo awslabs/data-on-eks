@@ -79,7 +79,7 @@ module "eks_blueprints_kubernetes_addons" {
     name             = "spark-operator"
     chart            = "spark-operator"
     repository       = "https://googlecloudplatform.github.io/spark-on-k8s-operator"
-    version          = "1.1.25"
+    version          = "1.1.26"
     namespace        = "spark-operator"
     timeout          = "300"
     create_namespace = true
@@ -97,12 +97,15 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "yunikorn"
     repository = "https://apache.github.io/yunikorn-release"
     chart      = "yunikorn"
-    version    = "0.12.2"
-    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version    = "0.12.2"
-      operating_system = "linux"
-      node_group_type  = "core"
-    })]
+    version    = "1.1.0"
+    timeout    = "300"
+    values = [
+      templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+        image_version    = "1.1.0"
+        operating_system = "linux"
+        node_group_type  = "core"
+      })
+    ]
     timeout = "300"
   }
 
@@ -150,11 +153,12 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_aws_for_fluentbit                 = true
   aws_for_fluentbit_cw_log_group_retention = 30
+  aws_for_fluentbit_irsa_policies          = ["${aws_iam_policy.fluentbit.arn}"]
   aws_for_fluentbit_helm_config = {
     name                            = "aws-for-fluent-bit"
     chart                           = "aws-for-fluent-bit"
     repository                      = "https://aws.github.io/eks-charts"
-    version                         = "0.1.19"
+    version                         = "0.1.21"
     namespace                       = "logging"
     timeout                         = "300"
     aws_for_fluent_bit_cw_log_group = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs" # Optional
@@ -162,6 +166,7 @@ module "eks_blueprints_kubernetes_addons" {
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region                    = data.aws_region.current.id
       aws_for_fluent_bit_cw_log = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs"
+      s3_bucket_name            = aws_s3_bucket.this.id
     })]
     set = [
       {
@@ -185,7 +190,7 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "prometheus"
     repository = "https://prometheus-community.github.io/helm-charts"
     chart      = "prometheus"
-    version    = "15.10.1"
+    version    = "15.16.1"
     namespace  = "prometheus"
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {
@@ -209,6 +214,24 @@ module "eks_blueprints_kubernetes_addons" {
       operating_system = "linux"
       node_group_type  = "core"
     })]
+  }
+
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics_helm_config = {
+    name       = "aws-cloudwatch-metrics"
+    chart      = "aws-cloudwatch-metrics"
+    repository = "https://aws.github.io/eks-charts"
+    version    = "0.0.7"
+    namespace  = "amazon-cloudwatch"
+    timeout    = "300"
+    values = [
+      templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {
+        eks_cluster_id = var.name
+      })
+    ]
   }
 
   #---------------------------------------------------------------
@@ -235,4 +258,191 @@ module "eks_blueprints_kubernetes_addons" {
     aws_s3_bucket_server_side_encryption_configuration.this,
     aws_s3_object.this
   ]
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
+}
+
+module "managed_prometheus" {
+  source  = "terraform-aws-modules/managed-service-prometheus/aws"
+  version = "~> 2.1"
+
+  workspace_alias = local.name
+
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# S3 Bucket for SparkHistoryServer logs and FluentBit logs
+#---------------------------------------------------------------
+#tfsec:ignore:aws-s3-enable-bucket-logging tfsec:ignore:aws-s3-enable-versioning
+resource "aws_s3_bucket" "this" {
+  bucket_prefix = format("%s-%s", "spark", data.aws_caller_identity.current.account_id)
+  tags          = local.tags
+}
+
+resource "aws_s3_bucket_acl" "this" {
+  bucket = aws_s3_bucket.this.id
+  acl    = "private"
+}
+
+#tfsec:ignore:aws-s3-encryption-customer-key
+resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket                  = aws_s3_bucket.this.id
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
+# Creating an s3 bucket prefix. Ensure you copy analytics event logs under this path to visualize the dags
+resource "aws_s3_object" "this" {
+  bucket       = aws_s3_bucket.this.id
+  acl          = "private"
+  key          = "logs/"
+  content_type = "application/x-directory"
+
+  depends_on = [
+    aws_s3_bucket_acl.this,
+    aws_s3_bucket_public_access_block.this,
+    aws_s3_bucket_server_side_encryption_configuration.this
+  ]
+}
+
+#---------------------------------------------------------------
+# IAM Policy for FluentBit Add-on
+#---------------------------------------------------------------
+resource "aws_iam_policy" "fluentbit" {
+  description = "IAM policy policy for FluentBit"
+  name        = "${local.name}-fluentbit-additional"
+  policy      = data.aws_iam_policy_document.fluent_bit.json
+}
+
+#---------------------------------------------------------------
+# IRSA for Spark driver/executor pods for "spark-team-a"
+#---------------------------------------------------------------
+module "irsa" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.12.2"
+
+  eks_cluster_id             = local.name
+  eks_oidc_provider_arn      = module.eks_blueprints.eks_oidc_provider_arn
+  irsa_iam_policies          = [aws_iam_policy.spark.arn]
+  kubernetes_namespace       = local.spark_team
+  kubernetes_service_account = local.spark_team
+}
+
+#---------------------------------------------------------------
+# Creates IAM policy for IRSA. Provides IAM permissions for Spark driver/executor pods
+#---------------------------------------------------------------
+resource "aws_iam_policy" "spark" {
+  description = "IAM role policy for Spark Job execution"
+  name        = "${local.name}-spark-irsa"
+  policy      = data.aws_iam_policy_document.spark_operator.json
+}
+
+#---------------------------------------------------------------
+# Kubernetes Cluster role for service Account analytics-k8s-data-team-a
+#---------------------------------------------------------------
+resource "kubernetes_cluster_role" "spark_role" {
+  metadata {
+    name = "spark-cluster-role"
+  }
+
+  rule {
+    verbs      = ["get", "list", "watch"]
+    api_groups = [""]
+    resources  = ["namespaces", "nodes", "persistentvolumes"]
+  }
+
+  rule {
+    verbs      = ["list", "watch"]
+    api_groups = ["storage.k8s.io"]
+    resources  = ["storageclasses"]
+  }
+  rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
+    api_groups = [""]
+    resources  = ["serviceaccounts", "services", "configmaps", "events", "pods", "pods/log"]
+  }
+
+  rule {
+    verbs      = ["create", "patch", "delete", "watch"]
+    api_groups = [""]
+    resources  = ["secrets"]
+  }
+
+  rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
+    api_groups = ["apps"]
+    resources  = ["statefulsets", "deployments"]
+  }
+
+  rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
+    api_groups = ["batch"]
+    resources  = ["jobs"]
+  }
+
+  rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
+    api_groups = ["extensions"]
+    resources  = ["ingresses"]
+  }
+
+  rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
+    api_groups = ["rbac.authorization.k8s.io"]
+    resources  = ["roles", "rolebindings"]
+  }
+
+  depends_on = [module.irsa]
+}
+#---------------------------------------------------------------
+# Kubernetes Cluster Role binding role for service Account analytics-k8s-data-team-a
+#---------------------------------------------------------------
+resource "kubernetes_cluster_role_binding" "spark_role_binding" {
+  metadata {
+    name = "spark-cluster-role-bind"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = local.spark_team
+    namespace = local.spark_team
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role.spark_role.id
+  }
+
+  depends_on = [module.irsa]
 }
