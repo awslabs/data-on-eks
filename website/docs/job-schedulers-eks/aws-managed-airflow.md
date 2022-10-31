@@ -27,7 +27,7 @@ Ensure that you have the following tools installed locally:
 
 ## Deploy
 
-To provision this example: 
+To provision this example:
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
@@ -103,7 +103,7 @@ namespace `mwaa` will be used by MWAA directly.
 - Choose an environment
 - Under the `Details` section, click the link for the Airflow UI<br />
 
-Note: You will see red error message once login. That is because the EMR connection has not been setup. The message will be gone after following the steps below to set up the connection and login again. 
+Note: You will see red error message once login. That is because the EMR connection has not been setup. The message will be gone after following the steps below to set up the connection and login again.
 
 ### Trigger the DAG workflow to execute job in EMR on EKS
 

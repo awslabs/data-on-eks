@@ -151,7 +151,7 @@ locals {
       user = {
         exec = {
           apiVersion = "client.authentication.k8s.io/v1beta1"
-          command = "aws"
+          command    = "aws"
           args = [
             "--region",
             local.region,

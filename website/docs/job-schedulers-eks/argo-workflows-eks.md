@@ -82,7 +82,7 @@ spark-operator    Active   30h
 yunikorn          Active   30h
 ```
 
-### Access Argo Workflow WebUI 
+### Access Argo Workflow WebUI
 
 ```bash
 kubectl -n argo-workflows port-forward deployment.apps/argo-workflows-server 2746:2746
@@ -118,7 +118,7 @@ You can also check the workflow status from Web UI
 ```bash
 kubectl apply -f workflow-example/argo-spark-operator.yaml
 
-kubectl get wf -n argo-workflows 
+kubectl get wf -n argo-workflows
 NAME             STATUS      AGE     MESSAGE
 spark            Succeeded   3m58s  
 spark-operator   Running     5s  
