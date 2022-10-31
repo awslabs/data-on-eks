@@ -27,40 +27,45 @@ Ensure that you have the following tools installed locally:
 
 ## Deploy
 
-To provision this example: 
+To provision this example:
 
 ```bash
+git clone https://github.com/awslabs/data-on-eks.git
+
 cd data-on-eks/schedulers/managed-airflow-mwaa
+
 terraform init
-terraform apply
+
+terraform apply -var region=<aws_region>
 ```
 
 Enter `yes` at command prompt to apply
 
-Once done, you will see terraform output like below. <br />
+Once done, you will see terraform output like below.
+
 ![terraform output](terraform-output.png)
 
 The following components are provisioned in your environment:
-- A sample VPC, 3 Private Subnets and 3 Public Subnets
-- Internet gateway for Public Subnets and NAT Gateway for Private Subnets
-- EKS Cluster Control plane with one managed node group
-- EKS Managed Add-ons: VPC_CNI, CoreDNS, Kube_Proxy, EBS_CSI_Driver
-- K8S metrics server and cluster autoscaler
-- A MWAA environment in version 2.2.2
-- An EMR virtual cluster registered with the newly created EKS
-- A S3 bucket with DAG code
+  - A sample VPC, 3 Private Subnets and 3 Public Subnets
+  - Internet gateway for Public Subnets and NAT Gateway for Private Subnets
+  - EKS Cluster Control plane with one managed node group
+  - EKS Managed Add-ons: VPC_CNI, CoreDNS, Kube_Proxy, EBS_CSI_Driver
+  - K8S metrics server and cluster autoscaler
+  - A MWAA environment in version 2.2.2
+  - An EMR virtual cluster registered with the newly created EKS
+  - A S3 bucket with DAG code
 
 ## Validate
 
 The following command will update the `kubeconfig` on your local machine and allow you to interact with your EKS Cluster using `kubectl` to validate the deployment.
 
-1. Run `update-kubeconfig` command:
+### Run `update-kubeconfig` command
 
 ```bash
 aws eks --region <REGION> update-kubeconfig --name <CLUSTER_NAME>
 ```
 
-2. List the nodes running currently
+### List the nodes
 
 ```bash
 kubectl get nodes
@@ -72,7 +77,8 @@ ip-10-0-22-71.ec2.internal   Ready    <none>   5h15m   v1.23.9-eks-ba74326
 ip-10-0-44-63.ec2.internal   Ready    <none>   5h15m   v1.23.9-eks-ba74326
 ```
 
-3. List the namespaces in your EKS cluster
+### List the namespaces in EKS cluster
+
 ```bash
 kubectl get ns
 
@@ -85,33 +91,37 @@ kube-system       Active   4h39m
 mwaa              Active   4h30m
 ```
 
-namesapce emr-mwaa will be used by EMR for running spark jobs.<br />
-namesapce mwaa will be used by MWAA directly.
+namespace `emr-mwaa` will be used by EMR for running spark jobs.<br />
+namespace `mwaa` will be used by MWAA directly.
 
 
-# Trigger jobs from MWAA
-1. Log into Apache Airflow UI
+## Trigger jobs from MWAA
+
+### Log into Apache Airflow UI
 
 - Open the Environments page on the Amazon MWAA console
 - Choose an environment
 - Under the `Details` section, click the link for the Airflow UI<br />
-Note: You will see red error message once login. That is because the EMR connection has not been setup. The message will be gone after following the steps below to set up the connection and login again. 
 
-2. Trigger the DAG workflow to execute job in EMR on EKS
+Note: You will see red error message once login. That is because the EMR connection has not been setup. The message will be gone after following the steps below to set up the connection and login again.
+
+### Trigger the DAG workflow to execute job in EMR on EKS
 
 First, you need to set up the connection to EMR virtual cluster in MWAA
-![add connection](add-connection.PNG)
 
-Click Add button, <br />
-make sure use emr_eks as Connection Id <br />
-Amazon Web Services as Connection Type <br />
-replace the value in Extra based on your terraform output <br />
-{"virtual_cluster_id":"<emrcontainers_virtual_cluster_id in terraform output>", "job_role_arn":"<emr_on_eks_role_arn in terraform output>"}
-![Add a new connection](Add-new-connection.PNG)
+![add connection](add-connection.png)
 
+- Click Add button, <br />
+- Make sure use `emr_eks` as Connection Id <br />
+- `Amazon Web Services` as Connection Type <br />
+- Replace the value in `Extra` based on your terraform output <br />
+`{"virtual_cluster_id":"<emrcontainers_virtual_cluster_id in terraform output>", "job_role_arn":"<emr_on_eks_role_arn in terraform output>"}`
 
-Go back to Airflow UI main page, enable the example DAG emr_eks_pi_job and then trigger it.
-![trigger EMR](trigger-emr.PNG)
+![Add a new connection](emr-eks-connection.png)
+
+Go back to Airflow UI main page, enable the example DAG `emr_eks_pi_job` and then trigger the job.
+
+![trigger EMR](trigger-emr.png)
 
 While it is running, use the following command to verify the spark jobs:
 
@@ -134,17 +144,18 @@ service/spark-000000030tk2ihdmr8g-ee64be83b4151dd5-driver-svc   ClusterIP   None
 NAME                            COMPLETIONS   DURATION   AGE
 job.batch/000000030tk2ihdmr8g   0/1           92s        92s
 ```
-You can also check the job status in Amazon EMR console. Under the `Virtual clusters` section, click the your Virtual cluster
-![EMR job status](emr-job-status.PNG)
 
+You can also check the job status in Amazon EMR console. Under the `Virtual clusters` section, click on Virtual cluster
 
-3. Trigger the DAG workflow to execute job in EKS
+![EMR job status](emr-job-status.png)
+
+### Trigger the DAG workflow to execute job in EKS
 
 In the Airflow UI, enable the example DAG kubernetes_pod_example and then trigger it.
 
-![Enable the DAG kubernetes_pod_example ](kubernetes_pod_example_dag.png)
+![Enable the DAG kubernetes_pod_example](kubernetes-pod-example-dag.png)
 
-![Trigger the DAG kubernetes_pod_example ](dag_tree.png)
+![Trigger the DAG kubernetes_pod_example](dag-tree.png)
 
 Verify that the pod was executed successfully
 
@@ -160,8 +171,6 @@ You should see output similar to the following:
 NAME                                             READY   STATUS      RESTARTS   AGE
 mwaa-pod-test.4bed823d645844bc8e6899fd858f119d   0/1     Completed   0          25s
 ```
-
-
 
 ## Destroy
 

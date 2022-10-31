@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: spark
+  namespace: argo-workflows
+spec:
+  arguments: {}
+  entrypoint: sparkapp
+  templates:
+    - arguments: {}
+      name: sparkapp
+      container:
+        securityContext:
+          runAsUser: 0
+        command: [
+            "/bin/sh",
+            "-c",
+            "/opt/spark/bin/spark-submit \
+            --master k8s://<your eks api server url> \
+            --deploy-mode cluster \
+            --name sparkapp \
+            --class org.apache.spark.examples.SparkPi \
+            --conf spark.kubernetes.namespace=argo-workflows \
+            --conf spark.kubernetes.container.image=apache/spark:v3.2.1 \
+            --conf spark.executor.memory=2G \
+            --conf spark.executor.cores=2 \
+            local:///opt/spark/examples/jars/spark-examples_2.12-3.2.1.jar"
+          ]
+        image: apache/spark:v3.2.1
+        imagePullPolicy: Always
+        resources: {}

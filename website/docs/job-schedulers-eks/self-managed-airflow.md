@@ -128,7 +128,7 @@ For production workloads, you can modify `values.yaml` to choose `internal` LB. 
 
 Execute the following command to get the ALB DNS name
 
-```bashell
+```bash
 kubectl get ingress -n airflow
 
 NAME                      CLASS   HOSTS   ADDRESS                                                                PORTS   AGE
@@ -155,7 +155,7 @@ This step is critical for writing the Airflow logs to S3 bucket.
 - Enter Connection Id as `aws_s3_conn`, Connection Type as `Amazon Web Services` and Extra as `{"region_name": "<ENTER_YOUR_REGION>"}`
 - Click on Save button
 
-![Airflow AWS Connection](aws_s3_conn.png)
+![Airflow AWS Connection](aws-s3-conn.png)
 
 ### Execute Sample Airflow Job
 
