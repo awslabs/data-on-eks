@@ -142,6 +142,20 @@ module "eks_blueprints_kubernetes_addons" {
     })]
   }
 
+  #---------------------------------------
+  # Kubecost
+  #---------------------------------------
+  enable_kubecost = true
+  kubecost_helm_config = {
+    name       = "kubecost"                      # (Required) Release name.
+    repository = "oci://public.ecr.aws/kubecost" # (Optional) Repository URL where to locate the requested chart.
+    chart      = "cost-analyzer"                 # (Required) Chart name to be installed.
+    version    = "1.97.0"                        # (Optional) Specify the exact chart version to install. If this is not specified, it defaults to the version set within default_helm_config: https://github.com/aws-ia/terraform-aws-eks-blueprints/blob/main/modules/kubernetes-addons/kubecost/locals.tf
+    namespace  = "kubecost"                      # (Optional) The namespace to install the release into.
+    timeout    = "300"
+    values     = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+  }
+
   tags = local.tags
 }
 
