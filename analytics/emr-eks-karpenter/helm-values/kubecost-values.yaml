@@ -69,11 +69,12 @@ kubecostModel:
       cpu: "500m"
       memory: "512Mi"
 
-serviceAccount:
-  create: false # Set this to false if you're bringing your own service account.
-  name: kubecost-cost-analyzer
-  annotations:
-    eks.amazonaws.com/role-arn: ${iam-role-arn}
+# Set this to false if you're bringing your own service account.
+#serviceAccount:
+#  create: false
+#  name: kubecost-cost-analyzer
+#  annotations:
+#    eks.amazonaws.com/role-arn: <iam-role-arn>
 
 # Define persistence volume for cost-analyzer
 persistentVolume:

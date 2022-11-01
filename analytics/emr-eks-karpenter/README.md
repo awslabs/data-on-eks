@@ -26,7 +26,6 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="module_eks_blueprints"></a> [eks\_blueprints](#module\_eks\_blueprints) | github.com/aws-ia/terraform-aws-eks-blueprints | v4.12.2 |
 | <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons | v4.12.2 |
 | <a name="module_karpenter_launch_templates"></a> [karpenter\_launch\_templates](#module\_karpenter\_launch\_templates) | github.com/aws-ia/terraform-aws-eks-blueprints//modules/launch-templates | v4.12.2 |
-| <a name="module_kubecost_irsa"></a> [kubecost\_irsa](#module\_kubecost\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa | v4.12.2 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 3.0 |
 
 ## Resources
