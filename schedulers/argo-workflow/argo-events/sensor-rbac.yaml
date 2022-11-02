@@ -64,4 +64,3 @@ subjects:
   - kind: ServiceAccount
     name: operate-workflow-sa
     namespace: argo-events
-    
