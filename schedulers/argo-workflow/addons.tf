@@ -1,6 +1,6 @@
 module "eks_blueprints_kubernetes_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons"
-  
+
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
   eks_oidc_provider    = module.eks_blueprints.oidc_provider
@@ -40,7 +40,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Apache YuniKorn Add-on
   #---------------------------------------------------------------
   enable_yunikorn = true
-    #---------------------------------------------------------------
+  #---------------------------------------------------------------
   # Argo Events Add-on
   #---------------------------------------------------------------
   enable_argo_workflows = true
