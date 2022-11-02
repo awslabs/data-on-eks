@@ -1,6 +1,6 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.14.0"
-
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons"
+  
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
   eks_oidc_provider    = module.eks_blueprints.oidc_provider
@@ -40,30 +40,15 @@ module "eks_blueprints_kubernetes_addons" {
   # Apache YuniKorn Add-on
   #---------------------------------------------------------------
   enable_yunikorn = true
+    #---------------------------------------------------------------
+  # Argo Events Add-on
+  #---------------------------------------------------------------
+  enable_argo_workflows = true
 }
 
-module "helm_addon" {
-  source      = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons/helm-addon?ref=v4.12.0"
-  helm_config = local.default_helm_config
-  irsa_config = local.irsa_config
-
-  addon_context = {
-    aws_caller_identity_account_id = data.aws_caller_identity.current.account_id
-    aws_caller_identity_arn        = data.aws_caller_identity.current.arn
-    aws_eks_cluster_endpoint       = module.eks_blueprints.eks_cluster_endpoint
-    aws_partition_id               = data.aws_partition.current.partition
-    aws_region_name                = data.aws_region.current.name
-    eks_cluster_id                 = module.eks_blueprints.eks_cluster_id
-    eks_oidc_issuer_url            = replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
-    eks_oidc_provider_arn          = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.eks_oidc_issuer_url}"
-    tags                           = local.tags
-    irsa_iam_role_path             = "/"
-    irsa_iam_permissions_boundary  = ""
-  }
-}
 
 #---------------------------------------------------------------
-# Kubernetes Cluster role for argo workflows
+# Kubernetes Cluster role for argo workflows to run spark jobs
 #---------------------------------------------------------------
 resource "kubernetes_cluster_role" "spark-cluster" {
   metadata {
@@ -82,13 +67,13 @@ resource "kubernetes_cluster_role" "spark-cluster" {
 resource "kubernetes_role_binding" "spark_role_binding" {
   metadata {
     name      = "argo-spark-rolebinding"
-    namespace = local.default_helm_config.namespace
+    namespace = "argo-workflows"
   }
 
   subject {
     kind      = "ServiceAccount"
     name      = "default"
-    namespace = local.default_helm_config.namespace
+    namespace = "argo-workflows"
   }
 
   role_ref {
@@ -100,13 +85,13 @@ resource "kubernetes_role_binding" "spark_role_binding" {
 resource "kubernetes_role_binding" "argo-admin-rolebinding" {
   metadata {
     name      = "argo-admin-rolebinding"
-    namespace = local.default_helm_config.namespace
+    namespace = "argo-workflows"
   }
 
   subject {
     kind      = "ServiceAccount"
     name      = "default"
-    namespace = local.default_helm_config.namespace
+    namespace = "argo-workflows"
   }
 
   role_ref {
@@ -114,4 +99,23 @@ resource "kubernetes_role_binding" "argo-admin-rolebinding" {
     kind      = "ClusterRole"
     name      = "admin"
   }
+}
+
+#---------------------------------------------------------------
+# IRSA for Argo events to read SQS
+#---------------------------------------------------------------
+module "irsa_argo_events" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.14.0"
+
+  create_kubernetes_namespace = true
+  kubernetes_namespace        = "argo-events"
+  kubernetes_service_account  = "event-sa"
+  irsa_iam_policies           = [data.aws_iam_policy.sqs.arn]
+  eks_cluster_id              = module.eks_blueprints.eks_cluster_id
+  eks_oidc_provider_arn       = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${module.eks_blueprints.oidc_provider}"
+}
+
+data "aws_iam_policy" "sqs" {
+
+  name = "AmazonSQSReadOnlyAccess"
 }
