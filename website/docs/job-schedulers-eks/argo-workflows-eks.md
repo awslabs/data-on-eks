@@ -142,14 +142,15 @@ kubectl apply -f argo-events/eventsource-sqs.yaml
 ```
 In this case, we configure a EventSource to license to the queue "test1" in region us-east-1. Let's create that queue in your account if you don't have.
 ```bash
+# create a queue
 aws sqs create-queue --queue-name test1 --region us-east-1 
 
-get your queue arn
+# get your queue arn
 aws sqs get-queue-attributes --queue-url <your queue url> --attribute-names QueueArn
 
-Replace the following values in argo-events/sqs-accesspolicy.json 
-<your queue arn>  
-<your event irsa arn> (you can get from terraform output)
+#Replace the following values in argo-events/sqs-accesspolicy.json 
+#<your queue arn>  
+#<your event irsa arn> (you can get from terraform output)
 aws sqs set-queue-attributes --queue-url <your queue url> --attributes file://argo-events/sqs-accesspolicy.json --region us-east-1 
 ```
 
