@@ -27,6 +27,7 @@ Ensure that you have the following tools installed locally:
 To provision this example:
 
 ```bash
+git clone https://github.com/awslabs/data-on-eks.git
 cd data-on-eks/schedulers/argo-workflow
 terraform init
 terraform apply -var region=<aws_region> #defaults to us-west-2

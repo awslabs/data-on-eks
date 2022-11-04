@@ -50,9 +50,9 @@ module "eks_blueprints_kubernetes_addons" {
 #---------------------------------------------------------------
 # Kubernetes Cluster role for argo workflows to run spark jobs
 #---------------------------------------------------------------
-resource "kubernetes_cluster_role" "spark-cluster" {
+resource "kubernetes_cluster_role" "spark_op_role" {
   metadata {
-    name = "spark-cluster-role"
+    name = "spark-op-role"
   }
 
   rule {
@@ -62,11 +62,11 @@ resource "kubernetes_cluster_role" "spark-cluster" {
   }
 }
 #---------------------------------------------------------------
-# Kubernetes Cluster Role binding role for argo workflows
+# Kubernetes Role binding role for argo workflows
 #---------------------------------------------------------------
 resource "kubernetes_role_binding" "spark_role_binding" {
   metadata {
-    name      = "argo-spark-rolebinding"
+    name      = "argo-workflows-spark-rolebinding"
     namespace = "argo-workflows"
   }
 
@@ -79,12 +79,12 @@ resource "kubernetes_role_binding" "spark_role_binding" {
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.spark-cluster.id
+    name      = kubernetes_cluster_role.spark_op_role.id
   }
 }
-resource "kubernetes_role_binding" "argo-admin-rolebinding" {
+resource "kubernetes_role_binding" "admin_rolebinding" {
   metadata {
-    name      = "argo-admin-rolebinding"
+    name      = "argo-workflows-admin-rolebinding"
     namespace = "argo-workflows"
   }
 
@@ -116,6 +116,5 @@ module "irsa_argo_events" {
 }
 
 data "aws_iam_policy" "sqs" {
-
   name = "AmazonSQSReadOnlyAccess"
 }
