@@ -14,25 +14,32 @@ spec:
         apiVersion: "sparkoperator.k8s.io/v1beta2"
         kind: SparkApplication
         metadata:
-          name: spark-app
+          name: pyspark-pi
+          namespace: argo-workflows
         spec:
-          type: Scala
+          type: Python
+          pythonVersion: "3"
           mode: cluster
-          image: gcr.io/spark-operator/spark:v3.1.1
+          image: "gcr.io/spark-operator/spark-py:v3.1.1"
           imagePullPolicy: Always
-          mainClass: org.apache.spark.examples.SparkPi
-          mainApplicationFile:  local:///opt/spark/spark-examples_2.12-3.1.1.jar
+          mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
           sparkVersion: "3.1.1"
+          restartPolicy:
+            type: OnFailure
+            onFailureRetries: 3
+            onFailureRetryInterval: 10
+            onSubmissionFailureRetries: 5
+            onSubmissionFailureRetryInterval: 20
           driver:
             cores: 1
             coreLimit: "1200m"
             memory: "512m"
-            serviceAccount: spark
             labels:
               version: 3.1.1
+            serviceAccount: default
           executor:
             cores: 1
-            instances: 1
+            instances: 2
             memory: "512m"
             labels:
               version: 3.1.1
