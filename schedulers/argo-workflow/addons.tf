@@ -105,7 +105,7 @@ resource "kubernetes_role_binding" "admin_rolebinding" {
 # IRSA for Argo events to read SQS
 #---------------------------------------------------------------
 module "irsa_argo_events" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.14.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.15.0"
 
   create_kubernetes_namespace = true
   kubernetes_namespace        = "argo-events"
