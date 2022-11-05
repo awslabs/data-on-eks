@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: aws-sqs
+  namespace: argo-events
+spec:
+  template:
+    serviceAccountName: event-sa
+  sqs:
+    example:
+      # jsonBody specifies that all event body payload coming from this
+      # source will be JSON
+      jsonBody: true
+      # aws region
+      region: us-east-1
+      # name of the queue. The eventsource resolves the url of the queue from the queue name.
+      queue: test1
+      # The duration (in seconds) for which the call waits for a message to arrive in the queue before returning.
+      # MUST BE > 0 AND <= 20
+      waitTimeSeconds: 20

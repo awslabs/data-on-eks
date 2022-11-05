@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: aws-sqs-crossns-spark
+  namespace: argo-events
+spec:
+  template:
+    serviceAccountName: operate-workflow-sa
+  dependencies:
+    - name: test-dep
+      eventSourceName: aws-sqs
+      eventName: example
+  triggers:
+    - template:
+        name: sqs-spark-workflow
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: aws-sqs-spark-workflow-
+                namespace: argo-workflows
+              spec:
+                arguments: {}
+                entrypoint: sparkapp-operator
+                templates:
+                - name: sparkapp-operator
+                  resource:
+                    action: create
+                    manifest: |
+                      apiVersion: "sparkoperator.k8s.io/v1beta2"
+                      kind: SparkApplication
+                      metadata:
+                        generateName: event-wf-sparkapp-
+                        namespace: argo-workflows
+                      spec:
+                        type: Python
+                        pythonVersion: "3"
+                        mode: cluster
+                        image: "gcr.io/spark-operator/spark-py:v3.1.1"
+                        imagePullPolicy: Always
+                        mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
+                        sparkVersion: "3.1.1"
+                        restartPolicy:
+                          type: OnFailure
+                          onFailureRetries: 3
+                          onFailureRetryInterval: 10
+                          onSubmissionFailureRetries: 5
+                          onSubmissionFailureRetryInterval: 20
+                        driver:
+                          cores: 1
+                          coreLimit: "1200m"
+                          memory: "512m"
+                          labels:
+                            version: 3.1.1
+                          serviceAccount: default
+                        executor:
+                          cores: 1
+                          instances: 2
+                          memory: "512m"
+                          labels:
+                            version: 3.1.1

@@ -7,3 +7,8 @@ output "eks_api_server_url" {
   description = "Your eks API server endpoint"
   value       = module.eks_blueprints.eks_cluster_endpoint
 }
+
+output "your_event_irsa_arn" {
+  description = "the ARN of IRSA for argo events"
+  value       = module.irsa_argo_events.irsa_iam_role_arn
+}
