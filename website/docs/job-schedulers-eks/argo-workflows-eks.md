@@ -6,7 +6,7 @@ sidebar_position: 4
 Argo Workflows is an open source container-native workflow engine for orchestrating parallel jobs on Kubernetes. It is implemented as a Kubernetes CRD (Custom Resource Definition). As a result, Argo workflows can be managed using kubectl and natively integrates with other Kubernetes services such as volumes, secrets, and RBAC.
 
 The example demonstrates how to use Argo Workflows to assign jobs to Amazon EKS in three ways.
-1. Use Argo Workflows to create a spark job. 
+1. Use Argo Workflows to create a spark job.
 2. Use Argo Workflows to create a spark job through spark operator.
 3. Trigger Argo Workflows to create a spark job based on Amazon SQS message insert event by using [Argo Events](https://argoproj.github.io/argo-events/).
 
@@ -46,7 +46,7 @@ The following components are provisioned in your environment:
 ![terraform-output](terraform-output-argo.png)
 
 
-## Install the Argo Workflows CLI 
+## Install the Argo Workflows CLI
 Please follow this link: https://github.com/argoproj/argo-workflows/releases/latest
 
 ## Validate
@@ -116,7 +116,7 @@ You can also check the workflow status from web UI
 ```bash
 kubectl apply -f workflow-example/argo-spark-operator.yaml
 
-kubectl get wf -n argo-workflows 
+kubectl get wf -n argo-workflows
 NAME             STATUS      AGE     MESSAGE
 spark            Succeeded   3m58s  
 spark-operator   Running     5s  
@@ -131,7 +131,7 @@ kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-events/stable/m
 kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-events/stable/manifests/install-validating-webhook.yaml
 ```
 
-7.2 Install [eventbus](https://argoproj.github.io/argo-events/eventbus/eventbus/) which is for event transmission in argo events 
+7.2 Install [eventbus](https://argoproj.github.io/argo-events/eventbus/eventbus/) which is for event transmission in argo events
 ```bash
 kubectl apply -f argo-events/eventbus.yaml
 ```
@@ -144,27 +144,27 @@ kubectl apply -f argo-events/eventsource-sqs.yaml
 In this case, we configure a EventSource to license to the queue "test1" in region us-east-1. Let's create that queue in your account if you don't have.
 ```bash
 # create a queue
-aws sqs create-queue --queue-name test1 --region us-east-1 
+aws sqs create-queue --queue-name test1 --region us-east-1
 
 # get your queue arn
 aws sqs get-queue-attributes --queue-url <your queue url> --attribute-names QueueArn
 
-#Replace the following values in argo-events/sqs-accesspolicy.json 
+#Replace the following values in argo-events/sqs-accesspolicy.json
 #<your queue arn>  
 #<your event irsa arn> (you can get from terraform output)
-aws sqs set-queue-attributes --queue-url <your queue url> --attributes file://argo-events/sqs-accesspolicy.json --region us-east-1 
+aws sqs set-queue-attributes --queue-url <your queue url> --attributes file://argo-events/sqs-accesspolicy.json --region us-east-1
 ```
 
 7.4 Deploy sensor-rbac.yaml and sensor-sqs-spark-crossns.yaml for triggering workflow
 
 ```bash
 kubectl apply -f argo-events/sensor-rbac.yaml
-kubectl apply -f argo-events/sensor-sqs-sparkjobs.yaml 
+kubectl apply -f argo-events/sensor-sqs-sparkjobs.yaml
 ```
 
-7.5 Verify what you have under namespace argo-events   
+7.5 Verify what you have under namespace argo-events  
 ```bash
-kubectl get all,eventbus,EventSource,sensor,sa,role,rolebinding -n argo-events   
+kubectl get all,eventbus,EventSource,sensor,sa,role,rolebinding -n argo-events  
 ```
 
 ![all-in-argoevents](things-argo-events.png)
@@ -178,7 +178,7 @@ Argo Events would capture the message and trigger Argo Workflows to create a wor
 kubectl get wf -A
 
 NAMESPACE        NAME                           STATUS    AGE   MESSAGE
-argo-workflows   aws-sqs-spark-workflow-p57qx   Running   9s   
+argo-workflows   aws-sqs-spark-workflow-p57qx   Running   9s  
 ```
 
 ## Destroy
