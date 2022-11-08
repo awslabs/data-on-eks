@@ -214,7 +214,7 @@ module "karpenter_launch_templates" {
 data "kubectl_path_documents" "karpenter_provisioners" {
   pattern = "${path.module}/provisioners/spark-*.yaml"
   vars = {
-    azs                  = "eu-west-1"
+    azs                  = local.region
     eks_cluster_id       = local.name
     instance_profile     = format("%s-%s", local.name, local.core_node_group) # This is using core-node-group instance profile
     launch_template_name = format("%s-%s", "karpenter", local.name)
