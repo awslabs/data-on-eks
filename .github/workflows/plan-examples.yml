@@ -75,7 +75,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials from Test account
-        uses: ws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v1-node16
         if: steps.changes.outputs.src== 'true'
         with:
           role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
