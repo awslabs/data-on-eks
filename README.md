@@ -1,3 +1,4 @@
+[![plan-examples](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml/badge.svg?branch=main)](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml)
 # Data on Amazon EKS (DoEKS)
 
 💥 **Welcome to Data on Amazon EKS (DoEKS)** 💥
