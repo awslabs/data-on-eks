@@ -1,6 +1,6 @@
 ---
-sidebar_position: 3
-sidebar_label: FSx for Lustre storage with EMR on EKS
+sidebar_position: 4
+sidebar_label: FSx for Lustre with EMR
 ---
 
 # EMR on EKS with FSx for Lustre
@@ -14,7 +14,7 @@ However, some Spark users are looking for an **HDFS-like shared file system** to
 In this example, you will learn how to deploy, configure and use FSx for Lustre as a shuffle storage for running Spark jobs with EMR on EKS.
 
 ## Deploying the Solution
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/emr-eks-fsx-lustre), you will provision the following resources required to run Spark Jobs using EMR on EKS with FSx for Lustre as shuffle storage, as well as monitor spark job metrics using **Amazon Managed Prometheus** and **Amazon Managed Grafana**.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-fsx-lustre), you will provision the following resources required to run Spark Jobs using EMR on EKS with FSx for Lustre as shuffle storage, as well as monitor spark job metrics using **Amazon Managed Prometheus** and **Amazon Managed Grafana**.
 
 - Creates EKS Cluster Control plane with public endpoint (for demo purpose only) with two managed node groups
 - Deploys Metrics server with HA, Cluster Autoscaler, Prometheus, VPA, CoreDNS Autoscaler, FSx CSI driver
@@ -45,14 +45,14 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/emr-eks-fsx-lustre
+cd data-on-eks/analytics/emr-eks-fsx-lustre
 terraform init
 ```
 
 Set `AWS_REGION` and Run`terraform plan` to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION="<enter-your-region>"
+export AWS_REGION="us-west-2" # Change according to your need
 terraform plan
 ```
 
@@ -79,7 +79,7 @@ aws amp list-workspaces --alias amp-ws-emr-eks-fsx-lustre
 ```bash
 # Verify EMR on EKS Namespaces emr-data-team-a and emr-data-team-b and Pod status for Prometheus, Vertical Pod Autoscaler, Metrics Server and Cluster Autoscaler.
 
-aws eks --region <ENTER_YOUR_REGION> update-kubeconfig --name emr-eks-fsx-lustre # Creates k8s config file to authenticate with EKS Cluster
+aws eks --region us-west-2 update-kubeconfig --name emr-eks-fsx-lustre # Creates k8s config file to authenticate with EKS Cluster
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
@@ -132,7 +132,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/emr-eks-fsx-lustre/examples/spark-execute/
+cd data-on-eks/analytics/emr-eks-fsx-lustre/examples/spark-execute/
 
 ./fsx-static-spark.sh "<ENTER_EMR_VIRTUAL_CLUSTER_ID>" "s3://<ENTER-YOUR-BUCKET-NAME>" "<EMR_JOB_EXECUTION_ROLE_ARN>"
 ```
@@ -169,7 +169,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/emr-eks-fsx-lustre/examples/spark-execute/
+cd data-on-eks/analytics/emr-eks-fsx-lustre/examples/spark-execute/
 
 ./fsx-dynamic-spark.sh "<ENTER_EMR_VIRTUAL_CLUSTER_ID>" "s3://<ENTER-YOUR-BUCKET-NAME>" "<EMR_JOB_EXECUTION_ROLE_ARN>"
 ```

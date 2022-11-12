@@ -1,5 +1,5 @@
 ---
-title: Amazon Managed Workflows for Apache Airflow (MWAA)
+title: Amazon MWAA
 sidebar_position: 2
 ---
 
@@ -31,19 +31,16 @@ To provision this example:
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
-
-cd data-on-eks/schedulers/managed-airflow-mwaa
-
+cd data-on-eks/schedulers/terraform/managed-airflow-mwaa
 terraform init
-
-terraform apply -var region=<aws_region>
+terraform apply -var region=us-west-2  # Change according to your region
 ```
 
 Enter `yes` at command prompt to apply
 
 Once done, you will see terraform output like below.
 
-![terraform output](terraform-output.png)
+![terraform output](img/terraform-output.png)
 
 The following components are provisioned in your environment:
   - A sample VPC, 3 Private Subnets and 3 Public Subnets
@@ -62,7 +59,7 @@ The following command will update the `kubeconfig` on your local machine and all
 ### Run `update-kubeconfig` command
 
 ```bash
-aws eks --region <REGION> update-kubeconfig --name <CLUSTER_NAME>
+aws eks --region us-west-2 update-kubeconfig --name managed-airflow-mwaa
 ```
 
 ### List the nodes
@@ -109,7 +106,7 @@ Note: You will see red error message once login. That is because the EMR connect
 
 First, you need to set up the connection to EMR virtual cluster in MWAA
 
-![add connection](add-connection.png)
+![add connection](img/add-connection.png)
 
 - Click Add button, <br />
 - Make sure use `emr_eks` as Connection Id <br />
@@ -117,11 +114,11 @@ First, you need to set up the connection to EMR virtual cluster in MWAA
 - Replace the value in `Extra` based on your terraform output <br />
 `{"virtual_cluster_id":"<emrcontainers_virtual_cluster_id in terraform output>", "job_role_arn":"<emr_on_eks_role_arn in terraform output>"}`
 
-![Add a new connection](emr-eks-connection.png)
+![Add a new connection](img/emr-eks-connection.png)
 
 Go back to Airflow UI main page, enable the example DAG `emr_eks_pi_job` and then trigger the job.
 
-![trigger EMR](trigger-emr.png)
+![trigger EMR](img/trigger-emr.png)
 
 While it is running, use the following command to verify the spark jobs:
 
@@ -147,15 +144,15 @@ job.batch/000000030tk2ihdmr8g   0/1           92s        92s
 
 You can also check the job status in Amazon EMR console. Under the `Virtual clusters` section, click on Virtual cluster
 
-![EMR job status](emr-job-status.png)
+![EMR job status](img/emr-job-status.png)
 
 ### Trigger the DAG workflow to execute job in EKS
 
 In the Airflow UI, enable the example DAG kubernetes_pod_example and then trigger it.
 
-![Enable the DAG kubernetes_pod_example](kubernetes-pod-example-dag.png)
+![Enable the DAG kubernetes_pod_example](img/kubernetes-pod-example-dag.png)
 
-![Trigger the DAG kubernetes_pod_example](dag-tree.png)
+![Trigger the DAG kubernetes_pod_example](img/dag-tree.png)
 
 Verify that the pod was executed successfully
 

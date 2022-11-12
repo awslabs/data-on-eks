@@ -35,14 +35,14 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd schedulers/self-managed-airflow
+cd data-on-eks/schedulers/terraform/self-managed-airflow
 terraform init
 ```
 
 Set `AWS_REGION` and Run `terraform plan` to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION="<enter-your-region>"
+export AWS_REGION="us-west-2"
 terraform plan
 ```
 
@@ -65,7 +65,7 @@ Rerun `terraform apply` if your execution timed out.
 ### Create kubectl config
 
 ```bash
-aws eks --region "<ENTER_REGION>" update-kubeconfig --name "<ENTER_EKS_CLUSTER_ID>"
+aws eks --region us-west-2 update-kubeconfig --name self-managed-airflow
 ```
 
 ### Describe the EKS Cluster
@@ -155,7 +155,7 @@ This step is critical for writing the Airflow logs to S3 bucket.
 - Enter Connection Id as `aws_s3_conn`, Connection Type as `Amazon Web Services` and Extra as `{"region_name": "<ENTER_YOUR_REGION>"}`
 - Click on Save button
 
-![Airflow AWS Connection](aws-s3-conn.png)
+![Airflow AWS Connection](img/aws-s3-conn.png)
 
 ### Execute Sample Airflow Job
 
