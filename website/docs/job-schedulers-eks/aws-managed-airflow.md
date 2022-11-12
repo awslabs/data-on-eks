@@ -31,12 +31,9 @@ To provision this example:
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
-
 cd data-on-eks/schedulers/terraform/managed-airflow-mwaa
-
 terraform init
-
-terraform apply -var region=<aws_region>
+terraform apply -var region=us-west-2  # Change according to your region
 ```
 
 Enter `yes` at command prompt to apply
@@ -62,7 +59,7 @@ The following command will update the `kubeconfig` on your local machine and all
 ### Run `update-kubeconfig` command
 
 ```bash
-aws eks --region <REGION> update-kubeconfig --name <CLUSTER_NAME>
+aws eks --region us-west-2 update-kubeconfig --name managed-airflow-mwaa
 ```
 
 ### List the nodes

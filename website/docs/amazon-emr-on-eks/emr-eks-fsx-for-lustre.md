@@ -45,7 +45,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/emr-eks-fsx-lustre
+cd data-on-eks/analytics/emr-eks-fsx-lustre
 terraform init
 ```
 
@@ -132,7 +132,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/emr-eks-fsx-lustre/examples/spark-execute/
+cd data-on-eks/analytics/emr-eks-fsx-lustre/examples/spark-execute/
 
 ./fsx-static-spark.sh "<ENTER_EMR_VIRTUAL_CLUSTER_ID>" "s3://<ENTER-YOUR-BUCKET-NAME>" "<EMR_JOB_EXECUTION_ROLE_ARN>"
 ```
@@ -169,7 +169,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/emr-eks-fsx-lustre/examples/spark-execute/
+cd data-on-eks/analytics/emr-eks-fsx-lustre/examples/spark-execute/
 
 ./fsx-dynamic-spark.sh "<ENTER_EMR_VIRTUAL_CLUSTER_ID>" "s3://<ENTER-YOUR-BUCKET-NAME>" "<EMR_JOB_EXECUTION_ROLE_ARN>"
 ```

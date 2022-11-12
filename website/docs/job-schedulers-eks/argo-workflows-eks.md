@@ -30,7 +30,7 @@ To provision this example:
 git clone https://github.com/awslabs/data-on-eks.git
 cd data-on-eks/schedulers/terraform/argo-workflow
 terraform init
-terraform apply -var region=<aws_region> #defaults to us-west-2
+terraform apply -var region=us-west-2 # Change according to your need
 ```
 
 Enter `yes` at command prompt to apply
@@ -52,7 +52,7 @@ The following command will update the `kubeconfig` on your local machine and all
 ### Run `update-kubeconfig` command:
 
 ```bash
-aws eks --region <REGION> update-kubeconfig --name <CLUSTER_NAME>
+aws eks --region us-west-2 update-kubeconfig --name argoworkflows-eks
 ```
 
 ### List the nodes

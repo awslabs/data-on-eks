@@ -67,7 +67,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/terraform/emr-eks-yunikorn
+cd data-on-eks/analytics/terraform/emr-eks-yunikorn
 terraform init
 ```
 
@@ -138,7 +138,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/terraform/emr-eks-yunikorn/examples/emr-yunikorn-gang-scheduling/
+cd data-on-eks/analytics/terraform/emr-eks-yunikorn/examples/emr-yunikorn-gang-scheduling/
 
 # Execute EMR Spark Job with Apache YuniKorn Gang Scheduling feature
 ./emr-eks-yunikorn-gang-scheduling.sh emr-eks-yunikorn-emr-data-team-a s3://<S3_BUCKET_NAME> arn:aws:iam::<YOUR_ACCOUNT_ID>:role/emr-eks-yunikorn-emr-eks-data-team-a

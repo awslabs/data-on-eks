@@ -42,7 +42,7 @@ terraform init
 Set `AWS_REGION` and Run `terraform plan` to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION="<enter-your-region>"
+export AWS_REGION="us-west-2"
 terraform plan
 ```
 
@@ -65,7 +65,7 @@ Rerun `terraform apply` if your execution timed out.
 ### Create kubectl config
 
 ```bash
-aws eks --region "<ENTER_REGION>" update-kubeconfig --name "<ENTER_EKS_CLUSTER_ID>"
+aws eks --region us-west-2 update-kubeconfig --name self-managed-airflow
 ```
 
 ### Describe the EKS Cluster

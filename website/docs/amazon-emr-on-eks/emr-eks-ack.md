@@ -59,7 +59,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/terraform/emr-eks-ack
+cd data-on-eks/analytics/terraform/emr-eks-ack
 terraform init
 ```
 
@@ -130,7 +130,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/terraform/emr-eks-ack/examples/spark/
+cd data-on-eks/analytics/terraform/emr-eks-ack/examples/spark/
 
 ./emr-eks-spark-amp-amg.sh "<ENTER_EMR_VIRTUAL_CLUSTER_ID>" "s3://<ENTER-YOUR-BUCKET-NAME>" "<EMR_JOB_EXECUTION_ROLE_ARN>"
 ```

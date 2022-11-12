@@ -53,7 +53,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/terraform/spark-k8s-operator
+cd data-on-eks/analytics/terraform/spark-k8s-operator
 terraform init
 ```
 

@@ -1,9 +1,16 @@
-# Ray with Amazon EKS
+---
+sidebar_position: 2
+sidebar_label: Ray on EKS
+---
 
-> 🛑 This blueprint should be considered as experimental and should only be used for proof of concept.
+# Ray on EKS
 
+:::caution
 
-This example deploys an EKS Cluster running the [Ray Operator](https://docs.ray.io/en/latest/).
+This blueprint should be considered as experimental and should only be used for proof of concept.
+:::
+
+This [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/terraform/ray) deploys an EKS Cluster running the [Ray Operator](https://docs.ray.io/en/latest/).
 
 - Creates a new sample VPC, 3 Private Subnets and 3 Public Subnets
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
@@ -21,7 +28,7 @@ Ensure that you have installed the following tools on your machine.
 4. [python3](https://www.python.org/)
 5. [jq](https://stedolan.github.io/jq/)
 
-Additionally for end-to-end configuration of Ingress, you can optionally provide the following:
+Additionally, for end-to-end configuration of Ingress, you can optionally provide the following:
 
 1. A [Route53 Public Hosted Zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html) configured in the account where you are deploying this example. E.g. "bar.com"
 2. An [ACM Certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html) in the account + region where you are deploying this example. A wildcard certificate is preferred, e.g. "*.bar.com"
@@ -30,7 +37,7 @@ Additionally for end-to-end configuration of Ingress, you can optionally provide
 
 ### Clone the repository
 
-```sh
+```bash
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
@@ -40,13 +47,13 @@ First, in order to run the RayCluster, we need to push a container image to ECR 
 
 Create an ECR repository
 
-```sh
+```bash
 aws ecr create-repository --repository-name ray-demo
 ```
 
 Login to the ECR repository
 
-```sh
+```bash
 export AWS_REGION=<enter-your-region>
 export ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
 echo $ACCOUNT_ID
@@ -59,13 +66,13 @@ aws ecr get-login-password \
 
 Build the docker image containing our model deployment.
 
-```sh
+```bash
 docker build sources -t $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ray-demo
 ```
 
 Push the docker image to the ECR repo
 
-```sh
+```bash
 docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ray-demo
 ```
 
@@ -73,8 +80,8 @@ docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ray-demo
 
 Navigate into the example directory and run `terraform init`
 
-```sh
-cd ai-ml/ray/
+```bash
+cd data-on-eks/ai-ml/terraform/ray/
 terraform init
 ```
 
@@ -84,14 +91,14 @@ Run Terraform plan to verify the resources created by this execution.
 
 **Optional** - provide a Route53 Hosted Zone hostname and a corresponding ACM Certificate;
 
-```sh
+```bash
 export TF_VAR_eks_cluster_domain="bar.com"
 export TF_VAR_acm_certificate_domain="*.bar.com"
 ```
 
 ### Deploy the pattern
 
-```sh
+```bash
 terraform apply
 ...
 ...
@@ -106,7 +113,7 @@ Enter `yes` to apply.
 
 Export the s3_bucket to your local environment.
 
-```sh
+```bash
 export S3_BUCKET="s3://ray-demo-models-20220719224423900800000001"
 ```
 
@@ -114,13 +121,13 @@ export S3_BUCKET="s3://ray-demo-models-20220719224423900800000001"
 
 Update kubeconfig
 
-```sh
+```bash
 aws eks --region us-west-2 update-kubeconfig --name ray
 ```
 
 Verify all pods are running.
 
-```sh
+```bash
 NAMESPACE               NAME                                                        READY   STATUS    RESTARTS        AGE
 external-dns            external-dns-99dd9564f-8fsvd                                1/1     Running   2 (6h21m ago)   16d
 ingress-nginx           ingress-nginx-controller-659678ccb9-dlc5r                   1/1     Running   2 (6h20m ago)   16d
@@ -151,7 +158,7 @@ ray-cluster             raycluster-autoscaler-worker-large-group-twtld          
 
 The Ray Dashboard can be opened at the following url "https://ray-demo.bar.com/dashboard"
 
-![](../../../images/Ray-Dashboard.png)
+![Ray Dashboard](img/ray.png)
 
 ### Examples
 
@@ -163,7 +170,7 @@ As a sample, we will use [Ray Serve](https://docs.ray.io/en/latest/serve/index.h
 
 Create a Job to deploy the model to the Ray Cluster
 
-```sh
+```bash
 envsubst < sample-jobs/summarize-serve-job.yaml | kubectl create -f -
 
 job.batch/ray-summarize-job-cjdd8 created
@@ -171,7 +178,7 @@ job.batch/ray-summarize-job-cjdd8 created
 
 Tail the logs of the job to verify successful deployment of the job.
 
-```sh
+```bash
 kubectl logs -n ray-cluster ray-summarize-job-cjdd8-wmxm8 -f
 
 Caught schedule exception
@@ -234,7 +241,7 @@ Downloading: 100%|██████████| 1.32M/1.32M [00:00<00:00, 25.5
 
 The client code uses python `requests` module to invoke the `/summarize` endpoint with a block of text. If all goes well, the endpoint should return summarized text of the block text submitted.
 
-```sh
+```bash
 python sources/summarize_client.py
 
 two astronauts steered their fragile lunar module safely and smoothly to the historic landing . the first men to reach the moon -- Armstrong and his co-pilot, col. Edwin E. Aldrin Jr. of the air force -- brought their ship to rest on a level, rock-strewn plain .
@@ -248,7 +255,7 @@ As a sample, we will use [Ray Train](https://docs.ray.io/en/latest/train/train.h
 
 Create a Job to submit the training job to the Ray Cluster
 
-```sh
+```bash
 envsubst < sample-jobs/train-pytorch-huggingface-clothing.yaml | kubectl create -f -
 
 job.batch/ray-train-pytorch-huggingface-clothing-plkzf created
@@ -256,7 +263,7 @@ job.batch/ray-train-pytorch-huggingface-clothing-plkzf created
 
 Tail the logs to see the training in progress:
 
-```sh
+```bash
 kubectl logs -n ray-cluster job.batch/ray-train-pytorch-huggingface-clothing-plkzf -f
 
 ...
@@ -273,7 +280,7 @@ As shown above a model checkpoint is written to an S3 location so that it can be
 To create an inference endpoint which will be served using Ray Serve, create a Job to submit the Ray [deployment](sources/serve_pytorch_huggingface_clothing.py)
 
 
-```sh
+```bash
 envsubst < sample-jobs/serve-pytorch-huggingface-clothing.yaml | kubectl create -f -
 
 ```
@@ -282,8 +289,7 @@ envsubst < sample-jobs/serve-pytorch-huggingface-clothing.yaml | kubectl create 
 
 A sample [script](sources/pytorch_huggingface_clothing_client.py) is provided that uses the requests library to test the inference endpoint.
 
-
-```sh
+```bash
 python sources/pytorch_huggingface_clothing_client.py
 
 Positive
@@ -291,12 +297,11 @@ Positive
 
 ### Monitoring
 
-This blueprint uses the [kube-prometheus-stack](../../../docs/add-ons/kube-prometheus-stack.md) to create a monitoring stack for getting visibility into your RayCluster.
+This blueprint uses the `kube-prometheus-stack` to create a monitoring stack for getting visibility into your RayCluster.
 
 Open the Grafana dashboard using the url "https://ray-demo.bar.com/monitoring". The sample Ray dashboard can be accessed by browsing to the Ray grafana folder.
 
-
-![](../../../images/Ray-Grafana.png)
+![Ray Grafana Dashboard](img/ray-grafana.png)
 
 ## Cleanup
 
@@ -304,7 +309,7 @@ To clean up your environment, destroy the Terraform modules in reverse order.
 
 Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
 
-```sh
+```bash
 terraform destroy -target="module.eks_blueprints_kubernetes_addons" -auto-approve
 terraform destroy -target="module.eks_blueprints" -auto-approve
 terraform destroy -target="module.vpc" -auto-approve
@@ -312,81 +317,6 @@ terraform destroy -target="module.vpc" -auto-approve
 
 Finally, destroy any additional resources that are not in the above modules
 
-```sh
+```bash
 terraform destroy -auto-approve
 ```
-
----
-
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
-## Requirements
-
-| Name | Version |
-|------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.72 |
-| <a name="requirement_grafana"></a> [grafana](#requirement\_grafana) | >= 1.13.3 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.4.1 |
-| <a name="requirement_kubectl"></a> [kubectl](#requirement\_kubectl) | >= 1.14 |
-| <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.0.0 |
-
-## Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
-| <a name="provider_grafana"></a> [grafana](#provider\_grafana) | >= 1.13.3 |
-| <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | >= 1.14 |
-| <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
-| <a name="provider_random"></a> [random](#provider\_random) | >= 3.0.0 |
-
-## Modules
-
-| Name | Source | Version |
-|------|--------|---------|
-| <a name="module_cluster_irsa"></a> [cluster\_irsa](#module\_cluster\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa | n/a |
-| <a name="module_eks_blueprints"></a> [eks\_blueprints](#module\_eks\_blueprints) | github.com/aws-ia/terraform-aws-eks-blueprints | v4.15.0 |
-| <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons | v4.15.0 |
-| <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | v3.3.0 |
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 3.0 |
-
-## Resources
-
-| Name | Type |
-|------|------|
-| [aws_iam_policy.irsa_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
-| [aws_kms_key.objects](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key) | resource |
-| [aws_secretsmanager_secret.grafana](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
-| [aws_secretsmanager_secret_version.grafana](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
-| [grafana_dashboard.ray](https://registry.terraform.io/providers/grafana/grafana/latest/docs/resources/dashboard) | resource |
-| [grafana_folder.ray](https://registry.terraform.io/providers/grafana/grafana/latest/docs/resources/folder) | resource |
-| [kubectl_manifest.cluster_provisioner](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
-| [kubectl_manifest.prometheus](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
-| [random_password.grafana](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
-| [aws_acm_certificate.issued](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/acm_certificate) | data source |
-| [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
-| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
-| [aws_eks_cluster_auth.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/eks_cluster_auth) | data source |
-| [aws_iam_policy_document.irsa_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
-| [kubernetes_ingress_v1.ingress](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/data-sources/ingress_v1) | data source |
-
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_acm_certificate_domain"></a> [acm\_certificate\_domain](#input\_acm\_certificate\_domain) | Optional Route53 certificate domain | `string` | `null` | no |
-| <a name="input_eks_cluster_domain"></a> [eks\_cluster\_domain](#input\_eks\_cluster\_domain) | Optional Route53 domain for the cluster. | `string` | `""` | no |
-| <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.23"` | no |
-| <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"ray"` | no |
-| <a name="input_region"></a> [region](#input\_region) | AWS Region | `string` | `"us-west-2"` | no |
-| <a name="input_tags"></a> [tags](#input\_tags) | Default tags | `map(string)` | `{}` | no |
-| <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR | `string` | `"10.1.0.0/16"` | no |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| <a name="output_configure_kubectl"></a> [configure\_kubectl](#output\_configure\_kubectl) | Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig |
-| <a name="output_s3_bucket"></a> [s3\_bucket](#output\_s3\_bucket) | S3 Bucket Name |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->

@@ -238,7 +238,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/terraform/emr-eks-karpenter
+cd data-on-eks/analytics/terraform/emr-eks-karpenter
 terraform init
 ```
 
@@ -305,7 +305,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/terraform/emr-eks-karpenter/examples/spark/
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/spark/
 
 ./compute-nytaxi-pyspark-karpenter.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \
@@ -326,7 +326,7 @@ kubectl get pods --namespace=emr-data-team-a -w
 This pattern uses the Karpenter provisioner for memory optimized instances. This template leverages the Karpenter AWS Node template with Userdata.
 
 ```bash
-cd analytics/terraform/emr-eks-karpenter/examples/spark/
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/spark/
 
 ./memory-nytaxi-pyspark-karpenter.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \
