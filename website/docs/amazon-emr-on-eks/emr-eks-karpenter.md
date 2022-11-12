@@ -1,13 +1,13 @@
 ---
-sidebar_position: 4
-sidebar_label: Karpenter with EMR on EKS
+sidebar_position: 3
+sidebar_label: Karpenter with EMR
 ---
 
 # EMR on EKS with [Karpenter Autoscaler](https://karpenter.sh/)
 
 ## Introduction
 
-In this pattern, you will learn how to deploy, configure and use multiple [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs with EMR on EKS.
+In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will learn how to deploy, configure and use multiple [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs with EMR on EKS.
 
 Multiple Data teams within the organization can run Spark jobs on the selected Karpenter provisioners using `tolerations` specified in the pod templates example.
 
@@ -198,7 +198,7 @@ spec:
 ```
 ## Deploying the Solution
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/emr-eks-karpenter), you will provision the following resources required to run Spark Jobs using EMR on EKS with [Karpenter](https://karpenter.sh/) as Autoscaler, as well as monitor job metrics using Amazon Managed Prometheus and Amazon Managed Grafana.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will provision the following resources required to run Spark Jobs using EMR on EKS with [Karpenter](https://karpenter.sh/) as Autoscaler, as well as monitor job metrics using Amazon Managed Prometheus and Amazon Managed Grafana.
 
 - Creates EKS Cluster Control plane with public endpoint (for demo purpose only)
 - One managed node group
@@ -238,14 +238,14 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/emr-eks-karpenter
+cd analytics/terraform/emr-eks-karpenter
 terraform init
 ```
 
 Set AWS_REGION and Run Terraform plan to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION="<enter-your-region>"
+export AWS_REGION="us-west-2"
 terraform plan
 ```
 
@@ -270,7 +270,7 @@ aws amp list-workspaces --alias amp-ws-emr-eks-karpenter
 Verify EMR on EKS Namespaces `emr-data-team-a` and `emr-data-team-b` and Pod status for `Prometheus`, `Vertical Pod Autoscaler`, `Metrics Server` and `Cluster Autoscaler`.
 
 ```bash
-aws eks --region <ENTER_YOUR_REGION> update-kubeconfig --name emr-eks-karpenter # Creates k8s config file to authenticate with EKS Cluster
+aws eks --region us-west-2 update-kubeconfig --name emr-eks-karpenter # Creates k8s config file to authenticate with EKS Cluster
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
@@ -305,7 +305,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/emr-eks-karpenter/examples/spark/
+cd analytics/terraform/emr-eks-karpenter/examples/spark/
 
 ./compute-nytaxi-pyspark-karpenter.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \
@@ -326,7 +326,7 @@ kubectl get pods --namespace=emr-data-team-a -w
 This pattern uses the Karpenter provisioner for memory optimized instances. This template leverages the Karpenter AWS Node template with Userdata.
 
 ```bash
-cd analytics/emr-eks-karpenter/examples/spark/
+cd analytics/terraform/emr-eks-karpenter/examples/spark/
 
 ./memory-nytaxi-pyspark-karpenter.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \

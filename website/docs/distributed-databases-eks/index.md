@@ -1,11 +1,8 @@
 ---
 sidebar_position: 1
+sidebar_label: Introduction
 ---
 
 # Distributed Databases on EKS
 
-:::info
-
-Work is still in progress with the documentation.
-
-:::
+Build, deploy and scale Distributed Streaming platforms on Amazon EKS.

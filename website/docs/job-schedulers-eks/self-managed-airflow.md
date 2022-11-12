@@ -35,7 +35,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd schedulers/self-managed-airflow
+cd data-on-eks/schedulers/terraform/self-managed-airflow
 terraform init
 ```
 
@@ -155,7 +155,7 @@ This step is critical for writing the Airflow logs to S3 bucket.
 - Enter Connection Id as `aws_s3_conn`, Connection Type as `Amazon Web Services` and Extra as `{"region_name": "<ENTER_YOUR_REGION>"}`
 - Click on Save button
 
-![Airflow AWS Connection](aws-s3-conn.png)
+![Airflow AWS Connection](img/aws-s3-conn.png)
 
 ### Execute Sample Airflow Job
 

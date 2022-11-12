@@ -8,9 +8,9 @@ sidebar_label: Spark Operator with YuniKorn
 ## Introduction
 In this post, we will learn to build, configure and deploy highly scalable EKS Cluster with Open source [Spark Operator](https://github.com/GoogleCloudPlatform/spark-on-k8s-operator) and [Apache YuniKorn](https://yunikorn.apache.org/) batch scheduler.
 
-## Architecture
+## Spark Operator
 
-Spark Operator consists of...
+The Kubernetes Operator for Apache Spark aims to make specifying and running Spark applications as easy and idiomatic as running other workloads on Kubernetes.
 
 * a SparkApplication controller that watches events of creation, updates, and deletion of SparkApplication objects and acts on the watch events,
 * a submission runner that runs spark-submit for submissions received from the controller,
@@ -20,11 +20,11 @@ Spark Operator consists of...
 
 The following diagram shows how different components of Spark Operator add-pn interact and work together.
 
-![img.png](img.png)
+![img.png](img/spark-operator.png)
 
 ## Deploying the Solution
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/spark-k8s-operator), you will provision the following resources required to run Spark Jobs with open source Spark Operator and Apache YuniKorn.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator), you will provision the following resources required to run Spark Jobs with open source Spark Operator and Apache YuniKorn.
 
 This example deploys an EKS Cluster running the Spark K8s Operator into a new VPC.
 
@@ -53,14 +53,14 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/spark-k8s-operator
+cd analytics/terraform/spark-k8s-operator
 terraform init
 ```
 
 Run Terraform plan to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION=<enter-your-region>   # Select your own region
+export AWS_REGION="us-west-2"   # Change according to your needs
 terraform plan
 ```
 
@@ -72,14 +72,16 @@ terraform apply
 
 Enter `yes` to apply.
 
-## Execute Sample Spark Job on EKS Cluster with `spark-k8s-operator`
+## Sample Spark Job with Spark Operator
+
+Execute sample PySpark Pi job.
 
 ```bash
-  cd analytics/spark-k8s-operator/examples
+  cd analytics/terraform/spark-k8s-operator/examples
   kubectl apply -f pyspark-pi-job.yaml
 ```
 
-### Verify the Spark job status
+Verify the Spark job status
 
 ```bash
   kubectl get sparkapplications -n spark-team-a
@@ -87,36 +89,79 @@ Enter `yes` to apply.
   kubectl describe sparkapplication pyspark-pi -n spark-team-a
 ```
 
-## Example for EBS Dynamic PVCs for shuffle storage
-_Note: Check the pre-requisites in yaml file before running this job.
+## NVMe Ephemeral SSD disk for Spark shuffle storage
+
+Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/spark-k8s-operator/examples
-  kubectl apply -f ebs-ondemand-pvc.yaml
+  cd analytics/terraform/spark-k8s-operator/examples/nvme-ephemeral-storage
 ```
 
-
-## Example for Apache YuniKorn Gang Scheduling with NVMe shuffle storage
-_Note: Check the pre-requisites in yaml file before running this job.
+Update the variables in Shell script and execute
 
 ```bash
-  cd analytics/spark-k8s-operator/examples
-  kubectl apply -f NVMe-yunikorn-gang-scheduling.yaml
+  ./taxi-trip-execute.sh
 ```
 
-## Example for TPCDS Test Data Generation tool
-_Note: Check the pre-requisites in yaml file before running this job.
+Update YAML file and run the below command
 
 ```bash
-  cd analytics/spark-k8s-operator/examples
-  kubectl apply -f tpcds-benchmark-data-generation-1t.yaml
+  kubectl apply -f nvme-ephemeral-storage.yaml
+```
+
+## EBS Dynamic PVC for shuffle storage
+Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
+
+```bash
+  cd analytics/terraform/spark-k8s-operator/examples/nvme-ephemeral-storage
+```
+
+Update the variables in Shell script and execute
+
+```bash
+  ./taxi-trip-execute.sh
+```
+
+Update YAML file and run the below command
+
+```bash
+  kubectl apply -f nvme-ephemeral-storage.yaml
+```
+
+## Apache YuniKorn Gang Scheduling with NVMe based SSD disk for shuffle storage
+Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
+
+```bash
+  cd analytics/terraform/spark-k8s-operator/examples/nvme-yunikorn-gang-scheduling
+```
+
+Update the variables in Shell script and execute
+
+```bash
+  ./taxi-trip-execute.sh
+```
+
+Update YAML file and run the below command
+
+```bash
+  kubectl apply -f nvme-yunikorn-gang-scheduling.yaml
 ```
 
 ## Example for TPCDS Benchmark test
-_Note: Check the pre-requisites in yaml file before running this job.
+Check the pre-requisites in yaml file before running this job.
 
 ```bash
-  cd analytics/spark-k8s-operator/examples
+cd analytics/terraform/spark-k8s-operator/examples/benchmark
+```
+
+Step1: Benchmark test data generation
+
+```bash
+kubectl apply -f tpcds-benchmark-data-generation-1t
+```
+Step2: Execute Benchmark test
+
+```bash
   kubectl apply -f tpcds-benchmark-1t.yaml
 ```
 

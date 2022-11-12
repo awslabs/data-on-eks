@@ -5,7 +5,7 @@ import styles from './styles.module.css';
 const FeatureList = [
     {
         title: 'Amazon EMR on EKS',
-        // Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+        // Svg: require('@site/static/img/emr.svg').default,
         description: (
             <>
                 Easily build, deploy and scale Spark workloads with Amazon EMR on EKS multi-tenant clusters and optimized EMR runtime.<br/>
@@ -15,7 +15,7 @@ const FeatureList = [
     },
   {
     title: 'Apache Spark on EKS',
-    // Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    // Svg: require('@site/static/img/spark.svg').default,
     description: (
       <div>
         Self-managed Apache Spark on Amazon EKS. <br/> Build, deploy and run self-managed Spark clusters on Amazon EKS with custom schedulers.
@@ -35,7 +35,7 @@ const FeatureList = [
   },
   {
     title: 'Distributed Databases on EKS',
-    // Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    // Svg: require('@site/static/img/distributed_databases.svg').default,
     description: (
       <>
         Build and scale highly scalable self-managed open source distributed databases on Amazon EKS. <br/>
@@ -45,20 +45,21 @@ const FeatureList = [
   },
     {
         title: 'Streaming Data Platforms on EKS',
-        // Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+        // Svg: require('@site/static/img/streaming.svg').default,
         description: (
             <>
-                Self-managed open source streaming platforms to build and scale on Amazon EKS. <br/>e.g., Kafka, Spark structured streaming, Flink etc.
+                Self-managed open source streaming platforms to build and scale on Amazon EKS. <br/>
+                e.g., Kafka, Spark structured streaming, Flink etc.
             </>
         ),
     },
     {
-        title: 'Observability on EKS',
-        // Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+        title: 'Schedulers on EKS',
+        // Svg: require('@site/static/img/schedulers.svg').default,
         description: (
             <>
-                Observability patterns for Spark workloads and other data platforms on Amazon EKS. <br/>
-                e.g., AWS Managed Prometheus, AWS Managed Grafana
+                Job schedulers for Data and AI/ML workloads on Amazon EKS. <br/>
+                e.g., Apache Airflow, Aamzon MWAA and Argo Workflow
             </>
         ),
     },
@@ -71,7 +72,7 @@ function Feature({Svg, title, description}) {
       {/*  <Svg className={styles.featureSvg} role="img" />*/}
       {/*</div>*/}
       <div className="text--center padding-horiz--md">
-        <h2>{title}</h2>
+        <h2><b>{title}</b></h2>
         <p>{description}</p>
       </div>
     </div>

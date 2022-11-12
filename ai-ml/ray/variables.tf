@@ -13,7 +13,7 @@ variable "acm_certificate_domain" {
 variable "region" {
   description = "AWS Region"
   type        = string
-  default     = "eu-west-1"
+  default     = "us-west-2"
 }
 
 variable "name" {

@@ -1,6 +1,6 @@
 ---
-sidebar_position: 5
-sidebar_label: Apache YuniKorn with EMR on EKS
+sidebar_position: 2
+sidebar_label: Apache YuniKorn with EMR
 ---
 
 # Apache YuniKorn with EMR on EKS
@@ -21,11 +21,11 @@ Key features as follows...
 7. Gang Scheduling Spark jobs
 
 ## Architecture
-![Apache YuniKorn](yunikorn.png)
+![Apache YuniKorn](img/yunikorn.png)
 
 ## Deploying the Solution
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/emr-eks-yunikorn), you will provision the following resources required to run Spark Jobs using EMR on EKS, as well as monitor spark job metrics using **Amazon Managed Prometheus** and **Amazon Managed Grafana**.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-yunikorn), you will provision the following resources required to run Spark Jobs using EMR on EKS, as well as monitor spark job metrics using **Amazon Managed Prometheus** and **Amazon Managed Grafana**.
 
 - Creates EKS Cluster Control plane with public endpoint (for demo purpose only)
 - Three managed node groups
@@ -67,14 +67,14 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd analytics/emr-eks-yunikorn
+cd analytics/terraform/emr-eks-yunikorn
 terraform init
 ```
 
 Set `AWS_REGION` and Run Terraform plan to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION="<enter-your-region>"
+export AWS_REGION="us-west-2" # Change region according to your needs.
 terraform plan
 ```
 
@@ -138,7 +138,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd analytics/emr-eks-yunikorn/examples/emr-yunikorn-gang-scheduling/
+cd analytics/terraform/emr-eks-yunikorn/examples/emr-yunikorn-gang-scheduling/
 
 # Execute EMR Spark Job with Apache YuniKorn Gang Scheduling feature
 ./emr-eks-yunikorn-gang-scheduling.sh emr-eks-yunikorn-emr-data-team-a s3://<S3_BUCKET_NAME> arn:aws:iam::<YOUR_ACCOUNT_ID>:role/emr-eks-yunikorn-emr-eks-data-team-a
