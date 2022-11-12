@@ -43,7 +43,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 
 ### Build Docker Image for Ray Cluster
 
-First, in order to run the RayCluster, we need to push a container image to ECR repository that contains the all the dependencies. You can see the [Dockerfile](sample-job/Dockerfile) to see the python dependencies packaged in. The next series of steps we will setup an ECR repository, build the docker image for our model and push it to the ECR repository.
+First, in order to run the RayCluster, we need to push a container image to ECR repository that contains the all the dependencies. You can see the `Dockerfile` in the example with python dependencies packaged in. The next series of steps we will setup an ECR repository, build the docker image for our model and push it to the ECR repository.
 
 Create an ECR repository
 
@@ -166,7 +166,7 @@ The Ray Dashboard can be opened at the following url "https://ray-demo.bar.com/d
 
 ##### Ray Serve
 
-As a sample, we will use [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) to deploy a sample machine learning model and expose it to the outside world via the Ingress configuration. The code for this deployment can be found [here](sources/hface_t5_summarize_serve.py). We use the [Hugging Face T5](https://huggingface.co/docs/transformers/model_doc/t5) model to serve an endpoint to summarize an arbitrary block of text. This model is deployed as Kubernetes [Job](sample-jobs/summarize-serve-job.yaml).
+As a sample, we will use [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) to deploy a sample machine learning model and expose it to the outside world via the Ingress configuration. The code for this deployment can be found `sources/hface_t5_summarize_serve.py`. We use the [Hugging Face T5](https://huggingface.co/docs/transformers/model_doc/t5) model to serve an endpoint to summarize an arbitrary block of text. This model is deployed as Kubernetes job `sample-jobs/summarize-serve-job.yaml`.
 
 Create a Job to deploy the model to the Ray Cluster
 
@@ -251,7 +251,7 @@ two astronauts steered their fragile lunar module safely and smoothly to the his
 
 ##### Ray Train
 
-As a sample, we will use [Ray Train](https://docs.ray.io/en/latest/train/train.html) to train a machine learning model using a sample dataset. See the code for model training [here](sources/train_pytorch_huggingface_clothing.py)
+As a sample, we will use [Ray Train](https://docs.ray.io/en/latest/train/train.html) to train a machine learning model using a sample dataset. See the code for model training `sources/train_pytorch_huggingface_clothing.py`
 
 Create a Job to submit the training job to the Ray Cluster
 
@@ -277,7 +277,7 @@ As shown above a model checkpoint is written to an S3 location so that it can be
 
 ##### Ray Serve
 
-To create an inference endpoint which will be served using Ray Serve, create a Job to submit the Ray [deployment](sources/serve_pytorch_huggingface_clothing.py)
+To create an inference endpoint which will be served using Ray Serve, create a Job to submit the Ray deployment `sources/serve_pytorch_huggingface_clothing.py`.
 
 
 ```bash
@@ -287,7 +287,7 @@ envsubst < sample-jobs/serve-pytorch-huggingface-clothing.yaml | kubectl create 
 
 ##### Test Deployment
 
-A sample [script](sources/pytorch_huggingface_clothing_client.py) is provided that uses the requests library to test the inference endpoint.
+A sample script `sources/pytorch_huggingface_clothing_client.py` is provided that uses the requests library to test the inference endpoint.
 
 ```bash
 python sources/pytorch_huggingface_clothing_client.py
