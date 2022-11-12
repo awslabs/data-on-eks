@@ -1,0 +1,30 @@
+name: Create daily tags
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * *"  # min(0 - 59) hour(0 - 23) day of the month (1 - 31) month (1 - 12 or JAN-DEC) day of the week (0 - 6 or SUN-SAT)
+
+permissions:
+  contents: write
+
+jobs:
+  daily-tag:
+    name: "Create tag on main for changes in last 24 hours"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: "Get changes and create TAG"
+        run: |
+          CHANGES=$(git log --since="1 day ago" --name-only --pretty=format: )
+
+          if [ "x$CHANGES" != "x" ] ; then
+            TAG="daily-$(date +%Y.%m.%d)"
+            git tag $TAG
+            git push origin $TAG
+
+            echo "Created a new tag: $TAG"
+          else
+            echo "No changes identified in last 24 hours"
+          fi
