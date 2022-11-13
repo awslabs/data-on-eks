@@ -25,7 +25,7 @@ Data on EKS(DoEKS) solution is categorized into the following areas.
 ## 🏃‍♀️Getting Started
 In this repository you will find multiple deployment examples for bootstrapping Data platforms with Amazon EKS Cluster and the Kubernetes add-ons.
 
-🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - EMR on EKS with Apache YuniKorn cusotm batch scheduler.
+🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - EMR on EKS with Apache YuniKorn custom batch scheduler.
 
 🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Scaling Spark jobs with EMR on EKS and Karpenter.
 
