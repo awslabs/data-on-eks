@@ -12,20 +12,20 @@ sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/mac
 ## 🌟 Features
 Data on EKS(DoEKS) solution is categorized into the following areas.
 
-🎯  [Data Analytics](analytics) on EKS
+🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks) on EKS
 
-🎯  [AI/ML](ai-ml) on EKS
+🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks) on EKS
 
-🎯  [Distributed Databases](distributed-databases) on EKS
+🎯  [Distributed Databases](https://awslabs.github.io/data-on-eks/docs/distributed-databases-eks) on EKS
 
-🎯  [Streaming Platforms](streaming) on EKS
+🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks) on EKS
 
-🎯  [Scheduler Workflow Platforms](schedulers) on EKS
+🎯  [Scheduler Workflow Platforms](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks) on EKS
 
 ## 🏃‍♀️Getting Started
 In this repository you will find multiple deployment examples for bootstrapping Data platforms with Amazon EKS Cluster and the Kubernetes add-ons.
 
-🚀 [EMR on EKS](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-amp-amg) - Spark job monitoring for EMR on EKS with Prometheus and Grafana.
+🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - EMR on EKS with Apache YuniKorn cusotm batch scheduler.
 
 🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Scaling Spark jobs with EMR on EKS and Karpenter.
 
@@ -37,7 +37,7 @@ In this repository you will find multiple deployment examples for bootstrapping 
 
 🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - Deploy self-managed Apache Airflow with best practices on Amazon EKS.
 
-🚀 [Ray on EKS](ai-ml/ray/README.md) - Deploy Ray Operator on EKS with sample scripts.
+🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks/ray) - Deploy Ray Operator on EKS with sample scripts.
 
 ## 🗂️ Documentation
 Checkout the [DoEKS](https://awslabs.github.io/data-on-eks/) Website for instructions to deploy the Data on EKS patterns and run sample tests.
