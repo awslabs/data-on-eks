@@ -2,7 +2,7 @@
 # Kubernetes Add-ons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.10.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.15.0"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -24,12 +24,12 @@ module "eks_blueprints_kubernetes_addons" {
   # enable_grafana                      = true
 
   # Kafka (Strimzi) add-on with custom helm config
-  enable_kafka = true
-  kafka_helm_config = {
+  enable_strimzi_kafka_operator = true
+  strimzi_kafka_operator_helm_config = {
     name             = local.strimzi_kafka_name
     chart            = local.strimzi_kafka_name
     repository       = "https://strimzi.io/charts/"
-    version          = "0.31.1"
+    version          = "0.32.0"
     namespace        = local.strimzi_kafka_name
     create_namespace = true
     timeout          = 360
