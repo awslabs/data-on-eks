@@ -6,7 +6,7 @@ metadata:
 spec:
   cruiseControl: {}
   kafka:
-    version: 3.3.1
+    version: 3.2.3
     replicas: 3
     listeners:
       - name: plain
@@ -39,7 +39,7 @@ spec:
       volumes:
       - id: 0
         type: persistent-claim
-        size: 10000Gi
+        size: 1000Gi
         class: gp3
         deleteClaim: false
     template:
@@ -90,7 +90,7 @@ spec:
     replicas: 3
     storage:
       type: persistent-claim
-      size: 100Gi
+      size: 10Gi
       class: gp3
       deleteClaim: false
     metricsConfig:
