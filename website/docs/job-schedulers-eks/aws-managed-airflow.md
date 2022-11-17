@@ -10,7 +10,7 @@ The example demonstrates how to use [Amazon Managed Workflows for Apache Airflow
 1. Directly create a job and deploy to EKS.
 2. Register EKS as a virtual cluster in EMR and assign a spark job to EMR on EKS.
 
-[Code repo](https://github.com/awslabs/data-on-eks/tree/main/schedulers/managed-airflow-mwaa) for this example.
+[Code repo](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/managed-airflow-mwaa) for this example.
 
 ### Considerations
 
