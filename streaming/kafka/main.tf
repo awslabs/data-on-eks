@@ -13,13 +13,19 @@ locals {
     Blueprint  = local.name
     GithubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"
   }
+
+  csi_name = "aws-ebs-csi-driver"
+
+  csi_create_irsa = true
+  csi_namespace   = "kube-system"
+
 }
 
 #---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.10.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.15.0"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
