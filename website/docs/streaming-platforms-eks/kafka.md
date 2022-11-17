@@ -28,3 +28,41 @@ terraform apply
 ```
 
 Enter `yes` at command prompt to apply
+
+## Architecture
+
+## Deploying the Solution
+
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/kafka), you will provision the following resources required to run Spark Jobs with open source Spark Operator and Apache YuniKorn.
+
+This example deploys an EKS Cluster running the Spark K8s Operator into a new VPC.
+
+- Creates a new sample VPC, 3 Private Subnets and 3 Public Subnets
+- Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
+- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with two managed node group
+- Deploys Metrics server, Cluster Autoscaler, self-managed ebs-csi-driver, Strimzi Kafka Operator, Grafana Operator.
+- Strimzi Kafka Operator is a Kubernetes Operator for Apache Kafka deployed to `strimzi-kafka-operator` namespace. The operator by default watches and handles `Kafka` in all namespaces.
+
+## Cleanup
+
+To clean up your environment, destroy the Terraform modules in reverse order with `--target` option to avoid destroy failures.
+
+Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
+
+```bash
+terraform destroy -target="module.eks_blueprints_kubernetes_addons" -auto-approve
+terraform destroy -target="module.eks_blueprints" -auto-approve
+terraform destroy -target="module.vpc" -auto-approve
+```
+
+Finally, destroy any additional resources that are not in the above modules
+
+```bash
+terraform destroy -auto-approve
+```
+:::caution
+
+To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
+
+ex. Delete kafka-on-eks EBS volumes
+:::
