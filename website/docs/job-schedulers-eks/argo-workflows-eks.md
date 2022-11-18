@@ -11,7 +11,7 @@ The example demonstrates how to use [Argo Workflows](https://argoproj.github.io/
 2. Use Argo Workflows to create a spark job through spark operator.
 3. Trigger Argo Workflows to create a spark job based on Amazon SQS message insert event by using [Argo Events](https://argoproj.github.io/argo-events/).
 
-[Code repo](https://github.com/awslabs/data-on-eks/tree/main/schedulers/argo-workflow) for this example.
+[Code repo](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/argo-workflow) for this example.
 
 ## Prerequisites:
 
