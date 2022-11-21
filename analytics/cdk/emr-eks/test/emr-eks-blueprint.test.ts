@@ -8,9 +8,9 @@ import * as blueprints from '@aws-quickstart/eks-blueprints';
 import * as cdk from 'aws-cdk-lib';
 import { EmrEksAddOn } from '../lib/AddOns/emrEksAddOn';
 import { EmrEksTeam, EmrEksTeamProps } from '../lib/teams/emrEksTeam';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { ArnPrincipal, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import EmrEksStack from '../lib/emr-eks-stack';
+import EmrEksStack, { EmrEksBlueprintProps } from '../lib/emr-eks-blueprint-stack';
 
 const app = new cdk.App();
 
@@ -47,7 +47,7 @@ const dataTeam: EmrEksTeamProps = {
   ]
 };
 
-const props = { env: { account, region }, dataTeams: [dataTeam] };
+const props: EmrEksBlueprintProps = { env: { account, region }, dataTeams: [dataTeam], clusterAdminRoleArn: new ArnPrincipal('arn:aws:iam::372775283473:role/FULL') };
 
 const myStack = new EmrEksStack().build(app, 'AddonRefactotingblueprint', props);
 

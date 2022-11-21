@@ -3,22 +3,27 @@ import * as blueprints from '@aws-quickstart/eks-blueprints'
 import { GenericClusterProvider, GlobalResources, PlatformTeam, VpcProvider } from '@aws-quickstart/eks-blueprints';
 import { CapacityType, Cluster, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
 import { InstanceType, IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { EmrEksTeam, EmrEksTeamProps } from './teams/emrEksTeam';
 import { EmrEksAddOn } from './AddOns/emrEksAddOn';
-import { StackProps } from 'aws-cdk-lib';
+import { Stack, StackProps } from 'aws-cdk-lib';
+import VpcDefinintion from './vpc';
+import { ArnPrincipal } from 'aws-cdk-lib/aws-iam';
+import { cloneDeep } from '@aws-quickstart/eks-blueprints/dist/utils';
 
 export interface EmrEksBlueprintProps extends StackProps {
   eksCluster?: GenericClusterProvider,
   clusterVpc?: IVpc,
   dataTeams: EmrEksTeamProps[],
   eksClusterName?: string,
+  clusterAdminRoleArn: ArnPrincipal
 }
 
 
 export default class EmrEksStack {
 
   build(scope: Construct, id: string, props: EmrEksBlueprintProps) {
+
+    const clusterVpc = props.clusterVpc || new VpcDefinintion (Stack.of(scope), 'vpc');
 
     const eksClusterLogging: ClusterLoggingTypes[] = [
       ClusterLoggingTypes.API,
@@ -30,18 +35,20 @@ export default class EmrEksStack {
 
     const emrCluster: GenericClusterProvider = new blueprints.GenericClusterProvider({
       clusterName: props.eksClusterName ? props.eksClusterName : 'eksBlueprintCluster',
-      version: KubernetesVersion.of('1.21'),
+      version: KubernetesVersion.V1_23,
       managedNodeGroups: [
         {
-          id: "core-ng",
+          id: "core-node-grp",
+          nodeGroupCapacityType: CapacityType.ON_DEMAND,
           amiType: NodegroupAmiType.AL2_X86_64,
-          instanceTypes: [new InstanceType('t3.large')],
+          instanceTypes: [new InstanceType('m5.xlarge')],
           diskSize: 50
         },
         {
-          id: "spark",
-          instanceTypes: [new InstanceType('r5d.xlarge')],
+          id: "spark-node-grp",
+          instanceTypes: [new InstanceType('r5d.large')],
           nodeGroupCapacityType: CapacityType.ON_DEMAND,
+          amiType: NodegroupAmiType.AL2_X86_64,
           diskSize: 50,
           labels: {
             app: 'spark'
@@ -50,11 +57,11 @@ export default class EmrEksStack {
         }
       ],
       clusterLogging: eksClusterLogging
-    });
-    //TODO CHANGE THIS TO OUTSIDE THE BLUEPRINT
+    }); 
+
     const clusterAdminTeam = new PlatformTeam({
       name: "adminteam",
-      userRoleArn: "arn:aws:iam::372775283473:role/FULL"
+      userRoleArn: props.clusterAdminRoleArn.arn
     });
 
     let emrEksBlueprint = blueprints.EksBlueprint.builder();
@@ -63,7 +70,7 @@ export default class EmrEksStack {
       emrEksBlueprint.resourceProvider(GlobalResources.Vpc, new VpcProvider(props.clusterVpc.vpcId));
     }
 
-    let emrTeams: EmrEksTeam [] = [...props.dataTeams.map(team => new EmrEksTeam(team))];
+    let emrTeams: EmrEksTeam [] = [...props.dataTeams.map(team => new EmrEksTeam(JSON.parse(JSON.stringify(team))))];
 
     emrEksBlueprint = props.eksCluster ?
       emrEksBlueprint.clusterProvider(props.eksCluster) :

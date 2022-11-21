@@ -2,7 +2,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: emr-containers
-  namespace: <REPLACE-NAMESPACE>
+  namespace: "{{namespace}}"
 rules:
   - apiGroups: [""]
     resources: ["namespaces"]
@@ -25,3 +25,17 @@ rules:
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["roles", "rolebindings"]
     verbs: ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: emr-containers
+  namespace: "{{namespace}}"
+subjects:
+- kind: User
+  name: emr-containers
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: emr-containers
+  apiGroup: rbac.authorization.k8s.io

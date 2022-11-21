@@ -9,7 +9,6 @@ import { CfnVirtualCluster } from "aws-cdk-lib/aws-emrcontainers";
 import { KubectlProvider, ManifestDeployment } from "@aws-quickstart/eks-blueprints/dist/addons/helm-addon/kubectl-provider";
 import { Construct } from "constructs";
 
-
 /**
  * Interface define the object to create an execution role
  */
@@ -22,7 +21,7 @@ import { Construct } from "constructs";
     * The IAM policy to use with IAM role if it already exists
     * Can be initialized for example by `fromPolicyName` in Policy class
     */
-  excutionRoleIamPolicy?: IManagedPolicy,
+  executionRoleIamPolicy?: IManagedPolicy,
   /**
     * Takes an array of IAM Policy Statement, you should pass this 
     * if you want the Team to create the policy along the IAM role 
@@ -76,7 +75,7 @@ export class EmrEksTeam extends ApplicationTeam {
    */
   constructor(props: EmrEksTeamProps) {
     super(props);
-    this.emrTeam = props;
+    this.emrTeam = JSON.parse(JSON.stringify(props)) as EmrEksTeamProps;
   }
 
   setup(clusterInfo: ClusterInfo): void {
@@ -92,8 +91,8 @@ export class EmrEksTeam extends ApplicationTeam {
 
     this.emrTeam.executionRoles.forEach(executionRole => {
 
-      const executionRolePolicy = executionRole.excutionRoleIamPolicy ?
-        executionRole.excutionRoleIamPolicy :
+      const executionRolePolicy = executionRole.executionRoleIamPolicy ?
+        executionRole.executionRoleIamPolicy :
         new ManagedPolicy(cluster.stack, `executionRole-${executionRole.executionRoleName}-Policy`, {
           statements: executionRole.executionRoleIamPolicyStatement,
         });

@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import EmrEksStack from '../lib/emr-eks-stack';
 import { EmrEksTeamProps } from '../lib/teams/emrEksTeam';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { EmrEksBlueprintProps } from '../lib/emr-eks-blueprint-stack';
+import { ArnPrincipal, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import EmrEksStack, { EmrEksBlueprintProps } from '../lib/emr-eks-blueprint-stack';
 
 const app = new cdk.App();
 
-const account = '123456789012';
+const account = '';
 const region = 'eu-west-1';
 
 const executionRolePolicyStatement: PolicyStatement[] = [
@@ -30,20 +29,21 @@ const executionRolePolicyStatement: PolicyStatement[] = [
 
 const dataTeamA: EmrEksTeamProps = {
   name: 'dataTeamA',
-  virtualClusterName: 'blueprintjob',
-  virtualClusterNamespace: 'blueprintjob',
+  virtualClusterName: 'mergejob',
+  virtualClusterNamespace: 'mergejob',
   createNamespace: true,
   executionRoles: [
     {
       executionRoleIamPolicyStatement: executionRolePolicyStatement,
-      executionRoleName: 'myBlueprintExecRole'
+      executionRoleName: 'myBlueprintExecRoleMerge'
     }
   ]
 };
 
 const props: EmrEksBlueprintProps = {
   env: { account, region },
-  dataTeams: [dataTeamA]
+  dataTeams: [dataTeamA],
+  clusterAdminRoleArn: new ArnPrincipal('arn:aws:iam::1111111111:role/FULL')
 };
 
-new EmrEksStack().build(app, 'BlueprintRefactoring', props);
+new EmrEksStack().build(app, 'BlueprintMergeReady', props);
