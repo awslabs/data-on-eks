@@ -4,6 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import EmrEksStack from '../lib/emr-eks-stack';
 import { EmrEksTeamProps } from '../lib/teams/emrEksTeam';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { EmrEksBlueprintProps } from '../lib/emr-eks-blueprint-stack';
 
 const app = new cdk.App();
 
@@ -40,7 +41,7 @@ const dataTeamA: EmrEksTeamProps = {
   ]
 };
 
-const props = {
+const props: EmrEksBlueprintProps = {
   env: { account, region },
   dataTeams: [dataTeamA]
 };
