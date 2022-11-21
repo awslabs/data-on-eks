@@ -1,8 +1,8 @@
 import { Construct } from 'constructs';
 import * as blueprints from '@aws-quickstart/eks-blueprints'
-import { GenericClusterProvider, GlobalResources, PlatformTeam, VpcProvider } from '@aws-quickstart/eks-blueprints';
+import { DirectVpcProvider, GenericClusterProvider, GlobalResources, PlatformTeam, VpcProvider } from '@aws-quickstart/eks-blueprints';
 import { CapacityType, Cluster, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
-import { InstanceType, IVpc, Vpc } from 'aws-cdk-lib/aws-ec2';
+import { InstanceType, IVpc, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { EmrEksTeam, EmrEksTeamProps } from './teams/emrEksTeam';
 import { EmrEksAddOn } from './AddOns/emrEksAddOn';
 import { Stack, StackProps } from 'aws-cdk-lib';
@@ -22,8 +22,6 @@ export interface EmrEksBlueprintProps extends StackProps {
 export default class EmrEksStack {
 
   build(scope: Construct, id: string, props: EmrEksBlueprintProps) {
-
-    const clusterVpc = props.clusterVpc || new VpcDefinintion (Stack.of(scope), 'vpc');
 
     const eksClusterLogging: ClusterLoggingTypes[] = [
       ClusterLoggingTypes.API,
@@ -52,7 +50,8 @@ export default class EmrEksStack {
           diskSize: 50,
           labels: {
             app: 'spark'
-          }
+          },
+          nodeGroupSubnets: {subnetType: SubnetType.PRIVATE_WITH_EGRESS, availabilityZones: [props.clusterVpc!.availabilityZones[0]]}
 
         }
       ],
@@ -67,10 +66,10 @@ export default class EmrEksStack {
     let emrEksBlueprint = blueprints.EksBlueprint.builder();
 
     if (props.clusterVpc) {
-      emrEksBlueprint.resourceProvider(GlobalResources.Vpc, new VpcProvider(props.clusterVpc.vpcId));
+      emrEksBlueprint.resourceProvider(GlobalResources.Vpc, new DirectVpcProvider(props.clusterVpc));
     }
 
-    let emrTeams: EmrEksTeam [] = [...props.dataTeams.map(team => new EmrEksTeam(JSON.parse(JSON.stringify(team))))];
+    let emrTeams: EmrEksTeam [] = [...props.dataTeams.map(team => new EmrEksTeam(team))];
 
     emrEksBlueprint = props.eksCluster ?
       emrEksBlueprint.clusterProvider(props.eksCluster) :

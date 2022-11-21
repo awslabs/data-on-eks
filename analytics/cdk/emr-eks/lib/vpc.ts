@@ -1,14 +1,16 @@
-import { Construct } from 'constructs';
-import { SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2';
+import { IpAddresses, Vpc } from 'aws-cdk-lib/aws-ec2';
+import { App, Stack, StackProps } from 'aws-cdk-lib';
 
 
-export default class VpcDefinintion extends Construct {
+export default class VpcDefinintion extends Stack {
 
-    constructor(scope: Construct, id: string) {
-        super(scope, id);
+    public readonly vpc: Vpc;
 
-        const eksVpc: Vpc = new Vpc(this, 'eksVpc', {
-            cidr: '10.0.0.0/16',
+    constructor(scope: App, id: string, props: StackProps) {
+        super(scope, id, props);
+
+        this.vpc = new Vpc(this, 'eksVpc', {
+            ipAddresses: IpAddresses.cidr('10.0.0.0/16'),
             natGateways: 3,
             maxAzs: 3
         });

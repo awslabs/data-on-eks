@@ -75,7 +75,7 @@ export class EmrEksTeam extends ApplicationTeam {
    */
   constructor(props: EmrEksTeamProps) {
     super(props);
-    this.emrTeam = JSON.parse(JSON.stringify(props)) as EmrEksTeamProps;
+    this.emrTeam = props;
   }
 
   setup(clusterInfo: ClusterInfo): void {
