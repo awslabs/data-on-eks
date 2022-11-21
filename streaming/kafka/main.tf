@@ -1,27 +1,4 @@
 #---------------------------------------------------------------
-# Local variables
-#---------------------------------------------------------------
-locals {
-  name   = var.name
-  region = var.region
-
-  vpc_cidr                      = var.vpc_cidr
-  azs                           = slice(data.aws_availability_zones.available.names, 0, 3)
-  strimzi_kafka_name             = "strimzi-kafka-operator"
-
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"
-  }
-
-  csi_name = "aws-ebs-csi-driver"
-
-  csi_create_irsa = true
-  csi_namespace   = "kube-system"
-
-}
-
-#---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {
@@ -29,6 +6,9 @@ module "eks_blueprints" {
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
+
+  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
+  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnets
@@ -116,15 +96,14 @@ module "eks_blueprints" {
       node_group_name = "kafka-node-grp"
       subnet_ids      = module.vpc.private_subnets
 
-      instance_types = ["r6i.2xlarge"]
-#      Im4gn.4xlarge , m5.8xlarge, r6i.2xlarge, Check for best instance
+      instance_types = ["r6i.2xlarge"] #Im4gn.4xlarge, m5.8xlarge, r6i.2xlarge
       ami_type       = "AL2_x86_64"
       capacity_type  = "ON_DEMAND"
 
       disk_size = 100
       disk_type = "gp3"
 
-      max_size               = 12 # According to workload
+      max_size               = 12
       min_size               = 3
       desired_size           = 3
       create_launch_template = true
@@ -158,28 +137,4 @@ module "eks_blueprints" {
   }
 
   tags = local.tags
-}
-
-#---------------------------------------------------------------
-# GP3 Storage Class
-#---------------------------------------------------------------
-resource "kubectl_manifest" "gp3_sc" {
-  yaml_body = <<-YAML
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "true"
-  name: gp3
-parameters:
-  fsType: xfs
-  type: gp3
-  encrypted: "true"
-allowVolumeExpansion: true
-provisioner: ebs.csi.aws.com
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
-YAML
-
-  depends_on = [module.eks_blueprints.eks_cluster_id]
 }

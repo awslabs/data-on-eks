@@ -12,6 +12,10 @@ defaultImageRegistry: quay.io
 defaultImageRepository: strimzi
 defaultImageTag: 0.31.1
 
+nodeSelector:
+  kubernetes.io/os: ${operating_system}
+  NodeGroupType: ${node_group_type}
+
 resources:
   limits:
     memory: 384Mi
@@ -25,4 +29,3 @@ livenessProbe:
 readinessProbe:
   initialDelaySeconds: 10
   periodSeconds: 30
-
