@@ -1,0 +1,104 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: cluster
+  namespace: kafka
+spec:
+  cruiseControl: {}
+  kafka:
+    version: 3.2.3
+    replicas: 3
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      inter.broker.protocol.version: "3.2"
+    resources:
+      requests:
+        memory: 60Gi
+        cpu: "6"
+      limits:
+        memory: 64Gi
+        cpu: "8"
+    jvmOptions:
+      "-Xmx": "6g"
+      "-Xms": "4g"
+    storage:
+      type: jbod
+      volumes:
+      - id: 0
+        type: persistent-claim
+        size: 1000Gi
+        class: gp3
+        deleteClaim: false
+    template:
+      pod:
+        tolerations:
+          - key: "dedicated"
+            operator: "Equal"
+            value: "kafka"
+            effect: "NoSchedule"
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                  - key: NodeGroupType
+                    operator: In
+                    values:
+                    - kafka
+        metadata:
+          annotations:
+            prometheus.io/path: /metrics
+            prometheus.io/port: "9404"
+            prometheus.io/scrape: "true"
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: kafka-metrics-config.yml
+    rack:
+      topologyKey: topology.kubernetes.io/zone
+  kafkaExporter:
+    template:
+      pod:
+        metadata:
+          annotations:
+            prometheus.io/path: /metrics
+            prometheus.io/port: "9404"
+            prometheus.io/scrape: "true"
+  zookeeper:
+    template:
+      pod:
+        metadata:
+          annotations:
+            prometheus.io/path: /metrics
+            prometheus.io/port: "9404"
+            prometheus.io/scrape: "true"
+    replicas: 3
+    storage:
+      type: persistent-claim
+      size: 10Gi
+      class: gp3
+      deleteClaim: false
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: zookeeper-metrics-config.yml
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
