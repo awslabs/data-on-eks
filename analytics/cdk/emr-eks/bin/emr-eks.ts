@@ -2,7 +2,6 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import EmrEksStack from '../lib/emr-eks-stack';
-import { Stack } from 'aws-cdk-lib';
 import { EmrEksTeamProps } from '../lib/teams/emrEksTeam';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
@@ -28,22 +27,22 @@ const executionRolePolicyStatement: PolicyStatement[] = [
   }),
 ];
 
-const dataTeam: EmrEksTeamProps = {
-  name: 'dataTeam',
+const dataTeamA: EmrEksTeamProps = {
+  name: 'dataTeamA',
   virtualClusterName: 'blueprintjob',
   virtualClusterNamespace: 'blueprintjob',
   createNamespace: true,
-  excutionRoles: [
+  executionRoles: [
     {
-      excutionRoleIamPolicyStatement: executionRolePolicyStatement,
-      excutionRoleName: 'myBlueprintExecRole'
+      executionRoleIamPolicyStatement: executionRolePolicyStatement,
+      executionRoleName: 'myBlueprintExecRole'
     }
   ]
 };
 
 const props = {
   env: { account, region },
-  dataTeams: [dataTeam]
+  dataTeams: [dataTeamA]
 };
 
 new EmrEksStack().build(app, 'BlueprintRefactoring', props);

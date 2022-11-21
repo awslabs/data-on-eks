@@ -11,7 +11,7 @@ import { StackProps } from 'aws-cdk-lib';
 export interface EmrEksBlueprintProps extends StackProps {
   eksCluster?: GenericClusterProvider,
   clusterVpc?: IVpc,
-  dataTeams: EmrEksTeamProps [],
+  dataTeams: EmrEksTeamProps[],
   eksClusterName?: string,
 }
 
@@ -51,7 +51,7 @@ export default class EmrEksStack {
       ],
       clusterLogging: eksClusterLogging
     });
-
+    //TODO CHANGE THIS TO OUTSIDE THE BLUEPRINT
     const clusterAdminTeam = new PlatformTeam({
       name: "adminteam",
       userRoleArn: "arn:aws:iam::372775283473:role/FULL"
@@ -63,29 +63,25 @@ export default class EmrEksStack {
       emrEksBlueprint.resourceProvider(GlobalResources.Vpc, new VpcProvider(props.clusterVpc.vpcId));
     }
 
-    let emrTeams: EmrEksTeam [];
-
-    props.dataTeams.forEach(dataTeam => {
-      emrTeams.push(new EmrEksTeam(dataTeam) )
-    });
+    let emrTeams: EmrEksTeam [] = [...props.dataTeams.map(team => new EmrEksTeam(team))];
 
     emrEksBlueprint = props.eksCluster ?
       emrEksBlueprint.clusterProvider(props.eksCluster) :
       emrEksBlueprint.clusterProvider(emrCluster);
 
-      return emrEksBlueprint.addOns(
-        new blueprints.VpcCniAddOn(),
-        new blueprints.CoreDnsAddOn(),
-        new blueprints.MetricsServerAddOn,
-        new blueprints.ClusterAutoScalerAddOn,
-        new blueprints.CertManagerAddOn,
-        new blueprints.AwsLoadBalancerControllerAddOn,
-        new blueprints.EbsCsiDriverAddOn,
-        new blueprints.KubeProxyAddOn,
-        new EmrEksAddOn)
+    return emrEksBlueprint.addOns(
+      new blueprints.VpcCniAddOn(),
+      new blueprints.CoreDnsAddOn(),
+      new blueprints.MetricsServerAddOn,
+      new blueprints.ClusterAutoScalerAddOn,
+      new blueprints.CertManagerAddOn,
+      new blueprints.AwsLoadBalancerControllerAddOn,
+      new blueprints.EbsCsiDriverAddOn,
+      new blueprints.KubeProxyAddOn,
+      new EmrEksAddOn)
       .teams(
         clusterAdminTeam,
-        ...emrTeams!)
+        ...emrTeams)
       .build(scope, `${id}-emr-eks-blueprint`);
 
   }

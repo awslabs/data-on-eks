@@ -39,10 +39,10 @@ const dataTeam: EmrEksTeamProps = {
   virtualClusterName: 'blueprintjob',
   virtualClusterNamespace: 'blueprintjob',
   createNamespace: true,
-  excutionRoles: [
+  executionRoles: [
     {
-      excutionRoleIamPolicyStatement: executionRolePolicyStatement,
-      excutionRoleName: 'myBlueprintExecRole'
+      executionRoleIamPolicyStatement: executionRolePolicyStatement,
+      executionRoleName: 'myBlueprintExecRole'
     }
   ]
 };
@@ -57,7 +57,6 @@ test('Verify the creation of emr-containters service role', () => {
 
   template.hasResourceProperties('AWS::IAM::ServiceLinkedRole', {
     AWSServiceName: "emr-containers.amazonaws.com"
-  }
-  );
+  });
 
 });
