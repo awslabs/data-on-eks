@@ -2,13 +2,14 @@
   "name": "emr-eks",
   "version": "0.1.0",
   "bin": {
-    "emr-eks": "bin/emr-eks.js"
+    "emr-eks": "dist/bin/emr-eks.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "lint": "npx eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",

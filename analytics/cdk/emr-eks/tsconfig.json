@@ -2,8 +2,10 @@
   "compilerOptions": {
     "target": "ES2018",
     "module": "commonjs",
+    "outDir": "dist",
     "lib": [
-      "es2018"
+      "es2018",
+      "dom"
     ],
     "declaration": true,
     "strict": true,
@@ -24,7 +26,13 @@
     ]
   },
   "exclude": [
+    "cdk.out",
+    "dist",
     "node_modules",
-    "cdk.out"
+    "test",
+    ".git",
+    ".idea",
+    ".vscode",
+    "cdk.context.json"
   ]
 }
