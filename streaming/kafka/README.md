@@ -1,5 +1,5 @@
 # Apache Kafka on EKS
-Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/streaming-platform-eks/kafka) to deploy this pattern and run sample tests.
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks/kafka) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
