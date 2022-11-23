@@ -42,6 +42,11 @@ Ensure that you have installed the following tools on your machine.
 
 **NOTE:** You need to have an AWS account and region that are [bootstraped](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap) by AWS CDK.
 
+### Customize
+
+If you want to change any of the resources or configuration we listed above you can read this section.
+If you want to run the example as is you can move to the next section.
+
 ### Deploy
 
 Clone the repository
