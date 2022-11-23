@@ -1,9 +1,9 @@
 ---
 sidebar_position: 5
-sidebar_label: ACK with EMR
+sidebar_label: ACK Controller for EMR on EKS
 ---
 
-# Monitoring EMR on EKS
+# ACK Controller for EMR on EKS
 :::info
 
 TODO: This deployment patterns will be updated with EMR on EKS ACK Controllers.
