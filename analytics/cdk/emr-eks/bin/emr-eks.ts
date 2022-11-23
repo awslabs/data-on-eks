@@ -18,10 +18,6 @@ const executionRolePolicyStatement: PolicyStatement[] = [
   }),
   new PolicyStatement({
     resources: ['*'],
-    actions: ['glue:*'],
-  }),
-  new PolicyStatement({
-    resources: ['*'],
     actions: [
       'logs:*',
     ],
@@ -29,9 +25,9 @@ const executionRolePolicyStatement: PolicyStatement[] = [
 ];
 
 const dataTeamA: EmrEksTeamProps = {
-  name: 'dataTeamA',
-  virtualClusterName: 'mergejob',
-  virtualClusterNamespace: 'mergejob',
+  name: 'emr-data-team-a',
+  virtualClusterName: 'batchjob',
+  virtualClusterNamespace: 'emr-data-team-a',
   createNamespace: true,
   executionRoles: [
     {
