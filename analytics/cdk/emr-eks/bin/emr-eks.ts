@@ -13,14 +13,12 @@ const region = 'eu-west-1';
 
 const executionRolePolicyStatement: PolicyStatement[] = [
   new PolicyStatement({
-    resources: ['*'],
-    actions: ['s3:*'],
+    actions:['s3:PutObject','s3:GetObject','s3:ListBucket'], 
+    resources:['YOUR-DATA-S3-BUCKET']
   }),
   new PolicyStatement({
-    resources: ['*'],
-    actions: [
-      'logs:*',
-    ],
+    actions:['logs:PutLogEvents','logs:CreateLogStream','logs:DescribeLogGroups','logs:DescribeLogStreams'], 
+    resources:['arn:aws:logs:*:*:*'],
   }),
 ];
 

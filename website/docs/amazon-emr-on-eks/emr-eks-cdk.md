@@ -88,11 +88,7 @@ aws eks --region <ENTER_YOUR_REGION> update-kubeconfig --name emr-eks-amp-amg # 
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
-kubectl get ns | grep emr-data-team # Output shows emr-data-team-a and emr-data-team-b namespaces for data teams
-
-kubectl get pods --namespace=prometheus # Output shows Prometheus server and Node exporter pods
-
-kubectl get pods --namespace=vpa  # Output shows Vertical Pod Autoscaler pods
+kubectl get ns | grep emr-data-team # Output shows emr-data-team-a
 
 kubectl get pods --namespace=kube-system | grep  metrics-server # Output shows Metric Server pod
 
