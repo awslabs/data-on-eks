@@ -1,9 +1,9 @@
 ---
-sidebar_position: 3
-sidebar_label: Karpenter with EMR
+sidebar_position: 2
+sidebar_label: EMR on EKS with Karpenter
 ---
 
-# EMR on EKS with [Karpenter Autoscaler](https://karpenter.sh/)
+# EMR on EKS with [Karpenter](https://karpenter.sh/)
 
 ## Introduction
 

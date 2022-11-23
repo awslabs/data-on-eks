@@ -19,8 +19,8 @@ By running analytics applications on EKS, you can reuse existing EC2 instances i
 
 ## EMR on EKS Deployment patterns with Terraform
 
-The following Terraform templates are available to deploy.
-
-- Monitoring EMR on EKS Spark jobs with Prometheus Server, Amazon Managed Prometheus and Amazon Managed Grafana
+The following Terraform templates are available to deploy. 
+- Scaling EMR on EKS Spark Jobs with Karpenter Autoscaler, also has Amazon Managed Prometheus (AMP) and Amazon Managed Grafana (AMG) as add-ons. Start here if you are not sure where to start
 - Running EMR on EKS Spark Jobs with FSx for Lustre as Shuffle Storage
-- Scaling EMR on EKS Spark Jobs with Karpenter Autoscaler
+- Running EMR on EKS Spark Jobs with Apache Unikorn
+- Running ACK controller for EMR on EKS to run Spark Jobs
