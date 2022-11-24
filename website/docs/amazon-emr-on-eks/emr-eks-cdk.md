@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 1
 sidebar_label: EMR on EKS with CDK
 ---
 
@@ -46,7 +46,7 @@ Ensure that you have installed the following tools on your machine.
 
 ### Customize
 
-The the entry point for this cdk blueprint is `/bin/emr-eks.ts` which instantiate a stack defined in `lib\emr-eks-blueprint-stack.ts`. This stack must be provided with a VPC and an array of EMR on EKS team defition and the role that will be admin of the EKS cluster. It can also take as options the an EKS cluster defined through `cdk-blueprints-library` and the EKS cluster name.
+The the entry point for this cdk blueprint is `/bin/emr-eks.ts` which instantiate a stack defined in `lib/emr-eks-blueprint-stack.ts`. This stack must be provided with a VPC and an array of EMR on EKS team defition and the role that will be admin of the EKS cluster. It can also take as options the an EKS cluster defined through `cdk-blueprints-library` and the EKS cluster name.
 
 The properties that are passed to the emr on eks blueprint stack are defined as such:
 
@@ -65,6 +65,8 @@ In this example we define a VPC in `lib/vpc.ts` and is instantiated in `bin\emr-
 The blueprint will deploy by default an EKS cluster with the managed nodegroups defined in the section [Deploying the Solution](#deploying-the-solution).
 
 ### Deploy
+
+Before you run the solution, you **MUST** change the `clusterAdminRoleArn` of the `props` object in `lib/emr-eks.ts`. This role allows you to interact manage EKS cluster and should have be allowed at least the IAM action `eks:AccessKubernetesApi`.
 
 Clone the repository
 

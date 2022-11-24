@@ -44,4 +44,4 @@ const props: EmrEksBlueprintProps = {
   clusterVpc: vpc
 };
 
-new EmrEksStack().build(app, 'BlueprintMergeReady', props);
+new EmrEksStack().build(app, 'data-on-eks', props);
