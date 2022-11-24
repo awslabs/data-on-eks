@@ -1,21 +1,20 @@
 import { Construct } from 'constructs';
 import * as blueprints from '@aws-quickstart/eks-blueprints'
-import { DirectVpcProvider, GenericClusterProvider, GlobalResources, PlatformTeam, VpcProvider } from '@aws-quickstart/eks-blueprints';
-import { CapacityType, Cluster, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
+import { DirectVpcProvider, GenericClusterProvider, GlobalResources, PlatformTeam } from '@aws-quickstart/eks-blueprints';
+import { CapacityType, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
 import { InstanceType, IVpc, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { EmrEksTeam, EmrEksTeamProps } from './teams/emrEksTeam';
 import { EmrEksAddOn } from './AddOns/emrEksAddOn';
-import { Stack, StackProps } from 'aws-cdk-lib';
-import VpcDefinintion from './vpc';
+import { StackProps } from 'aws-cdk-lib';
 import { ArnPrincipal } from 'aws-cdk-lib/aws-iam';
-import { cloneDeep } from '@aws-quickstart/eks-blueprints/dist/utils';
 
 export interface EmrEksBlueprintProps extends StackProps {
-  eksCluster?: GenericClusterProvider,
-  clusterVpc?: IVpc,
+  clusterVpc: IVpc,
+  clusterAdminRoleArn: ArnPrincipal
   dataTeams: EmrEksTeamProps[],
   eksClusterName?: string,
-  clusterAdminRoleArn: ArnPrincipal
+  eksCluster?: GenericClusterProvider,
+  
 }
 
 

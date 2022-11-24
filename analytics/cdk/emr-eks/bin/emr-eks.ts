@@ -24,8 +24,8 @@ const executionRolePolicyStatement: PolicyStatement[] = [
 
 const dataTeamA: EmrEksTeamProps = {
   name: 'emr-data-team-a',
-  virtualClusterName: 'batchjob',
-  virtualClusterNamespace: 'emr-data-team-a',
+  virtualClusterName: 'emr-data-team-a',
+  virtualClusterNamespace: 'batchjob',
   createNamespace: true,
   executionRoles: [
     {
