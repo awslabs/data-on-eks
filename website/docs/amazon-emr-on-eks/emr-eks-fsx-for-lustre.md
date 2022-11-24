@@ -1,6 +1,6 @@
 ---
 sidebar_position: 4
-sidebar_label: FSx for Lustre with EMR
+sidebar_label: EMR on EKS with FSx for Lustre
 ---
 
 # EMR on EKS with FSx for Lustre
