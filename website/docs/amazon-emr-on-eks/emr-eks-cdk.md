@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 6
 sidebar_label: EMR on EKS with CDK
 ---
 
@@ -78,7 +78,7 @@ Navigate into one of the example directories and run `cdk synth`
 
 ```bash
 cd analytics/cdk/emr-eks
-cdk synth
+cdk synth --profile YOUR-AWS-PROFILE
 ```
 
 Deploy the pattern
@@ -145,7 +145,7 @@ kubectl get pods --namespace=batchjob -w
 To clean up your environment, you call the command below. This will destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
 
 ```bash
-cdk destroy
+cdk destroy --all
 ```
 
 :::caution

@@ -8,14 +8,10 @@ import VpcDefinintion from '../lib/vpc';
 
 const app = new cdk.App();
 
-const account = '1111111';
-const region = 'eu-west-1';
+const account = process.env.CDK_DEFAULT_ACCOUNT;
+const region = process.env.CDK_DEFAULT_REGION;
 
 const executionRolePolicyStatement: PolicyStatement[] = [
-  new PolicyStatement({
-    actions:['s3:PutObject','s3:GetObject','s3:ListBucket'], 
-    resources:['YOUR-DATA-S3-BUCKET']
-  }),
   new PolicyStatement({
     actions:['logs:PutLogEvents','logs:CreateLogStream','logs:DescribeLogGroups','logs:DescribeLogStreams'], 
     resources:['arn:aws:logs:*:*:*'],
