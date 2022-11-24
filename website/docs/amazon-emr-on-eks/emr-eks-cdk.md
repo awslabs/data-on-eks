@@ -128,7 +128,7 @@ aws emr-containers start-job-run \
   --job-driver='{
     "sparkSubmitJobDriver": {
       "entryPoint": "local:///usr/lib/spark/examples/src/main/python/pi.py",
-      "sparkSubmitParameters": "--conf spark.executor.instances=1 --conf spark.executor.memory=2G --conf spark.executor.cores=1 --conf spark.driver.cores=1"
+      "sparkSubmitParameters": "--conf spark.executor.instances=1 --conf spark.executor.memory=2G --conf spark.executor.cores=1 --conf spark.driver.cores=1 --conf spark.kubernetes.node.selector.app=spark"
     }
   }'
 
