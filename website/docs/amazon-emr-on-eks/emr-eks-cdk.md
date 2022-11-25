@@ -50,12 +50,12 @@ The the entry point for this cdk blueprint is `/bin/emr-eks.ts` which instantiat
 
 The properties that are passed to the emr on eks blueprint stack are defined as such:
 
-```
+```typescript
 export interface EmrEksBlueprintProps extends StackProps {
   clusterVpc: IVpc,
   clusterAdminRoleArn: ArnPrincipal
   dataTeams: EmrEksTeamProps[],
-  eksClusterName?: string,
+  eksClusterName?: string, //Default eksBlueprintCluster
   eksCluster?: GenericClusterProvider,
   
 }
