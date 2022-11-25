@@ -125,7 +125,7 @@ Execute the Spark job using the below shell script.
 export EMR_ROLE_ARN=arn:aws:iam::<YOUR-ACCOUNT-ID>:role/myBlueprintExecRole
 
 aws emr-containers start-job-run \
-  --virtual-cluster-id=<VIRTUA-CLUSTER-ID-IN-CDK-OUTPUT> \
+  --virtual-cluster-id=<VIRTUAL-CLUSTER-ID-IN-CDK-OUTPUT> \
   --name=pi-2 \
   --execution-role-arn=$EMR_ROLE_ARN \
   --release-label=emr-6.8.0-latest \

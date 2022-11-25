@@ -47,7 +47,7 @@ const dataTeam: EmrEksTeamProps = {
   ]
 };
 
-const props: EmrEksBlueprintProps = { env: { account, region }, dataTeams: [dataTeam], clusterAdminRoleArn: new ArnPrincipal('arn:aws:iam::372775283473:role/FULL') };
+const props: EmrEksBlueprintProps = { env: { account, region }, dataTeams: [dataTeam], clusterAdminRoleArn: new ArnPrincipal('arn:aws:iam::1111111:role/MY-ROLE') };
 
 const myStack = new EmrEksStack().build(app, 'AddonRefactotingblueprint', props);
 
