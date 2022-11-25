@@ -97,14 +97,14 @@ Let’s verify the resources created by `cdk deploy`.
 Verify the Amazon EKS Cluster
 
 ```bash
-aws eks describe-cluster --name eksBlueprintCluster
+aws eks describe-cluster --name eksBlueprintCluster # Update the name cluster name if you supplied your own
 
 ```
 
 Verify EMR on EKS Namespaces `batchjob` and Pod status for `Metrics Server` and `Cluster Autoscaler`.
 
 ```bash
-aws eks --region <ENTER_YOUR_REGION> update-kubeconfig --name eksBlueprintCluster # Creates k8s config file to authenticate with EKS Cluster
+aws eks --region <ENTER_YOUR_REGION> update-kubeconfig --name eksBlueprintCluster # Creates k8s config file to authenticate with EKS Cluster. Update the name cluster name if you supplied your own
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
