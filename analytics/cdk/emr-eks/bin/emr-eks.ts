@@ -26,7 +26,7 @@ const dataTeamA: EmrEksTeamProps = {
   executionRoles: [
     {
       executionRoleIamPolicyStatement: executionRolePolicyStatement,
-      executionRoleName: 'myBlueprintExecRoleMerge'
+      executionRoleName: 'myBlueprintExecRole'
     }
   ]
 };
@@ -36,7 +36,7 @@ const vpc = new VpcDefinintion(app, 'vpcStack', {env: {account, region}} ).vpc;
 const props: EmrEksBlueprintProps = {
   env: { account, region },
   dataTeams: [dataTeamA],
-  clusterAdminRoleArn: new ArnPrincipal('arn:aws:iam::11111111111:role/FULL'),
+  clusterAdminRoleArn: new ArnPrincipal('arn:aws:iam::11111111111:role/<ROLE-NAME>'),
   clusterVpc: vpc
 };
 

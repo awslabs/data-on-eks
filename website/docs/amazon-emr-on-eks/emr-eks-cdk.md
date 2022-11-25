@@ -46,7 +46,7 @@ Ensure that you have installed the following tools on your machine.
 
 ### Customize
 
-The the entry point for this cdk blueprint is `/bin/emr-eks.ts` which instantiate a stack defined in `lib/emr-eks-blueprint-stack.ts`. This stack must be provided with a VPC and an array of EMR on EKS team defition and the role that will be admin of the EKS cluster. It can also take as options the an EKS cluster defined through `cdk-blueprints-library` and the EKS cluster name.
+The the entry point for this cdk blueprint is `/bin/emr-eks.ts` which instantiate a stack defined in `lib/emr-eks-blueprint-stack.ts`. This stack must be provided with a VPC and a list of EMR on EKS team defition and the role that will be admin of the EKS cluster. It can also take as options an EKS cluster defined through `cdk-blueprints-library` and the EKS cluster name.
 
 The properties that are passed to the emr on eks blueprint stack are defined as such:
 
@@ -61,7 +61,7 @@ export interface EmrEksBlueprintProps extends StackProps {
 }
 ```
 
-In this example we define a VPC in `lib/vpc.ts` and is instantiated in `bin\emr-eks.ts`.
+In this example we define a VPC in `lib/vpc.ts` and is instantiated in `bin/emr-eks.ts`. We also define a team called `emr-data-team-a` and which has an execution role called `myBlueprintExecRole`.
 The blueprint will deploy by default an EKS cluster with the managed nodegroups defined in the section [Deploying the Solution](#deploying-the-solution).
 
 ### Deploy
@@ -120,8 +120,11 @@ Execute the Spark job using the below shell script.
 - Once you deploy the blueprint you will have as output the Virtual Cluster id. You can use the id and the execution role for which you supplied a policy to submit jobs. Below you can find an example of a job you can submit with AWS CLI.
 
 ```bash
+
+export EMR_ROLE_ARN=arn:aws:iam::<YOUR-ACCOUNT-ID>:role/myBlueprintExecRole 
+
 aws emr-containers start-job-run \
-  --virtual-cluster-id=$VIRTUAL_CLUSTER_ID \
+  --virtual-cluster-id=<VIRTUA-CLUSTER-ID-IN-CDK-OUTPUT> \
   --name=pi-2 \
   --execution-role-arn=$EMR_ROLE_ARN \
   --release-label=emr-6.8.0-latest \
