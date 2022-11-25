@@ -78,6 +78,7 @@ Navigate into one of the example directories and run `cdk synth`
 
 ```bash
 cd analytics/cdk/emr-eks
+npm install
 cdk synth --profile YOUR-AWS-PROFILE
 ```
 
