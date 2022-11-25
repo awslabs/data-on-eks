@@ -97,7 +97,7 @@ Let’s verify the resources created by `cdk deploy`.
 Verify the Amazon EKS Cluster
 
 ```bash
-aws eks describe-cluster --name emr-eks-amp-amg
+aws eks describe-cluster --name eksBlueprintCluster
 
 ```
 
