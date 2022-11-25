@@ -14,7 +14,7 @@ export interface EmrEksBlueprintProps extends StackProps {
   dataTeams: EmrEksTeamProps[],
   eksClusterName?: string,
   eksCluster?: GenericClusterProvider,
-  
+
 }
 
 
@@ -55,7 +55,7 @@ export default class EmrEksStack {
         }
       ],
       clusterLogging: eksClusterLogging
-    }); 
+    });
 
     const clusterAdminTeam = new PlatformTeam({
       name: "adminteam",
@@ -91,4 +91,3 @@ export default class EmrEksStack {
 
   }
 }
-

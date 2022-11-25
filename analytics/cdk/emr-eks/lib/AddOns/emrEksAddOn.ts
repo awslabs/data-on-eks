@@ -8,7 +8,7 @@ export class EmrEksAddOn implements ClusterAddOn {
     const cluster = clusterInfo.cluster;
 
     /*
-    * Create the service role used by EMR on EKS 
+    * Create the service role used by EMR on EKS
     */
     const emrOnEksSlr = new CfnServiceLinkedRole(cluster.stack, 'EmrServiceRole', {
       awsServiceName: 'emr-containers.amazonaws.com',
@@ -23,7 +23,7 @@ export class EmrEksAddOn implements ClusterAddOn {
       `arn:aws:iam::${Stack.of(cluster.stack).account
       }:role/AWSServiceRoleForAmazonEMRContainers`,
     );
-    
+
     //Add the service role to the AwsAuth
     cluster.awsAuth.addRoleMapping(
       emrEksServiceRole,
@@ -32,7 +32,7 @@ export class EmrEksAddOn implements ClusterAddOn {
         groups: ['']
       }
     );
-  
+
     return Promise.resolve(emrOnEksSlr);
 
   }

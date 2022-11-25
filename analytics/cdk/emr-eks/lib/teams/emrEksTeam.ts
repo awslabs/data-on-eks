@@ -23,8 +23,8 @@ import { Construct } from "constructs";
     */
   executionRoleIamPolicy?: IManagedPolicy,
   /**
-    * Takes an array of IAM Policy Statement, you should pass this 
-    * if you want the Team to create the policy along the IAM role 
+    * Takes an array of IAM Policy Statement, you should pass this
+    * if you want the Team to create the policy along the IAM role
     */
   executionRoleIamPolicyStatement?: PolicyStatement[],
 }
@@ -59,7 +59,7 @@ export interface EmrEksTeamProps extends TeamProps {
  *This class define the Team that can be used with EMR on EKS
  *The class will create an EMR on EKS Virtual Cluster to use by the team
  *It can either create a namespace or use an existing one
- *The class will set the necessary k8s RBAC needed by EMR on EKS as defined in the AWS documentation 
+ *The class will set the necessary k8s RBAC needed by EMR on EKS as defined in the AWS documentation
  * https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-cluster-access.html
  * The class constructor take an EMR on EKS Team definition and need the EMR on EKS AddOn added
  * The EmrEksTeam will `throw` an error if the EMR on EKS AddOn is not added
@@ -135,13 +135,13 @@ export class EmrEksTeam extends ApplicationTeam {
   /**
    * @internal
    * Private method to to apply k8s RBAC to the service account used by EMR on EKS service role
-   * For more information on the RBAC read consult the EMR on EKS documentation in this link 
+   * For more information on the RBAC read consult the EMR on EKS documentation in this link
    * https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-cluster-access.html
-   * This method 
+   * This method
    * @param ClusterInfo EKS cluster where to apply the RBAC
    * @param namespace Namespace where the RBAC are applied
    * @param createNamespace flag to create namespace if not already created
-   * @returns 
+   * @returns
    */
 
   private setEmrContainersForNamespace(ClusterInfo: ClusterInfo, namespace: string, createNamespace: boolean): Construct {
@@ -207,5 +207,3 @@ export class EmrEksTeam extends ApplicationTeam {
 
 
 }
-
-

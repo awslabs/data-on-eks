@@ -19,7 +19,7 @@ const executionRolePolicyStatement: PolicyStatement [] = [
         actions: ['s3:*'],
       }),
       new PolicyStatement({
-        resources: ['*'],   
+        resources: ['*'],
         actions: ['glue:*'],
       }),
       new PolicyStatement({
@@ -61,7 +61,7 @@ const parentStack = blueprints.EksBlueprint.builder()
 const template = Template.fromStack(parentStack);
 
 test('Verify the creation of emr-containters service role', () => {
-    
+
     template.hasResourceProperties('AWS::IAM::ServiceLinkedRole', {
         AWSServiceName: "emr-containers.amazonaws.com"
       }

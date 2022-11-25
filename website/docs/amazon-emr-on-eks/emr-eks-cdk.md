@@ -57,7 +57,7 @@ export interface EmrEksBlueprintProps extends StackProps {
   dataTeams: EmrEksTeamProps[],
   eksClusterName?: string, //Default eksBlueprintCluster
   eksCluster?: GenericClusterProvider,
-  
+
 }
 ```
 
@@ -122,7 +122,7 @@ Execute the Spark job using the below shell script.
 
 ```bash
 
-export EMR_ROLE_ARN=arn:aws:iam::<YOUR-ACCOUNT-ID>:role/myBlueprintExecRole 
+export EMR_ROLE_ARN=arn:aws:iam::<YOUR-ACCOUNT-ID>:role/myBlueprintExecRole
 
 aws emr-containers start-job-run \
   --virtual-cluster-id=<VIRTUA-CLUSTER-ID-IN-CDK-OUTPUT> \
