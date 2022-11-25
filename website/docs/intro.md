@@ -4,11 +4,18 @@ sidebar_label: Introduction
 ---
 
 # Introduction
-Data on Amazon EKS (DoEKS) is an open source repository to build, deploy and scale Data workloads on Amazon EKS.
+Data on Amazon EKS(DoEKS) is a tool for users to build [aws](https://aws.amazon.com/) managed and self-managed scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/). This repo provides the following tools.
 
-This repo provides the Terraform and CDK templates to build scalable data platform on Amazon EKS for the following categories.
+1. Scalable deployment Infrastructure as Code(IaC) templates(e.g., [Terraform](https://www.terraform.io/) and [AWS CDK](https://aws.amazon.com/cdk/) etc.)
+2. Best Practices for deploying Data Solutions on Amazon EKS
+3. Performance Benchmark reports
+4. Sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs and various other frameworks
+5. Reference Architectures and Data blogs
 
-Provides sample Spark jobs with multiple options of storage, compute, cluster autoscalers and the batch schedulers.
+# Architecture
+The diagram displays the open source data tools, k8s operators and frameworks that runs on Kubernetes covered in DoEKS. AWS Data Analytics managed services integration with Data on EKS OSS tools.  
+
+![Data on EKS.png](doeks.png)
 
 # Main Features
 
