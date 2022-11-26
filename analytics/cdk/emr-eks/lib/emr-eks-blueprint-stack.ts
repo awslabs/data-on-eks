@@ -1,10 +1,16 @@
 import { Construct } from 'constructs';
 import * as blueprints from '@aws-quickstart/eks-blueprints'
-import { DirectVpcProvider, GenericClusterProvider, GlobalResources, PlatformTeam } from '@aws-quickstart/eks-blueprints';
+import { 
+  DirectVpcProvider, 
+  GenericClusterProvider, 
+  GlobalResources, 
+  PlatformTeam, 
+  EmrEksTeamProps, 
+  EmrEksTeam, 
+  EmrEksAddOn
+} from '@aws-quickstart/eks-blueprints';
 import { CapacityType, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
-import { InstanceType, IVpc, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2';
-import { EmrEksTeam, EmrEksTeamProps } from './teams/emrEksTeam';
-import { EmrEksAddOn } from './AddOns/emrEksAddOn';
+import { InstanceType, IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { StackProps } from 'aws-cdk-lib';
 import { ArnPrincipal } from 'aws-cdk-lib/aws-iam';
 
@@ -50,7 +56,7 @@ export default class EmrEksStack {
           labels: {
             app: 'spark'
           },
-          nodeGroupSubnets: {subnetType: SubnetType.PRIVATE_WITH_EGRESS, availabilityZones: [props.clusterVpc!.availabilityZones[0]]}
+          nodeGroupSubnets: {subnetType: SubnetType.PRIVATE_WITH_EGRESS, availabilityZones: [props.clusterVpc.availabilityZones[0]]}
 
         }
       ],

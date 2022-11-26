@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { EmrEksTeamProps } from '../lib/teams/emrEksTeam';
+import { EmrEksTeamProps } from '@aws-quickstart/eks-blueprints';
 import { ArnPrincipal, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import EmrEksStack, { EmrEksBlueprintProps } from '../lib/emr-eks-blueprint-stack';
 import VpcDefinintion from '../lib/vpc';
