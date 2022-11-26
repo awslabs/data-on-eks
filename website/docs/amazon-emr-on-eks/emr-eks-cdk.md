@@ -3,7 +3,7 @@ sidebar_position: 6
 sidebar_label: EMR on EKS with CDK
 ---
 
-# Deploying EMR on EKS with CDK blueprint
+# EMR on EKS with CDK blueprint
 
 ## Introduction
 In this post, we will learn how to use EMR on EKS AddOn and Teams in the `cdk-eks-blueprints` to deploy a an infrasturcture on EKS to submit Spark Job. The `cdk-eks-blueprints` allows you deploy an EKS cluster and enable it to be used by EMR on EKS service with minimal setup. The architecture below shows a conceptual view of the infrastructure you will deploy through this blueprint.
