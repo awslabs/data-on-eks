@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[3565],{4997:e=>{e.exports=JSON.parse('{"label":"emr-on-eks","permalink":"/data-on-eks/blog/tags/emr-on-eks","allTagsPath":"/data-on-eks/blog/tags","count":3}')}}]);
