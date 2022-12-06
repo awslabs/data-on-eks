@@ -13,7 +13,7 @@ const region = process.env.CDK_DEFAULT_REGION;
 
 const executionRolePolicyStatement: PolicyStatement[] = [
   new PolicyStatement({
-    actions:['logs:PutLogEvents','logs:CreateLogStream','logs:DescribeLogGroups','logs:DescribeLogStreams'], 
+    actions:['logs:PutLogEvents','logs:CreateLogStream','logs:DescribeLogGroups','logs:DescribeLogStreams'],
     resources:['arn:aws:logs:*:*:*'],
   }),
 ];

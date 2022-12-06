@@ -1,25 +1,4 @@
 #---------------------------------------------------------------
-# Local variables
-#---------------------------------------------------------------
-locals {
-  name   = var.name
-  region = var.region
-
-  vpc_cidr                      = var.vpc_cidr
-  azs                           = slice(data.aws_availability_zones.available.names, 0, 3)
-  airflow_name                  = "airflow"
-  airflow_service_account       = "airflow-webserver-sa"
-  airflow_webserver_secret_name = "airflow-webserver-secret-key"
-  efs_storage_class             = "efs-sc"
-  efs_pvc                       = "airflowdags-pvc"
-
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/awslabs/data-on-eks"
-  }
-}
-
-#---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {

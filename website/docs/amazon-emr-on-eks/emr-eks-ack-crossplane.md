@@ -1,12 +1,12 @@
 ---
 sidebar_position: 5
-sidebar_label: ACK Controller for EMR on EKS
+sidebar_label: ACK & Crossplane for EMR on EKS
 ---
 
-# ACK Controller for EMR on EKS
+# ACK Controller and Crossplane for EMR on EKS
 :::info
 
-TODO: This deployment patterns will be updated with EMR on EKS ACK Controllers.
+TODO: This deployment patterns will be updated with EMR on EKS ACK Controllers and Crossplane.
 For more information, please see this [issue](https://github.com/awslabs/data-on-eks/issues/51)
 
 :::
