@@ -130,16 +130,16 @@ Before you run the command below, make sure to change update the following param
 ```bash
 
 aws emr-containers start-job-run \
-    --virtual-cluster-id=CLUSTER-ID\
+    --virtual-cluster-id CLUSTER-ID\
     --name=SPARK-JOB-NAME\
-    --execution-role-arn=ROLE-ARN \
-    --release-label=emr-6.8.0-latest \
-    --job-driver='{
+    --execution-role-arn ROLE-ARN \
+    --release-label emr-6.8.0-latest \
+    --job-driver '{
         "sparkSubmitJobDriver":{
         "entryPoint": "local:///usr/lib/spark/examples/src/main/python/pi.py"
         }
     }' \
-    --configuration-overrides='{
+    --configuration-overrides '{
         "applicationConfiguration": [
             {
                 "classification": "spark-defaults",
