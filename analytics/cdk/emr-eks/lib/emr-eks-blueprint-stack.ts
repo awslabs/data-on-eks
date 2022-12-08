@@ -1,12 +1,12 @@
 import { Construct } from 'constructs';
 import * as blueprints from '@aws-quickstart/eks-blueprints'
-import { 
-  DirectVpcProvider, 
-  GenericClusterProvider, 
-  GlobalResources, 
-  PlatformTeam, 
-  EmrEksTeamProps, 
-  EmrEksTeam, 
+import {
+  DirectVpcProvider,
+  GenericClusterProvider,
+  GlobalResources,
+  PlatformTeam,
+  EmrEksTeamProps,
+  EmrEksTeam,
   EmrEksAddOn
 } from '@aws-quickstart/eks-blueprints';
 import { CapacityType, ClusterLoggingTypes, KubernetesVersion, NodegroupAmiType } from 'aws-cdk-lib/aws-eks';
