@@ -18,6 +18,35 @@ Architecture diagram work in progress
 
 :::
 
+## Managed Alternatives
+
+### Amazon Managed Streaming for Apache Kafka (MSK)
+[Amazon Managed Streaming for Apache Kafka (Amazon MSK)](https://aws.amazon.com/msk/) is a fully managed service that enables you to build and run applications that use Apache Kafka to process streaming data. Amazon MSK provides the control-plane operations, such as those for creating, updating, and deleting clusters. It lets you use Apache Kafka data-plane operations, such as those for producing and consuming data. It runs open-source versions of Apache Kafka. This means existing applications, tooling, and plugins from partners and the Apache Kafka community are supported. You can use Amazon MSK to create clusters that use any of the Apache Kafka versions listed under [Supported Apache Kafka versions](https://docs.aws.amazon.com/msk/latest/developerguide/supported-kafka-versions.html). Amazon MSK offers cluster-based or serverless deployment types.
+
+### Amazon Kinesis Data Streams (KDS)
+[Amazon Kinesis Data Streams (KDS)](https://aws.amazon.com/kinesis/data-streams/) allows users to collect and process large streams of data records in real time. You can create data-processing applications, known as Kinesis Data Streams applications. A typical Kinesis Data Streams application reads data from a data stream as data records. You can send the processed records to dashboards, use them to generate alerts, dynamically change pricing and advertising strategies, or send data to a variety of other AWS services. Kinesis Data Streams support your choice of stream processing framework including Kinesis Client Library (KCL), Apache Flink, and Apache Spark Streaming. It is serverless, and scales automatically.
+
+## Storage considerations when self-managing Kafka
+The most common resource bottlenecks for Kafka clusters are network throughput, storage throughput, and network throughput between brokers and the storage backend for brokers using network attached storage such as [Amazon Elastic Block Store (EBS)](https://aws.amazon.com/ebs/). 
+
+### Advantages to using EBS as persistent storage backend
+1. **Improved flexibility and faster recovery:** Fault tolerance is commonly achieved via broker (server) replication within
+the cluster and/or maintaining cross-AZ or region replicas. Since the lifecycle of EBS volumes is independent of
+Kafka brokers, if a broker fails and needs to be replaced, the EBS volume attached to the failed broker can be reattached to a replacement broker. Most of the replicated data for the replacement broker is already available in the
+EBS volume, and does not need to be copied over the network from another broker. This avoids most of the
+replication traffic required to bring the replacement broker up to speed with current operations.
+2. **Just in time scale up:** The characteristics of EBS volumes can be modified while they’re in use. Broker storage can be
+automatically scaled over time rather than provisioning storage for peak or adding additional brokers.
+3. **Optimized for frequently-accessed-throughput-intensive workloads:** Volume types such as st1 can be a good fit
+since these volumes are offered at a relatively low cost, support a large 1 MiB I/O block size, max IOPS of
+500/volume, and includes the ability to burst up to 250 MB/s per TB, with a baseline throughput of 40 MB/s per TB,
+and a maximum throughput of 500 MB/s per volume. 
+
+### What EBS volumes should I use when self-managing Kafka on AWS?
+* General purpose SSD volume **gp3** with a balanced price and performance are widely used, and you can **independently** provision storage (up to 16TiB), IOPS (up to 16,000) and throughput (up to 1,000MiB/s)
+* **st1** is a low-cost HDD option for frequently accessed and throughput intensive workloads with up to 500 IOPS and 500 MiB/s
+* For critical applications such as Zookeeper, provisioned IOPS volumes (**io2 Block Express, io2**) provide higher durability
+
 ## Deploying the Solution
 
 In this [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/kafka), you will provision the following resources to run Kafka Cluster on EKS.
