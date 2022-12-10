@@ -19,19 +19,7 @@ module "eks_blueprints_kubernetes_addons" {
   #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
   #---------------------------------------------------------
   enable_coredns_autoscaler = true
-  coredns_autoscaler_helm_config = {
-    name       = "cluster-proportional-autoscaler"
-    chart      = "cluster-proportional-autoscaler"
-    repository = "https://kubernetes-sigs.github.io/cluster-proportional-autoscaler"
-    version    = "1.0.0"
-    namespace  = "kube-system"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      operating_system = "linux"
-      target           = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
+
 
   #---------------------------------------
   # Metrics Server
@@ -136,6 +124,24 @@ module "eks_blueprints_kubernetes_addons" {
       aws_for_fluent_bit_cw_log = "/${var.name}/worker-fluentbit-logs"
     })]
   }
+
+  tags = local.tags
+}
+
+
+################################################################################
+# ACK Addons
+################################################################################
+
+module "eks_ack_addons" {
+  source = "github.com/season1946/terraform-aws-eks-ack-addons-victor"
+
+  cluster_id = module.eks_blueprints.eks_cluster_id
+
+  # Wait for data plane to be ready
+  data_plane_wait_arn = module.eks_blueprints.managed_node_group_arn[0]
+  
+  enable_emrcontainers = true
 
   tags = local.tags
 }

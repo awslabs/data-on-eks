@@ -194,20 +194,3 @@ resource "aws_prometheus_workspace" "amp" {
   tags = local.tags
 }
 
-#---------------------------------------------------------------
-# Create EMR on EKS Virtual Cluster
-#---------------------------------------------------------------
-resource "aws_emrcontainers_virtual_cluster" "this" {
-  name = format("%s-%s", module.eks_blueprints.eks_cluster_id, "emr-data-team-a")
-
-  container_provider {
-    id   = module.eks_blueprints.eks_cluster_id
-    type = "EKS"
-
-    info {
-      eks_info {
-        namespace = "emr-data-team-a"
-      }
-    }
-  }
-}
