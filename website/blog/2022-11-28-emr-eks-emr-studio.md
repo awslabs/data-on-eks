@@ -1,5 +1,5 @@
 ---
-slug: Data Platform with AWS CDK 
+slug: Data Platform with AWS CDK
 title: Data Platform with AWS CDK
 authors: [aws]
 tags: [emr-on-eks, Spark, emr-studio, CDK]
@@ -13,7 +13,7 @@ In this blog we will show you how you can use AWS CDK and the [Analytics Referen
 
 ## [Analytics Reference Architecture](https://aws.amazon.com/blogs/opensource/adding-cdk-constructs-to-the-aws-analytics-reference-architecture/)
 
-AWS Analytics Reference Architecture (ARA) exposes set fo reusable core components in an AWS CDK library, currently available in Typescript and Python. This library contains AWS CDK constructs (L3) that can be used to quickly provision analytics solutions in demos, prototypes, proofs of concept, and end-to-end reference architectures. The API of ARA Library is defined [here](https://constructs.dev/packages/aws-analytics-reference-architecture/v/2.4.11?lang=typescript). 
+AWS Analytics Reference Architecture (ARA) exposes set fo reusable core components in an AWS CDK library, currently available in Typescript and Python. This library contains AWS CDK constructs (L3) that can be used to quickly provision analytics solutions in demos, prototypes, proofs of concept, and end-to-end reference architectures. The API of ARA Library is defined [here](https://constructs.dev/packages/aws-analytics-reference-architecture/v/2.4.11?lang=typescript).
 
 In our case the library help you deploy an infrastructure optimised for Apache Spark running on EKS leveraging EMR on EKS. The infrastructure will out of the box provide you with pod collocation to reduce network traffic, deploy nodegroup in a single AZ to reduce cross AZ traffic during shuffle, use dedicated instances for EMR on EKS, use optimized instances for memory intensive jobs, use spot and on-demand instances for non-critical job and for critical jobs.
 
@@ -51,7 +51,7 @@ This solution will deploy the following:
 - EMR Studio called `platform`
 - A `managed endpoint`, called `platform-myendpoint` , to use with Jupyter notebooks you will create in the EMR Studio
 - [Execution role](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/iam-execution-role.html) to use when submiting jobs with EMR on EKS `start-job-run`
-- Execution role to use with managed endpoint.   
+- Execution role to use with managed endpoint.  
 - pod templates stored in an S3 bucket called "EKS-CLUSTER-NAME-emr-eks-assets-ACCOUNT-ID-REGION"
 
 ### Customize
@@ -106,14 +106,14 @@ At the end of the deployment you will see output like follow:
 
 ![ara-cdk-output](./cdk-deploy-result.png)
 
-In the output you will find job sample configurations with the best practices for Spark on Kubernetes like `dynamicAllocation` and `pod collocation`. 
+In the output you will find job sample configurations with the best practices for Spark on Kubernetes like `dynamicAllocation` and `pod collocation`.
 
 ### Job submission
 
-In this example we will use the `crittical-job` job configuration to submit a job using that will compute `pi` using that is part of Spark distribution. 
+In this example we will use the `crittical-job` job configuration to submit a job using that will compute `pi` using that is part of Spark distribution.
 To submit a job we will use Below you use `start-job-run` command with AWS CLI.
 
-Before you run the command below, make sure to change update the following parameters with the on created by your own deployment. 
+Before you run the command below, make sure to change update the following parameters with the on created by your own deployment.
     - <CLUSTER-ID> – The EMR virtual cluster ID, which you get from the AWS CDK output
     - <SPARK-JOB-NAME> – The name of your Spark job
     - <ROLE-ARN> – The execution role you created, which you get from the AWS CDK output
@@ -182,7 +182,7 @@ kubectl get pods --namespace=batchjob -w
 
 ### Interactive session
 
-To use an interactive session, you should log in to the EMR Studio instance with the URL provided to you at the end of `cdk deploy`. 
+To use an interactive session, you should log in to the EMR Studio instance with the URL provided to you at the end of `cdk deploy`.
 This link will be in the form of `https://es-xxxxx/emrstudio-prod-REGION.amazonaws.com`.
 Once you click on the link you will be see a log in page where you **MUST** sign-in with the username provided to the `addUser` method. When you sign in you should follow these steps.
 

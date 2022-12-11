@@ -8,7 +8,7 @@ spec:
   virtualClusterRef:
     from:
       name: my-ack-vc
-  executionRoleARN: "{emr_on_eks_role_arn}" # emr_on_eks_role_arn from terraform output
+  executionRoleARN: "{emr_on_eks_role_arn}" # emr_on_eks_role_arn for team a from terraform output
   releaseLabel: "emr-6.7.0-latest"
   jobDriver:
     sparkSubmitJobDriver:
@@ -22,4 +22,4 @@ spec:
         LogGroupName: /emr-on-eks-logs/emr-eks-amp-amg
         LogStreamNamePrefix: pi-job
       S3MonitoringConfiguration:
-        LogUri: s3://emr-eks-amp-amg-rapthg5f   
+        LogUri: s3://emr-eks-amp-amg-rapthg5f

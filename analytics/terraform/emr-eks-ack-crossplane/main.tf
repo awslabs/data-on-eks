@@ -193,4 +193,3 @@ resource "aws_prometheus_workspace" "amp" {
 
   tags = local.tags
 }
-
