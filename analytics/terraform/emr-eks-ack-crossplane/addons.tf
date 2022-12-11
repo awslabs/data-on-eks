@@ -134,7 +134,7 @@ module "eks_blueprints_kubernetes_addons" {
 ################################################################################
 
 module "eks_ack_addons" {
-  source = "github.com/season1946/terraform-aws-eks-ack-addons-victor"
+  source = "github.com/aws-ia/terraform-aws-eks-ack-addons"
 
   cluster_id = module.eks_blueprints.eks_cluster_id
 
