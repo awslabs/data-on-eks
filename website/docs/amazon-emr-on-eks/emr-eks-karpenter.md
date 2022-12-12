@@ -7,9 +7,9 @@ sidebar_label: EMR on EKS with Karpenter
 
 ## Introduction
 
-In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will learn how to deploy, configure and use multiple [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs with EMR on EKS.
+In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs. 
 
-Multiple Data teams within the organization can run Spark jobs on the selected Karpenter provisioners using `tolerations` specified in the pod templates example.
+The examples showcases how multiple data teams within an organization can run Spark jobs using Karpenter provisioners that are unique to each workload. For example, you can use compute optimized provisioner that has `taints` and use pod templates to specify `tolerations` so that you can run spark on compute optimized EC2 instances
 
 This pattern deploys three Karpenter provisioners.
 
@@ -200,7 +200,7 @@ spec:
 
 In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will provision the following resources required to run Spark Jobs using EMR on EKS with [Karpenter](https://karpenter.sh/) as Autoscaler, as well as monitor job metrics using Amazon Managed Prometheus and Amazon Managed Grafana.
 
-- Creates EKS Cluster Control plane with public endpoint (for demo purpose only)
+- Creates EKS Cluster Control plane with public endpoint (recommended for demo/poc environment)
 - One managed node group
   - Core Node group with 3 AZs for running system critical pods. e.g., Cluster Autoscaler, CoreDNS, Observability, Logging etc.
 - Enables EMR on EKS and creates two Data teams (`emr-data-team-a`, `emr-data-team-b`)
