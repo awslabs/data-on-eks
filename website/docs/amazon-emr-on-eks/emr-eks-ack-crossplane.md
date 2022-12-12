@@ -31,7 +31,7 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/ter
         - VPC CNI, CoreDNS, KubeProxy, AWS EBS CSi Driver
     - Self Managed Add-ons
         - Metrics server with HA, CoreDNS Cluster proportional Autoscaler, Cluster Autoscaler, Prometheus Server and Node Exporter, VPA for Prometheus, AWS for FluentBit, CloudWatchMetrics for EKS
- -  ACK EMR containers controller which allows you deploy sparks jobs to EMR on EKS by using yaml files.
+ -  ACK EMR containers controller which allows you deploy sparks jobs to EMR on EKS by using yaml files. The controller is installed by using [AWS EKS ACK Addons Terraform module](https://github.com/aws-ia/terraform-aws-eks-ack-addons)
 
 ### Prerequisites:
 
