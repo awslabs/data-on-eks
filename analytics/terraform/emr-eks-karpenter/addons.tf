@@ -145,7 +145,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Kubecost
   #---------------------------------------
-  enable_kubecost = true
+  enable_kubecost = false
   kubecost_helm_config = {
     name       = "kubecost"                      # (Required) Release name.
     repository = "oci://public.ecr.aws/kubecost" # (Optional) Repository URL where to locate the requested chart.
