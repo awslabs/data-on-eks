@@ -72,11 +72,10 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_karpenter = true
   karpenter_helm_config = {
-
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-
   }
+  
   #---------------------------------------
   # Amazon Managed Prometheus
   #---------------------------------------

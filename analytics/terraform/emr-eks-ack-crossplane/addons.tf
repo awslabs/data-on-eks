@@ -14,13 +14,6 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
 
-  #---------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------
-  enable_coredns_autoscaler = true
-
-
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -128,7 +121,6 @@ module "eks_blueprints_kubernetes_addons" {
   tags = local.tags
 }
 
-
 ################################################################################
 # ACK Addons
 ################################################################################
@@ -140,7 +132,6 @@ module "eks_ack_addons" {
 
   # Wait for data plane to be ready
   data_plane_wait_arn = module.eks_blueprints.managed_node_group_arn[0]
-
 
   enable_emrcontainers = true
 
