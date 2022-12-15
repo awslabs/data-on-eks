@@ -1,9 +1,9 @@
 ---
 sidebar_position: 5
-sidebar_label: ACK & Crossplane for EMR on EKS
+sidebar_label: ACK for EMR on EKS
 ---
 
-# ACK Controller and Crossplane for EMR on EKS
+# ACK Controller for EMR on EKS
 
 ## Introduction
 In this post, we will learn to build EMR on EKS Spark workloads by using [AWS Controllers for Kubernetes (ACK)](https://aws-controllers-k8s.github.io/community/docs/tutorials/emr-on-eks-example/).
