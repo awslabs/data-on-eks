@@ -40,7 +40,6 @@ Ensure that you have installed the following tools on your machine.
 1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
-4. [docker](https://docs.docker.com/get-docker/)
 
 _Note: Currently Amazon Managed Prometheus supported only in selected regions. Please see this [userguide](https://docs.aws.amazon.com/prometheus/latest/userguide/what-is-Amazon-Managed-Service-Prometheus.html) for supported regions._
 
@@ -50,11 +49,6 @@ Clone the repository
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
-```
-
-ACK controllers are installed by using helm charts in Amazon ECR public galley. You need to log in before running the Terraform script.
-```bash
-aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
 ```
 
 Navigate into one of the example directories and run `terraform init`
