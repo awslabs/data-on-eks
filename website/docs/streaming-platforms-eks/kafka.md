@@ -27,7 +27,7 @@ Architecture diagram work in progress
 [Amazon Kinesis Data Streams (KDS)](https://aws.amazon.com/kinesis/data-streams/) allows users to collect and process large streams of data records in real time. You can create data-processing applications, known as Kinesis Data Streams applications. A typical Kinesis Data Streams application reads data from a data stream as data records. You can send the processed records to dashboards, use them to generate alerts, dynamically change pricing and advertising strategies, or send data to a variety of other AWS services. Kinesis Data Streams support your choice of stream processing framework including Kinesis Client Library (KCL), Apache Flink, and Apache Spark Streaming. It is serverless, and scales automatically.
 
 ## Storage considerations when self-managing Kafka
-The most common resource bottlenecks for Kafka clusters are network throughput, storage throughput, and network throughput between brokers and the storage backend for brokers using network attached storage such as [Amazon Elastic Block Store (EBS)](https://aws.amazon.com/ebs/). 
+The most common resource bottlenecks for Kafka clusters are network throughput, storage throughput, and network throughput between brokers and the storage backend for brokers using network attached storage such as [Amazon Elastic Block Store (EBS)](https://aws.amazon.com/ebs/).
 
 ### Advantages to using EBS as persistent storage backend
 1. **Improved flexibility and faster recovery:** Fault tolerance is commonly achieved via broker (server) replication within
@@ -40,7 +40,7 @@ automatically scaled over time rather than provisioning storage for peak or addi
 3. **Optimized for frequently-accessed-throughput-intensive workloads:** Volume types such as st1 can be a good fit
 since these volumes are offered at a relatively low cost, support a large 1 MiB I/O block size, max IOPS of
 500/volume, and includes the ability to burst up to 250 MB/s per TB, with a baseline throughput of 40 MB/s per TB,
-and a maximum throughput of 500 MB/s per volume. 
+and a maximum throughput of 500 MB/s per volume.
 
 ### What EBS volumes should I use when self-managing Kafka on AWS?
 * General purpose SSD volume **gp3** with a balanced price and performance are widely used, and you can **independently** provision storage (up to 16TiB), IOPS (up to 16,000) and throughput (up to 1,000MiB/s)
