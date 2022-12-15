@@ -71,7 +71,12 @@ module "eks_blueprints_kubernetes_addons" {
   # Cluster Autoscaler
   #---------------------------------------
   enable_karpenter = true
+  karpenter_helm_config = {
 
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+
+  } 
   #---------------------------------------
   # Amazon Managed Prometheus
   #---------------------------------------
@@ -152,6 +157,8 @@ module "eks_blueprints_kubernetes_addons" {
     chart      = "cost-analyzer"                 # (Required) Chart name to be installed.
     version    = "1.97.0"                        # (Optional) Specify the exact chart version to install. If this is not specified, it defaults to the version set within default_helm_config: https://github.com/aws-ia/terraform-aws-eks-blueprints/blob/main/modules/kubernetes-addons/kubecost/locals.tf
     namespace  = "kubecost"                      # (Optional) The namespace to install the release into.
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
     timeout    = "300"
     values     = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
   }
