@@ -80,15 +80,15 @@ Let’s verify the resources created by `terraform apply`.
 Verify the Amazon EKS Cluster and Amazon Managed service for Prometheus.
 
 ```bash
-aws eks describe-cluster --name emr-eks-amp-amg
+aws eks describe-cluster --name emr-eks-ack
 
-aws amp list-workspaces --alias amp-ws-emr-eks-amp-amg
+aws amp list-workspaces --alias amp-ws-emr-eks-ack
 ```
 
 Verify EMR on EKS Namespaces `emr-data-team-a` and `emr-data-team-b` and Pod status for `Prometheus`, `Vertical Pod Autoscaler`, `Metrics Server` and `Cluster Autoscaler`.
 
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name emr-eks-amp-amg # Creates k8s config file to authenticate with EKS Cluster
+aws eks --region us-west-2 update-kubeconfig --name emr-eks-ack # Creates k8s config file to authenticate with EKS Cluster
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
@@ -121,8 +121,8 @@ You will get the output like below <br/>
 
 Before running a sample job, let’s create CloudWatch Logs and an S3 bucket to store EMR on EKS logs.
 ```bash
-aws logs create-log-group --log-group-name=/emr-on-eks-logs/emr-eks-amp-amg
-aws s3 mb s3://emr-eks-amp-amg-rapthg5f  
+aws logs create-log-group --log-group-name=/emr-on-eks-logs/emr-eks-ack
+aws s3 mb s3://emr-eks-ack-rapthg5f  
 ```
 
 update {emr_on_eks_role_arn} in jobrun.yaml with the output from terraform

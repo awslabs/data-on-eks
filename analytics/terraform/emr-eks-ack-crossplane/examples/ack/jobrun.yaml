@@ -19,7 +19,7 @@ spec:
     ApplicationConfiguration: null
     MonitoringConfiguration:
       CloudWatchMonitoringConfiguration:
-        LogGroupName: /emr-on-eks-logs/emr-eks-amp-amg
+        LogGroupName: /emr-on-eks-logs/emr-eks-ack
         LogStreamNamePrefix: pi-job
       S3MonitoringConfiguration:
-        LogUri: s3://emr-eks-amp-amg-rapthg5f
+        LogUri: s3://emr-eks-ack-rapthg5f

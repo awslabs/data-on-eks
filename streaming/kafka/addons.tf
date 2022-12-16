@@ -14,26 +14,6 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_coredns    = true
 
   #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_coredns_cluster_proportional_autoscaler = true
-  coredns_cluster_proportional_autoscaler_helm_config = {
-    name       = "cluster-proportional-autoscaler"
-    chart      = "cluster-proportional-autoscaler"
-    repository = "https://kubernetes-sigs.github.io/cluster-proportional-autoscaler"
-    version    = "1.0.0"
-    namespace  = "kube-system"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      operating_system = "linux"
-      target           = "deployment/coredns"
-      node_group_type  = "core"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
-
-  #---------------------------------------------------------------
   # Self managed EBS CSI Driver
   # Used self_managed_aws_ebs_csi_driver to define the Node Tolerations `tolerateAllTaints: true`
   #---------------------------------------------------------------

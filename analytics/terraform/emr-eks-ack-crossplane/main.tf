@@ -2,7 +2,7 @@
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.15.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.18.1"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -117,8 +117,8 @@ module "eks_blueprints" {
       disk_type = "gp3"
 
       max_size     = 9 # Managed node group soft limit is 450; request AWS for limit increase
-      min_size     = 3
-      desired_size = 3
+      min_size     = 1
+      desired_size = 1
 
       create_launch_template = true
       launch_template_os     = "amazonlinux2eks"

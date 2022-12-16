@@ -6,7 +6,7 @@ metadata:
 spec:
   name: my-ack-vc
   containerProvider:
-    id: emr-eks-amp-amg  # your eks cluster name
+    id: emr-eks-ack  # your eks cluster name
     type_: EKS
     info:
       eksInfo:
