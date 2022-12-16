@@ -92,5 +92,24 @@ module "eks_blueprints" {
     }
   }
 
+  application_teams = {
+    data-team-a = { # namespace
+      "labels" = {
+        "appName"     = "data-team-app",
+        "projectName" = "project-teamA",
+        "environment" = "dev"
+      }
+      "quota" = {
+        "requests.cpu"    = "1000m",
+        "requests.memory" = "4Gi",
+        "limits.cpu"      = "2000m",
+        "limits.memory"   = "8Gi",
+        "pods"            = "10",
+        "secrets"         = "10",
+        "services"        = "10"
+      }
+    }
+  }
+
   tags = local.tags
 }

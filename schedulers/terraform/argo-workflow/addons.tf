@@ -56,12 +56,12 @@ resource "kubernetes_cluster_role" "spark_op_role" {
   }
 }
 #---------------------------------------------------------------
-# Kubernetes Role binding role for argo workflows
+# Kubernetes Role binding role for argo workflows/data-team-a
 #---------------------------------------------------------------
 resource "kubernetes_role_binding" "spark_role_binding" {
   metadata {
-    name      = "argo-workflows-spark-rolebinding"
-    namespace = "argo-workflows"
+    name      = "data-team-a-spark-rolebinding"
+    namespace = "data-team-a"
   }
 
   subject {
