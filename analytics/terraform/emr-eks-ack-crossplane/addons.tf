@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.15.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.18.1"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -14,23 +14,31 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
 
-  #---------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------
-  enable_coredns_autoscaler = true
-  coredns_autoscaler_helm_config = {
-    name       = "cluster-proportional-autoscaler"
-    chart      = "cluster-proportional-autoscaler"
-    repository = "https://kubernetes-sigs.github.io/cluster-proportional-autoscaler"
-    version    = "1.0.0"
-    namespace  = "kube-system"
+  #---------------------------------------
+  # Enable Crossplane Addon, AWS provider and Kubernetes Provider
+  #---------------------------------------
+  enable_crossplane = var.enable_crossplane
+  crossplane_helm_config = {
+    name       = "crossplane"
+    chart      = "crossplane"
+    repository = "https://charts.crossplane.io/stable/"
+    version    = "1.10.1"
+    namespace  = "crossplane-system"
     timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      operating_system = "linux"
-      target           = "deployment/coredns"
+    values = [templatefile("${path.module}/helm-values/crossplane-values.yaml", {
+      operating-system = "linux"
     })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
+  }
+
+  # NOTE: Crossplane requires Admin like permissions to create and update resources similar to Terraform deploy role.
+  # This example config uses AdministratorAccess for demo purpose only, but you should select a policy with the minimum permissions required to provision your resources
+  crossplane_aws_provider = {
+    enable                   = var.enable_crossplane
+    name                     = "aws-provider"
+    service_account          = "aws-provider"
+    provider_config          = "default"
+    provider_aws_version     = "v0.34.0"
+    additional_irsa_policies = ["arn:aws:iam::aws:policy/AdministratorAccess"]
   }
 
   #---------------------------------------
@@ -137,5 +145,25 @@ module "eks_blueprints_kubernetes_addons" {
     })]
   }
 
+  tags = local.tags
+}
+
+################################################################################
+# ACK Addons
+################################################################################
+module "eks_ack_addons" {
+  count = var.enable_ack == true ? 1 : 0
+
+  source = "github.com/aws-ia/terraform-aws-eks-ack-addons"
+
+  cluster_id          = module.eks_blueprints.eks_cluster_id
+  data_plane_wait_arn = module.eks_blueprints.managed_node_group_arn[0] # Wait for data plane to be ready
+
+  enable_emrcontainers = true
+  emrcontainers_helm_config = {
+    repository          = "oci://public.ecr.aws/aws-controllers-k8s"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
   tags = local.tags
 }

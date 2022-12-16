@@ -14,25 +14,6 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
 
-  #---------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------
-  enable_coredns_autoscaler = true
-  coredns_autoscaler_helm_config = {
-    name       = "cluster-proportional-autoscaler"
-    chart      = "cluster-proportional-autoscaler"
-    repository = "https://kubernetes-sigs.github.io/cluster-proportional-autoscaler"
-    version    = "1.0.0"
-    namespace  = "kube-system"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      operating_system = "linux"
-      target           = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
-
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -71,6 +52,10 @@ module "eks_blueprints_kubernetes_addons" {
   # Cluster Autoscaler
   #---------------------------------------
   enable_karpenter = true
+  karpenter_helm_config = {
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
 
   #---------------------------------------
   # Amazon Managed Prometheus
@@ -147,13 +132,15 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    name       = "kubecost"                      # (Required) Release name.
-    repository = "oci://public.ecr.aws/kubecost" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "cost-analyzer"                 # (Required) Chart name to be installed.
-    version    = "1.97.0"                        # (Optional) Specify the exact chart version to install. If this is not specified, it defaults to the version set within default_helm_config: https://github.com/aws-ia/terraform-aws-eks-blueprints/blob/main/modules/kubernetes-addons/kubecost/locals.tf
-    namespace  = "kubecost"                      # (Optional) The namespace to install the release into.
-    timeout    = "300"
-    values     = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+    name                = "kubecost"                      # (Required) Release name.
+    repository          = "oci://public.ecr.aws/kubecost" # (Optional) Repository URL where to locate the requested chart.
+    chart               = "cost-analyzer"                 # (Required) Chart name to be installed.
+    version             = "1.97.0"                        # (Optional) Specify the exact chart version to install. If this is not specified, it defaults to the version set within default_helm_config: https://github.com/aws-ia/terraform-aws-eks-blueprints/blob/main/modules/kubernetes-addons/kubecost/locals.tf
+    namespace           = "kubecost"                      # (Optional) The namespace to install the release into.
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+    timeout             = "300"
+    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
   }
 
   tags = local.tags
