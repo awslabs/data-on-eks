@@ -29,8 +29,10 @@ To provision this example:
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 cd data-on-eks/schedulers/terraform/argo-workflow
+
+region=<your region> # set region variable for following commands
 terraform init
-terraform apply -var region=us-west-2 # Change according to your need
+terraform apply -var region=$region #defaults to us-west-2
 ```
 
 Enter `yes` at command prompt to apply
@@ -75,6 +77,7 @@ kubectl get ns
 # Output should look like below
 NAME              STATUS   AGE
 argo-events       Active   28h
+data-team-a       Active   73m
 argo-workflows    Active   28h
 default           Active   30h
 kube-node-lease   Active   30h
@@ -201,5 +204,9 @@ argo-workflows   aws-sqs-spark-workflow-p57qx   Running   9s
 To teardown and remove the resources created in this example:
 
 ```bash
-terraform destroy -auto-approve
+kubectl delete -f argo-events/.
+
+terraform destroy -target="module.eks_blueprints_kubernetes_addons" -target="module.irsa_argo_events" -auto-approve -var region=$region
+terraform destroy -target="module.eks_blueprints" -auto-approve -var region=$region
+terraform destroy -auto-approve -var region=$region
 ```

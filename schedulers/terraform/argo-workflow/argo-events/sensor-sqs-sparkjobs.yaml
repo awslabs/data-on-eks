@@ -34,7 +34,7 @@ spec:
                       kind: SparkApplication
                       metadata:
                         generateName: event-wf-sparkapp-
-                        namespace: argo-workflows
+                        namespace: data-team-a
                       spec:
                         type: Python
                         pythonVersion: "3"

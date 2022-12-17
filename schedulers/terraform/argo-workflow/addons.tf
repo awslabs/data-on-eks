@@ -56,12 +56,12 @@ resource "kubernetes_cluster_role" "spark_op_role" {
   }
 }
 #---------------------------------------------------------------
-# Kubernetes Role binding role for argo workflows
+# Kubernetes Role binding role for argo workflows/data-team-a
 #---------------------------------------------------------------
 resource "kubernetes_role_binding" "spark_role_binding" {
   metadata {
-    name      = "argo-workflows-spark-rolebinding"
-    namespace = "argo-workflows"
+    name      = "data-team-a-spark-rolebinding"
+    namespace = "data-team-a"
   }
 
   subject {
@@ -76,7 +76,7 @@ resource "kubernetes_role_binding" "spark_role_binding" {
     name      = kubernetes_cluster_role.spark_op_role.id
   }
 }
-resource "kubernetes_role_binding" "admin_rolebinding" {
+resource "kubernetes_role_binding" "admin_rolebinding_argoworkflows" {
   metadata {
     name      = "argo-workflows-admin-rolebinding"
     namespace = "argo-workflows"
@@ -86,6 +86,24 @@ resource "kubernetes_role_binding" "admin_rolebinding" {
     kind      = "ServiceAccount"
     name      = "default"
     namespace = "argo-workflows"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "admin"
+  }
+}
+resource "kubernetes_role_binding" "admin_rolebinding_data_teama" {
+  metadata {
+    name      = "data-team-a-admin-rolebinding"
+    namespace = "data-team-a"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = "data-team-a"
   }
 
   role_ref {
