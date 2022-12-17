@@ -100,13 +100,9 @@ module "eks_blueprints" {
         "environment" = "dev"
       }
       "quota" = {
-        "requests.cpu"    = "1000m",
-        "requests.memory" = "4Gi",
-        "limits.cpu"      = "2000m",
-        "limits.memory"   = "8Gi",
-        "pods"            = "10",
-        "secrets"         = "10",
-        "services"        = "10"
+        "pods"     = "10",
+        "secrets"  = "10",
+        "services" = "10"
       }
     }
   }
