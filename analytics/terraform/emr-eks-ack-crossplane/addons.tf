@@ -159,11 +159,10 @@ module "eks_ack_addons" {
   cluster_id          = module.eks_blueprints.eks_cluster_id
   data_plane_wait_arn = module.eks_blueprints.managed_node_group_arn[0] # Wait for data plane to be ready
 
+  ecrpublic_username = data.aws_ecrpublic_authorization_token.token.user_name
+  ecrpublic_token    = data.aws_ecrpublic_authorization_token.token.password
+
   enable_emrcontainers = true
-  emrcontainers_helm_config = {
-    repository          = "oci://public.ecr.aws/aws-controllers-k8s"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
+
   tags = local.tags
 }
