@@ -9,6 +9,12 @@ sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/mac
 
 > **Note**: Data on EKS is under active development for number of patterns. Please refer to the [issues](https://github.com/awslabs/data-on-eks/issues) section to see the work in progress features.
 
+## 🏗️ Architecture
+The diagram displays the open source data tools, k8s operators and frameworks that runs on Kubernetes covered in DoEKS. AWS Data Analytics managed services integration with Data on EKS OSS tools.
+
+<img width="779" alt="image" src="https://user-images.githubusercontent.com/19464259/208900860-a7ccdaeb-158d-4767-baad-fbc76388bc09.png">
+
+
 ## 🌟 Features
 Data on EKS(DoEKS) solution is categorized into the following areas.
 
@@ -28,8 +34,6 @@ In this repository you will find multiple deployment examples for bootstrapping 
 🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - EMR on EKS with Apache YuniKorn custom batch scheduler.
 
 🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Scaling Spark jobs with EMR on EKS and Karpenter.
-
-🚀 [EMR on EKS with FSx for Lustre](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-fsx-for-lustre) - EMR on EKS Cluster with FSx for Lustre as a high performance Spark shuffle storage.
 
 🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - Spark Operator with Apache YuniKorn on Amazon EKS.
 
