@@ -3,6 +3,12 @@ kind: Pod
 metadata:
   name: ny-taxi-exec
   namespace: emr-data-team-a
+  labels:
+    applicationId: ny-taxi-yunikorn
+    queue: root.test # YuniKorn Queue
+  annotations:
+    yunikorn.apache.org/task-group-name: "spark-executor" # YuniKorn Gang Scheduling annotation
+
 spec:
   volumes:
     - name: spark-local-dir-1

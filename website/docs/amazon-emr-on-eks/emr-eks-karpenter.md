@@ -7,7 +7,7 @@ sidebar_label: EMR on EKS with Karpenter
 
 ## Introduction
 
-In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs. 
+In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs.
 
 The examples showcases how multiple data teams within an organization can run Spark jobs using Karpenter provisioners that are unique to each workload. For example, you can use compute optimized provisioner that has `taints` and use pod templates to specify `tolerations` so that you can run spark on compute optimized EC2 instances
 
@@ -215,7 +215,7 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/ter
   - Managed Add-ons
     - VPC CNI, CoreDNS, KubeProxy, AWS EBS CSi Driver
   - Self Managed Add-ons
-    - Karpetner, Metrics server with HA, CoreDNS Cluster proportional Autoscaler, Cluster Autoscaler, Prometheus Server and Node Exporter, VPA for Prometheus, AWS for FluentBit, CloudWatchMetrics for EKS
+    - Karpetner, Apache YuniKorn, Metrics server with HA, CoreDNS Cluster proportional Autoscaler, Cluster Autoscaler, Prometheus Server and Node Exporter, VPA for Prometheus, AWS for FluentBit, CloudWatchMetrics for EKS
 
 ### Prerequisites:
 
@@ -305,9 +305,9 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/spark/
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner/
 
-./compute-nytaxi-pyspark-karpenter.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
+./execute_emr_eks_job.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \
   "<EMR_JOB_EXECUTION_ROLE_ARN>"
 ```
@@ -326,9 +326,9 @@ kubectl get pods --namespace=emr-data-team-a -w
 This pattern uses the Karpenter provisioner for memory optimized instances. This template leverages the Karpenter AWS Node template with Userdata.
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/spark/
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-memory-provisioner
 
-./memory-nytaxi-pyspark-karpenter.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
+./execute_emr_eks_job.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \
   "<EMR_JOB_EXECUTION_ROLE_ARN>"
 ```
@@ -342,6 +342,28 @@ Nodes will be drained with once the job is completed
 kubectl get pods --namespace=emr-data-team-a -w
 ```
 
+### Apache YuniKorn Gang Scheduling with Karpenter
+
+This example demonstrates the [Apache YuniKorn Gang Scheduling](https://yunikorn.apache.org/docs/user_guide/gang_scheduling/) with Karpenter Autoscaler.
+
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-yunikorn-gangscheduling
+
+./execute_emr_eks_job.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
+  "s3://<ENTER-YOUR-BUCKET-NAME>" \
+  "<EMR_JOB_EXECUTION_ROLE_ARN>"
+```
+
+#### Verify the job execution
+Apache YuniKorn Gang Scheduling will create pause pods for total number of executors requested.
+
+```bash
+kubectl get pods --namespace=emr-data-team-a -w
+```
+Verify the driver and executor pods prefix with `tg-` indicates the pause pods.
+These pods will be replaced with the actual Spark Driver and Executor pods once the Nodes are scaled and ready by the Karpenter.
+
+![img.png](img/karpenter-yunikorn-gang-schedule.png)
 
 ## Cleanup
 
