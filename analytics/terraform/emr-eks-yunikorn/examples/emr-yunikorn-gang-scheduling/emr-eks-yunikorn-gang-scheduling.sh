@@ -8,7 +8,7 @@
 if [ $# -ne 3 ];
 then
   echo "$0: Missing arguments EMR_VIRTUAL_CLUSTER_NAME, S3_BUCKET_NAME and EMR_JOB_EXECUTION_ROLE_ARN"
-  echo "USAGE: ./karpenter-memory-provisioner.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
+  echo "USAGE: ./emr-eks-yunikorn-gang-scheduling.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
   exit 1
 else
   echo "We got some argument(s)"
