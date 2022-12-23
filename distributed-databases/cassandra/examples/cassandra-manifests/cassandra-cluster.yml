@@ -2,6 +2,7 @@ apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: demo
+  namespace: cassandra
 spec:
   cassandra:
     serverVersion: "4.0.3"
