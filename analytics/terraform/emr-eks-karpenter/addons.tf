@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.15.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.19.0"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -141,6 +141,26 @@ module "eks_blueprints_kubernetes_addons" {
     repository_password = data.aws_ecrpublic_authorization_token.token.password
     timeout             = "300"
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+  }
+
+  #---------------------------------------------------------------
+  # Apache YuniKorn Add-on
+  #---------------------------------------------------------------
+  enable_yunikorn = var.enable_yunikorn
+  yunikorn_helm_config = {
+    name       = "yunikorn"
+    repository = "https://apache.github.io/yunikorn-release"
+    chart      = "yunikorn"
+    version    = "1.1.0"
+    timeout    = "300"
+    values = [
+      templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+        image_version    = "1.1.0"
+        operating_system = "linux"
+        node_group_type  = "core"
+      })
+    ]
+    timeout = "300"
   }
 
   tags = local.tags

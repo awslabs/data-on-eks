@@ -1,14 +1,9 @@
-# This script requires a TPCDS-TEST-1T input data to be generated in your S3 bucket
-# Use this analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml script to generate the test data
-# Alternatively you can use any test data with your PySpark script.
-# This example will demonstrate the Gang Scheduling. Check the PoD templates for more config
-
 #!/bin/bash
 
 if [ $# -ne 3 ];
 then
   echo "$0: Missing arguments EMR_VIRTUAL_CLUSTER_NAME, S3_BUCKET_NAME and EMR_JOB_EXECUTION_ROLE_ARN"
-  echo "USAGE: ./emr-eks-yunikorn-gang-scheduling.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
+  echo "USAGE: ./execute_emr_eks_job.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
   exit 1
 else
   echo "We got some argument(s)"
@@ -36,7 +31,7 @@ EMR_VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtu
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
-JOB_NAME='emr-yunikorn-gang-scheduling'  # Same name as example folder name
+JOB_NAME='taxidata'
 EMR_EKS_RELEASE_LABEL="emr-6.7.0-latest" # Spark 3.2.1
 CW_LOG_GROUP="/emr-on-eks-logs/${EMR_VIRTUAL_CLUSTER_NAME}" # Create CW Log group if not exist
 
@@ -101,7 +96,7 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
               "spark.executor.memory": "10g",
               "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
               "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
-              "spark.local.dir" : "/emrdata",
+              "spark.local.dir" : "/data1,/data2",
 
               "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
               "spark.ui.prometheus.enabled":"true",

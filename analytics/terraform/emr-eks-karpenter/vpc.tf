@@ -1,16 +1,16 @@
 #---------------------------------------------------------------
-# VPC and Subnets
+# Supporting Network Resources
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
 
   name = local.name
-  cidr = local.vpc_cidr
+  cidr = var.vpc_cidr
 
   azs             = local.azs
-  public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k)]
-  private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 10)]
+  public_subnets  = var.public_subnets  # Two Subnets. 4094 IPs per Subnet
+  private_subnets = var.private_subnets # Three Subnets. 16382 IPs per Subnet
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -41,7 +41,7 @@ module "vpc" {
       protocol    = -1
       from_port   = 0
       to_port     = 0
-      cidr_blocks = local.vpc_cidr
+      cidr_blocks = var.vpc_cidr
   }]
   default_security_group_egress = [
     {
