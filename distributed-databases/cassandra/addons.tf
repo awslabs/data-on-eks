@@ -2,8 +2,10 @@
 # Kubernetes Add-ons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.10.0"
+  # source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.15.0"
+  source = "/home/aly/terraform-aws-eks-blueprints/modules/kubernetes-addons?ref=k8ssandra_operator"
 
+  # eks_cluster_id = local.name
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
   eks_oidc_provider    = module.eks_blueprints.oidc_provider
@@ -37,7 +39,7 @@ module "eks_blueprints_kubernetes_addons" {
     namespace        = local.k8ssandra_operator_name
     create_namespace = true
     timeout          = 360
-    values           = [templatefile("${path.module}/values.yaml", {})]
+    values           = [templatefile("${path.module}/helm-values/values.yaml", {})]
     description      = "K8ssandra Operator to run Cassandra DB on Kubernetes"
   }
   tags = local.tags
@@ -48,11 +50,11 @@ module "eks_blueprints_kubernetes_addons" {
 #---------------------------------------------------------------
 
 resource "kubectl_manifest" "cassandra-namespace" {
-  yaml_body = file("./kubernetes-manifests/cassandra-ns.yml")
+  yaml_body = file("./examples/cassandra-ns.yml")
 }
 
 resource "kubectl_manifest" "cassandra-cluster" {
-  yaml_body = file("./kubernetes-manifests/cassandra-manifests/cassandra-cluster.yml")
+  yaml_body = file("./examples/cassandra-manifests/cassandra-cluster.yml")
 }
 
 # resource "kubectl_manifest" "grafana-prometheus-datasource" {
@@ -60,5 +62,5 @@ resource "kubectl_manifest" "cassandra-cluster" {
 # }
 
 resource "kubectl_manifest" "grafana-cassandra-dashboard" {
-  yaml_body = file("./kubernetes-manifests/cassandra-manifests/grafana-dashboards.yml")
+  yaml_body = file("./examples/cassandra-manifests/grafana-dashboards.yml")
 }
