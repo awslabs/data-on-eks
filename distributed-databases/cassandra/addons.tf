@@ -55,6 +55,30 @@ module "eks_blueprints_kubernetes_addons" {
 }
 
 #---------------------------------------------------------------
+# GP3 Storage Class
+#---------------------------------------------------------------
+resource "kubectl_manifest" "gp3_sc" {
+  yaml_body = <<-YAML
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+  name: gp3
+parameters:
+  fsType: xfs
+  type: gp3
+  encrypted: "true"
+allowVolumeExpansion: true
+provisioner: ebs.csi.aws.com
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+YAML
+
+  depends_on = [module.eks_blueprints.eks_cluster_id]
+}
+
+#---------------------------------------------------------------
 # Install kafka cluster
 #---------------------------------------------------------------
 
