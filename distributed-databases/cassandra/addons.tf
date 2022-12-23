@@ -28,7 +28,16 @@ module "eks_blueprints_kubernetes_addons" {
 
   enable_cert_manager = true
 
-  # Kafka (Strimzi) add-on with custom helm config
+  # cert_manager_helm_config = {
+  #   name        = "cert-manager"
+  #   chart       = "cert-manager"
+  #   repository  = "https://charts.jetstack.io"
+  #   version     = "v1.10.0"
+  #   namespace   = local.k8ssandra_operator_name
+  #   description = "Cert Manager Add-on"
+  # }
+
+  # K8ssandra Operator add-on with custom helm config
   enable_k8ssandra_operator = true
 
   k8ssandra_operator_helm_config = {
