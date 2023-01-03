@@ -31,17 +31,17 @@ Data on EKS(DoEKS) solution is categorized into the following areas.
 ## 🏃‍♀️Getting Started
 In this repository you will find multiple deployment examples for bootstrapping Data platforms with Amazon EKS Cluster and the Kubernetes add-ons.
 
-🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - EMR on EKS with Apache YuniKorn custom batch scheduler.
+🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - This template deploys EMR on EKS cluster and uses Apache YuniKorn for custom batch scheduling.
 
-🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Scaling Spark jobs with EMR on EKS and Karpenter.
+🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - **<---Start Here** if you are new to EMR on EKS. This template deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
 
-🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - Spark Operator with Apache YuniKorn on Amazon EKS.
+🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - This template deploys EKS cluster and uses Spark Operator and Apache YuniKorn for running self-managed Spark jobs
 
-🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) - Trigger EMR on EKS jobs with Amazon Managed Workflows for Apache Airflow (MWAA).
+🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) - This template deploys EMR on EKS cluster and uses Amazon Managed Workflows for Apache Airflow (MWAA) to run Spark jobs.
 
-🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - Deploy self-managed Apache Airflow with best practices on Amazon EKS.
+🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - This template deploys self-managed Apache Airflow with best practices on Amazon EKS cluster.
 
-🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks/ray) - Deploy Ray Operator on EKS with sample scripts.
+🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks/ray) - This template deploys Ray Operator on EKS with sample scripts.
 
 ## 🗂️ Documentation
 Checkout the [DoEKS](https://awslabs.github.io/data-on-eks/) Website for instructions to deploy the Data on EKS patterns and run sample tests.
