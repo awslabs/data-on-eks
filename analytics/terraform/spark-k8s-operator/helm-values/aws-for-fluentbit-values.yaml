@@ -37,7 +37,7 @@ cloudWatch:
   logKey:
   logFormat:
   roleArn:
-  autoCreateGroup: true
+  autoCreateGroup: false
   endpoint:
   credentialsEndpoint:  {}
 
