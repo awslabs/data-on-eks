@@ -28,13 +28,13 @@ spec:
                 templates:
                 - name: parallel-jobs
                   steps:
-                  - - name: hello1
+                  - - name: helloworld-job1
                       template: whalesay
                       arguments:
                         parameters: [{name: message, value: "spark-start!"}]
-                  - - name: spark-work
+                  - - name: spark-operator-job
                       template: sparkapp-operator
-                    - name: hello2
+                    - name: helloworld-job2
                       template: whalesay
                       arguments:
                         parameters: [{name: message, value: "spark-done!"}]
