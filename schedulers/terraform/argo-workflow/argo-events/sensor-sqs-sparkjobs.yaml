@@ -24,8 +24,20 @@ spec:
                 namespace: argo-workflows
               spec:
                 arguments: {}
-                entrypoint: sparkapp-operator
+                entrypoint: parallel-jobs
                 templates:
+                - name: parallel-jobs
+                  steps:
+                  - - name: helloworld-job1
+                      template: whalesay
+                      arguments:
+                        parameters: [{name: message, value: "spark-start!"}]
+                  - - name: spark-operator-job
+                      template: sparkapp-operator
+                    - name: helloworld-job2
+                      template: whalesay
+                      arguments:
+                        parameters: [{name: message, value: "spark-done!"}]
                 - name: sparkapp-operator
                   resource:
                     action: create
@@ -62,3 +74,11 @@ spec:
                           memory: "512m"
                           labels:
                             version: 3.1.1
+                - name: whalesay
+                  inputs:
+                    parameters:
+                    - name: message
+                  container:
+                    image: docker/whalesay
+                    command: [cowsay]
+                    args: ["{{inputs.parameters.message}}"]

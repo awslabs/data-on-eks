@@ -109,3 +109,12 @@ module "eks_blueprints" {
 
   tags = local.tags
 }
+
+#---------------------------------------------------------------
+# Amazon Prometheus Workspace
+#---------------------------------------------------------------
+resource "aws_prometheus_workspace" "amp" {
+  alias = format("%s-%s", "amp-ws", local.name)
+
+  tags = local.tags
+}
