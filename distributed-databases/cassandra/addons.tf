@@ -21,8 +21,21 @@ module "eks_blueprints_kubernetes_addons" {
   enable_cluster_autoscaler = true
   enable_aws_for_fluentbit            = true
   enable_aws_load_balancer_controller = true
-  enable_prometheus                   = true
-  enable_grafana                      = true
+  # enable_prometheus                   = true
+  # enable_grafana                      = true
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack_helm_config = {
+    name             = "prometheus-grafana"
+    chart            = "kube-prometheus-stack"
+    repository       = "https://prometheus-community.github.io/helm-charts"
+    version          = "43.2.1"
+    namespace        = local.k8ssandra_operator_name
+    create_namespace = true
+    timeout          = 600
+    values           = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    description      = "Kube Prometheus Grafana Stack Operator Chart"
+  
+  }
 
   # Install Cert Manager
 
@@ -35,6 +48,7 @@ module "eks_blueprints_kubernetes_addons" {
   #   version     = "v1.10.0"
   #   namespace   = local.k8ssandra_operator_name
   #   description = "Cert Manager Add-on"
+  #   wait        = true
   # }
 
   # K8ssandra Operator add-on with custom helm config
@@ -46,8 +60,8 @@ module "eks_blueprints_kubernetes_addons" {
     repository       = "https://helm.k8ssandra.io/stable"
     version          = "0.39.1"
     namespace        = local.k8ssandra_operator_name
-    create_namespace = true
-    timeout          = 360
+    create_namespace = false
+    timeout          = 600
     values           = [templatefile("${path.module}/helm-values/values.yaml", {})]
     description      = "K8ssandra Operator to run Cassandra DB on Kubernetes"
   }
@@ -84,10 +98,12 @@ YAML
 
 resource "kubectl_manifest" "cassandra-namespace" {
   yaml_body = file("./examples/cassandra-ns.yml")
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 resource "kubectl_manifest" "cassandra-cluster" {
   yaml_body = file("./examples/cassandra-manifests/cassandra-cluster.yml")
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 # resource "kubectl_manifest" "grafana-prometheus-datasource" {
@@ -96,4 +112,5 @@ resource "kubectl_manifest" "cassandra-cluster" {
 
 resource "kubectl_manifest" "grafana-cassandra-dashboard" {
   yaml_body = file("./examples/cassandra-manifests/grafana-dashboards.yml")
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
