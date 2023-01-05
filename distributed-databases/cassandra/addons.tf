@@ -39,7 +39,7 @@ module "eks_blueprints_kubernetes_addons" {
 
   # Install Cert Manager
 
-  enable_cert_manager = true
+  # enable_cert_manager = true
 
   # cert_manager_helm_config = {
   #   name        = "cert-manager"

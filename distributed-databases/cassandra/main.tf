@@ -91,49 +91,49 @@ module "eks_blueprints" {
         "k8s.io/cluster-autoscaler/enabled"                              = "true"
       }
     }
-    # # Kafka workload node group for deploying Kafka Brokers
-    # mng2 = {
-    #   node_group_name = "kafka-node-grp"
-    #   subnet_ids      = module.vpc.private_subnets
+    # Cassandra workload node group for deploying Cassandra
+    mng2 = {
+      node_group_name = "cassandra-node-grp"
+      subnet_ids      = module.vpc.private_subnets
 
-    #   instance_types = ["r6i.2xlarge"] #Im4gn.4xlarge, m5.8xlarge, r6i.2xlarge
-    #   ami_type       = "AL2_x86_64"
-    #   capacity_type  = "ON_DEMAND"
+      instance_types = ["r6i.2xlarge"] #Im4gn.4xlarge, m5.8xlarge, r6i.2xlarge
+      ami_type       = "AL2_x86_64"
+      capacity_type  = "ON_DEMAND"
 
-    #   disk_size = 100
-    #   disk_type = "gp3"
+      disk_size = 100
+      disk_type = "gp3"
 
-    #   max_size               = 12
-    #   min_size               = 3
-    #   desired_size           = 3
-    #   create_launch_template = true
-    #   launch_template_os     = "amazonlinux2eks"
+      max_size               = 12
+      min_size               = 3
+      desired_size           = 3
+      create_launch_template = true
+      launch_template_os     = "amazonlinux2eks"
 
-    #   update_config = [{
-    #     max_unavailable_percentage = 50
-    #   }]
+      update_config = [{
+        max_unavailable_percentage = 50
+      }]
 
-    #   k8s_labels = {
-    #     Environment   = "preprod"
-    #     Zone          = "test"
-    #     WorkerType    = "ON_DEMAND"
-    #     NodeGroupType = "kafka"
-    #   }
+      k8s_labels = {
+        Environment   = "preprod"
+        Zone          = "test"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "cassandra"
+      }
 
-    #   k8s_taints = [{ key = "dedicated", value = "kafka", effect = "NO_SCHEDULE" }]
+      k8s_taints = [{ key = "dedicated", value = "cassandra", effect = "NO_SCHEDULE" }]
 
-    #   # See this doc node-template tags https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
-    #   additional_tags = {
-    #     Name                                                             = "kafka-node-grp"
-    #     subnet_type                                                      = "private"
-    #     "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-    #     "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-    #     "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "kafka"
-    #     "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-    #     "k8s.io/cluster-autoscaler/${local.name}"                        = "owned"
-    #     "k8s.io/cluster-autoscaler/enabled"                              = "true"
-    #   }
-    # }
+      # See this doc node-template tags https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
+      additional_tags = {
+        Name                                                             = "cassandra-node-grp"
+        subnet_type                                                      = "private"
+        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
+        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
+        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "cassandra"
+        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
+        "k8s.io/cluster-autoscaler/${local.name}"                        = "owned"
+        "k8s.io/cluster-autoscaler/enabled"                              = "true"
+      }
+    }
   }
 
   tags = local.tags
