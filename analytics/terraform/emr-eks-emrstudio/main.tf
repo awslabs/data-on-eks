@@ -166,10 +166,10 @@ module "eks_blueprints" {
       job_execution_role      = "emr-eks-data-team-a"
       additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
     }
-    emr-data-team-b = {
-      namespace               = "emr-data-team-b"
-      job_execution_role      = "emr-eks-data-team-b"
-      additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
+    emr-studio = {
+      namespace               = "emr-studio"
+      job_execution_role      = "emr-eks-studio"
+      additional_iam_policies = [aws_iam_policy.emr_on_eks_emrstudio.arn]
     }
   }
   tags = local.tags
@@ -192,4 +192,63 @@ resource "aws_prometheus_workspace" "amp" {
   alias = format("%s-%s", "amp-ws", local.name)
 
   tags = local.tags
+}
+
+#---------------------------------------------------------------
+# Example IAM policies for EMR studio role
+#---------------------------------------------------------------
+resource "aws_iam_policy" "emr_on_eks_emrstudio" {
+  name        = format("%s-%s", local.name, "emrstudio-iam-policies")
+  description = "IAM policy for EMR on EKS EMR studio service role"
+  path        = "/"
+  policy      = data.aws_iam_policy_document.emr_on_eks_emrstudio.json
+}
+
+
+#---------------------------------------------------------------
+# Create EMR on EKS Virtual Cluster
+#---------------------------------------------------------------
+resource "aws_emrcontainers_virtual_cluster" "this" {
+  name = format("%s-%s", module.eks_blueprints.eks_cluster_id, "emr-studio")
+
+  container_provider {
+    id   = module.eks_blueprints.eks_cluster_id
+    type = "EKS"
+
+    info {
+      eks_info {
+        namespace = "emr-studio"
+      }
+    }
+  }
+}
+
+
+#---------------------------------------------------------------
+# Managed endpoint for EMR on EKS 
+#---------------------------------------------------------------
+# TODO Replace this resource once the provider is available for aws emr-containers
+resource "null_resource" "update_trust_policy" {
+  provisioner "local-exec" {
+    interpreter = ["/bin/sh", "-c"]
+    environment = {
+      AWS_DEFAULT_REGION = data.aws_region.current.id
+    }
+    command = <<EOF
+set -e
+
+aws emr-containers create-managed-endpoint \
+--type JUPYTER_ENTERPRISE_GATEWAY \
+--virtual-cluster-id ${aws_emrcontainers_virtual_cluster.this.id}  \
+--name EMR_STUDIO_ENDPOINT \
+--region ${var.region} \
+--execution-role-arn ${data.aws_iam_role.emr-studio-role.arn}  \
+--release-label emr-6.9.0-latest 
+
+EOF
+  }
+  triggers = {
+    always_run = timestamp()
+  }
+  depends_on = [module.eks_blueprints, aws_emrcontainers_virtual_cluster.this]
 }

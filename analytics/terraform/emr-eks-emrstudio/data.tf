@@ -43,3 +43,40 @@ data "aws_iam_policy_document" "emr_on_eks" {
     ]
   }
 }
+
+data "aws_iam_role" "emr-studio-role" {
+  name = format("%s-%s", var.name, "emr-eks-studio")
+}
+
+# todo update based on https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-service-role.html
+data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
+
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::*"]
+
+    actions = [
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:PutObject",
+    ]
+  }
+
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
+    ]
+  }
+
+}
