@@ -110,3 +110,10 @@ module "vpc_endpoints" {
 
   tags = local.tags
 }
+
+#---------------------------------------------------------------
+# security groups for EMR Studio
+#---------------------------------------------------------------
+# engine_security_group ref to sg-0263cb7e23f8fbbce
+
+# workspace_security_group ref to sg-0f1f22183fa272e93

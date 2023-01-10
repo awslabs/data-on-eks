@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.22"
+  default     = "1.21"
   type        = string
 }
 
@@ -33,4 +33,3 @@ variable "enable_ack" {
   default     = true
   type        = bool
 }
-

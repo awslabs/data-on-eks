@@ -44,39 +44,268 @@ data "aws_iam_policy_document" "emr_on_eks" {
   }
 }
 
+# emr-studio virtual cluster execution role
 data "aws_iam_role" "emr-studio-role" {
   name = format("%s-%s", var.name, "emr-eks-studio")
+
+  depends_on = [
+    module.eks_blueprints
+  ]
 }
 
-# todo update based on https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-service-role.html
+# emr studio role, based on https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-service-role.html
 data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
-
   statement {
-    sid       = ""
-    effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::*"]
+    sid    = "AllowEMRReadOnlyActions"
+    effect = "Allow"
 
     actions = [
-      "s3:DeleteObject",
-      "s3:DeleteObjectVersion",
-      "s3:GetObject",
-      "s3:ListBucket",
-      "s3:PutObject",
+      "elasticmapreduce:ListInstances",
+      "elasticmapreduce:DescribeCluster",
+      "elasticmapreduce:ListSteps"
     ]
+
+    resources = ["*"]
   }
 
   statement {
-    sid       = ""
-    effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+    sid    = "AllowEC2ENIActionsWithEMRTags"
+    effect = "Allow"
 
     actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:DescribeLogGroups",
-      "logs:DescribeLogStreams",
-      "logs:PutLogEvents",
+      "ec2:CreateNetworkInterfacePermission",
+      "ec2:DeleteNetworkInterface"
     ]
+
+    resources = [
+      "arn:aws:ec2:*:*:network-interface/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
   }
 
+  statement {
+    sid    = "AllowEC2ENIAttributeAction"
+    effect = "Allow"
+
+    actions = [
+      "ec2:ModifyNetworkInterfaceAttribute"
+    ]
+
+    resources = ["arn:aws:ec2:*:*:instance/*",
+      "arn:aws:ec2:*:*:network-interface/*",
+    "arn:aws:ec2:*:*:security-group/*"]
+  }
+
+  statement {
+    sid    = "AllowEC2SecurityGroupActionsWithEMRTags"
+    effect = "Allow"
+
+    actions = [
+      "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:RevokeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:DeleteNetworkInterfacePermission"
+    ]
+
+    resources = [
+      "*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
+  }
+
+
+  statement {
+    sid    = "AllowDefaultEC2SecurityGroupsCreationWithEMRTags"
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateSecurityGroup"
+    ]
+
+    resources = [
+      "arn:aws:ec2:*:*:security-group/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "AllowDefaultEC2SecurityGroupsCreationInVPCWithEMRTags"
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateSecurityGroup"
+    ]
+
+    resources = [
+      "arn:aws:ec2:*:*:vpc/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "AllowAddingEMRTagsDuringDefaultSecurityGroupCreation"
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateTags"
+    ]
+
+    resources = [
+      "arn:aws:ec2:*:*:security-group/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:CreateAction"
+      values   = ["CreateSecurityGroup"]
+    }
+  }
+
+  statement {
+    sid    = "AllowEC2ENICreationWithEMRTags"
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateNetworkInterface"
+    ]
+
+    resources = [
+      "arn:aws:ec2:*:*:network-interface/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "AllowEC2ENICreationInSubnetAndSecurityGroupWithEMRTags"
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateNetworkInterface"
+    ]
+
+    resources = [
+      "arn:aws:ec2:*:*:subnet/*",
+      "arn:aws:ec2:*:*:security-group/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "AllowAddingTagsDuringEC2ENICreation"
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateTags"
+    ]
+
+    resources = [
+      "arn:aws:ec2:*:*:network-interface/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:CreateAction"
+      values   = ["CreateNetworkInterface"]
+    }
+  }
+
+  statement {
+    sid    = "AllowSecretsManagerReadOnlyActionsWithEMRTags"
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:*:*:secret:*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "AllowEC2ReadOnlyActions"
+    effect = "Allow"
+
+    actions = [
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DescribeTags",
+      "ec2:DescribeInstances",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeVpcs"
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowWorkspaceCollaboration"
+    effect = "Allow"
+
+    actions = [
+      "iam:GetUser",
+      "iam:GetRole",
+      "iam:ListUsers",
+      "iam:ListRoles",
+      "sso:GetManagedApplicationInstance",
+      "sso-directory:SearchUsers"
+    ]
+
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "emr_studio_assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["elasticmapreduce.amazonaws.com"]
+    }
+
+  }
 }

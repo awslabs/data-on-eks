@@ -2,7 +2,7 @@
 # EKS Blueprints
 #---------------------------------------------------------------
 module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.18.1"
+  source = "../../../../terraform-aws-eks-blueprints"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -168,8 +168,8 @@ module "eks_blueprints" {
     }
     emr-studio = {
       namespace               = "emr-studio"
-      job_execution_role      = "emr-eks-studio"
-      additional_iam_policies = [aws_iam_policy.emr_on_eks_emrstudio.arn]
+      job_execution_role      = "emr-eks-studio" #role for managed endpoint
+      additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
     }
   }
   tags = local.tags
@@ -192,6 +192,20 @@ resource "aws_prometheus_workspace" "amp" {
   alias = format("%s-%s", "amp-ws", local.name)
 
   tags = local.tags
+}
+
+
+#---------------------------------------------------------------
+# EMR studio service role
+#---------------------------------------------------------------
+resource "aws_iam_role" "emr_studio_service_role" {
+  name                  = format("%s-%s", local.name, "emr-studio-service-role")
+  assume_role_policy    = data.aws_iam_policy_document.emr_studio_assume_role_policy.json
+  managed_policy_arns = [aws_iam_policy.emr_on_eks_emrstudio.arn]
+  force_detach_policies = true
+  path                  = "/"
+  permissions_boundary  = null
+  tags                  = local.tags
 }
 
 #---------------------------------------------------------------
@@ -225,7 +239,7 @@ resource "aws_emrcontainers_virtual_cluster" "this" {
 
 
 #---------------------------------------------------------------
-# Managed endpoint for EMR on EKS 
+# Managed endpoint for EMR on EKS
 #---------------------------------------------------------------
 # TODO Replace this resource once the provider is available for aws emr-containers
 resource "null_resource" "update_trust_policy" {
@@ -241,9 +255,9 @@ aws emr-containers create-managed-endpoint \
 --type JUPYTER_ENTERPRISE_GATEWAY \
 --virtual-cluster-id ${aws_emrcontainers_virtual_cluster.this.id}  \
 --name EMR_STUDIO_ENDPOINT \
---region ${var.region} \
+--region ${data.aws_region.current.id} \
 --execution-role-arn ${data.aws_iam_role.emr-studio-role.arn}  \
---release-label emr-6.9.0-latest 
+--release-label emr-6.9.0-latest
 
 EOF
   }
@@ -251,4 +265,18 @@ EOF
     always_run = timestamp()
   }
   depends_on = [module.eks_blueprints, aws_emrcontainers_virtual_cluster.this]
+}
+
+#---------------------------------------------------------------
+# EMR Studio
+#---------------------------------------------------------------
+resource "aws_emr_studio" "example" {
+  auth_mode                   = "IAM"
+  default_s3_location         = "s3://${aws_s3_bucket.test.bucket}/test"
+  engine_security_group_id    = aws_security_group.test.id
+  name                        =  format("%s-%s", local.name, "emrstudio")
+  service_role                =  aws_iam_role.emr_studio_service_role.arn
+  subnet_ids                  = module.vpc.private_subnets
+  vpc_id                      = vpc.id
+  workspace_security_group_id = aws_security_group.test.id
 }

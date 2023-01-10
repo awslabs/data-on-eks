@@ -14,6 +14,8 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
 
+  enable_aws_load_balancer_controller = true
+  enable_cert_manager                 = true
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -127,7 +129,7 @@ module "eks_blueprints_kubernetes_addons" {
 module "eks_ack_addons" {
   count = var.enable_ack == true ? 1 : 0
 
-  source = "github.com/aws-ia/terraform-aws-eks-ack-addons"
+  source = "github.com/season1946/terraform-aws-eks-ack-addons-victor"
 
   cluster_id          = module.eks_blueprints.eks_cluster_id
   data_plane_wait_arn = module.eks_blueprints.managed_node_group_arn[0] # Wait for data plane to be ready
