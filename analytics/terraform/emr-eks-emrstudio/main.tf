@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "eks_blueprints" {
   source = "../../../../terraform-aws-eks-blueprints"
-
+  //source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.18.1"
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
@@ -201,7 +201,7 @@ resource "aws_prometheus_workspace" "amp" {
 resource "aws_iam_role" "emr_studio_service_role" {
   name                  = format("%s-%s", local.name, "emr-studio-service-role")
   assume_role_policy    = data.aws_iam_policy_document.emr_studio_assume_role_policy.json
-  managed_policy_arns = [aws_iam_policy.emr_on_eks_emrstudio.arn]
+  managed_policy_arns   = [aws_iam_policy.emr_on_eks_emrstudio.arn]
   force_detach_policies = true
   path                  = "/"
   permissions_boundary  = null
@@ -267,16 +267,49 @@ EOF
   depends_on = [module.eks_blueprints, aws_emrcontainers_virtual_cluster.this]
 }
 
+module "s3_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 3.0"
+
+  bucket = "emr-studio-${random_id.this.hex}"
+  acl    = "private"
+
+  # For example only - please evaluate for your environment
+  force_destroy = true
+
+  attach_deny_insecure_transport_policy = true
+  attach_require_latest_tls_policy      = true
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  tags = local.tags
+}
+
+resource "random_id" "this" {
+  byte_length = "2"
+}
+
 #---------------------------------------------------------------
 # EMR Studio
 #---------------------------------------------------------------
 resource "aws_emr_studio" "example" {
   auth_mode                   = "IAM"
-  default_s3_location         = "s3://${aws_s3_bucket.test.bucket}/test"
-  engine_security_group_id    = aws_security_group.test.id
-  name                        =  format("%s-%s", local.name, "emrstudio")
-  service_role                =  aws_iam_role.emr_studio_service_role.arn
+  default_s3_location         = "s3://${module.s3_bucket.s3_bucket_id}"
+  engine_security_group_id    = module.emrstudio_engine_sg.security_group_id
+  name                        = format("%s-%s", local.name, "emrstudio")
+  service_role                = aws_iam_role.emr_studio_service_role.arn
   subnet_ids                  = module.vpc.private_subnets
-  vpc_id                      = vpc.id
-  workspace_security_group_id = aws_security_group.test.id
+  vpc_id                      = module.vpc.vpc_id
+  workspace_security_group_id = module.emrstudio_workspace_sg.security_group_id
 }

@@ -81,11 +81,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "arn:aws:ec2:*:*:network-interface/*"
     ]
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
   }
 
   statement {
@@ -117,11 +112,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "*"
     ]
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
   }
 
 
@@ -137,11 +127,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "arn:aws:ec2:*:*:security-group/*"
     ]
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
   }
 
   statement {
@@ -156,11 +141,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "arn:aws:ec2:*:*:vpc/*"
     ]
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
   }
 
   statement {
@@ -174,12 +154,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
     resources = [
       "arn:aws:ec2:*:*:security-group/*"
     ]
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
 
     condition {
       test     = "StringEquals"
@@ -200,11 +174,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "arn:aws:ec2:*:*:network-interface/*"
     ]
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
   }
 
   statement {
@@ -220,11 +189,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "arn:aws:ec2:*:*:security-group/*"
     ]
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
   }
 
   statement {
@@ -258,11 +222,6 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "arn:aws:secretsmanager:*:*:secret:*"
     ]
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/for-use-with-amazon-emr-managed-policies"
-      values   = ["true"]
-    }
   }
 
   statement {
@@ -292,6 +251,35 @@ data "aws_iam_policy_document" "emr_on_eks_emrstudio" {
       "iam:ListRoles",
       "sso:GetManagedApplicationInstance",
       "sso-directory:SearchUsers"
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowAccessToS3BucketEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:ReEncrypt",
+      "kms:DescribeKey"
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowEMRStudioAccesstoS3BucketforStudioWorkspaces"
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:GetEncryptionConfiguration",
+      "s3:ListBucket",
+      "s3:DeleteObject"
     ]
 
     resources = ["*"]

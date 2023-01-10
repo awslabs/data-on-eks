@@ -114,6 +114,59 @@ module "vpc_endpoints" {
 #---------------------------------------------------------------
 # security groups for EMR Studio
 #---------------------------------------------------------------
-# engine_security_group ref to sg-0263cb7e23f8fbbce
+# engine_security_group
+module "emrstudio_engine_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 4.0"
 
-# workspace_security_group ref to sg-0f1f22183fa272e93
+  name        = "${local.name}-engine-security-group"
+  description = "engineSecurityGroup for EMR studio"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_with_cidr_blocks = [
+    {
+      from_port   = 18888
+      to_port     = 18888
+      protocol    = "tcp"
+      description = "VPC CIDR HTTPS"
+      cidr_blocks = module.vpc.vpc_cidr_block
+    },
+  ]
+
+  egress_with_cidr_blocks = [
+    {
+      from_port = 86
+      to_port   = 86
+      protocol  = "252"
+
+      description = "Disallow all traffic"
+      cidr_blocks = "255.255.255.255/32"
+    },
+  ]
+
+  tags = local.tags
+}
+
+
+
+# workspace_security_group
+module "emrstudio_workspace_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 4.0"
+
+  name        = "${local.name}-workspace-security-group"
+  description = "workspace SecurityGroup for EMR studio"
+  vpc_id      = module.vpc.vpc_id
+
+  egress_with_cidr_blocks = [
+    {
+      from_port   = 18888
+      to_port     = 18888
+      protocol    = "tcp"
+      description = "VPC CIDR HTTPS"
+      cidr_blocks = module.vpc.vpc_cidr_block
+    },
+  ]
+
+  tags = local.tags
+}
