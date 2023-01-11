@@ -18,3 +18,11 @@ output "emr_studio_service_role_arn" {
   description = "EMR studio service role ARN"
   value       = aws_iam_role.emr_studio_service_role.arn
 }
+
+output "emr_studio_S3_bucket_id" {
+  description = "EMR studio s3 bucket id"
+  value       = module.s3_bucket.s3_bucket_id
+}
+
+
+

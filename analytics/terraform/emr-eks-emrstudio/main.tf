@@ -10,6 +10,8 @@ module "eks_blueprints" {
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnets
 
+  create_node_security_group    = false
+
   cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
@@ -237,36 +239,6 @@ resource "aws_emrcontainers_virtual_cluster" "this" {
   }
 }
 
-
-#---------------------------------------------------------------
-# Managed endpoint for EMR on EKS
-#---------------------------------------------------------------
-# TODO Replace this resource once the provider is available for aws emr-containers
-resource "null_resource" "update_trust_policy" {
-  provisioner "local-exec" {
-    interpreter = ["/bin/sh", "-c"]
-    environment = {
-      AWS_DEFAULT_REGION = data.aws_region.current.id
-    }
-    command = <<EOF
-set -e
-
-aws emr-containers create-managed-endpoint \
---type JUPYTER_ENTERPRISE_GATEWAY \
---virtual-cluster-id ${aws_emrcontainers_virtual_cluster.this.id}  \
---name EMR_STUDIO_ENDPOINT \
---region ${data.aws_region.current.id} \
---execution-role-arn ${data.aws_iam_role.emr-studio-role.arn}  \
---release-label emr-6.9.0-latest
-
-EOF
-  }
-  triggers = {
-    always_run = timestamp()
-  }
-  depends_on = [module.eks_blueprints, aws_emrcontainers_virtual_cluster.this]
-}
-
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
@@ -301,7 +273,7 @@ resource "random_id" "this" {
 }
 
 #---------------------------------------------------------------
-# EMR Studio
+# EMR Studio & Managed endpoint for EMR on EKS
 #---------------------------------------------------------------
 resource "aws_emr_studio" "example" {
   auth_mode                   = "IAM"
@@ -312,4 +284,25 @@ resource "aws_emr_studio" "example" {
   subnet_ids                  = module.vpc.private_subnets
   vpc_id                      = module.vpc.vpc_id
   workspace_security_group_id = module.emrstudio_workspace_sg.security_group_id
+  
+  provisioner "local-exec" {
+        interpreter = ["/bin/sh", "-c"]
+        environment = {
+          AWS_DEFAULT_REGION = data.aws_region.current.id
+        }
+        command = <<EOF
+    set -e
+    
+    aws emr-containers create-managed-endpoint \
+    --type JUPYTER_ENTERPRISE_GATEWAY \
+    --virtual-cluster-id ${aws_emrcontainers_virtual_cluster.this.id}  \
+    --name EMR_STUDIO_ENDPOINT \
+    --region ${data.aws_region.current.id} \
+    --execution-role-arn ${data.aws_iam_role.emr-studio-role.arn}  \
+    --release-label emr-6.9.0-latest
+    
+    EOF
+  }
+  
+  depends_on = [module.eks_blueprints, aws_emrcontainers_virtual_cluster.this]
 }

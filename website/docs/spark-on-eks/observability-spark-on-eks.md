@@ -93,7 +93,6 @@ Then open browser and enter localhost:8080. You can view your prometheus server 
 ## Grafana
 Grafana has been installed. Use the command below to access with port forward.
 
-# get grafana password
 
 ```bash
 kubectl  port-forward service/grafana 8080:80 -n grafana  
