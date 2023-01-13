@@ -87,20 +87,6 @@ module "eks_blueprints_kubernetes_addons" {
       operating_system = "linux"
     })]
   }
-  #---------------------------------------
-  # CloudWatch metrics for EKS
-  #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics_helm_config = {
-    name       = "aws-cloudwatch-metrics"
-    chart      = "aws-cloudwatch-metrics"
-    repository = "https://aws.github.io/eks-charts"
-    version    = "0.0.7"
-    namespace  = "amazon-cloudwatch"
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {
-      eks_cluster_id = var.name
-    })]
-  }
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
