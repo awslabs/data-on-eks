@@ -23,6 +23,3 @@ output "emr_studio_S3_bucket_id" {
   description = "EMR studio s3 bucket id"
   value       = module.s3_bucket.s3_bucket_id
 }
-
-
-

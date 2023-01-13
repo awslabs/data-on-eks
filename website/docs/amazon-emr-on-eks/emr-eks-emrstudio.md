@@ -121,13 +121,13 @@ To create a Workspace, complete the following steps:
 - click the workspace you just created (you may need to unblock the pop up block from the browser for the first time)
 - for the first time, you need to attach your workspace with EKS through Managed endpoint. Like the screenshot below, choose EMR on EKS virtual cluster and managed point created by terraform above.
   ![](img/link-eks-managedpoint.png)
-- work with your notebook. You can now open a notebook and connect to a preferred kernel to do your tasks. 
+- work with your notebook. You can now open a notebook and connect to a preferred kernel to do your tasks.
  ![](img/notebook-kernel.png)
 - Grant other users access permission to the workspace following the [link](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-user-permissions.html)
 
 Now, let's go back to the EKS cluster to see what is happening under the hood. Run the command below to see what's been created under `emr-studio` namespace.
 ```bash
-kubectl get pod -n emr-studio 
+kubectl get pod -n emr-studio
 
 results:
 NAME                                                            READY   STATUS    RESTARTS   AGE
@@ -137,12 +137,12 @@ k823c8ef9-002c-4780-8d42-663a053c2d6c-e7ff92859de2d5f0-exec-1   1/1     Running 
 k823c8ef9-002c-4780-8d42-663a053c2d6c-e7ff92859de2d5f0-exec-2   1/1     Running   0          59s  # executor for your notebook
 ```
 
-Go to the S3 bucket and you can see all the notebooks created in EMR studio. 
+Go to the S3 bucket and you can see all the notebooks created in EMR studio.
  ![](img/s3-bucket-notebooks.png)
 
 
 ## Execute Sample batch job on EMR Virtual Cluster
-For batch workloads, We can now create a EMR Virtual Cluster on namespace `emr-data-team-a`. 
+For batch workloads, We can now create a EMR Virtual Cluster on namespace `emr-data-team-a`.
 
 Create a Virtual cluster my-ack-vc for emr-data-team-a
 ```bash
@@ -194,5 +194,5 @@ terraform destroy -auto-approve
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
 
-## Known issues 
+## Known issues
 https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-considerations.html#emr-studio-known-issues
