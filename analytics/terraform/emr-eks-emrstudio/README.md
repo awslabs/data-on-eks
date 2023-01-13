@@ -24,8 +24,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_eks_ack_addons"></a> [eks\_ack\_addons](#module\_eks\_ack\_addons) | github.com/season1946/terraform-aws-eks-ack-addons-victor | n/a |
-| <a name="module_eks_blueprints"></a> [eks\_blueprints](#module\_eks\_blueprints) | ../../../../terraform-aws-eks-blueprints | n/a |
+| <a name="module_eks_ack_addons"></a> [eks\_ack\_addons](#module\_eks\_ack\_addons) | github.com/aws-ia/terraform-aws-eks-ack-addons | n/a |
+| <a name="module_eks_blueprints"></a> [eks\_blueprints](#module\_eks\_blueprints) | github.com/aws-ia/terraform-aws-eks-blueprints | v4.18.1 |
 | <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons | v4.18.1 |
 | <a name="module_emrstudio_engine_sg"></a> [emrstudio\_engine\_sg](#module\_emrstudio\_engine\_sg) | terraform-aws-modules/security-group/aws | ~> 4.0 |
 | <a name="module_emrstudio_workspace_sg"></a> [emrstudio\_workspace\_sg](#module\_emrstudio\_workspace\_sg) | terraform-aws-modules/security-group/aws | ~> 4.0 |
