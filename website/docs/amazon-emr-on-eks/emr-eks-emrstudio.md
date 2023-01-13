@@ -6,7 +6,7 @@ sidebar_label: EMR on EKS with EMR Studio
 # EMR on EKS with EMR Studio
 
 ## Introduction
-In this blog post, we will demonstrate how to build and deploy a data processing platform on [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to run batch workloads as well interactive iterative experiments. The platform links EMR Studio with EKS cluster which allows reusing the same EKS cluster to run interactive [Jupyter notebooks](https://jupyter.org/). The platform also includes [AWS Controllers for EMR on EKS](https://github.com/aws-controllers-k8s/emrcontainers-controller) which allows you to manage EMR on EKS resources directly using Kubernetes-native tools such as kubectl.
+In this blog post, we will demonstrate how to build and deploy a data processing platform on [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to run batch workloads as well interactive experiments. The platform links EMR Studio with EKS cluster which allows reusing the same EKS cluster to run interactive [Jupyter notebooks](https://jupyter.org/). The platform also includes [AWS Controllers for EMR on EKS](https://github.com/aws-controllers-k8s/emrcontainers-controller) which allows you to manage EMR on EKS resources directly using Kubernetes-native tools such as kubectl.
 
 
 ## Deploying the Solution
@@ -17,17 +17,14 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/ter
 - Two managed node groups
   - Core Node group with 3 AZs for running system critical pods. e.g., Cluster Autoscaler, CoreDNS, Observability, Logging etc.
   - Spark Node group with single AZ for running Spark jobs
-- Enable EMR on EKS and creates two Data teams (`emr-data-team-a`, `emr-data-team-b`)
+- Enable EMR on EKS
   - Creates two new namespace for the data team a, `emr-data-team-a` for batch job and `emr-studio` for running notebooks in EMR studio
-  - Creates Kubernetes role and role binding(`emr-containers` user) for the above namespace
-  - New IAM role for the team execution role
-  - Update AWS_AUTH config map with  emr-containers user and AWSServiceRoleForAmazonEMRContainers role
-  - Create a trust relationship between the job execution role and the identity of the EMR managed service account
-- EMR Virtual Cluster for `emr-data-team-a` and `emr-studio`
-- IAM policy for `emr-data-team-a` and `emr-studio`
-- [Managed endpoints](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/connect-emr-studio.html) for EMR studio running notebooks in EKS
-- EMR Studio with its service role
-- An S3 bucket for saving all the notebooks created in EMR studio
+  - New IAM roles and Kubernetes roles for the above namespaces
+  - EMR Virtual Cluster for `emr-data-team-a` and `emr-studio`
+- Create EMR studio
+  - EMR Studio with its service role
+  - [Managed endpoints](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/connect-emr-studio.html) for EMR studio running notebooks in EKS
+  - An S3 bucket for saving all the notebooks created in EMR studio
 - Amazon Managed Prometheus workspace to remote write metrics from Prometheus server
 - Deploys the following Kubernetes Add-ons
     - Managed Add-ons
@@ -95,7 +92,7 @@ aws eks --region us-west-2 update-kubeconfig --name emr-eks-emrstudio # Creates 
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
-kubectl get pods -A  # Output shows all the pods for add-ons and EMR one EKS
+kubectl get pods -A  # Output shows all the pods for add-ons and EMR on EKS
 
 ```
 
@@ -105,7 +102,7 @@ You can visualize the Spark jobs runs and metrics using Amazon Managed Prometheu
 
 
 ## Execute interactive experiments using notebooks in EMR Studio
-In this section, we show how you can create a workspace in Amazon EMR Studio and connect to the Amazon EKS managed endpoint from the workspace. From the output, use the link to Amazon EMR Studio to navigate to the EMR Studio deployment.
+In this section, we show how you can create a workspace in Amazon EMR Studio and connect to the Amazon EKS through managed endpoint.
 
 ### Create a Workspace
 To create a Workspace, complete the following steps:
@@ -126,7 +123,7 @@ To create a Workspace, complete the following steps:
   ![](img/link-eks-managedpoint.png)
 - work with your notebook. You can now open a notebook and connect to a preferred kernel to do your tasks. 
  ![](img/notebook-kernel.png)
-- Grant user access permission to the workspace following the [link](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-user-permissions.html)
+- Grant other users access permission to the workspace following the [link](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-user-permissions.html)
 
 Now, let's go back to the EKS cluster to see what is happening under the hood. Run the command below to see what's been created under `emr-studio` namespace.
 ```bash

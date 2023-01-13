@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.22"
+  default     = "1.22"  # EMR studio managed endpoint only supports up to 1.22 for now
   type        = string
 }
 
