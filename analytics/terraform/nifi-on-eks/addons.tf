@@ -28,7 +28,7 @@ module "eks_blueprints_kubernetes_addons" {
   external_dns_helm_config = {
     values = [templatefile("${path.module}/helm-values/external-dns-values.yaml", {
       txtOwnerId   = local.name
-      zoneIdFilter = var.eks_cluster_domain
+      domainFilter = var.eks_cluster_domain
     })]
   }
 
