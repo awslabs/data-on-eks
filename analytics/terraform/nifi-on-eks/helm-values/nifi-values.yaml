@@ -1,0 +1,54 @@
+replicaCount: 3
+
+persistence:
+  enabled: true
+
+properties:
+  sensitiveKey: hxHxsj3Q8MazK2 # Must have at least 12 characters
+  webProxyHost: ${hostname} # <clusterIP>:<NodePort> (If Nifi service is NodePort or LoadBalancer)
+  externalSecure: true
+  isNode: true
+
+auth:
+  SSL:
+    truststorePasswd: ${truststore_password}
+    keystorePasswd: ${keystore_password}
+  singleUser:
+    username: ${nifi_username}
+    password: ${nifi_password}
+
+registry:
+  enabled: true
+
+# ui service
+service:
+  type: NodePort
+  httpsPort: 8443
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/certificate-arn: ${ssl_cert_arn}
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=60
+    alb.ingress.kubernetes.io/target-type: ip
+    external-dns.alpha.kubernetes.io/hostname: ${hostname}
+  hosts:
+    - ${hostname}
+  path: /
+
+certManager:
+  enabled: true
+  clusterDomain: cluster.local
+  keystorePasswd: ${keystore_password}
+  truststorePasswd: ${truststore_password}
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9092
+    serviceMonitor:
+      # Enable deployment of Prometheus Operator ServiceMonitor resource
+      enabled: false

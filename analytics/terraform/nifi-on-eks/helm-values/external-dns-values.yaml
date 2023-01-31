@@ -1,0 +1,9 @@
+txtOwnerId: ${txtOwnerId}
+domainFilters:
+  - ${zoneIdFilter}
+policy: 'upsert-only'
+aws:
+  zoneType: 'public'
+  zonesCacheDuration: '1h'
+  region: us-east-2
+logLevel: 'debug'
