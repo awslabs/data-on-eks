@@ -38,3 +38,9 @@ data "aws_secretsmanager_secret_version" "nifi_keystore_password_version" {
 
   depends_on = [aws_secretsmanager_secret_version.nifi_keystore_password]
 }
+
+data "aws_secretsmanager_secret_version" "sensitive_key_version" {
+  secret_id = aws_secretsmanager_secret.sensitive_key.id
+
+  depends_on = [aws_secretsmanager_secret_version.sensitive_key]
+}

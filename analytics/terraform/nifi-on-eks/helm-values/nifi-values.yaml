@@ -4,8 +4,8 @@ persistence:
   enabled: true
 
 properties:
-  sensitiveKey: hxHxsj3Q8MazK2 # Must have at least 12 characters
-  webProxyHost: ${hostname} # <clusterIP>:<NodePort> (If Nifi service is NodePort or LoadBalancer)
+  sensitiveKey: ${sensitive_key} # Must have at least 12 characters
+  webProxyHost: ${hostname}
   externalSecure: true
   isNode: true
 
@@ -48,7 +48,3 @@ certManager:
 metrics:
   prometheus:
     enabled: true
-    port: 9092
-    serviceMonitor:
-      # Enable deployment of Prometheus Operator ServiceMonitor resource
-      enabled: false

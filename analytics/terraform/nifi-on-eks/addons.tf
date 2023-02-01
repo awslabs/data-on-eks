@@ -253,6 +253,21 @@ resource "aws_secretsmanager_secret_version" "nifi_login_password" {
   secret_string = random_password.nifi_login_password.result
 }
 
+resource "random_password" "sensitive_key" {
+  length           = 16
+  special          = false
+}
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "sensitive_key" {
+  name                    = "sensitive_key"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "sensitive_key" {
+  secret_id     = aws_secretsmanager_secret.sensitive_key.id
+  secret_string = random_password.sensitive_key.result
+}
+
 resource "helm_release" "nifi" {
   name             = "nifi"
   repository       = "https://cetic.github.io/helm-charts"
@@ -268,6 +283,7 @@ resource "helm_release" "nifi" {
     nifi_password       = data.aws_secretsmanager_secret_version.nifi_login_password_version.secret_string
     keystore_password   = data.aws_secretsmanager_secret_version.nifi_keystore_password_version.secret_string
     truststore_password = data.aws_secretsmanager_secret_version.nifi_truststore_password_version.secret_string
+    sensitive_key       = data.aws_secretsmanager_secret_version.sensitive_key_version.secret_string
   })]
 
   depends_on = [module.eks_blueprints.eks_cluster_id]
