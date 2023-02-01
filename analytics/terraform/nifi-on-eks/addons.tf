@@ -78,7 +78,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_aws_for_fluentbit                 = true
   aws_for_fluentbit_cw_log_group_retention = 30
-  aws_for_fluentbit_irsa_policies          = ["${aws_iam_policy.fluentbit.arn}"]
   aws_for_fluentbit_helm_config = {
     name                            = "aws-for-fluent-bit"
     chart                           = "aws-for-fluent-bit"
@@ -91,7 +90,6 @@ module "eks_blueprints_kubernetes_addons" {
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region                    = data.aws_region.current.id
       aws_for_fluent_bit_cw_log = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs"
-      s3_bucket_name            = aws_s3_bucket.this.id
     })]
     set = [
       {
@@ -204,58 +202,6 @@ module "managed_prometheus" {
   workspace_alias = local.name
 
   tags = local.tags
-}
-
-resource "aws_s3_bucket" "this" {
-  bucket_prefix = format("%s-%s", "nifi", data.aws_caller_identity.current.account_id)
-  tags          = local.tags
-}
-
-resource "aws_s3_bucket_acl" "this" {
-  bucket = aws_s3_bucket.this.id
-  acl    = "private"
-}
-
-#tfsec:ignore:aws-s3-encryption-customer-key
-resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
-  bucket = aws_s3_bucket.this.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "this" {
-  bucket                  = aws_s3_bucket.this.id
-  block_public_acls       = true
-  block_public_policy     = true
-  restrict_public_buckets = true
-  ignore_public_acls      = true
-}
-
-# Creating an s3 bucket prefix. Ensure you copy analytics event logs under this path to visualize the dags
-resource "aws_s3_object" "this" {
-  bucket       = aws_s3_bucket.this.id
-  acl          = "private"
-  key          = "logs/"
-  content_type = "application/x-directory"
-
-  depends_on = [
-    aws_s3_bucket_acl.this,
-    aws_s3_bucket_public_access_block.this,
-    aws_s3_bucket_server_side_encryption_configuration.this
-  ]
-}
-
-#---------------------------------------------------------------
-# IAM Policy for FluentBit Add-on
-#---------------------------------------------------------------
-resource "aws_iam_policy" "fluentbit" {
-  description = "IAM policy policy for FluentBit"
-  name        = "${local.name}-fluentbit-additional"
-  policy      = data.aws_iam_policy_document.fluent_bit.json
 }
 
 #---------------------------------------------------------------
