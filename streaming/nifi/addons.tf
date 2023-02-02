@@ -22,7 +22,7 @@ module "eks_blueprints_kubernetes_addons" {
   enable_aws_load_balancer_controller  = true
 
   #---------------------------------------------------------------
-  # Esternal DNS
+  # External DNS
   #---------------------------------------------------------------
   enable_external_dns                 = true
   external_dns_helm_config = {

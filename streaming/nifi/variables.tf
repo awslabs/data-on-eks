@@ -7,7 +7,7 @@ variable "name" {
 variable "region" {
   description = "region"
   type        = string
-  default     = "us-east-2"
+  default     = "us-west-2"
 }
 
 variable "eks_cluster_version" {
@@ -37,7 +37,7 @@ variable "private_subnets" {
 variable "eks_cluster_domain" {
   type        = string
   description = "Route53 domain for the cluster."
-  default     = "codesome.com"
+  default     = "example.com"
 }
 
 variable "nifi_sub_domain" {
@@ -49,7 +49,7 @@ variable "nifi_sub_domain" {
 variable "acm_certificate_domain" {
   type        = string
   description = "Route53 certificate domain"
-  default     = "*.codesome.com"
+  default     = "*.example.com"
 }
 
 variable "nifi_username" {
