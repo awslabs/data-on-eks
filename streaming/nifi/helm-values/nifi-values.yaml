@@ -9,6 +9,9 @@ properties:
   externalSecure: true
   isNode: true
 
+# Nifi User Authentication - this sample uses single user authentication.
+# For production workloads, it is recommended to use LDAP or OIDC bases authentication.
+# https://nifi.apache.org/docs/nifi-docs/html/administration-guide.html#user_authentication
 auth:
   SSL:
     truststorePasswd: ${truststore_password}
@@ -17,6 +20,8 @@ auth:
     username: ${nifi_username}
     password: ${nifi_password}
 
+# Enable Nifi registry
+# https://nifi.apache.org/registry.html
 registry:
   enabled: true
 
@@ -25,6 +30,7 @@ service:
   type: NodePort
   httpsPort: 8443
 
+# Configure Ingress to access NiFi UI using AWS Application Load Balancer
 ingress:
   enabled: true
   className: alb
@@ -39,12 +45,15 @@ ingress:
     - ${hostname}
   path: /
 
+# Enable cert-manager to provision certificates for each cluster node.
+#  Cert-manager it-self will be installed using EKS Add-ons
 certManager:
   enabled: true
   clusterDomain: cluster.local
   keystorePasswd: ${keystore_password}
   truststorePasswd: ${truststore_password}
 
+# Enable prometheus metrics to scrape JVM metrics
 metrics:
   prometheus:
     enabled: true
