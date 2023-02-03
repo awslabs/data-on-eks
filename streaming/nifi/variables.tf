@@ -41,7 +41,7 @@ variable "eks_cluster_domain" {
 
 variable "nifi_sub_domain" {
   type        = string
-  description = "Route53 DNS record for NiFi cluster."
+  description = "Subdomain for NiFi cluster."
   default     = "mynifi"
 }
 
