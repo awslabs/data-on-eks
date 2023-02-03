@@ -53,5 +53,5 @@ variable "acm_certificate_domain" {
 variable "nifi_username" {
   type        = string
   description = "NiFi login username"
-  default = "admin"
+  default     = "admin"
 }

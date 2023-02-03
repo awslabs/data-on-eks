@@ -19,12 +19,12 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   # AWS Load Balancer Controller
   #---------------------------------------------------------------
-  enable_aws_load_balancer_controller  = true
+  enable_aws_load_balancer_controller = true
 
   #---------------------------------------------------------------
   # External DNS
   #---------------------------------------------------------------
-  enable_external_dns                 = true
+  enable_external_dns = true
   external_dns_helm_config = {
     values = [templatefile("${path.module}/helm-values/external-dns-values.yaml", {
       txtOwnerId   = local.name
@@ -35,7 +35,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   # Cert Manager
   #---------------------------------------------------------------
-  enable_cert_manager                  = true
+  enable_cert_manager = true
 
   #---------------------------------------------------------------
   # Metrics Server
@@ -209,8 +209,8 @@ module "managed_prometheus" {
 #---------------------------------------------------------------
 
 resource "random_password" "nifi_keystore_password" {
-  length           = 16
-  special          = false
+  length  = 16
+  special = false
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "nifi_keystore_password" {
@@ -224,8 +224,8 @@ resource "aws_secretsmanager_secret_version" "nifi_keystore_password" {
 }
 
 resource "random_password" "nifi_truststore_password" {
-  length           = 16
-  special          = false
+  length  = 16
+  special = false
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "nifi_truststore_password" {
@@ -239,8 +239,8 @@ resource "aws_secretsmanager_secret_version" "nifi_truststore_password" {
 }
 
 resource "random_password" "nifi_login_password" {
-  length           = 16
-  special          = false
+  length  = 16
+  special = false
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "nifi_login_password" {
@@ -254,8 +254,8 @@ resource "aws_secretsmanager_secret_version" "nifi_login_password" {
 }
 
 resource "random_password" "sensitive_key" {
-  length           = 16
-  special          = false
+  length  = 16
+  special = false
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "sensitive_key" {
@@ -277,7 +277,7 @@ resource "helm_release" "nifi" {
   create_namespace = true
 
   values = [templatefile("${path.module}/helm-values/nifi-values.yaml", {
-    hostname            = join(".", [var.nifi_sub_domain,var.eks_cluster_domain])
+    hostname            = join(".", [var.nifi_sub_domain, var.eks_cluster_domain])
     ssl_cert_arn        = data.aws_acm_certificate.issued.arn
     nifi_username       = var.nifi_username
     nifi_password       = data.aws_secretsmanager_secret_version.nifi_login_password_version.secret_string
