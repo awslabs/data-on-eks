@@ -5,8 +5,9 @@ sidebar_label: Introduction
 
 # Job Schedulers
 
-Job scheduling is the process where tasks are executed at a scheduled time or triggered by event driven solutions.
+Job schedulers are an essential component of many organizations' infrastructure, helping to automate and manage complex workflows. When deployed on Kubernetes, job schedulers can take advantage of the platform's features such as automatic scaling, rolling updates, and self-healing capabilities to ensure high availability and reliability. Tools like **Apache Airflow**, **Argo Workflow**, and **Amazon MWAA** provide a simple and efficient way to manage and schedule jobs on a Kubernetes cluster. 
 
+These tools are well-suited for a wide range of use cases, including data pipelines, machine learning workflows, and batch processing. By leveraging the power of Kubernetes, organizations can simplify and automate the management of their job schedulers, freeing up resources to focus on other areas of the business. With its growing ecosystem of tools and support for a wide range of use cases, Kubernetes is becoming an increasingly popular choice for running job schedulers in production.
 The following are the most popular job scheduling tools used with data workloads.
 This section provides deployment patterns for the following tools and examples to trigger Spark/ML jobs using these schedulers.
 
