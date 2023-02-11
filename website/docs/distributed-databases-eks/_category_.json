@@ -1,8 +1,0 @@
-{
-  "label": "Distributed Databases on EKS",
-  "position": 5,
-  "link": {
-    "type": "generated-index",
-    "description": "Build, deploy and scale Distributed Database platforms on Amazon EKS"
-  }
-}

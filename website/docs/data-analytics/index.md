@@ -3,7 +3,7 @@ sidebar_position: 1
 sidebar_label: Introduction
 ---
 
-# Apache Spark on EKS
+# Data Analytics on EKS
 
 Build, deploy and scale Open source Spark on Amazon EKS.
 This section also provides Spark examples with various storage, compute types, Cluster Autoscalers and Batch Schedulers.

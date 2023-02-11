@@ -8,58 +8,52 @@ const FeatureList = [
         // Svg: require('@site/static/img/emr.svg').default,
         description: (
             <>
-                Easily build, deploy and scale Spark workloads with Amazon EMR on EKS multi-tenant clusters and optimized EMR runtime.<br/>
-                Simplify Management, Reduce Costs and faster performance with optimized EMR Spark.
+                Optimized Multi-Tenant Deployment of Amazon EMR on EKS Cluster with Best Practices using Karpenter Autoscaler and Apache YuniKorn Templates<br/>
             </>
         ),
     },
   {
-    title: 'Apache Spark on EKS',
+    title: 'Data Analytics',
     // Svg: require('@site/static/img/spark.svg').default,
     description: (
       <div>
-        Self-managed Apache Spark on Amazon EKS. <br/> Build, deploy and run self-managed Spark clusters on Amazon EKS with custom schedulers.
-          <br/>e.g., spark-submit, spark-operator, Apache YuniKorn, Volcano
+          Best Practice Data Analytics Deployment Templates and Examples for EKS with Apache Spark, Spark Operator, Dask, Beam, and More
       </div>
     ),
   },
   {
-    title: 'AI/ML on EKS',
+    title: 'AI/ML',
     // Svg: require('@site/static/img/ml.svg').default,
     description: (
       <>
-        Build, deploy and scale open source AI/ML platforms on Amazon EKS integrations with Machine Learning on AWS.<br/>
-          e.g., KubeFlow, MLFlow, JupyterHub
-      </>
-    ),
-  },
-  {
-    title: 'Distributed Databases on EKS',
-    // Svg: require('@site/static/img/distributed_databases.svg').default,
-    description: (
-      <>
-        Build and scale highly scalable self-managed open source distributed databases on Amazon EKS. <br/>
-          e.g., Cassandra, CockroachDB, MongoDB etc.
+          Unlocking Best Practices for AI/ML Deployment on EKS with KubeFlow, JupyterHub, and More
       </>
     ),
   },
     {
-        title: 'Streaming Data Platforms on EKS',
+        title: 'Streaming Data Platforms',
         // Svg: require('@site/static/img/streaming.svg').default,
         description: (
             <>
-                Self-managed open source streaming platforms to build and scale on Amazon EKS. <br/>
-                e.g., Kafka, Spark structured streaming, Flink etc.
+                Building High-Scalability Streaming Data Platforms with Kafka, Flink, Spark Streaming, and More
             </>
         ),
     },
     {
-        title: 'Schedulers on EKS',
+        title: 'Schedulers',
         // Svg: require('@site/static/img/schedulers.svg').default,
         description: (
             <>
-                Job schedulers for Data and AI/ML workloads on Amazon EKS. <br/>
-                e.g., Apache Airflow, Aamzon MWAA and Argo Workflow
+                Optimizing Job Scheduling on EKS with Apache Airflow, Amazon MWAA, Argo Workflow, and More
+            </>
+        ),
+    },
+    {
+        title: 'Distributed Databases & Query Engines',
+        // Svg: require('@site/static/img/distributed_databases.svg').default,
+        description: (
+            <>
+                Constructing High-Performance, Scalable Distributed Databases and Query Engines with Cassandra, Trino, Presto, and More
             </>
         ),
     },
