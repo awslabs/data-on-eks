@@ -6,7 +6,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {{onBrokenLinks: string, organizationName: string, plugins: string[], title: string, url: string, onBrokenMarkdownLinks: string, i18n: {defaultLocale: string, locales: string[]}, trailingSlash: boolean, baseUrl: string, presets: [string,Options][], githubHost: string, tagline: string, themeConfig: ThemeConfig & UserThemeConfig & AlgoliaThemeConfig, projectName: string}} */
 const config = {
-  title: 'Data on EKS \n (DoEKS)',
+  title: 'Data on EKS (DoEKS)',
   tagline: 'Accelerate your Data journey on Amazon EKS 🚀',
   url: 'https://awslabs.github.io',
   baseUrl: '/data-on-eks/',
