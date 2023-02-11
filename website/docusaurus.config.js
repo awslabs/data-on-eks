@@ -13,6 +13,7 @@ const config = {
   trailingSlash: false,
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
+  // favicon: 'img/ml.svg',
   // favicon: 'img/favicon.ico',
 
   // GitHub pages deployment config.
@@ -61,7 +62,7 @@ const config = {
         title: 'DoEKS',
         // logo: {
         //   alt: 'DoEKS Logo',
-        //   src: 'img/logo.svg',
+        //   src: 'img/a1.png',
         // },
         items: [
           {
@@ -78,33 +79,33 @@ const config = {
           },
           {
             type: 'doc',
-            docId: 'spark-on-eks/index',
+            docId: 'data-analytics/index',
             position: 'left',
-            label: 'Spark on EKS',
+            label: 'Data Analytics',
           },
           {
             type: 'doc',
-            docId: 'ai-ml-eks/index',
+            docId: 'ai-ml/index',
             position: 'left',
             label: 'AI/ML',
           },
           {
             type: 'doc',
-            docId: 'distributed-databases-eks/index',
+            docId: 'job-schedulers/index',
             position: 'left',
-            label: 'Distributed Databases',
+            label: 'Job Schedulers',
           },
           {
             type: 'doc',
-            docId: 'streaming-platforms-eks/index',
+            docId: 'streaming-platforms/index',
             position: 'left',
             label: 'Streaming Platforms',
           },
           {
             type: 'doc',
-            docId: 'job-schedulers-eks/index',
+            docId: 'distributed-databases/index',
             position: 'left',
-            label: 'Job Schedulers',
+            label: 'Distributed Databases',
           },
           {to: '/blog', label: 'Blog', position: 'left'},
           {

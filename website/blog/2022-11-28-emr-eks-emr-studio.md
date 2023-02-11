@@ -1,6 +1,6 @@
 ---
 slug: Data Platform with AWS CDK
-title: Data Platform with AWS CDK
+title: EMR on EKS Data Platform with AWS CDK
 authors: [aws]
 tags: [emr-on-eks, Spark, emr-studio, CDK]
 ---
