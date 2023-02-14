@@ -55,13 +55,13 @@ python3 emr-eks-sa-fix.py -n "emr-data-team-a"
 ## Error: could not download chart
 ```
 │ Error: could not download chart: failed to download "oci://public.ecr.aws/karpenter/karpenter" at version "v0.18.1"
-│ 
+│
 │   with module.eks_blueprints_kubernetes_addons.module.karpenter[0].module.helm_addon.helm_release.addon[0],
 │   on .terraform/modules/eks_blueprints_kubernetes_addons/modules/kubernetes-addons/helm-addon/main.tf line 1, in resource "helm_release" "addon":
 │    1: resource "helm_release" "addon" {
-│ 
+│
 ```
-### Solution 
+### Solution
 Looks like there is a bug in Terraform while doing Karpenter install. Until this is fixed, you can authenticate with ECR and re-run `terraform apply`
 ```
 aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws

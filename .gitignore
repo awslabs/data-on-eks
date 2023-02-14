@@ -2,6 +2,9 @@
 .idea
 .build
 
+# ignore the lock file
+website/package-lock.json
+
 # Local .terraform directories
 **/.terraform/*
 
