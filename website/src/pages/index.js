@@ -19,7 +19,7 @@ function HomepageHeader() {
           {/*<main className={styles.main}>*/}
         {/*<h1 className="hero__title">{siteConfig.title}</h1>*/}
           {/*</main>*/}
-          <p className='hero__subtitle' style={{fontSize: 18, fontSmooth: "auto", fontFamily: "Roboto Mono for Powerline", animation: "float 2s ease-in-out infinite"}}>{siteConfig.tagline}</p>
+          <p className='hero__subtitle' style={{fontSize: 18, fontSmooth: "auto", animation: "float 2s ease-in-out infinite"}}>{siteConfig.tagline}</p>
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg button-3d button-sparkles"
