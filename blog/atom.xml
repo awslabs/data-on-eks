@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://awslabs.github.io/data-on-eks/blog</id>
-    <title>Data on EKS (DoEKS) Blog</title>
+    <title>Data on EKS Blog</title>
     <updated>2022-11-28T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://awslabs.github.io/data-on-eks/blog"/>
-    <subtitle>Data on EKS (DoEKS) Blog</subtitle>
+    <subtitle>Data on EKS Blog</subtitle>
+    <icon>https://awslabs.github.io/data-on-eks/img/header-icon.png</icon>
     <entry>
         <title type="html"><![CDATA[EMR on EKS Data Platform with AWS CDK]]></title>
         <id>https://awslabs.github.io/data-on-eks/blog/Data Platform with AWS CDK</id>
