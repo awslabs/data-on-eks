@@ -19,6 +19,7 @@
     "dev": "docusaurus start"
   },
   "dependencies": {
+    "@chakra-ui/core": "^0.8.0",
     "@docusaurus/core": "2.3.1",
     "@docusaurus/logger": "^2.3.1",
     "@docusaurus/preset-classic": "2.3.1",

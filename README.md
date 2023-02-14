@@ -1,9 +1,10 @@
 [![plan-examples](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml/badge.svg?branch=main)](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml)
 # Data on Amazon EKS (DoEKS)
+![](../../../Downloads/LOGO V2/Lite/L.png)
 
 💥 **Welcome to Data on Amazon EKS (DoEKS)** 💥
 
-Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS. 
+Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS.
 
 > **Note**: DoEKS is actively being developed for various patterns. To see what features are in progress, please check out the [issues](https://github.com/awslabs/data-on-eks/issues) section of our repository.
 
