@@ -85,7 +85,8 @@ module "vpc" {
   azs             = local.azs
   private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
   public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
-  intra_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
+  # Control plane subnet
+  intra_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -153,7 +154,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     infra = {
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m5.large"]
       min_size       = 3
       max_size       = 3
       desired_size   = 3
@@ -165,15 +166,43 @@ module "eks" {
   })
 }
 
+module "karpenter_policy" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
+  version = "~> 5.11.1"
+
+  name        = "KarpenterS3ReadOnlyPolicy"
+  description = "IAM Policy to allow read from an S3 bucket for karpenter nodes"
+
+  policy = jsonencode(
+    {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Sid      = "ListObjectsInBucket"
+          Effect   = "Allow"
+          Action   = ["s3:ListBucket"]
+          Resource = ["arn:aws:s3:::air-example-data-2"]
+        },
+        {
+          Sid      = "AllObjectActions"
+          Effect   = "Allow"
+          Action   = "s3:Get*"
+          Resource = ["arn:aws:s3:::air-example-data-2/*"]
+        }
+      ]
+    }
+  )
+}
+
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "~> 19.7"
 
 
-  cluster_name           = module.eks.cluster_name
-  irsa_oidc_provider_arn = module.eks.oidc_provider_arn
-
-  tags = local.tags
+  cluster_name                 = module.eks.cluster_name
+  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
+  iam_role_additional_policies = [module.karpenter_policy.arn]
+  tags                         = local.tags
 }
 
 resource "helm_release" "karpenter" {
@@ -187,30 +216,23 @@ resource "helm_release" "karpenter" {
   chart               = "karpenter"
   version             = "v0.24.0"
 
-  set {
-    name  = "settings.aws.clusterName"
-    value = module.eks.cluster_name
-  }
-
-  set {
-    name  = "settings.aws.clusterEndpoint"
-    value = module.eks.cluster_endpoint
-  }
-
-  set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = module.karpenter.irsa_arn
-  }
-
-  set {
-    name  = "settings.aws.defaultInstanceProfile"
-    value = module.karpenter.instance_profile_name
-  }
-
-  set {
-    name  = "settings.aws.interruptionQueueName"
-    value = module.karpenter.queue_name
-  }
+  values = [
+    yamlencode({
+      settings = {
+        aws = {
+          clusterName            = module.eks.cluster_name
+          clusterEndpoint        = module.eks.cluster_endpoint
+          defaultInstanceProfile = module.karpenter.instance_profile_name
+          interruptionQueueName  = module.karpenter.queue_name
+        }
+      }
+      serviceAccount = {
+        annotations = {
+          "eks.amazonaws.com/role-arn" = module.karpenter.irsa_arn
+        }
+      }
+    })
+  ]
 }
 
 resource "kubectl_manifest" "karpenter_provisioner" {
@@ -468,41 +490,7 @@ resource "helm_release" "ray_cluster" {
   ]
 }
 
-module "ray_cluster_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.0"
-
-  role_name_prefix = "ray-cluster-irsa"
-  role_policy_arns = {
-    AmazonS3ReadOnlyAccess = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-  }
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["ray-cluster:ray-cluster-kuberay"]
-    }
-  }
-
-  tags = local.tags
-}
-
-resource "kubernetes_annotations" "irsa_annotation" {
-  api_version = "v1"
-  kind        = "ServiceAccount"
-  metadata {
-    name      = "ray-cluster-kuberay"
-    namespace = "ray-cluster"
-  }
-  annotations = {
-    "eks.amazonaws.com/role-arn" = module.ray_cluster_irsa.iam_role_arn
-  }
-
-  depends_on = [
-    helm_release.ray_cluster
-  ]
-}
-
+# Note: TLS
 resource "kubectl_manifest" "ray_cluster_ingress" {
   yaml_body = yamlencode({
     apiVersion = "networking.k8s.io/v1"
@@ -512,7 +500,7 @@ resource "kubectl_manifest" "ray_cluster_ingress" {
       namespace = "ray-cluster"
       annotations = {
         "alb.ingress.kubernetes.io/load-balancer-name" = "ray-cluster"
-        "alb.ingress.kubernetes.io/scheme"             = "internet-facing"
+        "alb.ingress.kubernetes.io/scheme"             = "internet-facing" #private
         "alb.ingress.kubernetes.io/tags"               = join(",", [for key, value in local.tags : "${key}=${value}"])
         "alb.ingress.kubernetes.io/target-type"        = "ip"
       }
