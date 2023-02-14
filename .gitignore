@@ -3,7 +3,7 @@
 .build
 
 # ignore the lock file
-package-lock.json
+website/package-lock.json
 
 # Local .terraform directories
 **/.terraform/*
