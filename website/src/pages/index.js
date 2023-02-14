@@ -9,13 +9,13 @@ import styles from './index.module.css';
 //TODO - fix code to get the correct theme to show the light-logo.png or dark-logo.png
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
-  const currentTheme = document.documentElement.getAttribute('data-theme');
+  // const currentTheme = document.documentElement.getAttribute('data-theme');
 
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
       <div className="container" style={{textAlign: 'center'}}>
-        {/*<img src="img/light-logo.png" alt="Header image" style={{width: '45%'}}/>*/}
-       <img src={currentTheme === 'dark' ? 'img/dark-logo.png' : 'img/light-logo.png'} alt="Header image" style={{width: '45%'}}/>
+        <img src="img/light-logo.png" alt="Header image" style={{width: '45%'}}/>
+        {/*<img src={currentTheme === 'dark' ? 'img/dark-logo.png' : 'img/light-logo.png'} alt="Header image" style={{width: '45%'}}/>*/}
           {/*<main className={styles.main}>*/}
         {/*<h1 className="hero__title">{siteConfig.title}</h1>*/}
           {/*</main>*/}
