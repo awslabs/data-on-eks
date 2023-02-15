@@ -32,10 +32,6 @@ data "aws_eks_cluster" "this" {
   name = local.eks_cluster
 }
 
-data "aws_eks_cluster_auth" "this" {
-  name = local.eks_cluster
-}
-
 locals {
   region      = "us-east-1"
   name        = "xgboost"
@@ -72,7 +68,7 @@ module "xgboost_cluster" {
         }
         tolerations = [
           {
-            key      = "${local.name}"
+            key      = local.name
             effect   = "NoSchedule"
             operator = "Exists"
           }
@@ -99,7 +95,7 @@ module "xgboost_cluster" {
         }
         tolerations = [
           {
-            key      = "${local.name}"
+            key      = local.name
             effect   = "NoSchedule"
             operator = "Exists"
           }

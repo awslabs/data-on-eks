@@ -15,9 +15,3 @@ variable "eks_cluster_version" {
   default     = "1.24"
   type        = string
 }
-
-variable "tags" {
-  description = "Default tags"
-  default     = {}
-  type        = map(string)
-}
