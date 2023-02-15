@@ -27,3 +27,51 @@ html[data-theme="dark"] {
   --ifm-toc-border-color: #333;
   --ifm-background-color: #141520;
 }
+
+.boldTagline {
+  font-weight: bold;
+  /*font-family: 'Roboto Mono for Powerline', sans-serif;*/
+}
+
+.button-3d {
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  transition: transform 0.3s ease-in-out;
+}
+
+.button-sparkles {
+  background-image: linear-gradient(to right, #ff3d2b 0%, #ffd941 51%, #ff2bc6 100%);
+  background-size: 200% auto;
+  background-position: right bottom;
+  animation: sparkling 1s ease-out infinite;
+  color: #070707;
+}
+
+@keyframes sparkling {
+  0% {
+    background-position: right bottom;
+  }
+  50% {
+    background-position: left bottom;
+  }
+  100% {
+    background-position: right bottom;
+  }
+}
+
+
+.hero__subtitle {
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translatey(0);
+  }
+  50% {
+    transform: translatey(-10px);
+  }
+  100% {
+    transform: translatey(0);
+  }
+}
