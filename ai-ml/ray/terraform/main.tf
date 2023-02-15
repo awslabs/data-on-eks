@@ -6,6 +6,7 @@ provider "aws" {
   region = local.region
 }
 
+# Used for Karpenter Helm chart
 provider "aws" {
   region = "us-east-1"
   alias  = "virginia"
@@ -25,14 +26,6 @@ provider "helm" {
   }
 }
 
-provider "kubectl" {
-  apply_retry_count      = 10
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.this.token
-  load_config_file       = false
-}
-
 #---------------------------------------------------------------
 # Data Sources
 #---------------------------------------------------------------
@@ -47,6 +40,7 @@ data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
 }
 
+# Used for Karpenter Helm chart
 data "aws_ecrpublic_authorization_token" "token" {
   provider = aws.virginia
 }
@@ -115,7 +109,7 @@ module "vpc" {
 # EKS Cluster
 #---------------------------------------------------------------
 
-#tfsec:ignore:aws-eks-enable-control-plane-logging
+#tfsec:ignore:aws-eks-enable-control-plane-logging    
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.7"
@@ -140,6 +134,8 @@ module "eks" {
     }
   }
 
+  # Update aws-auth configmap with Karpenter node role so they
+  # can join the cluster
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     {
@@ -152,6 +148,9 @@ module "eks" {
     },
   ]
 
+  # This MNG will be used to host infrastructure add-ons for 
+  # logging, monitoring, ingress controllers, kuberay-operator,
+  # etc.
   eks_managed_node_groups = {
     infra = {
       instance_types = ["m5.large"]
@@ -166,6 +165,10 @@ module "eks" {
   })
 }
 
+# We have to augment default the karpenter node IAM policy with 
+# permissions we need for Ray Jobs to run until IRSA is added 
+# upstream in kuberay-operator. See issue 
+# https://github.com/ray-project/kuberay/issues/746
 module "karpenter_policy" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
   version = "~> 5.11.1"
@@ -194,6 +197,8 @@ module "karpenter_policy" {
   )
 }
 
+# Deploys infrastructure needed for Karpenter. See 
+# https://karpenter.sh for details.
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "~> 19.7"
@@ -220,10 +225,12 @@ resource "helm_release" "karpenter" {
     yamlencode({
       settings = {
         aws = {
-          clusterName            = module.eks.cluster_name
-          clusterEndpoint        = module.eks.cluster_endpoint
+          clusterName           = module.eks.cluster_name
+          clusterEndpoint       = module.eks.cluster_endpoint
+          interruptionQueueName = module.karpenter.queue_name
+          # Remove this once https://github.com/ray-project/kuberay/issues/746
+          # is resolved
           defaultInstanceProfile = module.karpenter.instance_profile_name
-          interruptionQueueName  = module.karpenter.queue_name
         }
       }
       serviceAccount = {
@@ -232,80 +239,6 @@ resource "helm_release" "karpenter" {
         }
       }
     })
-  ]
-}
-
-resource "kubectl_manifest" "karpenter_provisioner" {
-  yaml_body = yamlencode({
-    apiVersion = "karpenter.sh/v1alpha5"
-    kind       = "Provisioner"
-    metadata = {
-      name = "default"
-    }
-    spec = {
-      requirements = [
-        {
-          key      = "karpenter.sh/capacity-type"
-          operator = "In"
-          values   = ["spot", "on-demand"]
-        }
-      ]
-      limits = {
-        resources = {
-          cpu = "1000"
-        }
-      }
-      providerRef = {
-        name = "default"
-      }
-      ttlSecondsAfterEmpty = 30
-      taints = [
-        {
-          key    = "RayClusterNodes"
-          value  = "true"
-          effect = "NoSchedule"
-        }
-      ]
-    }
-  })
-
-  depends_on = [
-    helm_release.karpenter
-  ]
-}
-
-resource "kubectl_manifest" "karpenter_node_template" {
-  yaml_body = yamlencode({
-    apiVersion = "karpenter.k8s.aws/v1alpha1"
-    kind       = "AWSNodeTemplate"
-    metadata = {
-      name = "default"
-    }
-    spec = {
-      subnetSelector = {
-        "karpenter.sh/discovery" = "${module.eks.cluster_name}"
-      }
-      securityGroupSelector = {
-        "karpenter.sh/discovery" = "${module.eks.cluster_name}"
-      }
-      tags = {
-        "karpenter.sh/discovery" = "${module.eks.cluster_name}"
-      }
-      blockDeviceMappings = [
-        {
-          deviceName = "/dev/xvda"
-          ebs = {
-            volumeSize          = "1000Gi"
-            volumeType          = "gp3"
-            deleteOnTermination = true
-          }
-        }
-      ]
-    }
-  })
-
-  depends_on = [
-    helm_release.karpenter
   ]
 }
 
@@ -323,20 +256,6 @@ module "eks_blueprints_kubernetes_addons" {
 
   # Wait on the node group(s) before provisioning addons
   data_plane_wait_arn = join(",", [for group in module.eks.eks_managed_node_groups : group.node_group_arn])
-
-  enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller_helm_config = {
-    version = "1.4.7"
-  }
-
-  enable_self_managed_aws_ebs_csi_driver = true
-  self_managed_aws_ebs_csi_driver_helm_config = {
-    set_values = [
-      {
-        name  = "node.tolerateAllTaints"
-        value = "true"
-    }]
-  }
 
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics_helm_config = {
@@ -402,135 +321,5 @@ resource "helm_release" "kuberay_operator" {
 
   depends_on = [
     module.eks_blueprints_kubernetes_addons
-  ]
-}
-
-#---------------------------------------------------------------
-# Ray Cluster
-#---------------------------------------------------------------
-
-resource "helm_release" "ray_cluster" {
-  namespace        = "ray-cluster"
-  create_namespace = true
-  name             = "ray-cluster"
-  repository       = "https://ray-project.github.io/kuberay-helm/"
-  chart            = "ray-cluster"
-  version          = "0.4.0"
-
-  values = [
-    yamlencode({
-      image = {
-        repository = "rayproject/ray-ml"
-        tag        = "2.0.0"
-        pullPolicy = "IfNotPresent"
-      }
-      head = {
-        enableInTreeAutoscaling = "True"
-        resources = {
-          limits = {
-            cpu               = "14"
-            memory            = "54Gi"
-            ephemeral-storage = "700Gi"
-          }
-          requests = {
-            cpu               = "14"
-            memory            = "54Gi"
-            ephemeral-storage = "700Gi"
-          }
-        }
-        tolerations = [
-          {
-            key      = "RayClusterNodes"
-            effect   = "NoSchedule"
-            operator = "Exists"
-          }
-        ]
-        containerEnv = [
-          {
-            name  = "RAY_LOG_TO_STDERR"
-            value = "1"
-          }
-        ]
-      }
-      worker = {
-        resources = {
-          limits = {
-            cpu               = "14"
-            memory            = "54Gi"
-            ephemeral-storage = "700Gi"
-          }
-          requests = {
-            cpu               = "14"
-            memory            = "54Gi"
-            ephemeral-storage = "700Gi"
-          }
-        }
-        tolerations = [
-          {
-            key      = "RayClusterNodes"
-            effect   = "NoSchedule"
-            operator = "Exists"
-          }
-        ]
-        replicas    = "0"
-        minReplicas = "0"
-        maxReplicas = "9"
-        containerEnv = [
-          {
-            name  = "RAY_LOG_TO_STDERR"
-            value = "1"
-          }
-        ]
-      }
-    })
-  ]
-
-  depends_on = [
-    helm_release.kuberay_operator
-  ]
-}
-
-# Note: TLS
-resource "kubectl_manifest" "ray_cluster_ingress" {
-  yaml_body = yamlencode({
-    apiVersion = "networking.k8s.io/v1"
-    kind       = "Ingress"
-    metadata = {
-      name      = "ray-cluster-ingress"
-      namespace = "ray-cluster"
-      annotations = {
-        "alb.ingress.kubernetes.io/load-balancer-name" = "ray-cluster"
-        "alb.ingress.kubernetes.io/scheme"             = "internet-facing" #private
-        "alb.ingress.kubernetes.io/tags"               = join(",", [for key, value in local.tags : "${key}=${value}"])
-        "alb.ingress.kubernetes.io/target-type"        = "ip"
-      }
-    }
-    spec = {
-      ingressClassName = "alb"
-      rules = [
-        {
-          http = {
-            paths = [
-              {
-                path     = "/"
-                pathType = "Prefix"
-                backend = {
-                  service = {
-                    name = "ray-cluster-kuberay-head-svc"
-                    port = {
-                      number : 8265
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        }
-      ]
-    }
-  })
-
-  depends_on = [
-    helm_release.ray_cluster
   ]
 }
