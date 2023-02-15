@@ -16,6 +16,5 @@ locals {
   }
 
   csi_name        = "aws-ebs-csi-driver"
-  csi_create_irsa = true
   csi_namespace   = "kube-system"
 }
