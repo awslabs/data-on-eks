@@ -336,3 +336,7 @@ Delete everything else.
 ```bash
 terraform destroy -auto-approve
 ```
+
+### Future Work
+
+We want to enhance this blueprint to add functionality that makes this pattern more enterprise ready. To that end in the near future we will be adding enhancements around cost management using kubecost, better observability dashboards using OTEl, Amazon Managed Prometheus and Grafana, better security and data governance using OPA/Gatekeeper, IRSA, etc. Please let us know via [issues](https://github.com/awslabs/data-on-eks/issues) to see what you would like to see us build in this blueprint.
