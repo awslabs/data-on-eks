@@ -109,7 +109,7 @@ module "vpc" {
 # EKS Cluster
 #---------------------------------------------------------------
 
-#tfsec:ignore:aws-eks-enable-control-plane-logging    
+#tfsec:ignore:aws-eks-enable-control-plane-logging
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.7"
@@ -148,7 +148,7 @@ module "eks" {
     },
   ]
 
-  # This MNG will be used to host infrastructure add-ons for 
+  # This MNG will be used to host infrastructure add-ons for
   # logging, monitoring, ingress controllers, kuberay-operator,
   # etc.
   eks_managed_node_groups = {
@@ -165,9 +165,9 @@ module "eks" {
   })
 }
 
-# We have to augment default the karpenter node IAM policy with 
-# permissions we need for Ray Jobs to run until IRSA is added 
-# upstream in kuberay-operator. See issue 
+# We have to augment default the karpenter node IAM policy with
+# permissions we need for Ray Jobs to run until IRSA is added
+# upstream in kuberay-operator. See issue
 # https://github.com/ray-project/kuberay/issues/746
 module "karpenter_policy" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
@@ -197,7 +197,7 @@ module "karpenter_policy" {
   )
 }
 
-# Deploys infrastructure needed for Karpenter. See 
+# Deploys infrastructure needed for Karpenter. See
 # https://karpenter.sh for details.
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"

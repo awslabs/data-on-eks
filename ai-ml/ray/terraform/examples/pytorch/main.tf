@@ -82,7 +82,7 @@ module "pytorch_cluster" {
             value = "1"
           },
           {
-            # workaround for protobuf protoc >= 3.19.0 issue 
+            # workaround for protobuf protoc >= 3.19.0 issue
             name  = "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"
             value = "python"
           }
@@ -115,7 +115,7 @@ module "pytorch_cluster" {
             value = "1"
           },
           {
-            # workaround for protobuf protoc >= 3.19.0 issue 
+            # workaround for protobuf protoc >= 3.19.0 issue
             name  = "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"
             value = "python"
           }

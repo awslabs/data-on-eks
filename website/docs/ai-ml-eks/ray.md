@@ -13,7 +13,7 @@ This blueprint should be considered as experimental and should only be used for 
 
 [Ray](https://www.ray.io/) is an open-source framework for building scalable and distributed applications. It is designed to make it easy to write parallel and distributed Python applications by providing a simple and intuitive API for distributed computing. It has a growing community of users and contributors, and is actively maintained and developed by the Ray team at Anyscale, Inc.
 
-To deploy Ray in production across multiple machines users must first deploy [**Ray Cluster**](https://docs.ray.io/en/latest/cluster/getting-started.html). A Ray Cluster consists of head nodes and worker nodes which can be autoscaled using the built-in **Ray Autoscaler**. 
+To deploy Ray in production across multiple machines users must first deploy [**Ray Cluster**](https://docs.ray.io/en/latest/cluster/getting-started.html). A Ray Cluster consists of head nodes and worker nodes which can be autoscaled using the built-in **Ray Autoscaler**.
 
 ![RayCluster](img/ray-cluster.svg)
 
@@ -146,7 +146,7 @@ At this point we are ready to deploy Ray Clusters.
 
 #### Deploy Ray Clusters and Workloads
 
-For convenience, we have packaged the helm chart deployent of Ray Cluster as a repeatable terraform [module](../../..//ai-ml/ray/terraform/modules/ray-cluster/). This allows us to codify organizational best practices and requirements for deploying Ray Clusters for multiple Data Science teams. The module also creates configuration needed for karpenter to be able to provision EC2 instances for Ray applications as and when they are needed for the duration of the job. This model can be replicated via GitOps tooling such as ArgoCD or Flux but is done here via terraform for demonstration purpose. 
+For convenience, we have packaged the helm chart deployent of Ray Cluster as a repeatable terraform [module](../../..//ai-ml/ray/terraform/modules/ray-cluster/). This allows us to codify organizational best practices and requirements for deploying Ray Clusters for multiple Data Science teams. The module also creates configuration needed for karpenter to be able to provision EC2 instances for Ray applications as and when they are needed for the duration of the job. This model can be replicated via GitOps tooling such as ArgoCD or Flux but is done here via terraform for demonstration purpose.
 
 ##### XGBoost
 
@@ -225,16 +225,16 @@ kubectl get nodes
 :::info
 ```bash
 NAME                          STATUS    ROLES    AGE   VERSION
-ip-10-1-1-241.ec2.internal    Unknown   <none>   1s    
-ip-10-1-10-211.ec2.internal   Unknown   <none>   1s    
+ip-10-1-1-241.ec2.internal    Unknown   <none>   1s  
+ip-10-1-10-211.ec2.internal   Unknown   <none>   1s  
 ip-10-1-13-204.ec2.internal   Ready     <none>   24m   v1.24.9-eks-49d8fe8
 ip-10-1-26-241.ec2.internal   Ready     <none>   12h   v1.24.9-eks-49d8fe8
-ip-10-1-3-64.ec2.internal     Unknown   <none>   7s    
+ip-10-1-3-64.ec2.internal     Unknown   <none>   7s  
 ip-10-1-4-21.ec2.internal     Ready     <none>   12h   v1.24.9-eks-49d8fe8
 ip-10-1-40-196.ec2.internal   Ready     <none>   12h   v1.24.9-eks-49d8fe8
-ip-10-1-7-167.ec2.internal    Unknown   <none>   1s    
-ip-10-1-9-112.ec2.internal    Unknown   <none>   1s    
-ip-10-1-9-172.ec2.internal    Unknown   <none>   1s    
+ip-10-1-7-167.ec2.internal    Unknown   <none>   1s  
+ip-10-1-9-112.ec2.internal    Unknown   <none>   1s  
+ip-10-1-9-172.ec2.internal    Unknown   <none>   1s  
 ```
 :::
 
@@ -247,7 +247,7 @@ Results: {'training_time': 1338.488839321999, 'prediction_time': 403.36653568099
 :::
 ##### PyTorch
 
-We can simultaneously deploy the PyTorch benchmark as well. We deploy a separate Ray Cluster with its own configuration for Karpenter workers. Different jobs can have different requirements for Ray Cluster such as a different version of Ray libraries or EC2 instance configuration such as making use of Spot market or GPU instances. We take advantage of node taints and tolerations in Ray Cluster pod specs to match the Ray Cluster configuration to Karpenter configuration thus taking advantage of the flexibility that Karpenter provides. 
+We can simultaneously deploy the PyTorch benchmark as well. We deploy a separate Ray Cluster with its own configuration for Karpenter workers. Different jobs can have different requirements for Ray Cluster such as a different version of Ray libraries or EC2 instance configuration such as making use of Spot market or GPU instances. We take advantage of node taints and tolerations in Ray Cluster pod specs to match the Ray Cluster configuration to Karpenter configuration thus taking advantage of the flexibility that Karpenter provides.
 
 Go to the PyTorch directory and run the terraform init and plan as before.
 

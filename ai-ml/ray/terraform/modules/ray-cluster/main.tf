@@ -1,8 +1,8 @@
 # Disclaimer!!!!
-# These are organizational specific configurations for the 
+# These are organizational specific configurations for the
 # karpenter Provisioner, NodeTemplate and RayCluster packaged
-# as a module for convenience. These should be parameterized as 
-# you see fit for your use-case. 
+# as a module for convenience. These should be parameterized as
+# you see fit for your use-case.
 
 #---------------------------------------------------------------
 # Karpenter Configuration
