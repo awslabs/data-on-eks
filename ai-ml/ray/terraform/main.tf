@@ -221,6 +221,29 @@ data "aws_eks_addon_version" "latest" {
   most_recent        = true
 }
 
+################################################################################
+# VPC-CNI Custom Networking ENIConfig
+################################################################################
+
+resource "kubectl_manifest" "eni_config" {
+  for_each = zipmap(local.azs, slice(module.vpc.private_subnets, 3, 6))
+
+  yaml_body = yamlencode({
+    apiVersion = "crd.k8s.amazonaws.com/v1alpha1"
+    kind       = "ENIConfig"
+    metadata = {
+      name = each.key
+    }
+    spec = {
+      securityGroups = [
+        module.eks.cluster_primary_security_group_id,
+        module.eks.node_security_group_id,
+      ]
+      subnet = each.value
+    }
+  })
+}
+
 # We have to augment default the karpenter node IAM policy with
 # permissions we need for Ray Jobs to run until IRSA is added
 # upstream in kuberay-operator. See issue
@@ -251,29 +274,6 @@ module "karpenter_policy" {
       ]
     }
   )
-}
-
-################################################################################
-# VPC-CNI Custom Networking ENIConfig
-################################################################################
-
-resource "kubectl_manifest" "eni_config" {
-  for_each = zipmap(local.azs, slice(module.vpc.private_subnets, 3, 6))
-
-  yaml_body = yamlencode({
-    apiVersion = "crd.k8s.amazonaws.com/v1alpha1"
-    kind       = "ENIConfig"
-    metadata = {
-      name = each.key
-    }
-    spec = {
-      securityGroups = [
-        module.eks.cluster_primary_security_group_id,
-        module.eks.node_security_group_id,
-      ]
-      subnet = each.value
-    }
-  })
 }
 
 ################################################################################
