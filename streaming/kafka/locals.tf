@@ -15,6 +15,6 @@ locals {
     GithubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"
   }
 
-  csi_name        = "aws-ebs-csi-driver"
-  csi_namespace   = "kube-system"
+  csi_name      = "aws-ebs-csi-driver"
+  csi_namespace = "kube-system"
 }
