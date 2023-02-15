@@ -54,8 +54,9 @@ locals {
   region    = var.region
   namespace = "ray-cluster"
 
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  vpc_cidr           = "10.0.0.0/16"
+  secondary_vpc_cidr = "100.64.0.0/16"
+  azs                = slice(data.aws_availability_zones.available.names, 0, 3)
 
   cluster_version = var.eks_cluster_version
 
@@ -76,10 +77,15 @@ module "vpc" {
   name = local.name
   cidr = local.vpc_cidr
 
-  azs             = local.azs
-  private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
-  public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
-  # Control plane subnet
+  secondary_cidr_blocks = [local.secondary_vpc_cidr]
+
+  azs = local.azs
+  private_subnets = concat(
+    [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)],
+    [for k, v in local.azs : cidrsubnet(local.secondary_vpc_cidr, 4, k)]
+  )
+  public_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
+  # Control Plane Subnets
   intra_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
 
   enable_nat_gateway   = true
@@ -118,18 +124,18 @@ module "eks" {
   cluster_version                = local.cluster_version
   cluster_endpoint_public_access = true
 
-  vpc_id                   = module.vpc.vpc_id
-  subnet_ids               = module.vpc.private_subnets
+  vpc_id = module.vpc.vpc_id
+  # We only want to assign the 10.0.* range subnets to the data plane
+  subnet_ids               = slice(module.vpc.private_subnets, 0, 3)
   control_plane_subnet_ids = module.vpc.intra_subnets
 
+  # Specify the VPC CNI addon outside of the module as shown below
+  # to ensure the addon is configured before compute resources are created
   cluster_addons = {
     coredns = {
       most_recent = true
     }
     kube-proxy = {
-      most_recent = true
-    }
-    vpc-cni = {
       most_recent = true
     }
   }
@@ -165,6 +171,39 @@ module "eks" {
   })
 }
 
+################################################################################
+# VPC-CNI Custom CNI and IPv4 Prefix Delegation
+################################################################################
+
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name      = module.eks.cluster_name
+  addon_name        = "vpc-cni"
+  resolve_conflicts = "OVERWRITE"
+  addon_version     = data.aws_eks_addon_version.latest["vpc-cni"].version
+
+  configuration_values = jsonencode({
+    env = {
+      # Reference https://aws.github.io/aws-eks-best-practices/reliability/docs/networkmanagement/#cni-custom-networking
+      AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG = "true"
+      ENI_CONFIG_LABEL_DEF               = "topology.kubernetes.io/zone"
+
+      # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+      ENABLE_PREFIX_DELEGATION = "true"
+      WARM_PREFIX_TARGET       = "1"
+    }
+  })
+
+  tags = local.tags
+}
+
+data "aws_eks_addon_version" "latest" {
+  for_each = toset(["vpc-cni"])
+
+  addon_name         = each.value
+  kubernetes_version = local.cluster_version
+  most_recent        = true
+}
+
 # We have to augment default the karpenter node IAM policy with
 # permissions we need for Ray Jobs to run until IRSA is added
 # upstream in kuberay-operator. See issue
@@ -196,6 +235,33 @@ module "karpenter_policy" {
     }
   )
 }
+
+################################################################################
+# VPC-CNI Custom Networking ENIConfig
+################################################################################
+
+resource "kubectl_manifest" "eni_config" {
+  for_each = zipmap(local.azs, slice(module.vpc.private_subnets, 3, 6))
+
+  yaml_body = yamlencode({
+    apiVersion = "crd.k8s.amazonaws.com/v1alpha1"
+    kind       = "ENIConfig"
+    metadata = {
+      name = each.key
+    }
+    spec = {
+      securityGroups = [
+        module.eks.cluster_primary_security_group_id,
+        module.eks.node_security_group_id,
+      ]
+      subnet = each.value
+    }
+  })
+}
+
+################################################################################
+# Karpenter Deployment
+################################################################################
 
 # Deploys infrastructure needed for Karpenter. See
 # https://karpenter.sh for details.
@@ -243,7 +309,7 @@ resource "helm_release" "karpenter" {
 }
 
 #---------------------------------------------------------------
-# Operational Add-Ons
+# Operational Add-Ons using EKS Blueprints
 #---------------------------------------------------------------
 
 module "eks_blueprints_kubernetes_addons" {

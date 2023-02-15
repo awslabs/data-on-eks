@@ -312,9 +312,27 @@ cd ../xgboost
 terraform destroy -auto-approve
 ```
 
-Delete the add-ons, worker nodes, EKS cluster and the VPC.
+Delete the add-ons.
 
 ```bash
 cd ../../
+tf destroy -auto-approve -target=module.eks_blueprints_kubernetes_addons
+```
+
+Delete worker nodes, EKS cluster.
+
+```bash
+tf destroy -auto-approve -target=module.eks
+```
+
+Delete the VPC.
+
+```bash
+tf destroy -auto-approve -target=module.vpc
+```
+
+Delete everything else.
+
+```bash
 terraform destroy -auto-approve
 ```

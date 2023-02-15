@@ -21,9 +21,3 @@ variable "tags" {
   default     = {}
   type        = map(string)
 }
-
-variable "vpc_cidr" {
-  description = "VPC CIDR"
-  default     = "10.1.0.0/16"
-  type        = string
-}
