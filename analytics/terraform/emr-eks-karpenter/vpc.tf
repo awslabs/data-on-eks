@@ -1,16 +1,16 @@
 #---------------------------------------------------------------
-# VPC and Subnets
+# Supporting Network Resources
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
 
   name = local.name
-  cidr = local.vpc_cidr
+  cidr = var.vpc_cidr
 
   azs             = local.azs
-  public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k)]
-  private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 10)]
+  public_subnets  = var.public_subnets  # Two Subnets. 4094 IPs per Subnet
+  private_subnets = var.private_subnets # Three Subnets. 16382 IPs per Subnet
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -41,7 +41,7 @@ module "vpc" {
       protocol    = -1
       from_port   = 0
       to_port     = 0
-      cidr_blocks = local.vpc_cidr
+      cidr_blocks = var.vpc_cidr
   }]
   default_security_group_egress = [
     {
@@ -50,6 +50,63 @@ module "vpc" {
       protocol    = -1
       cidr_blocks = "0.0.0.0/0"
   }]
+
+  tags = local.tags
+}
+
+module "vpc_endpoints_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 4.0"
+
+  name        = "${local.name}-vpc-endpoints"
+  description = "Security group for VPC endpoint access"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_with_cidr_blocks = [
+    {
+      rule        = "https-443-tcp"
+      description = "VPC CIDR HTTPS"
+      cidr_blocks = join(",", module.vpc.private_subnets_cidr_blocks)
+    },
+  ]
+
+  egress_with_cidr_blocks = [
+    {
+      rule        = "https-443-tcp"
+      description = "All egress HTTPS"
+      cidr_blocks = "0.0.0.0/0"
+    },
+  ]
+
+  tags = local.tags
+}
+
+module "vpc_endpoints" {
+  source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+  version = "~> 3.0"
+
+  vpc_id             = module.vpc.vpc_id
+  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
+
+  endpoints = merge({
+    s3 = {
+      service         = "s3"
+      service_type    = "Gateway"
+      route_table_ids = module.vpc.private_route_table_ids
+      tags = {
+        Name = "${local.name}-s3"
+      }
+    }
+    },
+    { for service in toset(local.vpc_endpoints) :
+      replace(service, ".", "_") =>
+      {
+        service             = service
+        subnet_ids          = module.vpc.private_subnets
+        private_dns_enabled = true
+        tags                = { Name = "${local.name}-${service}" }
+      }
+  })
 
   tags = local.tags
 }

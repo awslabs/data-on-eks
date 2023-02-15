@@ -1,9 +1,9 @@
 ---
-sidebar_position: 2
-sidebar_label: Apache YuniKorn with EMR
+sidebar_position: 3
+sidebar_label: EMR on EKS with Apache Yunikorn
 ---
 
-# Apache YuniKorn with EMR on EKS
+# EMR on EKS with [Apache YuniKorn](https://yunikorn.apache.org/)
 
 ## Introduction
 In this post, we learn how to deploy highly scalable EMR on EKS Clusters with [Apache YuniKorn](https://yunikorn.apache.org/) batch scheduler and Cluster Autoscaler.

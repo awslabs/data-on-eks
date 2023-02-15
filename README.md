@@ -3,11 +3,15 @@
 
 💥 **Welcome to Data on Amazon EKS (DoEKS)** 💥
 
-Data on Amazon EKS(DoEKS) is a tool for users to build [aws](https://aws.amazon.com/) managed and self-managed scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/).
-This repo provides Infrastructure as Code(IaC) templates(e.g., [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/) etc.),
-sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, Performance Benchmark reports and Best Practices for deploying Data Solutions on Amazon EKS.
+Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS.
 
-> **Note**: Data on EKS is under active development for number of patterns. Please refer to the [issues](https://github.com/awslabs/data-on-eks/issues) section to see the work in progress features.
+> **Note**: DoEKS is actively being developed for various patterns. To see what features are in progress, please check out the [issues](https://github.com/awslabs/data-on-eks/issues) section of our repository.
+
+## 🏗️ Architecture
+The following diagram illustrates the open source data tools, Kubernetes operators, and frameworks covered by DoEKS, as well as the integration of AWS Data Analytics managed services with DoEKS open source tools.
+
+<img width="779" alt="image" src="https://user-images.githubusercontent.com/19464259/208900860-a7ccdaeb-158d-4767-baad-fbc76388bc09.png">
+
 
 ## 🌟 Features
 Data on EKS(DoEKS) solution is categorized into the following areas.
@@ -23,38 +27,34 @@ Data on EKS(DoEKS) solution is categorized into the following areas.
 🎯  [Scheduler Workflow Platforms](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks) on EKS
 
 ## 🏃‍♀️Getting Started
-In this repository you will find multiple deployment examples for bootstrapping Data platforms with Amazon EKS Cluster and the Kubernetes add-ons.
+In this repository, you'll find a variety of deployment examples for creating data platforms with Amazon EKS clusters and Kubernetes add-ons. These examples are just a small selection of the available blueprints - visit the [DoEKS website](https://awslabs.github.io/data-on-eks/) for the complete list of options.
 
-🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - EMR on EKS with Apache YuniKorn custom batch scheduler.
+🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - 👈 Start here if you are new to EMR on EKS. This template deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
 
-🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - Scaling Spark jobs with EMR on EKS and Karpenter.
+🚀 [EMR on EKS with Apache YuniKorn](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn) - This template deploys EMR on EKS cluster and uses Apache YuniKorn for custom batch scheduling.
 
-🚀 [EMR on EKS with FSx for Lustre](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-fsx-for-lustre) - EMR on EKS Cluster with FSx for Lustre as a high performance Spark shuffle storage.
+🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - This template deploys EKS cluster and uses Spark Operator and Apache YuniKorn for running self-managed Spark jobs
 
-🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - Spark Operator with Apache YuniKorn on Amazon EKS.
+🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks/ray) - This template deploys Ray Operator on EKS with sample scripts.
 
-🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) - Trigger EMR on EKS jobs with Amazon Managed Workflows for Apache Airflow (MWAA).
+🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) - This template deploys EMR on EKS cluster and uses Amazon Managed Workflows for Apache Airflow (MWAA) to run Spark jobs.
 
-🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - Deploy self-managed Apache Airflow with best practices on Amazon EKS.
+🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - This template sets up a self-managed Argo Workflow on an Amazon EKS cluster, following best practices.
 
-🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks/ray) - Deploy Ray Operator on EKS with sample scripts.
+🚀 [Argo Workflows on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/argo-workflows-eks) - This template sets up a self-managed Apache Airflow on an Amazon EKS cluster, following best practices.
+
+🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks/kafka) - This template deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
 
 ## 🗂️ Documentation
-Checkout the [DoEKS](https://awslabs.github.io/data-on-eks/) Website for instructions to deploy the Data on EKS patterns and run sample tests.
+For instructions on how to deploy Data on EKS patterns and run sample tests, visit the [DoEKS website](https://awslabs.github.io/data-on-eks/).
 
 ## 🏆 Motivation
-[Kubernetes](https://kubernetes.io/) is the most widely known system for large-scale orchestration of containerized software.
-It became more mature for running stateful workloads with the introduction of several storage options in version 1.19.
-In addition, with an introduction of [Spark on Kubernetes](https://spark.apache.org/docs/2.3.0/running-on-kubernetes.html) and the flexibility that Kubernetes offers have motivated many users to migrate their existing Hadoop based clusters to Kubernetes.
+[Kubernetes](https://kubernetes.io/) is a widely-used system for the large-scale orchestration of containerized software. It has become more suited for running stateful workloads with the introduction of several storage options in version 1.19. The availability of [Spark on Kubernetes](https://spark.apache.org/docs/2.3.0/running-on-kubernetes.html) and the versatility of Kubernetes has encouraged many users to migrate their existing Hadoop-based clusters to Kubernetes.
 
-Deploying and managing Kubernetes clusters and scaling data workloads is still challenging for many users because they are expected to be familiar with Kubernetes and data workloads.
-To address this, we chose to launch this new Data on EKS (DoEKS) tool to help simplify the journey for the users who want to run Spark on EKS, Kubeflow, MLFlow, Airflow, Presto, Kafka, Cassandra etc. or any other data workloads.
+However, deploying and managing Kubernetes clusters and scaling data workloads can still be challenging for many users as they are required to be proficient in both Kubernetes and data workloads. To address this, we developed Data on EKS (DoEKS) to help users easily run Spark on EKS, Kubeflow, MLFlow, Airflow, Presto, Kafka, Cassandra, and other data workloads.
 
 ## 🤝 Support & Feedback
-Data on EKS(DoEKS) is maintained by AWS Solution Architects.
-It is not part of an AWS service, and support is provided best effort by the Data on EKS Blueprints community.
-
-Please use the Issues section of this GitHub to post feedback, submit feature ideas, or report bugs.
+DoEKS is maintained by AWS Solution Architects and is not an AWS service. Support is provided on a best effort basis by the Data on EKS Blueprints community. If you have feedback, feature ideas, or wish to report bugs, please use the [Issues](https://github.com/awslabs/data-on-eks/issues) section of this GitHub.
 
 ## 🔐 Security
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
@@ -63,6 +63,6 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 This library is licensed under the Apache 2.0 License.
 
 ## 🙌 Community
-We invite everyone who is passionate about data on Kubernetes to join this initiative.
+We welcome all individuals who are enthusiastic about data on Kubernetes to become a part of this open source community. Your contributions and participation are invaluable to the success of this project.
 
 Built with ❤️ at AWS.

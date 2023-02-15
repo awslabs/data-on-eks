@@ -16,12 +16,6 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_aws_ebs_csi_driver = true
 
   #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_coredns_autoscaler = true
-
-  #---------------------------------------------------------------
   # Metrics Server
   #---------------------------------------------------------------
   enable_metrics_server = true
@@ -44,6 +38,43 @@ module "eks_blueprints_kubernetes_addons" {
   # Argo Events Add-on
   #---------------------------------------------------------------
   enable_argo_workflows = true
+  #---------------------------------------
+  # Amazon Managed Prometheus
+  #---------------------------------------
+  enable_amazon_prometheus             = true
+  amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp.prometheus_endpoint
+  #---------------------------------------
+  # Prometheus Server Add-on
+  #---------------------------------------
+  enable_prometheus = true
+  prometheus_helm_config = {
+    name       = "prometheus"
+    repository = "https://prometheus-community.github.io/helm-charts"
+    chart      = "prometheus"
+    version    = "15.10.1"
+    namespace  = "prometheus"
+    timeout    = "300"
+    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {
+      operating_system = "linux"
+    })]
+  }
+  #---------------------------------------
+  # AWS for FluentBit - DaemonSet
+  #---------------------------------------
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_helm_config = {
+    name                                      = "aws-for-fluent-bit"
+    chart                                     = "aws-for-fluent-bit"
+    repository                                = "https://aws.github.io/eks-charts"
+    version                                   = "0.1.21"
+    namespace                                 = "aws-for-fluent-bit"
+    aws_for_fluent_bit_cw_log_group           = "/${var.name}/worker-fluentbit-logs" # Optional
+    aws_for_fluentbit_cwlog_retention_in_days = 90
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region                    = var.region,
+      aws_for_fluent_bit_cw_log = "/${var.name}/worker-fluentbit-logs"
+    })]
+  }
 }
 
 
@@ -62,12 +93,12 @@ resource "kubernetes_cluster_role" "spark_op_role" {
   }
 }
 #---------------------------------------------------------------
-# Kubernetes Role binding role for argo workflows
+# Kubernetes Role binding role for argo workflows/data-team-a
 #---------------------------------------------------------------
 resource "kubernetes_role_binding" "spark_role_binding" {
   metadata {
-    name      = "argo-workflows-spark-rolebinding"
-    namespace = "argo-workflows"
+    name      = "data-team-a-spark-rolebinding"
+    namespace = "data-team-a"
   }
 
   subject {
@@ -82,7 +113,7 @@ resource "kubernetes_role_binding" "spark_role_binding" {
     name      = kubernetes_cluster_role.spark_op_role.id
   }
 }
-resource "kubernetes_role_binding" "admin_rolebinding" {
+resource "kubernetes_role_binding" "admin_rolebinding_argoworkflows" {
   metadata {
     name      = "argo-workflows-admin-rolebinding"
     namespace = "argo-workflows"
@@ -92,6 +123,24 @@ resource "kubernetes_role_binding" "admin_rolebinding" {
     kind      = "ServiceAccount"
     name      = "default"
     namespace = "argo-workflows"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "admin"
+  }
+}
+resource "kubernetes_role_binding" "admin_rolebinding_data_teama" {
+  metadata {
+    name      = "data-team-a-admin-rolebinding"
+    namespace = "data-team-a"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = "data-team-a"
   }
 
   role_ref {

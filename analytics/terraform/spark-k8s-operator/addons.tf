@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.15.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.19.0"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -14,26 +14,6 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_coredns            = true
   enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
-
-  #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_coredns_autoscaler = true
-  coredns_autoscaler_helm_config = {
-    name       = "cluster-proportional-autoscaler"
-    chart      = "cluster-proportional-autoscaler"
-    repository = "https://kubernetes-sigs.github.io/cluster-proportional-autoscaler"
-    version    = "1.0.0"
-    namespace  = "kube-system"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      operating_system = "linux"
-      target           = "deployment/coredns"
-      node_group_type  = "core"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
 
   #---------------------------------------------------------------
   # Metrics Server

@@ -6,14 +6,14 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {{onBrokenLinks: string, organizationName: string, plugins: string[], title: string, url: string, onBrokenMarkdownLinks: string, i18n: {defaultLocale: string, locales: string[]}, trailingSlash: boolean, baseUrl: string, presets: [string,Options][], githubHost: string, tagline: string, themeConfig: ThemeConfig & UserThemeConfig & AlgoliaThemeConfig, projectName: string}} */
 const config = {
-  title: 'Data on EKS (DoEKS)',
-  tagline: 'Accelerate your Data journey on Amazon EKS 🚀',
+  title: 'Data on EKS',
+  tagline: 'Accelerate your Data Journey with Amazon EKS 🚀',
   url: 'https://awslabs.github.io',
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  // favicon: 'img/favicon.ico',
+  favicon: 'img/header-icon.png',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -58,11 +58,11 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        title: 'DoEKS',
-        // logo: {
-        //   alt: 'DoEKS Logo',
-        //   src: 'img/logo.svg',
-        // },
+        // title: 'DoEKS',
+        logo: {
+          alt: 'DoEKS Logo',
+          src: 'img/header-icon.png',
+        },
         items: [
           {
             type: 'doc',
@@ -78,33 +78,33 @@ const config = {
           },
           {
             type: 'doc',
-            docId: 'spark-on-eks/index',
+            docId: 'data-analytics/index',
             position: 'left',
-            label: 'Spark on EKS',
+            label: 'Data Analytics',
           },
           {
             type: 'doc',
-            docId: 'ai-ml-eks/index',
+            docId: 'ai-ml/index',
             position: 'left',
             label: 'AI/ML',
           },
           {
             type: 'doc',
-            docId: 'distributed-databases-eks/index',
+            docId: 'job-schedulers/index',
             position: 'left',
-            label: 'Distributed Databases',
+            label: 'Job Schedulers',
           },
           {
             type: 'doc',
-            docId: 'streaming-platforms-eks/index',
+            docId: 'streaming-platforms/index',
             position: 'left',
             label: 'Streaming Platforms',
           },
           {
             type: 'doc',
-            docId: 'job-schedulers-eks/index',
+            docId: 'distributed-databases/index',
             position: 'left',
-            label: 'Job Schedulers',
+            label: 'Distributed Databases',
           },
           {to: '/blog', label: 'Blog', position: 'left'},
           {
