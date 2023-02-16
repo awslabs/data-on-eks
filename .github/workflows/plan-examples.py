@@ -9,7 +9,7 @@ def get_examples():
     returning a string formatted json array of the example directories minus those that are excluded
     """
     exclude = {
-        '',  # Add examples here to exclude from terraform plan
+        'ai-ml/ray/terraform', # Skip until we fix CI script to test as per v5 convention
     }
 
     projects = {
