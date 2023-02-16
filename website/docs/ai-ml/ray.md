@@ -44,7 +44,7 @@ Before moving forward with the deployment please make sure you have read the per
 *Source: https://docs.ray.io/en/latest/cluster/kubernetes/index.html*
 ## Deploying the Example
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/terraform/terraform/ray), you will provision Ray Cluster on Amazon EKS using the KubeRay Operator. The example also demonstrates the use of Karpenter of autoscaling of worker nodes for job specific Ray Clusters.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform), you will provision Ray Cluster on Amazon EKS using the KubeRay Operator. The example also demonstrates the use of Karpenter of autoscaling of worker nodes for job specific Ray Clusters.
 
 
 ![RayOnEKS](img/ray-on-eks.png)
@@ -146,7 +146,7 @@ At this point we are ready to deploy Ray Clusters.
 
 #### Deploy Ray Clusters and Workloads
 
-For convenience, we have packaged the helm chart deployent of Ray Cluster as a repeatable terraform [module](../../..//ai-ml/ray/terraform/modules/ray-cluster/). This allows us to codify organizational best practices and requirements for deploying Ray Clusters for multiple Data Science teams. The module also creates configuration needed for karpenter to be able to provision EC2 instances for Ray applications as and when they are needed for the duration of the job. This model can be replicated via GitOps tooling such as ArgoCD or Flux but is done here via terraform for demonstration purpose.
+For convenience, we have packaged the helm chart deployent of Ray Cluster as a repeatable terraform [module](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform/modules/ray-cluster/). This allows us to codify organizational best practices and requirements for deploying Ray Clusters for multiple Data Science teams. The module also creates configuration needed for karpenter to be able to provision EC2 instances for Ray applications as and when they are needed for the duration of the job. This model can be replicated via GitOps tooling such as ArgoCD or Flux but is done here via terraform for demonstration purpose.
 
 ##### XGBoost
 
