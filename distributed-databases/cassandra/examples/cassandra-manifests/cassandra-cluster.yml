@@ -17,17 +17,45 @@ spec:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 10Gi
+            storage: 20Gi
     config:
       jvmOptions:
-        heapSize: 512M
+        heapSize: 31Gi
+        gc_g1_rset_updating_pause_time_percent: 5
+        gc_g1_max_gc_pause_ms: 300
+    resources:
+      requests:
+        memory: "59Gi"
+        cpu: "7500m"
+      limits:
+        memory: "60Gi"
     datacenters:
       - metadata:
           name: dc1
         size: 3
-    mgmtAPIHeap: 64Mi 
+        racks:
+        - name: r1
+          nodeAffinityLabels:
+            topology.kubernetes.io/zone: us-west-2a
+        - name: r2
+          nodeAffinityLabels:
+            topology.kubernetes.io/zone: us-west-2b
+        - name: r3
+          nodeAffinityLabels:
+            topology.kubernetes.io/zone: us-west-2c
+    tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "cassandra"
+      effect: "NoSchedule"
   stargate:
-    size: 1
+    size: 3
+    heapSize: 1024Mi
+    resources:
+      requests:
+        cpu: 3000m
+      limits:
+        cpu: 3000m
     telemetry:
       prometheus:
         enabled: true

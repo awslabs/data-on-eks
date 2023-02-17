@@ -2,8 +2,8 @@
 # Kubernetes Add-ons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  # source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.15.0"
-  source = "/home/aly/terraform-aws-eks-blueprints/modules/kubernetes-addons?ref=k8ssandra_operator"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.24.0"
+  #source = "/home/aly/terraform-aws-eks-blueprints/modules/kubernetes-addons?ref=k8ssandra_operator"
 
   # eks_cluster_id = local.name
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
@@ -52,19 +52,19 @@ module "eks_blueprints_kubernetes_addons" {
   # }
 
   # K8ssandra Operator add-on with custom helm config
-  enable_k8ssandra_operator = true
+  # enable_k8ssandra_operator = true
 
-  k8ssandra_operator_helm_config = {
-    name             = local.k8ssandra_operator_name
-    chart            = "k8ssandra-operator"
-    repository       = "https://helm.k8ssandra.io/stable"
-    version          = "0.39.1"
-    namespace        = local.k8ssandra_operator_name
-    create_namespace = false
-    timeout          = 600
-    values           = [templatefile("${path.module}/helm-values/values.yaml", {})]
-    description      = "K8ssandra Operator to run Cassandra DB on Kubernetes"
-  }
+  # k8ssandra_operator_helm_config = {
+  #   name             = local.k8ssandra_operator_name
+  #   chart            = "k8ssandra-operator"
+  #   repository       = "https://helm.k8ssandra.io/stable"
+  #   version          = "0.39.1"
+  #   namespace        = local.k8ssandra_operator_name
+  #   create_namespace = false
+  #   timeout          = 600
+  #   values           = [templatefile("${path.module}/helm-values/values.yaml", {})]
+  #   description      = "K8ssandra Operator to run Cassandra DB on Kubernetes"
+  # }
   tags = local.tags
 }
 
@@ -93,15 +93,57 @@ YAML
 }
 
 #---------------------------------------------------------------
-# Install kafka cluster
+# Install K8ssandra Operator
 #---------------------------------------------------------------
 
-resource "kubectl_manifest" "cassandra-namespace" {
+resource "helm_release" "cert_manager" {
+  name  = "cert-manager"
+  chart = "cert-manager"
+  repository  = "https://charts.jetstack.io"
+  version     = "v1.10.0"
+  namespace   = "cert-manager"
+  create_namespace = true
+  description = "Cert Manager Add-on"
+  wait        = true
+  set {
+    name  = "installCRDs"
+    value = true
+  }
+
+}
+
+resource "helm_release" "k8ssandra_operator" {
+  name  = "k8ssandra-operator"
+  chart = "k8ssandra-operator"
+  repository  = "https://helm.k8ssandra.io/stable"
+  version     = "v1.10.0"
+  namespace   = "k8ssandra-operator"
+  create_namespace = true
+  description = "K8ssandra Operator to run Cassandra DB on Kubernetes"
+  wait        = true
+  values           = [templatefile("${path.module}/helm-values/values.yaml", {})]
+  depends_on = [helm_release.cert_manager]
+}
+
+
+# module "helm_addon" {
+#   source            = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons/helm-addon"
+#   helm_config       = local.k8ssandra_operator_helm_config
+#   addon_context     = module.eks_blueprints_kubernetes_addons.addon_context
+#   # manage_via_gitops = var.manage_via_gitops
+#   depends_on = [helm_release.cert_manager]
+# }
+
+#---------------------------------------------------------------
+# Install Cassandra Cluster
+#---------------------------------------------------------------
+
+resource "kubectl_manifest" "cassandra_namespace" {
   yaml_body = file("./examples/cassandra-ns.yml")
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-resource "kubectl_manifest" "cassandra-cluster" {
+resource "kubectl_manifest" "cassandra_cluster" {
   yaml_body = file("./examples/cassandra-manifests/cassandra-cluster.yml")
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
@@ -110,7 +152,7 @@ resource "kubectl_manifest" "cassandra-cluster" {
 #   yaml_body = file("./kubernetes-manifests/grafana-manifests/grafana-operator-datasource-prometheus.yml")
 # }
 
-resource "kubectl_manifest" "grafana-cassandra-dashboard" {
+resource "kubectl_manifest" "grafana_cassandra_dashboard" {
   yaml_body = file("./examples/cassandra-manifests/grafana-dashboards.yml")
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
