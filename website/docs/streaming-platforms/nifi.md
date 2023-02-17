@@ -53,11 +53,11 @@ terraform init
 
 Run Terraform plan to verify the resources created by this execution.
 
-**Optional** - provide a Route53 Hosted Zone hostname and a corresponding ACM Certificate;
+Provide a Route53 Hosted Zone hostname and a corresponding ACM Certificate;
 
 ```bash
-export TF_VAR_eks_cluster_domain="example.com"
-export TF_VAR_acm_certificate_domain="*.example.com"
+export TF_VAR_eks_cluster_domain="<CHANGEME - example.com>"
+export TF_VAR_acm_certificate_domain="<CHANGEME - *.example.com>"
 export TF_VAR_nifi_sub_domain="nifi"
 export TF_VAR_nifi_username="admin"
 ```
