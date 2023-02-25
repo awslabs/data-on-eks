@@ -54,7 +54,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.24"` | no |
-| <a name="input_enable_yunikorn"></a> [enable\_yunikorn](#input\_enable\_yunikorn) | Enable YuniKorn Scheduler | `bool` | `true` | no |
+| <a name="input_enable_yunikorn"></a> [enable\_yunikorn](#input\_enable\_yunikorn) | Enable YuniKorn Scheduler | `bool` | `false` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"emr-eks-karpenter"` | no |
 | <a name="input_private_subnets"></a> [private\_subnets](#input\_private\_subnets) | Private Subnets CIDRs. 16382 IPs per Subnet | `list(string)` | <pre>[<br>  "10.1.0.0/18",<br>  "10.1.64.0/18",<br>  "10.1.128.0/18"<br>]</pre> | no |
 | <a name="input_public_subnets"></a> [public\_subnets](#input\_public\_subnets) | Public Subnets CIDRs. 4094 IPs per Subnet | `list(string)` | <pre>[<br>  "10.1.192.0/20",<br>  "10.1.208.0/20",<br>  "10.1.224.0/20"<br>]</pre> | no |
@@ -70,4 +70,5 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_emr_on_eks_role_arn"></a> [emr\_on\_eks\_role\_arn](#output\_emr\_on\_eks\_role\_arn) | IAM execution role arn for EMR on EKS |
 | <a name="output_emr_on_eks_role_id"></a> [emr\_on\_eks\_role\_id](#output\_emr\_on\_eks\_role\_id) | IAM execution role ID for EMR on EKS |
 | <a name="output_emrcontainers_virtual_cluster_id"></a> [emrcontainers\_virtual\_cluster\_id](#output\_emrcontainers\_virtual\_cluster\_id) | EMR Containers Virtual cluster ID |
+| <a name="output_emrcontainers_virtual_cluster_name"></a> [emrcontainers\_virtual\_cluster\_name](#output\_emrcontainers\_virtual\_cluster\_name) | EMR Containers Virtual cluster name |
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
