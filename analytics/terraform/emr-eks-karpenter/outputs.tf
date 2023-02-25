@@ -8,6 +8,11 @@ output "emrcontainers_virtual_cluster_id" {
   value       = aws_emrcontainers_virtual_cluster.this.id
 }
 
+output "emrcontainers_virtual_cluster_name" {
+  description = "EMR Containers Virtual cluster name"
+  value       = aws_emrcontainers_virtual_cluster.this.name
+}
+
 output "emr_on_eks_role_id" {
   description = "IAM execution role ID for EMR on EKS"
   value       = module.eks_blueprints.emr_on_eks_role_id

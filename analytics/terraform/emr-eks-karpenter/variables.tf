@@ -41,7 +41,7 @@ variable "private_subnets" {
 }
 
 variable "enable_yunikorn" {
-  default     = true
+  default     = false
   description = "Enable YuniKorn Scheduler"
   type        = bool
 }
