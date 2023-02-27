@@ -1,0 +1,171 @@
+global:
+  ## Override the deployment namespace
+  namespaceOverride: logging
+
+#hostNetwork and dnsPolicy are critical for enabling large clusters to avoid making calls to API server
+# see this link https://docs.fluentbit.io/manual/pipeline/filters/kubernetes#optional-feature-using-kubelet-to-get-metadata
+hostNetwork: true
+dnsPolicy: ClusterFirstWithHostNet
+
+#----------------------------------------------------------#
+# PARSERS for k8s-custom-tag abd crio
+# NOTE: Read this link for more details about WHY CRIO parser used -> https://docs.fluentbit.io/manual/installation/kubernetes#container-runtime-interface-cri-parser
+# e.g., k8s log line for crio ->
+# 2023-02-19T21:28:48.495311051Z  stdout                      F                 Unsetting extraneous env vars (UTC): 21:28:48
+# ^(?<time>[^ ]+)                 (?<stream>stdout|stderr)    (?<logtag>P|F)    (?<log>.*)$
+#----------------------------------------------------------#
+service:
+  parsersFiles:
+    - /fluent-bit/parsers/parsers.conf
+  extraParsers: |
+    [PARSER]
+        Name    k8s-custom-tag
+        Format  regex
+        Regex   ^(?<namespace_name>[^_]+)\.(?<container_name>.+)\.(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)\.(?<docker_id>[a-z0-9]{64})-$
+
+    [PARSER]
+        Name          crio
+        Format        Regex
+        Regex         ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>P|F) (?<log>.*)$
+        Time_Key      time
+        Time_Format   %Y-%m-%dT%H:%M:%S.%L%z
+
+#----------------------------------------------------------#
+# FILTER logs with k8s-custom-tag parser
+# Tag_regex -> Use this to verify the regex https://rubular.com/
+#----------------------------------------------------------#
+input:
+  enabled: true
+  tag: kube.<namespace_name>.<container_name>.<pod_name>.<docker_id>-
+  path: "/var/log/containers/*.log"
+  db: "/var/log/flb_kube.db"
+  parser: crio
+  memBufLimit: 5MB
+  skipLongLines: "On"
+  refreshInterval: 10
+  extraInputs: |
+    Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
+
+#----------------------------------------------------------#
+# FILTER logs with k8s-custom-tag parser
+#----------------------------------------------------------#
+# NOTE: The Kubernetes filter will enrich the logs with Kubernetes metadata, specifically labels and annotations.
+#       The filter only goes to the API Server when it cannot find the cached info, otherwise it uses the cache.
+#----------------------------------------------------------#
+filter:
+  enabled: true
+  name: "kubernetes"
+  match: "kube.*"
+  kubeURL: "https://kubernetes.default.svc.cluster.local:443"
+  mergeLog: "On"
+  mergeLogKey: "log_processed"
+  keepLog: "On"
+  k8sLoggingParser: "On"
+  k8sLoggingExclude: "On"
+  bufferSize: "0"
+  extraFilters: |
+    Kube_Tag_Prefix     kube.
+    Regex_Parser        k8s-custom-tag
+    Use_Kubelet         true
+    Kubelet_Port        10250
+    Annotations         Off
+    Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+
+#  extraFilters: |
+#    Labels              Off
+
+#----------------------------------------------------------#
+# OUTPUT logs to CloudWatch
+#----------------------------------------------------------#
+cloudWatch:
+  enabled: true
+  match: "*"
+  region: ${region}
+  logGroupName: ${aws_for_fluent_bit_cw_log}
+  logStreamName:
+  logStreamPrefix: "fluentbit-"
+  logKey:
+  logFormat:
+  roleArn:
+  autoCreateGroup: false
+  endpoint:
+  credentialsEndpoint:  {}
+  # extraOutputs: |
+  #   ...
+
+firehose:
+  enabled: false
+
+kinesis:
+  enabled: false
+
+elasticsearch:
+  enabled: false
+
+
+#----------------------------------------------------------#
+# OUTPUT logs to S3
+#----------------------------------------------------------#
+# Use this config to write logs to an S3 bucket.
+# Pre-req
+#  1/ S3 bucket for logging
+#  2/ Additional IAM policy for FluentBit add-on IRSA config
+#  3/ Add this to Terraform to pass additional IAM policy "aws_for_fluentbit_irsa_policies = ["<ENTER_NEW_IAM_POLICY_FOR_S3>"]"
+#----------------------------------------------------------#
+additionalOutputs: |
+  [OUTPUT]
+      Name                            s3
+      Match                           *
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 100M
+      s3_key_format                   /${cluster_name}/application-logs/year=%Y/month=%m/day=%d/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  10m
+      workers                         2
+
+#----------------------------------------------------------#
+# Use below when compression is enabled for S3 logs with gzip. Multipart upload cannot be used with gzip compression
+#  use_put_object On
+#  content_type application/json
+#  compression gzip
+#  preserve_data_ordering On
+#----------------------------------------------------------#
+
+serviceAccount:
+  create: true
+
+# Resource config for large clusters
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1500Mi
+  requests:
+    cpu: 500m
+    memory: 500Mi
+
+## Assign a PriorityClassName to pods if set
+priorityClassName: system-node-critical
+
+updateStrategy:
+  type: RollingUpdate
+
+nodeSelector:
+  kubernetes.io/os: linux
+
+volumes:
+  - name: varlog
+    hostPath:
+      path: /var/log
+  - name: varlibdockercontainers
+    hostPath:
+      path: /var/lib/docker/containers
+
+volumeMounts:
+  - name: varlog
+    mountPath: /var/log
+  - name: varlibdockercontainers
+    mountPath: /var/lib/docker/containers
+    readOnly: true
