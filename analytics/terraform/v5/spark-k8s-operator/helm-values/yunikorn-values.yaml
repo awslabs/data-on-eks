@@ -1,0 +1,137 @@
+replicaCount: 1
+admissionControllerReplicaCount: 1
+
+# nodeSelector -- Node labels for pod assignment
+nodeSelector:
+  NodeGroupType: ${node_group_type}
+  kubernetes.io/os: ${operating_system}
+tolerations: []
+affinity: {}
+
+imagePullSecrets:
+userLabelKey: "yunikorn.apache.org/username"
+operatorPlugins: "general"
+serviceAccount: yunikorn-admin
+hostNetwork: false
+
+placeHolderImage: k8s.gcr.io/pause
+
+admissionControllerServiceAccount: yunikorn-admission-controller
+
+image:
+  repository: apache/yunikorn
+  tag: scheduler-${image_version}
+  pullPolicy: Always
+
+pluginImage:
+  repository: apache/yunikorn
+  tag: scheduler-plugin-${image_version}
+  pullPolicy: Always
+
+admissionController:
+  image:
+    repository: apache/yunikorn
+    tag: admission-${image_version}
+    pullPolicy: Always
+  replicaCount: 1
+  serviceAccount: yunikorn-admission-controller
+  processNamespaces: ""
+  bypassNamespaces: "^kube-system$"
+  labelNamespaces: ""
+  noLabelNamespaces: ""
+  hostNetwork: true
+  resources:
+    requests:
+      cpu: 200m
+      memory: 500Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  service:
+    type: ClusterIP
+
+web:
+  image:
+    repository: apache/yunikorn
+    tag: web-${image_version}
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: 500Mi
+      cpu: 500m
+    limits:
+      memory: 500Mi
+      cpu: 500m
+
+service:
+  type: ClusterIP
+  port: 9080
+  portWeb: 9889
+
+resources:
+  requests:
+    cpu: 400m
+    memory: 2Gi
+  limits:
+    cpu: 4
+    memory: 4Gi
+
+# When this flag is true, the admission controller will be installed along with the scheduler.
+# When this flag is false, the admission controller will not be installed.
+# Once the admission controller is installed, all traffic will be routing to yunikorn.
+embedAdmissionController: true
+
+# When this flag is true, the scheduler will be deployed as Kubernetes scheduler plugin.
+# When this flag is false, the scheduler will be deployed as a standalone scheduler.
+enableSchedulerPlugin: false
+
+
+# ------------------------------------------------------------------------
+# Please choose one configuration from following two for yunikorn
+# Use "CMD + /" to comment-out or uncomment a block before the deployment
+# ------------------------------------------------------------------------
+
+# Use this configuration to configure absolute capacities for yunikorn queues
+configuration: |
+  partitions:
+    -
+      name: default
+      queues:
+        - name: root
+          submitacl: '*'
+          queues:
+            - name: default
+              resources:
+                guaranteed:
+                  memory: 100G
+                  vcore: 10
+                max:
+                  memory: 100G
+                  vcore: 10
+            - name: prod
+              resources:
+                guaranteed:
+                  memory: 500G
+                  vcore: 50
+                max:
+                  memory: 800G
+                  vcore: 80
+            - name: test
+              resources:
+                guaranteed:
+                  memory: 100G
+                  vcore: 10
+                max:
+                  memory: 800G
+                  vcore: 50
+            - name: dev
+              resources:
+                guaranteed:
+                  memory: 100G
+                  vcore: 10
+                max:
+                  memory: 100G
+                  vcore: 10
