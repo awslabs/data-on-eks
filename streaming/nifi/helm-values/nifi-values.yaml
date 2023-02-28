@@ -2,6 +2,7 @@ replicaCount: 3
 
 persistence:
   enabled: true
+  storageClass: gp3
 
 properties:
   sensitiveKey: ${sensitive_key} # Must have at least 12 characters
