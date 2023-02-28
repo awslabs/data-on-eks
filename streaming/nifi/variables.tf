@@ -37,7 +37,7 @@ variable "private_subnets" {
 variable "eks_cluster_domain" {
   type        = string
   description = "A Route53 Public Hosted Zone configured in the account where you are deploying this example. E.g. example.com"
-  default = "codesome.com"
+  default     = "codesome.com"
 }
 
 variable "nifi_sub_domain" {
@@ -49,7 +49,7 @@ variable "nifi_sub_domain" {
 variable "acm_certificate_domain" {
   type        = string
   description = "An ACM Certificate in the account + region where you are deploying this example. A wildcard certificate is preferred, e.g. *.example.com"
-  default = "*.codesome.com"
+  default     = "*.codesome.com"
 }
 
 variable "nifi_username" {
