@@ -4,8 +4,6 @@ data "aws_eks_cluster_auth" "this" {
 
 data "aws_availability_zones" "available" {}
 
-data "aws_region" "current" {}
-
 data "aws_secretsmanager_secret_version" "admin_password_version" {
   secret_id = aws_secretsmanager_secret.grafana.id
 
