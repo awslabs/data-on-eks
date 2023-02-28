@@ -19,7 +19,7 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_aws_ebs_csi_driver = true
 
   #---------------------------------------------------------------
-  # AWS Load Balancer Controller
+  # Additional Add-ons
   #---------------------------------------------------------------
   enable_aws_load_balancer_controller = true
 
