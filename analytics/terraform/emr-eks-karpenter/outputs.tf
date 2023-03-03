@@ -1,24 +1,45 @@
+################################################################################
+# Cluster
+################################################################################
+output "cluster_arn" {
+  description = "The Amazon Resource Name (ARN) of the cluster"
+  value       = module.eks.cluster_arn
+}
+
+output "cluster_name" {
+  description = "The Amazon Resource Name (ARN) of the cluster"
+  value       = module.eks.cluster_id
+}
+
+output "oidc_provider_arn" {
+  description = "The ARN of the OIDC Provider if `enable_irsa = true`"
+  value       = module.eks.oidc_provider_arn
+}
+
+################################################################################
+# EKS Managed Node Group
+################################################################################
+output "eks_managed_node_groups" {
+  description = "Map of attribute maps for all EKS managed node groups created"
+  value       = module.eks.eks_managed_node_groups
+}
+
+output "eks_managed_node_groups_iam_role_name" {
+  description = "List of the autoscaling group names created by EKS managed node groups"
+  value       = compact(flatten([for group in module.eks.eks_managed_node_groups : group.iam_role_name]))
+}
+
+output "aws_auth_configmap_yaml" {
+  description = "Formatted yaml output for base aws-auth configmap containing roles used in cluster node groups/fargate profiles"
+  value       = module.eks.aws_auth_configmap_yaml
+}
+
 output "configure_kubectl" {
   description = "Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig"
-  value       = module.eks_blueprints.configure_kubectl
+  value       = "aws eks --region ${local.region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
 
-output "emrcontainers_virtual_cluster_id" {
-  description = "EMR Containers Virtual cluster ID"
-  value       = aws_emrcontainers_virtual_cluster.this.id
-}
-
-output "emrcontainers_virtual_cluster_name" {
-  description = "EMR Containers Virtual cluster NAME"
-  value       = aws_emrcontainers_virtual_cluster.this.name
-}
-
-output "emr_on_eks_role_id" {
-  description = "IAM execution role ID for EMR on EKS"
-  value       = module.eks_blueprints.emr_on_eks_role_id
-}
-
-output "emr_on_eks_role_arn" {
-  description = "IAM execution role arn for EMR on EKS"
-  value       = module.eks_blueprints.emr_on_eks_role_arn
+output "emr_on_eks" {
+  description = "EMR on EKS"
+  value       = module.emr_containers
 }

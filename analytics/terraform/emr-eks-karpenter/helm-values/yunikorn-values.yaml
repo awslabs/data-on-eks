@@ -1,13 +1,6 @@
 replicaCount: 1
 admissionControllerReplicaCount: 1
 
-# nodeSelector -- Node labels for pod assignment
-nodeSelector:
-  NodeGroupType: ${node_group_type}
-  kubernetes.io/os: ${operating_system}
-tolerations: []
-affinity: {}
-
 imagePullSecrets:
 userLabelKey: "yunikorn.apache.org/username"
 operatorPlugins: "general"
@@ -87,7 +80,6 @@ embedAdmissionController: true
 # When this flag is true, the scheduler will be deployed as Kubernetes scheduler plugin.
 # When this flag is false, the scheduler will be deployed as a standalone scheduler.
 enableSchedulerPlugin: false
-
 
 # ------------------------------------------------------------------------
 # Please choose one configuration from following two for yunikorn

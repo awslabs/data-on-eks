@@ -33,7 +33,8 @@ EMR_VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtu
 #--------------------------------------------
 JOB_NAME='taxidata'
 EMR_EKS_RELEASE_LABEL="emr-6.7.0-latest" # Spark 3.2.1
-CW_LOG_GROUP="/emr-on-eks-logs/${EMR_VIRTUAL_CLUSTER_NAME}" # Create CW Log group if not exist
+
+CW_LOG_GROUP="/emr-on-eks-logs/v5-emr-eks-karpenter/emr-data-team-a" # Create CW Log group if not exist
 
 SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_NAME}/${JOB_NAME}"
 SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
@@ -50,18 +51,18 @@ aws s3 sync "./" ${SCRIPTS_S3_PATH}
 # https://registry.opendata.aws/nyc-tlc-trip-records-pds/
 #--------------------------------------------
 
-mkdir -p "../input"
-# Download the input data from public data set to local folders
-wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
-
-# Making duplicate copies to increase the size of the data.
-max=20
-for (( i=1; i <= $max; ++i ))
-do
-    cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
-done
-
-aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
+# mkdir -p "../input"
+# # Download the input data from public data set to local folders
+# wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
+#
+# # Making duplicate copies to increase the size of the data.
+# max=20
+# for (( i=1; i <= $max; ++i ))
+# do
+#     cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
+# done
+#
+# aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
 
 #--------------------------------------------
 # Execute Spark job

@@ -15,21 +15,6 @@ server:
       cpu: 500m
       memory: 1Gi
 
-  verticalAutoscaler:
-    enabled: true
-    updateMode: "Auto"
-    containerPolicies:
-      - containerName: "prometheus-server"
-        minAllowed:
-          cpu: 500m
-          memory: 1Gi
-        maxAllowed:
-          cpu: 1000m
-          memory: 4Gi
-
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: core
   persistentVolume:
     accessModes:
       - ReadWriteOnce
@@ -37,25 +22,6 @@ server:
     mountPath: /data
     size: 20Gi
     storageClass: gp2
-
-alertmanager:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: core
-
-kube-state-metrics:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: core
-
-pushgateway:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: core
-
-nodeExporter:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
 
 # Additional scrape config for KubeCost
 extraScrapeConfigs: |

@@ -1,3 +1,7 @@
+locals {
+  vpc_cidr = var.vpc_cidr
+  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+}
 #---------------------------------------------------------------
 # Supporting Network Resources
 #---------------------------------------------------------------
@@ -5,16 +9,23 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
 
-  name = local.name
-  cidr = var.vpc_cidr
+  name           = local.name
+  cidr           = var.vpc_cidr
+  azs            = local.azs
+  public_subnets = var.public_subnets # Two Subnets. 4094 IPs per Subnet
 
-  azs             = local.azs
-  public_subnets  = var.public_subnets  # Two Subnets. 4094 IPs per Subnet
+  #  Use This to leverage Secondary CIDR block
+  #  secondary_cidr_blocks = "100.64.0.0/16"
+  #  private_subnets = concat(var.private_subnets, [var.secondary_cidr_blocks])
   private_subnets = var.private_subnets # Three Subnets. 16382 IPs per Subnet
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
   enable_dns_hostnames = true
+
+  enable_flow_log                      = true
+  create_flow_log_cloudwatch_iam_role  = true
+  create_flow_log_cloudwatch_log_group = true
 
   # Manage so we can name
   manage_default_network_acl    = true
@@ -32,6 +43,8 @@ module "vpc" {
   private_subnet_tags = {
     "kubernetes.io/cluster/${local.name}" = "shared"
     "kubernetes.io/role/internal-elb"     = 1
+    # Tags subnets for Karpenter auto-discovery
+    "karpenter.sh/discovery" = local.name
   }
 
   default_security_group_name = "${local.name}-endpoint-secgrp"
@@ -98,7 +111,7 @@ module "vpc_endpoints" {
       }
     }
     },
-    { for service in toset(local.vpc_endpoints) :
+    { for service in toset(["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]) :
       replace(service, ".", "_") =>
       {
         service             = service

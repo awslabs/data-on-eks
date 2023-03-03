@@ -43,8 +43,50 @@ metadata:
   name: spark-compute-optimized
   namespace: karpenter
 spec:
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
   subnetSelector:
-    Name: "${eks_cluster_id}-private*"       # or karpenter.sh/discovery/${eks_cluster_id}: '*'
-  launchTemplate: "${launch_template_name}"  # optional, see Launch Template documentation
+    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
+  securityGroupSelector:                      # required, when not using launchTemplate
+    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
+  #  instanceProfile: ""      # optional, if already set in controller args
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+    --BOUNDARY
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
+    #!/bin/bash
+    echo "Running a custom user data script"
+    set -ex
+
+    IDX=1
+    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    for DEV in $DEVICES
+    do
+      mkfs.xfs /dev/$${DEV}
+      mkdir -p /local$${IDX}
+      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
+      IDX=$(($${IDX} + 1))
+    done
+
+    mount -a
+
+    /usr/bin/chown -hR +999:+1000 /local*
+
+    --BOUNDARY--
+
   tags:
-    InstanceType: "spark-compute-optimized"   # optional, add tags for your own use
+    InstanceType: "spark-compute-optimized"    # optional, add tags for your own use
