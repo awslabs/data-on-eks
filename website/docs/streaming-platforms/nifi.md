@@ -199,6 +199,7 @@ Run the command below and open the Grafana dashboard using the url "http://local
 kubectl port-forward svc/grafana -n grafana 8080:80
 ```
 
+Import Apache NiFi [Grafana dashboard](https://grafana.com/grafana/dashboards/12314-nifi-prometheusreportingtask-dashboard/)
 
 ![Apache NiFi Grafana Dashboard](img/nifi-grafana.png)
 
