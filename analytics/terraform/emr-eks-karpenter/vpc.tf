@@ -1,5 +1,5 @@
 locals {
-  vpc_cidr = var.vpc_cidr
+  vpc_cidr = local.vpc_cidr
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 #---------------------------------------------------------------
@@ -10,7 +10,7 @@ module "vpc" {
   version = "~> 3.0"
 
   name           = local.name
-  cidr           = var.vpc_cidr
+  cidr           = local.vpc_cidr
   azs            = local.azs
   public_subnets = var.public_subnets # Two Subnets. 4094 IPs per Subnet
 
@@ -54,7 +54,7 @@ module "vpc" {
       protocol    = -1
       from_port   = 0
       to_port     = 0
-      cidr_blocks = var.vpc_cidr
+      cidr_blocks = local.vpc_cidr
   }]
   default_security_group_egress = [
     {
