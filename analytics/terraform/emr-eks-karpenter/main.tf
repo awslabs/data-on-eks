@@ -1,23 +1,43 @@
-#---------------------------------------------------------------
-# EKS Blueprints
-#---------------------------------------------------------------
-module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.19.0"
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.9"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
-
   cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
+  manage_aws_auth_configmap = true
+  aws_auth_roles = [
+    {
+      # Required for EMR on EKS virtual cluster
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
+      username = "emr-containers"
+    },
+  ]
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
+  # Extend cluster security group rules
+  cluster_security_group_additional_rules = {
+    ingress_nodes_ephemeral_ports_tcp = {
+      description                = "Nodes on ephemeral ports"
+      protocol                   = "tcp"
+      from_port                  = 1025
+      to_port                    = 65535
+      type                       = "ingress"
+      source_node_security_group = true
+    }
+  }
+
+  # Extend node-to-node security group rules
   node_security_group_additional_rules = {
-    # Extend node-to-node security group rules. Recommended and required for the Add-ons
     ingress_self_all = {
       description = "Node to node all ports/protocols"
       protocol    = "-1"
@@ -26,7 +46,6 @@ module "eks_blueprints" {
       type        = "ingress"
       self        = true
     }
-    # Recommended outbound traffic for Node groups
     egress_all = {
       description      = "Node all egress"
       protocol         = "-1"
@@ -36,128 +55,132 @@ module "eks_blueprints" {
       cidr_blocks      = ["0.0.0.0/0"]
       ipv6_cidr_blocks = ["::/0"]
     }
-    # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
-    # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, analytics-operator 8080, karpenter 8443 etc.
-    # Change this according to your security requirements if needed
-    ingress_cluster_to_node_all_traffic = {
-      description                   = "Cluster API to Nodegroup all traffic"
-      protocol                      = "-1"
-      from_port                     = 0
-      to_port                       = 0
-      type                          = "ingress"
-      source_cluster_security_group = true
+  }
+
+  eks_managed_node_group_defaults = {
+    iam_role_additional_policies = {
+      # Not required, but used in the example to access the nodes to inspect mounted volumes
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
+  eks_managed_node_groups = {
+    #  We recommend to have a MNG to place your critical workloads and add-ons
+    #  Then rely on Karpenter to scale your workloads
+    #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
+    core_node_group = {
+      name            = "core-node-group"
+      description     = "EKS managed node group example launch template"
 
-
-  # Add karpenter.sh/discovery tag so that we can use this as securityGroupSelector in karpenter provisioner
-  node_security_group_tags = {
-    "karpenter.sh/discovery/${local.name}" = local.name
-  }
-
-  managed_node_groups = {
-    # EKS MANAGED NODE GROUPS
-    # We recommend to have a MNG to place your critical workloads and add-ons
-    # Then rely on Karpenter to scale your workloads
-    # You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
-    mng1 = {
-      node_group_name = local.core_node_group
-      subnet_ids      = module.vpc.private_subnets
-
-      instance_types = ["m5.xlarge"]
       ami_type       = "AL2_x86_64"
-      capacity_type  = "ON_DEMAND"
+      subnet_ids = module.vpc.private_subnets
 
-      disk_size = 100
-      disk_type = "gp3"
+      min_size     = 1
+      max_size     = 9
+      desired_size = 3
 
-      max_size               = 9
-      min_size               = 3
-      desired_size           = 3
-      create_launch_template = true
-      launch_template_os     = "amazonlinux2eks"
+      force_update_version = true
+      instance_types       = ["m5.xlarge"]
 
-      update_config = [{
-        max_unavailable_percentage = 50
-      }]
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
 
-      k8s_labels = {
-        Environment   = "preprod"
-        Zone          = "test"
+      labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
       }
 
-      additional_tags = {
-        Name                                                             = "core-node-grp"
-        subnet_type                                                      = "private"
-        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "core"
-        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-        "k8s.io/cluster-autoscaler/experiments"                          = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                              = "true"
+      tags = {
+        Name                     = "core-node-grp",
+        "karpenter.sh/discovery" = local.name
       }
     }
   }
 
   #---------------------------------------
-  # ENABLE EMR ON EKS
-  # 1. Creates namespace
-  # 2. k8s role and role binding(emr-containers user) for the above namespace
-  # 3. IAM role for the team execution role
-  # 4. Update AWS_AUTH config map with  emr-containers user and AWSServiceRoleForAmazonEMRContainers role
-  # 5. Create a trust relationship between the job execution role and the identity of the EMR managed service account
+  # EKS managed Addons
   #---------------------------------------
-  enable_emr_on_eks = true
-  emr_on_eks_teams = {
-    emr-data-team-a = {
-      namespace               = "emr-data-team-a"
-      job_execution_role      = "emr-eks-data-team-a"
-      additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
+  cluster_addons = {
+    # VPC CNI
+    vpc-cni = {
+      resolve_conflicts        = "OVERWRITE"
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
     }
-    emr-data-team-b = {
-      namespace               = "emr-data-team-b"
-      job_execution_role      = "emr-eks-data-team-b"
-      additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
+
+    # CoreDNS
+    # Replicas increased from 2 to 4 for large clusters
+    # Added NodeSelectors to place CoreDNS pods in core node group
+    coredns = {
+      configuration_values = jsonencode({
+        replicaCount = 3
+        nodeSelector = {
+          NodeGroupType = "core"
+        }
+        resources = {
+          limits = {
+            cpu    = "200M"
+            memory = "256M"
+          }
+          requests = {
+            cpu    = "200M"
+            memory = "256M"
+          }
+        }
+      })
     }
-  }
-  tags = local.tags
-}
+    # Kube Proxy
+    kube-proxy = {}
 
-#---------------------------------------------------------------
-# Example IAM policies for EMR job execution
-#---------------------------------------------------------------
-resource "aws_iam_policy" "emr_on_eks" {
-  name        = format("%s-%s", local.name, "emr-job-iam-policies")
-  description = "IAM policy for EMR on EKS Job execution"
-  path        = "/"
-  policy      = data.aws_iam_policy_document.emr_on_eks.json
-}
-
-#---------------------------------------------------------------
-# Amazon Prometheus Workspace
-#---------------------------------------------------------------
-resource "aws_prometheus_workspace" "amp" {
-  alias = format("%s-%s", "amp-ws", local.name)
-
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# Create EMR on EKS Virtual Cluster
-#---------------------------------------------------------------
-resource "aws_emrcontainers_virtual_cluster" "this" {
-  name = format("%s-%s", module.eks_blueprints.eks_cluster_id, "emr-data-team-a")
-
-  container_provider {
-    id   = module.eks_blueprints.eks_cluster_id
-    type = "EKS"
-
-    info {
-      eks_info {
-        namespace = "emr-data-team-a"
-      }
+    # EBS CSI Driver
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_irsa_role.iam_role_arn
+      configuration_values = jsonencode({
+        controller = {
+          nodeSelector = {
+            NodeGroupType = "core"
+          }
+        }
+      })
     }
   }
+}
+
+module "vpc_cni_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.11.2"
+
+  role_name             = "${var.name}-vpc-cni"
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+}
+
+module "ebs_csi_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.11.2"
+
+  role_name             = "${var.name}-ebs-csi"
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+
+  tags = local.tags
 }
