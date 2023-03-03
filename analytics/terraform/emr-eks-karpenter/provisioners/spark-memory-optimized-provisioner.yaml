@@ -74,16 +74,13 @@ spec:
     IDX=1
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
 
-    if [ $(echo "$DEVICES" | wc -l) -eq 1 ]; then
-      mkfs.xfs /dev/$DEVICES
-      mkdir -p /local1
-      echo "/dev/$DEVICES /local1 xfs defaults,noatime 1 2" >> /etc/fstab
-    else
-      mdadm --create /dev/md0 --level=0 --raid-devices=$(echo "$DEVICES" | wc -l) $DEVICES
-      mkfs.xfs /dev/md0
-      mkdir -p /local1
-      echo "/dev/md0 /local1 xfs defaults,noatime 0 0" >> /etc/fstab
-    fi
+    for DEV in $DEVICES
+    do
+      mkfs.xfs /dev/$${DEV}
+      mkdir -p /local$${IDX}
+      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
+      IDX=$(($${IDX} + 1))
+    done
 
     mount -a
 
