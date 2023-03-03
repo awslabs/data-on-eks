@@ -9,7 +9,7 @@ output "emrcontainers_virtual_cluster_id" {
 }
 
 output "emrcontainers_virtual_cluster_name" {
-  description = "EMR Containers Virtual cluster NAME"
+  description = "EMR Containers Virtual cluster name"
   value       = aws_emrcontainers_virtual_cluster.this.name
 }
 

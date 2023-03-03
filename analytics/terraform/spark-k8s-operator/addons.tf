@@ -15,6 +15,27 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
 
+  enable_aws_load_balancer_controller = true
+  aws_load_balancer_controller_helm_config = {
+    name        = "aws-load-balancer-controller"
+    chart       = "aws-load-balancer-controller"
+    repository  = "https://aws.github.io/eks-charts"
+    version     = "1.4.7"
+    namespace   = "kube-system"
+    description = "aws-load-balancer-controller Helm Chart for ingress resources"
+  }
+
+  enable_ingress_nginx = true
+  ingress_nginx_helm_config = {
+    name        = "ingress-nginx"
+    chart       = "ingress-nginx"
+    repository  = "https://kubernetes.github.io/ingress-nginx"
+    version     = "4.5.2"
+    description = "The NGINX HelmChart Ingress Controller deployment configuration"
+    values      = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+  }
+
+
   #---------------------------------------------------------------
   # Metrics Server
   #---------------------------------------------------------------
@@ -138,7 +159,7 @@ module "eks_blueprints_kubernetes_addons" {
     name                            = "aws-for-fluent-bit"
     chart                           = "aws-for-fluent-bit"
     repository                      = "https://aws.github.io/eks-charts"
-    version                         = "0.1.21"
+    version                         = "0.1.22"
     namespace                       = "logging"
     timeout                         = "300"
     aws_for_fluent_bit_cw_log_group = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs" # Optional
@@ -147,6 +168,7 @@ module "eks_blueprints_kubernetes_addons" {
       region                    = data.aws_region.current.id
       aws_for_fluent_bit_cw_log = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs"
       s3_bucket_name            = aws_s3_bucket.this.id
+      cluster_name              = module.eks_blueprints.eks_cluster_id
     })]
     set = [
       {
@@ -302,11 +324,11 @@ resource "aws_s3_bucket_public_access_block" "this" {
   ignore_public_acls      = true
 }
 
-# Creating an s3 bucket prefix. Ensure you copy analytics event logs under this path to visualize the dags
+# Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
 resource "aws_s3_object" "this" {
   bucket       = aws_s3_bucket.this.id
   acl          = "private"
-  key          = "logs/"
+  key          = "${module.eks_blueprints.eks_cluster_id}/event-history-logs/"
   content_type = "application/x-directory"
 
   depends_on = [
