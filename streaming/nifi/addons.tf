@@ -82,6 +82,7 @@ resource "kubernetes_storage_class_v1" "gp3" {
     fsType    = "ext4"
     type      = "gp3"
   }
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 #---------------------------------------------------------------
@@ -194,5 +195,5 @@ resource "helm_release" "nifi" {
     sensitive_key       = data.aws_secretsmanager_secret_version.sensitive_key_version.secret_string
   })]
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [kubernetes_storage_class_v1.gp3]
 }
