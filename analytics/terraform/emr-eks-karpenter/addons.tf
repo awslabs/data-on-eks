@@ -49,10 +49,15 @@ module "eks_blueprints_kubernetes_addons" {
   }
 
   #---------------------------------------
-  # Cluster Autoscaler
+  # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
   enable_karpenter = true
   karpenter_helm_config = {
+    name                = "karpenter"
+    chart               = "karpenter"
+    repository          = "oci://public.ecr.aws/karpenter"
+    version             = local.karpenter_helm_chart_version
+    namespace           = local.karpenter_namespace
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -234,3 +239,28 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
+
+#------------------------------------------------------------------------------------------------------------
+# Karpenter-CRD Helm Chart for upgrades - Custom Resource Definition (CRD) Upgrades
+# https://gallery.ecr.aws/karpenter/karpenter-crd
+# Checkout the user guide https://karpenter.sh/preview/upgrade-guide/
+# https://github.com/aws/karpenter/tree/main/charts/karpenter-crd
+#------------------------------------------------------------------------------------------------------------
+# README:
+# Karpenter ships with a few Custom Resource Definitions (CRDs). These CRDs are published:
+# As an independent helm chart karpenter-crd - source that can be used by Helm to manage the lifecycle of these CRDs.
+# To upgrade or install karpenter-crd run:
+# helm upgrade --install karpenter-crd oci://public.ecr.aws/karpenter/karpenter-crd --version vx.y.z --namespace karpenter --create-namespace
+#------------------------------------------------------------------------------------------------------------
+#resource "helm_release" "karpenter_crd" {
+#  namespace        = local.karpenter_namespace
+#  create_namespace = true
+#  name             = "karpenter"
+#  repository       = "oci://public.ecr.aws/karpenter/karpenter-crd"
+#  chart            = "karpenter-crd"
+#  version          = "v0.24.0"
+#  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+#  repository_password = data.aws_ecrpublic_authorization_token.token.password
+#
+#  depends_on = [module.eks_blueprints_kubernetes_addons.karpenter]
+#}

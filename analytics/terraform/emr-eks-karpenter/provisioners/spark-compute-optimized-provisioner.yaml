@@ -44,7 +44,7 @@ metadata:
   namespace: karpenter
 spec:
   subnetSelector:
-    Name: "${eks_cluster_id}-private*"       # required
+    Name: "${eks_cluster_id}-private*"       # or karpenter.sh/discovery/${eks_cluster_id}: '*'
   launchTemplate: "${launch_template_name}"  # optional, see Launch Template documentation
   tags:
     InstanceType: "spark-compute-optimized"   # optional, add tags for your own use
