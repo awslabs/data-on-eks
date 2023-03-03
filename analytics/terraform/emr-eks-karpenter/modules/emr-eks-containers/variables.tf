@@ -15,16 +15,9 @@ variable "eks_cluster_id" {
   type        = string
 }
 
-variable "eks_oidc_provider" {
-  description = "The OpenID Connect identity provider (issuer URL without leading `https://`)"
-  type        = string
-  default     = null
-}
-
 variable "eks_oidc_provider_arn" {
   description = "The OpenID Connect identity provider ARN"
   type        = string
-  default     = null
 }
 
 variable "tags" {

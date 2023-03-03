@@ -14,10 +14,20 @@ module "eks" {
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
+    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
+    {
+      rolearn  = module.karpenter.role_arn
+      username = "system:node:{{EC2PrivateDNSName}}"
+      groups = [
+        "system:bootstrappers",
+        "system:nodes",
+      ]
+    },
     {
       # Required for EMR on EKS virtual cluster
       rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
       username = "emr-containers"
+      groups   = []
     },
   ]
 
@@ -68,10 +78,10 @@ module "eks" {
     #  Then rely on Karpenter to scale your workloads
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
     core_node_group = {
-      name            = "core-node-group"
-      description     = "EKS managed node group example launch template"
+      name        = "core-node-group"
+      description = "EKS managed node group example launch template"
 
-      ami_type       = "AL2_x86_64"
+      ami_type   = "AL2_x86_64"
       subnet_ids = module.vpc.private_subnets
 
       min_size     = 1
@@ -103,84 +113,20 @@ module "eks" {
       }
     }
   }
-
-  #---------------------------------------
-  # EKS managed Addons
-  #---------------------------------------
-  cluster_addons = {
-    # VPC CNI
-    vpc-cni = {
-      resolve_conflicts        = "OVERWRITE"
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-    }
-
-    # CoreDNS
-    # Replicas increased from 2 to 4 for large clusters
-    # Added NodeSelectors to place CoreDNS pods in core node group
-    coredns = {
-      configuration_values = jsonencode({
-        replicaCount = 3
-        nodeSelector = {
-          NodeGroupType = "core"
-        }
-        resources = {
-          limits = {
-            cpu    = "200M"
-            memory = "256M"
-          }
-          requests = {
-            cpu    = "200M"
-            memory = "256M"
-          }
-        }
-      })
-    }
-    # Kube Proxy
-    kube-proxy = {}
-
-    # EBS CSI Driver
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_irsa_role.iam_role_arn
-      configuration_values = jsonencode({
-        controller = {
-          nodeSelector = {
-            NodeGroupType = "core"
-          }
-        }
-      })
-    }
-  }
 }
 
-module "vpc_cni_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.11.2"
 
-  role_name             = "${var.name}-vpc-cni"
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
+#---------------------------------------
+# Karpenter IAM instance profile
+#---------------------------------------
 
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-}
+module "karpenter" {
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "~> 19.9"
 
-module "ebs_csi_irsa_role" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.11.2"
-
-  role_name             = "${var.name}-ebs-csi"
-  attach_ebs_csi_policy = true
-
-  oidc_providers = {
-    ex = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-
-  tags = local.tags
+  cluster_name            = module.eks.cluster_name
+  irsa_oidc_provider_arn  = module.eks.oidc_provider_arn
+  create_irsa             = false # EKS Blueprints add-on module creates IRSA
+  enable_spot_termination = false # EKS Blueprints add-on module adds this feature
+  tags                    = local.tags
 }

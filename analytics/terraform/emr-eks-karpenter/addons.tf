@@ -35,15 +35,18 @@ module "eks_blueprints_kubernetes_addons" {
     namespace  = "kube-system"
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region       = var.region,
-      eks_cluster_id   = local.name
+      aws_region     = var.region,
+      eks_cluster_id = local.name
     })]
   }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter = true
+  enable_karpenter                           = true
+  karpenter_enable_spot_termination_handling = true
+  karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
+
   karpenter_helm_config = {
     name                = "karpenter"
     chart               = "karpenter"
@@ -52,16 +55,6 @@ module "eks_blueprints_kubernetes_addons" {
     namespace           = "karpenter"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-    values = [
-      <<-EOT
-          settings:
-            aws:
-              clusterName: ${module.eks.cluster_name}
-              clusterEndpoint: ${module.eks.cluster_endpoint}
-              defaultInstanceProfile: ${module.karpenter.instance_profile_name}
-              interruptionQueueName: ${module.karpenter.queue_name}
-        EOT
-    ]
   }
 
   #---------------------------------------
@@ -124,8 +117,8 @@ module "eks_blueprints_kubernetes_addons" {
     version    = "1.1.0"
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-        image_version    = "1.1.0"
-      })]
+      image_version = "1.1.0"
+    })]
     timeout = "300"
   }
 
@@ -146,24 +139,13 @@ module "eks_blueprints_kubernetes_addons" {
     version    = "15.10.1"
     namespace  = "prometheus"
     timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
+    values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
   }
 
   tags = local.tags
 
 } # End of EKS Blueprints Add-on module
 
-#---------------------------------------
-# Karpenter Supporting resources (IRSA + SQS Queues for Spot Node termination handling)
-#---------------------------------------
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.7"
-
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  tags                         = local.tags
-}
 
 #---------------------------------------
 # Karpenter Provisioners
@@ -171,8 +153,8 @@ module "karpenter" {
 data "kubectl_path_documents" "karpenter_provisioners" {
   pattern = "${path.module}/provisioners/spark-*.yaml"
   vars = {
-    azs              = local.region
-    eks_cluster_id   = module.eks.cluster_name
+    azs            = local.region
+    eks_cluster_id = module.eks.cluster_name
   }
 }
 

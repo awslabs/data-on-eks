@@ -151,4 +151,3 @@ priorityClassName: system-node-critical
 
 updateStrategy:
   type: RollingUpdate
-

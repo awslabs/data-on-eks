@@ -33,45 +33,51 @@ resource "kubernetes_role_v1" "this" {
   }
 
   rule {
+    verbs      = ["get"]
     api_groups = [""]
     resources  = ["namespaces"]
-    verbs      = ["get"]
   }
 
   rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
     api_groups = [""]
     resources  = ["serviceaccounts", "services", "configmaps", "events", "pods", "pods/log"]
-    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
   }
 
   rule {
+    verbs      = ["create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"]
+    api_groups = [""]
+    resources  = ["persistentvolumeclaims"]
+  }
+
+  rule {
+    verbs      = ["create", "patch", "delete", "watch"]
     api_groups = [""]
     resources  = ["secrets"]
-    verbs      = ["create", "patch", "delete", "watch"]
   }
 
   rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
     api_groups = ["apps"]
     resources  = ["statefulsets", "deployments"]
-    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
   }
 
   rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
     api_groups = ["batch"]
     resources  = ["jobs"]
-    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
   }
 
   rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
     api_groups = ["extensions"]
     resources  = ["ingresses"]
-    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
   }
 
   rule {
+    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
     api_groups = ["rbac.authorization.k8s.io"]
     resources  = ["roles", "rolebindings"]
-    verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
   }
 }
 

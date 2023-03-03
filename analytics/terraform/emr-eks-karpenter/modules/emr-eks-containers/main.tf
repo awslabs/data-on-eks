@@ -1,14 +1,3 @@
-data "aws_eks_cluster" "eks_cluster" {
-  name = var.eks_cluster_id
-}
-
-data "aws_partition" "current" {}
-data "aws_caller_identity" "current" {}
-
-locals {
-  eks_oidc_issuer_url = var.eks_oidc_provider != null ? var.eks_oidc_provider : replace(data.aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer, "https://", "")
-  oidc_provider_arn   = var.eks_oidc_provider != null ? var.eks_oidc_provider_arn : "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.eks_oidc_issuer_url}"
-}
 
 module "emr_on_eks" {
   source = "./emr-on-eks"
@@ -22,7 +11,7 @@ module "emr_on_eks" {
 
   # Job Execution Role
   create_iam_role   = try(each.value.create_iam_role, true)
-  oidc_provider_arn = local.oidc_provider_arn
+  oidc_provider_arn = var.eks_oidc_provider_arn
 
   role_name                     = try(each.value.execution_role_name, each.value.name, each.key)
   iam_role_use_name_prefix      = try(each.value.execution_iam_role_use_name_prefix, false)
@@ -39,7 +28,7 @@ module "emr_on_eks" {
 
   # EMR Virtual Cluster
   name           = try(each.value.name, each.key)
-  eks_cluster_id = data.aws_eks_cluster.eks_cluster.id
+  eks_cluster_id = var.eks_cluster_id
 
   tags = merge(var.tags, try(each.value.tags, {}))
 }
