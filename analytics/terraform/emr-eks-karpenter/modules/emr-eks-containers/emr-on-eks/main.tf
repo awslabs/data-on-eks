@@ -11,11 +11,9 @@ locals {
   namespace = var.create_namespace ? kubernetes_namespace_v1.this[0].metadata[0].name : var.namespace
 }
 
-################################################################################
+#-----------------------------------------------------------
 # Kubernetes Namespace + Role/Role Binding
-# https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-cluster-access.html#setting-up-cluster-access-manual
-################################################################################
-
+#-----------------------------------------------------------
 resource "kubernetes_namespace_v1" "this" {
   count = var.create_namespace ? 1 : 0
 
@@ -100,12 +98,9 @@ resource "kubernetes_role_binding_v1" "this" {
   }
 }
 
-################################################################################
-# Job Execution Role
-# https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/creating-job-execution-role.html
-# https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/iam-execution-role.html
-################################################################################
-
+#-----------------------------------------------------------
+# EMR on EKS Job Execution Role
+#-----------------------------------------------------------
 data "aws_iam_policy_document" "assume" {
   count = var.create_iam_role ? 1 : 0
 
@@ -214,10 +209,9 @@ resource "aws_iam_role_policy_attachment" "additional" {
   role       = aws_iam_role.this[0].name
 }
 
-################################################################################
+#-----------------------------------------------------------
 # Cloudwatch Log Group
-################################################################################
-
+#-----------------------------------------------------------
 resource "aws_cloudwatch_log_group" "this" {
   count = var.create_cloudwatch_log_group ? 1 : 0
 
@@ -228,10 +222,9 @@ resource "aws_cloudwatch_log_group" "this" {
   tags = var.tags
 }
 
-################################################################################
+#-----------------------------------------------------------
 # EMR Virtual Cluster
-################################################################################
-
+#-----------------------------------------------------------
 resource "aws_emrcontainers_virtual_cluster" "this" {
   name = var.name
 

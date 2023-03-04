@@ -2,7 +2,7 @@
 module "emr_on_eks" {
   source = "./emr-on-eks"
 
-  for_each = { for k, v in var.emr_on_eks_config : k => v if var.enable_emr_on_eks }
+  for_each = var.emr_on_eks_config
 
   # Kubernetes Namespace + Role/Role Binding
   create_namespace       = try(each.value.create_namespace, true)

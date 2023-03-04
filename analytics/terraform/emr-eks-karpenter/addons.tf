@@ -22,6 +22,19 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
+  #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  metrics_server_helm_config = {
+    name       = "metrics-server"
+    repository = "https://kubernetes-sigs.github.io/metrics-server/" # (Optional) Repository URL where to locate the requested chart.
+    chart      = "metrics-server"
+    version    = "3.8.2"
+    namespace  = "kube-system"
+    timeout    = "300"
+    values     = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  }
 
   #---------------------------------------
   # Cluster Autoscaler
