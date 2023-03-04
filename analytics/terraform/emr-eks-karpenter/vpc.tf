@@ -1,6 +1,6 @@
 locals {
-  vpc_cidr = local.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  vpc_cidr = var.vpc_cidr
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 }
 #---------------------------------------------------------------
 # Supporting Network Resources
@@ -11,13 +11,13 @@ module "vpc" {
 
   name           = local.name
   cidr           = local.vpc_cidr
-  azs            = local.azs
-  public_subnets = var.public_subnets # Two Subnets. 4094 IPs per Subnet
+  azs            = ["${local.region}a", "${local.region}b"]
+  public_subnets = var.public_subnets
 
   #  Use This to leverage Secondary CIDR block
   #  secondary_cidr_blocks = "100.64.0.0/16"
   #  private_subnets = concat(var.private_subnets, [var.secondary_cidr_blocks])
-  private_subnets = var.private_subnets # Three Subnets. 16382 IPs per Subnet
+  private_subnets = var.private_subnets
 
   enable_nat_gateway   = true
   single_nat_gateway   = true

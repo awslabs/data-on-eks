@@ -39,7 +39,7 @@ output "configure_kubectl" {
   value       = "aws eks --region ${local.region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
 
-output "emr_on_eks" {
-  description = "EMR on EKS"
-  value       = module.emr_containers
-}
+#output "emr_on_eks" {
+#  description = "EMR on EKS"
+#  value       = module.emr_containers
+#}
