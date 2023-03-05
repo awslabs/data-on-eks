@@ -81,7 +81,23 @@ module "eks" {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
 
-      ami_type   = "AL2_x86_64"
+      ami_id = data.aws_ami.eks.image_id
+      # This will ensure the bootstrap user data is used to join the node
+      # By default, EKS managed node groups will not append bootstrap script;
+      # this adds it back in using the default template provided by the module
+      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
+      enable_bootstrap_user_data = true
+
+      # Optional - This is to show how you can pass pre bootstrap data
+      pre_bootstrap_user_data = <<-EOT
+        echo "Node bootstrap process started by Data on EKS"
+      EOT
+
+      # Optional - Post bootstrap data to verify anything
+      post_bootstrap_user_data = <<-EOT
+        echo "Bootstrap complete.Ready to Go!"
+      EOT
+
       subnet_ids = module.vpc.private_subnets
 
       min_size     = 1
