@@ -154,7 +154,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_aws_for_fluentbit                 = true
   aws_for_fluentbit_cw_log_group_retention = 30
-  aws_for_fluentbit_irsa_policies          = ["${aws_iam_policy.fluentbit.arn}"]
+  aws_for_fluentbit_irsa_policies          = [aws_iam_policy.fluentbit.arn]
   aws_for_fluentbit_helm_config = {
     name                            = "aws-for-fluent-bit"
     chart                           = "aws-for-fluent-bit"
