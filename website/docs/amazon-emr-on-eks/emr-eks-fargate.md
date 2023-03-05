@@ -11,7 +11,7 @@ There are two Fargate profiles created:
 1. `kube-system` to support core Kubernetes components such as CoreDNS
 2. `emr-wildcard` which supports any namespaces that begin with `emr-*`; this allows for creating multiple virtual clusters without having to create additional Fargate profiles for each new cluster.
 
-Using the `emr-on-eks` addon, you can provision as many EMR virtual clusters as you would like by passing in multiple virtual cluster definitions to `emr_on_eks_config`. Each virtual cluster will get its own set of resources with permissions scoped to only that set of resources. The resources created by the `emr-on-eks` addon include:
+Using the `emr-on-eks` module, you can provision as many EMR virtual clusters as you would like by passing in multiple virtual cluster definitions to `emr_on_eks_config`. Each virtual cluster will get its own set of resources with permissions scoped to only that set of resources. The resources created by the `emr-on-eks` addon include:
 - Kubernetes namespace, role, and role binding; existing or externally created namespace and role can be utilized as well
 - IAM role for service account (IRSA) used by for job execution. Users can scope access to the appropriate S3 bucket and path via `s3_bucket_arns`, use for both accessing job data as well as writing out results. The bare minimum permissions have been provided for the job execution role; users can provide additional permissions by passing in additional policies to attach to the role via `iam_role_additional_policies`
 - CloudWatch log group for task execution logs. Log streams are created by the job itself and not via Terraform
