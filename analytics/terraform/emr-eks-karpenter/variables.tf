@@ -28,20 +28,21 @@ variable "vpc_cidr" {
   type        = string
 }
 
+# Only two Subnets for with low IP range for internet access
 variable "public_subnets" {
-  description = "Public Subnets CIDRs. 4094 IPs per Subnet"
-  default     = ["10.1.192.0/20", "10.1.208.0/20", "10.1.224.0/20"]
+  description = "Public Subnets CIDRs. 62 IPs per Subnet"
+  default     = ["10.1.255.128/26", "10.1.255.192/26"]
   type        = list(string)
 }
 
 variable "private_subnets" {
-  description = "Private Subnets CIDRs. 16382 IPs per Subnet"
-  default     = ["10.1.0.0/18", "10.1.64.0/18", "10.1.128.0/18"]
+  description = "Private Subnets CIDRs. 32766 Subnet1 and 16382 Subnet2 IPs per Subnet"
+  default     = ["10.1.0.0/17", "10.1.128.0/18"]
   type        = list(string)
 }
 
 variable "enable_yunikorn" {
   default     = false
-  description = "Enable YuniKorn Scheduler"
+  description = "Enable Apache YuniKorn Scheduler"
   type        = bool
 }
