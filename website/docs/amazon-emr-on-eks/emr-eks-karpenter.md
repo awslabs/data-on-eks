@@ -383,6 +383,19 @@ Finally, destroy any additional resources that are not in the above modules
 terraform destroy -auto-approve
 ```
 
+If the EMR virtual cluster fails to delete and the following error is shown:
+```
+Error: waiting for EMR Containers Virtual Cluster (xwbc22787q6g1wscfawttzzgb) delete: unexpected state 'ARRESTED', wanted target ''. last error: %!s(<nil>)
+```
+
+You can clean up any of the clusters in the `ARRESTED` state with the following:
+
+```sh
+aws emr-containers list-virtual-clusters --region us-west-2 --states ARRESTED \
+--query 'virtualClusters[0].id' --output text | xargs -I{} aws emr-containers delete-virtual-cluster \
+--region us-west-2 --id {}
+```
+
 :::caution
 
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment

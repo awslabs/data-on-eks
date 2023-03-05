@@ -5,5 +5,5 @@ output "configure_kubectl" {
 
 output "emr_on_eks" {
   description = "EMR on EKS"
-  value       = module.eks_blueprints_kubernetes_addons.emr_on_eks
+  value       = module.emr_containers
 }
