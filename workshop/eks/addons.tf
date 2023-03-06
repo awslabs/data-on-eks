@@ -29,7 +29,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                           = true
+  enable_karpenter                           = var.enable_karpenter
   karpenter_enable_spot_termination_handling = true
   karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
 
@@ -54,7 +54,7 @@ module "eks_blueprints_kubernetes_addons" {
     version                                   = "0.1.21"
     namespace                                 = "aws-for-fluent-bit"
     aws_for_fluent_bit_cw_log_group           = "/${var.name}/fluentbit-logs" # Optional
-    aws_for_fluentbit_cwlog_retention_in_days = 90
+    aws_for_fluentbit_cwlog_retention_in_days = 30
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region                    = var.region,
       aws_for_fluent_bit_cw_log = "/${var.name}/fluentbit-logs"
@@ -64,7 +64,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Kubecost
   #---------------------------------------
-  enable_kubecost = true
+  enable_kubecost = var.enable_kubecost
   kubecost_helm_config = {
     name                = "kubecost"
     repository          = "oci://public.ecr.aws/kubecost"
@@ -115,27 +115,7 @@ module "eks_blueprints_kubernetes_addons" {
 
   tags = local.tags
 
-} # End of EKS Blueprints Add-on module
-
-
-#---------------------------------------
-# Karpenter Provisioners
-#---------------------------------------
-#data "kubectl_path_documents" "karpenter_provisioners" {
-#  pattern = "${path.module}/provisioners/spark-*.yaml"
-#  vars = {
-#    azs            = local.region
-#    eks_cluster_id = module.eks.cluster_name
-#  }
-#}
-#
-#resource "kubectl_manifest" "karpenter_provisioner" {
-#  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-#  yaml_body = each.value
-#
-#  depends_on = [module.eks_blueprints_kubernetes_addons]
-#}
-
+}
 #---------------------------------------------------------------
 # Amazon Prometheus Workspace
 #---------------------------------------------------------------

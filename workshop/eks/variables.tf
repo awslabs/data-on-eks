@@ -22,8 +22,21 @@ variable "tags" {
   type        = map(string)
 }
 
+variable "enable_karpenter" {
+  description = "Enable Karpenter autoscaler add-on"
+  type        = bool
+  default     = false
+}
+
 variable "enable_yunikorn" {
   default     = false
   description = "Enable Apache YuniKorn Scheduler"
   type        = bool
 }
+
+variable "enable_kubecost" {
+  description = "Enable Kubecost add-on"
+  type        = bool
+  default     = false
+}
+
