@@ -47,7 +47,7 @@ resource "helm_release" "example" {
   name             = local.name
   chart            = "cloudnative-pg"
   repository       = "https://cloudnative-pg.github.io/charts"
-  version          = "0.16.1"
+  version          = "0.17.0"
   namespace        = "${local.name}-system"
   create_namespace = true
   description      = "CloudNativePG Operator Helm chart deployment configuration"
