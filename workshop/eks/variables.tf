@@ -39,4 +39,3 @@ variable "enable_kubecost" {
   type        = bool
   default     = false
 }
-

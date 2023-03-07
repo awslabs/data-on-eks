@@ -54,7 +54,7 @@ No modules.
 | <a name="input_iam_role_permissions_boundary"></a> [iam\_role\_permissions\_boundary](#input\_iam\_role\_permissions\_boundary) | ARN of the policy that is used to set the permissions boundary for the job execution IAM role | `string` | `null` | no |
 | <a name="input_iam_role_use_name_prefix"></a> [iam\_role\_use\_name\_prefix](#input\_iam\_role\_use\_name\_prefix) | Determines whether the IAM job execution role name (`role_name`) is used as a prefix | `bool` | `true` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the EMR on EKS virtual cluster | `string` | n/a | yes |
-| <a name="input_namespace"></a> [namespace](#input\_namespace) | Kubernetes namespace for EMR on EKS | `string` | `"emr-containers"` | no |
+| <a name="input_namespace"></a> [namespace](#input\_namespace) | Kubernetes namespace for EMR on EKS | `string` | `""` | no |
 | <a name="input_oidc_provider_arn"></a> [oidc\_provider\_arn](#input\_oidc\_provider\_arn) | OIDC provider ARN for the EKS cluster | `string` | `""` | no |
 | <a name="input_role_name"></a> [role\_name](#input\_role\_name) | Name to use on IAM role created for EMR on EKS job execution role as well as Kubernetes RBAC role | `string` | `null` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to all AWS resources | `map(string)` | `{}` | no |

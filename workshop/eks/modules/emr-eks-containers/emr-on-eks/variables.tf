@@ -31,7 +31,7 @@ variable "create_namespace" {
 variable "namespace" {
   description = "Kubernetes namespace for EMR on EKS"
   type        = string
-  default     = "emr-containers"
+  default     = ""
 }
 
 variable "create_kubernetes_role" {

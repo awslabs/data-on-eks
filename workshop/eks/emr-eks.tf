@@ -9,8 +9,7 @@ module "emr_containers" {
     emr-data-team-a = {
       name = format("%s-%s", module.eks.cluster_name, "emr-data-team-a")
 
-      create_namespace = true
-      namespace        = "emr-data-team-a"
+      namespace = "emr-data-team-a"
 
       execution_role_name                    = format("%s-%s", module.eks.cluster_name, "emr-eks-data-team-a")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
@@ -24,8 +23,7 @@ module "emr_containers" {
     emr-data-team-b = {
       name = format("%s-%s", module.eks.cluster_name, "emr-data-team-b")
 
-      create_namespace = true
-      namespace        = "emr-data-team-b"
+      namespace = "emr-data-team-b"
 
       execution_role_name                    = format("%s-%s", module.eks.cluster_name, "emr-eks-data-team-b")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-b"

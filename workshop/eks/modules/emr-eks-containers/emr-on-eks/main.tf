@@ -7,8 +7,9 @@ locals {
 
   internal_role_name = try(coalesce(var.role_name, var.name), "")
 
-  role_name = var.create_kubernetes_role ? kubernetes_role_v1.this[0].metadata[0].name : local.internal_role_name
-  namespace = var.create_namespace ? kubernetes_namespace_v1.this[0].metadata[0].name : var.namespace
+  role_name        = var.create_kubernetes_role ? kubernetes_role_v1.this[0].metadata[0].name : local.internal_role_name
+  namespace        = var.create_namespace ? kubernetes_namespace_v1.this[0].metadata[0].name : var.namespace
+  emr_service_name = "emr-containers"
 }
 
 #-----------------------------------------------------------
@@ -26,7 +27,7 @@ resource "kubernetes_role_v1" "this" {
   count = var.create_kubernetes_role ? 1 : 0
 
   metadata {
-    name      = local.internal_role_name
+    name      = local.emr_service_name
     namespace = local.namespace
   }
 
@@ -81,19 +82,19 @@ resource "kubernetes_role_v1" "this" {
 
 resource "kubernetes_role_binding_v1" "this" {
   metadata {
-    name      = local.role_name
+    name      = local.emr_service_name
     namespace = local.namespace
   }
 
   subject {
     kind      = "User"
-    name      = "emr-containers" # this must stay static and is not configurable
+    name      = local.emr_service_name
     api_group = "rbac.authorization.k8s.io"
   }
 
   role_ref {
     kind      = "Role"
-    name      = local.role_name
+    name      = local.emr_service_name
     api_group = "rbac.authorization.k8s.io"
   }
 }

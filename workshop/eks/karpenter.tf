@@ -58,8 +58,3 @@ resource "kubectl_manifest" "memory_provisioner" {
       ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
     YAML
 }
-
-
-
-
-
