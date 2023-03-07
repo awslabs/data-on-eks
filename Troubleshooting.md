@@ -94,3 +94,19 @@ aws eks --region <region> update-kubeconfig --name <eks-clusetr-name>
 export KUBE_CONFIG_PATH=</path/to/kubeconfig>
 terraform apply or destroy
 ```
+
+## EMR Containers Virtual Cluster (dhwtlq9yx34duzq5q3akjac00) delete: unexpected state 'ARRESTED'
+
+If the EMR virtual cluster fails to delete and the following error is shown:
+```
+Error: waiting for EMR Containers Virtual Cluster (xwbc22787q6g1wscfawttzzgb) delete: unexpected state 'ARRESTED', wanted target ''. last error: %!s(<nil>)
+```
+
+**Solution:**
+You can clean up any of the clusters in the `ARRESTED` state with the following:
+
+```sh
+aws emr-containers list-virtual-clusters --region <REGION> --states ARRESTED \
+--query 'virtualClusters[0].id' --output text | xargs -I{} aws emr-containers delete-virtual-cluster \
+--region <REGION> --id {}
+```
