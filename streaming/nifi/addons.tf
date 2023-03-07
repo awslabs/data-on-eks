@@ -151,6 +151,7 @@ resource "random_password" "nifi_login_password" {
   length  = 16
   special = false
 }
+
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "nifi_login_password" {
   name                    = "nifi_login_password-${random_string.random_suffix.result}"
@@ -166,6 +167,7 @@ resource "random_password" "sensitive_key" {
   length  = 16
   special = false
 }
+
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "sensitive_key" {
   name                    = "sensitive_key-${random_string.random_suffix.result}"
