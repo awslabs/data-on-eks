@@ -1,0 +1,67 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cluster
+  namespace: demo
+spec:
+  description: "Cluster Demo for DoEKS"
+  imageName: ghcr.io/cloudnative-pg/postgresql:15.1
+  instances: 3
+  startDelay: 300
+  stopDelay: 300
+  primaryUpdateStrategy: unsupervised
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::074661079081:role/testingcluster-barman-irsa  
+  postgresql:
+    parameters:
+      shared_buffers: 256MB
+      pg_stat_statements.max: '10000'
+      pg_stat_statements.track: all
+      auto_explain.log_min_duration: '10s'
+    pg_hba:
+      - hostssl app all all cert
+  storage:
+    storageClass: ebs-sc
+    size: 1Gi
+  bootstrap:
+    initdb: # Deploying a new cluster
+      database: app
+      owner: app
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://cnpg-barman-backup-bucket/
+      s3Credentials:
+        accessKeyId:
+          name: aws-creds
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: aws-creds
+          key: ACCESS_SECRET_KEY
+      wal:
+        compression: gzip
+        encryption: AES256
+      data:
+        compression: gzip
+        encryption: AES256
+        immediateCheckpoint: false
+        jobs: 2
+    retentionPolicy: "30d"
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "1"
+    limits:
+      memory: "1Gi"
+      cpu: "2"
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: failure-domain.beta.kubernetes.io/zone
+
+  nodeMaintenanceWindow:
+    inProgress: false
+    reusePVC: false

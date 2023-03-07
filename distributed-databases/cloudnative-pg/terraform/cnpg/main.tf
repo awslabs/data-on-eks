@@ -24,7 +24,7 @@ module "eks_blueprints" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.23.0"
 
   cluster_name    = local.cluster_name
-  cluster_version = "1.24"
+  cluster_version = "1.25"
 
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnets
@@ -52,4 +52,22 @@ resource "helm_release" "example" {
   create_namespace = true
   description      = "CloudNativePG Operator Helm chart deployment configuration"
   values           = [templatefile("${path.module}/values.yaml", {})]
+}
+
+resource "kubectl_manifest" "demo-namespace" {
+  yaml_body = file("../demo-manifests/demo-namespace.yaml")
+
+  depends_on = [helm_release.example]
+}
+
+resource "kubectl_manifest" "demo-storageclass" {
+  yaml_body = file("../demo-manifests/demo-storageclass.yaml")
+
+  depends_on = [kubectl_manifest.demo-namespace]
+}
+
+resource "kubectl_manifest" "demo-cnpg-cluster" {
+  yaml_body = file("../demo-manifests/demo-cnpg-cluster.yaml")
+
+  depends_on = [kubectl_manifest.demo-storageclass]
 }
