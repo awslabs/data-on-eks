@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -o errexit
+set -o pipefail
+
 read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
