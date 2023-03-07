@@ -25,7 +25,9 @@ spec:
       - hostssl app all all cert
   storage:
     storageClass: ebs-sc
-    size: 1Gi
+    size: 20Gi
+  monitoring:
+    enablePodMonitor: true
   bootstrap:
     initdb: # Deploying a new cluster
       database: app
