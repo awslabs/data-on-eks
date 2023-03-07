@@ -25,7 +25,7 @@ variable "tags" {
 variable "enable_karpenter" {
   description = "Enable Karpenter autoscaler add-on"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_yunikorn" {
