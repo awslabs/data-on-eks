@@ -51,7 +51,27 @@ resource "helm_release" "example" {
   namespace        = "${local.name}-system"
   create_namespace = true
   description      = "CloudNativePG Operator Helm chart deployment configuration"
-  values           = [templatefile("${path.module}/values.yaml", {})]
+
+  set {
+    name  = "resources.limits.cpu"
+    value = "100m"
+  }  
+  
+  set {
+    name  = "resources.limits.memory"
+    value = "200Mi"
+  }
+
+  set {
+    name  = "resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "resources.memory.memory"
+    value = "100Mi"
+  }
+
 }
 
 resource "kubectl_manifest" "demo-namespace" {

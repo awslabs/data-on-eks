@@ -37,11 +37,7 @@ spec:
       destinationPath: s3://cnpg-barman-backup-bucket/
       s3Credentials:
         accessKeyId:
-          name: aws-creds
-          key: ACCESS_KEY_ID
-        secretAccessKey:
-          name: aws-creds
-          key: ACCESS_SECRET_KEY
+        inheritFromIAMRole: true
       wal:
         compression: gzip
         encryption: AES256
@@ -52,7 +48,7 @@ spec:
         jobs: 2
     retentionPolicy: "30d"
 
-  resources:
+  resources: # m5large: m5xlarge 2vCPU, 8GI RAM 
     requests:
       memory: "512Mi"
       cpu: "1"
