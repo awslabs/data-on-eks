@@ -1,5 +1,5 @@
-# KubeCost WebUI -> kubectl port-forward --namespace kubecost deployment/kubecost-cost-analyzer 9090
 
+# KubeCost WebUI -> kubectl port-forward --namespace kubecost deployment/kubecost-cost-analyzer 9090
 nodeSelector:
   NodeGroupType: core
 # --set nodeSelector."beta\\.kubernetes\\.io/arch"=arm64
@@ -47,8 +47,6 @@ kubecostFrontend:
 kubecostMetrics:
   emitPodAnnotations: true
   emitNamespaceAnnotations: true
-#  nodeSelector:
-#    NodeGroupType: core
 
 kubecostModel:
   image: public.ecr.aws/kubecost/cost-model

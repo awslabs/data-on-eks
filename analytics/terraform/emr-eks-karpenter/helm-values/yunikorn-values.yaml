@@ -1,13 +1,6 @@
 replicaCount: 1
 admissionControllerReplicaCount: 1
 
-# nodeSelector -- Node labels for pod assignment
-nodeSelector:
-  NodeGroupType: ${node_group_type}
-  kubernetes.io/os: ${operating_system}
-tolerations: []
-affinity: {}
-
 imagePullSecrets:
 userLabelKey: "yunikorn.apache.org/username"
 operatorPlugins: "general"
@@ -88,50 +81,47 @@ embedAdmissionController: true
 # When this flag is false, the scheduler will be deployed as a standalone scheduler.
 enableSchedulerPlugin: false
 
-
-# ------------------------------------------------------------------------
-# Please choose one configuration from following two for yunikorn
-# Use "CMD + /" to comment-out or uncomment a block before the deployment
-# ------------------------------------------------------------------------
-
-# Use this configuration to configure absolute capacities for yunikorn queues
-configuration: |
-  partitions:
-    -
-      name: default
-      queues:
-        - name: root
-          submitacl: '*'
-          queues:
-            - name: default
-              resources:
-                guaranteed:
-                  memory: 100G
-                  vcore: 10
-                max:
-                  memory: 100G
-                  vcore: 10
-            - name: prod
-              resources:
-                guaranteed:
-                  memory: 500G
-                  vcore: 50
-                max:
-                  memory: 800G
-                  vcore: 80
-            - name: test
-              resources:
-                guaranteed:
-                  memory: 100G
-                  vcore: 10
-                max:
-                  memory: 800G
-                  vcore: 50
-            - name: dev
-              resources:
-                guaranteed:
-                  memory: 100G
-                  vcore: 10
-                max:
-                  memory: 100G
-                  vcore: 10
+# YuniKorn service configuration values. These are rendered to the yunikorn-defaults ConfigMap
+yunikornDefaults:
+  # The default volume bind timeout value of 10 seconds may be too short for EBS.
+  service.volumeBindTimeout: "60s"
+  # Use this configuration to configure absolute capacities for yunikorn queues
+  queues.yaml: |
+    partitions:
+      - name: default
+        queues:
+          - name: root
+            submitacl: '*'
+            queues:
+              - name: default
+                resources:
+                  guaranteed:
+                    memory: 100G
+                    vcore: 10
+                  max:
+                    memory: 100G
+                    vcore: 10
+              - name: prod
+                resources:
+                  guaranteed:
+                    memory: 500G
+                    vcore: 50
+                  max:
+                    memory: 800G
+                    vcore: 80
+              - name: test
+                resources:
+                  guaranteed:
+                    memory: 100G
+                    vcore: 10
+                  max:
+                    memory: 800G
+                    vcore: 50
+              - name: dev
+                resources:
+                  guaranteed:
+                    memory: 100G
+                    vcore: 10
+                  max:
+                    memory: 100G
+                    vcore: 10

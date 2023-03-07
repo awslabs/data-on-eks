@@ -59,7 +59,7 @@ spec:
     Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
   securityGroupSelector:                      # required, when not using launchTemplate
     Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
-  instanceProfile: "${instance_profile}"      # optional, if already set in controller args
+#  instanceProfile: ""      # optional, if already set in controller args
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"
@@ -71,7 +71,6 @@ spec:
     echo "Running a custom user data script"
     set -ex
 
-    IDX=1
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
 
     for DEV in $DEVICES
@@ -84,7 +83,7 @@ spec:
 
     mount -a
 
-    /usr/bin/chown -hR +999:+1000 /local*
+    /usr/bin/chown -hR +999:+1000 /local1
 
     --BOUNDARY--
 
