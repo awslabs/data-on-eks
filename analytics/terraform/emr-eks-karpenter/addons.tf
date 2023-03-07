@@ -1,10 +1,15 @@
-module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.19.0"
 
-  eks_cluster_id       = module.eks_blueprints.eks_cluster_id
-  eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
-  eks_oidc_provider    = module.eks_blueprints.oidc_provider
-  eks_cluster_version  = module.eks_blueprints.eks_cluster_version
+module "eks_blueprints_kubernetes_addons" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.25.0"
+
+  # Wait on the node group(s) before provisioning addons
+  data_plane_wait_arn = join(",", [for group in module.eks.eks_managed_node_groups : group.node_group_arn])
+
+  eks_cluster_id        = module.eks.cluster_name
+  eks_cluster_endpoint  = module.eks.cluster_endpoint
+  eks_oidc_provider     = module.eks.oidc_provider
+  eks_oidc_provider_arn = module.eks.oidc_provider_arn
+  eks_cluster_version   = module.eks.cluster_version
 
   #---------------------------------------
   # Amazon EKS Managed Add-ons
@@ -14,6 +19,9 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy         = true
   enable_amazon_eks_aws_ebs_csi_driver = true
 
+  #---------------------------------------
+  # Kubernetes Add-ons
+  #---------------------------------------
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -25,9 +33,7 @@ module "eks_blueprints_kubernetes_addons" {
     version    = "3.8.2"
     namespace  = "kube-system"
     timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {
-      operating_system = "linux"
-    })]
+    values     = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -38,67 +44,32 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "cluster-autoscaler"
     repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
     chart      = "cluster-autoscaler"
-    version    = "9.15.0"
+    version    = "9.21.0"
     namespace  = "kube-system"
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region       = var.region,
-      eks_cluster_id   = local.name,
-      operating_system = "linux"
+      aws_region     = var.region,
+      eks_cluster_id = local.name
     })]
   }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter = true
+  enable_karpenter                           = true
+  karpenter_enable_spot_termination_handling = true
+  karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
+
   karpenter_helm_config = {
     name                = "karpenter"
     chart               = "karpenter"
     repository          = "oci://public.ecr.aws/karpenter"
-    version             = local.karpenter_helm_chart_version
-    namespace           = local.karpenter_namespace
+    version             = "v0.25.0"
+    namespace           = "karpenter"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
-  #---------------------------------------
-  # Amazon Managed Prometheus
-  #---------------------------------------
-  enable_amazon_prometheus             = true
-  amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp.prometheus_endpoint
-
-  #---------------------------------------
-  # Prometheus Server Add-on
-  #---------------------------------------
-  enable_prometheus = true
-  prometheus_helm_config = {
-    name       = "prometheus"
-    repository = "https://prometheus-community.github.io/helm-charts"
-    chart      = "prometheus"
-    version    = "15.10.1"
-    namespace  = "prometheus"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {
-      operating_system = "linux"
-    })]
-  }
-
-  #---------------------------------------
-  # Vertical Pod Autoscaling
-  #---------------------------------------
-  enable_vpa = true
-  vpa_helm_config = {
-    name       = "vpa"
-    repository = "https://charts.fairwinds.com/stable" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "vpa"
-    version    = "1.4.0"
-    namespace  = "vpa"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/vpa-values.yaml", {
-      operating_system = "linux"
-    })]
-  }
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
@@ -124,11 +95,11 @@ module "eks_blueprints_kubernetes_addons" {
     repository                                = "https://aws.github.io/eks-charts"
     version                                   = "0.1.21"
     namespace                                 = "aws-for-fluent-bit"
-    aws_for_fluent_bit_cw_log_group           = "/${var.name}/worker-fluentbit-logs" # Optional
+    aws_for_fluent_bit_cw_log_group           = "/${var.name}/fluentbit-logs" # Optional
     aws_for_fluentbit_cwlog_retention_in_days = 90
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region                    = var.region,
-      aws_for_fluent_bit_cw_log = "/${var.name}/worker-fluentbit-logs"
+      aws_for_fluent_bit_cw_log = "/${var.name}/fluentbit-logs"
     })]
   }
 
@@ -137,11 +108,11 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    name                = "kubecost"                      # (Required) Release name.
-    repository          = "oci://public.ecr.aws/kubecost" # (Optional) Repository URL where to locate the requested chart.
-    chart               = "cost-analyzer"                 # (Required) Chart name to be installed.
-    version             = "1.97.0"                        # (Optional) Specify the exact chart version to install. If this is not specified, it defaults to the version set within default_helm_config: https://github.com/aws-ia/terraform-aws-eks-blueprints/blob/main/modules/kubernetes-addons/kubecost/locals.tf
-    namespace           = "kubecost"                      # (Optional) The namespace to install the release into.
+    name                = "kubecost"
+    repository          = "oci://public.ecr.aws/kubecost"
+    chart               = "cost-analyzer"
+    version             = "1.97.0"
+    namespace           = "kubecost"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
     timeout             = "300"
@@ -158,78 +129,45 @@ module "eks_blueprints_kubernetes_addons" {
     chart      = "yunikorn"
     version    = "1.1.0"
     timeout    = "300"
-    values = [
-      templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-        image_version    = "1.1.0"
-        operating_system = "linux"
-        node_group_type  = "core"
-      })
-    ]
+    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+      image_version = "1.1.0"
+    })]
     timeout = "300"
   }
 
-  tags = local.tags
-}
+  #---------------------------------------
+  # Amazon Managed Prometheus
+  #---------------------------------------
+  enable_amazon_prometheus             = true
+  amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp.prometheus_endpoint
 
-# Creates Launch templates for Karpenter
-# Launch template outputs will be used in Karpenter Provisioners yaml files. Checkout this examples/karpenter/provisioners/default_provisioner_with_launch_templates.yaml
-module "karpenter_launch_templates" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/launch-templates?ref=v4.15.0"
-
-  eks_cluster_id = module.eks_blueprints.eks_cluster_id
-  tags           = merge(local.tags, { Name = "karpenter" })
-
-  launch_template_config = {
-    linux = {
-      ami                    = data.aws_ami.eks.id
-      launch_template_prefix = "karpenter"
-      iam_instance_profile   = module.eks_blueprints.managed_node_group_iam_instance_profile_id[0]
-      vpc_security_group_ids = [module.eks_blueprints.worker_node_security_group_id]
-      block_device_mappings = [
-        {
-          device_name = "/dev/xvda"
-          volume_type = "gp3"
-          volume_size = 200
-        }
-      ]
-
-      # RAID0 configuration is recommended for better performance when you use larger instances with multiple NVMe disks e.g., r5d.24xlarge
-      # Permissions for hadoop user runs the analytics job. user > hadoop:x:999:1000::/home/hadoop:/bin/bash
-      pre_userdata = <<-EOT
-      #!/bin/bash
-      set -ex
-      IDX=1
-      DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-      for DEV in $DEVICES
-      do
-        mkfs.xfs /dev/$${DEV}
-        mkdir -p /local$${IDX}
-        echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
-        IDX=$(($${IDX} + 1))
-      done
-      mount -a
-      /usr/bin/chown -hR +999:+1000 /local*
-      EOT
-    }
+  #---------------------------------------
+  # Prometheus Server Add-on
+  #---------------------------------------
+  enable_prometheus = true
+  prometheus_helm_config = {
+    name       = "prometheus"
+    repository = "https://prometheus-community.github.io/helm-charts"
+    chart      = "prometheus"
+    version    = "15.10.1"
+    namespace  = "prometheus"
+    timeout    = "300"
+    values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
   }
-}
 
-# NOTE: instance_profile is hardcoded to avoid the following error from Terraform
-#╷
-#│ Error: Invalid for_each argument
-#│
-#│   on addons.tf line 202, in resource "kubectl_manifest" "karpenter_provisioner":
-#│  202:   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-#│     ├────────────────
-#│     │ data.kubectl_path_documents.karpenter_provisioners.documents is a list of string, known only after apply
+  tags = local.tags
 
+} # End of EKS Blueprints Add-on module
+
+
+#---------------------------------------
+# Karpenter Provisioners
+#---------------------------------------
 data "kubectl_path_documents" "karpenter_provisioners" {
   pattern = "${path.module}/provisioners/spark-*.yaml"
   vars = {
-    azs                  = local.region
-    eks_cluster_id       = local.name
-    instance_profile     = format("%s-%s", local.name, local.core_node_group) # This is using core-node-group instance profile
-    launch_template_name = format("%s-%s", "karpenter", local.name)
+    azs            = local.region
+    eks_cluster_id = module.eks.cluster_name
   }
 }
 
@@ -240,27 +178,11 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-#------------------------------------------------------------------------------------------------------------
-# Karpenter-CRD Helm Chart for upgrades - Custom Resource Definition (CRD) Upgrades
-# https://gallery.ecr.aws/karpenter/karpenter-crd
-# Checkout the user guide https://karpenter.sh/preview/upgrade-guide/
-# https://github.com/aws/karpenter/tree/main/charts/karpenter-crd
-#------------------------------------------------------------------------------------------------------------
-# README:
-# Karpenter ships with a few Custom Resource Definitions (CRDs). These CRDs are published:
-# As an independent helm chart karpenter-crd - source that can be used by Helm to manage the lifecycle of these CRDs.
-# To upgrade or install karpenter-crd run:
-# helm upgrade --install karpenter-crd oci://public.ecr.aws/karpenter/karpenter-crd --version vx.y.z --namespace karpenter --create-namespace
-#------------------------------------------------------------------------------------------------------------
-#resource "helm_release" "karpenter_crd" {
-#  namespace        = local.karpenter_namespace
-#  create_namespace = true
-#  name             = "karpenter"
-#  repository       = "oci://public.ecr.aws/karpenter/karpenter-crd"
-#  chart            = "karpenter-crd"
-#  version          = "v0.24.0"
-#  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-#  repository_password = data.aws_ecrpublic_authorization_token.token.password
-#
-#  depends_on = [module.eks_blueprints_kubernetes_addons.karpenter]
-#}
+#---------------------------------------------------------------
+# Amazon Prometheus Workspace
+#---------------------------------------------------------------
+resource "aws_prometheus_workspace" "amp" {
+  alias = format("%s-%s", "amp-ws", local.name)
+
+  tags = local.tags
+}

@@ -41,10 +41,6 @@ resources:
     cpu: 200m
     memory: 512Mi
 
-nodeSelector:
-  NodeGroupType: core
-  kubernetes.io/os: ${operating_system}
-
 affinity:
   podAntiAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:

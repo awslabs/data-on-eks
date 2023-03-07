@@ -1,4 +1,6 @@
 #!/bin/bash
+# NOTE: Make sure to set the region before running the shell script e.g., export AWS_REGION="<your-region>"
+# CW_LOG_GROUP should exist before running the job
 
 if [ $# -ne 3 ];
 then
