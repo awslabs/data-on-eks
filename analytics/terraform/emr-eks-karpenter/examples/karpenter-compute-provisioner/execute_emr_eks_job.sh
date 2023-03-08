@@ -47,59 +47,54 @@ rm -rf "../input" # delete local input folder
 # Execute Spark job
 #--------------------------------------------
 
-# if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
-#   echo "Found Cluster $EMR_VIRTUAL_CLUSTER_NAME; Executing the Spark job now..."
-  aws emr-containers start-job-run \
-    --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
-    --name $JOB_NAME \
-    --execution-role-arn $EMR_EXECUTION_ROLE_ARN \
-    --release-label $EMR_EKS_RELEASE_LABEL \
-    --job-driver '{
-      "sparkSubmitJobDriver": {
-        "entryPoint": "'"$SCRIPTS_S3_PATH"'/pyspark-taxi-trip.py",
-        "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'",
-          "'"$OUTPUT_DATA_S3_PATH"'"
-        ],
-        "sparkSubmitParameters": "--conf spark.executor.instances=6"
-      }
-   }' \
-    --configuration-overrides '{
-      "applicationConfiguration": [
-          {
-            "classification": "spark-defaults",
-            "properties": {
-              "spark.driver.cores":"1",
-              "spark.executor.cores":"1",
-              "spark.driver.memory": "10g",
-              "spark.executor.memory": "10g",
-              "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
-              "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
-              "spark.local.dir" : "/data1,/data2",
+aws emr-containers start-job-run \
+  --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
+  --name $JOB_NAME \
+  --execution-role-arn $EMR_EXECUTION_ROLE_ARN \
+  --release-label $EMR_EKS_RELEASE_LABEL \
+  --job-driver '{
+    "sparkSubmitJobDriver": {
+      "entryPoint": "'"$SCRIPTS_S3_PATH"'/pyspark-taxi-trip.py",
+      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'",
+        "'"$OUTPUT_DATA_S3_PATH"'"
+      ],
+      "sparkSubmitParameters": "--conf spark.executor.instances=6"
+    }
+  }' \
+  --configuration-overrides '{
+    "applicationConfiguration": [
+        {
+          "classification": "spark-defaults",
+          "properties": {
+            "spark.driver.cores":"1",
+            "spark.executor.cores":"1",
+            "spark.driver.memory": "10g",
+            "spark.executor.memory": "10g",
+            "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
+            "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
+            "spark.local.dir" : "/data1,/data2",
 
-              "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
-              "spark.ui.prometheus.enabled":"true",
-              "spark.executor.processTreeMetrics.enabled":"true",
-              "spark.kubernetes.driver.annotation.prometheus.io/scrape":"true",
-              "spark.kubernetes.driver.annotation.prometheus.io/path":"/metrics/executors/prometheus/",
-              "spark.kubernetes.driver.annotation.prometheus.io/port":"4040",
-              "spark.kubernetes.driver.service.annotation.prometheus.io/scrape":"true",
-              "spark.kubernetes.driver.service.annotation.prometheus.io/path":"/metrics/driver/prometheus/",
-              "spark.kubernetes.driver.service.annotation.prometheus.io/port":"4040",
-              "spark.metrics.conf.*.sink.prometheusServlet.class":"org.apache.spark.metrics.sink.PrometheusServlet",
-              "spark.metrics.conf.*.sink.prometheusServlet.path":"/metrics/driver/prometheus/",
-              "spark.metrics.conf.master.sink.prometheusServlet.path":"/metrics/master/prometheus/",
-              "spark.metrics.conf.applications.sink.prometheusServlet.path":"/metrics/applications/prometheus/"
-            }
+            "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
+            "spark.ui.prometheus.enabled":"true",
+            "spark.executor.processTreeMetrics.enabled":"true",
+            "spark.kubernetes.driver.annotation.prometheus.io/scrape":"true",
+            "spark.kubernetes.driver.annotation.prometheus.io/path":"/metrics/executors/prometheus/",
+            "spark.kubernetes.driver.annotation.prometheus.io/port":"4040",
+            "spark.kubernetes.driver.service.annotation.prometheus.io/scrape":"true",
+            "spark.kubernetes.driver.service.annotation.prometheus.io/path":"/metrics/driver/prometheus/",
+            "spark.kubernetes.driver.service.annotation.prometheus.io/port":"4040",
+            "spark.metrics.conf.*.sink.prometheusServlet.class":"org.apache.spark.metrics.sink.PrometheusServlet",
+            "spark.metrics.conf.*.sink.prometheusServlet.path":"/metrics/driver/prometheus/",
+            "spark.metrics.conf.master.sink.prometheusServlet.path":"/metrics/master/prometheus/",
+            "spark.metrics.conf.applications.sink.prometheusServlet.path":"/metrics/applications/prometheus/"
           }
-        ],
-      "monitoringConfiguration": {
-        "persistentAppUI":"ENABLED",
-        "cloudWatchMonitoringConfiguration": {
-          "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
-          "logStreamNamePrefix":"'"$JOB_NAME"'"
         }
+      ],
+    "monitoringConfiguration": {
+      "persistentAppUI":"ENABLED",
+      "cloudWatchMonitoringConfiguration": {
+        "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
+        "logStreamNamePrefix":"'"$JOB_NAME"'"
       }
-    }'
-# else
-#   echo "Cluster is not in running state $EMR_VIRTUAL_CLUSTER_NAME"
-# fi
+    }
+  }'
