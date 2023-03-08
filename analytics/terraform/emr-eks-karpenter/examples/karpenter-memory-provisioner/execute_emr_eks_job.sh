@@ -1,6 +1,8 @@
 #!/bin/bash
+# NOTE: Make sure to set the region before running the shell script e.g., export AWS_REGION="<your-region>"
+# CW_LOG_GROUP should exist before running the job
 
-if [ $# -ne 4 ];
+if [ $# -ne 3 ];
 then
   echo "$0: Missing arguments EMR_VIRTUAL_CLUSTER_NAME, S3_BUCKET_NAME and EMR_JOB_EXECUTION_ROLE_ARN"
   echo "USAGE: ./execute_emr_eks_job.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
@@ -80,7 +82,7 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
         "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'",
           "'"$OUTPUT_DATA_S3_PATH"'"
         ],
-        "sparkSubmitParameters": "--conf spark.executor.instances=10"
+        "sparkSubmitParameters": "--conf spark.executor.instances=2"
       }
    }' \
     --configuration-overrides '{

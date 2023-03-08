@@ -11,4 +11,4 @@ If you are open to others contacting you about your use of Data on EKS on Slack,
 
 | Organization | Description | Contacts | Link |
 | --- | --- | --- | --- |
-| Example, Inc. | Used EMR on EKS with Karpenter templates in PoC | `@JaneDoe`, `@JohnDoe` | [Homepage](http://example.com)
+| Adobe Inc. | Used EMR on EKS with Karpenter templates in PoC, DEV, QE | `@srikaanthpenugonda` | [Homepage](http://example.com)

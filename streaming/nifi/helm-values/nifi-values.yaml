@@ -1,0 +1,60 @@
+replicaCount: 3
+
+persistence:
+  enabled: true
+  storageClass: gp3
+
+properties:
+  sensitiveKey: ${sensitive_key} # Must have at least 12 characters
+  webProxyHost: ${hostname}
+  externalSecure: true
+  isNode: true
+
+# Nifi User Authentication - this sample uses single user authentication.
+# For production workloads, it is recommended to use LDAP or OIDC bases authentication.
+# https://nifi.apache.org/docs/nifi-docs/html/administration-guide.html#user_authentication
+auth:
+  SSL:
+    truststorePasswd: ${truststore_password}
+    keystorePasswd: ${keystore_password}
+  singleUser:
+    username: ${nifi_username}
+    password: ${nifi_password}
+
+# Enable Nifi registry
+# https://nifi.apache.org/registry.html
+registry:
+  enabled: true
+
+# ui service
+service:
+  type: NodePort
+  httpsPort: 8443
+
+# Configure Ingress to access NiFi UI using AWS Application Load Balancer
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/certificate-arn: ${ssl_cert_arn}
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=60
+    alb.ingress.kubernetes.io/target-type: ip
+    external-dns.alpha.kubernetes.io/hostname: ${hostname}
+  hosts:
+    - ${hostname}
+  path: /
+
+# Enable cert-manager to provision certificates for each cluster node.
+#  Cert-manager it-self will be installed using EKS Add-ons
+certManager:
+  enabled: true
+  clusterDomain: cluster.local
+  keystorePasswd: ${keystore_password}
+  truststorePasswd: ${truststore_password}
+
+# Enable prometheus metrics to scrape JVM metrics
+metrics:
+  prometheus:
+    enabled: true

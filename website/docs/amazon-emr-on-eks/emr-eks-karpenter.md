@@ -373,7 +373,7 @@ Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
 
 ```bash
 terraform destroy -target="module.eks_blueprints_kubernetes_addons" -auto-approve
-terraform destroy -target="module.eks_blueprints" -auto-approve
+terraform destroy -target="module.eks" -auto-approve
 terraform destroy -target="module.vpc" -auto-approve
 ```
 
@@ -381,6 +381,19 @@ Finally, destroy any additional resources that are not in the above modules
 
 ```bash
 terraform destroy -auto-approve
+```
+
+If the EMR virtual cluster fails to delete and the following error is shown:
+```
+Error: waiting for EMR Containers Virtual Cluster (xwbc22787q6g1wscfawttzzgb) delete: unexpected state 'ARRESTED', wanted target ''. last error: %!s(<nil>)
+```
+
+You can clean up any of the clusters in the `ARRESTED` state with the following:
+
+```sh
+aws emr-containers list-virtual-clusters --region us-west-2 --states ARRESTED \
+--query 'virtualClusters[0].id' --output text | xargs -I{} aws emr-containers delete-virtual-cluster \
+--region us-west-2 --id {}
 ```
 
 :::caution

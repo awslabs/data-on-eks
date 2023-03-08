@@ -3,7 +3,7 @@
 
 💥 **Welcome to Data on Amazon EKS (DoEKS)** 💥
 
-Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS. 
+Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS.
 
 > **Note**: DoEKS is actively being developed for various patterns. To see what features are in progress, please check out the [issues](https://github.com/awslabs/data-on-eks/issues) section of our repository.
 
@@ -39,9 +39,9 @@ In this repository, you'll find a variety of deployment examples for creating da
 
 🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) - This template deploys EMR on EKS cluster and uses Amazon Managed Workflows for Apache Airflow (MWAA) to run Spark jobs.
 
-🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - This template sets up a self-managed Argo Workflow on an Amazon EKS cluster, following best practices.
+🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/self-managed-airflow) - This template sets up a self-managed Apache Airflow on an Amazon EKS cluster, following best practices.
 
-🚀 [Argo Workflows on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/argo-workflows-eks) - This template sets up a self-managed Apache Airflow on an Amazon EKS cluster, following best practices.
+🚀 [Argo Workflows on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/argo-workflows-eks) - This template sets up a self-managed Argo Workflow on an Amazon EKS cluster, following best practices.
 
 🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks/kafka) - This template deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
 

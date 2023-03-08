@@ -51,3 +51,62 @@ Repeat the above tests after applying the patch. This script needs to be run for
 cd analytics/emr-eks-fsx-lustre/fsx_lustre
 python3 emr-eks-sa-fix.py -n "emr-data-team-a"
 ```
+
+## Terraform apply/destroy error to authenticate with EKS Cluster
+```
+ERROR:
+╷
+│ Error: Get "http://localhost/api/v1/namespaces/kube-system/configmaps/aws-auth": dial tcp [::1]:80: connect: connection refused
+│
+│   with module.eks.kubernetes_config_map_v1_data.aws_auth[0],
+│   on .terraform/modules/eks/main.tf line 550, in resource "kubernetes_config_map_v1_data" "aws_auth":
+│  550: resource "kubernetes_config_map_v1_data" "aws_auth" {
+│
+╵
+```
+
+**Solution:**
+In this situation Terraform is unable to refresh the data resources and authenticate with EKS Cluster.
+See the discussion [here](https://github.com/terraform-aws-modules/terraform-aws-eks/issues/1234)
+
+Try this approach first by using exec plugin.
+
+```terraform
+provider "kubernetes" {
+  host                   = module.eks_blueprints.eks_cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks_blueprints.eks_cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args = ["eks", "get-token", "--cluster-name", module.eks_blueprints.eks_cluster_id]
+  }
+}
+
+
+```
+If the above change still not fixed the issue then you can follow this approach.
+Please note this is not a recommended approach however this will fix the issue.
+
+```shell
+rm </path/to/kubeconfig> # deletes the old config if any. Make sure you backup this file if required
+aws eks --region <region> update-kubeconfig --name <eks-clusetr-name>
+export KUBE_CONFIG_PATH=</path/to/kubeconfig>
+terraform apply or destroy
+```
+
+## EMR Containers Virtual Cluster (dhwtlq9yx34duzq5q3akjac00) delete: unexpected state 'ARRESTED'
+
+If the EMR virtual cluster fails to delete and the following error is shown:
+```
+Error: waiting for EMR Containers Virtual Cluster (xwbc22787q6g1wscfawttzzgb) delete: unexpected state 'ARRESTED', wanted target ''. last error: %!s(<nil>)
+```
+
+**Solution:**
+You can clean up any of the clusters in the `ARRESTED` state with the following:
+
+```sh
+aws emr-containers list-virtual-clusters --region <REGION> --states ARRESTED \
+--query 'virtualClusters[0].id' --output text | xargs -I{} aws emr-containers delete-virtual-cluster \
+--region <REGION> --id {}
+```
