@@ -36,4 +36,7 @@ module "emr_containers" {
       }
     }
   }
+  depends_on = [
+    module.eks,module.eks_blueprints_kubernetes_addons
+  ]
 }
