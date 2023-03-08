@@ -1,42 +1,19 @@
+#!/bin/bash
+
 # NOTE: Make sure to set the region before running the shell script e.g., export AWS_REGION="<your-region>"
-# CW_LOG_GROUP should exist before running the job
 
-if [ $# -ne 3 ];
-then
-  echo "$0: Missing arguments EMR_VIRTUAL_CLUSTER_NAME, S3_BUCKET_NAME and EMR_JOB_EXECUTION_ROLE_ARN"
-  echo "USAGE: ./execute_emr_eks_job.sh '<EMR_VIRTUAL_CLUSTER_NAME>' '<s3://ENTER_BUCKET_NAME>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
-  exit 1
-else
-  echo "We got some argument(s)"
-  echo "==========================="
-  echo "Number of arguments.: $#"
-  echo "List of arguments...: $@"
-  echo "Arg #1..............: $1"
-  echo "Arg #2..............: $2"
-  echo "Arg #3..............: $3"
-  echo "==========================="
-fi
-
-#--------------------------------------------
-# INPUT VARIABLES
-#--------------------------------------------
-EMR_VIRTUAL_CLUSTER_NAME=$1     # Terraform output variable is `emrcontainers_virtual_cluster_id`
-S3_BUCKET=$2                    # This script requires s3 bucket as input parameter e.g., s3://<bucket-name>
-EMR_JOB_EXECUTION_ROLE_ARN=$3   # Terraform output variable is emr_on_eks_role_arn
-
-#--------------------------------------------
-# DERIVED VARIABLES
-#--------------------------------------------
-EMR_VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '$EMR_VIRTUAL_CLUSTER_NAME' && state == 'RUNNING'].id" --output text)
+read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
+read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
+read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
+read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: " S3_BUCKET
 
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
 JOB_NAME='taxidata'
 EMR_EKS_RELEASE_LABEL="emr-6.7.0-latest" # Spark 3.2.1
-CW_LOG_GROUP="/emr-on-eks-logs/${EMR_VIRTUAL_CLUSTER_NAME}" # Create CW Log group if not exist
 
-SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_NAME}/${JOB_NAME}"
+SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
 SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
 INPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/input"
 OUTPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/output"
@@ -70,12 +47,12 @@ rm -rf "../input" # delete local input folder
 # Execute Spark job
 #--------------------------------------------
 
-if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
-  echo "Found Cluster $EMR_VIRTUAL_CLUSTER_NAME; Executing the Spark job now..."
+# if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
+#   echo "Found Cluster $EMR_VIRTUAL_CLUSTER_NAME; Executing the Spark job now..."
   aws emr-containers start-job-run \
     --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
     --name $JOB_NAME \
-    --execution-role-arn $EMR_JOB_EXECUTION_ROLE_ARN \
+    --execution-role-arn $EMR_EXECUTION_ROLE_ARN \
     --release-label $EMR_EKS_RELEASE_LABEL \
     --job-driver '{
       "sparkSubmitJobDriver": {
@@ -118,11 +95,11 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
       "monitoringConfiguration": {
         "persistentAppUI":"ENABLED",
         "cloudWatchMonitoringConfiguration": {
-          "logGroupName":"'"$CW_LOG_GROUP"'",
+          "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
           "logStreamNamePrefix":"'"$JOB_NAME"'"
         }
       }
     }'
-else
-  echo "Cluster is not in running state $EMR_VIRTUAL_CLUSTER_NAME"
-fi
+# else
+#   echo "Cluster is not in running state $EMR_VIRTUAL_CLUSTER_NAME"
+# fi
