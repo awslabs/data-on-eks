@@ -14,7 +14,7 @@ spec:
   serviceAccountTemplate:
     metadata:
       annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::074661079081:role/testingcluster-barman-irsa  
+        eks.amazonaws.com/role-arn: arn:aws:iam::074661079081:role/cnpg-cluster-irsa
   postgresql:
     parameters:
       shared_buffers: 256MB
@@ -36,7 +36,6 @@ spec:
     barmanObjectStore:
       destinationPath: s3://cnpg-barman-backup-bucket/
       s3Credentials:
-        accessKeyId:
         inheritFromIAMRole: true
       wal:
         compression: gzip

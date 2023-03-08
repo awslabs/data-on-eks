@@ -48,6 +48,16 @@ output "configure_kubectl" {
   value       = module.eks_blueprints.configure_kubectl
 }
 
+output "barman_irsa_arn" {
+  value = module.barman_irsa.irsa_iam_role_arn
+  
+}
+
+output "barman_irsa_name" {
+  value = module.barman_irsa.irsa_iam_role_name
+  
+}
+
 # Region used for Terratest
 output "region" {
   description = "AWS region"

@@ -28,10 +28,10 @@ module "barman_s3_bucket" {
 }
 
 #---------------------------------------------------------------
-# IRSA for Airflow S3 logging
+# IRSA for Barman S3
 #---------------------------------------------------------------
 module "barman_irsa" {
-  source                     = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.23.0"
+  source                     = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.25.0"
   eks_cluster_id             = module.eks_blueprints.eks_cluster_id
   eks_oidc_provider_arn      = module.eks_blueprints.eks_oidc_provider_arn
   irsa_iam_policies          = [aws_iam_policy.cnpg_buckup_policy.arn]
@@ -46,6 +46,6 @@ module "barman_irsa" {
 #---------------------------------------------------------------
 resource "aws_iam_policy" "cnpg_buckup_policy" {
   description = "IAM role policy for CloudNativePG Barman Tool"
-  name        = "${local.name}-cnpg-barman-irsa"
+  name        = "${local.name}-barman-irsa"
   policy      = data.aws_iam_policy_document.cnpg_backup.json
 }
