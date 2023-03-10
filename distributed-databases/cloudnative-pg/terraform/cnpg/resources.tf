@@ -1,8 +1,8 @@
 resource "random_string" "random" {
-  length           = 4
-  special          = false
-  upper            = false
-  }
+  length  = 4
+  special = false
+  upper   = false
+}
 
 module "barman_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -37,25 +37,25 @@ module "barman_s3_bucket" {
 # IRSA for Barman S3
 #---------------------------------------------------------------
 module "barman_backup_irsa" {
-  source                     = "github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa"
-  eks_cluster_id             = module.eks.cluster_name
-  eks_oidc_provider_arn      = module.eks.oidc_provider_arn
-  irsa_iam_policies          = [aws_iam_policy.cnpg_buckup_policy.arn]
-  kubernetes_namespace       = "demo"
-  kubernetes_service_account = "prod"
+  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa"
+  eks_cluster_id                    = module.eks.cluster_name
+  eks_oidc_provider_arn             = module.eks.oidc_provider_arn
+  irsa_iam_policies                 = [aws_iam_policy.cnpg_buckup_policy.arn]
+  kubernetes_namespace              = "demo"
+  kubernetes_service_account        = "prod"
   create_kubernetes_service_account = false
-  create_kubernetes_namespace = false
+  create_kubernetes_namespace       = false
 }
 
 module "barman_restore_irsa" {
-  source                     = "github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa"
-  eks_cluster_id             = module.eks.cluster_name
-  eks_oidc_provider_arn      = module.eks.oidc_provider_arn
-  irsa_iam_policies          = [aws_iam_policy.cnpg_buckup_policy.arn]
-  kubernetes_namespace       = "restore"
-  kubernetes_service_account = "restore"
+  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa"
+  eks_cluster_id                    = module.eks.cluster_name
+  eks_oidc_provider_arn             = module.eks.oidc_provider_arn
+  irsa_iam_policies                 = [aws_iam_policy.cnpg_buckup_policy.arn]
+  kubernetes_namespace              = "restore"
+  kubernetes_service_account        = "restore"
   create_kubernetes_service_account = false
-  create_kubernetes_namespace = false
+  create_kubernetes_namespace       = false
 }
 
 

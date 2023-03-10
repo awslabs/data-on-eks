@@ -13,18 +13,18 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_aws_ebs_csi_driver = true
   enable_kube_prometheus_stack         = true
   kube_prometheus_stack_helm_config = {
-      name       = "kube-prometheus-stack"
-      chart      = "kube-prometheus-stack"
-      namespace  = "monitoring"
-      values =  [
-        file("${path.module}/monitoring/kube-stack-config.yaml")
-        ]
-      description = "kube-prometheus-stack helm Chart deployment configuration"
-      repository = "https://prometheus-community.github.io/helm-charts"
-      version    = "45.6.0"
-    }
-    
-  
+    name      = "kube-prometheus-stack"
+    chart     = "kube-prometheus-stack"
+    namespace = "monitoring"
+    values = [
+      file("${path.module}/monitoring/kube-stack-config.yaml")
+    ]
+    description = "kube-prometheus-stack helm Chart deployment configuration"
+    repository  = "https://prometheus-community.github.io/helm-charts"
+    version     = "45.6.0"
+  }
+
+
   tags = local.tags
 }
 

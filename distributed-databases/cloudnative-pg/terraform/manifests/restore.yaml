@@ -60,7 +60,7 @@ spec:
         wal:
           maxParallel: 8
 
-  resources: # m5large: m5xlarge 2vCPU, 8GI RAM 
+  resources: # m5large: m5xlarge 2vCPU, 8GI RAM
     requests:
       memory: "512Mi"
       cpu: "1"

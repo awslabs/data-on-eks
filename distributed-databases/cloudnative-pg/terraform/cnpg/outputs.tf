@@ -5,16 +5,16 @@ output "configure_kubectl" {
 
 output "barman_backup_irsa" {
   description = "ARN for Backup IAM ROLE"
-  value = module.barman_backup_irsa.irsa_iam_role_arn
-  
+  value       = module.barman_backup_irsa.irsa_iam_role_arn
+
 }
 
 output "barman_restore_irsa" {
   description = "ARN for Restore IAM ROLE"
-  value = module.barman_restore_irsa.irsa_iam_role_arn
-  
+  value       = module.barman_restore_irsa.irsa_iam_role_arn
+
 }
 output "barman_s3_bucket" {
   description = "Backup bucket"
-  value = module.barman_s3_bucket.s3_bucket_id
+  value       = module.barman_s3_bucket.s3_bucket_id
 }

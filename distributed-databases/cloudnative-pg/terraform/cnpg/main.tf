@@ -124,8 +124,8 @@ resource "helm_release" "cloudnative_pg" {
   set {
     name  = "resources.limits.cpu"
     value = "100m"
-  }  
-  
+  }
+
   set {
     name  = "resources.limits.memory"
     value = "200Mi"

@@ -49,7 +49,7 @@ spec:
       for: 1m
       labels:
         severity: warning
-    - alert: LastFailedArchiveTime 
+    - alert: LastFailedArchiveTime
       annotations:
         description: Archiving failed for {{ $labels.pod }}
         summary: Checks the last time archiving failed. Will be -1 when it has not failed.
@@ -58,7 +58,7 @@ spec:
       for: 1m
       labels:
         severity: warning
-    - alert: DatabaseDeadlockConflicts 
+    - alert: DatabaseDeadlockConflicts
       annotations:
         description: There are over 10 deadlock conflicts in {{ $labels.pod }}
         summary: Checks the number of database conflicts

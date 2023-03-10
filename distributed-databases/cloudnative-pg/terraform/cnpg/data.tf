@@ -22,7 +22,7 @@ data "aws_ami" "eks" {
 
 data "aws_caller_identity" "current" {}
 
-data aws_iam_policy_document cnpg_backup {
+data "aws_iam_policy_document" "cnpg_backup" {
   statement {
     sid       = ""
     effect    = "Allow"
