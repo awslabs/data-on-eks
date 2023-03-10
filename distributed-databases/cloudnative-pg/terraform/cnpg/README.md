@@ -24,11 +24,11 @@
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_barman_backup_irsa"></a> [barman\_backup\_irsa](#module\_barman\_backup\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa | n/a |
-| <a name="module_barman_restore_irsa"></a> [barman\_restore\_irsa](#module\_barman\_restore\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa | n/a |
+| <a name="module_barman_backup_irsa"></a> [barman\_backup\_irsa](#module\_barman\_backup\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | ed27abc//modules/irsa |
+| <a name="module_barman_restore_irsa"></a> [barman\_restore\_irsa](#module\_barman\_restore\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | ed27abc//modules/irsa |
 | <a name="module_barman_s3_bucket"></a> [barman\_s3\_bucket](#module\_barman\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.9 |
-| <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | ed27abc8bb048a46a6bcefda16e14c5ba345c46f |
+| <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | ed27abc |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 3.0 |
 
 ## Resources
