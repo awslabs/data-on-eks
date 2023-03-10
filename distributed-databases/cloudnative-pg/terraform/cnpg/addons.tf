@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc8bb048a46a6bcefda16e14c5ba345c46f"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc"
 
   eks_cluster_id       = module.eks.cluster_name
   eks_cluster_endpoint = module.eks.cluster_endpoint

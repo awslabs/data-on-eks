@@ -37,7 +37,7 @@ module "barman_s3_bucket" {
 # IRSA for Barman S3
 #---------------------------------------------------------------
 module "barman_backup_irsa" {
-  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc8bb048a46a6bcefda16e14c5ba345c46f//modules/irsa"
+  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc//modules/irsa"
   eks_cluster_id                    = module.eks.cluster_name
   eks_oidc_provider_arn             = module.eks.oidc_provider_arn
   irsa_iam_policies                 = [aws_iam_policy.cnpg_buckup_policy.arn]
@@ -48,7 +48,7 @@ module "barman_backup_irsa" {
 }
 
 module "barman_restore_irsa" {
-  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc8bb048a46a6bcefda16e14c5ba345c46f//modules/irsa"
+  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc//modules/irsa"
   eks_cluster_id                    = module.eks.cluster_name
   eks_oidc_provider_arn             = module.eks.oidc_provider_arn
   irsa_iam_policies                 = [aws_iam_policy.cnpg_buckup_policy.arn]
