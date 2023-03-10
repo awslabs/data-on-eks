@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+  labels:
+      name: demo
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-auth
+  namespace: demo
+type: kubernetes.io/basic-auth
+stringData:
+  username: app      # required field for kubernetes.io/basic-auth
+  password: testing # required field for kubernetes.io/basic-auth

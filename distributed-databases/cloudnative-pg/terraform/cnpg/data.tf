@@ -1,6 +1,6 @@
 
 data "aws_eks_cluster_auth" "this" {
-  name = module.eks_blueprints.eks_cluster_id
+  name = module.eks.cluster_name
 }
 
 data "aws_availability_zones" "available" {
@@ -9,6 +9,18 @@ data "aws_availability_zones" "available" {
     values = ["opt-in-not-required"]
   }
 }
+
+data "aws_ami" "eks" {
+  owners      = ["amazon"]
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["amazon-eks-node-${module.eks.cluster_version}-*"]
+  }
+}
+
+data "aws_caller_identity" "current" {}
 
 data aws_iam_policy_document cnpg_backup {
   statement {

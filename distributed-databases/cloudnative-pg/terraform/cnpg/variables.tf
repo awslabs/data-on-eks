@@ -1,6 +1,29 @@
-# tflint-ignore: terraform_unused_declarations
-variable "cluster_name" {
-  description = "Name of cluster - used by Terratest for e2e test automation"
+variable "name" {
+  description = "Name of the VPC and EKS Cluster"
+  default     = "cnpg-on-eks"
   type        = string
-  default     = ""
+}
+
+variable "region" {
+  description = "region"
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "eks_cluster_version" {
+  description = "EKS Cluster version"
+  default     = "1.25"
+  type        = string
+}
+
+variable "tags" {
+  description = "Default tags"
+  default     = {}
+  type        = map(string)
+}
+
+variable "vpc_cidr" {
+  description = "VPC CIDR"
+  default     = "10.1.0.0/16"
+  type        = string
 }
