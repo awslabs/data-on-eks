@@ -43,3 +43,8 @@ output "emr_on_eks" {
   description = "EMR on EKS"
   value       = module.emr_containers
 }
+
+output "s3_bucket_name" {
+  description = "S3 bucket name"
+  value       = module.s3_bucket.s3_bucket_id
+}
