@@ -50,7 +50,7 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
     --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
     --name $JOB_NAME \
     --region $AWS_REGION \
-    --execution-role-arn $EMR_EXECUTION_ROLE_ARN \
+    --execution-role-arn $EMR_JOB_EXECUTION_ROLE_ARN \
     --release-label $EMR_EKS_RELEASE_LABEL \
     --job-driver '{
       "sparkSubmitJobDriver": {
@@ -93,11 +93,11 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
       "monitoringConfiguration": {
         "persistentAppUI":"ENABLED",
         "cloudWatchMonitoringConfiguration": {
-          "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
+          "logGroupName":"'"$CW_LOG_GROUP"'",
           "logStreamNamePrefix":"'"$JOB_NAME"'"
         },
         "s3MonitoringConfiguration": {
-          "logUri": "'"${S3_BUCKET}/logs/"'"
+           "logUri": "'"${S3_BUCKET}/logs"'"/"
         }
       }
     }'
