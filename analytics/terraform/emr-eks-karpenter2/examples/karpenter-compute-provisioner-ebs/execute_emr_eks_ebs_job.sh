@@ -2,6 +2,7 @@
 
 # NOTE: Make sure to set the region before running the shell script e.g., export AWS_REGION="<your-region>"
 
+read -p "Enter the AWS REGION: " AWS_REGION
 read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
 read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP

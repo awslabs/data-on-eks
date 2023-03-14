@@ -6,7 +6,7 @@ metadata:
 provisioner: kubernetes.io/aws-ebs
 volumeBindingMode: WaitForFirstConsumer
 parameters:
-  type: gp2
+  type: gp3
   fsType: ext4
 ---
 apiVersion: v1
