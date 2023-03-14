@@ -1,7 +1,7 @@
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
-  name: spark-memory-optimized
+  name: spark-graviton-memory-optimized
   namespace: karpenter
 spec:
   kubeletConfiguration:
@@ -17,21 +17,21 @@ spec:
       values: ["spot", "on-demand"]
     - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
       operator: In
-      values: ["r5d.4xlarge","r5d.8xlarge","r5d.12xlarge"] # 2 NVMe disk
+      values: ["r6gd.4xlarge", "r6gd.8xlarge"] # 2 NVMe disk
     - key: "kubernetes.io/arch"
       operator: In
-      values: ["amd64"]
+      values: ["arm64"]
   limits:
     resources:
       cpu: 1000
   providerRef: # optional, recommended to use instead of `provider`
-    name: spark-memory-optimized
+    name: spark-graviton-memory-optimized
   labels:
     type: karpenter
-    provisioner: spark-memory-optimized
-    NodeGroupType: SparkMemoryOptimized
+    provisioner: spark-graviton-memory-optimized
+    NodeGroupType: SparkGravitonMemoryOptimized
   taints:
-    - key: spark-memory-optimized
+    - key: spark-graviton-memory-optimized
       value: 'true'
       effect: NoSchedule
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
@@ -40,7 +40,7 @@ spec:
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
 metadata:
-  name: spark-memory-optimized
+  name: spark-graviton-memory-optimized
   namespace: karpenter
 spec:
   blockDeviceMappings:
@@ -71,7 +71,6 @@ spec:
     echo "Running a custom user data script"
     set -ex
 
-    IDX=1
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
 
     for DEV in $DEVICES
@@ -84,9 +83,9 @@ spec:
 
     mount -a
 
-    /usr/bin/chown -hR +999:+1000 /local*
+    /usr/bin/chown -hR +999:+1000 /local1
 
     --BOUNDARY--
 
   tags:
-    InstanceType: "spark-memory-optimized"    # optional, add tags for your own use
+    InstanceType: "spark-graviton-memory-optimized"    # optional, add tags for your own use

@@ -5,10 +5,12 @@ set -o pipefail
 read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
 read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
+read -p "Enter the CloudWatch Log Group name(e.g., s3://my-bucket-name ): " S3_BUCKET_LOGS
 
 aws emr-containers start-job-run \
    --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
    --name=pi \
+   --region $AWS_REGION \
    --execution-role-arn $EMR_EXECUTION_ROLE_ARN \
    --release-label emr-6.8.0-latest \
    --job-driver '{
@@ -23,6 +25,9 @@ aws emr-containers start-job-run \
            "cloudWatchMonitoringConfiguration": {
                "logGroupName": "'"${CLOUDWATCH_LOG_GROUP}"'",
                "logStreamNamePrefix": "sample-pi"
+           },
+           "s3MonitoringConfiguration": {
+               "logUri": "'"${S3_BUCKET_LOGS}"'"/"
            }
        }
    }'

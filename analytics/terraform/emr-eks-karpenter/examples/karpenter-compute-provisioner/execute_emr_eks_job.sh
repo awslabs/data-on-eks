@@ -2,6 +2,7 @@
 
 # NOTE: Make sure to set the region before running the shell script e.g., export AWS_REGION="<your-region>"
 
+read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
 read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
 read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
@@ -50,6 +51,7 @@ rm -rf "../input" # delete local input folder
 aws emr-containers start-job-run \
   --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
   --name $JOB_NAME \
+  --region $AWS_REGION \
   --execution-role-arn $EMR_EXECUTION_ROLE_ARN \
   --release-label $EMR_EKS_RELEASE_LABEL \
   --job-driver '{
@@ -95,6 +97,9 @@ aws emr-containers start-job-run \
       "cloudWatchMonitoringConfiguration": {
         "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
         "logStreamNamePrefix":"'"$JOB_NAME"'"
+      },
+      "s3MonitoringConfiguration": {
+         "logUri": "'"${S3_BUCKET}/logs"'"/"
       }
     }
   }'
