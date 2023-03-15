@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.18.1"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.25.0"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -130,18 +130,18 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit = true
+  enable_aws_for_fluentbit                 = true
+  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Add-on creates this log group
+  aws_for_fluentbit_cw_log_group_retention = 30
   aws_for_fluentbit_helm_config = {
-    name                                      = "aws-for-fluent-bit"
-    chart                                     = "aws-for-fluent-bit"
-    repository                                = "https://aws.github.io/eks-charts"
-    version                                   = "0.1.21"
-    namespace                                 = "aws-for-fluent-bit"
-    aws_for_fluent_bit_cw_log_group           = "/${var.name}/worker-fluentbit-logs" # Optional
-    aws_for_fluentbit_cwlog_retention_in_days = 90
+    name       = "aws-for-fluent-bit"
+    chart      = "aws-for-fluent-bit"
+    repository = "https://aws.github.io/eks-charts"
+    version    = "0.1.21"
+    namespace  = "aws-for-fluent-bit"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region                    = var.region,
-      aws_for_fluent_bit_cw_log = "/${var.name}/worker-fluentbit-logs"
+      region               = var.region,
+      cloudwatch_log_group = "/${var.name}/fluentbit-logs"
     })]
   }
 

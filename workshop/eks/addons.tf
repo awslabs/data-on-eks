@@ -46,20 +46,21 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit = true
+  enable_aws_for_fluentbit                 = true
+  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Optional
+  aws_for_fluentbit_cw_log_group_retention = 30
   aws_for_fluentbit_helm_config = {
-    name                                      = "aws-for-fluent-bit"
-    chart                                     = "aws-for-fluent-bit"
-    repository                                = "https://aws.github.io/eks-charts"
-    version                                   = "0.1.21"
-    namespace                                 = "aws-for-fluent-bit"
-    aws_for_fluent_bit_cw_log_group           = "/${var.name}/fluentbit-logs" # Optional
-    aws_for_fluentbit_cwlog_retention_in_days = 30
+    name       = "aws-for-fluent-bit"
+    chart      = "aws-for-fluent-bit"
+    repository = "https://aws.github.io/eks-charts"
+    version    = "0.1.21"
+    namespace  = "aws-for-fluent-bit"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region                    = var.region,
-      aws_for_fluent_bit_cw_log = "/${var.name}/fluentbit-logs"
+      region               = var.region,
+      cloudwatch_log_group = "/${var.name}/fluentbit-logs"
     })]
   }
+
 
   #---------------------------------------
   # Kubecost
