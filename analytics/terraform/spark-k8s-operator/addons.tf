@@ -165,7 +165,7 @@ module "eks_blueprints_kubernetes_addons" {
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = data.aws_region.current.id
-      cloudwatch_log_group = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs"
+      cloudwatch_log_group = "/${var.name}/fluentbit-logs"
       s3_bucket_name       = aws_s3_bucket.this.id
       cluster_name         = module.eks_blueprints.eks_cluster_id
     })]
