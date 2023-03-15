@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.19.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.25.0"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -153,29 +153,22 @@ module "eks_blueprints_kubernetes_addons" {
   # Logging with FluentBit
   #---------------------------------------------------------------
   enable_aws_for_fluentbit                 = true
+  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Optional
   aws_for_fluentbit_cw_log_group_retention = 30
   aws_for_fluentbit_irsa_policies          = [aws_iam_policy.fluentbit.arn]
   aws_for_fluentbit_helm_config = {
-    name                            = "aws-for-fluent-bit"
-    chart                           = "aws-for-fluent-bit"
-    repository                      = "https://aws.github.io/eks-charts"
-    version                         = "0.1.22"
-    namespace                       = "logging"
-    timeout                         = "300"
-    aws_for_fluent_bit_cw_log_group = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs" # Optional
-    create_namespace                = true
+    name       = "aws-for-fluent-bit"
+    chart      = "aws-for-fluent-bit"
+    repository = "https://aws.github.io/eks-charts"
+    version    = "0.1.22"
+    namespace  = "aws-for-fluent-bit"
+    timeout    = "300"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region                    = data.aws_region.current.id
-      aws_for_fluent_bit_cw_log = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs"
-      s3_bucket_name            = aws_s3_bucket.this.id
-      cluster_name              = module.eks_blueprints.eks_cluster_id
+      region               = data.aws_region.current.id
+      cloudwatch_log_group = "/${module.eks_blueprints.eks_cluster_id}/worker-fluentbit-logs"
+      s3_bucket_name       = aws_s3_bucket.this.id
+      cluster_name         = module.eks_blueprints.eks_cluster_id
     })]
-    set = [
-      {
-        name  = "nodeSelector.kubernetes\\.io/os"
-        value = "linux"
-      }
-    ]
   }
 
   #---------------------------------------------------------------
