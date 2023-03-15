@@ -289,14 +289,7 @@ kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output sho
 
 ### Execute the sample PySpark Job to trigger compute optimized Karpenter provisioner
 
-1. The following script requires three input parameters in which `EMR_VIRTUAL_CLUSTER_NAME` and `EMR_JOB_EXECUTION_ROLE_ARN` values can be extracted from `terraform apply` output values.
-2. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket to store the scripts, input and output data required to run this sample job.
-
-```text
-EMR_VIRTUAL_CLUSTER_NAME=$1   # Terraform output variable is emrcontainers_virtual_cluster_name
-S3_BUCKET=$2                  # This script requires S3 bucket as input parameter e.g., s3://<bucket-name>
-EMR_JOB_EXECUTION_ROLE_ARN=$3 # Terraform output variable is emr_on_eks_role_arn
-```
+The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & S3 Bucket to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
 
 :::caution
 
@@ -306,10 +299,11 @@ This shell script downloads the test data to your local machine and uploads to S
 
 ```bash
 cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner/
-
-./execute_emr_eks_job.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
-  "s3://<ENTER-YOUR-BUCKET-NAME>" \
-  "<EMR_JOB_EXECUTION_ROLE_ARN>"
+./execute_emr_eks_job.sh
+Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
+Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
+Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data-team-a
+Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
 ```
 
 Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
@@ -320,6 +314,28 @@ Nodes will be drained with once the job is completed
 ```bash
 kubectl get pods --namespace=emr-data-team-a -w
 ```
+### Execute the sample PySpark job that uses EBS volumes and compute optimized Karpenter provisioner
+
+This pattern uses EBS volumes for data processing and compute optimized instances. 
+
+We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors. 
+
+Create StorageClass and PVC using example provided
+```bash
+kubectl apply -f emr-eks-karpenter-ebs.yaml
+```
+Let's run the job
+
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner-ebs/
+./execute_emr_eks_job.sh
+Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
+Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
+Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data-team-a
+Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
+```
+
+You'll notice the PVC `spark-driver-pvc` will be used by driver pod but Spark will create multiple ebs volumes for executors mapped to Storageclass `emr-eks-karpenter-ebs-sc`. All dynamically created ebs volumes will be deleted once the job completes
 
 ### Execute the sample PySpark Job to trigger Memory optimized Karpenter provisioner
 
