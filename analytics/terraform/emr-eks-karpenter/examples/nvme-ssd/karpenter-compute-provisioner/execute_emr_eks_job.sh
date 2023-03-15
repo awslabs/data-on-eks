@@ -99,7 +99,7 @@ aws emr-containers start-job-run \
         "logStreamNamePrefix":"'"$JOB_NAME"'"
       },
       "s3MonitoringConfiguration": {
-         "logUri": "'"${S3_BUCKET}/logs"'"/"
+        "logUri": "'"${S3_BUCKET}/logs/"'"
       }
     }
   }'
