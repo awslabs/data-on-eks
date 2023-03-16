@@ -35,3 +35,34 @@ resource "kubectl_manifest" "cnpg_prometheus_rule" {
     module.eks_blueprints_kubernetes_addons.kube_prometheus_stack
   ]
 }
+
+resource "helm_release" "cloudnative_pg" {
+  name             = local.name
+  chart            = "cloudnative-pg"
+  repository       = "https://cloudnative-pg.github.io/charts"
+  version          = "0.17.0"
+  namespace        = "${local.name}-system"
+  create_namespace = true
+  description      = "CloudNativePG Operator Helm chart deployment configuration"
+
+  set {
+    name  = "resources.limits.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "resources.limits.memory"
+    value = "200Mi"
+  }
+
+  set {
+    name  = "resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "resources.memory.memory"
+    value = "100Mi"
+  }
+
+}
