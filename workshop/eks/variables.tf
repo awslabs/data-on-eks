@@ -37,5 +37,5 @@ variable "enable_yunikorn" {
 variable "enable_kubecost" {
   description = "Enable Kubecost add-on"
   type        = bool
-  default     = false
+  default     = true
 }

@@ -67,12 +67,54 @@ metadata:
   name: spark-compute-optimized
   namespace: karpenter
 spec:
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
   subnetSelector:
-    Name: "${eks_cluster_id}-private*"       # required
-  launchTemplate: "${launch_template_name}"  # optional, see Launch Template documentation
-  tags:
-    InstanceType: "spark-compute-optimized"  # optional, add tags for your own use
+    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
+  securityGroupSelector:                      # required, when not using launchTemplate
+    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
+  #  instanceProfile: ""      # optional, if already set in controller args
 
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+    --BOUNDARY
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
+    #!/bin/bash
+    echo "Running a custom user data script"
+    set -ex
+
+    IDX=1
+    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    for DEV in $DEVICES
+    do
+      mkfs.xfs /dev/$${DEV}
+      mkdir -p /local$${IDX}
+      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
+      IDX=$(($${IDX} + 1))
+    done
+
+    mount -a
+
+    /usr/bin/chown -hR +999:+1000 /local*
+
+    --BOUNDARY--
+
+  tags:
+    InstanceType: "spark-compute-optimized" 
 ```
 
 **Spark Jobs can use this provisioner to submit the jobs by adding `tolerations` to pod templates.**
@@ -152,6 +194,7 @@ spec:
   securityGroupSelector:                      # required, when not using launchTemplate
     Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
   instanceProfile: "${instance_profile}"      # optional, if already set in controller args
+  # RAID0 ARRAY config
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"
@@ -162,24 +205,28 @@ spec:
     #!/bin/bash
     echo "Running a custom user data script"
     set -ex
+    yum install mdadm -y
 
-    IDX=1
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    DISK_ARRAY=()
 
     for DEV in $DEVICES
     do
-      mkfs.xfs /dev/$${DEV}
-      mkdir -p /local$${IDX}
-      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
-      IDX=$(($${IDX} + 1))
+    DISK_ARRAY+=("/dev/$${DEV}")
     done
 
+    if [ $${#DISK_ARRAY[@]} -gt 0 ]; then
+    mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${#DISK_ARRAY[@]} $${DISK_ARRAY[@]}
+    mkfs.xfs /dev/md0
+    mkdir -p /local1
+    echo /dev/md0 /local1 xfs defaults,noatime 1 2 >> /etc/fstab
     mount -a
-
-    /usr/bin/chown -hR +999:+1000 /local*
+    /usr/bin/chown -hR +999:+1000 /local1
+    fi
 
     --BOUNDARY--
-
+  
   tags:
     InstanceType: "spark-memory-optimized"    # optional, add tags for your own use
 
@@ -298,7 +345,7 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner/
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-compute-provisioner/
 ./execute_emr_eks_job.sh
 Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
 Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
@@ -316,9 +363,9 @@ kubectl get pods --namespace=emr-data-team-a -w
 ```
 ### Execute the sample PySpark job that uses EBS volumes and compute optimized Karpenter provisioner
 
-This pattern uses EBS volumes for data processing and compute optimized instances. 
+This pattern uses EBS volumes for data processing and compute optimized instances.
 
-We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors. 
+We will create Storageclass that will be used by drivers and executors. We'll create static Persistent Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors.
 
 Create StorageClass and PVC using example provided
 ```bash
@@ -327,7 +374,7 @@ kubectl apply -f emr-eks-karpenter-ebs.yaml
 Let's run the job
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner-ebs/
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/ebs-pvc/karpenter-compute-provisioner-ebs/
 ./execute_emr_eks_job.sh
 Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
 Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
@@ -342,7 +389,7 @@ You'll notice the PVC `spark-driver-pvc` will be used by driver pod but Spark wi
 This pattern uses the Karpenter provisioner for memory optimized instances. This template leverages the Karpenter AWS Node template with Userdata.
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-memory-provisioner
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-memory-provisioner
 
 ./execute_emr_eks_job.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \
@@ -363,7 +410,7 @@ kubectl get pods --namespace=emr-data-team-a -w
 This example demonstrates the [Apache YuniKorn Gang Scheduling](https://yunikorn.apache.org/docs/user_guide/gang_scheduling/) with Karpenter Autoscaler.
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-yunikorn-gangscheduling
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-yunikorn-gangscheduling
 
 ./execute_emr_eks_job.sh "<EMR_VIRTUAL_CLUSTER_NAME>" \
   "s3://<ENTER-YOUR-BUCKET-NAME>" \

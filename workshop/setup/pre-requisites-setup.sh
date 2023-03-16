@@ -1,4 +1,5 @@
 #!/bin/bash
+# Cloud9 IDE Setup
 
 # Install Terraform v1.2.8
 TERRAFORM_VERSION="1.2.8"

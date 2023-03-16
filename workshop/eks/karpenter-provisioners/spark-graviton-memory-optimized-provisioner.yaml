@@ -70,20 +70,25 @@ spec:
     #!/bin/bash
     echo "Running a custom user data script"
     set -ex
+    yum install mdadm -y
 
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
 
+    DISK_ARRAY=()
+
     for DEV in $DEVICES
     do
-      mkfs.xfs /dev/$${DEV}
-      mkdir -p /local$${IDX}
-      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
-      IDX=$(($${IDX} + 1))
+      DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    mount -a
-
-    /usr/bin/chown -hR +999:+1000 /local1
+    if [ $${#DISK_ARRAY[@]} -gt 0 ]; then
+      mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${#DISK_ARRAY[@]} $${DISK_ARRAY[@]}
+      mkfs.xfs /dev/md0
+      mkdir -p /local1
+      echo /dev/md0 /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
+    fi
 
     --BOUNDARY--
 
