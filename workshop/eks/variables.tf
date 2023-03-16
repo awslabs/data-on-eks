@@ -39,3 +39,9 @@ variable "enable_kubecost" {
   type        = bool
   default     = true
 }
+
+variable "enable_grafana" {
+  description = "Enable Grafana add-on"
+  type        = bool
+  default     = false
+}

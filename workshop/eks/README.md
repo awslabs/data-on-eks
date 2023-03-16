@@ -1,6 +1,5 @@
 # Install steps
 
-
 ## Step1: Deploy Pre-requisites
 if you are using Cloud9 IDE to deploy the EKS Cluster then execute the following command
 
