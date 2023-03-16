@@ -114,7 +114,7 @@ spec:
     --BOUNDARY--
 
   tags:
-    InstanceType: "spark-compute-optimized" 
+    InstanceType: "spark-compute-optimized"
 ```
 
 **Spark Jobs can use this provisioner to submit the jobs by adding `tolerations` to pod templates.**
@@ -226,7 +226,7 @@ spec:
     fi
 
     --BOUNDARY--
-  
+
   tags:
     InstanceType: "spark-memory-optimized"    # optional, add tags for your own use
 

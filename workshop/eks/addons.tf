@@ -123,7 +123,7 @@ module "eks_blueprints_kubernetes_addons" {
     set_sensitive = [
       {
         name  = "adminPassword"
-        value = data.aws_secretsmanager_secret_version.admin_password_version[0].secret_string
+        value = try(data.aws_secretsmanager_secret_version.admin_password_version[0].secret_string, null)
       }
     ]
   }
