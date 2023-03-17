@@ -114,20 +114,19 @@ module "eks_blueprints_kubernetes_addons" {
     values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
   }
 
-  #---------------------------------------------------------------
-  # Open Source Grafana Add-on
-  #---------------------------------------------------------------
-  #  enable_grafana = true
-  #
-  #  # This example shows how to set default password for grafana using SecretsManager and Helm Chart set_sensitive values.
-  #  grafana_helm_config = {
-  #    set_sensitive = [
-  #      {
-  #        name  = "adminPassword"
-  #        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
-  #      }
-  #    ]
-  #  }
+  #  ---------------------------------------------------------------
+  #   Open Source Grafana Add-on
+  #  ---------------------------------------------------------------
+  enable_grafana = var.enable_grafana
+  # This example shows how to set default password for grafana using SecretsManager and Helm Chart set_sensitive values.
+  grafana_helm_config = {
+    set_sensitive = [
+      {
+        name  = "adminPassword"
+        value = try(data.aws_secretsmanager_secret_version.admin_password_version[0].secret_string, null)
+      }
+    ]
+  }
 
   tags = local.tags
 
@@ -163,23 +162,29 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 # Grafana Admin credentials resources
 # Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
-#data "aws_secretsmanager_secret_version" "admin_password_version" {
-#  secret_id = aws_secretsmanager_secret.grafana.id
-#
-#  depends_on = [aws_secretsmanager_secret_version.grafana]
-#}
-#resource "random_password" "grafana" {
-#  length           = 16
-#  special          = true
-#  override_special = "!#$%&*()-_=+[]{}<>:?"
-#}
-##tfsec:ignore:aws-ssm-secret-use-customer-key
-#resource "aws_secretsmanager_secret" "grafana" {
-#  name                    = "grafana"
-#  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
-#}
-#
-#resource "aws_secretsmanager_secret_version" "grafana" {
-#  secret_id     = aws_secretsmanager_secret.grafana.id
-#  secret_string = random_password.grafana.result
-#}
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  count     = var.enable_grafana ? 1 : 0
+  secret_id = aws_secretsmanager_secret.grafana[0].id
+
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  count            = var.enable_grafana ? 1 : 0
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  count                   = var.enable_grafana ? 1 : 0
+  name                    = "grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  count         = var.enable_grafana ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.grafana[0].id
+  secret_string = random_password.grafana[0].result
+}

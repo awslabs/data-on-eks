@@ -37,5 +37,11 @@ variable "enable_yunikorn" {
 variable "enable_kubecost" {
   description = "Enable Kubecost add-on"
   type        = bool
+  default     = true
+}
+
+variable "enable_grafana" {
+  description = "Enable Grafana add-on"
+  type        = bool
   default     = false
 }
