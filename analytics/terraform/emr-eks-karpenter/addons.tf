@@ -73,7 +73,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
+  enable_aws_cloudwatch_metrics = var.enable_aws_cloudwatch_metrics
   aws_cloudwatch_metrics_helm_config = {
     name       = "aws-cloudwatch-metrics"
     chart      = "aws-cloudwatch-metrics"
@@ -88,7 +88,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit                 = true
+  enable_aws_for_fluentbit                 = var.enable_aws_for_fluentbit
   aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Add-on creates this log group
   aws_for_fluentbit_cw_log_group_retention = 30
   aws_for_fluentbit_helm_config = {
@@ -154,6 +154,19 @@ module "eks_blueprints_kubernetes_addons" {
     timeout    = "300"
     values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
   }
+
+  #---------------------------------------
+  # Enable FSx for Lustre CSI Driver
+  #---------------------------------------
+  enable_aws_fsx_csi_driver = var.enable_aws_fsx_csi_driver
+  aws_fsx_csi_driver_helm_config = {
+    name       = "aws-fsx-csi-driver"
+    chart      = "aws-fsx-csi-driver"
+    repository = "https://kubernetes-sigs.github.io/aws-fsx-csi-driver/"
+    version    = "1.4.2"
+    namespace  = "kube-system"
+  }
+
 
   tags = local.tags
 

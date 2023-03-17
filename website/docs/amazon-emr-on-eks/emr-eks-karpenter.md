@@ -316,9 +316,9 @@ kubectl get pods --namespace=emr-data-team-a -w
 ```
 ### Execute the sample PySpark job that uses EBS volumes and compute optimized Karpenter provisioner
 
-This pattern uses EBS volumes for data processing and compute optimized instances. 
+This pattern uses EBS volumes for data processing and compute optimized instances.
 
-We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors. 
+We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors.
 
 Create StorageClass and PVC using example provided
 ```bash
