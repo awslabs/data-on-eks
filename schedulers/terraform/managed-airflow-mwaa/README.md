@@ -1,5 +1,5 @@
 # Amazon Managed Workflows for Apache Airflow (MWAA)
-Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/job-schedulers-eks/aws-managed-airflow) to deploy this pattern and run sample tests.
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/job-schedulers/aws-managed-airflow) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
