@@ -10,10 +10,6 @@ spec:
       hostPath:
         path: /local1
         type: Directory
-    - name: spark-local-dir-2
-      hostPath:
-        path: /local2
-        type: Directory
 
   nodeSelector:
     "NodeGroupType": "SparkMemoryOptimized"
@@ -24,9 +20,6 @@ spec:
       volumeMounts:
         - name: spark-local-dir-1
           mountPath: /data1
-          readOnly: false
-        - name: spark-local-dir-2
-          mountPath: /data2
           readOnly: false
 
   tolerations:

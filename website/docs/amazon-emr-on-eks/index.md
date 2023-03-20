@@ -21,6 +21,4 @@ By running analytics applications on EKS, you can reuse existing EC2 instances i
 
 The following Terraform templates are available to deploy.
 - [EMR on EKS with Karpenter](../../data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter): **:point_left::skin-tone-3: Start Here** if you are new to EMR on EKS. This template deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
-- [EMR on EKS with Apache Yunikorn](../../data-on-eks/docs/amazon-emr-on-eks/emr-eks-yunikorn): This template deploys EMR on EKS cluster with [Apache Yunikorn](https://yunikorn.apache.org/) for application-aware scheduling and [Cluster Autoscaler](https://github.com/kubernetes/autoscaler) for scaling Spark jobs
-- [EMR on EKS with FSx for Lustre](../../data-on-eks/docs/amazon-emr-on-eks/emr-eks-fsx-for-lustre): This template deploys EMR on EKS cluster and uses [FSx for Lustre](https://aws.amazon.com/fsx/lustre/) for shuffle storage
 - [ACK controller for EMR on EKS](../../data-on-eks/docs/amazon-emr-on-eks/emr-eks-ack-crossplane): This template deploys EMR on EKS cluster and uses [ACK controller](https://aws.amazon.com/blogs/big-data/introducing-ack-controller-for-amazon-emr-on-eks/) to manage Spark jobs

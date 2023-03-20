@@ -72,7 +72,7 @@ if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
               "spark.executor.memory": "4g",
               "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
               "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
-              "spark.local.dir" : "/data1",
+              "spark.local.dir": "/data1",
 
               "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
               "spark.ui.prometheus.enabled":"true",

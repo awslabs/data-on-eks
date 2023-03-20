@@ -47,20 +47,20 @@ variable "enable_yunikorn" {
   type        = bool
 }
 
-variable "enable_aws_fsx_csi_driver" {
+variable "enable_fsx_for_lustre" {
   default     = false
-  description = "Enable FSx for Lustre filesystem for EMR"
+  description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
   type        = bool
 }
 
 variable "enable_aws_cloudwatch_metrics" {
-  default     = false
+  default     = true
   description = "Enable Cloudwatch metrics"
   type        = bool
 }
 
 variable "enable_aws_for_fluentbit" {
-  default     = false
+  default     = true
   description = "Enable Fluentbit addon"
   type        = bool
 }

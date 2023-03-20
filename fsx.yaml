@@ -1,0 +1,343 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fsx-csi-node
+  namespace: kube-system
+  uid: 0a017ad2-181b-4069-86fa-a82f85ed3525
+  resourceVersion: '381843'
+  generation: 2
+  creationTimestamp: '2023-03-17T23:54:57Z'
+  labels:
+    app.kubernetes.io/instance: aws-fsx-csi-driver
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: aws-fsx-csi-driver
+    app.kubernetes.io/version: 0.9.0
+    helm.sh/chart: aws-fsx-csi-driver-1.5.1
+  annotations:
+    deprecated.daemonset.template.generation: '2'
+    meta.helm.sh/release-name: aws-fsx-csi-driver
+    meta.helm.sh/release-namespace: kube-system
+  managedFields:
+    - manager: terraform-provider-helm_v2.9.0_x5
+      operation: Update
+      apiVersion: apps/v1
+      time: '2023-03-17T23:54:57Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:deprecated.daemonset.template.generation: {}
+            f:meta.helm.sh/release-name: {}
+            f:meta.helm.sh/release-namespace: {}
+          f:labels:
+            .: {}
+            f:app.kubernetes.io/instance: {}
+            f:app.kubernetes.io/managed-by: {}
+            f:app.kubernetes.io/name: {}
+            f:app.kubernetes.io/version: {}
+            f:helm.sh/chart: {}
+        f:spec:
+          f:revisionHistoryLimit: {}
+          f:selector: {}
+          f:template:
+            f:metadata:
+              f:labels:
+                .: {}
+                f:app: {}
+                f:app.kubernetes.io/instance: {}
+                f:app.kubernetes.io/managed-by: {}
+                f:app.kubernetes.io/name: {}
+                f:app.kubernetes.io/version: {}
+                f:helm.sh/chart: {}
+            f:spec:
+              f:containers:
+                k:{"name":"fsx-plugin"}:
+                  .: {}
+                  f:args: {}
+                  f:env:
+                    .: {}
+                    k:{"name":"CSI_ENDPOINT"}:
+                      .: {}
+                      f:name: {}
+                      f:value: {}
+                  f:image: {}
+                  f:imagePullPolicy: {}
+                  f:livenessProbe:
+                    .: {}
+                    f:failureThreshold: {}
+                    f:httpGet:
+                      .: {}
+                      f:path: {}
+                      f:port: {}
+                      f:scheme: {}
+                    f:initialDelaySeconds: {}
+                    f:periodSeconds: {}
+                    f:successThreshold: {}
+                    f:timeoutSeconds: {}
+                  f:name: {}
+                  f:ports:
+                    .: {}
+                    k:{"containerPort":9810,"protocol":"TCP"}:
+                      .: {}
+                      f:containerPort: {}
+                      f:hostPort: {}
+                      f:name: {}
+                      f:protocol: {}
+                  f:resources: {}
+                  f:securityContext:
+                    .: {}
+                    f:privileged: {}
+                  f:terminationMessagePath: {}
+                  f:terminationMessagePolicy: {}
+                  f:volumeMounts:
+                    .: {}
+                    k:{"mountPath":"/csi"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                    k:{"mountPath":"/var/lib/kubelet"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:mountPropagation: {}
+                      f:name: {}
+                k:{"name":"liveness-probe"}:
+                  .: {}
+                  f:args: {}
+                  f:image: {}
+                  f:imagePullPolicy: {}
+                  f:name: {}
+                  f:resources: {}
+                  f:terminationMessagePath: {}
+                  f:terminationMessagePolicy: {}
+                  f:volumeMounts:
+                    .: {}
+                    k:{"mountPath":"/csi"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                k:{"name":"node-driver-registrar"}:
+                  .: {}
+                  f:args: {}
+                  f:env:
+                    .: {}
+                    k:{"name":"ADDRESS"}:
+                      .: {}
+                      f:name: {}
+                      f:value: {}
+                    k:{"name":"DRIVER_REG_SOCK_PATH"}:
+                      .: {}
+                      f:name: {}
+                      f:value: {}
+                    k:{"name":"KUBE_NODE_NAME"}:
+                      .: {}
+                      f:name: {}
+                      f:valueFrom:
+                        .: {}
+                        f:fieldRef: {}
+                  f:image: {}
+                  f:imagePullPolicy: {}
+                  f:name: {}
+                  f:resources: {}
+                  f:terminationMessagePath: {}
+                  f:terminationMessagePolicy: {}
+                  f:volumeMounts:
+                    .: {}
+                    k:{"mountPath":"/csi"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                    k:{"mountPath":"/registration"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+              f:dnsPolicy: {}
+              f:hostNetwork: {}
+              f:nodeSelector: {}
+              f:priorityClassName: {}
+              f:restartPolicy: {}
+              f:schedulerName: {}
+              f:securityContext: {}
+              f:serviceAccount: {}
+              f:serviceAccountName: {}
+              f:terminationGracePeriodSeconds: {}
+              f:tolerations: {}
+              f:volumes:
+                .: {}
+                k:{"name":"kubelet-dir"}:
+                  .: {}
+                  f:hostPath:
+                    .: {}
+                    f:path: {}
+                    f:type: {}
+                  f:name: {}
+                k:{"name":"plugin-dir"}:
+                  .: {}
+                  f:hostPath:
+                    .: {}
+                    f:path: {}
+                    f:type: {}
+                  f:name: {}
+                k:{"name":"registration-dir"}:
+                  .: {}
+                  f:hostPath:
+                    .: {}
+                    f:path: {}
+                    f:type: {}
+                  f:name: {}
+          f:updateStrategy:
+            f:rollingUpdate:
+              .: {}
+              f:maxSurge: {}
+              f:maxUnavailable: {}
+            f:type: {}
+    - manager: kube-controller-manager
+      operation: Update
+      apiVersion: apps/v1
+      time: '2023-03-18T21:58:58Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:status:
+          f:currentNumberScheduled: {}
+          f:desiredNumberScheduled: {}
+          f:numberAvailable: {}
+          f:numberMisscheduled: {}
+          f:numberReady: {}
+          f:observedGeneration: {}
+          f:updatedNumberScheduled: {}
+      subresource: status
+  selfLink: /apis/apps/v1/namespaces/kube-system/daemonsets/fsx-csi-node
+status:
+  currentNumberScheduled: 3
+  numberMisscheduled: 0
+  desiredNumberScheduled: 3
+  numberReady: 3
+  observedGeneration: 2
+  updatedNumberScheduled: 3
+  numberAvailable: 3
+spec:
+  selector:
+    matchLabels:
+      app: fsx-csi-node
+      app.kubernetes.io/instance: aws-fsx-csi-driver
+      app.kubernetes.io/name: aws-fsx-csi-driver
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: fsx-csi-node
+        app.kubernetes.io/instance: aws-fsx-csi-driver
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: aws-fsx-csi-driver
+        app.kubernetes.io/version: 0.9.0
+        helm.sh/chart: aws-fsx-csi-driver-1.5.1
+    spec:
+      volumes:
+        - name: kubelet-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry/
+            type: Directory
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/fsx.csi.aws.com/
+            type: DirectoryOrCreate
+      containers:
+        - name: fsx-plugin
+          image: public.ecr.aws/fsx-csi-driver/aws-fsx-csi-driver:v0.9.0
+          args:
+            - '--endpoint=$(CSI_ENDPOINT)'
+          ports:
+            - name: healthz
+              hostPort: 9810
+              containerPort: 9810
+              protocol: TCP
+          env:
+            - name: CSI_ENDPOINT
+              value: unix:/csi/csi.sock
+          resources: {}
+          volumeMounts:
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: Bidirectional
+            - name: plugin-dir
+              mountPath: /csi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+              scheme: HTTP
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 2
+            successThreshold: 1
+            failureThreshold: 5
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+        - name: node-driver-registrar
+          image: >-
+            public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.7.0-eks-1-23-13
+          args:
+            - '--csi-address=$(ADDRESS)'
+            - '--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)'
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+            - name: DRIVER_REG_SOCK_PATH
+              value: /var/lib/kubelet/plugins/fsx.csi.aws.com/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          resources: {}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+        - name: liveness-probe
+          image: >-
+            public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.9.0-eks-1-23-13
+          args:
+            - '--csi-address=/csi/csi.sock'
+            - '--health-port=9810'
+          resources: {}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: fsx-csi-sa
+      serviceAccount: fsx-csi-sa
+      hostNetwork: true
+      securityContext: {}
+      schedulerName: default-scheduler
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+      priorityClassName: system-node-critical
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  revisionHistoryLimit: 10

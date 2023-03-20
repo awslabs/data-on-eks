@@ -1,24 +1,26 @@
 
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.25.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons"
 
-  # Wait on the node group(s) before provisioning addons
-  data_plane_wait_arn = join(",", [for group in module.eks.eks_managed_node_groups : group.node_group_arn])
-
-  eks_cluster_id        = module.eks.cluster_name
-  eks_cluster_endpoint  = module.eks.cluster_endpoint
-  eks_oidc_provider     = module.eks.oidc_provider
-  eks_oidc_provider_arn = module.eks.oidc_provider_arn
-  eks_cluster_version   = module.eks.cluster_version
+  cluster_name            = module.eks.cluster_name
+  cluster_endpoint        = module.eks.cluster_endpoint
+  cluster_version         = module.eks.cluster_version
+  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
+  oidc_provider_arn       = module.eks.oidc_provider_arn
 
   #---------------------------------------
   # Amazon EKS Managed Add-ons
   #---------------------------------------
-  enable_amazon_eks_vpc_cni            = true
-  enable_amazon_eks_coredns            = true
-  enable_amazon_eks_kube_proxy         = true
-  enable_amazon_eks_aws_ebs_csi_driver = true
-
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {}
+    vpc-cni = {
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+    }
+    kube-proxy = {}
+  }
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
@@ -80,7 +82,7 @@ module "eks_blueprints_kubernetes_addons" {
     repository = "https://aws.github.io/eks-charts"
     version    = "0.0.7"
     namespace  = "amazon-cloudwatch"
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {
       eks_cluster_id = var.name
     })]
   }
@@ -101,38 +103,6 @@ module "eks_blueprints_kubernetes_addons" {
       region               = var.region,
       cloudwatch_log_group = "/${var.name}/fluentbit-logs"
     })]
-  }
-
-  #---------------------------------------
-  # Kubecost
-  #---------------------------------------
-  enable_kubecost = true
-  kubecost_helm_config = {
-    name                = "kubecost"
-    repository          = "oci://public.ecr.aws/kubecost"
-    chart               = "cost-analyzer"
-    version             = "1.97.0"
-    namespace           = "kubecost"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-    timeout             = "300"
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-  }
-
-  #---------------------------------------------------------------
-  # Apache YuniKorn Add-on
-  #---------------------------------------------------------------
-  enable_yunikorn = var.enable_yunikorn
-  yunikorn_helm_config = {
-    name       = "yunikorn"
-    repository = "https://apache.github.io/yunikorn-release"
-    chart      = "yunikorn"
-    version    = "1.1.0"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.1.0"
-    })]
-    timeout = "300"
   }
 
   #---------------------------------------
@@ -158,20 +128,59 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
-  enable_aws_fsx_csi_driver = var.enable_aws_fsx_csi_driver
+  enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
   aws_fsx_csi_driver_helm_config = {
     name       = "aws-fsx-csi-driver"
     chart      = "aws-fsx-csi-driver"
     repository = "https://kubernetes-sigs.github.io/aws-fsx-csi-driver/"
-    version    = "1.4.2"
+    version    = "1.5.1"
     namespace  = "kube-system"
+    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    values = [
+      <<-EOT
+        node:
+          tolerations:
+            - operator: Exists
+      EOT
+    ]
   }
 
-
   tags = local.tags
+}
 
-} # End of EKS Blueprints Add-on module
+#---------------------------------------
+# Kubecost
+#---------------------------------------
+resource "helm_release" "kubecost" {
+  name                = "kubecost"
+  repository          = "oci://public.ecr.aws/kubecost"
+  chart               = "cost-analyzer"
+  version             = "1.97.0"
+  namespace           = "kubecost"
+  create_namespace    = true
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+  timeout             = "300"
+  values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+}
 
+#---------------------------------------------------------------
+# Apache YuniKorn Add-on
+#---------------------------------------------------------------
+resource "helm_release" "yunikorn" {
+  count = var.enable_yunikorn ? 1 : 0
+
+  name             = "yunikorn"
+  repository       = "https://apache.github.io/yunikorn-release"
+  chart            = "yunikorn"
+  version          = "1.1.0"
+  namespace        = "yunikorn"
+  create_namespace = true
+  timeout          = "300"
+  values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+    image_version = "1.1.0"
+  })]
+}
 
 #---------------------------------------
 # Karpenter Provisioners
@@ -196,6 +205,40 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 #---------------------------------------------------------------
 resource "aws_prometheus_workspace" "amp" {
   alias = format("%s-%s", "amp-ws", local.name)
+  tags  = local.tags
+}
 
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
   tags = local.tags
 }

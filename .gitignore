@@ -16,6 +16,8 @@ website/package-lock.json
 *.tfstate.*
 *.tfplan
 
+terraform-apply.log
+
 # Crash log files
 crash.log
 
