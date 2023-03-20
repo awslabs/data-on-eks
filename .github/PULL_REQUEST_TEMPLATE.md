@@ -12,9 +12,8 @@ Consult the [CONTRIBUTING](https://github.com/awslabs/data-on-eks/blob/main/CONT
 ### More
 
 - [ ] Yes, I have tested the PR using my local account setup (Provide any test evidence report under Additional Notes)
-- [ ] Yes, I have added a new example under [examples](https://github.com/awslabs/data-on-eks/tree/main/examples) to support my PR
-- [ ] Yes, I have created another PR to add a new Add-on for [Terraform EKS Blueprints](https://github.com/aws-ia/terraform-aws-eks-blueprints) repo (if applicable)
-- [ ] Yes, I have updated the `website/docs` or `website/blog` section for this feature
+- [ ] Mandatory for new blueprints. Yes, I have added a example to support my blueprint PR
+- [ ] Mandatory for new blueprints. Yes, I have updated the `website/docs` or `website/blog` section for this feature
 - [ ] Yes, I ran `pre-commit run -a` with this PR. Link for installing [pre-commit](https://pre-commit.com/) locally
 
 ### For Moderators
