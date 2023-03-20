@@ -1,17 +1,19 @@
-################################################################################
-# Supporting Resources
-################################################################################
-
+#---------------------------------------------------------------
+# Supporting Network Resources
+#---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
 
-  name = local.name
-  cidr = local.vpc_cidr
+  name           = local.name
+  cidr           = local.vpc_cidr
+  azs            = local.azs
+  public_subnets = var.public_subnets
 
-  azs             = local.azs
-  public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k)]
-  private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 10)]
+  #  Use This to leverage Secondary CIDR block
+  #  secondary_cidr_blocks = "100.64.0.0/16"
+  #  private_subnets = concat(var.private_subnets, [var.secondary_cidr_blocks])
+  private_subnets = var.private_subnets
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
