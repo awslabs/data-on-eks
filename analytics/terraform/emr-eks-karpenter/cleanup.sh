@@ -11,6 +11,32 @@ targets=(
   "module.eks"
 )
 
+#-------------------------------------------
+# Helpful to delete the stuck in "Terminating" namespaces
+# Rerun the cleanup.sh script to detect and delete the stuck resources
+#-------------------------------------------
+terminating_namespaces=$(kubectl get namespaces --field-selector status.phase=Terminating -o json | jq -r '.items[].metadata.name')
+
+# If there are no terminating namespaces, exit the script
+if [[ -z $terminating_namespaces ]]; then
+    echo "No terminating namespaces found"
+fi
+
+echo "Terminating namespaces:"
+for ns in $terminating_namespaces; do
+    case "$choice" in
+        y|Y )
+            kubectl get namespace $ns -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f -
+            ;;
+        * )
+            echo "Skipping namespace $ns"
+            ;;
+    esac
+done
+
+#-------------------------------------------
+# Terraform destroy per module target
+#-------------------------------------------
 for target in "${targets[@]}"
 do
   destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
@@ -22,6 +48,9 @@ do
   fi
 done
 
+#-------------------------------------------
+# Terraform destroy full
+#-------------------------------------------
 destroy_output=$(terraform destroy -auto-approve 2>&1)
 if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
   echo "SUCCESS: Terraform destroy of all targets completed successfully"

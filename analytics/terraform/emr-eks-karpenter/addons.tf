@@ -2,11 +2,11 @@
 module "eks_blueprints_kubernetes_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons"
 
-  cluster_name            = module.eks.cluster_name
-  cluster_endpoint        = module.eks.cluster_endpoint
-  cluster_version         = module.eks.cluster_version
-  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
-  oidc_provider_arn       = module.eks.oidc_provider_arn
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider     = module.eks.cluster_oidc_issuer_url
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
   # Amazon EKS Managed Add-ons
@@ -15,11 +15,16 @@ module "eks_blueprints_kubernetes_addons" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns = {}
+    coredns = {
+      preserve = true
+    }
     vpc-cni = {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      preserve                 = true
     }
-    kube-proxy = {}
+    kube-proxy = {
+      preserve = true
+    }
   }
   #---------------------------------------
   # Kubernetes Add-ons
@@ -75,17 +80,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = var.enable_aws_cloudwatch_metrics
-  aws_cloudwatch_metrics_helm_config = {
-    name       = "aws-cloudwatch-metrics"
-    chart      = "aws-cloudwatch-metrics"
-    repository = "https://aws.github.io/eks-charts"
-    version    = "0.0.7"
-    namespace  = "amazon-cloudwatch"
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {
-      eks_cluster_id = var.name
-    })]
-  }
+  enable_cloudwatch_metrics = var.enable_cloudwatch_metrics
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet

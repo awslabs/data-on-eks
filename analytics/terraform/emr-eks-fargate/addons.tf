@@ -4,17 +4,18 @@
 module "eks_blueprints_kubernetes_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons"
 
-  cluster_name            = module.eks.cluster_name
-  cluster_endpoint        = module.eks.cluster_endpoint
-  cluster_version         = module.eks.cluster_version
-  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
-  oidc_provider_arn       = module.eks.oidc_provider_arn
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider     = module.eks.cluster_oidc_issuer_url
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
     coredns = {
+      preserve = true
       configuration_values = jsonencode({
         computeType = "Fargate"
         # Ensure that the we fully utilize the minimum amount of resources that are supplied by
@@ -41,8 +42,11 @@ module "eks_blueprints_kubernetes_addons" {
     }
     vpc-cni = {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      preserve                 = true
     }
-    kube-proxy = {}
+    kube-proxy = {
+      preserve = true
+    }
   }
 
   #---------------------------------------
