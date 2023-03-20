@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 4
 sidebar_label: EMR on EKS with ACK Controller
 ---
 import CollapsibleContent from '../../src/components/CollapsibleContent';
@@ -12,7 +12,7 @@ We will also build a end-to-end observability for Spark workloads by leveraging 
 
 <CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-ack-crossplane), you will provision the following resources required to run Spark Jobs using EMR on EKS, as well as monitor spark job metrics using **Amazon Managed Prometheus** and **Amazon Managed Grafana**.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-ack), you will provision the following resources required to run Spark Jobs using EMR on EKS, as well as monitor spark job metrics using **Amazon Managed Prometheus** and **Amazon Managed Grafana**.
 
 - Creates EKS Cluster Control plane with public endpoint (for demo purpose only)
 - Two managed node groups
@@ -55,7 +55,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-ack-crossplane
+cd data-on-eks/analytics/terraform/emr-eks-ack
 terraform init
 ```
 

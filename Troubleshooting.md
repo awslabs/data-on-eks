@@ -110,3 +110,12 @@ aws emr-containers list-virtual-clusters --region <REGION> --states ARRESTED \
 --query 'virtualClusters[0].id' --output text | xargs -I{} aws emr-containers delete-virtual-cluster \
 --region <REGION> --id {}
 ```
+
+## Execute this command to delete `Terminating namespace` issue
+
+This will remove the finalizers on the namespace.
+
+```sh
+NAMESPACE=<namespace>
+kubectl get namespace $NAMESPACE -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$NAMESPACE/finalize" -f -
+```
