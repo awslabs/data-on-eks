@@ -15,11 +15,16 @@ module "eks_blueprints_kubernetes_addons" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns = {}
+    coredns = {
+      preserve = true
+    }
     vpc-cni = {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      preserve                 = true
     }
-    kube-proxy = {}
+    kube-proxy = {
+      preserve = true
+    }
   }
 
   #---------------------------------------

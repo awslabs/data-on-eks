@@ -15,6 +15,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   eks_addons = {
     coredns = {
+      preserve = true
       configuration_values = jsonencode({
         computeType = "Fargate"
         # Ensure that the we fully utilize the minimum amount of resources that are supplied by
@@ -41,8 +42,11 @@ module "eks_blueprints_kubernetes_addons" {
     }
     vpc-cni = {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      preserve                 = true
     }
-    kube-proxy = {}
+    kube-proxy = {
+      preserve = true
+    }
   }
 
   #---------------------------------------
