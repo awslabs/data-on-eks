@@ -1,3 +1,0 @@
-nodeSelector:
-  kubernetes.io/os: ${operating-system}
-  NodeGroupType: core
