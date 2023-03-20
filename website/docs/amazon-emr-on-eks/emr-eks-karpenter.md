@@ -2,7 +2,6 @@
 sidebar_position: 2
 sidebar_label: EMR on EKS with Karpenter
 ---
-
 import CollapsibleContent from '../../src/components/CollapsibleContent';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -74,6 +73,79 @@ terraform apply
 
 ## Deploying the Solution
 
+Let's go through the deployment steps 
+
+### Prerequisites:
+
+Ensure that you have installed the following tools on your machine.
+
+1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
+3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+
+_Note: Currently Amazon Managed Prometheus supported only in selected regions. Please see this [userguide](https://docs.aws.amazon.com/prometheus/latest/userguide/what-is-Amazon-Managed-Service-Prometheus.html) for supported regions._
+
+### Deploy
+
+Clone the repository
+
+```bash
+git clone https://github.com/awslabs/data-on-eks.git
+```
+
+Navigate into one of the example directories and run `terraform init`
+
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter
+terraform init
+```
+
+Set AWS_REGION and Run Terraform plan to verify the resources created by this execution.
+
+```bash
+export AWS_REGION="us-west-2"
+terraform plan
+```
+
+This command may take between 20 and 30 minutes to create all the resources.
+
+```bash
+terraform apply
+```
+
+Enter `yes` to apply.
+
+### Verify the resources
+
+Verify the Amazon EKS Cluster and Amazon Managed service for Prometheus
+
+```bash
+aws eks describe-cluster --name emr-eks-karpenter
+
+aws amp list-workspaces --alias amp-ws-emr-eks-karpenter
+```
+
+Verify EMR on EKS Namespaces `emr-data-team-a` and `emr-data-team-b` and Pod status for `Prometheus`, `Vertical Pod Autoscaler`, `Metrics Server` and `Cluster Autoscaler`.
+
+```bash
+aws eks --region us-west-2 update-kubeconfig --name emr-eks-karpenter # Creates k8s config file to authenticate with EKS Cluster
+
+kubectl get nodes # Output shows the EKS Managed Node group nodes
+
+kubectl get ns | grep emr-data-team # Output shows emr-data-team-a and emr-data-team-b namespaces for data teams
+
+kubectl get pods --namespace=prometheus # Output shows Prometheus server and Node exporter pods
+
+kubectl get pods --namespace=vpa  # Output shows Vertical Pod Autoscaler pods
+
+kubectl get pods --namespace=kube-system | grep  metrics-server # Output shows Metric Server pod
+
+kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output shows Cluster Autoscaler pod
+```
+## Run Sample Spark job
+
+The pattern shows how to run spark jobs in a multi-tenant EKS cluster. The examples showcases two data teams using namespaces `emr-data-team-a` and `emr-data-team-b` mapped to their EMR virtual clusters. You can use different Karpenter provisioners for each team so that they can submit jobs that are unique to their workload. Teams can also use different storage requirements to run their Spark jobs. For example, you can use compute optimized provisioner that has `taints` and specify `tolerations` using pod templates so that you can run spark on compute optimized EC2 instances. In terms of storage, you can decide whether to use [EC2 instance-store](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html) or [EBS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html) or [FSx for lustre](https://docs.aws.amazon.com/fsx/latest/LustreGuide/what-is.html) volumes for data processing. The default storage that is used in these examples is EC2 instance store because of performance benefit
+
 This example showcases how multiple data teams within an organization can run Spark jobs using Karpenter provisioners that are unique to each workload.
 For example, you can use a compute-optimized provisioner that has taints and use pod templates to specify tolerations so that you can run Spark on compute-optimized EC2 instances.
 
@@ -81,7 +153,10 @@ For example, you can use a compute-optimized provisioner that has taints and use
 - `spark-memory-optimized` provisioner to run spark jobs on `r5d` instances.
 - `spark-graviton-memory-optimized` provisioner to run spark jobs on `r6gd` Graviton instances(`ARM64`).
 
-**Karpenter provisioner for compute optimized instances. This template leverages the pre-created AWS Launch templates.**
+<Tabs>
+<TabItem value="spark-compute-optimized" lebl="spark-compute-optimized"default>
+
+In this tutorial, you will use Karpenter provisioner that uses compute optimized instances. This template leverages the pre-created AWS Launch templates.
 
 <details>
 <summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary> 
@@ -183,9 +258,9 @@ spec:
 ```
 </details>
 
-**Spark Jobs can use this provisioner to submit the jobs by adding `tolerations` to pod templates.**
+To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
 
-e.g.,
+For example, 
 
 ```yaml
 spec:
@@ -195,7 +270,65 @@ spec:
       effect: "NoSchedule"
 ```
 
-**Karpenter provisioner for memory optimized instances. This template uses the AWS Node template with Userdata.**
+### Execute the sample PySpark Job to trigger compute optimized Karpenter provisioner
+
+The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
+
+:::caution
+
+This shell script downloads the test data to your local machine and uploads to S3 bucket. Verify the shell script before running the job.
+
+:::
+
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner/
+./execute_emr_eks_job.sh
+Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
+Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
+Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data-team-a
+Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
+```
+
+Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Nodes will be drained with once the job is completed
+
+#### Verify the job execution
+
+```bash
+kubectl get pods --namespace=emr-data-team-a -w
+```
+### Execute the sample PySpark job that uses EBS volumes and compute optimized Karpenter provisioner
+
+This pattern uses EBS volumes for data processing and compute optimized instances. 
+:::tip
+You can modify the provisioner to include [EC2 instances](https://aws.amazon.com/ec2/instance-types/#Compute_Optimized) that doesn't provide instance store (for example c5.xlarge) and remove c5d's if needed for this exercise
+:::
+
+We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors. 
+
+Create StorageClass and PVC using example provided
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner-ebs/
+kubectl apply -f emr-eks-karpenter-ebs.yaml
+```
+Let's run the job
+
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner-ebs/
+./execute_emr_eks_job.sh
+Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
+Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
+Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data-team-a
+Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
+```
+
+You'll notice the PVC `spark-driver-pvc` will be used by driver pod but Spark will create multiple ebs volumes for executors mapped to Storageclass `emr-eks-karpenter-ebs-sc`. All dynamically created ebs volumes will be deleted once the job completes
+
+</TabItem>
+
+<TabItem value="spark-memory-optimized" label="spark-memory-optimized">
+
+In this tutorial, you will use Karpenter provisioner that uses memory optimized instances. This template uses the AWS Node template with Userdata.
 <details>
 <summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary> 
 
@@ -301,9 +434,9 @@ spec:
 ```
 </details>
 
-Spark Jobs can use this provisioner to submit the jobs by adding `tolerations` to pod templates.
+To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
 
-e.g.,
+For example, 
 
 ```yaml
 spec:
@@ -312,9 +445,6 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
 ```
-
-
-<CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
 Let's go through the deployment steps 
 
@@ -391,6 +521,7 @@ kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output sho
 <CollapsibleContent header={<h3><span>Execute Spark job - NVMe SSD - Karpenter Compute Optimized Instances</span></h3>}>
 
 ### Execute the sample PySpark Job to trigger compute optimized Karpenter provisioner
+### Execute the sample PySpark Job to trigger memory optimized Karpenter provisioner
 
 The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
 
@@ -409,8 +540,7 @@ Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data
 Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
 ```
 
-Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
-Nodes will be drained with once the job is completed
+Karpetner may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs. Nodes will be drained with once the job is completed
 
 #### Verify the job execution
 
