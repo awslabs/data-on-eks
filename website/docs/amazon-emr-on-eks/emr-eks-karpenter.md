@@ -4,17 +4,75 @@ sidebar_label: EMR on EKS with Karpenter
 ---
 
 import CollapsibleContent from '../../src/components/CollapsibleContent';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
 ## Introduction
 
-In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use Karpenter provisioners for scaling Spark jobs.
-It will demonstrate how to use multiple storage types (**EBS PVC, Instance Storage (SSD), FSx for Lustre**) for **Spark shuffle storage**.
+In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs. 
 
-Additionally, all the **Karpenter Node templates** use **RAID0 configuration** to ensure Spark jobs can refer to `/local1` as one folder even if the instances have one or more SSD disks.
+This pattern uses opinionated defaults to keep the deployment experience simple but also keeps it flexible so that you can pick and choose necessary add-ons during deployment. We recommend keeping the defaults if you are new to EMR on EKS and only customize if you have viable alternative option available for replacement. 
 
-This pattern deploys three Karpenter provisioners, and it also provides guidance on using **Apache YuniKorn as a batch scheduler** to **gang-schedule** Spark jobs.
+In terms of infrastructure, here are the resources created by this pattern
+
+- Creates an EKS Cluster Control plane with public endpoint (recommended for demo/poc environment)
+- One managed node group
+  - Core Node group with 3 instances spanning multi-AZs for running system critical pods. e.g., Cluster Autoscaler, CoreDNS, Observability, Logging etc.
+- Enables EMR on EKS  
+  - Creates two namespaces (`emr-data-team-a`, `emr-data-team-b`) for data teams
+  - Creates Kubernetes role and role binding(`emr-containers` user) for both namespaces
+  - IAM roles for both teams needed for job execution 
+  - Update `AWS_AUTH` config map with `emr-containers` user and `AWSServiceRoleForAmazonEMRContainers` role
+  - Create a trust relationship between the job execution role and the identity of the EMR managed service account
+  - Create EMR Virtual Cluster for `emr-data-team-a` & `emr-data-team-b` and IAM policies for both
+
+You can see the list of add-ons available below.
+:::tip
+We recommend running all the default system add-ons on a dedicated EKS managed nodegroup such as `core-node-group` as provided by this pattern.
+:::
+:::danger
+We don't recommend removing critical add-ons (`Amazon VPC CNI`, `CoreDNS`, `Kube-proxy`). 
+:::
+| Add-on | Enabled by default? | Benefits | Link | 
+| :---  | :----: | :---- | :---- |
+| Amazon VPC CNI | Yes | VPC CNI is available as an [EKS add-on](https://docs.aws.amazon.com/eks/latest/userguide/eks-networking-add-ons.html) and is responsible for creating ENI's and IPv4 or IPv6 addresses for your spark application pods | [VPC CNI Documentation](https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html) |
+| CoreDNS | Yes | CoreDNS is available as an [EKS add-on](https://docs.aws.amazon.com/eks/latest/userguide/eks-networking-add-ons.html) and is responsible for resolving DNS queries for spark application and for Kubernetes cluster | [EKS CoreDNS Documentation](https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html) |
+| Kube-proxy | Yes | Kube-proxy is available as an [EKS add-on](https://docs.aws.amazon.com/eks/latest/userguide/eks-networking-add-ons.html) and it maintains network rules on your nodes and enables network communication to your spark application pods | [EKS kube-proxy Documentation](https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html) |
+| Amazon EBS CSI driver | Yes | EBS CSI driver is available as an [EKS add-on](https://docs.aws.amazon.com/eks/latest/userguide/eks-networking-add-ons.html) and it allows EKS clusters to manage the lifecycle of EBS volumes | [EBS CSI Driver Documentation](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html)
+| Karpenter | Yes | Karpenter is nodegroup-less autoscaler that provides just-in-time compute capacity for spark applications on Kubernetes clusters | [Karpenter Documentation](https://karpenter.sh/) |
+| Cluster Autoscaler | Yes | Kubernetes Cluster Autoscaler automatically adjusts the size of Kubernetes cluster and is available for scaling nodegroups (such as `core-node-group`) in the cluster | [Cluster Autoscaler Documentation](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/cloudprovider/aws/README.md) |
+| Cluster proportional autoscaler | Yes | This is responsible for scaling CoreDNS pods in your Kubernetes cluster | [Cluster Proportional Autoscaler Documentation](https://github.com/kubernetes-sigs/cluster-proportional-autoscaler) |
+| Metrics server | Yes | Kubernetes metrics server is responsible for aggregating cpu, memory and other container resource usage within your cluster | [EKS Metrics Server Documentation](https://docs.aws.amazon.com/eks/latest/userguide/metrics-server.html) |
+| Prometheus | Yes | Prometheus is responsible for monitoring EKS cluster including spark applications in your EKS cluster. We use Prometheus deployment for scraping and ingesting metrics into Amazon Managed Prometheus and Kubecost | [Prometheus Documentation](https://prometheus.io/docs/introduction/overview/) |
+| Amazon Managed Prometheus | Yes | This is responsible for storing and scaling of EKS cluster and spark application metrics | [Amazon Managed Prometheus Documentation](https://docs.aws.amazon.com/prometheus/latest/userguide/what-is-Amazon-Managed-Service-Prometheus.html) |
+| Kubecost | Yes | Kubecost is responsible for providing cost break down by Spark application. You can monitor costs based on per job, namespace or labels | [EKS Kubecost Documentation](https://docs.aws.amazon.com/eks/latest/userguide/cost-monitoring.html) |
+| CloudWatch metrics | No | CloudWatch container insights metrics shows simple and standardized way to monitor not only AWS resources but also EKS resources on CloudWatch dashboard | [CloudWatch Container Insights Documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Container-Insights-metrics-EKS.html) |
+|AWS for Fluent-bit | No | This can be used to publish EKS cluster and worker node logs to CloudWatch Logs or 3rd party logging system | [AWS For Fluent-bit Documentation](https://github.com/aws/aws-for-fluent-bit) |
+| FSx for Lustre CSI driver | No | This can be used for running Spark application using FSx for Lustre | [FSx for Lustre CSI Driver Documentation](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html) |
+
+
+### Customizing Add-ons
+
+You can customize your deployment anytime either by changing recommended system add-ons in `addons.tf` or by changing optional add-ons in `variables.tf`. 
+
+For example, let's say you want to remove Amazon Managed Prometheus because you have another application that captures Prometheus metrics, you can edit `addons.tf` using your favorite editor, find Amazon Managed Prometheus and change to `false`
+```
+enable_amazon_prometheus             = false
+```
+
+If you want to use FSx for Lustre storage while running Spark application for storing shuffle files or accessing data from S3, you can install FSx CSI driver by searching for FSx in `variables.tf` and edit the file
+```
+variable "enable_aws_fsx_csi_driver" {
+  default     = true
+```
+Once the changes are saved, follow the [deployment guide](#deploying-the-solution) if this is a new installation or apply these changes using Terraform for existing installation
+```
+terraform apply
+```
+
+## Deploying the Solution
 
 This example showcases how multiple data teams within an organization can run Spark jobs using Karpenter provisioners that are unique to each workload.
 For example, you can use a compute-optimized provisioner that has taints and use pod templates to specify tolerations so that you can run Spark on compute-optimized EC2 instances.
@@ -23,11 +81,10 @@ For example, you can use a compute-optimized provisioner that has taints and use
 - `spark-memory-optimized` provisioner to run spark jobs on `r5d` instances.
 - `spark-graviton-memory-optimized` provisioner to run spark jobs on `r6gd` Graviton instances(`ARM64`).
 
-Let's review the Karpenter provisioner for computed optimized instances deployed by this pattern.
-
 **Karpenter provisioner for compute optimized instances. This template leverages the pre-created AWS Launch templates.**
 
-<CollapsibleContent header={<h3><span>Karpenter Provisioner - Compute Optimized Instances</span></h3>}>
+<details>
+<summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary> 
 
 ```yaml
 apiVersion: karpenter.sh/v1alpha5
@@ -124,8 +181,7 @@ spec:
   tags:
     InstanceType: "spark-compute-optimized"
 ```
-
-</CollapsibleContent>
+</details>
 
 **Spark Jobs can use this provisioner to submit the jobs by adding `tolerations` to pod templates.**
 
@@ -140,8 +196,8 @@ spec:
 ```
 
 **Karpenter provisioner for memory optimized instances. This template uses the AWS Node template with Userdata.**
-
-<CollapsibleContent header={<h3><span>Karpenter Provisioner - Memory Optimized Instances</span></h3>}>
+<details>
+<summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary> 
 
 ```yaml
 apiVersion: karpenter.sh/v1alpha5
@@ -243,8 +299,7 @@ spec:
     InstanceType: "spark-memory-optimized"    # optional, add tags for your own use
 
 ```
-
-</CollapsibleContent>
+</details>
 
 Spark Jobs can use this provisioner to submit the jobs by adding `tolerations` to pod templates.
 
@@ -261,24 +316,7 @@ spec:
 
 <CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will provision the following resources required to run Spark Jobs using EMR on EKS with [Karpenter](https://karpenter.sh/) as Autoscaler, as well as monitor job metrics using Amazon Managed Prometheus and Amazon Managed Grafana.
-
-- Creates EKS Cluster Control plane with public endpoint (recommended for demo/poc environment)
-- One managed node group
-  - Core Node group with 2 AZs for running system critical pods. e.g., Cluster Autoscaler, CoreDNS, Observability, Logging etc.
-- Enables EMR on EKS and creates two Data teams (`emr-data-team-a`, `emr-data-team-b`)
-  - Creates new namespace for each team
-  - Creates Kubernetes role and role binding(`emr-containers` user) for the above namespace
-  - New IAM role for the team execution role
-  - Update `AWS_AUTH` config map with `emr-containers` user and `AWSServiceRoleForAmazonEMRContainers` role
-  - Create a trust relationship between the job execution role and the identity of the EMR managed service account
-  - EMR Virtual Cluster for `emr-data-team-a` and `emr-data-team-b`
-- Amazon Managed Prometheus workspace to remotely write metrics from Prometheus server
-- Deploys the following Kubernetes Add-ons
-  - Managed Add-ons
-    - VPC CNI, CoreDNS, KubeProxy, AWS EBS CSi Driver
-  - Self Managed Add-ons
-    - Karpetner, Apache YuniKorn(optional), FSx for Lustre(Optional), Metrics server with HA, CoreDNS Cluster proportional Autoscaler, Cluster Autoscaler, Prometheus Server and Node Exporter, VPA for Prometheus, AWS for FluentBit, CloudWatchMetrics for EKS
+Let's go through the deployment steps 
 
 ### Prerequisites:
 
@@ -354,7 +392,7 @@ kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output sho
 
 ### Execute the sample PySpark Job to trigger compute optimized Karpenter provisioner
 
-The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & S3 Bucket to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
+The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
 
 :::caution
 
@@ -391,7 +429,8 @@ This pattern uses EBS volumes for data processing and compute optimized instance
 We will create Storageclass that will be used by drivers and executors. We'll create static Persistent Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors.
 
 Create StorageClass and PVC using example provided
-```shell
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner-ebs/
 kubectl apply -f emr-eks-karpenter-ebs.yaml
 ```
 Let's run the job
