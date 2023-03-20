@@ -61,9 +61,12 @@ enable_amazon_prometheus             = false
 ```
 
 If you want to use FSx for Lustre storage while running Spark application for storing shuffle files or accessing data from S3, you can install FSx CSI driver by searching for FSx in `variables.tf` and edit the file
-```
-variable "enable_aws_fsx_csi_driver" {
-  default     = true
+```yaml
+variable "enable_fsx_for_lustre" {
+  default     = false
+  description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
+  type        = bool
+}
 ```
 Once the changes are saved, follow the [deployment guide](#deploying-the-solution) if this is a new installation or apply these changes using Terraform for existing installation
 ```
@@ -420,10 +423,12 @@ spec:
 
 ### Execute the sample PySpark job that uses EBS volumes and compute optimized Karpenter provisioner
 
-This pattern uses EBS volumes for data processing and compute optimized instances. 
-:::tip
-You can modify the provisioner to include [EC2 instances](https://aws.amazon.com/ec2/instance-types/#Compute_Optimized) that doesn't provide instance store (for example c5.xlarge) and remove c5d's if needed for this exercise
-:::
+This pattern uses EBS volumes for data processing and compute optimized provisioner. You can modify the provisioner by changing nodeselector in driver and executor pod templates. In order to change provisioners, simply update your pod templates to desired provisioner
+```yaml
+  nodeSelector:
+    "NodeGroupType": "SparkComputeOptimized"
+```
+You can also update [EC2 instances](https://aws.amazon.com/ec2/instance-types/#Compute_Optimized) that doesn't include instance store volumes (for example c5.xlarge) and remove c5d's if needed for this exercise
 
 We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors. 
 
@@ -445,32 +450,21 @@ Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. F
 
 You'll notice the PVC `spark-driver-pvc` will be used by driver pod but Spark will create multiple ebs volumes for executors mapped to Storageclass `emr-eks-karpenter-ebs-sc`. All dynamically created ebs volumes will be deleted once the job completes
 
-### Execute PySpark job that uses FSx for Lustre Static Provisioning and compute optimized Karpenter provisioner
+### Running Sample Spark job using FSx for Lustre
 
-Amazon FSx for Lustre is a fully managed shared storage option built on the world’s most popular high-performance file system. You can use FSx to store shuffle files and also to store intermediate data processing tasks in a data pipeline. You can read more in [FSx for Lustre documentation](https://docs.aws.amazon.com/fsx/latest/LustreGuide/what-is.html) and learn how to use this storage with EMR on EKS in our [best practices guide](https://aws.github.io/aws-emr-containers-best-practices/storage/docs/spark/fsx-lustre/)
+Amazon FSx for Lustre is a fully managed shared storage option built on the world’s most popular high-performance file system. You can use FSx to store shuffle files and also to store intermediate data processing tasks in a data pipeline. You can read more about FSX for Lustre in [documentation](https://docs.aws.amazon.com/fsx/latest/LustreGuide/what-is.html) and learn how to use this storage with EMR on EKS in our [best practices guide](https://aws.github.io/aws-emr-containers-best-practices/storage/docs/spark/fsx-lustre/)
 
-In this example, you will learn how to deploy, configure and use FSx for Lustre as a shuffle storage.
+In this example, you will learn how to deploy, configure and use FSx for Lustre as a shuffle storage. There are two ways to use FSx for Lustre
+- using static FSx for Lustre volumes
+- using dynamically created FSx for Lustre volumes
 
-Fsx for Lustre Terraform module is disabled by default. Follow the steps to deploy the FSx for Lustre module and execute the Spark job.
+<Tabs>
+<TabItem value="fsx-static" lebal="fsx-static"default>
 
-1. Update the `analytics/terraform/emr-eks-karpenter/variables.tf` file with the following
+**Execute Spark Job by using `FSx for Lustre` with statically provisioned volume and compute optimized Karpenter provisioner.**
 
-```terraform
-variable "enable_fsx_for_lustre" {
-  default     = true
-  description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
-  type        = bool
-}
+Fsx for Lustre Terraform module is disabled by default. Follow the [customizing add-ons](#customizing-add-ons) steps before running Spark jobs.
 
-```
-
-2. Execute `terrafrom apply` again. This will deploy FSx for Lustre add-on and all the necessary reosurces.
-
-```terraform
-terraform apply -auto-approve
-```
-
-3. Execute Spark Job by using `FSx for Lustre` as a Shuffle storage for Driver and Executor pods with statically provisioned volume.
 Execute the Spark job using the below shell script.
 
 This script requires input parameters which can be extracted from `terraform apply` output values.
@@ -501,28 +495,15 @@ kubectl exec -ti ny-taxi-trip-static-exec-1 -c analytics-kubernetes-executor -n 
 
 kubectl exec -ti ny-taxi-trip-static-exec-1 -c analytics-kubernetes-executor -n emr-data-team-a -- ls -lah /static
 ```
+</TabItem>
 
-### Execute PySpark job that uses FSx for Lustre Dynamic Provisioning and compute optimized Karpenter provisioner
-Fsx for Lustre Terraform module is disabled by default. Follow the steps to deploy the FSx for Lustre module and execute the Spark job.
+<TabItem value="fsx-dynamic" lebal="fsx-dynamic"default>
 
-1. Update the `analytics/terraform/emr-eks-karpenter/variables.tf` file with the following
+**Execute Spark Job by using `FSx for Lustre` with dynamically provisioned volume and compute optimized Karpenter provisioner.**
 
-```terraform
-variable "enable_fsx_for_lustre" {
-  default     = true
-  description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
-  type        = bool
-}
+Fsx for Lustre Terraform module is disabled by default. Follow the [customizing add-ons](#customizing-add-ons) steps before running Spark jobs.
 
-```
-
-2. Execute `terrafrom apply` again. This will deploy FSx for Lustre add-on and all the necessary reosurces.
-
-```terraform
-terraform apply -auto-approve
-```
-
-3. Execute Spark Job by using `FSx for Lustre` as a Shuffle storage for Driver and Executor pods with dynamically provisioned FSx filesystem and Persistent volume.
+Execute Spark Job by using `FSx for Lustre` as a Shuffle storage for Driver and Executor pods with dynamically provisioned FSx filesystem and Persistent volume.
 Execute the Spark job using the below shell script.
 
 This script requires input parameters which can be extracted from `terraform apply` output values.
@@ -552,7 +533,8 @@ kubectl exec -ti ny-taxi-trip-dyanmic-exec-1 -c analytics-kubernetes-executor -n
 
 kubectl exec -ti ny-taxi-trip-dyanmic-exec-1 -c analytics-kubernetes-executor -n emr-data-team-a -- ls -lah /dyanmic
 ```
-
+</TabItem>
+</Tabs>
 
 ## Apache YuniKorn - Batch Scheduler
 
