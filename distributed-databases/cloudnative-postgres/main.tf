@@ -59,8 +59,8 @@ module "eks" {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
-    core_node_group = {
-      name        = "core-node-group"
+    doeks_node_group = {
+      name        = "doeks-node-group"
       description = "EKS managed node group example launch template"
 
       ami_id = data.aws_ami.eks.image_id
@@ -84,7 +84,7 @@ module "eks" {
 
       min_size     = 1
       max_size     = 9
-      desired_size = 3
+      desired_size = 4
 
       force_update_version = true
       instance_types       = ["m5.xlarge"]
@@ -102,11 +102,11 @@ module "eks" {
 
       labels = {
         WorkerType    = "ON_DEMAND"
-        NodeGroupType = "core"
+        NodeGroupType = "doeks"
       }
 
       tags = {
-        Name                     = "core-node-grp"
+        Name                     = "doeks-node-grp"
       }
     }
   }
