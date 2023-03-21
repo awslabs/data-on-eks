@@ -9,9 +9,9 @@ import TabItem from '@theme/TabItem';
 
 ## Introduction
 
-In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs. 
+In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs.
 
-This pattern uses opinionated defaults to keep the deployment experience simple but also keeps it flexible so that you can pick and choose necessary add-ons during deployment. We recommend keeping the defaults if you are new to EMR on EKS and only customize if you have viable alternative option available for replacement. 
+This pattern uses opinionated defaults to keep the deployment experience simple but also keeps it flexible so that you can pick and choose necessary add-ons during deployment. We recommend keeping the defaults if you are new to EMR on EKS and only customize if you have viable alternative option available for replacement.
 
 In terms of infrastructure, here are the resources that are created by this pattern
 
@@ -21,7 +21,7 @@ In terms of infrastructure, here are the resources that are created by this patt
 - Enables EMR on EKS  
   - Creates two namespaces (`emr-data-team-a`, `emr-data-team-b`) for data teams
   - Creates Kubernetes role and role binding(`emr-containers` user) for both namespaces
-  - IAM roles for both teams needed for job execution 
+  - IAM roles for both teams needed for job execution
   - Update `AWS_AUTH` config map with `emr-containers` user and `AWSServiceRoleForAmazonEMRContainers` role
   - Create a trust relationship between the job execution role and the identity of the EMR managed service account
   - Create EMR Virtual Cluster for `emr-data-team-a` & `emr-data-team-b` and IAM policies for both
@@ -31,9 +31,9 @@ You can see the list of add-ons available below.
 We recommend running all the default system add-ons on a dedicated EKS managed nodegroup such as `core-node-group` as provided by this pattern.
 :::
 :::danger
-We don't recommend removing critical add-ons (`Amazon VPC CNI`, `CoreDNS`, `Kube-proxy`). 
+We don't recommend removing critical add-ons (`Amazon VPC CNI`, `CoreDNS`, `Kube-proxy`).
 :::
-| Add-on | Enabled by default? | Benefits | Link | 
+| Add-on | Enabled by default? | Benefits | Link |
 | :---  | :----: | :---- | :---- |
 | Amazon VPC CNI | Yes | VPC CNI is available as an [EKS add-on](https://docs.aws.amazon.com/eks/latest/userguide/eks-networking-add-ons.html) and is responsible for creating ENI's and IPv4 or IPv6 addresses for your spark application pods | [VPC CNI Documentation](https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html) |
 | CoreDNS | Yes | CoreDNS is available as an [EKS add-on](https://docs.aws.amazon.com/eks/latest/userguide/eks-networking-add-ons.html) and is responsible for resolving DNS queries for spark application and for Kubernetes cluster | [EKS CoreDNS Documentation](https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html) |
@@ -53,7 +53,7 @@ We don't recommend removing critical add-ons (`Amazon VPC CNI`, `CoreDNS`, `Kube
 
 ### Customizing Add-ons
 
-You can customize your deployment anytime either by changing recommended system add-ons in `addons.tf` or by changing optional add-ons in `variables.tf`. 
+You can customize your deployment anytime either by changing recommended system add-ons in `addons.tf` or by changing optional add-ons in `variables.tf`.
 
 For example, let's say you want to remove Amazon Managed Prometheus because you have another application that captures Prometheus metrics, you can edit `addons.tf` using your favorite editor, find Amazon Managed Prometheus and change to `false`
 ```
@@ -75,7 +75,7 @@ terraform apply
 
 ## Deploying the Solution
 
-Let's go through the deployment steps 
+Let's go through the deployment steps
 
 ### Prerequisites:
 
@@ -156,7 +156,7 @@ The pattern shows how to run spark jobs in a multi-tenant EKS cluster. The examp
 In this tutorial, you will use Karpenter provisioner that uses compute optimized instances. This template leverages the pre-created AWS Launch templates.
 
 <details>
-<summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary> 
+<summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary>
 
 ```yaml
 apiVersion: karpenter.sh/v1alpha5
@@ -257,7 +257,7 @@ spec:
 
 To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
 
-For example, 
+For example,
 
 ```yaml
 spec:
@@ -302,7 +302,7 @@ kubectl get pods --namespace=emr-data-team-a -w
 In this tutorial, you will use Karpenter provisioner that uses memory optimized instances. This template uses the AWS Node template with Userdata.
 
 <details>
-<summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary> 
+<summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary>
 
 ```yaml
 apiVersion: karpenter.sh/v1alpha5
@@ -408,7 +408,7 @@ spec:
 
 To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
 
-For example, 
+For example,
 
 ```yaml
 spec:
@@ -430,7 +430,7 @@ This pattern uses EBS volumes for data processing and compute optimized provisio
 ```
 You can also update [EC2 instances](https://aws.amazon.com/ec2/instance-types/#Compute_Optimized) that doesn't include instance store volumes (for example c5.xlarge) and remove c5d's if needed for this exercise
 
-We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors. 
+We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors.
 
 Create StorageClass and PVC using example provided
 ```bash

@@ -10,5 +10,5 @@ If you are open to others contacting you about your use of Data on EKS on Slack,
 ## Adopters (Alphabetical)
 
 | Organization | Description | Contacts |
-| --- | --- | --- | 
-| Adobe Inc. | Used EMR on EKS with Karpenter templates in PoC, DEV, QE | `@srikaanthpenugonda` | 
+| --- | --- | --- |
+| Adobe Inc. | Used EMR on EKS with Karpenter templates in PoC, DEV, QE | `@srikaanthpenugonda` |
