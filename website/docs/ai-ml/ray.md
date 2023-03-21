@@ -2,23 +2,60 @@
 sidebar_position: 2
 sidebar_label: Ray on EKS
 ---
+import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 # Ray on EKS
 
 :::caution
-
 This blueprint should be considered as experimental and should only be used for proof of concept.
 :::
 
-This [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/terraform/ray) deploys an EKS Cluster running the [Ray Operator](https://docs.ray.io/en/latest/).
+:::info
+As part of our ongoing efforts to make this blueprint more enterprise-ready, we are actively working on adding several key functionalities. This includes cost management with Kubecost, advanced observability with OTEL, Amazon Managed Prometheus, and Grafana, as well as improved security and data governance using tools such as OPA/Gatekeeper and IRSA. If you have specific requirements or suggestions for this blueprint, please feel free to open an issue on our GitHub repository.
+:::
 
-- Creates a new sample VPC, 3 Private Subnets and 3 Public Subnets
-- Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
-- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with one managed node group
-- Deploys Ray Operator, AWS Load Balancer Controller, Ingress-nginx and External DNS (optional) add-ons
-- Deploys a Ray Cluster in the `ray-cluster` namespace
+## Introduction
 
-## Prerequisites
+[Ray](https://www.ray.io/) is an open-source framework for building scalable and distributed applications. It is designed to make it easy to write parallel and distributed Python applications by providing a simple and intuitive API for distributed computing. It has a growing community of users and contributors, and is actively maintained and developed by the Ray team at Anyscale, Inc.
+
+To deploy Ray in production across multiple machines users must first deploy [**Ray Cluster**](https://docs.ray.io/en/latest/cluster/getting-started.html). A Ray Cluster consists of head nodes and worker nodes which can be autoscaled using the built-in **Ray Autoscaler**.
+
+![RayCluster](img/ray-cluster.svg)
+
+*Source: https://docs.ray.io/en/latest/cluster/key-concepts.html*
+
+## Ray on Kubernetes
+
+Deploying Ray Cluster on Kubernetes including on Amazon EKS is supported via the [**KubeRay Operator**](https://ray-project.github.io/kuberay/). The operator provides a Kubernetes-native way to manage Ray clusters. The installation of KubeRay Operator involves deploying the operator and the CRDs for `RayCluster`, `RayJob` and `RayService` as documented [here](https://ray-project.github.io/kuberay/deploy/helm/).
+
+Deploying Ray on Kubernetes can provide several benefits:
+
+1. Scalability: Kubernetes allows you to scale your Ray cluster up or down based on your workload requirements, making it easy to manage large-scale distributed applications.
+
+1. Fault tolerance: Kubernetes provides built-in mechanisms for handling node failures and ensuring high availability of your Ray cluster.
+
+1. Resource allocation: With Kubernetes, you can easily allocate and manage resources for your Ray workloads, ensuring that they have access to the necessary resources for optimal performance.
+
+1. Portability: By deploying Ray on Kubernetes, you can run your workloads across multiple clouds and on-premises data centers, making it easy to move your applications as needed.
+
+1. Monitoring: Kubernetes provides rich monitoring capabilities, including metrics and logging, making it easy to troubleshoot issues and optimize performance.
+
+Overall, deploying Ray on Kubernetes can simplify the deployment and management of distributed applications, making it a popular choice for many organizations that need to run large-scale machine learning workloads.
+
+Before moving forward with the deployment please make sure you have read the pertinent sections of the official [documentation](https://docs.ray.io/en/latest/cluster/kubernetes/index.html).
+
+![RayonK8s](img/ray_on_kubernetes.webp)
+
+*Source: https://docs.ray.io/en/latest/cluster/kubernetes/index.html*
+
+## Deploying the Example
+
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform), you will provision Ray Cluster on Amazon EKS using the KubeRay Operator. The example also demonstrates the use of Karpenter of autoscaling of worker nodes for job specific Ray Clusters.
+
+
+![RayOnEKS](img/ray-on-eks.png)
+
+<CollapsibleContent header={<h3><span>Pre-requisites</span></h3>}>
 
 Ensure that you have installed the following tools on your machine.
 
@@ -26,297 +63,271 @@ Ensure that you have installed the following tools on your machine.
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 4. [python3](https://www.python.org/)
-5. [jq](https://stedolan.github.io/jq/)
+6. [ray](https://docs.ray.io/en/master/ray-overview/installation.html#from-wheels)
 
-Additionally, for end-to-end configuration of Ingress, you can optionally provide the following:
+</CollapsibleContent>
 
-1. A [Route53 Public Hosted Zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html) configured in the account where you are deploying this example. E.g. "bar.com"
-2. An [ACM Certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html) in the account + region where you are deploying this example. A wildcard certificate is preferred, e.g. "*.bar.com"
+<CollapsibleContent header={<h3><span>Deploy the EKS Cluster with KubeRay Operator</span></h3>}>
 
-## Deploy the EKS Cluster with Ray Operator
-
-### Clone the repository
+#### Clone the repository
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-### Build Docker Image for Ray Cluster
+#### Initialize Terraform
 
-First, in order to run the RayCluster, we need to push a container image to ECR repository that contains the all the dependencies. You can see the `Dockerfile` in the example with python dependencies packaged in. The next series of steps we will setup an ECR repository, build the docker image for our model and push it to the ECR repository.
-
-Create an ECR repository
+Navigate into the example directory
 
 ```bash
-aws ecr create-repository --repository-name ray-demo
+cd data-on-eks/ai-ml/ray/terraform
 ```
 
-Login to the ECR repository
+#### Run the install script
+
+
+Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region. This is also the time to update any other input variables or make any other changes to the terraform template.
+
 
 ```bash
-export AWS_REGION=<enter-your-region>
-export ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
-echo $ACCOUNT_ID
-
-aws ecr get-login-password \
-  --region $AWS_REGION | docker login \
-  --username AWS \
-  --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ray-demo
+./install .sh
 ```
 
-Build the docker image containing our model deployment.
+</CollapsibleContent>
+
+<CollapsibleContent header={<h3><span>Verify Deployment</span></h3>}>
+
+Update local kubeconfig so we can access kubernetes cluster
 
 ```bash
-docker build sources -t $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ray-demo
+aws eks update-kubeconfig --name ray-cluster #or whatever you used for EKS cluster name
 ```
 
-Push the docker image to the ECR repo
+First, lets verify that we have worker nodes running in the cluster.
 
 ```bash
-docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ray-demo
+kuebctl get nodes
 ```
+:::info
+```bash
+NAME                          STATUS   ROLES    AGE   VERSION
+ip-10-1-26-241.ec2.internal   Ready    <none>   10h   v1.24.9-eks-49d8fe8
+ip-10-1-4-21.ec2.internal     Ready    <none>   10h   v1.24.9-eks-49d8fe8
+ip-10-1-40-196.ec2.internal   Ready    <none>   10h   v1.24.9-eks-49d8fe8
+```
+:::
 
-### Initialize Terraform
-
-Navigate into the example directory and run `terraform init`
+Next, lets verify all the pods are running.
 
 ```bash
-cd data-on-eks/ai-ml/terraform/ray/
+kubectl get pods -n kuberay-operator
+```
+:::info
+```bash
+NAMESPACE            NAME                               READY   STATUS    RESTARTS        AGE
+amazon-cloudwatch    aws-cloudwatch-metrics-d4xrr       1/1     Running   1 (1h37m ago)   1h
+amazon-cloudwatch    aws-cloudwatch-metrics-tpqsz       1/1     Running   1 (1h37m ago)   1h
+amazon-cloudwatch    aws-cloudwatch-metrics-z7wbn       1/1     Running   1 (1h37m ago)   1h
+aws-for-fluent-bit   aws-for-fluent-bit-h82w4           1/1     Running   1 (1h37m ago)   1h
+aws-for-fluent-bit   aws-for-fluent-bit-r5kxt           1/1     Running   1 (1h37m ago)   1h
+aws-for-fluent-bit   aws-for-fluent-bit-wgxxl           1/1     Running   1 (1h37m ago)   1h
+karpenter            karpenter-668c669897-fmxdr         1/1     Running   1 (1h37m ago)   1h
+karpenter            karpenter-668c669897-prbr6         1/1     Running   1 (1h37m ago)   1h
+kube-system          aws-node-fnwp5                     1/1     Running   1 (1h37m ago)   1h
+kube-system          aws-node-r45xd                     1/1     Running   1 (1h37m ago)   1h
+kube-system          aws-node-vfq66                     1/1     Running   1 (1h37m ago)   1h
+kube-system          coredns-79989457d9-2jldd           1/1     Running   1 (1h37m ago)   1h
+kube-system          coredns-79989457d9-cgtkf           1/1     Running   1 (1h37m ago)   1h
+kube-system          kube-proxy-5jrtf                   1/1     Running   1 (1h37m ago)   1h
+kube-system          kube-proxy-fjxsk                   1/1     Running   1 (1h37m ago)   1h
+kube-system          kube-proxy-tzr79                   1/1     Running   1 (1h37m ago)   1h
+kuberay-operator     kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
+```
+:::
+
+
+At this point we are ready to deploy Ray Clusters.
+</CollapsibleContent>
+
+<CollapsibleContent header={<h3><span>Deploy Ray Clusters and Workloads</span></h3>}>
+
+For convenience, we have packaged the helm chart deployent of Ray Cluster as a repeatable terraform [module](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform/modules/ray-cluster/). This allows us to codify organizational best practices and requirements for deploying Ray Clusters for multiple Data Science teams. The module also creates configuration needed for karpenter to be able to provision EC2 instances for Ray applications as and when they are needed for the duration of the job. This model can be replicated via GitOps tooling such as ArgoCD or Flux but is done here via terraform for demonstration purpose.
+
+##### XGBoost
+
+First, we will deploy a Ray Cluster for our [XGBoost benchmark](https://docs.ray.io/en/latest/cluster/kubernetes/examples/ml-example.html#kuberay-ml-example) sample job.
+
+Go to the xgboost directory followed by terraform init, and plan.
+
+```bash
+cd examples/xgboost
 terraform init
+terraform plan
 ```
 
-### Terraform Plan
-
-Run Terraform plan to verify the resources created by this execution.
-
-**Optional** - provide a Route53 Hosted Zone hostname and a corresponding ACM Certificate;
+If the changes look good, lets apply them.
 
 ```bash
-export TF_VAR_eks_cluster_domain="bar.com"
-export TF_VAR_acm_certificate_domain="*.bar.com"
+terraform apply -auto-approve
 ```
 
-### Deploy the pattern
+As the RayCluster pod goes into the pending state, Karpenter will provision an EC2 instance based on the `Provisioner` and `AWSNodeTemplate` configuration we have provided. We can check that a new node has been created.
 
 ```bash
-terraform apply
-...
-...
-
-Outputs:
-
-configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name ray"
-s3_bucket = "ray-demo-models-20220719224423900800000001"
+kubectl get nodes
 ```
 
-Enter `yes` to apply.
+:::info
+```bash
+NAME                          STATUS   ROLES    AGE     VERSION
+# New node appears
+ip-10-1-13-204.ec2.internal   Ready    <none>   2m22s   v1.24.9-eks-49d8fe8
+ip-10-1-26-241.ec2.internal   Ready    <none>   12h     v1.24.9-eks-49d8fe8
+ip-10-1-4-21.ec2.internal     Ready    <none>   12h     v1.24.9-eks-49d8fe8
+ip-10-1-40-196.ec2.internal   Ready    <none>   12h     v1.24.9-eks-49d8fe8
+```
+:::
 
-Export the s3_bucket to your local environment.
+Wait until the RayCluster head node pods are provisioned.
 
 ```bash
-export S3_BUCKET="s3://ray-demo-models-20220719224423900800000001"
+kubectl get pods -n xgboost
 ```
+:::info
+```
+NAME                         READY   STATUS    RESTARTS   AGE
+xgboost-kuberay-head-585d6   2/2     Running   0          5m42s
+```
+:::
 
-### Verify Deployment
+Now we are ready to run our sample training benchmark using for XGBoost. First, open another terminal and forward the Ray server to our localhost.
 
-Update kubeconfig
+```sh
+kubectl port-forward service/xgboost-kuberay-head-svc -n xgboost 8265:8265
+```
+:::info
+```bash
+Forwarding from 127.0.0.1:8265 -> 8265
+Forwarding from [::1]:8265 -> 8265
+```
+:::
+
+Submit the ray job for XGBoost benchmark.
 
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name ray
+python job/xgboost_submit.py
 ```
 
-Verify all pods are running.
+You can open http://localhost:8265 in your browser to monitor job progress. If there are any failures during execution those can be viewed in the logs under the Jobs section.
+
+![RayDashboard](img/ray-dashboard.png)
+
+As the job progresses, you will notice new Ray autoscaler will provision additional ray worker pods based on the autoscaling configuration defined in the RayCluster configuration. Those worker pods will initially remain in pending state. That will trigger karpenter to spin up new EC2 instances so the pending pods can be scheduled. After worker pods go to running state, the job will progress to completion.
 
 ```bash
-NAMESPACE               NAME                                                        READY   STATUS    RESTARTS        AGE
-external-dns            external-dns-99dd9564f-8fsvd                                1/1     Running   2 (6h21m ago)   16d
-ingress-nginx           ingress-nginx-controller-659678ccb9-dlc5r                   1/1     Running   2 (6h20m ago)   16d
-kube-prometheus-stack   alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   4 (6h21m ago)   16d
-kube-prometheus-stack   kube-prometheus-stack-grafana-68d4b6d7f4-h97j4              3/3     Running   6 (6h21m ago)   15d
-kube-prometheus-stack   kube-prometheus-stack-kube-state-metrics-6d6b967d6d-fc62f   1/1     Running   2 (6h21m ago)   16d
-kube-prometheus-stack   kube-prometheus-stack-operator-7c8bffbd9b-5rv59             1/1     Running   2 (6h21m ago)   14d
-kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-4hj6g        1/1     Running   2 (6h20m ago)   16d
-kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-9pgqc        1/1     Running   2 (6h21m ago)   16d
-kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-v46pf        1/1     Running   2 (6h21m ago)   16d
-kube-prometheus-stack   prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   4 (6h21m ago)   14d
-kube-system             aws-load-balancer-controller-67b5dd7d69-jjq4r               1/1     Running   2 (6h21m ago)   16d
-kube-system             aws-load-balancer-controller-67b5dd7d69-pthpn               1/1     Running   2 (6h20m ago)   16d
-kube-system             aws-node-7bcvh                                              1/1     Running   3 (6h19m ago)   16d
-kube-system             aws-node-csshj                                              1/1     Running   3 (6h19m ago)   16d
-kube-system             aws-node-htcmn                                              1/1     Running   4 (6h19m ago)   16d
-kube-system             coredns-7f5998f4c-m4lxr                                     1/1     Running   2 (6h21m ago)   16d
-kube-system             coredns-7f5998f4c-t78m9                                     1/1     Running   2 (6h20m ago)   16d
-kube-system             kube-proxy-4v4pr                                            1/1     Running   2 (6h21m ago)   16d
-kube-system             kube-proxy-7rkb7                                            1/1     Running   2 (6h20m ago)   16d
-kube-system             kube-proxy-v76mj                                            1/1     Running   2 (6h21m ago)   16d
-kuberay-operator        kuberay-operator-7b88c9c4fb-kdhlz                           1/1     Running   2 (6h21m ago)   16d
-ray-cluster             raycluster-autoscaler-head-wxbgw                            1/1     Running   0               10m
-ray-cluster             raycluster-autoscaler-worker-large-group-twtld              1/1     Running   0               10m
+kubectl get nodes
 ```
+:::info
+```bash
+NAME                          STATUS    ROLES    AGE   VERSION
+ip-10-1-1-241.ec2.internal    Unknown   <none>   1s  
+ip-10-1-10-211.ec2.internal   Unknown   <none>   1s  
+ip-10-1-13-204.ec2.internal   Ready     <none>   24m   v1.24.9-eks-49d8fe8
+ip-10-1-26-241.ec2.internal   Ready     <none>   12h   v1.24.9-eks-49d8fe8
+ip-10-1-3-64.ec2.internal     Unknown   <none>   7s  
+ip-10-1-4-21.ec2.internal     Ready     <none>   12h   v1.24.9-eks-49d8fe8
+ip-10-1-40-196.ec2.internal   Ready     <none>   12h   v1.24.9-eks-49d8fe8
+ip-10-1-7-167.ec2.internal    Unknown   <none>   1s  
+ip-10-1-9-112.ec2.internal    Unknown   <none>   1s  
+ip-10-1-9-172.ec2.internal    Unknown   <none>   1s  
+```
+:::
 
-#### Ray Dashboard
+Optionally, you can also use [eks-node-viewer](https://github.com/awslabs/eks-node-viewer) for visualizing dynamic node usage within the cluster.
 
-The Ray Dashboard can be opened at the following url "https://ray-demo.bar.com/dashboard"
+![EksNodeViewer](img/eks-node-viewer.png)
 
-![Ray Dashboard](img/ray.png)
+Once the benchmark is complete, the job log will display the results. You might see different results based on your configurations.
 
-### Examples
+:::info
+```bash
+Results: {'training_time': 1338.488839321999, 'prediction_time': 403.36653568099973}
+```
+:::
+##### PyTorch
 
-#### Hugging Face
+We can simultaneously deploy the PyTorch benchmark as well. We deploy a separate Ray Cluster with its own configuration for Karpenter workers. Different jobs can have different requirements for Ray Cluster such as a different version of Ray libraries or EC2 instance configuration such as making use of Spot market or GPU instances. We take advantage of node taints and tolerations in Ray Cluster pod specs to match the Ray Cluster configuration to Karpenter configuration thus taking advantage of the flexibility that Karpenter provides.
 
-##### Ray Serve
-
-As a sample, we will use [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) to deploy a sample machine learning model and expose it to the outside world via the Ingress configuration. The code for this deployment can be found `sources/hface_t5_summarize_serve.py`. We use the [Hugging Face T5](https://huggingface.co/docs/transformers/model_doc/t5) model to serve an endpoint to summarize an arbitrary block of text. This model is deployed as Kubernetes job `sample-jobs/summarize-serve-job.yaml`.
-
-Create a Job to deploy the model to the Ray Cluster
+Go to the PyTorch directory and run the terraform init and plan as before.
 
 ```bash
-envsubst < sample-jobs/summarize-serve-job.yaml | kubectl create -f -
-
-job.batch/ray-summarize-job-cjdd8 created
+cd ../pytorch
+terraform init
+terraform plan
 ```
 
-Tail the logs of the job to verify successful deployment of the job.
-
-```bash
-kubectl logs -n ray-cluster ray-summarize-job-cjdd8-wmxm8 -f
-
-Caught schedule exception
-2022-07-08 17:03:29,579 INFO common.py:220 -- Exception from actor creation is ignored in destructor. To receive this exception in application code, call a method on the actor reference before its destructor is run.
-(ServeController pid=458) INFO 2022-07-08 17:03:30,684 controller 458 checkpoint_path.py:17 - Using RayInternalKVStore for controller checkpoint and recovery.
-(ServeController pid=458) INFO 2022-07-08 17:03:30,788 controller 458 http_state.py:115 - Starting HTTP proxy with name 'SERVE_CONTROLLER_ACTOR:SERVE_PROXY_ACTOR-node:10.0.12.204-0' on node 'node:10.0.12.204-0' listening on '0.0.0.0:8000'
-(HTTPProxyActor pid=496) INFO:     Started server process [496]
-(ServeController pid=458) INFO 2022-07-08 17:03:33,701 controller 458 deployment_state.py:1217 - Adding 1 replicas to deployment 'Summarizer'.
-Downloading: 100%|██████████| 1.17k/1.17k [00:00<00:00, 2.04MB/s]
-Downloading:   0%|          | 0.00/231M [00:00<?, ?B/s]
-Downloading:   2%|▏         | 5.68M/231M [00:00<00:03, 59.5MB/s]
-Downloading:   5%|▍         | 11.4M/231M [00:00<00:04, 47.3MB/s]
-Downloading:   7%|▋         | 16.0M/231M [00:00<00:04, 45.2MB/s]
-Downloading:   9%|▉         | 20.5M/231M [00:00<00:04, 45.9MB/s]
-Downloading:  11%|█         | 25.8M/231M [00:00<00:04, 48.9MB/s]
-Downloading:  13%|█▎        | 31.1M/231M [00:00<00:04, 51.2MB/s]
-Downloading:  16%|█▌        | 36.4M/231M [00:00<00:03, 52.7MB/s]
-Downloading:  18%|█▊        | 41.5M/231M [00:00<00:03, 52.7MB/s]
-Downloading:  20%|██        | 46.6M/231M [00:00<00:03, 52.1MB/s]
-Downloading:  22%|██▏       | 51.5M/231M [00:01<00:03, 51.5MB/s]
-Downloading:  25%|██▍       | 56.6M/231M [00:01<00:03, 51.9MB/s]
-Downloading:  27%|██▋       | 61.7M/231M [00:01<00:03, 52.3MB/s]
-Downloading:  29%|██▉       | 66.9M/231M [00:01<00:03, 53.2MB/s]
-Downloading:  31%|███       | 72.0M/231M [00:01<00:03, 51.1MB/s]
-Downloading:  33%|███▎      | 76.9M/231M [00:01<00:03, 51.2MB/s]
-Downloading:  36%|███▌      | 82.2M/231M [00:01<00:02, 52.5MB/s]
-Downloading:  38%|███▊      | 87.3M/231M [00:01<00:02, 52.6MB/s]
-Downloading:  40%|████      | 92.6M/231M [00:01<00:02, 53.5MB/s]
-Downloading:  42%|████▏     | 97.7M/231M [00:01<00:02, 53.5MB/s]
-Downloading:  45%|████▍     | 103M/231M [00:02<00:02, 54.2MB/s]
-Downloading:  47%|████▋     | 108M/231M [00:02<00:02, 53.5MB/s]
-Downloading:  49%|████▉     | 114M/231M [00:02<00:02, 54.3MB/s]
-Downloading:  51%|█████▏    | 119M/231M [00:02<00:02, 54.6MB/s]
-Downloading:  54%|█████▎    | 124M/231M [00:02<00:02, 54.8MB/s]
-Downloading:  56%|█████▌    | 129M/231M [00:02<00:01, 54.2MB/s]
-Downloading:  58%|█████▊    | 135M/231M [00:02<00:01, 54.7MB/s]
-Downloading:  61%|██████    | 140M/231M [00:02<00:01, 54.2MB/s]
-Downloading:  63%|██████▎   | 145M/231M [00:02<00:01, 53.2MB/s]
-Downloading:  65%|██████▌   | 150M/231M [00:02<00:01, 53.9MB/s]
-Downloading:  67%|██████▋   | 155M/231M [00:03<00:01, 44.7MB/s]
-Downloading:  70%|██████▉   | 161M/231M [00:03<00:01, 48.3MB/s]
-Downloading:  72%|███████▏  | 167M/231M [00:03<00:01, 51.2MB/s]
-Downloading:  74%|███████▍  | 172M/231M [00:03<00:01, 52.3MB/s]
-Downloading:  77%|███████▋  | 177M/231M [00:03<00:01, 50.8MB/s]
-Downloading:  79%|███████▉  | 182M/231M [00:03<00:00, 52.2MB/s]
-Downloading:  81%|████████▏ | 188M/231M [00:03<00:00, 53.2MB/s]
-Downloading:  84%|████████▎ | 193M/231M [00:03<00:00, 54.2MB/s]
-Downloading:  86%|████████▌ | 198M/231M [00:03<00:00, 53.9MB/s]
-Downloading:  88%|████████▊ | 204M/231M [00:04<00:00, 53.6MB/s]
-Downloading:  90%|█████████ | 209M/231M [00:04<00:00, 53.5MB/s]
-Downloading:  93%|█████████▎| 214M/231M [00:04<00:00, 54.0MB/s]
-Downloading:  95%|█████████▍| 219M/231M [00:04<00:00, 54.6MB/s]
-Downloading:  97%|█████████▋| 225M/231M [00:04<00:00, 54.8MB/s]
-Downloading: 100%|██████████| 231M/231M [00:04<00:00, 52.5MB/s]
-Downloading: 100%|██████████| 773k/773k [00:00<00:00, 29.1MB/s]
-Downloading: 100%|██████████| 1.32M/1.32M [00:00<00:00, 25.5MB/s]
-```
-
-##### Test Summarize Deployment
-
-The client code uses python `requests` module to invoke the `/summarize` endpoint with a block of text. If all goes well, the endpoint should return summarized text of the block text submitted.
-
-```bash
-python sources/summarize_client.py
-
-two astronauts steered their fragile lunar module safely and smoothly to the historic landing . the first men to reach the moon -- Armstrong and his co-pilot, col. Edwin E. Aldrin Jr. of the air force -- brought their ship to rest on a level, rock-strewn plain .
-```
-
-#### Pytorch HuggingFace Clothing
-
-##### Ray Train
-
-As a sample, we will use [Ray Train](https://docs.ray.io/en/latest/train/train.html) to train a machine learning model using a sample dataset. See the code for model training `sources/train_pytorch_huggingface_clothing.py`
-
-Create a Job to submit the training job to the Ray Cluster
-
-```bash
-envsubst < sample-jobs/train-pytorch-huggingface-clothing.yaml | kubectl create -f -
-
-job.batch/ray-train-pytorch-huggingface-clothing-plkzf created
-```
-
-Tail the logs to see the training in progress:
-
-```bash
-kubectl logs -n ray-cluster job.batch/ray-train-pytorch-huggingface-clothing-plkzf -f
-
-...
-...
-{'running_train_loss': tensor(1.1093, requires_grad=True), '_timestamp': 1660890352, '_time_this_iter_s': 32.8163115978241, '_training_iteration': 1, 'time_this_iter_s': 37.8390429019928, 'should_checkpoint': True, 'done': True, 'timesteps_total': None, 'episodes_total': None, 'training_iteration': 1, 'trial_id': 'af450_00000', 'experiment_id': '5a41dbb6558648d29ff5070c391167ea', 'date': '2022-08-18_23-25-54', 'timestamp': 1660890354, 'time_total_s': 37.8390429019928, 'pid': 1469, 'hostname': 'raycluster-autoscaler-head-wxbgw', 'node_ip': '10.0.11.68', 'config': {}, 'time_since_restore': 37.8390429019928, 'timesteps_since_restore': 0, 'iterations_since_restore': 1, 'warmup_time': 0.002658843994140625, 'experiment_tag': '0'}
-s3://ray-demo-models-20220801234005040500000001/ray_output/TorchTrainer_2022-08-18_23-25-13/TorchTrainer_af450_00000_0_2022-08-18_23-25-14/checkpoint_000000/
-
-```
-
-As shown above a model checkpoint is written to an S3 location so that it can be retrived for model serving. The location of the checkpoint is stored in the SSM Parameter Store.
-
-##### Ray Serve
-
-To create an inference endpoint which will be served using Ray Serve, create a Job to submit the Ray deployment `sources/serve_pytorch_huggingface_clothing.py`.
+Apply the changes.
 
 
 ```bash
-envsubst < sample-jobs/serve-pytorch-huggingface-clothing.yaml | kubectl create -f -
-
+terraform apply -auto-approve
 ```
 
-##### Test Deployment
-
-A sample script `sources/pytorch_huggingface_clothing_client.py` is provided that uses the requests library to test the inference endpoint.
+Wait for the pytorch Ray Cluster head node pods to be ready.
 
 ```bash
-python sources/pytorch_huggingface_clothing_client.py
-
-Positive
+kubectl get pods -n pytorch -w
 ```
 
-### Monitoring
+:::info
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE
+pytorch-kuberay-head-9tx56   0/2     Pending   0          43s
+```
+:::
 
-This blueprint uses the `kube-prometheus-stack` to create a monitoring stack for getting visibility into your RayCluster.
-
-Open the Grafana dashboard using the url "https://ray-demo.bar.com/monitoring". The sample Ray dashboard can be accessed by browsing to the Ray grafana folder.
-
-![Ray Grafana Dashboard](img/ray-grafana.png)
-
-## Cleanup
-
-To clean up your environment, destroy the Terraform modules in reverse order.
-
-Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
+Once running, we can forward the port for server, taking care that we foward it to another local port as 8265 may be occupied by the xgboost connection.
 
 ```bash
-terraform destroy -target="module.eks_blueprints_kubernetes_addons" -auto-approve
-terraform destroy -target="module.eks_blueprints" -auto-approve
-terraform destroy -target="module.vpc" -auto-approve
+kubectl port-forward service/xgboost-kuberay-head-svc -n pytorch 8265:8266
 ```
 
-Finally, destroy any additional resources that are not in the above modules
+We can then submit the job for PyTorch benchmark workload.
 
 ```bash
+python job/pytorch_submit.py
+```
+
+You can open http://localhost:8266 to monitor the progress of the pytorch benchmark.
+</CollapsibleContent>
+
+<CollapsibleContent header={<h3><span>Teardown</span></h3>}>
+
+:::caution
+To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment.
+:::
+
+Destroy the Ray Clusters for pytorch followed by xgboost.
+
+From the pytorch directory.
+
+```bash
+cd ../pytorch
 terraform destroy -auto-approve
 ```
+
+From the xgboost directory.
+
+```bash
+cd ../xgboost
+terraform destroy -auto-approve
+```
+
+Use the provided helper script `cleanup.sh` to tear down EKS cluster and other AWS resources.
+
+```bash
+cd ../../
+./cleanup.sh
+```
+
+</CollapsibleContent>

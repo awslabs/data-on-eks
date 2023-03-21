@@ -2,6 +2,8 @@
 # Kubernetes Addons
 ################################################################################
 module "eks_blueprints_kubernetes_addons" {
+  # Users should pin the version to the latest available release
+  # tflint-ignore: terraform_module_pinned_source
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons"
 
   cluster_name      = module.eks.cluster_name
