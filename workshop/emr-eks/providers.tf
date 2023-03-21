@@ -10,23 +10,41 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  host                   = module.eks_workshop.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks_workshop.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.this.token
+  host                   = local.cluster_endpoint
+  cluster_ca_certificate = base64decode(local.cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    # This requires the awscli to be installed locally where Terraform is executed
+    args = ["eks", "get-token", "--cluster-name", local.cluster_name]
+  }
 }
 
 provider "helm" {
   kubernetes {
-    host                   = module.eks_workshop.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks_workshop.cluster_certificate_authority_data)
-    token                  = data.aws_eks_cluster_auth.this.token
+    host                   = local.cluster_endpoint
+    cluster_ca_certificate = base64decode(local.cluster_certificate_authority_data)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      # This requires the awscli to be installed locally where Terraform is executed
+      args = ["eks", "get-token", "--cluster-name", local.cluster_name]
+    }
   }
 }
 
 provider "kubectl" {
   apply_retry_count      = 30
-  host                   = module.eks_workshop.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks_workshop.cluster_certificate_authority_data)
+  host                   = local.cluster_endpoint
+  cluster_ca_certificate = base64decode(local.cluster_certificate_authority_data)
   load_config_file       = false
-  token                  = data.aws_eks_cluster_auth.this.token
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    # This requires the awscli to be installed locally where Terraform is executed
+    args = ["eks", "get-token", "--cluster-name", local.cluster_name]
+  }
 }

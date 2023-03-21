@@ -5,6 +5,16 @@ locals {
   })
   ecr_repository_username = data.aws_ecrpublic_authorization_token.token.user_name
   ecr_repository_password = data.aws_ecrpublic_authorization_token.token.password
+
+  private_subnet_ids = var.create_vpc ? module.vpc_workshop[0].private_subnets : var.private_subnet_ids
+  vpc_id             = var.create_vpc ? module.vpc_workshop[0].vpc_id : var.vpc_id
+
+  cluster_name                        = var.create_eks ? module.eks_workshop[0].cluster_name : var.cluster_name
+  oidc_provider                       = var.create_eks ? module.eks_workshop[0].oidc_provider : var.oidc_provider
+  oidc_provider_arn                   = var.create_eks ? module.eks_workshop[0].oidc_provider_arn : var.oidc_provider_arn
+  cluster_endpoint                    = var.create_eks ? module.eks_workshop[0].cluster_endpoint : var.cluster_endpoint
+  karpenter_iam_instance_profile_name = var.create_eks ? module.eks_workshop[0].karpenter_iam_instance_profile_name : var.karpenter_iam_instance_profile_name
+  cluster_certificate_authority_data  = var.create_eks ? module.eks_workshop[0].cluster_certificate_authority_data : var.cluster_certificate_authority_data
 }
 
 data "aws_ecrpublic_authorization_token" "token" {
@@ -12,13 +22,14 @@ data "aws_ecrpublic_authorization_token" "token" {
 }
 
 data "aws_eks_cluster_auth" "this" {
-  name = module.eks_workshop.cluster_name
+  name = local.cluster_name
 }
 
 #---------------------------------------------------
 # VPC
 #---------------------------------------------------
 module "vpc_workshop" {
+  count  = var.create_vpc ? 1 : 0
   source = "../modules/vpc"
 
   name            = var.name
@@ -32,51 +43,53 @@ module "vpc_workshop" {
 # EKS Cluster and Core Node group
 #---------------------------------------------------
 module "eks_workshop" {
+  count  = var.create_eks ? 1 : 0
   source = "../modules/eks"
 
-  name                = var.name
+  name                = var.cluster_name
+  eks_cluster_version = var.cluster_version
+  vpc_id              = local.vpc_id
+  private_subnets     = local.private_subnet_ids
   region              = var.region
-  eks_cluster_version = var.eks_cluster_version
-  private_subnets     = module.vpc_workshop.private_subnets
-  vpc_id              = module.vpc_workshop.vpc_id
 }
 
-##---------------------------------------------------
-## Addons with Karpenter
-##---------------------------------------------------
+#---------------------------------------------------
+# Addons with Karpenter
+#---------------------------------------------------
 module "addons_workshop" {
   source = "../modules/addons"
 
-  region            = var.region
-  cluster_name      = module.eks_workshop.cluster_name
-  oidc_provider     = module.eks_workshop.oidc_provider_arn
-  oidc_provider_arn = module.eks_workshop.oidc_provider_arn
-  cluster_endpoint  = module.eks_workshop.cluster_endpoint
-  cluster_version   = module.eks_workshop.cluster_version
+  region           = var.region
+  cluster_name     = local.cluster_name
+  cluster_version  = var.cluster_version
+  cluster_endpoint = local.cluster_endpoint
+
+  oidc_provider     = local.oidc_provider
+  oidc_provider_arn = local.oidc_provider_arn
 
   ecr_repository_username             = local.ecr_repository_username
   ecr_repository_password             = local.ecr_repository_password
-  karpenter_iam_instance_profile_name = module.eks_workshop.karpenter_iam_instance_profile_name
+  karpenter_iam_instance_profile_name = local.karpenter_iam_instance_profile_name
 
   # ENABLE ADDONS
   enable_cloudwatch_metrics = true
   enable_aws_for_fluentbit  = true
   enable_amazon_prometheus  = true
   enable_prometheus         = true
-  enable_aws_fsx_csi_driver = true
-  enable_yunikorn           = true
+  enable_aws_fsx_csi_driver = false
+  enable_yunikorn           = false
   enable_kubecost           = true
 }
 
 ##---------------------------------------------------
 ## Karpenter Provisioners
 ##---------------------------------------------------
-module "karpenter_provisioners" {
-  source = "../modules/karpenter-provisioners"
-  name   = var.name
-  region = var.region
-  tags   = local.tags
-}
+#module "karpenter_provisioners" {
+#  source = "../modules/karpenter-provisioners"
+#  name   = local.cluster_name
+#  region = var.region
+#  tags   = local.tags
+#}
 
 #---------------------------------------------------
 # EMR EKS Module with two teams
@@ -84,18 +97,18 @@ module "karpenter_provisioners" {
 module "emr_containers_workshop" {
   source = "../modules/emr-eks-containers"
 
-  eks_cluster_id        = module.eks_workshop.cluster_name
-  eks_oidc_provider_arn = module.eks_workshop.oidc_provider_arn
+  eks_cluster_id        = local.cluster_name
+  eks_oidc_provider_arn = local.oidc_provider_arn
 
   emr_on_eks_config = {
     # Example of all settings
     emr-data-team-a = {
-      name = format("%s-%s", module.eks_workshop.cluster_name, "emr-data-team-a")
+      name = format("%s-%s", local.cluster_name, "emr-data-team-a")
 
       create_namespace = true
       namespace        = "emr-data-team-a"
 
-      execution_role_name                    = format("%s-%s", module.eks_workshop.cluster_name, "emr-eks-data-team-a")
+      execution_role_name                    = format("%s-%s", local.cluster_name, "emr-eks-data-team-a")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
       execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
 
@@ -105,12 +118,12 @@ module "emr_containers_workshop" {
     },
 
     emr-data-team-b = {
-      name = format("%s-%s", module.eks_workshop.cluster_name, "emr-data-team-b")
+      name = format("%s-%s", local.cluster_name, "emr-data-team-b")
 
       create_namespace = true
       namespace        = "emr-data-team-b"
 
-      execution_role_name                    = format("%s-%s", module.eks_workshop.cluster_name, "emr-eks-data-team-b")
+      execution_role_name                    = format("%s-%s", local.cluster_name, "emr-eks-data-team-b")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-b"
       execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
 
@@ -121,17 +134,18 @@ module "emr_containers_workshop" {
   }
 }
 
-##---------------------------------------------------
-## EMR ACK Controller
-##---------------------------------------------------
-##module "emr_ack" {
-##  source = "../modules/emr-ack"
-##
-##  eks_cluster_id                 = module.eks_workshop.cluster_name
-##  eks_oidc_provider_arn          = module.eks_workshop.oidc_provider_arn
-##  ecr_public_repository_username = local.ecr_repository_username
-##  ecr_public_repository_password = local.ecr_repository_password
-##}
+#---------------------------------------------------
+# EMR ACK Controller
+#---------------------------------------------------
+module "emr_ack" {
+  count  = var.enable_emr_ack_controller ? 1 : 0
+  source = "../modules/emr-ack"
+
+  eks_cluster_id                 = local.cluster_name
+  eks_oidc_provider_arn          = local.oidc_provider_arn
+  ecr_public_repository_username = local.ecr_repository_username
+  ecr_public_repository_password = local.ecr_repository_password
+}
 
 #---------------------------------------------------
 # Supporting resources
