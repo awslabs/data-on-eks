@@ -10,6 +10,10 @@ import CollapsibleContent from '../../src/components/CollapsibleContent';
 This blueprint should be considered as experimental and should only be used for proof of concept.
 :::
 
+:::info
+As part of our ongoing efforts to make this blueprint more enterprise-ready, we are actively working on adding several key functionalities. This includes cost management with Kubecost, advanced observability with OTEL, Amazon Managed Prometheus, and Grafana, as well as improved security and data governance using tools such as OPA/Gatekeeper and IRSA. If you have specific requirements or suggestions for this blueprint, please feel free to open an issue on our GitHub repository.
+:::
+
 ## Introduction
 
 [Ray](https://www.ray.io/) is an open-source framework for building scalable and distributed applications. It is designed to make it easy to write parallel and distributed Python applications by providing a simple and intuitive API for distributed computing. It has a growing community of users and contributors, and is actively maintained and developed by the Ray team at Anyscale, Inc.
@@ -327,8 +331,3 @@ cd ../../
 ```
 
 </CollapsibleContent>
-
-
-### Future Work
-
-We want to enhance this blueprint to add functionality that makes this pattern more enterprise ready. To that end in the near future we will be adding enhancements around cost management using kubecost, better observability dashboards using OTEl, Amazon Managed Prometheus and Grafana, better security and data governance using OPA/Gatekeeper, IRSA, etc. Please let us know via [issues](https://github.com/awslabs/data-on-eks/issues) to see what you would like to see us build in this blueprint.
