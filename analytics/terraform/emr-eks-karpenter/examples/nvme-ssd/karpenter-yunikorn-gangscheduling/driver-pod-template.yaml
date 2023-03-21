@@ -47,6 +47,7 @@ spec:
 
   nodeSelector:
     "NodeGroupType": "SparkMemoryOptimized"
+    "karpenter.sh/capacity-type": "on-demand"
     "topology.kubernetes.io/zone": "us-west-2b"
 
   containers:
