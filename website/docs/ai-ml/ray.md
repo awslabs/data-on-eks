@@ -2,6 +2,7 @@
 sidebar_position: 2
 sidebar_label: Ray on EKS
 ---
+import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 # Ray on EKS
 
@@ -42,6 +43,7 @@ Before moving forward with the deployment please make sure you have read the per
 ![RayonK8s](img/ray_on_kubernetes.webp)
 
 *Source: https://docs.ray.io/en/latest/cluster/kubernetes/index.html*
+
 ## Deploying the Example
 
 In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform), you will provision Ray Cluster on Amazon EKS using the KubeRay Operator. The example also demonstrates the use of Karpenter of autoscaling of worker nodes for job specific Ray Clusters.
@@ -49,7 +51,7 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/ter
 
 ![RayOnEKS](img/ray-on-eks.png)
 
-### Prerequisites
+<CollapsibleContent header={<h3><span>Pre-requisites</span></h3>}>
 
 Ensure that you have installed the following tools on your machine.
 
@@ -59,8 +61,9 @@ Ensure that you have installed the following tools on your machine.
 4. [python3](https://www.python.org/)
 6. [ray](https://docs.ray.io/en/master/ray-overview/installation.html#from-wheels)
 
+</CollapsibleContent>
 
-### Deploy the EKS Cluster with KubeRay Operator
+<CollapsibleContent header={<h3><span>Deploy the EKS Cluster with KubeRay Operator</span></h3>}>
 
 #### Clone the repository
 
@@ -70,33 +73,30 @@ git clone https://github.com/awslabs/data-on-eks.git
 
 #### Initialize Terraform
 
-Navigate into the example directory and run `terraform init`
+Navigate into the example directory
 
 ```bash
 cd data-on-eks/ai-ml/ray/terraform
-terraform init
 ```
 
-#### Terraform Plan
+#### Run the install script
 
-Run Terraform plan to verify the resources created by this execution.
+
+Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region. This is also the time to update any other input variables or make any other changes to the terraform template.
+
 
 ```bash
-terraform plan
+./install .sh
 ```
 
-#### Terraform Apply
+</CollapsibleContent>
 
-```bash
-terraform apply -auto-approve
-```
-
-#### Verify Deployment
+<CollapsibleContent header={<h3><span>Verify Deployment</span></h3>}>
 
 Update local kubeconfig so we can access kubernetes cluster
 
 ```bash
-aws eks update-kubeconfig --name ray-cluster
+aws eks update-kubeconfig --name ray-cluster #or whatever you used for EKS cluster name
 ```
 
 First, lets verify that we have worker nodes running in the cluster.
@@ -143,8 +143,9 @@ kuberay-operator     kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h3
 
 
 At this point we are ready to deploy Ray Clusters.
+</CollapsibleContent>
 
-#### Deploy Ray Clusters and Workloads
+<CollapsibleContent header={<h3><span>Deploy Ray Clusters and Workloads</span></h3>}>
 
 For convenience, we have packaged the helm chart deployent of Ray Cluster as a repeatable terraform [module](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform/modules/ray-cluster/). This allows us to codify organizational best practices and requirements for deploying Ray Clusters for multiple Data Science teams. The module also creates configuration needed for karpenter to be able to provision EC2 instances for Ray applications as and when they are needed for the duration of the job. This model can be replicated via GitOps tooling such as ArgoCD or Flux but is done here via terraform for demonstration purpose.
 
@@ -238,6 +239,10 @@ ip-10-1-9-172.ec2.internal    Unknown   <none>   1s
 ```
 :::
 
+Optionally, you can also use [eks-node-viewer](https://github.com/awslabs/eks-node-viewer) for visualizing dynamic node usage within the cluster.
+
+![EksNodeViewer](img/eks-node-viewer.png)
+
 Once the benchmark is complete, the job log will display the results. You might see different results based on your configurations.
 
 :::info
@@ -290,8 +295,9 @@ python job/pytorch_submit.py
 ```
 
 You can open http://localhost:8266 to monitor the progress of the pytorch benchmark.
+</CollapsibleContent>
 
-#### Teardown
+<CollapsibleContent header={<h3><span>Teardown</span></h3>}>
 
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment.
@@ -302,6 +308,7 @@ Destroy the Ray Clusters for pytorch followed by xgboost.
 From the pytorch directory.
 
 ```bash
+cd ../pytorch
 terraform destroy -auto-approve
 ```
 
@@ -312,30 +319,15 @@ cd ../xgboost
 terraform destroy -auto-approve
 ```
 
-Delete the add-ons.
+Use the provided helper script `cleanup.sh` to tear down EKS cluster and other AWS resources.
 
 ```bash
 cd ../../
-tf destroy -auto-approve -target=module.eks_blueprints_kubernetes_addons
+./cleanup.sh
 ```
 
-Delete worker nodes, EKS cluster.
+</CollapsibleContent>
 
-```bash
-tf destroy -auto-approve -target=module.eks
-```
-
-Delete the VPC.
-
-```bash
-tf destroy -auto-approve -target=module.vpc
-```
-
-Delete everything else.
-
-```bash
-terraform destroy -auto-approve
-```
 
 ### Future Work
 

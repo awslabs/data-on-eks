@@ -9,7 +9,7 @@ provider "aws" {
 # Used for Karpenter Helm chart
 provider "aws" {
   region = "us-east-1"
-  alias  = "virginia"
+  alias  = "ecr_public_region"
 }
 
 provider "kubernetes" {
@@ -60,7 +60,7 @@ data "aws_availability_zones" "available" {}
 
 # Used for Karpenter Helm chart
 data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.virginia
+  provider = aws.ecr_public_region
 }
 
 #---------------------------------------------------------------
@@ -84,58 +84,13 @@ locals {
 }
 
 #---------------------------------------------------------------
-# VPC
-#---------------------------------------------------------------
-
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
-
-  name = local.name
-  cidr = local.vpc_cidr
-
-  secondary_cidr_blocks = [local.secondary_vpc_cidr]
-
-  azs = local.azs
-  private_subnets = concat(
-    [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)],
-    [for k, v in local.azs : cidrsubnet(local.secondary_vpc_cidr, 4, k)]
-  )
-  public_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
-  # Control Plane Subnets
-  intra_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
-
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
-
-  enable_flow_log                      = true
-  create_flow_log_cloudwatch_iam_role  = true
-  create_flow_log_cloudwatch_log_group = true
-
-  public_subnet_tags = {
-    "kubernetes.io/role/elb" = 1
-  }
-
-  private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = 1
-    "karpenter.sh/discovery"          = local.name
-  }
-
-  tags = merge(local.tags, {
-    "karpenter.sh/discovery" = local.name
-  })
-}
-
-
-#---------------------------------------------------------------
 # EKS Cluster
 #---------------------------------------------------------------
 
 #tfsec:ignore:aws-eks-enable-control-plane-logging
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.7"
+  version = "~> 19.10"
 
   cluster_name                   = local.name
   cluster_version                = local.cluster_version
@@ -145,17 +100,6 @@ module "eks" {
   # We only want to assign the 10.0.* range subnets to the data plane
   subnet_ids               = slice(module.vpc.private_subnets, 0, 3)
   control_plane_subnet_ids = module.vpc.intra_subnets
-
-  # Specify the VPC CNI addon outside of the module as shown below
-  # to ensure the addon is configured before compute resources are created
-  cluster_addons = {
-    coredns = {
-      most_recent = true
-    }
-    kube-proxy = {
-      most_recent = true
-    }
-  }
 
   # Update aws-auth configmap with Karpenter node role so they
   # can join the cluster
@@ -170,6 +114,34 @@ module "eks" {
       ]
     },
   ]
+
+  # EKS Addons
+  cluster_addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      # Specify the VPC CNI addon should be deployed before compute to ensure
+      # the addon is configured before data plane compute resources are created
+      # See README for further details
+      before_compute = true
+      most_recent    = true # To ensure access to the latest settings provided
+      configuration_values = jsonencode({
+        env = {
+          # Reference https://aws.github.io/aws-eks-best-practices/reliability/docs/networkmanagement/#cni-custom-networking
+          AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG = "true"
+          ENI_CONFIG_LABEL_DEF               = "topology.kubernetes.io/zone"
+
+          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+  }
 
   # This MNG will be used to host infrastructure add-ons for
   # logging, monitoring, ingress controllers, kuberay-operator,
@@ -188,42 +160,9 @@ module "eks" {
   })
 }
 
-################################################################################
-# VPC-CNI Custom CNI and IPv4 Prefix Delegation
-################################################################################
-
-resource "aws_eks_addon" "vpc_cni" {
-  cluster_name      = module.eks.cluster_name
-  addon_name        = "vpc-cni"
-  resolve_conflicts = "OVERWRITE"
-  addon_version     = data.aws_eks_addon_version.latest["vpc-cni"].version
-
-  configuration_values = jsonencode({
-    env = {
-      # Reference https://aws.github.io/aws-eks-best-practices/reliability/docs/networkmanagement/#cni-custom-networking
-      AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG = "true"
-      ENI_CONFIG_LABEL_DEF               = "topology.kubernetes.io/zone"
-
-      # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
-      ENABLE_PREFIX_DELEGATION = "true"
-      WARM_PREFIX_TARGET       = "1"
-    }
-  })
-
-  tags = local.tags
-}
-
-data "aws_eks_addon_version" "latest" {
-  for_each = toset(["vpc-cni"])
-
-  addon_name         = each.value
-  kubernetes_version = local.cluster_version
-  most_recent        = true
-}
-
-################################################################################
+#---------------------------------------------------------------
 # VPC-CNI Custom Networking ENIConfig
-################################################################################
+#---------------------------------------------------------------
 
 resource "kubectl_manifest" "eni_config" {
   for_each = zipmap(local.azs, slice(module.vpc.private_subnets, 3, 6))
@@ -242,6 +181,22 @@ resource "kubectl_manifest" "eni_config" {
       subnet = each.value
     }
   })
+}
+
+#---------------------------------------------------------------
+# Karpenter Infrastructure
+#---------------------------------------------------------------
+
+module "karpenter" {
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "~> 19.9"
+
+  cluster_name                 = module.eks.cluster_name
+  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
+  create_irsa                  = false # IRSA will be created by the kubernetes-addons module
+  iam_role_additional_policies = [module.karpenter_policy.arn]
+
+  tags = local.tags
 }
 
 # We have to augment default the karpenter node IAM policy with
@@ -276,74 +231,22 @@ module "karpenter_policy" {
   )
 }
 
-################################################################################
-# Karpenter Deployment
-################################################################################
-
-# Deploys infrastructure needed for Karpenter. See
-# https://karpenter.sh for details.
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.7"
-
-
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  iam_role_additional_policies = [module.karpenter_policy.arn]
-  tags                         = local.tags
-}
-
-resource "helm_release" "karpenter" {
-  namespace        = "karpenter"
-  create_namespace = true
-
-  name                = "karpenter"
-  repository          = "oci://public.ecr.aws/karpenter"
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
-  chart               = "karpenter"
-  version             = "v0.24.0"
-
-  values = [
-    yamlencode({
-      settings = {
-        aws = {
-          clusterName           = module.eks.cluster_name
-          clusterEndpoint       = module.eks.cluster_endpoint
-          interruptionQueueName = module.karpenter.queue_name
-          # Remove this once https://github.com/ray-project/kuberay/issues/746
-          # is resolved
-          defaultInstanceProfile = module.karpenter.instance_profile_name
-        }
-      }
-      serviceAccount = {
-        annotations = {
-          "eks.amazonaws.com/role-arn" = module.karpenter.irsa_arn
-        }
-      }
-    })
-  ]
-}
-
 #---------------------------------------------------------------
 # Operational Add-Ons using EKS Blueprints
 #---------------------------------------------------------------
 
-module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.23.0"
+module "eks_blueprints_addons" {
+  # Users should pin the version to the latest available release
+  # tflint-ignore: terraform_module_pinned_source
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons"
 
-  eks_cluster_id       = module.eks.cluster_name
-  eks_cluster_endpoint = module.eks.cluster_endpoint
-  eks_oidc_provider    = module.eks.oidc_provider
-  eks_cluster_version  = module.eks.cluster_version
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider     = module.eks.oidc_provider
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
-  # Wait on the node group(s) before provisioning addons
-  data_plane_wait_arn = join(",", [for group in module.eks.eks_managed_node_groups : group.node_group_arn])
-
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics_helm_config = {
-    version = "0.0.8"
-  }
+  enable_cloudwatch_metrics = true
 
   enable_aws_for_fluentbit = true
   aws_for_fluentbit_helm_config = {
@@ -387,11 +290,19 @@ module "eks_blueprints_kubernetes_addons" {
     ]
   }
 
+  enable_karpenter = true
+  karpenter_helm_config = {
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+  karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
+  karpenter_enable_spot_termination_handling = true
+
   tags = local.tags
 }
 
 #---------------------------------------------------------------
-# KubeRay Operator
+# KubeRay Operator using Helm Release
 #---------------------------------------------------------------
 
 resource "helm_release" "kuberay_operator" {
@@ -403,6 +314,6 @@ resource "helm_release" "kuberay_operator" {
   version          = "0.4.0"
 
   depends_on = [
-    module.eks_blueprints_kubernetes_addons
+    module.eks
   ]
 }
