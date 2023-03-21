@@ -46,3 +46,21 @@ variable "enable_yunikorn" {
   description = "Enable Apache YuniKorn Scheduler"
   type        = bool
 }
+
+variable "enable_fsx_for_lustre" {
+  default     = false
+  description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
+  type        = bool
+}
+
+variable "enable_cloudwatch_metrics" {
+  default     = true
+  description = "Enable Cloudwatch metrics"
+  type        = bool
+}
+
+variable "enable_aws_for_fluentbit" {
+  default     = true
+  description = "Enable Fluentbit addon"
+  type        = bool
+}

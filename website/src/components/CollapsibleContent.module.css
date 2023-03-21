@@ -1,0 +1,33 @@
+.collapsibleContent {
+    border: 2px solid grey;
+    margin-bottom: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.header {
+    cursor: pointer;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.icon {
+    margin-left: auto;
+    width: 2rem;
+    height: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11.999 18.674l-7.406-7.406 1.413-1.414 5.993 5.993 5.993-5.993 1.413 1.414-7.406 7.406z'/%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
+    transition: transform 0.3s ease-in-out;
+}
+
+.content {
+    padding: 1rem;
+}
+
+.icon.expanded {
+    transform: rotate(180deg);
+}
