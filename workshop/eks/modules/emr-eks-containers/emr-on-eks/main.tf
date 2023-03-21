@@ -7,7 +7,6 @@ locals {
 
   internal_role_name = try(coalesce(var.role_name, var.name), "")
 
-  role_name        = var.create_kubernetes_role ? kubernetes_role_v1.this[0].metadata[0].name : local.internal_role_name
   namespace        = var.create_namespace ? kubernetes_namespace_v1.this[0].metadata[0].name : var.namespace
   emr_service_name = "emr-containers"
 }

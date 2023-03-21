@@ -124,11 +124,12 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      # Specify the VPC CNI addon should be deployed before compute to ensure
+      # The VPC CNI addon should be deployed before compute to ensure
       # the addon is configured before data plane compute resources are created
       # See README for further details
       before_compute = true
       most_recent    = true # To ensure access to the latest settings provided
+      preserve       = true
       configuration_values = jsonencode({
         env = {
           # Reference https://aws.github.io/aws-eks-best-practices/reliability/docs/networkmanagement/#cni-custom-networking
