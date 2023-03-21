@@ -251,8 +251,6 @@ module "eks_blueprints_addons" {
 
   enable_aws_for_fluentbit = true
   aws_for_fluentbit_helm_config = {
-    version                                   = "0.1.22"
-    namespace                                 = "aws-for-fluent-bit"
     aws_for_fluent_bit_cw_log_group           = "/${local.name}/worker-fluentbit-logs"
     aws_for_fluentbit_cwlog_retention_in_days = 7 #days
     values = [

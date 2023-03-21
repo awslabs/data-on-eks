@@ -1,35 +1,15 @@
 #!/bin/bash
 
-# List of Terraform modules to apply in sequence
-targets=(
-  "module.vpc"
-  "module.eks"
-  "module.eks_blueprints_addons"
-)
-
+echo "Initializing ..."
 terraform init || echo "\"terraform init\" failed"
 
-# Apply modules in sequence
-for target in "${targets[@]}"
-do
-  echo "Applying module $target..."
-  terraform apply -target="$target" -auto-approve
-  apply_output=$(terraform apply -target="$target" -auto-approve 2>&1)
-  if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then
-    echo "SUCCESS: Terraform apply of $target completed successfully"
-  else
-    echo "FAILED: Terraform apply of $target failed"
-    exit 1
-  fi
-done
 
-# Final apply to catch any remaining resources
-echo "Applying remaining resources..."
+echo "Applying ..."
 terraform apply -auto-approve
 apply_output=$(terraform apply -auto-approve 2>&1)
 if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then
-  echo "SUCCESS: Terraform apply of all modules completed successfully"
+  echo "SUCCESS: Terraform apply completed successfully"
 else
-  echo "FAILED: Terraform apply of all modules failed"
+  echo "FAILED: Terraform apply failed"
   exit 1
 fi
