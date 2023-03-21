@@ -66,7 +66,6 @@ module "addons_workshop" {
   enable_aws_fsx_csi_driver = true
   enable_yunikorn           = true
   enable_kubecost           = true
-
 }
 
 ##---------------------------------------------------
