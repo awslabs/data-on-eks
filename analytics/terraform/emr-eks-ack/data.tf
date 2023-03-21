@@ -8,11 +8,7 @@ data "aws_ecrpublic_authorization_token" "token" {
 
 data "aws_availability_zones" "available" {}
 
-data "aws_region" "current" {}
-
 data "aws_caller_identity" "current" {}
-
-data "aws_partition" "current" {}
 
 # This data source can be used to get the latest AMI for Managed Node Groups
 data "aws_ami" "eks" {
