@@ -4,6 +4,41 @@ resource "random_string" "random" {
   upper   = false
 }
 
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+  tags = local.tags
+}
+
 module "barman_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
@@ -46,18 +81,6 @@ module "barman_backup_irsa" {
   create_kubernetes_service_account = false
   create_kubernetes_namespace       = false
 }
-
-module "barman_restore_irsa" {
-  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc//modules/irsa"
-  eks_cluster_id                    = module.eks.cluster_name
-  eks_oidc_provider_arn             = module.eks.oidc_provider_arn
-  irsa_iam_policies                 = [aws_iam_policy.cnpg_buckup_policy.arn]
-  kubernetes_namespace              = "restore"
-  kubernetes_service_account        = "restore"
-  create_kubernetes_service_account = false
-  create_kubernetes_namespace       = false
-}
-
 
 #---------------------------------------------------------------
 # Creates IAM policy for accessing s3 bucket

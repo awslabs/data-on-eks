@@ -1,16 +1,31 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650f"
 
-  eks_cluster_id       = module.eks.cluster_name
-  eks_cluster_endpoint = module.eks.cluster_endpoint
-  eks_oidc_provider    = module.eks.oidc_provider
-  eks_cluster_version  = module.eks.cluster_version
+  cluster_name            = module.eks.cluster_name
+  cluster_endpoint        = module.eks.cluster_endpoint
+  cluster_version         = module.eks.cluster_version
+  oidc_provider           = module.eks.oidc_provider
+  oidc_provider_arn       = module.eks.oidc_provider_arn
 
-  # EKS Managed Add-ons
-  enable_amazon_eks_vpc_cni            = true
-  enable_amazon_eks_coredns            = true
-  enable_amazon_eks_kube_proxy         = true
-  enable_amazon_eks_aws_ebs_csi_driver = true
+   #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+      preserve = true
+    }
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      preserve = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
+  }
   enable_kube_prometheus_stack         = true
   kube_prometheus_stack_helm_config = {
     name      = "kube-prometheus-stack"
