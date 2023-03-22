@@ -22,7 +22,7 @@ metadata:
             "memory": "15Gi"
           },
           "nodeSelector": {
-            NodeGroupType: "SparkMemoryOptimized"
+            "NodeGroupType": "SparkMemoryOptimized"
           },
           "tolerations": [{"key" : "spark-memory-optimized", "operator": "Exists", "effect": "NoSchedule"}]
         },
@@ -34,7 +34,7 @@ metadata:
             "memory": "15Gi"
           },
           "nodeSelector": {
-            NodeGroupType: "SparkMemoryOptimized"
+            "NodeGroupType": "SparkMemoryOptimized"
           },
           "tolerations": [{"key" : "spark-memory-optimized", "operator": "Exists", "effect": "NoSchedule"}]
       }]
