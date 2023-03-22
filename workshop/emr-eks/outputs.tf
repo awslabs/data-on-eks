@@ -85,10 +85,10 @@ output "configure_kubectl" {
   value       = "aws eks --region ${var.region} update-kubeconfig --name ${var.cluster_name}"
 }
 
-#output "emr_on_eks" {
-#  description = "EMR on EKS"
-#  value       = module.emr_containers_workshop
-#}
+output "emr_on_eks" {
+  description = "EMR on EKS"
+  value       = module.emr_containers_workshop
+}
 
 output "s3_bucket_name" {
   description = "EMR on EKS"
