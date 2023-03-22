@@ -85,14 +85,32 @@ provider "kubernetes" {
 
 
 ```
-If the above change still not fixed the issue then you can follow this approach.
-Please note this is not a recommended approach however this will fix the issue.
 
-```shell
-rm </path/to/kubeconfig> # deletes the old config if any. Make sure you backup this file if required
-aws eks --region <region> update-kubeconfig --name <eks-clusetr-name>
-export KUBE_CONFIG_PATH=</path/to/kubeconfig>
-terraform apply or destroy
+If the issue still persists even after the above change then you can use alternative approach of using local kube config file.
+NOTE: This approach might not be ideal for production. It helps you to apply/destroy clusters with your local kube config.
+
+1. Create a local kubeconfig for your cluster
+
+```bash
+aws eks update-kubeconfig --name <EKS_CLUSTER_NAME> --region <CLUSTER_REGION>
+```
+
+2. Update the `providers.tf` file with the below config by just using the config_path.
+
+```terraform
+provider "kubernetes" {
+    config_path = "<HOME_PATH>/.kube/config"
+}
+
+provider "helm" {
+    kubernetes {
+        config_path = "<HOME_PATH>/.kube/config"
+    }
+}
+
+provider "kubectl" {
+    config_path = "<HOME_PATH>/.kube/config"
+}
 ```
 
 ## EMR Containers Virtual Cluster (dhwtlq9yx34duzq5q3akjac00) delete: unexpected state 'ARRESTED'

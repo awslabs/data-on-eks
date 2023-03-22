@@ -86,7 +86,7 @@ spec:
     labels:
       version: 3.1.1
     nodeSelector:
-      "NodeGroupType": "spark"
+      NodeGroupType: "spark"
   executor:
     volumeMounts:
       - name: spark-local-dir-1
@@ -106,4 +106,4 @@ spec:
     labels:
       version: 3.1.1
     nodeSelector:
-      "NodeGroupType": "spark"
+      NodeGroupType: "spark"

@@ -618,7 +618,7 @@ kubectl get pods --namespace=emr-data-team-a -w
 This pattern uses EBS volumes for data processing and compute optimized provisioner. You can modify the provisioner by changing nodeselector in driver and executor pod templates. In order to change provisioners, simply update your pod templates to desired provisioner
 ```yaml
   nodeSelector:
-    "NodeGroupType": "SparkComputeOptimized"
+    NodeGroupType: "SparkComputeOptimized"
 ```
 You can also update [EC2 instances](https://aws.amazon.com/ec2/instance-types/#Compute_Optimized) that doesn't include instance store volumes (for example c5.xlarge) and remove c5d's if needed for this exercise
 
