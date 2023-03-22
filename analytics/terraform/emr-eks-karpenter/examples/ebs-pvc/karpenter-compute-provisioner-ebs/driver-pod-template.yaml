@@ -5,8 +5,8 @@ metadata:
   namespace: emr-data-team-a
 spec:
   nodeSelector:
-    "NodeGroupType": "SparkComputeOptimized"
-    "topology.kubernetes.io/zone": "us-west-2a"
+    NodeGroupType: "SparkComputeOptimized"
+    topology.kubernetes.io/zone: "us-west-2a"
   tolerations:
     - key: "spark-compute-optimized"
       operator: "Exists"

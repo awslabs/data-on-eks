@@ -107,7 +107,7 @@ spec:
     labels:
       version: 3.2.1
     nodeSelector:
-      "NodeGroupType": "spark"
+      NodeGroupType: "spark"
   executor:
     podSecurityContext:
       fsGroup: 185
@@ -127,4 +127,4 @@ spec:
     labels:
       version: 3.2.1
     nodeSelector:
-      "NodeGroupType": "spark"
+      NodeGroupType: "spark"
