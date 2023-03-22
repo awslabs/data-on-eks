@@ -106,7 +106,7 @@ spec:
               "memory": "14Gi"
             },
             "nodeSelector": {
-              NodeGroupType: "spark"
+              "NodeGroupType": "spark"
             }
           },
           {
@@ -117,7 +117,7 @@ spec:
               "memory": "14Gi"
             },
             "nodeSelector": {
-              NodeGroupType: "spark"
+              "NodeGroupType": "spark"
             }
         }]
     nodeSelector:
