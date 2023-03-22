@@ -72,24 +72,15 @@ module "addons_workshop" {
   karpenter_iam_instance_profile_name = local.karpenter_iam_instance_profile_name
 
   # ENABLE ADDONS
-  enable_cloudwatch_metrics = true
-  enable_aws_for_fluentbit  = true
-  enable_amazon_prometheus  = true
-  enable_prometheus         = true
-  enable_aws_fsx_csi_driver = false
-  enable_yunikorn           = false
-  enable_kubecost           = true
+  enable_karpenter          = var.enable_karpenter
+  enable_cloudwatch_metrics = var.enable_cloudwatch_metrics
+  enable_aws_for_fluentbit  = var.enable_aws_for_fluentbit
+  enable_amazon_prometheus  = var.enable_amazon_prometheus
+  enable_prometheus         = var.enable_prometheus
+  enable_aws_fsx_csi_driver = var.enable_aws_fsx_csi_driver
+  enable_yunikorn           = var.enable_yunikorn
+  enable_kubecost           = var.enable_kubecost
 }
-
-##---------------------------------------------------
-## Karpenter Provisioners
-##---------------------------------------------------
-#module "karpenter_provisioners" {
-#  source = "../modules/karpenter-provisioners"
-#  name   = local.cluster_name
-#  region = var.region
-#  tags   = local.tags
-#}
 
 #---------------------------------------------------
 # EMR EKS Module with two teams
@@ -105,8 +96,9 @@ module "emr_containers_workshop" {
     emr-data-team-a = {
       name = format("%s-%s", local.cluster_name, "emr-data-team-a")
 
-      create_namespace = true
-      namespace        = "emr-data-team-a"
+      create_namespace       = true
+      namespace              = "emr-data-team-a"
+      create_virtual_cluster = var.enable_emr_ack_controller ? false : true
 
       execution_role_name                    = format("%s-%s", local.cluster_name, "emr-eks-data-team-a")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
@@ -120,8 +112,9 @@ module "emr_containers_workshop" {
     emr-data-team-b = {
       name = format("%s-%s", local.cluster_name, "emr-data-team-b")
 
-      create_namespace = true
-      namespace        = "emr-data-team-b"
+      create_namespace       = true
+      namespace              = "emr-data-team-b"
+      create_virtual_cluster = var.enable_emr_ack_controller ? false : true
 
       execution_role_name                    = format("%s-%s", local.cluster_name, "emr-eks-data-team-b")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-b"
@@ -133,6 +126,12 @@ module "emr_containers_workshop" {
     }
   }
 }
+
+#---------------------------------------------------
+# Use Kubectl to deploy Karpenter provisioners
+# /Users/vabonthu/Documents/GITHUB/data-on-eks/workshop/emr-eks/karpenter-provisioners
+#---------------------------------------------------
+
 
 #---------------------------------------------------
 # EMR ACK Controller

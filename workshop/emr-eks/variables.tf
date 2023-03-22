@@ -67,6 +67,7 @@ variable "create_eks" {
   type        = string
 }
 
+# This name is used in Karpenter provisioners.  If you change the name then update files under workshop/emr-eks/karpenter-provisioners.
 variable "cluster_name" {
   description = "Name of the EKS cluster"
   type        = string
@@ -148,7 +149,7 @@ variable "enable_cloudwatch_metrics" {
 variable "enable_aws_for_fluentbit" {
   description = "Enable AWS for FluentBit add-on"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_amazon_prometheus" {

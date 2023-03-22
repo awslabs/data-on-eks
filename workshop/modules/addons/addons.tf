@@ -42,7 +42,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
-  enable_metrics_server = true
+  enable_metrics_server = var.enable_metrics_server
   metrics_server_helm_config = {
     name       = "metrics-server"
     repository = "https://kubernetes-sigs.github.io/metrics-server/" # (Optional) Repository URL where to locate the requested chart.
@@ -56,7 +56,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
-  enable_cluster_autoscaler = true
+  enable_cluster_autoscaler = var.enable_cluster_autoscaler
   cluster_autoscaler_helm_config = {
     name       = "cluster-autoscaler"
     repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
@@ -73,7 +73,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                           = true
+  enable_karpenter                           = var.enable_karpenter
   karpenter_enable_spot_termination_handling = true
   karpenter_node_iam_instance_profile        = var.karpenter_iam_instance_profile_name
 
@@ -114,7 +114,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon Managed Prometheus
   #---------------------------------------
   enable_amazon_prometheus             = var.enable_amazon_prometheus
-  amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp.prometheus_endpoint
+  amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp[0].prometheus_endpoint
 
   #---------------------------------------
   # Prometheus Server Add-on
@@ -193,6 +193,7 @@ resource "helm_release" "yunikorn" {
 # Amazon Prometheus Workspace
 #---------------------------------------------------------------
 resource "aws_prometheus_workspace" "amp" {
+  count = var.enable_amazon_prometheus ? 1 : 0
   alias = format("%s-%s", "amp-ws", local.name)
   tags  = local.tags
 }

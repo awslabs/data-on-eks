@@ -35,6 +35,12 @@ variable "region" {
   default     = "us-west-2"
 }
 
+variable "enable_karpenter" {
+  description = "Enable Karpenter Addon"
+  type        = bool
+  default     = false
+}
+
 variable "karpenter_iam_instance_profile_name" {
   description = "Karpenter IAM instance profile name"
   type        = string
@@ -53,25 +59,25 @@ variable "ecr_repository_password" {
 variable "enable_cloudwatch_metrics" {
   description = "Enable AWS Cloudwatch Metrics add-on for Container Insights"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_aws_for_fluentbit" {
   description = "Enable AWS for FluentBit add-on"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_prometheus" {
   description = "Enable Community Prometheus add-on"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_aws_fsx_csi_driver" {
@@ -86,8 +92,20 @@ variable "enable_yunikorn" {
   type        = bool
 }
 
-variable "enable_kubecost" {
+variable "enable_metrics_server" {
   default     = true
+  description = "Enable Metrics server"
+  type        = bool
+}
+
+variable "enable_cluster_autoscaler" {
+  default     = true
+  description = "Enable Cluster Autoscaler"
+  type        = bool
+}
+
+variable "enable_kubecost" {
+  default     = false
   description = "Enable KubeCost addon"
   type        = bool
 }

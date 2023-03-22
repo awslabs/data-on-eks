@@ -8,7 +8,6 @@ targets=(
   "module.vpc_workshop"
   "module.eks_workshop"
   "module.addons_workshop"
-  "module.karpenter_provisioners"
   "module.emr_containers_workshop"
 )
 
