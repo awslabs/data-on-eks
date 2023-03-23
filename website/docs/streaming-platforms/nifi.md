@@ -2,6 +2,7 @@
 sidebar_position: 3
 sidebar_label: Apache NiFi on EKS
 ---
+import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 # Apache NiFi on EKS
 
@@ -17,7 +18,7 @@ Apache NiFi provides a GUI based interface for building and managing data flows,
 This blueprint should be considered as experimental and should only be used for proof of concept.
 :::
 
-This [example](https://github.com/awslabs/data-on-eks/tree/main/streaming-platforms/nifi) deploys an EKS Cluster running the Apache NiFi cluster. In the example, Apache NIfi is streaming data from the AWS Kinesis Data Stream to an Amazon DynamoDB table after some format transformation.
+This [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/nifi) deploys an EKS Cluster running the Apache NiFi cluster. In the example, Apache NIfi is streaming data from the AWS Kinesis Data Stream to an Amazon DynamoDB table after some format transformation.
 
 - Creates a new sample VPC, 3 Private Subnets and 3 Public Subnets
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
@@ -25,7 +26,7 @@ This [example](https://github.com/awslabs/data-on-eks/tree/main/streaming-platfo
 - Deploys Apache NiFi, AWS Load Balancer Controller, Cert Manager and External DNS (optional) add-ons
 - Deploys Apache NiFi cluster in the `nifi` namespace
 
-## Prerequisites
+<CollapsibleContent header={<h3><span>Pre-requisites</span></h3>}>
 
 Ensure that you have installed the following tools on your machine.
 
@@ -39,54 +40,35 @@ Additionally, for end-to-end configuration of Ingress, you will need to provide 
 1. A [Route53 Public Hosted Zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html) configured in the account where you are deploying this example. E.g. "example.com"
 2. An [ACM Certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html) in the account + region where you are deploying this example. A wildcard certificate is preferred, e.g. "*.example.com"
 
-## Deploy the EKS Cluster with Apache NiFi
+</CollapsibleContent>
 
-### Clone the repository
+<CollapsibleContent header={<h3><span>Deploy the EKS Cluster with Apache NiFi</span></h3>}>
+
+#### Clone the repository
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-### Initialize Terraform
+#### Initialize Terraform
 
-Navigate into the example directory and run `terraform init`
+Navigate into the example directory
 
 ```bash
 cd data-on-eks/streaming/nifi/
-terraform init
 ```
 
-### Terraform Plan
+#### Run the install script
 
-Run Terraform plan to verify the resources created by this execution.
 
-Provide a Route53 Hosted Zone hostname and a corresponding ACM Certificate;
+Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region. This is also the time to update any other input variables or make any other changes to the terraform template.
+
 
 ```bash
-export TF_VAR_eks_cluster_domain="<CHANGEME - example.com>"
-export TF_VAR_acm_certificate_domain="<CHANGEME - *.example.com>"
-export TF_VAR_nifi_sub_domain="nifi"
-export TF_VAR_nifi_username="admin"
+./install .sh
 ```
 
-### Deploy the pattern
-
-```bash
-terraform plan
-terraform apply
-```
-
-Enter `yes` to apply.
-
-```
-Outputs:
-
-configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name nifi-on-eks"
-```
-
-
-
-### Verify Deployment
+#### Verify Deployment
 
 Update kubeconfig
 
@@ -170,7 +152,10 @@ aws secretsmanager get-secret-value --secret-id <nifi_login_password_secret_name
 ```
 ![Apache NiFi Canvas](img/nifi-canvas.png)
 
-### Monitoring
+</CollapsibleContent>
+
+<CollapsibleContent header={<h3><span>Monitoring</span></h3>}>
+
 Apache Nifi can be monitored using metrics reported by PrometheusReportingTask. JVM metrics are disabled by default, let's enable the JVM metrics by navigating to Controller Settings by the clicking on the hamburger icon (three horizontal bars) in the top right corner.
 
 ![Apache NiFi Controller Settings](img/nifi-controller-settings.png)
@@ -203,7 +188,9 @@ Import Apache NiFi [Grafana dashboard](https://grafana.com/grafana/dashboards/12
 
 ![Apache NiFi Grafana Dashboard](img/nifi-grafana.png)
 
-### Example
+</CollapsibleContent>
+
+<CollapsibleContent header={<h3><span>Example</span></h3>}>
 
 #### Create IAM policies for accessing Amazon DynamoDB and AWS Kinesis
 
@@ -335,20 +322,13 @@ d. Partition Key Field - select the partition field
 
 13. Check that none of the processors have any Hazard symbols. Right-click on the grid and click "run the data flow." You can start seeing the data flowing in.
 
-## Cleanup
+</CollapsibleContent>
 
-To clean up your environment, destroy the Terraform modules in reverse order.
+<CollapsibleContent header={<h3><span>Cleanup</span></h3>}>
 
-Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
-
-```bash
-terraform destroy -target="module.eks_blueprints_kubernetes_addons" --auto-approve
-terraform destroy -target="module.eks" --auto-approve
-terraform destroy -target="module.vpc" --auto-approve
-```
-
-Finally, destroy any additional resources that are not in the above modules
+Use the provided helper script `cleanup.sh` to tear down EKS cluster and other AWS resources.
 
 ```bash
-terraform destroy --auto-approve
+./cleanup.sh
 ```
+</CollapsibleContent>
