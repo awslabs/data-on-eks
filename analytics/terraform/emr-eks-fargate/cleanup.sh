@@ -22,16 +22,9 @@ if [[ -z $terminating_namespaces ]]; then
     echo "No terminating namespaces found"
 fi
 
-echo "Terminating namespaces:"
 for ns in $terminating_namespaces; do
-    case "$choice" in
-        y|Y )
-            kubectl get namespace $ns -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f -
-            ;;
-        * )
-            echo "Skipping namespace $ns"
-            ;;
-    esac
+    echo "Terminating namespace: $ns"
+    kubectl get namespace $ns -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f -
 done
 
 #-------------------------------------------

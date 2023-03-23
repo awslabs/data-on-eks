@@ -145,7 +145,9 @@ cd analytics/terraform/emr-eks-ack && chmod +x cleanup.sh
 ./cleanup.sh
 ```
 </CollapsibleContent>
+
 :::caution
 
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
+
 :::
