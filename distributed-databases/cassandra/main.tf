@@ -12,20 +12,6 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  # cluster_addons = {
-  #   coredns = {
-  #     most_recent = true
-  #   }
-  #   kube-proxy = {
-  #     most_recent = true
-  #   }
-  #   vpc-cni = {
-  #     most_recent = true
-  #   }
-  #   aws-ebs-csi-driver = {
-  #     most_recent = true
-  #   }
-  # }
 
   #---------------------------------------
   # Amazon EKS Managed Add-ons
@@ -47,23 +33,6 @@ module "eks" {
   }
 
   manage_aws_auth_configmap = true
-  # aws_auth_roles = [
-  #   # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-  #   {
-  #     rolearn  = module.karpenter.role_arn
-  #     username = "system:node:{{EC2PrivateDNSName}}"
-  #     groups = [
-  #       "system:bootstrappers",
-  #       "system:nodes",
-  #     ]
-  #   },
-  #   {
-  #     # Required for EMR on EKS virtual cluster
-  #     rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
-  #     username = "emr-containers"
-  #     groups   = []
-  #   },
-  # ]
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
