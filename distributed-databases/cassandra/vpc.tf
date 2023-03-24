@@ -11,10 +11,10 @@ module "vpc" {
   azs              = local.azs
   public_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k)]
   private_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 10)]
-  database_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 20)]
+  # database_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 20)]
 
-  create_database_subnet_group       = true
-  create_database_subnet_route_table = true
+  # create_database_subnet_group       = true
+  # create_database_subnet_route_table = true
 
   enable_nat_gateway   = true
   single_nat_gateway   = true

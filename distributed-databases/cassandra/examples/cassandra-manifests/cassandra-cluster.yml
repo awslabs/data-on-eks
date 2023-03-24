@@ -25,8 +25,8 @@ spec:
         gc_g1_max_gc_pause_ms: 300
     resources:
       requests:
-        memory: "59Gi"
-        cpu: "7500m"
+        memory: "55Gi"
+        cpu: "7000m"
       limits:
         memory: "60Gi"
     datacenters:
