@@ -6,8 +6,6 @@ export AWS_DEFAULT_REGION=$region
 # List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
-  "module.vpc_endpoints_sg"
-  "module.vpc_endpoints"
   "module.eks"
   "module.ebs_csi_driver_irsa"
   "module.vpc_cni_irsa"

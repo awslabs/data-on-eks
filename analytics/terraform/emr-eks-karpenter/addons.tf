@@ -142,6 +142,18 @@ module "eks_blueprints_kubernetes_addons" {
     ]
   }
 
+  enable_grafana = var.enable_grafana
+
+  # This example shows how to set default password for grafana using SecretsManager and Helm Chart set_sensitive values.
+  grafana_helm_config = {
+    set_sensitive = [
+      {
+        name  = "adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ]
+  }
+
   tags = local.tags
 }
 
@@ -238,4 +250,24 @@ module "vpc_cni_irsa" {
     }
   }
   tags = local.tags
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
 }

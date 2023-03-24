@@ -20,3 +20,10 @@ data "aws_ami" "eks" {
     values = ["amazon-eks-node-${module.eks.cluster_version}-*"]
   }
 }
+
+# For Grafana Password
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id = aws_secretsmanager_secret.grafana.id
+
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
