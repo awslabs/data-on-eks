@@ -60,7 +60,7 @@ variable "enable_cloudwatch_metrics" {
 }
 
 variable "enable_aws_for_fluentbit" {
-  default     = true
+  default     = false
   description = "Enable Fluentbit addon"
   type        = bool
 }
