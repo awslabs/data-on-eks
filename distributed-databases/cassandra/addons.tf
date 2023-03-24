@@ -29,10 +29,11 @@ resource "helm_release" "metrics-server" {
     repository  = "https://kubernetes-sigs.github.io/metrics-server/"
     namespace   = "kube-system"
     wait        = true
-    set {
-        name  = "tolerations"
-        value = "[{ key = \"dedicated\", value = \"cassandra\", effect = \"NO_SCHEDULE\" }]"
-    }
+    # values      = ["${path.module}/helm-values/metrics-server-values.yaml"]
+    # set {
+    #     name  = "tolerations"
+    #     value = [{ key = "dedicated", value = "cassandra", effect = "NO_SCHEDULE" }]
+    # }
   depends_on = [module.eks.cluster_id]
 }
 
