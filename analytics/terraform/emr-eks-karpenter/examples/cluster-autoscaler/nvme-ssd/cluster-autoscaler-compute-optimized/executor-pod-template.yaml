@@ -3,7 +3,6 @@ kind: Pod
 metadata:
   name: ny-taxi-exec
   namespace: emr-data-team-a
-
 spec:
   volumes:
     - name: spark-local-dir-1
@@ -12,7 +11,7 @@ spec:
         type: Directory
 
   nodeSelector:
-    NodeGroupType: "SparkComputeOptimized"
+    NodeGroupType: "spark-compute-spot-ng"
     topology.kubernetes.io/zone: "us-west-2a"
 
   containers:
@@ -21,8 +20,3 @@ spec:
         - name: spark-local-dir-1
           mountPath: /data1
           readOnly: false
-
-  tolerations:
-    - key: "spark-compute-optimized"
-      operator: "Exists"
-      effect: "NoSchedule"

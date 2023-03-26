@@ -7,6 +7,7 @@ spec:
   nodeSelector:
     NodeGroupType: "SparkComputeOptimized"
     topology.kubernetes.io/zone: "us-west-2a"
+    karpenter.sh/capacity-type: "on-demand"
   tolerations:
     - key: "spark-compute-optimized"
       operator: "Exists"

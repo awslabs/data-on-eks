@@ -53,7 +53,7 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "cluster-autoscaler"
     repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
     chart      = "cluster-autoscaler"
-    version    = "9.21.0"
+    version    = "9.25.0"
     namespace  = "kube-system"
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {

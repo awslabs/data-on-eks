@@ -14,6 +14,7 @@ spec:
 
   nodeSelector:
     NodeGroupType: SparkComputeOptimized
+    karpenter.sh/capacity-type: "on-demand"
 
   containers:
     - name: spark-kubernetes-driver # Don't change this name. EMR on EKS looking for this name

@@ -29,20 +29,20 @@ aws s3 sync "./" ${SCRIPTS_S3_PATH}
 # https://registry.opendata.aws/nyc-tlc-trip-records-pds/
 #--------------------------------------------
 
-mkdir -p "../input"
-# Download the input data from public data set to local folders
-wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
+# mkdir -p "../input"
+# # Download the input data from public data set to local folders
+# wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
 
-# Making duplicate copies to increase the size of the data.
-max=20
-for (( i=1; i <= $max; ++i ))
-do
-    cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
-done
+# # Making duplicate copies to increase the size of the data.
+# max=20
+# for (( i=1; i <= $max; ++i ))
+# do
+#     cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
+# done
 
-aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
+# aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
 
-rm -rf "../input" # delete local input folder
+# rm -rf "../input" # delete local input folder
 
 #--------------------------------------------
 # Deploy EBS Storage Class and PersistentVolumeClaim for Driver before running the job
@@ -85,13 +85,13 @@ aws emr-containers start-job-run \
             "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.options.claimName": "spark-driver-pvc",
             "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.mount.readOnly": "false",
             "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.mount.path": "/data",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.claimName": "OnDemand",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.storageClass": "emr-eks-karpenter-ebs-sc",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.sizeLimit": "50Gi",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.mount.path": "/var/data/spill",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.mount.readOnly": "false",
-            "spark.kubernetes.driver.ownPersistentVolumeClaim": "true",
-            "spark.kubernetes.driver.reusePersistentVolumeClaim": "true",
+
+            "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.options.claimName": "OnDemand",
+            "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.options.storageClass": "emr-eks-karpenter-ebs-sc",
+            "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.options.sizeLimit": "50Gi",
+            "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.mount.path": "/data",
+            "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.mount.readOnly": "false",
+
             "spark.ui.prometheus.enabled":"true",
             "spark.executor.processTreeMetrics.enabled":"true",
             "spark.kubernetes.driver.annotation.prometheus.io/scrape":"true",

@@ -23,6 +23,7 @@ metadata:
           },
           "nodeSelector": {
             "NodeGroupType": "SparkMemoryOptimized"
+            "karpenter.sh/capacity-type": "on-demand"
           },
           "tolerations": [{"key" : "spark-memory-optimized", "operator": "Exists", "effect": "NoSchedule"}]
         },

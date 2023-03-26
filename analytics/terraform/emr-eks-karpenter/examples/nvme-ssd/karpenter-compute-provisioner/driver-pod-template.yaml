@@ -12,7 +12,8 @@ spec:
 
   nodeSelector:
     NodeGroupType: "SparkComputeOptimized"
-#    topology.kubernetes.io/zone: "us-west-2a"
+    topology.kubernetes.io/zone: "us-west-2a"
+    karpenter.sh/capacity-type: "on-demand"
 
   containers:
     - name: spark-kubernetes-driver # Don't change this name. EMR on EKS looking for this name

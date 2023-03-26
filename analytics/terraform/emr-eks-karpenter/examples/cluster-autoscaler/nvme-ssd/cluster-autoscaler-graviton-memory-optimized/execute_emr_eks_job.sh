@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# NOTE: Make sure to set the region before running the shell script e.g., export AWS_REGION="<your-region>"
-
-read -p "Enter the AWS Region: " AWS_REGION
+read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
 read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
 read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
@@ -11,7 +9,7 @@ read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Inpu
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
-JOB_NAME='taxidata-ebs'
+JOB_NAME='taxidata'
 EMR_EKS_RELEASE_LABEL="emr-6.8.0-latest" # Spark 3.2.1
 
 SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
@@ -34,7 +32,7 @@ mkdir -p "../input"
 wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
 
 # Making duplicate copies to increase the size of the data.
-max=20
+max=10
 for (( i=1; i <= $max; ++i ))
 do
     cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
@@ -45,14 +43,8 @@ aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
 rm -rf "../input" # delete local input folder
 
 #--------------------------------------------
-# Deploy EBS Storage Class and PersistentVolumeClaim for Driver before running the job
-#--------------------------------------------
-kubectl apply -f ebs-storageclass-pvc.yaml
-
-#--------------------------------------------
 # Execute Spark job
 #--------------------------------------------
-
 aws emr-containers start-job-run \
   --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
   --name $JOB_NAME \
@@ -65,7 +57,7 @@ aws emr-containers start-job-run \
       "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'",
         "'"$OUTPUT_DATA_S3_PATH"'"
       ],
-      "sparkSubmitParameters": "--conf spark.executor.instances=6"
+      "sparkSubmitParameters": "--conf spark.executor.instances=2"
     }
   }' \
   --configuration-overrides '{
@@ -79,19 +71,9 @@ aws emr-containers start-job-run \
             "spark.executor.memory": "4g",
             "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
             "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
-            "spark.local.dir":"/data1,/data2",
+            "spark.local.dir":"/data1",
 
             "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
-            "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.options.claimName": "spark-driver-pvc",
-            "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.mount.readOnly": "false",
-            "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.mount.path": "/data",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.claimName": "OnDemand",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.storageClass": "emr-eks-karpenter-ebs-sc",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.sizeLimit": "50Gi",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.mount.path": "/var/data/spill",
-            "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.mount.readOnly": "false",
-            "spark.kubernetes.driver.ownPersistentVolumeClaim": "true",
-            "spark.kubernetes.driver.reusePersistentVolumeClaim": "true",
             "spark.ui.prometheus.enabled":"true",
             "spark.executor.processTreeMetrics.enabled":"true",
             "spark.kubernetes.driver.annotation.prometheus.io/scrape":"true",
@@ -112,6 +94,9 @@ aws emr-containers start-job-run \
       "cloudWatchMonitoringConfiguration": {
         "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
         "logStreamNamePrefix":"'"$JOB_NAME"'"
+      },
+      "s3MonitoringConfiguration": {
+        "logUri":"'"${S3_BUCKET}/logs/"'"
       }
     }
   }'

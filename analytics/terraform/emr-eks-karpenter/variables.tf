@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "emr-eks-karpenter"
+  default     = "emr-eks-karpenter3"
   type        = string
 }
 
@@ -60,13 +60,19 @@ variable "enable_fsx_for_lustre" {
 }
 
 variable "enable_cloudwatch_metrics" {
-  default     = true
+  default     = false
   description = "Enable Cloudwatch metrics"
   type        = bool
 }
 
 variable "enable_aws_for_fluentbit" {
-  default     = true
+  default     = false
   description = "Enable Fluentbit addon"
+  type        = bool
+}
+
+variable "enable_spark_node_group" {
+  default     = false
+  description = "Enable data nodegroup when you need to autoscale using Cluster Autoscaler"
   type        = bool
 }
