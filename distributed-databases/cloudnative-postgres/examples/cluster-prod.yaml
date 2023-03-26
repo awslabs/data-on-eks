@@ -22,7 +22,7 @@ spec:
     # You will find this IAM role on terraform outputs. 
     metadata:
       annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa  #arn:aws:iam::074661079081:role/cnpg-on-eks-prod-irsa
+        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa 
   postgresql:
     parameters:
       shared_buffers: 256MB
@@ -51,7 +51,7 @@ spec:
     barmanObjectStore:
     # For backup, we S3 backet to store data. 
     # On this Blueprint, we create an S3 check the terraform output for it.
-      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://medd-cnpg-barman-bucket 
+      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket 
       s3Credentials:
         inheritFromIAMRole: true
       wal:

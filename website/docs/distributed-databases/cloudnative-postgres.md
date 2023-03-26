@@ -253,7 +253,7 @@ Password for user app:
 
 ### Create Backup to S3
 
-Now that we had a running database with data, CloudNativePG operator offers backup restore using [barman](https://pgbarman.org/) tool. CloudNativePG allow database admin to create on-demand database or Scheduled backups and for more details on [documentations](https://cloudnative-pg.io/documentation/1.19/backup_recovery/).
+Now that we had a running database with data, CloudNativePG operator offers backup-restore feature using [barman](https://pgbarman.org/) tool. CloudNativePG allows database admin to create on-demand database or Scheduled backups and for more details on [documentations](https://cloudnative-pg.io/documentation/1.19/backup_recovery/).
 
 In this example, we will create a Backup object to start a backup process immidiately.
 
@@ -271,7 +271,7 @@ spec:
  kubectl create -f examples/backup-od.yaml
 ```
 
-Check the backup process
+It will take couple minutes to run, then, check the backup process
 
 ```bash
 kubectl describe backup ondemand
@@ -286,9 +286,9 @@ Events:
 
 ### Restore
 
-For restore, we use bootstrap a new cluster using backup file on S3. This is the second method to create a new cluster. Same backup tool *barman* manages restore process. However, it doesn't support backup and restore for kubernetes secrets. The later should be managed seperately, like using csi-secrets-driver with AWS SecretsManager.
+For restore, we use bootstrap a new cluster using backup file on S3. The backup tool *barman* manages restore process, but, it doesn't support backup and restore for kubernetes secrets. This must be managed seperately, like using csi-secrets-driver with AWS SecretsManager.
 
-Fist let's delete prod database.
+First let's delete prod database.
 
 ```bash
 kubectl delete cluster prod -n demo
