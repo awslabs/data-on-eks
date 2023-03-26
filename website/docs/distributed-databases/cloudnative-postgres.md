@@ -333,4 +333,4 @@ psql -h localhost --port 5432 -U app -d WorldDB -c 'SELECT CURRENT_TIME;'
 
 ## Conclusion
 
-CloudNativePG operator provides Level 5 from [Operator Capability Levels](https://operatorframework.io/operator-capabilities/). We touched on this example, how to deploy the operator on EKS with monitoring stack, How to create an empty database and run backup and restore procedure (on-demand) using S3 buckets.
+CloudNativePG operator provides Level 5 from [Operator Capability Levels](https://operatorframework.io/operator-capabilities/). In this example, we share a blueprint that deploy the operator as an addon along with its monitoring stack (Prometheus and grafana). Among many features, we highlighted couple of examples on creating cluster, importing data and restoring database in case of disaster (or cluster deletion). More features are available on this [documentation](https://cloudnative-pg.io/documentation/1.19/)
