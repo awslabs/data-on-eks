@@ -28,20 +28,14 @@ fi
 
 echo "Terminating namespaces:"
 for ns in $terminating_namespaces; do
-    case "$choice" in
-        y|Y )
-            kubectl get namespace $ns -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f -
-            ;;
-        * )
-            echo "Skipping namespace $ns"
-            ;;
-    esac
+    echo "Terminating namespace: $ns"
+    kubectl get namespace $ns -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f -
 done
 
 #-------------------------------------------
 # Terraform destroy per module target
 #-------------------------------------------
-for target in "${targets[@]}"
+for target in "${targets[@]}"2
 do
   destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
   if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
