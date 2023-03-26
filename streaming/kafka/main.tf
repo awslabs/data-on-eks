@@ -1,8 +1,7 @@
-#---------------------------------------------------------------
-# EKS Blueprints
-#---------------------------------------------------------------
-module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.15.0"
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.9"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -10,14 +9,48 @@ module "eks_blueprints" {
   cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
+
+  #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  cluster_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      preserve                 = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
+  }
+
+  manage_aws_auth_configmap = true
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
+  # Extend cluster security group rules
+  cluster_security_group_additional_rules = {
+    ingress_nodes_ephemeral_ports_tcp = {
+      description                = "Nodes on ephemeral ports"
+      protocol                   = "tcp"
+      from_port                  = 1025
+      to_port                    = 65535
+      type                       = "ingress"
+      source_node_security_group = true
+    }
+  }
+
+  # Extend node-to-node security group rules
   node_security_group_additional_rules = {
-    # Extend node-to-node security group rules. Recommended and required for the Add-ons
     ingress_self_all = {
       description = "Node to node all ports/protocols"
       protocol    = "-1"
@@ -26,7 +59,6 @@ module "eks_blueprints" {
       type        = "ingress"
       self        = true
     }
-    # Recommended outbound traffic for Node groups
     egress_all = {
       description      = "Node all egress"
       protocol         = "-1"
@@ -36,105 +68,172 @@ module "eks_blueprints" {
       cidr_blocks      = ["0.0.0.0/0"]
       ipv6_cidr_blocks = ["::/0"]
     }
-    # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
-    # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
-    # Change this according to your security requirements if needed
-    ingress_cluster_to_node_all_traffic = {
-      description                   = "Cluster API to Nodegroup all traffic"
-      protocol                      = "-1"
-      from_port                     = 0
-      to_port                       = 0
-      type                          = "ingress"
-      source_cluster_security_group = true
-    }
+
+    # ingress_fsx1 = {
+    #   description = "Allows Lustre traffic between Lustre clients"
+    #   cidr_blocks = module.vpc.private_subnets_cidr_blocks
+    #   from_port   = 1021
+    #   to_port     = 1023
+    #   protocol    = "tcp"
+    #   type        = "ingress"
+    # }
+
+    # ingress_fsx2 = {
+    #   description = "Allows Lustre traffic between Lustre clients"
+    #   cidr_blocks = module.vpc.private_subnets_cidr_blocks
+    #   from_port   = 988
+    #   to_port     = 988
+    #   protocol    = "tcp"
+    #   type        = "ingress"
+    # }
   }
 
-  managed_node_groups = {
-    # Core node group for deploying all the critical add-ons
-    mng1 = {
-      node_group_name = "core-node-grp"
-      subnet_ids      = module.vpc.private_subnets
+  eks_managed_node_group_defaults = {
+    iam_role_additional_policies = {
+      # Not required, but used in the example to access the nodes to inspect mounted volumes
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
+  eks_managed_node_groups = {
+    #  We recommend to have a MNG to place your critical workloads and add-ons
+    #  Then rely on Karpenter to scale your workloads
+    #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
+    core_node_group = {
+      name        = "core-node-group"
+      description = "EKS managed node group example launch template"
 
-      instance_types = ["m5.xlarge"]
-      ami_type       = "AL2_x86_64"
-      capacity_type  = "ON_DEMAND"
+      ami_id = data.aws_ami.eks.image_id
+      # This will ensure the bootstrap user data is used to join the node
+      # By default, EKS managed node groups will not append bootstrap script;
+      # this adds it back in using the default template provided by the module
+      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
+      enable_bootstrap_user_data = true
 
-      disk_size = 100
-      disk_type = "gp3"
+      # Optional - This is to show how you can pass pre bootstrap data
+      pre_bootstrap_user_data = <<-EOT
+        echo "Node bootstrap process started by Data on EKS"
+      EOT
 
-      max_size               = 9
-      min_size               = 3
-      desired_size           = 3
-      create_launch_template = true
-      launch_template_os     = "amazonlinux2eks"
+      # Optional - Post bootstrap data to verify anything
+      post_bootstrap_user_data = <<-EOT
+        echo "Bootstrap complete.Ready to Go!"
+      EOT
 
-      update_config = [{
-        max_unavailable_percentage = 50
-      }]
+      subnet_ids = module.vpc.private_subnets
 
-      k8s_labels = {
-        Environment   = "preprod"
-        Zone          = "test"
+      min_size     = 1
+      max_size     = 9
+      desired_size = 3
+
+      force_update_version = true
+      instance_types       = ["m5.xlarge"]
+
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
+
+      labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
       }
 
-      # See this doc node-template tags https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
-      additional_tags = {
-        Name                                                             = "core-node-grp"
-        subnet_type                                                      = "private"
-        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "core"
-        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-        "k8s.io/cluster-autoscaler/${local.name}"                        = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                              = "true"
+      tags = {
+        Name                     = "core-node-grp"
       }
     }
-    # Kafka workload node group for deploying Kafka Brokers
-    mng2 = {
-      node_group_name = "kafka-node-grp"
-      subnet_ids      = module.vpc.private_subnets
+    kafka_node_group = {
+      name        = "kafka-node-group"
+      description = "EKS managed node group example launch template"
 
-      instance_types = ["r6i.2xlarge"] #Im4gn.4xlarge, m5.8xlarge, r6i.2xlarge
-      ami_type       = "AL2_x86_64"
-      capacity_type  = "ON_DEMAND"
+      ami_id = data.aws_ami.eks.image_id
+      # This will ensure the bootstrap user data is used to join the node
+      # By default, EKS managed node groups will not append bootstrap script;
+      # this adds it back in using the default template provided by the module
+      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
+      enable_bootstrap_user_data = true
 
-      disk_size = 100
-      disk_type = "gp3"
+      # Optional - This is to show how you can pass pre bootstrap data
+      pre_bootstrap_user_data = <<-EOT
+        echo "Node bootstrap process started by Data on EKS"
+      EOT
 
-      max_size               = 12
-      min_size               = 3
-      desired_size           = 3
-      create_launch_template = true
-      launch_template_os     = "amazonlinux2eks"
+      # Optional - Post bootstrap data to verify anything
+      post_bootstrap_user_data = <<-EOT
+        echo "Bootstrap complete.Ready to Go!"
+      EOT
 
-      update_config = [{
-        max_unavailable_percentage = 50
-      }]
+      subnet_ids = module.vpc.private_subnets
 
-      k8s_labels = {
-        Environment   = "preprod"
-        Zone          = "test"
+      min_size     = 1
+      max_size     = 12
+      desired_size = 3
+
+      force_update_version = true
+      instance_types       = ["r6i.2xlarge"]
+
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
+
+      labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "kafka"
       }
 
-      k8s_taints = [{ key = "dedicated", value = "kafka", effect = "NO_SCHEDULE" }]
+      taints = [{ key = "dedicated", value = "kafka", effect = "NO_SCHEDULE" }]
 
-      # See this doc node-template tags https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
-      additional_tags = {
-        Name                                                             = "kafka-node-grp"
-        subnet_type                                                      = "private"
-        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "kafka"
-        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-        "k8s.io/cluster-autoscaler/${local.name}"                        = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                              = "true"
+      tags = {
+        Name                     = "kafka-node-grp"
       }
     }
   }
+}
 
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
   tags = local.tags
 }
