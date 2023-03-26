@@ -114,7 +114,7 @@ As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you n
 1. Bootstrap an empty cluster
 2. Bootstrap From another cluster.
 
-In this first example, we are going to create a new empty DataBase Cluster.
+In this first example, we are going to create a new empty database cluster.
 
 ```yaml
 ---
@@ -127,7 +127,7 @@ spec:
   description: "Cluster Demo for DoEKS"
   imageName: ghcr.io/cloudnative-pg/postgresql:15.2
   instances: 3
-... 
+
 ```
 
 Update your template in `examples/cluster-prod.yaml` using IAM role for IRSA configuration and S3 bucket for backup restore. Then, apply your kubernetes template:
@@ -210,9 +210,21 @@ prod-2  29 MB          0/6000000    Standby (async)   OK      BestEffort  1.19.0
 prod-3  29 MB          0/6000000    Standby (async)   OK      BestEffort  1.19.0           ip-10-1-11-38.us-west-2.compute.internal
 ```
 
-### Create Database instance and run some queries
+### Monitoring
 
-You can expose your database externally using ingress-controller or kubernetes service type `LoadBalancer`. However, for internal usage inside your EKS cluster, you can use kuberntes service `prod-rw` and `prod-ro`. In this part, we are going to expose read write service `-rw`using `kubectl port-forward`.
+In this example, we deployed a Prometheus and Grafana addons to monitor all database clusters created by CloudNativePG. Let's check Grafana dashboard.
+
+```bash
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 8080:80
+
+```
+
+![CloudNativePG Grafana Dashboard](img/cnpg_garfana_dashboard.png)
+
+### Import database sample `world.sql`
+
+You can expose your database outside the cluster using ingress-controller or kubernetes service type `LoadBalancer`. However, for internal usage inside your EKS cluster, you can use kuberntes service `prod-rw` and `prod-ro`.
+In this section, we are going to expose read-write service `-rw`using `kubectl port-forward`.
 
 ```bash
 
@@ -220,11 +232,90 @@ kubectl port-forward svc/prod-rw 5432:5432 -n demo
 
 ```
 
-Now, that we exposed our database cluster, we are going to import `world.sql` into our Databse instance WorldDB using credentials from `app-auth` secrets.
+Now, we use `psql` cli to import `world.sql` into our Databse instance WorldDB using credentials from `app-auth` secrets.
 
 ```bash
 
 psql -h localhost --port 5432 -U app -d WorldDB < world.sql
+
+# Quick check on db tables.
+
+psql -h localhost --port 5432 -U app -d WorldDB -c '\dt'
+Password for user app:
+            List of relations
+ Schema |      Name       | Type  | Owner
+--------+-----------------+-------+-------
+ public | city            | table | app
+ public | country         | table | app
+ public | countrylanguage | table | app
+(3 rows)
+```
+
+### Create Backup to S3
+
+Now that we had a running database with data, CloudNativePG operator offers backup restore using [barman](https://pgbarman.org/) tool. CloudNativePG allow database admin to create on-demand database or Scheduled backups and for more details on [documentations](https://cloudnative-pg.io/documentation/1.19/backup_recovery/).
+
+In this example, we will create a Backup object to start a backup process immidiately.
+
+```yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata:
+  name: ondemand
+spec:
+  cluster:
+    name: prod
+```
+
+```bash
+ kubectl create -f examples/backup-od.yaml
+```
+
+Check the backup process
+
+```bash
+kubectl describe backup ondemand
+
+Events:
+  Type    Reason     Age   From                   Message
+  ----    ------     ----  ----                   -------
+  Normal  Starting   60s   cloudnative-pg-backup  Starting backup for cluster prod
+  Normal  Starting   60s   instance-manager       Backup started
+  Normal  Completed  56s   instance-manager       Backup completed
+```
+
+### Restore
+
+For restore, we use bootstrap a new cluster using backup file on S3. This is the second method to create a new cluster. Same backup tool *barman* manages restore process. However, it doesn't support backup and restore for kubernetes secrets. The later should be managed seperately, like using csi-secrets-driver with AWS SecretsManager.
+
+Fist let's delete prod database.
+
+```bash
+kubectl delete cluster prod -n demo
+
+```
+
+Then, update your template `examples/cluster-restore.yaml` with your S3 bucket and IAM role. Note that on restore template, CloudNativePG use `externalClusters` to point on the database.
+
+```bash
+  kubectl create -f examples/cluster-restore.yaml
+
+  Type    Reason                       Age    From            Message
+  ----    ------                       ----   ----            -------
+  Normal  CreatingPodDisruptionBudget  7m12s  cloudnative-pg  Creating PodDisruptionBudget prod-primary
+  Normal  CreatingPodDisruptionBudget  7m12s  cloudnative-pg  Creating PodDisruptionBudget prod
+  Normal  CreatingServiceAccount       7m12s  cloudnative-pg  Creating ServiceAccount
+  Normal  CreatingRole                 7m12s  cloudnative-pg  Creating Cluster Role
+  Normal  CreatingInstance             7m12s  cloudnative-pg  Primary instance (from backup)
+  Normal  CreatingInstance             6m33s  cloudnative-pg  Creating instance prod-2
+  Normal  CreatingInstance             5m51s  cloudnative-pg  Creating instance prod-3
+```
+
+When creating a new cluster, the operator will create a ServiceAccount with IRSA configuration as described on Cluster resources. Make sure the trust policy points the right ServiceAccount.
+
+Let's check if the data were covered as expected.
+
+```bash
 
 psql -h localhost --port 5432 -U app -d WorldDB -c '\dt'
 Password for user app:
@@ -236,5 +327,10 @@ Password for user app:
  public | countrylanguage | table | app
 (3 rows)
 
+psql -h localhost --port 5432 -U app -d WorldDB -c 'SELECT CURRENT_TIME;'
 
 ```
+
+## Conclusion
+
+CloudNativePG operator provides Level 5 from [Operator Capability Levels](https://operatorframework.io/operator-capabilities/). We touched on this example, how to deploy the operator on EKS with monitoring stack, How to create an empty database and run backup and restore procedure (on-demand) using S3 buckets.

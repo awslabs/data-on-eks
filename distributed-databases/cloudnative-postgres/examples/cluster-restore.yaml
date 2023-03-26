@@ -2,8 +2,8 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: restore
-  namespace: restore
+  name: prod
+  namespace: demo
 spec:
   description: "Cluster Demo for DoEKS"
   imageName: ghcr.io/cloudnative-pg/postgresql:15.2
@@ -14,7 +14,7 @@ spec:
   serviceAccountTemplate:
     metadata:
       annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::074661079081:role/cnpg-on-eks-restore-irsa
+        eks.amazonaws.com/role-arn: arn:aws:iam::074661079081:role/cnpg-on-eks-prod-irsa
   postgresql:
     parameters:
       shared_buffers: 256MB
@@ -38,7 +38,7 @@ spec:
 
   backup:
     barmanObjectStore:
-      destinationPath: s3://twoh-cnpg-barman-bucket
+      destinationPath: s3://medd-cnpg-barman-bucket/restore
       s3Credentials:
         inheritFromIAMRole: true
       wal:
@@ -54,13 +54,13 @@ spec:
   externalClusters:
     - name: prod
       barmanObjectStore:
-        destinationPath: s3://twoh-cnpg-barman-bucket
+        destinationPath: s3://medd-cnpg-barman-bucket
         s3Credentials:
           inheritFromIAMRole: true
         wal:
           maxParallel: 8
 
-  resources: # m5large: m5xlarge 2vCPU, 8GI RAM
+  resources:
     requests:
       memory: "512Mi"
       cpu: "1"
