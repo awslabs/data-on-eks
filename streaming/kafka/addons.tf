@@ -17,6 +17,7 @@ resource "helm_release" "cluster-autoscaler" {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
     })]
+    # depends_on = [module.eks.cluster_addons]
 }
 
 #---------------------------------------------------------------
@@ -33,7 +34,7 @@ resource "helm_release" "metrics-server" {
     #     name  = "tolerations"
     #     value = "[{ key = \"dedicated\", value = \"cassandra\", effect = \"NO_SCHEDULE\" }]"
     # }
-  depends_on = [module.eks.eks_managed_node_groups]
+  # depends_on = [module.eks.cluster_addons]
 }
 
 #---------------------------------------------------------------
@@ -57,7 +58,7 @@ reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
 YAML
 
-  depends_on = [module.eks.cluster_addons ]
+  # depends_on = [module.eks.cluster_addons]
 }
 
 resource "helm_release" "cert_manager" {
@@ -73,7 +74,7 @@ resource "helm_release" "cert_manager" {
     name  = "installCRDs"
     value = true
   }
-  depends_on = [module.eks.eks_managed_node_groups]
+  # depends_on = [module.eks.cluster_addons]
 }
 
 #---------------------------------------------------------------
@@ -95,7 +96,7 @@ resource "helm_release" "strimzi-operator" {
     })]
     description = "Strimzi - Apache Kafka on Kubernetes"
     depends_on = [
-      module.eks.eks_managed_node_groups
+      # module.eks.cluster_addons
     ]
   }
 
@@ -105,17 +106,17 @@ resource "helm_release" "strimzi-operator" {
 #---------------------------------------------------------------
 resource "kubectl_manifest" "kafka_namespace" {
   yaml_body  = file("./kafka-manifests/kafka-ns.yml")
-  depends_on = [helm_release.strimzi-operator]
+  # depends_on = [helm_release.strimzi-operator]
 }
 
 resource "kubectl_manifest" "kafka_cluster" {
   yaml_body  = file("./kafka-manifests/kafka-cluster.yml")
-  depends_on = [kubectl_manifest.kafka_namespace, module.eks]
+  # depends_on = [kubectl_manifest.kafka_namespace, module.eks]
 }
 
 resource "kubectl_manifest" "kafka_metric_config" {
   yaml_body  = file("./kafka-manifests/kafka-metrics-configmap.yml")
-  depends_on = [kubectl_manifest.kafka_cluster]
+  # depends_on = [kubectl_manifest.kafka_cluster]
 }
 
 #---------------------------------------------------------------
@@ -147,8 +148,8 @@ resource "helm_release" "grafana_operator" {
   version          = "2.7.8"
   namespace        = "grafana"
   create_namespace = true
-
-  depends_on = [module.eks.eks_managed_node_groups]
+  # wait             = true
+  # depends_on = [module.eks.cluster_addons]
 }
 
 #---------------------------------------------------------------
@@ -158,29 +159,29 @@ resource "helm_release" "grafana_operator" {
 resource "kubectl_manifest" "grafana_prometheus_datasource" {
   yaml_body = file("./grafana-manifests/grafana-operator-datasource-prometheus.yml")
 
-  depends_on = [helm_release.grafana_operator]
+  # depends_on = [helm_release.grafana_operator]
 }
 
 resource "kubectl_manifest" "grafana_kafka_dashboard" {
   yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka.yml")
 
-  depends_on = [helm_release.grafana_operator]
+  # depends_on = [helm_release.grafana_operator]
 }
 
 resource "kubectl_manifest" "grafana_kafka_exporter_dashboard" {
   yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka-exporter.yml")
 
-  depends_on = [helm_release.grafana_operator]
+  # depends_on = [helm_release.grafana_operator]
 }
 
 resource "kubectl_manifest" "grafana_kafka_zookeeper_dashboard" {
   yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka-zookeeper.yml")
 
-  depends_on = [helm_release.grafana_operator]
+  # depends_on = [helm_release.grafana_operator]
 }
 
 resource "kubectl_manifest" "grafana_kafka_cruise_control_dashboard" {
   yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka-cruise-control.yml")
 
-  depends_on = [helm_release.grafana_operator]
+  # depends_on = [helm_release.grafana_operator]
 }
