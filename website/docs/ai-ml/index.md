@@ -12,4 +12,4 @@ With its robust ecosystem of tools and support for a wide range of use cases, Ku
 The following Terraform templates are available to deploy.
 
 * [Ray on EKS](ray.md): This template deploys [RayCluster](https://docs.ray.io/en/latest/cluster/getting-started.html) on EKS.
-* [Kubeflow on AWS](kubeflow.md): This template deploys the [Kubeflow on AWS](https://awslabs.github.io/kubeflow-manifests/) distribution on EKS. 
+* [Kubeflow on AWS](kubeflow.md): This template deploys the [Kubeflow on AWS](https://awslabs.github.io/kubeflow-manifests/) distribution on EKS.
