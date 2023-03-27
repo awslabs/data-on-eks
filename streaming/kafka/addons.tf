@@ -136,7 +136,7 @@ resource "helm_release" "kube_prometheus_stack" {
   chart            = "kube-prometheus-stack"
   repository       = "https://prometheus-community.github.io/helm-charts"
   version          = "43.2.1"    
-  namespace        = local.k8ssandra_operator_name
+  namespace        = local.strimzi_kafka_name
   create_namespace = true
   description      = "Kube Prometheus Grafana Stack Operator Chart"
   timeout          = 600
