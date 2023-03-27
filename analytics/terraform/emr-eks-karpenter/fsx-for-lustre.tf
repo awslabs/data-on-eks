@@ -14,7 +14,7 @@ resource "aws_fsx_lustre_file_system" "this" {
   per_unit_storage_throughput = "500" # 125, 250, 500, 1000
   storage_capacity            = 2400
 
-  subnet_ids         = [module.vpc.private_subnets[0]]
+  subnet_ids         = [data.aws_subnets.private.ids[0]]
   security_group_ids = [aws_security_group.fsx[0].id]
   log_configuration {
     level = "WARN_ERROR"
@@ -48,18 +48,18 @@ resource "aws_security_group" "fsx" {
 
   name        = "${local.name}-fsx"
   description = "Allow inbound traffic from private subnets of the VPC to FSx filesystem"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = data.aws_vpc.eks_vpc.id
 
   ingress {
     description = "Allows Lustre traffic between Lustre clients"
-    cidr_blocks = module.vpc.private_subnets_cidr_blocks
+    cidr_blocks = [for s in data.aws_subnet.selectedpriv : s.cidr_block]
     from_port   = 1021
     to_port     = 1023
     protocol    = "tcp"
   }
   ingress {
     description = "Allows Lustre traffic between Lustre clients"
-    cidr_blocks = module.vpc.private_subnets_cidr_blocks
+    cidr_blocks = [for s in data.aws_subnet.selectedpriv : s.cidr_block]
     from_port   = 988
     to_port     = 988
     protocol    = "tcp"
@@ -107,7 +107,7 @@ resource "kubectl_manifest" "storage_class" {
   count = var.enable_fsx_for_lustre ? 1 : 0
 
   yaml_body = templatefile("${path.module}/examples/fsx-for-lustre/fsxlustre-storage-class.yaml", {
-    subnet_id         = module.vpc.private_subnets[0],
+    subnet_id         = data.aws_subnets.private.ids[0],
     security_group_id = aws_security_group.fsx[0].id
   })
 

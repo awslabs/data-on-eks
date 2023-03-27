@@ -2,7 +2,7 @@ locals {
   name   = var.name
   region = var.region
 
-  vpc_cidr = var.vpc_cidr
+  vpc_cidr = data.aws_vpc.eks_vpc.cidr_block
   azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 
   tags = merge(var.tags, {

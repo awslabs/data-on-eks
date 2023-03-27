@@ -7,6 +7,8 @@ variable "emr_on_eks_config" {
 variable "eks_cluster_id" {
   description = "Name of the EKS Cluster"
   type        = string
+  default     = "emr-roadshow"
+
 }
 
 variable "eks_oidc_provider_arn" {

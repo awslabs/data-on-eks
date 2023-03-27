@@ -4,11 +4,11 @@ module "eks_blueprints_kubernetes_addons" {
   # tflint-ignore: terraform_module_pinned_source
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650fd2b4bc894bde7b51313a8dc9598d82e925"
 
-  cluster_name      = module.eks.cluster_name
-  cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.cluster_oidc_issuer_url
-  oidc_provider_arn = module.eks.oidc_provider_arn
+  cluster_name      = data.aws_eks_cluster.cluster.name
+  cluster_endpoint  = data.aws_eks_cluster.cluster.endpoint
+  cluster_version   = data.aws_eks_cluster.cluster.version
+  oidc_provider     = replace(data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer, "https://", "")
+  oidc_provider_arn = data.aws_iam_openid_connect_provider.eks_oidc.arn
 
   #---------------------------------------
   # Amazon EKS Managed Add-ons
@@ -142,6 +142,18 @@ module "eks_blueprints_kubernetes_addons" {
     ]
   }
 
+  enable_grafana = var.enable_grafana
+
+  # This example shows how to set default password for grafana using SecretsManager and Helm Chart set_sensitive values.
+  grafana_helm_config = {
+    set_sensitive = [
+      {
+        name  = "adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ]
+  }
+
   tags = local.tags
 }
 
@@ -186,7 +198,7 @@ data "kubectl_path_documents" "karpenter_provisioners" {
   pattern = "${path.module}/karpenter-provisioners/spark-*.yaml"
   vars = {
     azs            = local.region
-    eks_cluster_id = module.eks.cluster_name
+    eks_cluster_id = data.aws_eks_cluster.cluster.name
   }
 }
 
@@ -215,7 +227,7 @@ module "ebs_csi_driver_irsa" {
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
-      provider_arn               = module.eks.oidc_provider_arn
+      provider_arn               = data.aws_iam_openid_connect_provider.eks_oidc.arn
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
     }
   }
@@ -233,9 +245,29 @@ module "vpc_cni_irsa" {
   vpc_cni_enable_ipv4   = true
   oidc_providers = {
     main = {
-      provider_arn               = module.eks.oidc_provider_arn
+      provider_arn               = data.aws_iam_openid_connect_provider.eks_oidc.arn
       namespace_service_accounts = ["kube-system:aws-node"]
     }
   }
   tags = local.tags
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
 }
