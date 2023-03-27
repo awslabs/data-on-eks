@@ -58,11 +58,6 @@ spec:
                     operator: In
                     values:
                     - kafka
-        metadata:
-          annotations:
-            prometheus.io/path: /metrics
-            prometheus.io/port: "9404"
-            prometheus.io/scrape: "true"
     metricsConfig:
       type: jmxPrometheusExporter
       valueFrom:
@@ -71,22 +66,8 @@ spec:
           key: kafka-metrics-config.yml
     rack:
       topologyKey: topology.kubernetes.io/zone
-  kafkaExporter:
-    template:
-      pod:
-        metadata:
-          annotations:
-            prometheus.io/path: /metrics
-            prometheus.io/port: "9404"
-            prometheus.io/scrape: "true"
+  kafkaExporter: {}
   zookeeper:
-    template:
-      pod:
-        metadata:
-          annotations:
-            prometheus.io/path: /metrics
-            prometheus.io/port: "9404"
-            prometheus.io/scrape: "true"
     replicas: 3
     storage:
       type: persistent-claim

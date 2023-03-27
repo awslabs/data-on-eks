@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: strimzi-kafka-dashboard
-  namespace: kafka
+  namespace: strimzi-kafka-operator
   labels:
     grafana_dashboard: "1"
 data:
@@ -72,7 +72,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of brokers online",
           "format": "none",
           "gauge": {
@@ -157,7 +157,7 @@ data:
             "#e5ac0e",
             "#bf1b00"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of active controllers in the cluster",
           "format": "none",
           "gauge": {
@@ -239,7 +239,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Unclean leader election rate",
           "format": "none",
           "gauge": {
@@ -321,7 +321,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Replicas that are online",
           "format": "none",
           "gauge": {
@@ -402,7 +402,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#bf1b00"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of under-replicated partitions (| ISR | < | all replicas |).",
           "format": "none",
           "gauge": {
@@ -484,7 +484,7 @@ data:
             "#ef843c",
             "#bf1b00"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of partitions which are at their minimum in sync replica count (| ISR | == | min.insync.replicas |)",
           "format": "none",
           "gauge": {
@@ -566,7 +566,7 @@ data:
             "#ef843c",
             "#bf1b00"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of partitions which are under their minimum in sync replica count (| ISR | < | min.insync.replicas |)",
           "format": "none",
           "gauge": {
@@ -648,7 +648,7 @@ data:
             "#ef843c",
             "#bf1b00"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of partitions that don?t have an active leader and are hence not writable or readable",
           "format": "none",
           "gauge": {
@@ -739,7 +739,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Kafka broker pods memory usage",
           "fill": 1,
           "gridPos": {
@@ -827,7 +827,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Aggregated Kafka broker pods CPU usage",
           "fill": 1,
           "gridPos": {
@@ -915,7 +915,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Kafka broker pods disk usage",
           "fill": 1,
           "gridPos": {
@@ -1003,7 +1003,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Open File Descriptors",
           "fill": 1,
           "gridPos": {
@@ -1091,7 +1091,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -1177,7 +1177,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -1263,7 +1263,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -1349,7 +1349,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "JVM thread count",
           "fill": 1,
           "gridPos": {
@@ -1440,7 +1440,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Total incoming byte rate",
           "format": "Bps",
           "gauge": {
@@ -1524,7 +1524,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Total outgoing byte rate",
           "format": "Bps",
           "gauge": {
@@ -1608,7 +1608,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Incoming messages rate",
           "format": "wps",
           "gauge": {
@@ -1692,7 +1692,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Total produce request rate",
           "format": "reqps",
           "gauge": {
@@ -1772,7 +1772,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Byte rate",
           "fill": 1,
           "gridPos": {
@@ -1875,7 +1875,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 8,
@@ -1962,7 +1962,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Produce request rate",
           "fill": 1,
           "gridPos": {
@@ -2057,7 +2057,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Fetch request rate",
           "fill": 1,
           "gridPos": {
@@ -2151,7 +2151,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Average percentage of time network processor is idle",
           "fill": 1,
           "gridPos": {
@@ -2238,7 +2238,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Average percentage of time request handler threads are idle",
           "fill": 1,
           "gridPos": {
@@ -2326,7 +2326,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Disk writes",
           "fill": 1,
           "gridPos": {
@@ -2414,7 +2414,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Disk reads",
           "fill": 1,
           "gridPos": {
@@ -2502,7 +2502,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Disk reads",
           "fill": 1,
           "gridPos": {
@@ -2590,7 +2590,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 13,
@@ -2685,7 +2685,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
             "includeAll": false,
@@ -2707,7 +2707,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
             "includeAll": false,
@@ -2729,7 +2729,7 @@ data:
           {
             "allValue": ".*",
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
             "includeAll": true,
@@ -2751,7 +2751,7 @@ data:
           {
             "allValue": ".+",
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
             "includeAll": true,
@@ -2773,7 +2773,7 @@ data:
           {
             "allValue": ".*",
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
             "includeAll": true,
@@ -2835,7 +2835,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: strimzi-operators-dashboard
-  namespace: kafka
+  namespace: strimzi-kafka-operator
   labels:
     grafana_dashboard: "1"
 data:
@@ -2918,7 +2918,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3001,7 +3001,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3084,7 +3084,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3167,7 +3167,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3250,7 +3250,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3333,7 +3333,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3416,7 +3416,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3499,7 +3499,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3582,7 +3582,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -3674,7 +3674,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "decimals": null,
           "fill": 1,
           "fillGradient": 0,
@@ -3767,7 +3767,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "decimals": null,
           "fill": 1,
           "fillGradient": 0,
@@ -3860,7 +3860,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "decimals": null,
           "fill": 1,
           "fillGradient": 0,
@@ -3954,7 +3954,7 @@ data:
           "cacheTimeout": null,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "decimals": null,
           "fill": 1,
           "fillGradient": 0,
@@ -4048,7 +4048,7 @@ data:
           "cacheTimeout": null,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "decimals": null,
           "fill": 1,
           "fillGradient": 0,
@@ -4142,7 +4142,7 @@ data:
           "cacheTimeout": null,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "decimals": null,
           "fill": 1,
           "fillGradient": 0,
@@ -4250,7 +4250,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -4340,7 +4340,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -4430,7 +4430,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -4568,7 +4568,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: strimzi-zookeeper-dashboard
-  namespace: kafka
+  namespace: strimzi-kafka-operator
   labels:
     grafana_dashboard: "1"
 data:
@@ -4654,7 +4654,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Quorum size of ZooKeeper ensemble",
           "format": "none",
           "gauge": {
@@ -4735,7 +4735,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of active connections",
           "format": "none",
           "gauge": {
@@ -4812,7 +4812,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of queued requests in the server. This goes up when the server receives more requests than it can process",
           "fill": 1,
           "gridPos": {
@@ -4902,7 +4902,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "format": "none",
           "gauge": {
             "maxValue": 100,
@@ -4982,7 +4982,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of watchers",
           "format": "none",
           "gauge": {
@@ -5059,7 +5059,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "ZooKeeper pods memory usage",
           "fill": 1,
           "gridPos": {
@@ -5144,7 +5144,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Aggregated ZooKeeper pods CPU usage",
           "fill": 1,
           "gridPos": {
@@ -5229,7 +5229,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Kafka broker pods disk usage",
           "fill": 1,
           "gridPos": {
@@ -5314,7 +5314,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Open File Descriptors",
           "fill": 1,
           "gridPos": {
@@ -5401,7 +5401,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -5485,7 +5485,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -5569,7 +5569,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "gridPos": {
             "h": 7,
@@ -5653,7 +5653,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "JVM thread count",
           "fill": 1,
           "gridPos": {
@@ -5739,7 +5739,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Amount of time (in ms) it takes for the server to respond to a client request",
           "fill": 1,
           "gridPos": {
@@ -5824,7 +5824,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Amount of time (in ms) it takes for the server to respond to a client request",
           "fill": 1,
           "gridPos": {
@@ -5909,7 +5909,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Amount of time (in ms) it takes for the server to respond to a client request",
           "fill": 1,
           "gridPos": {
@@ -6003,7 +6003,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "hide": 0,
             "includeAll": false,
             "label": "Namespace",
@@ -6023,7 +6023,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "hide": 0,
             "includeAll": false,
             "label": "Cluster Name",
@@ -6043,7 +6043,7 @@ data:
           {
             "allValue": ".*",
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "hide": 0,
             "includeAll": true,
             "label": "Node",
@@ -6103,7 +6103,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: strimzi-exporter-dashboard
-  namespace: kafka
+  namespace: strimzi-kafka-operator
   labels:
     grafana_dashboard: "1"
 data:
@@ -6815,7 +6815,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 0,
           "gridPos": {
             "h": 10,
@@ -6906,7 +6906,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 0,
           "gridPos": {
             "h": 10,
@@ -6997,7 +6997,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 0,
           "gridPos": {
             "h": 10,
@@ -7463,7 +7463,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
             "includeAll": false,
@@ -7485,7 +7485,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "",
             "hide": 0,
             "includeAll": false,
@@ -7512,7 +7512,7 @@ data:
                 "$__all"
               ]
             },
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "label_values(kafka_consumergroup_current_offset{namespace=\"$kubernetes_namespace\",strimzi_io_cluster=\"$strimzi_cluster_name\"}, consumergroup)",
             "hide": 0,
             "includeAll": true,
@@ -7539,7 +7539,7 @@ data:
                 "$__all"
               ]
             },
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "label_values(kafka_topic_partition_current_offset{namespace=\"$kubernetes_namespace\",strimzi_io_cluster=\"$strimzi_cluster_name\"}, topic)",
             "hide": 0,
             "includeAll": true,
@@ -7601,7 +7601,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: strimzi-cruise-control-dashboard
-  namespace: kafka
+  namespace: strimzi-kafka-operator
   labels:
     grafana_dashboard: "1"
 data:
@@ -7672,7 +7672,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "The number of snapshot windows that are monitored",
           "format": "none",
           "gauge": {
@@ -7759,7 +7759,7 @@ data:
             "#e5ac0e",
             "#bf1b00"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of time windows considered to be valid because of enough samples for computing a proposal.",
           "format": "none",
           "gauge": {
@@ -7843,7 +7843,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Number of ongoing executions running for proposals or rebalance",
           "format": "none",
           "gauge": {
@@ -7927,7 +7927,7 @@ data:
             "#FF780A",
             "#299c46"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "The current balancedness score of the Kafka cluster as calculated by the anomaly detector (every 5 minutes by default)",
           "format": "none",
           "gauge": {
@@ -8011,7 +8011,7 @@ data:
             "rgba(237, 129, 40, 0.89)",
             "#d44a3a"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Monitored Partition Percentage",
           "format": "percentunit",
           "gauge": {
@@ -8102,7 +8102,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Goal Violation Rate",
           "fill": 1,
           "fillGradient": 0,
@@ -8201,7 +8201,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Disk read failures reported by Kafka",
           "fill": 1,
           "fillGradient": 0,
@@ -8300,7 +8300,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Partition Samples Fetcher Failure Rate",
           "fill": 1,
           "fillGradient": 0,
@@ -8399,7 +8399,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Training Samples Fetcher Failure Rate",
           "fill": 1,
           "fillGradient": 0,
@@ -8498,7 +8498,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Proposal Computation Time",
           "fill": 1,
           "fillGradient": 0,
@@ -8614,7 +8614,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Cluster Model Creation Time",
           "fill": 1,
           "fillGradient": 0,
@@ -8741,7 +8741,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Rebalance Request Rate",
           "fill": 1,
           "fillGradient": 0,
@@ -8840,7 +8840,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "User Tasks Request Rate",
           "fill": 1,
           "fillGradient": 0,
@@ -8931,7 +8931,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Proposal Request Rate",
           "fill": 1,
           "fillGradient": 0,
@@ -9030,7 +9030,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -9134,7 +9134,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -9224,7 +9224,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -9314,7 +9314,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -9404,7 +9404,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Kafka broker pods memory usage",
           "fill": 1,
           "fillGradient": 0,
@@ -9496,7 +9496,7 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "Prometheus",
           "description": "Aggregated Kafka broker pods CPU usage",
           "fill": 1,
           "fillGradient": 0,
@@ -9596,7 +9596,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "query_result(kafka_cruisecontrol_loadmonitor_valid_windows_value)",
             "hide": 0,
             "includeAll": false,
@@ -9618,7 +9618,7 @@ data:
           {
             "allValue": null,
             "current": {},
-            "datasource": "${DS_PROMETHEUS}",
+            "datasource": "Prometheus",
             "definition": "query_result(kafka_cruisecontrol_loadmonitor_valid_windows_value{namespace=\"$kubernetes_namespace\"})",
             "hide": 0,
             "includeAll": false,

@@ -119,73 +119,30 @@ resource "kubectl_manifest" "kafka_metric_config" {
   # depends_on = [kubectl_manifest.kafka_cluster]
 }
 
-resource "kubectl_manifest" "grafana_dashboards" {
+#---------------------------------------------------------------
+# Install Kafka Montoring Stack with Prometheus and Grafana
+# 1- Grafana port-forward `kubectl port-forward svc/prometheus-grafana 8080:80 -n strimzi-kafka-operator`
+# 2- Grafana Admin user: admin
+#---------------------------------------------------------------
+
+  resource "helm_release" "kube_prometheus_stack" {
+    name             = "prometheus-grafana"
+    chart            = "kube-prometheus-stack"
+    repository       = "https://prometheus-community.github.io/helm-charts"
+    version          = "43.2.1"    
+    namespace        = local.strimzi_kafka_name
+    create_namespace = true
+    description      = "Kube Prometheus Grafana Stack Operator Chart"
+    timeout          = 600
+    wait             = true
+    values           = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    depends_on = [module.eks.cluster_id]
+  }
+
+  resource "kubectl_manifest" "pod-monitors" {
+  yaml_body = file("./kafka-manifests/prom-pod-monitors.yml")
+}
+
+  resource "kubectl_manifest" "grafana_dashboards" {
   yaml_body = file("./kafka-manifests/grafana-dashboards.yml")
-}
-
-#---------------------------------------------------------------
-# Grafana Dashboard for Kafka
-# Login to Grafana dashboard
-#1/ kubectl port-forward svc/grafana-service 3000:3000 -n grafana
-#2/ Admin password: kubectl get secrets/grafana-admin-credentials --template={{.data.GF_SECURITY_ADMIN_PASSWORD}} -n grafana | base64 -D
-#3/ Admin user: admin
-#---------------------------------------------------------------
-
-resource "helm_release" "kube_prometheus_stack" {
-  name             = "prometheus-grafana"
-  chart            = "kube-prometheus-stack"
-  repository       = "https://prometheus-community.github.io/helm-charts"
-  version          = "43.2.1"    
-  namespace        = local.strimzi_kafka_name
-  create_namespace = true
-  description      = "Kube Prometheus Grafana Stack Operator Chart"
-  timeout          = 600
-  wait             = true
-  values           = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
-  depends_on = [module.eks.cluster_id]
-}
-
-resource "helm_release" "grafana_operator" {
-  name             = "grafana-operator"
-  repository       = "https://charts.bitnami.com/bitnami"
-  chart            = "grafana-operator"
-  version          = "2.7.8"
-  namespace        = "grafana"
-  create_namespace = true
-  # wait             = true
-  # depends_on = [module.eks.cluster_addons]
-}
-
-#---------------------------------------------------------------
-# Install Grafana Dashboards
-#---------------------------------------------------------------
-
-resource "kubectl_manifest" "grafana_prometheus_datasource" {
-  yaml_body = file("./grafana-manifests/grafana-operator-datasource-prometheus.yml")
-
-  # depends_on = [helm_release.grafana_operator]
-}
-
-resource "kubectl_manifest" "grafana_kafka_dashboard" {
-  yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka.yml")
-
-  # depends_on = [helm_release.grafana_operator]
-}
-
-resource "kubectl_manifest" "grafana_kafka_exporter_dashboard" {
-  yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka-exporter.yml")
-
-  # depends_on = [helm_release.grafana_operator]
-}
-
-resource "kubectl_manifest" "grafana_kafka_zookeeper_dashboard" {
-  yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka-zookeeper.yml")
-
-  # depends_on = [helm_release.grafana_operator]
-}
-
-resource "kubectl_manifest" "grafana_kafka_cruise_control_dashboard" {
-  yaml_body = file("./grafana-manifests/grafana-operator-dashboard-kafka-cruise-control.yml")
-
-  # depends_on = [helm_release.grafana_operator]
 }
