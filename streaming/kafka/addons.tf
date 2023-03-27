@@ -85,7 +85,7 @@ resource "helm_release" "strimzi-operator" {
     name             = local.strimzi_kafka_name
     chart            = local.strimzi_kafka_name
     repository       = "https://strimzi.io/charts/"
-    version          = "0.31.1"
+    version          = "0.34.0"
     namespace        = local.strimzi_kafka_name
     create_namespace = true
     timeout          = 300
