@@ -119,6 +119,10 @@ resource "kubectl_manifest" "kafka_metric_config" {
   # depends_on = [kubectl_manifest.kafka_cluster]
 }
 
+resource "kubectl_manifest" "grafana_dashboards" {
+  yaml_body = file("./kafka-manifests/grafana-dashboards.yml")
+}
+
 #---------------------------------------------------------------
 # Grafana Dashboard for Kafka
 # Login to Grafana dashboard
@@ -127,19 +131,19 @@ resource "kubectl_manifest" "kafka_metric_config" {
 #3/ Admin user: admin
 #---------------------------------------------------------------
 
-# resource "helm_release" "kube_prometheus_stack" {
-#   name             = "prometheus-grafana"
-#   chart            = "kube-prometheus-stack"
-#   repository       = "https://prometheus-community.github.io/helm-charts"
-#   version          = "43.2.1"    
-#   namespace        = local.k8ssandra_operator_name
-#   create_namespace = true
-#   description      = "Kube Prometheus Grafana Stack Operator Chart"
-#   timeout          = 600
-#   wait             = true
-#   values           = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
-#   depends_on = [module.eks.cluster_id]
-# }
+resource "helm_release" "kube_prometheus_stack" {
+  name             = "prometheus-grafana"
+  chart            = "kube-prometheus-stack"
+  repository       = "https://prometheus-community.github.io/helm-charts"
+  version          = "43.2.1"    
+  namespace        = local.k8ssandra_operator_name
+  create_namespace = true
+  description      = "Kube Prometheus Grafana Stack Operator Chart"
+  timeout          = 600
+  wait             = true
+  values           = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+  depends_on = [module.eks.cluster_id]
+}
 
 resource "helm_release" "grafana_operator" {
   name             = "grafana-operator"
