@@ -114,7 +114,17 @@ As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you n
 1. Bootstrap an empty cluster
 2. Bootstrap From another cluster.
 
-In this first example, we are going to create a new empty database cluster.
+In this first example, we are going to create a new empty database cluster using `initdb`flags. We are going to use the template below by modifiying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
+
+```bash
+cd data-on-eks/distributed-databases/cloudnative-postgres
+
+terraform output
+
+barman_backup_irsa = "arn:aws:iam::<your_account_id>:role/cnpg-on-eks-prod-irsa"
+barman_s3_bucket = "XXXX-cnpg-barman-bucket"
+configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name cnpg-on-eks"
+```
 
 ```yaml
 ---
@@ -125,19 +135,86 @@ metadata:
   namespace: demo
 spec:
   description: "Cluster Demo for DoEKS"
+  # Choose your PostGres Database Version
   imageName: ghcr.io/cloudnative-pg/postgresql:15.2
+  # Number of Replicas
   instances: 3
+  startDelay: 300
+  stopDelay: 300
+  replicationSlots:
+    highAvailability:
+      enabled: true
+    updateInterval: 300
+  primaryUpdateStrategy: unsupervised
+  serviceAccountTemplate:
+    # For backup and restore, we use IRSA for barman tool. 
+    # You will find this IAM role on terraform outputs. 
+    metadata:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa #1
+  postgresql:
+    parameters:
+      shared_buffers: 256MB
+      pg_stat_statements.max: '10000'
+      pg_stat_statements.track: all
+      auto_explain.log_min_duration: '10s'
+    pg_hba:
+      # - hostssl app all all cert
+      - host app app all password
+  logLevel: debug
+  storage:
+    storageClass: ebs-sc
+    size: 1Gi
+  walStorage:
+    storageClass: ebs-sc
+    size: 1Gi
+  monitoring:
+    enablePodMonitor: true
+  bootstrap:
+    initdb: # Deploying a new cluster
+      database: WorldDB
+      owner: app
+      secret:
+        name: app-auth
+  backup:
+    barmanObjectStore:
+    # For backup, we S3 backet to store data. 
+    # On this Blueprint, we create an S3 check the terraform output for it.
+      destinationPath: s3://<your-s3-barman-bucket> #2
+      s3Credentials:
+        inheritFromIAMRole: true
+      wal:
+        compression: gzip
+        maxParallel: 8
+    retentionPolicy: "30d"
+
+  resources: # m5large: m5xlarge 2vCPU, 8GI RAM
+    requests:
+      memory: "512Mi"
+      cpu: "1"
+    limits:
+      memory: "1Gi"
+      cpu: "2"
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: failure-domain.beta.kubernetes.io/zone
+
+  nodeMaintenanceWindow:
+    inProgress: false
+    reusePVC: false
+
 
 ```
 
-Update your template in `examples/cluster-prod.yaml` using IAM role for IRSA configuration and S3 bucket for backup restore. Then, apply your kubernetes template:
+Once updated, you can apply your template.
 
 ```bash
 kubectl create -f examples/prod-cluster.yaml
 
 ```
 
-Verify it will create three pods and three kuberntes services
+Verify that CloudNatvicePG operator has created three pods: one primary and two standby.
 
 ```bash
 
@@ -154,13 +231,13 @@ service/prod-ro    ClusterIP   172.20.96.16     <none>        5432/TCP   4m53s
 service/prod-rw    ClusterIP   172.20.236.1     <none>        5432/TCP   4m53s
 ```
 
-CloudNatvicePG operator will create three pods, one primary and two standby. Then, it will create three services:
+The operator created also three services:
 
 1. `-rw`: points only to the primary instances of cluster database
 2. `-ro`points only to hot standby replicas for read-only-workloads
 3. `-r`points to any of the instances for read-only workloads
 
-Note that `-any` points on all the instances for sync perpose.
+Note that `-any` points on all the instances.
 
 Another way to check Cluster status is by using [cloudnative-pg kubectl plugin](https://cloudnative-pg.io/documentation/1.19/cnpg-plugin/#cloudnativepg-plugin) offered by the CloudNativePG comminuty,
 
