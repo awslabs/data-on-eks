@@ -33,9 +33,9 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server_helm_config = {
-    version    = "3.8.4"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    version = "3.8.4"
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -43,8 +43,8 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler_helm_config = {
-    version    = "9.21.0"
-    timeout    = "300"
+    version = "9.21.0"
+    timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -60,7 +60,7 @@ module "eks_blueprints_kubernetes_addons" {
 
   karpenter_helm_config = {
     version             = "v0.25.0"
-    timeout    = "300"
+    timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -71,18 +71,18 @@ module "eks_blueprints_kubernetes_addons" {
   enable_cloudwatch_metrics = true
   cloudwatch_metrics = {
     version = "0.0.8"
-    timeout    = "300"
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
   }
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit                 = true
-  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Add-on creates this log group
-  aws_for_fluentbit_irsa_policies = [aws_iam_policy.fluentbit.arn]
+  enable_aws_for_fluentbit            = true
+  aws_for_fluentbit_cw_log_group_name = "/${var.name}/fluentbit-logs" # Add-on creates this log group
+  aws_for_fluentbit_irsa_policies     = [aws_iam_policy.fluentbit.arn]
   aws_for_fluentbit_helm_config = {
-    version    = "0.1.22"
+    version = "0.1.22"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = var.region,
       cloudwatch_log_group = "/${var.name}/fluentbit-logs"
@@ -93,15 +93,15 @@ module "eks_blueprints_kubernetes_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller_helm_config = {
-    version    = "1.4.7"
-    timeout    = "300"
+    version = "1.4.7"
+    timeout = "300"
   }
 
   enable_ingress_nginx = true
   ingress_nginx_helm_config = {
-    version     = "4.5.2"
-    timeout    = "300"
-    values      = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+    version = "4.5.2"
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
   tags = local.tags
@@ -138,8 +138,8 @@ module "eks_data_addons" {
     create_irsa = true
     values = [
       templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
-        s3_bucket_name       = module.s3_bucket.s3_bucket_id
-        s3_bucket_prefix     = aws_s3_object.this.key
+        s3_bucket_name   = module.s3_bucket.s3_bucket_id
+        s3_bucket_prefix = aws_s3_object.this.key
       })
     ]
   }
@@ -149,7 +149,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    values = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -291,7 +291,7 @@ resource "aws_s3_object" "this" {
 # Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
 data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id = aws_secretsmanager_secret.grafana.id
+  secret_id  = aws_secretsmanager_secret.grafana.id
   depends_on = [aws_secretsmanager_secret_version.grafana]
 }
 

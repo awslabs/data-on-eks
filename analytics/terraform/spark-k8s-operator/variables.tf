@@ -59,5 +59,3 @@ variable "enable_amazon_prometheus" {
   type        = bool
   default     = true
 }
-
-

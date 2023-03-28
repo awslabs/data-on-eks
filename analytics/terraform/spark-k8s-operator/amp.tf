@@ -3,7 +3,7 @@
 #------------------------------------------
 locals {
   amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
-  namespace = "prometheus"
+  namespace                  = "prometheus"
 }
 
 resource "aws_prometheus_workspace" "amp" {

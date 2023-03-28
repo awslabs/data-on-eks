@@ -100,7 +100,7 @@ module "spark_history_server_irsa" {
   role_permissions_boundary_arn = try(var.spark_history_server_helm_config.role_permissions_boundary_arn, null)
   role_description              = try(var.spark_history_server_helm_config.role_description, "IRSA for ${local.spark_history_server_name} project")
 
-  role_policy_arns = try(var.spark_history_server_helm_config.role_policy_arns, {"S3ReadOnlyPolicy": "arn:${local.partition}:iam::aws:policy/AmazonS3ReadOnlyAccess"})
+  role_policy_arns = try(var.spark_history_server_helm_config.role_policy_arns, { "S3ReadOnlyPolicy" : "arn:${local.partition}:iam::aws:policy/AmazonS3ReadOnlyAccess" })
 
   oidc_providers = {
     this = {
