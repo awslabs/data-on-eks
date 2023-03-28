@@ -41,26 +41,22 @@ resource "aws_eks_addon" "vpc_cni" {
   cluster_name = module.eks.cluster_name
   addon_name   = "vpc-cni"
   service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-  resolve_conflicts = "PRESERVE"
 }
 
 resource "aws_eks_addon" "coredns" {
   cluster_name = module.eks.cluster_name
   addon_name   = "coredns"
-  resolve_conflicts = "PRESERVE"
 }
 
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name = module.eks.cluster_name
   addon_name   = "kube-proxy"
-  resolve_conflicts = "PRESERVE"
 }
 
 resource "aws_eks_addon" "aws_ebs_csi_driver" {
   cluster_name = module.eks.cluster_name
   addon_name   = "aws-ebs-csi-driver"
   service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-  resolve_conflicts = "PRESERVE"
 }
 
 #---------------------------------------------------------------
@@ -187,10 +183,30 @@ resource "kubectl_manifest" "kafka_metric_config" {
     depends_on = [module.eks.cluster_id]
   }
 
-  resource "kubectl_manifest" "pod-monitors" {
-  yaml_body = file("./kafka-manifests/prom-pod-monitors.yml")
-}
+  resource "kubectl_manifest" "podmonitor_cluster_operator_metrics" {
+  yaml_body = file("./monitoring-manifests/podmonitor-cluster-operator-metrics.yml")
+  }
 
-  resource "kubectl_manifest" "grafana_dashboards" {
-  yaml_body = file("./kafka-manifests/grafana-dashboards.yml")
-}
+  resource "kubectl_manifest" "podmonitor_entity_operator_metrics" {
+  yaml_body = file("./monitoring-manifests/podmonitor-entity-operator-metrics.yml")
+  }
+
+  resource "kubectl_manifest" "podmonitor_kafka_resources_metrics" {
+  yaml_body = file("./monitoring-manifests/podmonitor-kafka-resources-metrics.yml")
+  }
+
+  resource "kubectl_manifest" "grafana_strimzi_exporter_dashboard" {
+  yaml_body = file("./monitoring-manifests/grafana-strimzi-exporter-dashboard.yml")
+  }
+
+  resource "kubectl_manifest" "grafana_strimzi_kafka_dashboard" {
+  yaml_body = file("./monitoring-manifests/grafana-strimzi-kafka-dashboard.yml")
+  }
+
+  resource "kubectl_manifest" "grafana_strimzi_operators_dashboard" {
+  yaml_body = file("./monitoring-manifests/grafana-strimzi-operators-dashboard.yml")
+  }
+
+  resource "kubectl_manifest" "grafana_strimzi_zookeeper_dashboard" {
+  yaml_body = file("./monitoring-manifests/grafana-strimzi-zookeeper-dashboard.yml")
+  }
