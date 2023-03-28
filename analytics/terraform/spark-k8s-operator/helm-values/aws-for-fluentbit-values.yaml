@@ -131,16 +131,16 @@ cloudWatch:
 
 additionalOutputs: |
   [OUTPUT]
-    Name                            s3
-    Match                           systempods.*
-    region                          ${region}
-    bucket                          ${s3_bucket_name}
-    total_file_size                 100M
-    s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
-    s3_key_format_tag_delimiters    ..
-    store_dir                       /home/ec2-user/buffer
-    upload_timeout                  10m
-    log_key                         log
+      Name                            s3
+      Match                           systempods.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 100M
+      s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  10m
+      log_key                         log
 
 #   [OUTPUT]
 #       Name                            s3
@@ -180,3 +180,7 @@ priorityClassName: system-node-critical
 
 updateStrategy:
   type: RollingUpdate
+
+# This toleration allows Daemonset pod to be scheduled on any node, regardless of their Taints.
+tolerations:
+  - operator: Exists

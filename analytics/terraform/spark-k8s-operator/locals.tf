@@ -1,12 +1,15 @@
 locals {
-  name          = var.name
-  region        = var.region
-  azs           = slice(data.aws_availability_zones.available.names, 0, 3)
-  vpc_endpoints = ["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]
-  spark_team    = "spark-team-a"
+  name     = var.name
+  region   = var.region
+  vpc_cidr = var.vpc_cidr
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 
   tags = {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
   }
+
+  account_id = data.aws_caller_identity.current.account_id
+  partition  = data.aws_partition.current.partition
+
 }

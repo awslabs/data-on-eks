@@ -1,10 +1,6 @@
 replicaCount: 1
 admissionControllerReplicaCount: 1
 
-# nodeSelector -- Node labels for pod assignment
-nodeSelector:
-  NodeGroupType: ${node_group_type}
-  kubernetes.io/os: ${operating_system}
 tolerations: []
 affinity: {}
 
