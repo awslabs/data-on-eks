@@ -160,36 +160,36 @@ module "eks_blueprints_kubernetes_addons" {
 #---------------------------------------
 # Kubecost
 #---------------------------------------
-resource "helm_release" "kubecost" {
-  name                = "kubecost"
-  repository          = "oci://public.ecr.aws/kubecost"
-  chart               = "cost-analyzer"
-  version             = "1.97.0"
-  namespace           = "kubecost"
-  create_namespace    = true
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
-  timeout             = "300"
-  values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-}
+# resource "helm_release" "kubecost" {
+#   name                = "kubecost"
+#   repository          = "oci://public.ecr.aws/kubecost"
+#   chart               = "cost-analyzer"
+#   version             = "1.97.0"
+#   namespace           = "kubecost"
+#   create_namespace    = true
+#   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+#   repository_password = data.aws_ecrpublic_authorization_token.token.password
+#   timeout             = "300"
+#   values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+# }
 
 #---------------------------------------------------------------
 # Apache YuniKorn Add-on
 #---------------------------------------------------------------
-resource "helm_release" "yunikorn" {
-  count = var.enable_yunikorn ? 1 : 0
+# resource "helm_release" "yunikorn" {
+#   count = var.enable_yunikorn ? 1 : 0
 
-  name             = "yunikorn"
-  repository       = "https://apache.github.io/yunikorn-release"
-  chart            = "yunikorn"
-  version          = "1.1.0"
-  namespace        = "yunikorn"
-  create_namespace = true
-  timeout          = "300"
-  values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-    image_version = "1.1.0"
-  })]
-}
+#   name             = "yunikorn"
+#   repository       = "https://apache.github.io/yunikorn-release"
+#   chart            = "yunikorn"
+#   version          = "1.1.0"
+#   namespace        = "yunikorn"
+#   create_namespace = true
+#   timeout          = "300"
+#   values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+#     image_version = "1.1.0"
+#   })]
+# }
 
 #---------------------------------------
 # Karpenter Provisioners
