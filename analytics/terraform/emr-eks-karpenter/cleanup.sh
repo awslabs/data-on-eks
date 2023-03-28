@@ -2,7 +2,7 @@
 set -o errexit
 set -o pipefail
 
-read -p "Enter the region: " region
+read -p "Enter the region (us-west-2): " region
 export AWS_DEFAULT_REGION=$region
 
 targets=(

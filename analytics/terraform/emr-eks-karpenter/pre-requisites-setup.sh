@@ -80,5 +80,3 @@ git clone -b apac-workshop --single-branch https://github.com/awslabs/data-on-ek
 echo $(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?starts_with(OutputKey,'eksclusterEKSConfig')].OutputValue" --output text) | bash
 echo "Testing EKS connection..."
 kubectl get svc
-export KUBE_CONFIG_PATH=~/.kube/config
-echo "export KUBE_CONFIG_PATH=~/.kube/config" | tee -a ~/.bash_profile
