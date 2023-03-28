@@ -94,3 +94,18 @@ output "s3_bucket_name" {
   description = "EMR on EKS"
   value       = module.s3_bucket.s3_bucket_id
 }
+
+################################################################################
+# Step Function
+################################################################################
+
+output "step_function_arn" {
+  description = "ARN of the Step Function"
+  value       = try(module.step_function[0].step_function_arn, null)
+  
+}
+
+output "step_function_iam_role_arn" {
+  description = "The role arn of the Step Function"
+  value       = try(module.step_function[0].step_function_iam_role_arn, null)
+}

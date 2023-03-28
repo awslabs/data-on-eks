@@ -178,3 +178,12 @@ variable "enable_emr_ack_controller" {
   default     = false
   type        = string
 }
+
+#-------------------------------------------------------
+# Schedulers 
+#-------------------------------------------------------
+variable "enable_stepfunction" {
+  description = "Enable Step Functions to run jobs on emr-eks "
+  default     = false
+  type        = string
+}

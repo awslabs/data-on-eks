@@ -178,3 +178,16 @@ module "s3_bucket" {
 
   tags = local.tags
 }
+
+
+#---------------------------------------------------
+# Step Function
+#---------------------------------------------------
+module "step_function" {
+  count  = var.enable_stepfunction ? 1 : 0
+  source = "../modules/schedulers/stepfunction"
+  
+  virtual_cluster_id = module.emr_containers_workshop.emr_on_eks.emr-data-team-a.virtual_cluster_id
+  job_execution_role_arn = module.emr_containers_workshop.emr_on_eks.emr-data-team-a.job_execution_role_arn
+  s3_bucket_id = module.s3_bucket.s3_bucket_id
+  }
