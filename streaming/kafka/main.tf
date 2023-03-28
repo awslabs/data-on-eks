@@ -129,6 +129,7 @@ module "eks" {
       instance_types       = ["m5.xlarge"]
 
       ebs_optimized = true
+      # This is the root filesystem
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
@@ -179,6 +180,7 @@ module "eks" {
       instance_types       = ["r6i.2xlarge"]
 
       ebs_optimized = true
+      # This is the root filesystem Not used by the brokers
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
@@ -201,39 +203,4 @@ module "eks" {
       }
     }
   }
-}
-
-#---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
 }

@@ -1,6 +1,67 @@
+
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+  tags = local.tags
+}
+
 #---------------------------------------------------------------
 # Kubernetes Add-ons
 #---------------------------------------------------------------
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "vpc-cni"
+  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+  resolve_conflicts = "PRESERVE"
+}
+
+resource "aws_eks_addon" "coredns" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "coredns"
+  resolve_conflicts = "PRESERVE"
+}
+
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "kube-proxy"
+  resolve_conflicts = "PRESERVE"
+}
+
+resource "aws_eks_addon" "aws_ebs_csi_driver" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "aws-ebs-csi-driver"
+  service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+  resolve_conflicts = "PRESERVE"
+}
 
 #---------------------------------------------------------------
 # Cluster Autoscaler
@@ -17,7 +78,6 @@ resource "helm_release" "cluster-autoscaler" {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
     })]
-    # depends_on = [module.eks.cluster_addons]
 }
 
 #---------------------------------------------------------------
@@ -30,11 +90,6 @@ resource "helm_release" "metrics-server" {
     repository  = "https://kubernetes-sigs.github.io/metrics-server/"
     namespace   = "kube-system"
     wait        = true
-    # set {
-    #     name  = "tolerations"
-    #     value = "[{ key = \"dedicated\", value = \"cassandra\", effect = \"NO_SCHEDULE\" }]"
-    # }
-  # depends_on = [module.eks.cluster_addons]
 }
 
 #---------------------------------------------------------------
@@ -57,8 +112,6 @@ provisioner: ebs.csi.aws.com
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
 YAML
-
-  # depends_on = [module.eks.cluster_addons]
 }
 
 resource "helm_release" "cert_manager" {
@@ -74,7 +127,6 @@ resource "helm_release" "cert_manager" {
     name  = "installCRDs"
     value = true
   }
-  # depends_on = [module.eks.cluster_addons]
 }
 
 #---------------------------------------------------------------
@@ -96,7 +148,6 @@ resource "helm_release" "strimzi-operator" {
     })]
     description = "Strimzi - Apache Kafka on Kubernetes"
     depends_on = [
-      # module.eks.cluster_addons
     ]
   }
 
@@ -106,17 +157,14 @@ resource "helm_release" "strimzi-operator" {
 #---------------------------------------------------------------
 resource "kubectl_manifest" "kafka_namespace" {
   yaml_body  = file("./kafka-manifests/kafka-ns.yml")
-  # depends_on = [helm_release.strimzi-operator]
 }
 
 resource "kubectl_manifest" "kafka_cluster" {
   yaml_body  = file("./kafka-manifests/kafka-cluster.yml")
-  # depends_on = [kubectl_manifest.kafka_namespace, module.eks]
 }
 
 resource "kubectl_manifest" "kafka_metric_config" {
   yaml_body  = file("./kafka-manifests/kafka-metrics-configmap.yml")
-  # depends_on = [kubectl_manifest.kafka_cluster]
 }
 
 #---------------------------------------------------------------
