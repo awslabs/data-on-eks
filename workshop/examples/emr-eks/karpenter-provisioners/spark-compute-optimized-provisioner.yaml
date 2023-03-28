@@ -11,7 +11,7 @@ spec:
   requirements:
     - key: "topology.kubernetes.io/zone"
       operator: In
-      values: ["us-west-b"] #Update the correct region and zones
+      values: [${azs}a] #Update the correct region and zones
     - key: "karpenter.sh/capacity-type"
       operator: In
       values: ["spot", "on-demand"]
@@ -56,9 +56,9 @@ spec:
     httpPutResponseHopLimit: 2
     httpTokens: required
   subnetSelector:
-    Name: "doeks-workshop-private*"        # Name of the Subnets to spin up the nodes
+    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
   securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "doeks-workshop-node*"           # name of the SecurityGroup to be used with Nodes
+    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
   #  instanceProfile: ""      # optional, if already set in controller args
   #RAID0 config example
   userData: |
