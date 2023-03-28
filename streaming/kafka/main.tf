@@ -12,26 +12,6 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-
-  #---------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------
-  cluster_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
-    }
-    kube-proxy = {
-      preserve = true
-    }
-  }
-
   manage_aws_auth_configmap = true
 
   #---------------------------------------
