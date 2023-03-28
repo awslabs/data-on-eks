@@ -4,6 +4,7 @@ sidebar_label: EMR on EKS with Karpenter
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
@@ -54,6 +55,8 @@ We don't recommend removing critical add-ons (`Amazon VPC CNI`, `CoreDNS`, `Kube
 | FSx for Lustre CSI driver | No | This can be used for running Spark application using FSx for Lustre | [FSx for Lustre CSI Driver Documentation](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html) |
 
 
+<CollapsibleContent header={<h3><span>Customizing Add-ons</span></h3>}>
+
 ### Customizing Add-ons
 
 You can customize your deployment anytime either by changing recommended system add-ons in `addons.tf` or by changing optional add-ons in `variables.tf`.
@@ -85,7 +88,9 @@ Once the changes are saved, follow the [deployment guide](#deploying-the-solutio
 terraform apply
 ```
 
-## Deploying the Solution
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
 Let's go through the deployment steps
 
@@ -153,6 +158,8 @@ kubectl get pods --namespace=kube-system | grep  metrics-server # Output shows M
 
 kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output shows Cluster Autoscaler pod
 ```
+
+</CollapsibleContent>
 
 ## Run Sample Spark job
 
@@ -244,21 +251,36 @@ spec:
     #!/bin/bash
     echo "Running a custom user data script"
     set -ex
+    yum install mdadm -y
 
-    IDX=1
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    DISK_ARRAY=()
 
     for DEV in $DEVICES
     do
-      mkfs.xfs /dev/$${DEV}
-      mkdir -p /local$${IDX}
-      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
-      IDX=$(($${IDX} + 1))
+      DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    mount -a
+    DISK_COUNT=$${#DISK_ARRAY[@]}
 
-    /usr/bin/chown -hR +999:+1000 /local*
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
+    fi
 
     --BOUNDARY--
 
@@ -400,16 +422,27 @@ spec:
 
     for DEV in $DEVICES
     do
-    DISK_ARRAY+=("/dev/$${DEV}")
+      DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    if [ $${#DISK_ARRAY[@]} -gt 0 ]; then
-    mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${#DISK_ARRAY[@]} $${DISK_ARRAY[@]}
-    mkfs.xfs /dev/md0
-    mkdir -p /local1
-    echo /dev/md0 /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-    mount -a
-    /usr/bin/chown -hR +999:+1000 /local1
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
     fi
 
     --BOUNDARY--
@@ -553,11 +586,22 @@ spec:
       DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    if [ $${#DISK_ARRAY[@]} -gt 0 ]; then
-      mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${#DISK_ARRAY[@]} $${DISK_ARRAY[@]}
-      mkfs.xfs /dev/md0
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
       mkdir -p /local1
-      echo /dev/md0 /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
       mount -a
       /usr/bin/chown -hR +999:+1000 /local1
     fi
@@ -782,14 +826,16 @@ These pods will be replaced with the actual Spark Driver and Executor pods once 
 
 ![img.png](img/karpenter-yunikorn-gang-schedule.png)
 
-## Cleanup
+<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd analytics/terraform/emr-eks-karpenter/ && chmod +x cleanup.sh
+cd analytics/terraform/emr-eks-karpenter && chmod +x cleanup.sh
 ./cleanup.sh
 ```
+</CollapsibleContent>
+
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
