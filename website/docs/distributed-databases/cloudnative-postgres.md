@@ -3,7 +3,7 @@ sidebar_position: 2
 sidebar_label: CloudNativePG PostgreSQL
 ---
 
-# PostgresSQL database on EKS with CloudNativePG Operator
+# Deploying PostgreSQL Database on EKS using CloudNativePG Operator
 
 ## Introduction
 
