@@ -317,7 +317,7 @@ kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 8080:80
 
 ![CloudNativePG Grafana Dashboard](img/cnpg_garfana_dashboard.png)
 
-### Import database sample `world.sql`
+### Import database sample
 
 You can expose your database outside the cluster using ingress-controller or kubernetes service type `LoadBalancer`. However, for internal usage inside your EKS cluster, you can use kubernetes service `prod-rw` and `prod-ro`.
 In this section, we are going to expose read-write service `-rw`using `kubectl port-forward`.
