@@ -101,7 +101,7 @@ cnpg-on-eks-cloudnative-pg-587d5d8fc5-65z9j   1/1     Running   0          4d17h
 
 ### Deploy a PostgreSQL cluster
 
-First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for login/password for database authentication. Check examples folder for all kubernetes manifests.
+First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for login/password for database authentication `app-auth`. Check examples folder for all kubernetes manifests.
 
 #### Storage
 
