@@ -33,11 +33,12 @@ spec:
       # - hostssl app all all cert
       - host app app all password
   logLevel: debug
+  # Choose the right storageclass for type of workload.
   storage:
-    storageClass: ebs-sc
+    storageClass: storageclass-io2
     size: 1Gi
   walStorage:
-    storageClass: ebs-sc
+    storageClass: storageclass-io2
     size: 1Gi
   monitoring:
     enablePodMonitor: true

@@ -101,7 +101,26 @@ cnpg-on-eks-cloudnative-pg-587d5d8fc5-65z9j   1/1     Running   0          4d17h
 
 ### Deploy a PostgreSQL cluster
 
-To create database, first we need to create a storageclass, namespace and kubernetes secrets for loging/password. Check examples folder for all kubernetes manifests.
+First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for loging/password for database authentication. Check examples folder for all kubernetes manifests.
+
+#### Storage.
+
+For running a highly scalable and durable self-managed PostgreSQL database on Kubernetes with Amazon EKS and EC2, it is recommended to use Amazon Elastic Block Store (EBS) volumes that provide high performance and fault tolerance. The preferred EBS volume types for this use case are:
+
+1.Provisioned IOPS SSD (io2 or io1):
+
+- Designed for I/O-intensive workloads such as databases.
+- Offers consistent and low-latency performance.
+- Allows you to provision a specific number of IOPS (input/output operations per second) according to your requirements.
+- Provides up to 64,000 IOPS per volume and 1,000 MB/s throughput, making it suitable for demanding database workloads.
+
+2.General Purpose SSD (gp3 or gp2):
+
+- Suitable for most workloads and offers a balance between performance and cost.
+- Provides a baseline performance of 3,000 IOPS and 125 MB/s throughput per volume, which can be increased if needed (up to 16,000 IOPS and 1,000 MB/s for gp3).
+- Recommended for less I/O-intensive database workloads or when cost is a primary concern.
+
+You can find both storageclass template in `examples` folder.
 
 ```bash
 kubectl create -f examples/storageclass.yaml
