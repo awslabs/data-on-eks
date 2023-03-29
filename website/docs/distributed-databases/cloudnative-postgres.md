@@ -103,7 +103,7 @@ cnpg-on-eks-cloudnative-pg-587d5d8fc5-65z9j   1/1     Running   0          4d17h
 
 First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for loging/password for database authentication. Check examples folder for all kubernetes manifests.
 
-#### Storage.
+#### Storage
 
 For running a highly scalable and durable self-managed PostgreSQL database on Kubernetes with Amazon EKS and EC2, it is recommended to use Amazon Elastic Block Store (EBS) volumes that provide high performance and fault tolerance. The preferred EBS volume types for this use case are:
 
