@@ -216,11 +216,7 @@ spec:
         name: app-auth
   backup:
     barmanObjectStore:
-<<<<<<< HEAD
     # For backup, we S3 bucket to store data. 
-=======
-    # For backup, we S3 backet to store data. 
->>>>>>> main
     # On this Blueprint, we create an S3 check the terraform output for it.
       destinationPath: s3://<your-s3-barman-bucket> #2
       s3Credentials:
