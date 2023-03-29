@@ -107,6 +107,7 @@ module "eks_blueprints_kubernetes_addons" {
   tags = local.tags
 }
 
+# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
 module "eks_data_addons" {
   source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
   cluster_name      = module.eks.cluster_name
@@ -160,7 +161,8 @@ module "eks_data_addons" {
   enable_prometheus = true
   prometheus_helm_config = {
     values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
-    set_values = var.enable_amazon_prometheus ? [
+    # Use only when Amazon managed Prometheus is enabled with `amp.tf` resources
+    set = var.enable_amazon_prometheus ? [
       {
         name  = "serviceAccounts.server.name"
         value = local.amp_ingest_service_account
