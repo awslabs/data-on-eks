@@ -1,16 +1,9 @@
 ---
 sidebar_position: 2
-<<<<<<< HEAD
 sidebar_label: CloudNativePG PostgreSQL
 ---
 
 # PostgresSQL database on EKS with CloudNativePG Operator
-=======
-sidebar_label: Cloud Native PostGres Operator
----
-
-# Run CloudNativePG operator to manage your Postgres DataBase on EKS
->>>>>>> main
 
 ## Introduction
 
