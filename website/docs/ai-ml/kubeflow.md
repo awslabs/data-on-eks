@@ -8,7 +8,7 @@ import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 ## Introduction
 
-**Kubeflow on AWS** is an open source distribution of [Kubeflow](https://www.kubeflow.org/) that allows customers to build machine learning systems with ready-made AWS service integrations. Use **Kubeflow on AWS** to streamline data science tasks and build highly reliable, secure, and scalable machine learning systems with reduced operational overheads. 
+**Kubeflow on AWS** is an open source distribution of [Kubeflow](https://www.kubeflow.org/) that allows customers to build machine learning systems with ready-made AWS service integrations. Use **Kubeflow on AWS** to streamline data science tasks and build highly reliable, secure, and scalable machine learning systems with reduced operational overheads.
 
 The open source repository for the **Kubeflow on AWS** distribution is available under [awslabs](https://github.com/awslabs/kubeflow-manifests) GitHub organization.
 
@@ -66,7 +66,7 @@ Terraform deployment options mentioned below are still in preview.
 :::
 
 :::caution
-Please make sure to visit the [version compability](https://awslabs.github.io/kubeflow-manifests/docs/about/eks-compatibility/) page to ensure the Kubeflow version you are planning to run is compatible with the EKS version. 
+Please make sure to visit the [version compability](https://awslabs.github.io/kubeflow-manifests/docs/about/eks-compatibility/) page to ensure the Kubeflow version you are planning to run is compatible with the EKS version.
 :::
 
 **Kubeflow on AWS** can be deployed on an existing EKS cluster using Kustomize or Helm. Additionally, terraform templates are also made available if an EKS cluster is not available and needs to be created. AWS provides various Kubeflow deployment options:

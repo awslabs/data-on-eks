@@ -1,9 +1,16 @@
 ---
 sidebar_position: 2
+<<<<<<< HEAD
 sidebar_label: CloudNativePG PostgreSQL
 ---
 
 # PostgresSQL database on EKS with CloudNativePG Operator
+=======
+sidebar_label: Cloud Native PostGres Operator
+---
+
+# Run CloudNativePG operator to manage your Postgres DataBase on EKS
+>>>>>>> main
 
 ## Introduction
 
@@ -101,7 +108,11 @@ cnpg-on-eks-cloudnative-pg-587d5d8fc5-65z9j   1/1     Running   0          4d17h
 
 ### Deploy a PostgreSQL cluster
 
+<<<<<<< HEAD
 First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for login/password for database authentication. Check examples folder for all kubernetes manifests.
+=======
+First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for loging/password for database authentication. Check examples folder for all kubernetes manifests.
+>>>>>>> main
 
 #### Storage
 
@@ -128,12 +139,20 @@ kubectl create -f examples/storageclass.yaml
 kubectl create -f examples/auth-prod.yaml
 ```
 
+<<<<<<< HEAD
 As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you need to apply a configuration file that defines your desired `Cluster`. CloudNativePG operator offers two type of Bootstrapping a new database:
+=======
+As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you need to apply a configuration file that defines your desired `Cluster`. CloudNativePG operator offers two type of Bootstrapping a new Databse:
+>>>>>>> main
 
 1. Bootstrap an empty cluster
 2. Bootstrap From another cluster.
 
+<<<<<<< HEAD
 In this first example, we are going to create a new empty database cluster using `initdb`flags. We are going to use the template below by modifying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
+=======
+In this first example, we are going to create a new empty database cluster using `initdb`flags. We are going to use the template below by modifiying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
+>>>>>>> main
 
 ```bash
 cd data-on-eks/distributed-databases/cloudnative-postgres
@@ -197,7 +216,11 @@ spec:
         name: app-auth
   backup:
     barmanObjectStore:
+<<<<<<< HEAD
     # For backup, we S3 bucket to store data. 
+=======
+    # For backup, we S3 backet to store data. 
+>>>>>>> main
     # On this Blueprint, we create an S3 check the terraform output for it.
       destinationPath: s3://<your-s3-barman-bucket> #2
       s3Credentials:
@@ -317,9 +340,15 @@ kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 8080:80
 
 ![CloudNativePG Grafana Dashboard](img/cnpg_garfana_dashboard.png)
 
+<<<<<<< HEAD
 ### Import database sample
 
 You can expose your database outside the cluster using ingress-controller or kubernetes service type `LoadBalancer`. However, for internal usage inside your EKS cluster, you can use kubernetes service `prod-rw` and `prod-ro`.
+=======
+### Import database sample `world.sql`
+
+You can expose your database outside the cluster using ingress-controller or kubernetes service type `LoadBalancer`. However, for internal usage inside your EKS cluster, you can use kuberntes service `prod-rw` and `prod-ro`.
+>>>>>>> main
 In this section, we are going to expose read-write service `-rw`using `kubectl port-forward`.
 
 ```bash
@@ -328,7 +357,11 @@ kubectl port-forward svc/prod-rw 5432:5432 -n demo
 
 ```
 
+<<<<<<< HEAD
 Now, we use `psql` cli to import `world.sql` into our database instance WorldDB using credentials from `app-auth` secrets.
+=======
+Now, we use `psql` cli to import `world.sql` into our Databse instance WorldDB using credentials from `app-auth` secrets.
+>>>>>>> main
 
 ```bash
 
@@ -351,7 +384,11 @@ Password for user app:
 
 Now that we had a running database with data, CloudNativePG operator offers backup-restore feature using [barman](https://pgbarman.org/) tool. CloudNativePG allows database admin to create on-demand database or Scheduled backups and for more details on [documentations](https://cloudnative-pg.io/documentation/1.19/backup_recovery/).
 
+<<<<<<< HEAD
 In this example, we will create a Backup object to start a backup process immediately.
+=======
+In this example, we will create a Backup object to start a backup process immidiately.
+>>>>>>> main
 
 ```yaml
 apiVersion: postgresql.cnpg.io/v1
@@ -382,7 +419,11 @@ Events:
 
 ### Restore
 
+<<<<<<< HEAD
 For restore, we use bootstrap a new cluster using backup file on S3. The backup tool _barman_ manages restore process, but, it doesn't support backup and restore for kubernetes secrets. This must be managed separately, like using csi-secrets-driver with AWS SecretsManager.
+=======
+For restore, we use bootstrap a new cluster using backup file on S3. The backup tool *barman* manages restore process, but, it doesn't support backup and restore for kubernetes secrets. This must be managed seperately, like using csi-secrets-driver with AWS SecretsManager.
+>>>>>>> main
 
 First let's delete prod database.
 
@@ -429,4 +470,8 @@ psql -h localhost --port 5432 -U app -d WorldDB -c 'SELECT CURRENT_TIME;'
 
 ## Conclusion
 
+<<<<<<< HEAD
 CloudNativePG operator provides Level 5 from [Operator Capability Levels](https://operatorframework.io/operator-capabilities/). In this example, we share a blueprint that deploy the operator as an addon along with its monitoring stack (Prometheus and grafana). Among many features, we highlighted couple of examples on creating cluster, importing data and restoring database in case of disaster (or cluster deletion). More features are available on this [documentation](https://cloudnative-pg.io/documentation/1.19/)
+=======
+CloudNativePG operator provides Level 5 from [Operator Capability Levels](https://operatorframework.io/operator-capabilities/). In this example, we share a blueprint that deploy the operator as an addon along with its monitoring stack (Prometheus and grafana). Among many features, we highlighted couple of examples on creating cluster, importing data and restoring database in case of disaster (or cluster deletion). More features are available on this [documentation](https://cloudnative-pg.io/documentation/1.19/)
+>>>>>>> main

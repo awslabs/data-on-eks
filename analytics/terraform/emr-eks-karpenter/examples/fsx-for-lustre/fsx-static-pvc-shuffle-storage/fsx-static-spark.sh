@@ -27,20 +27,20 @@ aws s3 sync "./" ${SCRIPTS_S3_PATH}
 # https://registry.opendata.aws/nyc-tlc-trip-records-pds/
 #--------------------------------------------
 
-# mkdir -p "../input"
-# # Download the input data from public data set to local folders
-# wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
-#
-# # Making duplicate copies to increase the size of the data.
-# max=10
-# for (( i=1; i <= $max; ++i ))
-# do
-#     cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
-# done
-#
-# aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
-#
-# rm -rf "../input" # delete local input folder
+mkdir -p "../input"
+# Download the input data from public data set to local folders
+wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
+
+# Making duplicate copies to increase the size of the data.
+max=10
+for (( i=1; i <= $max; ++i ))
+do
+    cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
+done
+
+aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
+
+rm -rf "../input" # delete local input folder
 
 #--------------------------------------------
 # Deploy EBS Storage Class and PersistentVolumeClaim for Driver before running the job

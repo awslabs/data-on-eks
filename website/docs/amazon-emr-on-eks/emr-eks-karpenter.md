@@ -4,12 +4,16 @@ sidebar_label: EMR on EKS with Karpenter
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
 ## Introduction
 
 In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs.
+
+**Architecture**
+![emr-eks-karpenter](img/emr-eks-karpenter.png)
 
 This pattern uses opinionated defaults to keep the deployment experience simple but also keeps it flexible so that you can pick and choose necessary add-ons during deployment. We recommend keeping the defaults if you are new to EMR on EKS and only customize if you have viable alternative option available for replacement.
 
@@ -51,13 +55,24 @@ We don't recommend removing critical add-ons (`Amazon VPC CNI`, `CoreDNS`, `Kube
 | FSx for Lustre CSI driver | No | This can be used for running Spark application using FSx for Lustre | [FSx for Lustre CSI Driver Documentation](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html) |
 
 
+<CollapsibleContent header={<h3><span>Customizing Add-ons</span></h3>}>
+
 ### Customizing Add-ons
 
 You can customize your deployment anytime either by changing recommended system add-ons in `addons.tf` or by changing optional add-ons in `variables.tf`.
 
 For example, let's say you want to remove Amazon Managed Prometheus because you have another application that captures Prometheus metrics, you can edit `addons.tf` using your favorite editor, find Amazon Managed Prometheus and change to `false`
-```
-enable_amazon_prometheus             = false
+```yaml
+  enable_prometheus = false
+  prometheus_helm_config = {
+    name       = "prometheus"
+    repository = "https://prometheus-community.github.io/helm-charts"
+    chart      = "prometheus"
+    version    = "15.10.1"
+    namespace  = "prometheus"
+    timeout    = "300"
+    values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
+  }
 ```
 
 If you want to use FSx for Lustre storage while running Spark application for storing shuffle files or accessing data from S3, you can install FSx CSI driver by searching for FSx in `variables.tf` and edit the file
@@ -73,7 +88,9 @@ Once the changes are saved, follow the [deployment guide](#deploying-the-solutio
 terraform apply
 ```
 
-## Deploying the Solution
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
 Let's go through the deployment steps
 
@@ -141,6 +158,8 @@ kubectl get pods --namespace=kube-system | grep  metrics-server # Output shows M
 
 kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output shows Cluster Autoscaler pod
 ```
+
+</CollapsibleContent>
 
 ## Run Sample Spark job
 
@@ -232,21 +251,36 @@ spec:
     #!/bin/bash
     echo "Running a custom user data script"
     set -ex
+    yum install mdadm -y
 
-    IDX=1
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    DISK_ARRAY=()
 
     for DEV in $DEVICES
     do
-      mkfs.xfs /dev/$${DEV}
-      mkdir -p /local$${IDX}
-      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
-      IDX=$(($${IDX} + 1))
+      DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    mount -a
+    DISK_COUNT=$${#DISK_ARRAY[@]}
 
-    /usr/bin/chown -hR +999:+1000 /local*
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
+    fi
 
     --BOUNDARY--
 
@@ -267,7 +301,7 @@ spec:
       effect: "NoSchedule"
 ```
 
-### Execute the sample PySpark Job to trigger compute optimized Karpenter provisioner
+**Execute the sample PySpark Job to trigger compute optimized Karpenter provisioner**
 
 The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
 
@@ -278,8 +312,10 @@ This shell script downloads the test data to your local machine and uploads to S
 :::
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/karpenter-compute-provisioner/
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-compute-provisioner/
 ./execute_emr_eks_job.sh
+```
+```
 Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
 Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
 Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data-team-a
@@ -289,7 +325,7 @@ Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. F
 Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
 Nodes will be drained with once the job is completed
 
-#### Verify the job execution
+**Verify the job execution**
 
 ```bash
 kubectl get pods --namespace=emr-data-team-a -w
@@ -386,16 +422,27 @@ spec:
 
     for DEV in $DEVICES
     do
-    DISK_ARRAY+=("/dev/$${DEV}")
+      DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    if [ $${#DISK_ARRAY[@]} -gt 0 ]; then
-    mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${#DISK_ARRAY[@]} $${DISK_ARRAY[@]}
-    mkfs.xfs /dev/md0
-    mkdir -p /local1
-    echo /dev/md0 /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-    mount -a
-    /usr/bin/chown -hR +999:+1000 /local1
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
     fi
 
     --BOUNDARY--
@@ -417,6 +464,195 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
 ```
+**Execute the sample PySpark Job to trigger memory optimized Karpenter provisioner**
+
+The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
+
+:::caution
+
+This shell script downloads the test data to your local machine and uploads to S3 bucket. Verify the shell script before running the job.
+
+:::
+
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-memory-provisioner/
+./execute_emr_eks_job.sh
+```
+```
+Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
+Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
+Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data-team-a
+Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
+```
+
+Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Nodes will be drained with once the job is completed
+
+**Verify the job execution**
+
+```bash
+kubectl get pods --namespace=emr-data-team-a -w
+```
+</TabItem>
+
+<TabItem value="spark-graviton-memory-optimized" label="spark-graviton-memory-optimized">
+
+In this tutorial, you will use Karpenter provisioner that uses Graviton memory optimized instances. This template uses the AWS Node template with Userdata.
+
+<details>
+<summary> To view Karpenter provisioner for Graviton memory optimized instances, Click to toggle content!</summary>
+
+```yaml
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: spark-graviton-memory-optimized
+  namespace: karpenter
+spec:
+  kubeletConfiguration:
+    containerRuntime: containerd
+#    podsPerCore: 2
+#    maxPods: 20
+  requirements:
+    - key: "topology.kubernetes.io/zone"
+      operator: In
+      values: [${azs}b] #Update the correct region and zone
+    - key: "karpenter.sh/capacity-type"
+      operator: In
+      values: ["spot", "on-demand"]
+    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
+      operator: In
+      values: ["r6gd.4xlarge", "r6gd.8xlarge"] # 2 NVMe disk
+    - key: "kubernetes.io/arch"
+      operator: In
+      values: ["arm64"]
+  limits:
+    resources:
+      cpu: 1000
+  providerRef: # optional, recommended to use instead of `provider`
+    name: spark-graviton-memory-optimized
+  labels:
+    type: karpenter
+    provisioner: spark-graviton-memory-optimized
+    NodeGroupType: SparkGravitonMemoryOptimized
+  taints:
+    - key: spark-graviton-memory-optimized
+      value: 'true'
+      effect: NoSchedule
+  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
+
+---
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: spark-graviton-memory-optimized
+  namespace: karpenter
+spec:
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
+  subnetSelector:
+    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
+  securityGroupSelector:                      # required, when not using launchTemplate
+    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
+#  instanceProfile: ""      # optional, if already set in controller args
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+    --BOUNDARY
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
+    #!/bin/bash
+    echo "Running a custom user data script"
+    set -ex
+    yum install mdadm -y
+
+    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    DISK_ARRAY=()
+
+    for DEV in $DEVICES
+    do
+      DISK_ARRAY+=("/dev/$${DEV}")
+    done
+
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
+    fi
+
+    --BOUNDARY--
+
+  tags:
+    InstanceType: "spark-graviton-memory-optimized"    # optional, add tags for your own use
+```
+</details>
+
+To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
+
+For example,
+
+```yaml
+spec:
+  tolerations:
+    - key: "spark-graviton-memory-optimized"
+      operator: "Exists"
+      effect: "NoSchedule"
+```
+**Execute the sample PySpark Job to trigger Graviton memory optimized Karpenter provisioner**
+
+The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
+
+:::caution
+
+This shell script downloads the test data to your local machine and uploads to S3 bucket. Verify the shell script before running the job.
+
+:::
+
+```bash
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-graviton-memory-provisioner/
+./execute_emr_eks_job.sh
+```
+```
+Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
+Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
+Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data-team-a
+Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
+```
+
+Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Nodes will be drained with once the job is completed
+
+**Verify the job execution**
+
+```bash
+kubectl get pods --namespace=emr-data-team-a -w
+```
 </TabItem>
 
 </Tabs>
@@ -426,7 +662,7 @@ spec:
 This pattern uses EBS volumes for data processing and compute optimized provisioner. You can modify the provisioner by changing nodeselector in driver and executor pod templates. In order to change provisioners, simply update your pod templates to desired provisioner
 ```yaml
   nodeSelector:
-    "NodeGroupType": "SparkComputeOptimized"
+    NodeGroupType: "SparkComputeOptimized"
 ```
 You can also update [EC2 instances](https://aws.amazon.com/ec2/instance-types/#Compute_Optimized) that doesn't include instance store volumes (for example c5.xlarge) and remove c5d's if needed for this exercise
 
@@ -536,7 +772,7 @@ kubectl exec -ti ny-taxi-trip-dyanmic-exec-1 -c analytics-kubernetes-executor -n
 </TabItem>
 </Tabs>
 
-## Apache YuniKorn - Batch Scheduler
+### Running Sample Spark job using Apache YuniKorn Batch Scheduler
 
 Apache YuniKorn is an open-source, universal resource scheduler for managing distributed big data processing workloads such as Spark, Flink, and Storm. It is designed to efficiently manage resources across multiple tenants in a shared, multi-tenant cluster environment.
 Some of the key features of Apache YuniKorn include:
@@ -548,10 +784,10 @@ Some of the key features of Apache YuniKorn include:
 
 Apache YuniKorn is a powerful and versatile resource scheduler that can help organizations efficiently manage their big data workloads while ensuring high resource utilization and workload performance.
 
-## Architecture
+**Apache YuniKorn Architecture**
 ![Apache YuniKorn](img/yunikorn.png)
 
-### Apache YuniKorn Gang Scheduling with Karpenter
+**Apache YuniKorn Gang Scheduling with Karpenter**
 
 Apache YuniKorn Scheduler add-on is disabled by default. Follow the steps to deploy the Apache YuniKorn add-on and execute the Spark job.
 
@@ -579,7 +815,7 @@ cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-yunikorn-ga
 ./execute_emr_eks_job.sh
 ```
 
-#### Verify the job execution
+**Verify the job execution**
 Apache YuniKorn Gang Scheduling will create pause pods for total number of executors requested.
 
 ```bash
@@ -590,14 +826,16 @@ These pods will be replaced with the actual Spark Driver and Executor pods once 
 
 ![img.png](img/karpenter-yunikorn-gang-schedule.png)
 
-## Cleanup
+<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd analytics/terraform/emr-eks-karpenter/ && chmod +x cleanup.sh
+cd analytics/terraform/emr-eks-karpenter && chmod +x cleanup.sh
 ./cleanup.sh
 ```
+</CollapsibleContent>
+
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
