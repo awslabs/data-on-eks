@@ -101,7 +101,7 @@ cnpg-on-eks-cloudnative-pg-587d5d8fc5-65z9j   1/1     Running   0          4d17h
 
 ### Deploy a PostgreSQL cluster
 
-First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for loging/password for database authentication. Check examples folder for all kubernetes manifests.
+First of all, we need to create a storageclass using the `ebs-csi-driver`, a demo namespace and kubernetes secrets for login/password for database authentication. Check examples folder for all kubernetes manifests.
 
 #### Storage
 
@@ -128,12 +128,12 @@ kubectl create -f examples/storageclass.yaml
 kubectl create -f examples/auth-prod.yaml
 ```
 
-As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you need to apply a configuration file that defines your desired `Cluster`. CloudNativePG operator offers two type of Bootstrapping a new Databse:
+As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you need to apply a configuration file that defines your desired `Cluster`. CloudNativePG operator offers two type of Bootstrapping a new database:
 
 1. Bootstrap an empty cluster
 2. Bootstrap From another cluster.
 
-In this first example, we are going to create a new empty database cluster using `initdb`flags. We are going to use the template below by modifiying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
+In this first example, we are going to create a new empty database cluster using `initdb`flags. We are going to use the template below by modifying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
 
 ```bash
 cd data-on-eks/distributed-databases/cloudnative-postgres
@@ -197,7 +197,7 @@ spec:
         name: app-auth
   backup:
     barmanObjectStore:
-    # For backup, we S3 backet to store data. 
+    # For backup, we S3 bucket to store data. 
     # On this Blueprint, we create an S3 check the terraform output for it.
       destinationPath: s3://<your-s3-barman-bucket> #2
       s3Credentials:
@@ -258,7 +258,7 @@ The operator created also three services:
 
 Note that `-any` points on all the instances.
 
-Another way to check Cluster status is by using [cloudnative-pg kubectl plugin](https://cloudnative-pg.io/documentation/1.19/cnpg-plugin/#cloudnativepg-plugin) offered by the CloudNativePG comminuty,
+Another way to check Cluster status is by using [cloudnative-pg kubectl plugin](https://cloudnative-pg.io/documentation/1.19/cnpg-plugin/#cloudnativepg-plugin) offered by the CloudNativePG community,
 
 ```bash
 kubectl cnpg status prod
@@ -319,7 +319,7 @@ kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 8080:80
 
 ### Import database sample `world.sql`
 
-You can expose your database outside the cluster using ingress-controller or kubernetes service type `LoadBalancer`. However, for internal usage inside your EKS cluster, you can use kuberntes service `prod-rw` and `prod-ro`.
+You can expose your database outside the cluster using ingress-controller or kubernetes service type `LoadBalancer`. However, for internal usage inside your EKS cluster, you can use kubernetes service `prod-rw` and `prod-ro`.
 In this section, we are going to expose read-write service `-rw`using `kubectl port-forward`.
 
 ```bash
@@ -328,7 +328,7 @@ kubectl port-forward svc/prod-rw 5432:5432 -n demo
 
 ```
 
-Now, we use `psql` cli to import `world.sql` into our Databse instance WorldDB using credentials from `app-auth` secrets.
+Now, we use `psql` cli to import `world.sql` into our database instance WorldDB using credentials from `app-auth` secrets.
 
 ```bash
 
@@ -351,7 +351,7 @@ Password for user app:
 
 Now that we had a running database with data, CloudNativePG operator offers backup-restore feature using [barman](https://pgbarman.org/) tool. CloudNativePG allows database admin to create on-demand database or Scheduled backups and for more details on [documentations](https://cloudnative-pg.io/documentation/1.19/backup_recovery/).
 
-In this example, we will create a Backup object to start a backup process immidiately.
+In this example, we will create a Backup object to start a backup process immediately.
 
 ```yaml
 apiVersion: postgresql.cnpg.io/v1
@@ -382,7 +382,7 @@ Events:
 
 ### Restore
 
-For restore, we use bootstrap a new cluster using backup file on S3. The backup tool *barman* manages restore process, but, it doesn't support backup and restore for kubernetes secrets. This must be managed seperately, like using csi-secrets-driver with AWS SecretsManager.
+For restore, we use bootstrap a new cluster using backup file on S3. The backup tool _barman_ manages restore process, but, it doesn't support backup and restore for kubernetes secrets. This must be managed separately, like using csi-secrets-driver with AWS SecretsManager.
 
 First let's delete prod database.
 
