@@ -88,11 +88,11 @@ aws emr-containers start-job-run \
           }
         }
       ],
- "monitoringConfiguration": {
+    "monitoringConfiguration": {
       "persistentAppUI":"ENABLED",
       "cloudWatchMonitoringConfiguration": {
-        "logGroupName":"/emr-on-eks-logs/emr-roadshow/karpenter-graviton",
-        "logStreamNamePrefix":"'"$JOB_NAME"'"
+        "logGroupName":"'$CLOUDWATCH_LOG_GROUP'",
+        "logStreamNamePrefix":"'$JOB_NAME'"
       },
       "s3MonitoringConfiguration": {
         "logUri":"s3://'${S3BUCKET}'/logs/"
