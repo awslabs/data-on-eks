@@ -48,7 +48,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
-  enable_cluster_autoscaler = true
+  enable_cluster_autoscaler = false
   cluster_autoscaler_helm_config = {
     name       = "cluster-autoscaler"
     repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
@@ -157,21 +157,21 @@ module "eks_blueprints_kubernetes_addons" {
   tags = local.tags
 }
 
-#---------------------------------------
+# ---------------------------------------
 # Kubecost
-#---------------------------------------
-# resource "helm_release" "kubecost" {
-#   name                = "kubecost"
-#   repository          = "oci://public.ecr.aws/kubecost"
-#   chart               = "cost-analyzer"
-#   version             = "1.97.0"
-#   namespace           = "kubecost"
-#   create_namespace    = true
-#   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-#   repository_password = data.aws_ecrpublic_authorization_token.token.password
-#   timeout             = "300"
-#   values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-# }
+# ---------------------------------------
+resource "helm_release" "kubecost" {
+  name                = "kubecost"
+  repository          = "oci://public.ecr.aws/kubecost"
+  chart               = "cost-analyzer"
+  version             = "1.97.0"
+  namespace           = "kubecost"
+  create_namespace    = true
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+  timeout             = "300"
+  values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+}
 
 #---------------------------------------------------------------
 # Apache YuniKorn Add-on
