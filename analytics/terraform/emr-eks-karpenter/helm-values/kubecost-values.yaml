@@ -1,7 +1,7 @@
 
 # KubeCost WebUI -> kubectl port-forward --namespace kubecost deployment/kubecost-cost-analyzer 9090
-nodeSelector:
-  NodeGroupType: core
+# nodeSelector:
+#   NodeGroupType: core
 # --set nodeSelector."beta\\.kubernetes\\.io/arch"=arm64
 
 priority:
