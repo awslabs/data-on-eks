@@ -13,35 +13,11 @@ echo "export ACCOUNT_ID=${ACCOUNT_ID}" | tee -a ~/.bash_profile
 aws configure set default.region ${AWS_REGION}
 aws configure get default.region
 
+# don't need this line once the prev lab EMR on EKS is up
 export S3BUCKET=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='CODEBUCKET'].OutputValue" --output text)
-export MSK_SERVER=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='MSKBROKER'].OutputValue" --output text)
-export VIRTUAL_CLUSTER_ID=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='VirtualClusterId'].OutputValue" --output text)
-export EMR_ROLE_ARN=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='EMRExecRoleARN'].OutputValue" --output text)
-
 echo "export S3BUCKET=${S3BUCKET}" | tee -a ~/.bash_profile
-echo "export MSK_SERVER=${MSK_SERVER}" | tee -a ~/.bash_profile
-echo "export VIRTUAL_CLUSTER_ID=${VIRTUAL_CLUSTER_ID}" | tee -a ~/.bash_profile
-echo "export EMR_ROLE_ARN=${EMR_ROLE_ARN}" | tee -a ~/.bash_profile
 source ~/.bash_profile
 
-
-#1. Update MSK with custom configuration
-base64 <<EoF >msk-config.txt
-auto.create.topics.enable=true
-log.retention.minutes=1440
-zookeeper.connection.timeout.ms=1000
-log.roll.ms=60480000
-EoF
-
-validate=$(aws kafka list-configurations --query 'Configurations[?Name==`autotopic`].Arn' --output text)
-if [ -z "$validate" ]; then
-    echo "Update MSK configuration ..."
-
-    configArn=$(aws kafka create-configuration --name "autotopic" --description "Topic autocreation enabled; Log retention 24h; Apache ZooKeeper timeout 1000 ms; Log rolling 16h." --server-properties file://msk-config.txt | jq -r '.Arn')
-    msk_cluster=$(aws kafka list-clusters --region $AWS_REGION --query 'ClusterInfoList[?ClusterName==`'$stack_name'`].ClusterArn' --output text)
-    msk_version=$(aws kafka describe-cluster --cluster-arn ${msk_cluster} --query "ClusterInfo.CurrentVersion" --output text)
-    aws kafka update-cluster-configuration --cluster-arn ${msk_cluster} --configuration-info '{"Arn": "'$configArn'","Revision": 1 }' --current-version ${msk_version}
-fi
 
 #2. Install Terraform v1.2.8
 TERRAFORM_VERSION="1.2.8"
@@ -51,13 +27,7 @@ sudo unzip $TERRAFORM_ZIP -d /usr/local/bin/
 rm $TERRAFORM_ZIP
 
 # 3. install tools
-# install Kafka Client
-echo "Installing Kafka Client tool ..."
-wget https://archive.apache.org/dist/kafka/2.8.1/kafka_2.12-2.8.1.tgz
-tar -xzf kafka_2.12-2.8.1.tgz
-rm kafka_2.12-2.8.1.tgz
-
-# Install kubectl
+# Install kubectl  (not needed after EMR on EKS Lab is up)
 sudo curl --silent --location -o /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl --silent --location https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 sudo chmod +x /usr/local/bin/kubectl
 
@@ -68,7 +38,7 @@ helm repo update
 
 helm version
 
-# Install latest AWS CLIv2
+# Install latest AWS CLIv2 (not needed after EMR on EKS Lab is up)
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 sudo ./aws/install
