@@ -56,9 +56,9 @@ spec:
     httpPutResponseHopLimit: 2
     httpTokens: required
   subnetSelector:
-    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
+    Name: "${eks_cluster_id}/*/Private*"        # Name of the Subnets to spin up the nodes
   securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
+    Name: "eks-*-${eks_cluster_id}-*"
   #  instanceProfile: ""      # optional, if already set in controller args
   #RAID0 config example
   userData: |
