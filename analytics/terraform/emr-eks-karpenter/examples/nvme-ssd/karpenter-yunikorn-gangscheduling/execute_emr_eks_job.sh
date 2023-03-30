@@ -1,18 +1,19 @@
 #!/bin/bash
 
-read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
-read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
-read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
-read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
-read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: " S3_BUCKET
-
-#--------------------------------------------
+#------------------------------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
-#--------------------------------------------
-JOB_NAME='taxidata'
-EMR_EKS_RELEASE_LABEL="emr-6.8.0-latest" # Spark 3.2.1
+#------------------------------------------------------------------
 
-SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
+JOB_NAME='taxidata'
+EMR_EKS_RELEASE_LABEL="emr-6.10.0-latest" # Spark 3.3.1
+
+cp ../../../terraform.tfstate .
+VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '.emr_on_eks."emr-data-team-a".virtual_cluster_id')
+EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '.emr_on_eks."emr-data-team-a".job_execution_role_arn')
+CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '.emr_on_eks."emr-data-team-a".cloudwatch_log_group_name')
+rm terraform.tfstate
+
+SPARK_JOB_S3_PATH="s3://${S3BUCKET}/${VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
 SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
 INPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/input"
 OUTPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/output"
@@ -46,7 +47,7 @@ rm -rf "../input" # delete local input folder
 # Execute Spark job
 #--------------------------------------------
 aws emr-containers start-job-run \
-  --virtual-cluster-id $EMR_VIRTUAL_CLUSTER_ID \
+  --virtual-cluster-id $VIRTUAL_CLUSTER_ID \
   --name $JOB_NAME \
   --region $AWS_REGION \
   --execution-role-arn $EMR_EXECUTION_ROLE_ARN \
@@ -92,11 +93,11 @@ aws emr-containers start-job-run \
     "monitoringConfiguration": {
       "persistentAppUI":"ENABLED",
       "cloudWatchMonitoringConfiguration": {
-        "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
+        "logGroupName":"/emr-on-eks-logs/emr-roadshow/karpenter-yunikorn",
         "logStreamNamePrefix":"'"$JOB_NAME"'"
       },
       "s3MonitoringConfiguration": {
-        "logUri":"'"${S3_BUCKET}/logs/"'"
+        "logUri":"s3://'${S3BUCKET}'/logs/"
       }
     }
   }'
