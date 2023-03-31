@@ -3,8 +3,8 @@
 #------------------------------------------------------------------------
 
 module "mwaa" {
-  source  = "aws-ia/mwaa/aws"
-  version = "0.0.1"
+  source = "github.com/askulkarni2/terraform-aws-mwaa?ref=fix%2Fprovider-versions"
+  #version = "0.0.1"
 
   name                  = local.name
   airflow_version       = "2.2.2"
@@ -119,16 +119,16 @@ locals {
     kind            = "Config"
     current-context = "mwaa"
     clusters = [{
-      name = module.eks_blueprints.eks_cluster_arn
+      name = module.eks.cluster_arn
       cluster = {
-        certificate-authority-data = module.eks_blueprints.eks_cluster_certificate_authority_data
-        server                     = module.eks_blueprints.eks_cluster_endpoint
+        certificate-authority-data = module.eks.cluster_certificate_authority_data
+        server                     = module.eks.cluster_endpoint
       }
     }]
     contexts = [{
       name = "mwaa" # must match KubernetesPodOperator context
       context = {
-        cluster = module.eks_blueprints.eks_cluster_arn
+        cluster = module.eks.cluster_arn
         user    = "mwaa"
       }
     }]
@@ -152,14 +152,14 @@ locals {
   })
 }
 
-resource "aws_s3_bucket_object" "kube_config" {
+resource "aws_s3_object" "kube_config" {
   bucket  = module.s3_bucket.s3_bucket_id
   key     = "${local.dag_s3_path}/kube_config.yaml"
   content = local.kubeconfig
   etag    = md5(local.kubeconfig)
 }
 
-resource "aws_s3_bucket_object" "uploads" {
+resource "aws_s3_object" "uploads" {
   for_each = fileset("${local.dag_s3_path}/", "*")
 
   bucket = module.s3_bucket.s3_bucket_id

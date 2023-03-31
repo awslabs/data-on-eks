@@ -2,6 +2,8 @@
 title: Amazon MWAA
 sidebar_position: 2
 ---
+import CollapsibleContent from '../../src/components/CollapsibleContent';
+
 
 # Amazon Managed Workflows for Apache Airflow (MWAA)
 Amazon Managed Workflows for Apache Airflow (MWAA) is a managed orchestration service for Apache Airflow that makes it easier to set up and operate end-to-end data pipelines in the cloud at scale. Apache Airflow is an open-source tool used to programmatically author, schedule, and monitor sequences of processes and tasks referred to as “workflows.” With Managed Workflows, you can use Airflow and Python to create workflows without having to manage the underlying infrastructure for scalability, availability, and security.
@@ -17,7 +19,8 @@ The example demonstrates how to use [Amazon Managed Workflows for Apache Airflow
 Ideally we recommend adding the steps to sync requirements/sync dags to the MWAA S3 Bucket as part of a CI/CD pipeline. Generally Dags development have a different lifecycle than the Terraform code to provision infrastructure.
 For simplicity, we are providing steps for that using Terraform running AWS CLI commands on `null_resource`.
 
-## Prerequisites:
+
+<CollapsibleContent header={<h3><span>Pre-requisites</span></h3>}>
 
 Ensure that you have the following tools installed locally:
 
@@ -25,7 +28,9 @@ Ensure that you have the following tools installed locally:
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
-## Deploy
+</CollapsibleContent>
+
+<CollapsibleContent header={<h3><span>Deploy</span></h3>}>
 
 To provision this example:
 
@@ -52,7 +57,10 @@ The following components are provisioned in your environment:
   - An EMR virtual cluster registered with the newly created EKS
   - A S3 bucket with DAG code
 
-## Validate
+</CollapsibleContent>
+
+
+<CollapsibleContent header={<h3><span>Validate</span></h3>}>
 
 The following command will update the `kubeconfig` on your local machine and allow you to interact with your EKS Cluster using `kubectl` to validate the deployment.
 
@@ -90,9 +98,10 @@ mwaa              Active   4h30m
 
 namespace `emr-mwaa` will be used by EMR for running spark jobs.<br />
 namespace `mwaa` will be used by MWAA directly.
+</CollapsibleContent>
 
 
-## Trigger jobs from MWAA
+<CollapsibleContent header={<h3><span>Trigger Jobs from MWAA</span></h3>}>
 
 ### Log into Apache Airflow UI
 
@@ -168,12 +177,15 @@ You should see output similar to the following:
 NAME                                             READY   STATUS      RESTARTS   AGE
 mwaa-pod-test.4bed823d645844bc8e6899fd858f119d   0/1     Completed   0          25s
 ```
+</CollapsibleContent>
 
-## Destroy
+<CollapsibleContent header={<h3><span>Clean Up</span></h3>}>
 
 To teardown and remove the resources created in this example:
 
 ```bash
 terraform destroy -auto-approve
 ```
+</CollapsibleContent>
+
 ---

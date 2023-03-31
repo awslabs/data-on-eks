@@ -1,27 +1,38 @@
 #---------------------------------------------------------------
 # EKS Blueprints
 #---------------------------------------------------------------
-module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.15.0"
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.10.3"
 
-  cluster_name    = local.name
-  cluster_version = var.eks_cluster_version
+  cluster_name                   = local.name
+  cluster_version                = var.eks_cluster_version
+  cluster_endpoint_public_access = true
 
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
 
-  cluster_kms_key_additional_admin_arns = [data.aws_caller_identity.current.arn]
+  kms_key_administrators = [data.aws_caller_identity.current.arn]
 
   # Add MWAA IAM Role to aws-auth configmap
-  map_roles = [
+  # aws-auth configmap
+  manage_aws_auth_configmap = true
+
+  aws_auth_roles = [
     {
       rolearn  = module.mwaa.mwaa_role_arn
       username = "mwaa-service"
       groups   = ["system:masters"]
+    },
+    {
+      # Required for EMR on EKS virtual cluster
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
+      username = "emr-containers"
+      groups   = []
     }
   ]
 
-  managed_node_groups = {
+  eks_managed_node_groups = {
     # EKS MANAGED NODE GROUPS
     # We recommend to have a MNG to place your critical workloads and add-ons
     # Then rely on Karpenter to scale your workloads
@@ -43,9 +54,9 @@ module "eks_blueprints" {
       create_launch_template = true
       launch_template_os     = "amazonlinux2eks"
 
-      update_config = [{
-        max_unavailable_percentage = 50
-      }]
+      update_config = {
+        max_unavailable_percentage = "50"
+      }
 
       k8s_labels = {
         Environment   = "preprod"
@@ -67,20 +78,10 @@ module "eks_blueprints" {
     },
   }
 
-  #---------------------------------------
-  # ENABLE EMR ON EKS
-  # 1. Creates namespace
-  # 2. k8s role and role binding(emr-containers user) for the above namespace
-  # 3. IAM role for the team execution role
-  # 4. Update AWS_AUTH config map with  emr-containers user and AWSServiceRoleForAmazonEMRContainers role
-  # 5. Create a trust relationship between the job execution role and the identity of the EMR managed service account
-  #---------------------------------------
-  enable_emr_on_eks = true
-  emr_on_eks_teams = {
-    emr-mwaa-team = {
-      namespace               = "emr-mwaa"
-      job_execution_role      = "emr-eks-mwaa-team"
-      additional_iam_policies = [aws_iam_policy.emr_on_eks.arn]
+  eks_managed_node_group_defaults = {
+    iam_role_additional_policies = {
+      # Not required, but used in the example to access the nodes to inspect mounted volumes
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
 
@@ -88,54 +89,107 @@ module "eks_blueprints" {
 }
 
 #------------------------------------------------------------------------
+# EMR on EKS
+#------------------------------------------------------------------------
+module "emr_containers" {
+  source = "../../../workshop/modules/emr-eks-containers"
+
+  eks_cluster_id        = module.eks.cluster_name
+  eks_oidc_provider_arn = module.eks.oidc_provider_arn
+
+  emr_on_eks_config = {
+    emr-mwaa-team = {
+      name = format("%s-%s", module.eks.cluster_name, "emr-mwaa")
+
+      create_namespace = true
+      namespace        = "emr-mwaa"
+
+      execution_role_name            = format("%s-%s", module.eks.cluster_name, "emr-eks-mwaa-team")
+      execution_iam_role_description = "EMR Execution Role for emr-eks-mwaa-team"
+      execution_iam_role_additional_policies = [
+        "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+      ] # Attach additional policies for execution IAM Role
+
+      tags = merge(
+        local.tags,
+        {
+          Name = "emr-mwaa"
+        }
+      )
+    }
+  }
+}
+
+#------------------------------------------------------------------------
 # Kubernetes Add-on Module
 #------------------------------------------------------------------------
-module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.15.0"
+module "eks_blueprints_addons" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=485133feaec00267f9708a9e50578454bf2a0113"
 
-  eks_cluster_id       = module.eks_blueprints.eks_cluster_id
-  eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
-  eks_oidc_provider    = module.eks_blueprints.oidc_provider
-  eks_cluster_version  = module.eks_blueprints.eks_cluster_version
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider     = module.eks.oidc_provider
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
   # EKS Managed Add-ons
-  enable_amazon_eks_vpc_cni            = true
-  enable_amazon_eks_coredns            = true
-  enable_amazon_eks_kube_proxy         = true
-  enable_amazon_eks_aws_ebs_csi_driver = true
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {}
+    vpc-cni = {
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+    }
+    kube-proxy = {}
+  }
 
   enable_metrics_server     = true
   enable_cluster_autoscaler = true
 
   tags = local.tags
 }
-#---------------------------------------------------------------
-# Example IAM policies for EMR job execution
-#---------------------------------------------------------------
-resource "aws_iam_policy" "emr_on_eks" {
-  name        = format("%s-%s", local.name, "emr-job-iam-policies")
-  description = "IAM policy for EMR on EKS Job execution"
-  path        = "/"
-  policy      = data.aws_iam_policy_document.emr_on_eks.json
-}
 
-#---------------------------------------------------------------
-# Create EMR on EKS Virtual Cluster
-#---------------------------------------------------------------
-resource "aws_emrcontainers_virtual_cluster" "this" {
-  name = format("%s-%s", module.eks_blueprints.eks_cluster_id, "emr-mwaa-team")
+#------------------------------------------------------------------------
+# EKS Add-ons IRSA
+#------------------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.14"
 
-  container_provider {
-    id   = module.eks_blueprints.eks_cluster_id
-    type = "EKS"
+  role_name_prefix = "${local.name}-ebs-csi-driver-"
 
-    info {
-      eks_info {
-        namespace = "emr-mwaa"
-      }
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
     }
   }
+
+  tags = local.tags
 }
+
+module "vpc_cni_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.14"
+
+  role_name_prefix = "${local.name}-vpc-cni-"
+
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+
+  tags = local.tags
+}
+
 #------------------------------------------------------------------------
 # Create K8s Namespace and Role for mwaa access directly
 #------------------------------------------------------------------------
@@ -144,6 +198,9 @@ resource "kubernetes_namespace_v1" "mwaa" {
   metadata {
     name = "mwaa"
   }
+  depends_on = [
+    module.eks_blueprints_addons
+  ]
 }
 
 resource "kubernetes_role_v1" "mwaa" {
