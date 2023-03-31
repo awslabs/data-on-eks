@@ -153,13 +153,14 @@ module "eks" {
       }
     }
 
-    spark_ondemand_r6gd = {
-      name        = "spark-ondemand-r6gd"
+    spark_ondemand_r5d = {
+      name        = "spark-ondemand-r5d"
       description = "Spark managed node group for Driver pods"
 
-      ami_type = "AL2_ARM_64"
+      ami_type = "AL2_x86_64"  # Use this for Graviton AL2_ARM_64
+
       # Current default AMI used by managed node groups - pseudo "custom"
-      ami_id = data.aws_ami.arm.image_id
+      ami_id = data.aws_ami.x86.image_id
       # This will ensure the bootstrap user data is used to join the node
       # By default, EKS managed node groups will not append bootstrap script;
       # this adds it back in using the default template provided by the module
@@ -208,14 +209,16 @@ module "eks" {
 
       subnet_ids = [element(module.vpc.private_subnets, 0)] # Single AZ node group for Spark workloads
 
-      min_size     = 0
+      min_size     = 1
       max_size     = 12
-      desired_size = 0
+      desired_size = 1
 
       force_update_version = true
-      instance_types       = ["r6gd.xlarge"] # r6gd.xlarge 4vCPU - 32GB - 1 x 237 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
+      instance_types       = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
 
       ebs_optimized = true
+      # This bloc device is used only for root volume. Adjust volume according to your size.
+      # NOTE: Dont use this volume for Spark workloads
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
@@ -232,27 +235,27 @@ module "eks" {
 
       labels = {
         WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark"
+        NodeGroupType = "spark-on-demand-ca"
       }
 
-      taints = [{ key = "dedicated", value = "spark", effect = "NO_SCHEDULE" }]
+      taints = [{ key = "spark-on-demand-ca", value = true, effect = "NO_SCHEDULE" }]
 
       tags = {
-        Name          = "spark-node-grp"
+        Name          = "spark-ondemand-r5d"
         WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark"
+        NodeGroupType = "spark-on-demand-ca"
       }
     }
 
     # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
     # This command will give you the list of the instances with similar vcpus for arm64 dense instances
     spark_spot_x86_4cpu_16gb = {
-      name        = "spark-spot-arm-48cpu"
+      name        = "spark-spot-48cpu"
       description = "Spark Spot node group for executor workloads"
 
-      ami_type = "AL2_ARM_64"
+      ami_type = "AL2_x86_64"  # Use this for Graviton AL2_ARM_64
       # Current default AMI used by managed node groups - pseudo "custom"
-      ami_id = data.aws_ami.arm.image_id
+      ami_id = data.aws_ami.x86.image_id
 
       enable_bootstrap_user_data = true
 
@@ -303,7 +306,7 @@ module "eks" {
       desired_size = 0
 
       force_update_version = true
-      instance_types       = ["c6gd.12xlarge", "m6gd.12xlarge", "r6gd.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
+      instance_types       = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
 
       ebs_optimized = true
       block_device_mappings = {
@@ -322,10 +325,10 @@ module "eks" {
 
       labels = {
         WorkerType    = "SPOT"
-        NodeGroupType = "spark"
+        NodeGroupType = "spark-spot-ca"
       }
 
-      taints = [{ key = "dedicated", value = "spark", effect = "NO_SCHEDULE" }]
+      taints = [{ key = "spark-spot-ca", value = true, effect = "NO_SCHEDULE" }]
 
       tags = {
         Name          = "spark-node-grp"

@@ -1,5 +1,5 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650fd2b4bc894bde7b51313a8dc9598d82e925"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -43,7 +43,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler_helm_config = {
-    version = "9.21.0"
+    version = "9.27.0"
     timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
@@ -127,7 +127,7 @@ module "eks_data_addons" {
   enable_yunikorn = true
   yunikorn_helm_config = {
     values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.1.0"
+      image_version = "1.2.0"
     })]
   }
 

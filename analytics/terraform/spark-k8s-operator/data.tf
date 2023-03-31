@@ -14,7 +14,6 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
-
 # This data source can be used to get the latest AMI for Managed Node Groups
 data "aws_ami" "x86" {
   owners      = ["amazon"]
@@ -22,20 +21,9 @@ data "aws_ami" "x86" {
 
   filter {
     name   = "name"
-    values = ["amazon-eks-node-${module.eks.cluster_version}-*"]
+    values = ["amazon-eks-node-${module.eks.cluster_version}-*"] # Update this for ARM ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
   }
 }
-
-data "aws_ami" "arm" {
-  owners      = ["amazon"]
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
-  }
-}
-
 
 #---------------------------------------------------------------
 # Example IAM policy for Spark job execution

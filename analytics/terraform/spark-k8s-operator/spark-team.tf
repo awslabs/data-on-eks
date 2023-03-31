@@ -45,7 +45,7 @@ resource "kubernetes_cluster_role" "spark_role" {
   rule {
     verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "deletecollection", "annotate", "patch", "label"]
     api_groups = [""]
-    resources  = ["serviceaccounts", "services", "configmaps", "events", "pods", "pods/log"]
+    resources  = ["serviceaccounts", "services", "configmaps", "events", "pods", "pods/log", "persistentvolumeclaims"]
   }
 
   rule {
@@ -62,7 +62,7 @@ resource "kubernetes_cluster_role" "spark_role" {
 
   rule {
     verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
-    api_groups = ["batch"]
+    api_groups = ["batch", "extensions"]
     resources  = ["jobs"]
   }
 

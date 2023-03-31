@@ -2,11 +2,11 @@ locals {
 
   spark_operator_name       = "spark-operator"
   spark_operator_repository = "https://googlecloudplatform.github.io/spark-on-k8s-operator"
-  spark_operator_version    = "1.1.26"
+  spark_operator_version    = "1.1.27"
 
   yunikorn_name       = "yunikorn"
   yunikorn_repository = "https://apache.github.io/yunikorn-release"
-  yunikorn_version    = "1.1.0"
+  yunikorn_version    = "1.2.0"
 
   volcano_name       = "volcano"
   volcano_repository = "https://volcano-sh.github.io/charts"
