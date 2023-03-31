@@ -26,7 +26,7 @@ spec:
       inter.broker.protocol.version: "3.4"
     resources:
       requests:
-        memory: 60Gi
+        memory: 58Gi
         cpu: "6"
       limits:
         memory: 64Gi
