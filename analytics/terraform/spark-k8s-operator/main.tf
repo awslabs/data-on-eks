@@ -157,7 +157,7 @@ module "eks" {
       name        = "spark-ondemand-r5d"
       description = "Spark managed node group for Driver pods"
 
-      ami_type = "AL2_x86_64"  # Use this for Graviton AL2_ARM_64
+      ami_type = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
 
       # Current default AMI used by managed node groups - pseudo "custom"
       ami_id = data.aws_ami.x86.image_id
@@ -253,7 +253,7 @@ module "eks" {
       name        = "spark-spot-48cpu"
       description = "Spark Spot node group for executor workloads"
 
-      ami_type = "AL2_x86_64"  # Use this for Graviton AL2_ARM_64
+      ami_type = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
       # Current default AMI used by managed node groups - pseudo "custom"
       ami_id = data.aws_ami.x86.image_id
 

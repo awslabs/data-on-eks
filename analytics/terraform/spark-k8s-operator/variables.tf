@@ -53,7 +53,6 @@ variable "enable_yunikorn" {
   type        = bool
 }
 
-#-----------Amazon Managed Service for Prometheus-------------
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
