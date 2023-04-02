@@ -1,17 +1,17 @@
 # Pre-requisite before running this job
-# 1/ Open taxi-trip-execute.sh and update spark-operator-doeks-spark-logs-20230327193851241000000003 , nvme-taxi-trip
-# 2/ Replace spark-operator-doeks-spark-logs-20230327193851241000000003  and nvme-taxi-trip with your S3 bucket in this yaml
+# 1/ Open taxi-trip-execute.sh and update <S3_BUCKET> , <JOB_NAME>
+# 2/ Replace <S3_BUCKET>  and <JOB_NAME> with your S3 bucket in this yaml
 # 3/ execute taxi-trip-execute.sh
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: "nvme-taxi-trip"
+  name: "<JOB_NAME>"
   namespace: spark-team-a
   labels:
-    app: "nvme-taxi-trip"
-    applicationId: "nvme-taxi-trip-yunikorn"
+    app: "<JOB_NAME>"
+    applicationId: "<JOB_NAME>-yunikorn"
 #    queue: root.test
 spec:
   type: Python
@@ -21,10 +21,10 @@ spec:
   # Public docker image used from datamechanics/spark:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest and pushed to ECR repo
   image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://spark-operator-doeks-spark-logs-20230327193851241000000003/nvme-taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<S3_BUCKET>/<JOB_NAME>/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
-    - "s3a://spark-operator-doeks-spark-logs-20230327193851241000000003/nvme-taxi-trip/input/"
-    - "s3a://spark-operator-doeks-spark-logs-20230327193851241000000003/nvme-taxi-trip/output/"
+    - "s3a://<S3_BUCKET>/<JOB_NAME>/input/"
+    - "s3a://<S3_BUCKET>/<JOB_NAME>/output/"
   hadoopConf:
     "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
@@ -43,7 +43,7 @@ spec:
     #Event logs
     "spark.local.dir": "/data1"
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://spark-operator-doeks-spark-logs-20230327193851241000000003/logs"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/logs"
   #    "spark.eventLog.rolling.enabled": "true"
   #    "spark.eventLog.rolling.maxFileSize": "128m"
 
