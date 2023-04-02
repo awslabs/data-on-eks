@@ -47,14 +47,14 @@ variable "private_subnets" {
   type        = list(string)
 }
 
-variable "enable_yunikorn" {
-  default     = true
-  description = "Enable Apache YuniKorn Scheduler"
-  type        = bool
-}
-
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
   default     = true
+}
+
+variable "enable_yunikorn" {
+  default     = true
+  description = "Enable Apache YuniKorn Scheduler"
+  type        = bool
 }

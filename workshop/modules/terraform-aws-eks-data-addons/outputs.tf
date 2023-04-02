@@ -8,11 +8,6 @@ output "yunikorn" {
   description = "Yunikorn Helm Chart metadata"
 }
 
-output "volcano" {
-  value       = try(helm_release.volcano[0].metadata, null)
-  description = "Volcano Helm Chart metadata"
-}
-
 output "prometheus" {
   value       = try(helm_release.prometheus[0].metadata, null)
   description = "Prometheus Helm Chart metadata"

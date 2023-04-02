@@ -8,10 +8,6 @@ locals {
   yunikorn_repository = "https://apache.github.io/yunikorn-release"
   yunikorn_version    = "1.2.0"
 
-  volcano_name       = "volcano"
-  volcano_repository = "https://volcano-sh.github.io/charts"
-  volcano_version    = "1.5"
-
   spark_history_server_name       = "spark-history-server"
   spark_history_server_repository = "https://hyper-mesh.github.io/spark-history-server"
   spark_history_server_version    = "1.0.0"

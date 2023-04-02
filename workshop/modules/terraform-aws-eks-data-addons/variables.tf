@@ -36,18 +36,6 @@ variable "yunikorn_helm_config" {
   default     = {}
 }
 
-#-----------VOLCANO ADDON-------------
-variable "enable_volcano" {
-  description = "Enable Volcano K8s scheduler add-on"
-  type        = bool
-  default     = false
-}
-
-variable "volcano_helm_config" {
-  description = "Helm configuration for Volcano"
-  type        = any
-  default     = {}
-}
 #-----------SPARK HISTORY SERVER ADDON-------------
 variable "enable_spark_history_server" {
   description = "Enable Spark History Server add-on"

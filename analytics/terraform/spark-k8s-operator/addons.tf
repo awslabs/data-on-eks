@@ -1,3 +1,41 @@
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# EKS Blueprints Kubernetes Addons
+#---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
 
@@ -107,6 +145,9 @@ module "eks_blueprints_kubernetes_addons" {
   tags = local.tags
 }
 
+#---------------------------------------------------------------
+# Data on EKS Kubernetes Addons
+#---------------------------------------------------------------
 # NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
 module "eks_data_addons" {
   source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
@@ -124,7 +165,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Apache YuniKorn Add-on
   #---------------------------------------------------------------
-  enable_yunikorn = true
+  enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
     values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
       image_version = "1.2.0"
@@ -215,40 +256,6 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-#---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
 
 #tfsec:ignore:*
 module "s3_bucket" {

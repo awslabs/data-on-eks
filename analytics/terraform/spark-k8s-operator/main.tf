@@ -249,7 +249,7 @@ module "eks" {
 
     # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
     # This command will give you the list of the instances with similar vcpus for arm64 dense instances
-    spark_spot_x86_4cpu_16gb = {
+    spark_spot_x86_48cpu = {
       name        = "spark-spot-48cpu"
       description = "Spark Spot node group for executor workloads"
 
