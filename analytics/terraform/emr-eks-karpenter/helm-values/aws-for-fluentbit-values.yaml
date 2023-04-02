@@ -131,9 +131,9 @@ cloudWatch:
 #      Name                            s3
 #      Match                           systempods.*
 #      region                          ${region}
-#      bucket                          ${s3_bucket_name}
+#      bucket                          <S3_BUCKET_NAME>
 #      total_file_size                 100M
-#      s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
+#      s3_key_format                   /<ENTER_CLUSTER_NAME/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
 #      s3_key_format_tag_delimiters    ..
 #      store_dir                       /home/ec2-user/buffer
 #      upload_timeout                  10m
