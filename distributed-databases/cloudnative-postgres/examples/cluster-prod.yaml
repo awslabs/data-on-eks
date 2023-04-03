@@ -18,11 +18,11 @@ spec:
     updateInterval: 300
   primaryUpdateStrategy: unsupervised
   serviceAccountTemplate:
-    # For backup and restore, we use IRSA for barman tool. 
-    # You will find this IAM role on terraform outputs. 
+    # For backup and restore, we use IRSA for barman tool.
+    # You will find this IAM role on terraform outputs.
     metadata:
       annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa 
+        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa
   postgresql:
     parameters:
       shared_buffers: 256MB
@@ -50,9 +50,9 @@ spec:
         name: app-auth
   backup:
     barmanObjectStore:
-    # For backup, we S3 backet to store data. 
+    # For backup, we S3 backet to store data.
     # On this Blueprint, we create an S3 check the terraform output for it.
-      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket 
+      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket
       s3Credentials:
         inheritFromIAMRole: true
       wal:

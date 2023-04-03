@@ -1,7 +1,7 @@
 --
 -- PostgreSQL port of the MySQL "World" database.
 --
--- The sample data used in the world database is Copyright Statistics 
+-- The sample data used in the world database is Copyright Statistics
 -- Finland, http://www.stat.fi/worldinfigures.
 --
 
@@ -5385,4 +5385,3 @@ COMMIT;
 ANALYZE city;
 ANALYZE country;
 ANALYZE countrylanguage;
-

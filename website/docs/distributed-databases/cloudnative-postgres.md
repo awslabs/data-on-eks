@@ -69,7 +69,7 @@ aws eks describe-cluster --name cnpg-on-eks
 Update local kubeconfig so we can access kubernetes cluster
 
 ```bash
-aws eks update-kubeconfig --name cnpg-on-eks --region us-west-2 
+aws eks update-kubeconfig --name cnpg-on-eks --region us-west-2
 ```
 
 First, lets verify that we have worker nodes running in the cluster.
@@ -166,8 +166,8 @@ spec:
     updateInterval: 300
   primaryUpdateStrategy: unsupervised
   serviceAccountTemplate:
-    # For backup and restore, we use IRSA for barman tool. 
-    # You will find this IAM role on terraform outputs. 
+    # For backup and restore, we use IRSA for barman tool.
+    # You will find this IAM role on terraform outputs.
     metadata:
       annotations:
         eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa #1
@@ -197,7 +197,7 @@ spec:
         name: app-auth
   backup:
     barmanObjectStore:
-    # For backup, we S3 bucket to store data. 
+    # For backup, we S3 bucket to store data.
     # On this Blueprint, we create an S3 check the terraform output for it.
       destinationPath: s3://<your-s3-barman-bucket> #2
       s3Credentials:
