@@ -1,5 +1,4 @@
 locals {
-
   spark_operator_name       = "spark-operator"
   spark_operator_repository = "https://googlecloudplatform.github.io/spark-on-k8s-operator"
   spark_operator_version    = "1.1.27"

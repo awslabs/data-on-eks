@@ -1,7 +1,5 @@
 locals {
-  name   = var.name
-  region = var.region
-
+  name     = var.name
   vpc_cidr = var.vpc_cidr
   azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 

@@ -64,7 +64,7 @@ module "eks_blueprints_kubernetes_addons" {
     namespace  = "kube-system"
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = var.region,
+      aws_region     = local.region,
       eks_cluster_id = local.name
     })]
   }
@@ -104,7 +104,7 @@ module "eks_blueprints_kubernetes_addons" {
     version    = "0.1.21"
     namespace  = "aws-for-fluent-bit"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = var.region,
+      region               = local.region,
       cloudwatch_log_group = "/${local.name}/fluentbit-logs"
     })]
   }

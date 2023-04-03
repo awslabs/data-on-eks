@@ -1,32 +1,32 @@
 module "eks_blueprints_kubernetes_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650f"
 
-  cluster_name            = module.eks.cluster_name
-  cluster_endpoint        = module.eks.cluster_endpoint
-  cluster_version         = module.eks.cluster_version
-  oidc_provider           = module.eks.oidc_provider
-  oidc_provider_arn       = module.eks.oidc_provider_arn
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider     = module.eks.oidc_provider
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
-   #---------------------------------------
+  #---------------------------------------
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      preserve = true
+      preserve                 = true
     }
     coredns = {
       preserve = true
     }
     vpc-cni = {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve = true
+      preserve                 = true
     }
     kube-proxy = {
       preserve = true
     }
   }
-  enable_kube_prometheus_stack         = true
+  enable_kube_prometheus_stack = true
   kube_prometheus_stack_helm_config = {
     namespace = "monitoring"
     values = [

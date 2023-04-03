@@ -38,7 +38,7 @@ spec:
 
   backup:
     barmanObjectStore:
-      destinationPath: s3://<your-s3-barman-bucket>/restore # ie: s3://xxxx-cnpg-barman-bucket 
+      destinationPath: s3://<your-s3-barman-bucket>/restore # ie: s3://xxxx-cnpg-barman-bucket
       s3Credentials:
         inheritFromIAMRole: true
       wal:
@@ -54,7 +54,7 @@ spec:
   externalClusters:
     - name: prod
       barmanObjectStore:
-        destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket 
+        destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket
         s3Credentials:
           inheritFromIAMRole: true
         wal:

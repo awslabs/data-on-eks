@@ -106,7 +106,7 @@ module "eks" {
       }
 
       tags = {
-        Name                     = "doeks-node-grp"
+        Name = "doeks-node-grp"
       }
     }
   }
