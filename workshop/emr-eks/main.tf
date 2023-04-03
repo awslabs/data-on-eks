@@ -21,19 +21,14 @@ data "aws_ecrpublic_authorization_token" "token" {
   provider = aws.ecr
 }
 
-data "aws_eks_cluster_auth" "this" {
-  name = local.cluster_name
-}
-
 #---------------------------------------------------
 # VPC
 #---------------------------------------------------
 module "vpc_workshop" {
   count  = var.create_vpc ? 1 : 0
-  source = "../modules/vpc"
+  source = "./modules/vpc"
 
   name            = var.name
-  region          = var.region
   vpc_cidr        = var.vpc_cidr
   private_subnets = var.private_subnets
   public_subnets  = var.public_subnets
@@ -44,7 +39,7 @@ module "vpc_workshop" {
 #---------------------------------------------------
 module "eks_workshop" {
   count  = var.create_eks ? 1 : 0
-  source = "../modules/eks"
+  source = "./modules/eks"
 
   name                = var.cluster_name
   eks_cluster_version = var.cluster_version
@@ -57,7 +52,7 @@ module "eks_workshop" {
 # Addons with Karpenter
 #---------------------------------------------------
 module "addons_workshop" {
-  source = "../modules/addons"
+  source = "./modules/addons"
 
   region           = var.region
   cluster_name     = local.cluster_name

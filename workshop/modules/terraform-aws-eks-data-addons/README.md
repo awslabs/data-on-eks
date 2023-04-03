@@ -1,6 +1,6 @@
 # Data on EKS Kubernetes add-ons
 
-:exclamation: Notice to Users :exclamation:
+:exclamation: :exclamation: Notice to Users :exclamation: :exclamation:
 
 This Terraform module is specifically designed to support Data on EKS blueprints.
 To maintain focus and avoid code duplication across various blueprints, we kindly request that you refrain from adding new Kubernetes add-ons to this module, unless they are directly related to Data on EKS Blueprints.
@@ -51,7 +51,6 @@ Your understanding and cooperation are greatly appreciated :pray:
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_cluster_name"></a> [cluster\_name](#input\_cluster\_name) | Name of the EKS cluster | `string` | n/a | yes |
 | <a name="input_enable_grafana"></a> [enable\_grafana](#input\_enable\_grafana) | Enable Grafana add-on | `bool` | `false` | no |
 | <a name="input_enable_kubecost"></a> [enable\_kubecost](#input\_enable\_kubecost) | Enable Kubecost add-on | `bool` | `false` | no |
 | <a name="input_enable_prometheus"></a> [enable\_prometheus](#input\_enable\_prometheus) | Enable Community Prometheus add-on | `bool` | `false` | no |
