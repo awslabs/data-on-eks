@@ -8,10 +8,6 @@ cloudProvider: aws
 extraArgs:
   aws-use-static-instance-list: true
 
-rbac:
-  serviceAccount:
-    create: false
-
 # Best practice to update the resource requests and limits for each add-on
 resources:
    limits:

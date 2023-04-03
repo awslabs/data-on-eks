@@ -43,7 +43,7 @@ spec:
     #Event logs
     "spark.local.dir": "/data1"
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<ENTER_S3_BUCKET>/logs"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/logs"
 
     # Expose Spark metrics for Prometheus
     "spark.ui.prometheus.enabled": "true"
@@ -89,7 +89,11 @@ spec:
     labels:
       version: 3.2.1
     nodeSelector:
-      NodeGroupType: "spark"
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
   executor:
     podSecurityContext:
       fsGroup: 185
@@ -111,4 +115,8 @@ spec:
     labels:
       version: 3.2.1
     nodeSelector:
-      NodeGroupType: "spark"
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"

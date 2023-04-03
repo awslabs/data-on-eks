@@ -172,7 +172,7 @@ The pattern shows how to run spark jobs in a multi-tenant EKS cluster. The examp
 <Tabs>
 <TabItem value="spark-compute-optimized" lebal="spark-compute-optimized"default>
 
-In this tutorial, you will use Karpenter provisioner that uses compute optimized instances. This template leverages the pre-created AWS Launch templates.
+In this tutorial, you will use Karpenter provisioner that uses compute optimized instances. This template leverages the Karpenter AWSNodeTemplates.
 
 <details>
 <summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary>

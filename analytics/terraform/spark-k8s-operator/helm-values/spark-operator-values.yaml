@@ -1,15 +1,16 @@
 replicaCount: 1
 
-# nodeSelector -- Node labels for pod assignment
-nodeSelector:
-  NodeGroupType: ${node_group_type}
-  kubernetes.io/os: ${operating_system}
-
 webhook:
   # -- Enable webhook server
   enable: true
   # -- Webhook service port
   port: 8080
+
+# -- Set this if running spark jobs in a different namespace than the operator
+sparkJobNamespace: "spark-team-a"
+
+# -- Operator concurrency, higher values might increase memory usage
+controllerThreads: 10
 
 # resources -- Pod resource requests and limits
 # Note, that each job submission will spawn a JVM within the Spark Operator Pod using "/usr/local/openjdk-11/bin/java -Xmx128m".

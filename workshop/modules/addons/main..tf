@@ -11,7 +11,6 @@ locals {
 module "eks_blueprints_kubernetes_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650fd2b4bc894bde7b51313a8dc9598d82e925"
 
-
   cluster_name      = var.cluster_name
   cluster_endpoint  = var.cluster_endpoint
   cluster_version   = var.cluster_version

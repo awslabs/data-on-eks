@@ -1,5 +1,5 @@
 # Pre-requisite before running this job
-# 1/ Open taxi-trip-execute.sh and update <S3_BUCKET> , <JOB_NAME>  and <REGION>
+# 1/ Open taxi-trip-execute.sh and update <S3_BUCKET> , <JOB_NAME>
 # 2/ Replace <S3_BUCKET>  and <JOB_NAME> with your S3 bucket in this yaml
 # 3/ execute taxi-trip-execute.sh
 
@@ -12,7 +12,7 @@ metadata:
   labels:
     app: "<JOB_NAME>"
     applicationId: "<JOB_NAME>-yunikorn"
-    queue: root.test
+#    queue: root.test
 spec:
   type: Python
   sparkVersion: "3.2.1"
@@ -43,7 +43,7 @@ spec:
     #Event logs
     "spark.local.dir": "/data1"
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<ENTER_YOUR_S3_BUCKET>/logs"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/logs"
   #    "spark.eventLog.rolling.enabled": "true"
   #    "spark.eventLog.rolling.maxFileSize": "128m"
 
@@ -90,6 +90,12 @@ spec:
     memory: "4g"
     memoryOverhead: "4g"
     serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
     labels:
       version: 3.2.1
     annotations:
@@ -106,8 +112,9 @@ spec:
               "memory": "14Gi"
             },
             "nodeSelector": {
-              "NodeGroupType": "spark"
-            }
+              "NodeGroupType": "SparkComputeOptimized"
+            },
+            "tolerations": [{"key": "spark-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
           },
           {
             "name": "spark-executor",
@@ -117,11 +124,10 @@ spec:
               "memory": "14Gi"
             },
             "nodeSelector": {
-              "NodeGroupType": "spark"
-            }
+              "NodeGroupType": "SparkComputeOptimized"
+            },
+            "tolerations": [{"key": "spark-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
         }]
-    nodeSelector:
-      NodeGroupType: "spark"
   executor:
     podSecurityContext:
       fsGroup: 185
@@ -147,4 +153,8 @@ spec:
     annotations:
       yunikorn.apache.org/task-group-name: "spark-executor"
     nodeSelector:
-      NodeGroupType: "spark"
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"

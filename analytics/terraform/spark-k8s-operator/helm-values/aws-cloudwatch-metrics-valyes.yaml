@@ -1,5 +1,3 @@
-clusterName: ${eks_cluster_id}
-
 resources:
   limits:
     cpu: 500m
@@ -7,3 +5,7 @@ resources:
   requests:
     cpu: 200m
     memory: 1Gi
+
+# This toleration allows Daemonset pod to be scheduled on any node, regardless of their Taints.
+tolerations:
+  - operator: Exists
