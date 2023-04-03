@@ -16,13 +16,13 @@ The following diagram illustrates the open source data tools, Kubernetes operato
 ## 🌟 Features
 Data on EKS(DoEKS) solution is categorized into the following areas.
 
-🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks) on EKS
+🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/data-analytics) on EKS
 
-🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks) on EKS
+🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/ai-ml) on EKS
 
-🎯  [Distributed Databases](https://awslabs.github.io/data-on-eks/docs/distributed-databases-eks) on EKS
+🎯  [Distributed Databases & Query Engine](https://awslabs.github.io/data-on-eks/docs/distributed-databases) on EKS
 
-🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks) on EKS
+🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/streaming-platforms) on EKS
 
 🎯  [Scheduler Workflow Platforms](https://awslabs.github.io/data-on-eks/docs/job-schedulers) on EKS
 
@@ -31,9 +31,9 @@ In this repository, you'll find a variety of deployment examples for creating da
 
 🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - 👈 Start here if you are new to EMR on EKS. This template deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
 
-🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/spark-on-eks/spark-operator-yunikorn) - This template deploys EKS cluster and uses Spark Operator and Apache YuniKorn for running self-managed Spark jobs
+🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/data-analytics/spark-operator-yunikorn) - This template deploys EKS cluster and uses Spark Operator and Apache YuniKorn for running self-managed Spark jobs
 
-🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml-eks/ray) - This template deploys Ray Operator on EKS with sample scripts.
+🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml/ray) - This template deploys Ray Operator on EKS with sample scripts.
 
 🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers/aws-managed-airflow) - This template deploys EMR on EKS cluster and uses Amazon Managed Workflows for Apache Airflow (MWAA) to run Spark jobs.
 
@@ -41,7 +41,7 @@ In this repository, you'll find a variety of deployment examples for creating da
 
 🚀 [Argo Workflows on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers/argo-workflows-eks) - This template sets up a self-managed Argo Workflow on an Amazon EKS cluster, following best practices.
 
-🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks/kafka) - This template deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
+🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/streaming-platforms/kafka) - This template deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
 
 ## 🗂️ Documentation
 For instructions on how to deploy Data on EKS patterns and run sample tests, visit the [DoEKS website](https://awslabs.github.io/data-on-eks/).
