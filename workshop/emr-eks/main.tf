@@ -29,7 +29,6 @@ module "vpc_workshop" {
   source = "./modules/vpc"
 
   name            = var.name
-  region          = var.region
   vpc_cidr        = var.vpc_cidr
   private_subnets = var.private_subnets
   public_subnets  = var.public_subnets
