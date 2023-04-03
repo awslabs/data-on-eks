@@ -151,7 +151,6 @@ module "eks_blueprints_kubernetes_addons" {
 # NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
 module "eks_data_addons" {
   source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
-  cluster_name      = module.eks.cluster_name
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
