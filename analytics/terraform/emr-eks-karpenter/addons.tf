@@ -48,7 +48,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
-  enable_cluster_autoscaler = false
+  enable_cluster_autoscaler = true
   cluster_autoscaler_helm_config = {
     name       = "cluster-autoscaler"
     repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
