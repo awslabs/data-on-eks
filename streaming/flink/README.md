@@ -1,1 +1,5 @@
-# Apache Flink on EKS  (Coming Soon)
+# Apache Flink on EKS
+
+<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+
+<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->

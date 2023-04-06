@@ -3,6 +3,10 @@ locals {
   spark_operator_repository = "https://googlecloudplatform.github.io/spark-on-k8s-operator"
   spark_operator_version    = "1.1.27"
 
+  flink_operator_name       = "flink-kubernetes-operator"
+  flink_operator_repository = "https://downloads.apache.org/flink/flink-kubernetes-operator-${local.flink_operator_version}"
+  flink_operator_version    = try(var.flink_operator_helm_config["version"], "1.4.0")
+
   yunikorn_name       = "yunikorn"
   yunikorn_repository = "https://apache.github.io/yunikorn-release"
   yunikorn_version    = "1.2.0"

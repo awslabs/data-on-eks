@@ -1,0 +1,71 @@
+---
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: basic-example
+  namespace: flink-team-a-ns
+spec:
+  image: flink:1.16
+  flinkVersion: v1_16
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "2"
+    state.savepoints.dir: file:///flink/data/checkpoint/savepoints
+    state.checkpoints.dir: file:///flink/data/checkpoint/checkpoints
+    high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    high-availability.storageDir: file:///flink/data/checkpoint/ha
+    job-result-store.storage-path: file:///flink/data/checkpoint/job-result-store
+    # restartNonce: 123 # Application restarts without spec change
+    kubernetes.operator.periodic.savepoint.interval: 1h # periodic savepoint triggering
+    kubernetes.operator.deployment.rollback.enabled: "true"
+    env.log.dir: "/flink/data/log"    
+    env.taskmanager.tmp.dirs: "/flink/data/tmp"
+  serviceAccount: flink-team-a-sa
+  # Pod templates permit customization of the Flink job and task manager pods, 
+  # for example to specify volume mounts, ephemeral storage, sidecar containers etc.
+  #  A common pod template may hold the settings that apply to both job and task manager, like volumeMounts
+  podTemplate:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: pod-template
+    spec:
+      nodeSelector:
+        NodeGroupType: "flink-on-demand-ca"
+      tolerations:
+        - key: "flink-on-demand-ca"
+          operator: "Exists"
+          effect: "NoSchedule"
+      initContainers:
+        - name: flink-ssd-volume-permissions
+          image: public.ecr.aws/y4g4v0z7/busybox
+          command: [ 'sh', '-c', 'chown -R 9999 /local1' ]
+          volumeMounts:
+            - mountPath: /local1
+              name: flink-ssd-volume
+      containers:
+        # Do not change the main container name
+        - name: flink-main-container
+          volumeMounts:
+            - mountPath: /flink/data/checkpoint
+              name: flink-ssd-volume
+            - mountPath: /flink/data/tmp
+              name: flink-ssd-volume
+            - mountPath: /flink/data/log
+              name: flink-ssd-volume
+      volumes:
+        - name: flink-ssd-volume
+          hostPath:
+            path: /local1
+            type: Directory
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  job:
+    jarURI: local:///opt/flink/examples/streaming/StateMachineExample.jar
+    parallelism: 2
+    upgradeMode: stateless # last-state
