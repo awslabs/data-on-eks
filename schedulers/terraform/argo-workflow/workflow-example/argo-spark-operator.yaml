@@ -15,7 +15,7 @@ spec:
         kind: SparkApplication
         metadata:
           name: pyspark-pi
-          namespace: argo-workflows
+          namespace: data-team-a
         spec:
           type: Python
           pythonVersion: "3"

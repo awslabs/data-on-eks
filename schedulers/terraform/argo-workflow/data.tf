@@ -1,5 +1,9 @@
 data "aws_eks_cluster_auth" "this" {
-  name = module.eks_blueprints.eks_cluster_id
+  name = module.eks.cluster_name
+}
+
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
 }
 
 data "aws_availability_zones" "available" {}
@@ -7,3 +11,53 @@ data "aws_availability_zones" "available" {}
 data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
+
+data "aws_region" "current" {}
+
+data "aws_iam_policy" "sqs" {
+  name = "AmazonSQSReadOnlyAccess"
+}
+
+# This data source can be used to get the latest AMI for Managed Node Groups
+data "aws_ami" "x86" {
+  owners      = ["amazon"]
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["amazon-eks-node-${module.eks.cluster_version}-*"] # Update this for ARM ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
+  }
+}
+
+#---------------------------------------------------------------
+# Example IAM policy for Spark job execution
+#---------------------------------------------------------------
+data "aws_iam_policy_document" "spark_operator" {
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::*"]
+
+    actions = [
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:PutObject",
+    ]
+  }
+
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
+    ]
+  }
+}

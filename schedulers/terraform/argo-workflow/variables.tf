@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "argoworkflows-eks"
+  default     = "argoworkflows-refactor"
   type        = string
 }
 
@@ -32,4 +32,16 @@ variable "private_subnets" {
   description = "Private Subnets CIDRs. 16382 IPs per Subnet"
   default     = ["10.1.0.0/18", "10.1.64.0/18", "10.1.128.0/18"]
   type        = list(string)
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = true
+}
+
+variable "enable_yunikorn" {
+  default     = true
+  description = "Enable Apache YuniKorn Scheduler"
+  type        = bool
 }
