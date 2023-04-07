@@ -13,6 +13,9 @@ targets=(
   "module.eks_blueprints_kubernetes_addons"
 )
 
+# Initialize Terraform
+terraform init --upgrade
+
 # Apply modules in sequence
 for target in "${targets[@]}"
 do

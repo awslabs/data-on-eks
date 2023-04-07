@@ -7,11 +7,11 @@ import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 :::info
-Please note that we are working on addming more Flink examples wit multiple connectors, Ingress for WebUI and Grafana dashboards.
+Please note that we are working on adding more features to this blueprint such as Flink examples with multiple connectors, Ingress for WebUI, Grafana dashboards etc.
 :::
 
 ## Introduction to Apache Flink
-[Apache Flink](https://flink.apache.org/) is an open-source, unified stream processing and batch processing framework that was designed to process large amounts of data. It provides fast, reliable, and scalable data processing with fault tolerance and exactly-once semantics. 
+[Apache Flink](https://flink.apache.org/) is an open-source, unified stream processing and batch processing framework that was designed to process large amounts of data. It provides fast, reliable, and scalable data processing with fault tolerance and exactly-once semantics.
 Some of the key features of Flink are:
 - **Distributed Processing**: Flink is designed to process large volumes of data in a distributed fashion, making it horizontally scalable and fault-tolerant.
 - **Stream Processing and Batch Processing**: Flink provides APIs for both stream processing and batch processing. This means you can process data in real-time, as it's being generated, or process data in batches.
@@ -166,7 +166,7 @@ To get the most out of Flink on Kubernetes, here are some best practices to foll
 - **Use checkpoints and savepoints**: Use checkpoints for periodic snapshots of Flink application state and savepoints for more advanced use cases such as upgrading or downgrading the application.
 - **Store checkpoints and savepoints in the right places**: Store checkpoints in distributed file systems or key-value stores like Amazon S3 or another durable external storage. Store savepoints in a durable external storage like Amazon S3.
 
-## Flink Upgrade 
+## Flink Upgrade
 Flink Operator provides three upgrade modes for Flink jobs. Checkout the [Flink upgrade docs](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/custom-resource/job-management/#stateful-and-stateless-application-upgrades) for up-to-date information.
 
 1. **stateless**: Stateless application upgrades from empty state
@@ -267,7 +267,7 @@ You should see the new nodes triggered by the karpenter and the YuniKorn will sc
 kubectl get pods -n flink-team-a-ns -w
 ```
 
-To access the Flink WebUI for the job run this command locally. 
+To access the Flink WebUI for the job run this command locally.
 
 ```bash
 kubectl port-forward svc/basic-example-rest 8081
@@ -293,7 +293,7 @@ You should see the new nodes triggered by the Cluster Autoscaler and the YuniKor
 kubectl get pods -n flink-team-a-ns -w
 ```
 
-To access the Flink WebUI for the job run this command locally. 
+To access the Flink WebUI for the job run this command locally.
 
 ```bash
 kubectl port-forward svc/basic-example-rest 8081
