@@ -17,10 +17,10 @@ spec:
     # restartNonce: 123 # Application restarts without spec change
     kubernetes.operator.periodic.savepoint.interval: 1h # periodic savepoint triggering
     kubernetes.operator.deployment.rollback.enabled: "true"
-    env.log.dir: "/flink/data/log"    
+    env.log.dir: "/flink/data/log"
     env.taskmanager.tmp.dirs: "/flink/data/tmp"
   serviceAccount: flink-team-a-sa
-  # Pod templates permit customization of the Flink job and task manager pods, 
+  # Pod templates permit customization of the Flink job and task manager pods,
   # for example to specify volume mounts, ephemeral storage, sidecar containers etc.
   #  A common pod template may hold the settings that apply to both job and task manager, like volumeMounts
   podTemplate:

@@ -50,4 +50,3 @@ operatorPod:
 # (Optional) Exposes metrics port on the container if defined
 metrics:
   port: 9999
-  

@@ -105,4 +105,3 @@ resource "kubernetes_role_binding" "flink" {
 
   depends_on = [module.flink_irsa]
 }
-
