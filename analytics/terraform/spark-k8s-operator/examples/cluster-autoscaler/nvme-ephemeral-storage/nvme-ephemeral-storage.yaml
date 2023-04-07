@@ -43,7 +43,7 @@ spec:
     #Event logs
     "spark.local.dir": "/data1"
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<S3_BUCKET>/logs"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
 
     # Expose Spark metrics for Prometheus
     "spark.ui.prometheus.enabled": "true"

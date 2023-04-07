@@ -264,16 +264,32 @@ Monitor the job status using the below command.
 You should see the new nodes triggered by the karpenter and the YuniKorn will schedule one Job manager pod and one Taskmanager pods on this node.
 
 ```bash
-kubectl get pods -n flink-team-a-ns -w
+kubectl get deployments -n flink-team-a-ns
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+basic-example   1/1     1            1           5m9s
+
+kubectl get pods -n flink-team-a-ns
+NAME                            READY   STATUS    RESTARTS   AGE
+basic-example-bf467dff7-zwhgc   1/1     Running   0          102s
+basic-example-taskmanager-1-1   1/1     Running   0          87s
+basic-example-taskmanager-1-2   1/1     Running   0          87s
+
+kubectl get services -n flink-team-a-ns
+NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+basic-example-rest   ClusterIP   172.20.74.9   <none>        8081/TCP   3m43s
 ```
 
 To access the Flink WebUI for the job run this command locally.
 
 ```bash
-kubectl port-forward svc/basic-example-rest 8081
+kubectl port-forward svc/basic-example-rest 8081 -n flink-team-a-ns
 ```
 
-![Flink Job UI](img/flink-job-ui.png)
+![Flink Job UI](img/flink1.png)
+![Flink Job UI](img/flink2.png)
+![Flink Job UI](img/flink3.png)
+![Flink Job UI](img/flink4.png)
+![Flink Job UI](img/flink5.png)
 
 </CollapsibleContent>
 
@@ -290,16 +306,32 @@ Monitor the job status using the below command.
 You should see the new nodes triggered by the Cluster Autoscaler and the YuniKorn will schedule one Job manager pod and one Taskmanager pods on this node.
 
 ```bash
-kubectl get pods -n flink-team-a-ns -w
+kubectl get deployments -n flink-team-a-ns
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+basic-example   1/1     1            1           5m9s
+
+kubectl get pods -n flink-team-a-ns
+NAME                            READY   STATUS    RESTARTS   AGE
+basic-example-bf467dff7-zwhgc   1/1     Running   0          102s
+basic-example-taskmanager-1-1   1/1     Running   0          87s
+basic-example-taskmanager-1-2   1/1     Running   0          87s
+
+kubectl get services -n flink-team-a-ns
+NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+basic-example-rest   ClusterIP   172.20.74.9   <none>        8081/TCP   3m43s
 ```
 
 To access the Flink WebUI for the job run this command locally.
 
 ```bash
-kubectl port-forward svc/basic-example-rest 8081
+kubectl port-forward svc/basic-example-rest 8081 -n flink-team-a-ns
 ```
 
-![Flink Job UI](img/flink-job-ui.png)
+![Flink Job UI](img/flink1.png)
+![Flink Job UI](img/flink2.png)
+![Flink Job UI](img/flink3.png)
+![Flink Job UI](img/flink4.png)
+![Flink Job UI](img/flink5.png)
 
 </CollapsibleContent>
 

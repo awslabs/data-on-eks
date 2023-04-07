@@ -14,7 +14,6 @@ service:
         Format  regex
         Regex   ^(?<namespace_name>[^_]+)\.(?<container_name>.+)\.(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)\.(?<docker_id>[a-z0-9]{64})-$
 
-
 input:
   name: "tail"
   enabled: true
@@ -27,7 +26,6 @@ input:
   extraInputs: |
     multiline.parser  docker, cri
     Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
-
 
 # NOTE: extraFilters config for using Kubelet to get the Metadata instead of talking to API server for large clusters
 filter:
@@ -50,7 +48,6 @@ filter:
     Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
 
-
 cloudWatch:
   enabled: true
   match: "systempods.*"
@@ -64,7 +61,6 @@ cloudWatch:
 #----------------------------------------------------------#
 # OUTPUT logs to S3
 #----------------------------------------------------------#
-
 additionalOutputs: |
   [OUTPUT]
       Name                            s3
@@ -77,7 +73,6 @@ additionalOutputs: |
       store_dir                       /home/ec2-user/buffer
       upload_timeout                  10m
       log_key                         log
-
 
 firehose:
   enabled: false

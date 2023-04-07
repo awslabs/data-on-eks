@@ -37,7 +37,7 @@ module "vpc_cni_irsa" {
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ac7fd74d9df282ce6f8d068c4fd17ccd5638ae3a"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -80,8 +80,8 @@ module "eks_blueprints_kubernetes_addons" {
   # Cluster Autoscaler
   #---------------------------------------
   enable_cluster_autoscaler = true
-  cluster_autoscaler_helm_config = {
-    version = "9.27.0"
+  cluster_autoscaler = {
+    version = "9.28.0"
     timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
@@ -120,7 +120,7 @@ module "eks_blueprints_kubernetes_addons" {
   aws_for_fluentbit_cw_log_group_name = "/${var.name}/fluentbit-logs" # Add-on creates this log group
   aws_for_fluentbit_irsa_policies     = [aws_iam_policy.fluentbit.arn]
   aws_for_fluentbit_helm_config = {
-    version = "0.1.22"
+    version = "0.1.24"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = var.region,
       cloudwatch_log_group = "/${var.name}/fluentbit-logs"
@@ -130,9 +130,12 @@ module "eks_blueprints_kubernetes_addons" {
   }
 
   enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller_helm_config = {
-    version = "1.4.7"
-    timeout = "300"
+  aws_load_balancer_controller = {
+    values = [
+      <<-EOT
+          clusterName: ${module.eks.cluster_name}
+      EOT
+    ]
   }
 
   enable_ingress_nginx = true
@@ -145,6 +148,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Required Flink Deployment
   enable_cert_manager = true
   cert_manager_helm_config = {
+    version = "1.11.1"
     set_values = [
       {
         name  = "extraArgs[0]"
@@ -223,6 +227,8 @@ module "eks_data_addons" {
       }
     ]
   }
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 #---------------------------------------
@@ -290,7 +296,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "grafana-login"
+  name                    = "grafana"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
