@@ -5,7 +5,7 @@ locals {
 # IRSA for Spark driver/executor pods for "spark-team-a"
 #---------------------------------------------------------------
 module "irsa" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.15.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa?ref=ac7fd74d9df282ce6f8d068c4fd17ccd5638ae3a"
 
   eks_cluster_id             = local.name
   eks_oidc_provider_arn      = module.eks.oidc_provider_arn

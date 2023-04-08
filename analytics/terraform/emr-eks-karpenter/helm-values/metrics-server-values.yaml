@@ -1,6 +1,6 @@
 # HA config for metrics-server
 image:
-  repository: k8s.gcr.io/metrics-server/metrics-server
+  repository: registry.k8s.io/metrics-server/metrics-server
   pullPolicy: IfNotPresent
 
 serviceAccount:
