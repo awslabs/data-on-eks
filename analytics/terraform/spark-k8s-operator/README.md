@@ -32,7 +32,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.9 |
 | <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | 3e64d809ac9dbc89aee872fe0f366f0b757d3137 |
 | <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | ../../../workshop/modules/terraform-aws-eks-data-addons | n/a |
-| <a name="module_irsa"></a> [irsa](#module\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa | v4.15.0 |
+| <a name="module_irsa"></a> [irsa](#module\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa | ac7fd74d9df282ce6f8d068c4fd17ccd5638ae3a |
 | <a name="module_karpenter"></a> [karpenter](#module\_karpenter) | terraform-aws-modules/eks/aws//modules/karpenter | ~> 19.9 |
 | <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 3.0 |

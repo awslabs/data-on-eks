@@ -1,15 +1,5 @@
-replicaCount: 1
-admissionControllerReplicaCount: 1
-
 imagePullSecrets:
-userLabelKey: "yunikorn.apache.org/username"
-operatorPlugins: "general"
 serviceAccount: yunikorn-admin
-hostNetwork: false
-
-placeHolderImage: registry.k8s.io/pause
-
-admissionControllerServiceAccount: yunikorn-admission-controller
 
 image:
   repository: apache/yunikorn
@@ -21,6 +11,14 @@ pluginImage:
   tag: scheduler-plugin-${image_version}
   pullPolicy: Always
 
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+configuration: null    # deprecated; use queues.yaml in yunikornDefaults
+operatorPlugins: null  # deprecated; use service.operatorPlugins in yunikornDefaults
+placeHolderImage: null # deprecated; use service.placeholderImage in yunikornDefaults
+
 admissionController:
   image:
     repository: apache/yunikorn
@@ -28,10 +26,6 @@ admissionController:
     pullPolicy: Always
   replicaCount: 1
   serviceAccount: yunikorn-admission-controller
-  processNamespaces: ""
-  bypassNamespaces: "^kube-system$"
-  labelNamespaces: ""
-  noLabelNamespaces: ""
   hostNetwork: true
   resources:
     requests:
@@ -45,6 +39,10 @@ admissionController:
   affinity: {}
   service:
     type: ClusterIP
+  processNamespaces: null # deprecated; use admissionController.processNamespaces in yunikornDefaults
+  bypassNamespaces: null  # deprecated; use admissionController.bypassNamespaces in yunikornDefaults
+  labelNamespaces: null   # deprecated; use admissionController.labelNamespaces in yunikornDefaults
+  noLabelNamespaces: null # deprecated; use admissionController.noLabelNamespaces in yunikornDefaults
 
 web:
   image:
@@ -64,13 +62,25 @@ service:
   port: 9080
   portWeb: 9889
 
+ingress:
+  enabled: false
+  ingressClassName: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths: []
+  pathType: Prefix
+  tls: []
+
 resources:
   requests:
     cpu: 400m
     memory: 2Gi
   limits:
     cpu: 4
-    memory: 4Gi
+    memory: 2Gi
+
+
 
 # When this flag is true, the admission controller will be installed along with the scheduler.
 # When this flag is false, the admission controller will not be installed.
@@ -81,10 +91,16 @@ embedAdmissionController: true
 # When this flag is false, the scheduler will be deployed as a standalone scheduler.
 enableSchedulerPlugin: false
 
-# YuniKorn service configuration values. These are rendered to the yunikorn-defaults ConfigMap
+
+# Bootstrap configuration for YuniKorn - will be rendered into yunikorn-defaults ConfigMap.
+# Any valid options for YuniKorn may be specified here.
+# Use this link for more values -> https://yunikorn.apache.org/docs/user_guide/service_config/#yunikorn-configuration
 yunikornDefaults:
   # The default volume bind timeout value of 10 seconds may be too short for EBS.
   service.volumeBindTimeout: "60s"
+  service.placeholderImage: registry.k8s.io/pause:3.7
+  service.operatorPlugins: "general"
+  admissionController.filtering.bypassNamespaces: "^kube-system$"
   # Use this configuration to configure absolute capacities for yunikorn queues
   queues.yaml: |
     partitions:

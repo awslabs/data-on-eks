@@ -37,7 +37,7 @@ module "vpc_cni_irsa" {
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ac7fd74d9df282ce6f8d068c4fd17ccd5638ae3a"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -80,8 +80,8 @@ module "eks_blueprints_kubernetes_addons" {
   # Cluster Autoscaler
   #---------------------------------------
   enable_cluster_autoscaler = true
-  cluster_autoscaler_helm_config = {
-    version = "9.27.0"
+  cluster_autoscaler = {
+    version = "9.28.0"
     timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
@@ -120,7 +120,7 @@ module "eks_blueprints_kubernetes_addons" {
   aws_for_fluentbit_cw_log_group_name = "/${var.name}/fluentbit-logs" # Add-on creates this log group
   aws_for_fluentbit_irsa_policies     = [aws_iam_policy.fluentbit.arn]
   aws_for_fluentbit_helm_config = {
-    version = "0.1.22"
+    version = "0.1.24"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = var.region,
       cloudwatch_log_group = "/${var.name}/fluentbit-logs"
@@ -130,9 +130,12 @@ module "eks_blueprints_kubernetes_addons" {
   }
 
   enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller_helm_config = {
-    version = "1.4.7"
-    timeout = "300"
+  aws_load_balancer_controller = {
+    values = [
+      <<-EOT
+          clusterName: ${module.eks.cluster_name}
+      EOT
+    ]
   }
 
   enable_ingress_nginx = true
@@ -140,6 +143,18 @@ module "eks_blueprints_kubernetes_addons" {
     version = "4.5.2"
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+  }
+
+  # Required Flink Deployment
+  enable_cert_manager = true
+  cert_manager_helm_config = {
+    version = "1.11.1"
+    set_values = [
+      {
+        name  = "extraArgs[0]"
+        value = "--enable-certificate-owner-ref=false"
+      },
+    ]
   }
 
   tags = local.tags
@@ -150,15 +165,16 @@ module "eks_blueprints_kubernetes_addons" {
 #---------------------------------------------------------------
 # NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
 module "eks_data_addons" {
-  source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
+  source            = "../../workshop/modules/terraform-aws-eks-data-addons"
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
-  # Spark Operator Add-on
+  # Flink Operator Add-on
   #---------------------------------------------------------------
-  enable_spark_operator = true
-  spark_operator_helm_config = {
-    values = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
+  enable_flink_operator = true
+  flink_operator_helm_config = {
+    version = "1.4.0"
+    values  = [templatefile("${path.module}/helm-values/flink-operator-values.yaml", {})]
   }
 
   #---------------------------------------------------------------
@@ -169,30 +185,6 @@ module "eks_data_addons" {
     values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
       image_version = "1.2.0"
     })]
-  }
-
-  #---------------------------------------------------------------
-  # Spark History Server Add-on
-  #---------------------------------------------------------------
-  enable_spark_history_server = true
-  spark_history_server_helm_config = {
-    create_irsa = true
-    values = [
-      templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
-        s3_bucket_name   = module.s3_bucket.s3_bucket_id
-        s3_bucket_prefix = aws_s3_object.this.key
-      })
-    ]
-  }
-
-  #---------------------------------------------------------------
-  # Kubecost Add-on
-  #---------------------------------------------------------------
-  enable_kubecost = true
-  kubecost_helm_config = {
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
   #---------------------------------------------------------------
@@ -235,13 +227,15 @@ module "eks_data_addons" {
       }
     ]
   }
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 #---------------------------------------
 # Karpenter Provisioners
 #---------------------------------------
 data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/spark-*.yaml"
+  pattern = "${path.module}/karpenter-provisioners/flink-*.yaml"
   vars = {
     azs            = local.region
     eks_cluster_id = module.eks.cluster_name
@@ -255,13 +249,12 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket_prefix = "${local.name}-spark-logs-"
+  bucket_prefix = "${local.name}-flink-logs-"
   acl           = "private"
 
   # For example only - please evaluate for your environment
@@ -286,14 +279,6 @@ module "s3_bucket" {
   tags = local.tags
 }
 
-# Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
-resource "aws_s3_object" "this" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  acl          = "private"
-  key          = "spark-event-logs/"
-  content_type = "application/x-directory"
-}
-
 #---------------------------------------------------------------
 # Grafana Admin credentials resources
 # Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
@@ -311,7 +296,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "grafana-login"
+  name                    = "grafana"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
