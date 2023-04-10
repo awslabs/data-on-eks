@@ -22,7 +22,7 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "@aws-quickstart/eks-blueprints": "1.5.0",
+    "@aws-quickstart/eks-blueprints": "1.6.1",
     "aws-cdk-lib": "2.51.1",
     "constructs": "^10.0.0",
     "simple-base": "^1.0.0",
