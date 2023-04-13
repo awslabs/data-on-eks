@@ -4,6 +4,7 @@ sidebar_label: EMR on EKS with Karpenter
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
@@ -781,6 +782,100 @@ Verify the driver and executor pods prefix with `tg-` indicates the pause pods.
 These pods will be replaced with the actual Spark Driver and Executor pods once the Nodes are scaled and ready by the Karpenter.
 
 ![img.png](img/karpenter-yunikorn-gang-schedule.png)
+
+
+<CollapsibleContent header={<h2><span>Data Lake Table Formats</span></h2>}>
+
+Data lakes are a storage approach that allows for the storage of vast amounts of raw, unstructured data in their native formats.
+Table formats allow us to interact with data lakes as easily as we interact with databases, using our favorite tools and languages. 
+A table format allows us to abstract different data files as a singular dataset, a table.
+
+The leading table formats which are used to organize and store data are Hudi, Iceberg and Delta Lake.
+These are open source formats that provides a transactional and scalable layer for data lakes, enabling efficient and easy-to-manage data processing. 
+They offer features such as
+  - ACID (Atomicity, Consistency, Isolation, and Durability) transactions
+  - schema evolution
+  - data merge operations
+  - data versioning
+  - processing performance
+
+Below quickstart examples showcases the features and usage of the different data table formats.
+
+<Tabs>
+  <TabItem value="delta" label="delta lake" default>
+In this first example we will load a csv file into a delta lake table format by running Spark jobs on an EMR on EKS cluster.
+
+### Prerequisites:
+
+The necessary EMR on EKS cluster has been provisioned as per instructions in the begining of this page.
+This script requires input parameters which can be extracted from `terraform apply` output values.    
+Execute the Spark job using the below shell script.
+
+
+```bash
+Navigate to folder and execute script:
+  
+cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
+./execute-deltacreate.sh
+```    
+
+:::tip
+    This shell script uploads test data and pyspark scripts to S3 bucket. 
+    Specify the S3 bucket where you want to upload the artifacts and create the delta table.
+    
+    Verify successful job completion by navigating to the EMR on EKS virtual cluster and view the job status.
+    For job failures, you can navigate to the S3 bucket emr-on-eks-logs and drill-down to the jobs folder and investigate the spark driver stdout and stderr logs.
+:::
+
+**Following artifacts are created in S3 once the script is executed and the EMR on EKS job is successfully completed.**
+
+![](img/deltalake-s3.png)
+
+  - The data folder contains two csv files.(initial_emp.csv and update_emp.csv)
+  - The scripts folder contains two pyspark scripts.(delta-create.py and delta-merge.py) for intial load and subsequent merge.
+  - The delta lake table is created in the delta\delta_emp folder.
+  - There is also a symlink manifest file created in the delta\delta_emp\_symlink_format_manifest and registered to glue catalog for athena to query the initial table.
+
+
+** Using Athena to query the created delta table. **
+
+Athena, is a serverless query service offered by AWS. 
+It requires a symlink file for Delta tables registered to the Glue catalog.
+This is required because Delta Lake uses a specific directory structure to store data and metadata.
+The symlink file serves as a pointer to the latest version of the Delta log file. Without this symlink, 
+Athena would not be able to determine the correct version of the metadata file to use for a given query
+
+  - Navigate to Athena query editor.
+  - The delta table should appear under the default database in AWSDataCatalog as shown below.
+  - Select the table and preview the data and verify if all records from the initial_emp.csv is shown.
+
+![](img/athena-query-1.png)
+
+**Query output as table**
+
+![](img/athena-query-results.png)
+
+In the second example we will load an updated csv file into into the previously created delta lake table by running the merge Spark job.
+
+```bash
+Navigate to folder and execute script:
+  
+cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
+./execute-deltamerge.sh
+```    
+
+** Verify successful job completion. Re-run the query in Athena and verify data is merged (insert and updates) and shown correctly in delta lake table.**
+
+  </TabItem>
+  <TabItem value="hudi" label="hudi">
+    Hudi examples -- TBD
+  </TabItem>
+  <TabItem value="iceberg" label="iceberg">
+    Iceberg examples -- TBD
+  </TabItem>
+</Tabs>
+
+</CollapsibleContent>
 
 ## Cleanup
 

@@ -165,6 +165,20 @@ data "aws_iam_policy_document" "this" {
     ]
     resources = ["*"]
   }
+  
+  statement {
+    sid    = "GluePolicy"
+    effect = "Allow"
+    actions = [
+      "glue:GetDatabase",
+      "glue:GetPartitions",
+      "glue:GetTable",
+      "glue:GetTables",
+      "glue:GetConnection",
+      "glue:CreateTable"
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role" "this" {

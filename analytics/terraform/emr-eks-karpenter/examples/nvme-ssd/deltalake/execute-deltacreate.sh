@@ -17,6 +17,11 @@ SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
 INPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/data"
 
 
+#--------------------------------------------
+# Copy PySpark Scripts, Pod Templates and Input data to S3 bucket
+#--------------------------------------------
+aws s3 sync "./scripts" ${SCRIPTS_S3_PATH}
+aws s3 sync "./data" ${INPUT_DATA_S3_PATH}
 
 #--------------------------------------------
 # Execute Spark job
@@ -30,7 +35,7 @@ aws emr-containers start-job-run \
   --release-label emr-6.9.0-latest \
   --job-driver '{
   "sparkSubmitJobDriver": {
-      "entryPoint": "'$SCRIPTS_S3_PATH'/delta-merge.py",
+      "entryPoint": "'$SCRIPTS_S3_PATH'/delta-create.py",
       "entryPointArguments":["'$SPARK_JOB_S3_PATH'"],
       "sparkSubmitParameters": "--conf spark.executor.memory=2G --conf spark.executor.cores=2"}}' \
   --configuration-overrides '{
