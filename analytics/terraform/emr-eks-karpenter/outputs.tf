@@ -43,3 +43,12 @@ output "emr_on_eks" {
   description = "EMR on EKS"
   value       = module.emr_containers
 }
+
+################################################################################
+# AMP
+################################################################################
+
+output "amp_workspace_id" {
+  description = "The id of amp"
+  value       = aws_prometheus_workspace.amp.id
+}
