@@ -5,12 +5,15 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
 
-  name = local.name
-  cidr = var.vpc_cidr
+  name           = local.name
+  cidr           = local.vpc_cidr
+  azs            = local.azs
+  public_subnets = var.public_subnets
 
-  azs             = local.azs
-  public_subnets  = var.public_subnets  # Two Subnets. 4094 IPs per Subnet
-  private_subnets = var.private_subnets # Three Subnets. 16382 IPs per Subnet
+  #  Use This to leverage Secondary CIDR block
+  #  secondary_cidr_blocks = "100.64.0.0/16"
+  #  private_subnets = concat(var.private_subnets, [var.secondary_cidr_blocks])
+  private_subnets = var.private_subnets
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -25,36 +28,21 @@ module "vpc" {
   default_security_group_tags   = { Name = "${local.name}-default" }
 
   public_subnet_tags = {
-    "kubernetes.io/cluster/${local.name}" = "shared"
-    "kubernetes.io/role/elb"              = 1
+    "kubernetes.io/role/elb" = 1
   }
 
   private_subnet_tags = {
-    "kubernetes.io/cluster/${local.name}" = "shared"
-    "kubernetes.io/role/internal-elb"     = 1
+    "kubernetes.io/role/internal-elb" = 1
+    # Tags subnets for Karpenter auto-discovery
+    "karpenter.sh/discovery" = local.name
   }
-
-  default_security_group_name = "${local.name}-endpoint-secgrp"
-
-  default_security_group_ingress = [
-    {
-      protocol    = -1
-      from_port   = 0
-      to_port     = 0
-      cidr_blocks = var.vpc_cidr
-  }]
-  default_security_group_egress = [
-    {
-      from_port   = 0
-      to_port     = 0
-      protocol    = -1
-      cidr_blocks = "0.0.0.0/0"
-  }]
 
   tags = local.tags
 }
 
 module "vpc_endpoints_sg" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 4.0"
 
@@ -82,11 +70,13 @@ module "vpc_endpoints_sg" {
 }
 
 module "vpc_endpoints" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
   version = "~> 3.0"
 
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
+  security_group_ids = [module.vpc_endpoints_sg[0].security_group_id]
 
   endpoints = merge({
     s3 = {
@@ -98,7 +88,7 @@ module "vpc_endpoints" {
       }
     }
     },
-    { for service in toset(local.vpc_endpoints) :
+    { for service in toset(["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]) :
       replace(service, ".", "_") =>
       {
         service             = service

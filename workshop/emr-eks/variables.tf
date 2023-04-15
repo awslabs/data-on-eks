@@ -134,12 +134,6 @@ variable "enable_kubecost" {
   default     = true
 }
 
-variable "enable_grafana" {
-  description = "Enable Grafana add-on"
-  type        = bool
-  default     = false
-}
-
 variable "enable_cloudwatch_metrics" {
   description = "Enable AWS Cloudwatch Metrics add-on for Container Insights"
   type        = bool

@@ -1,5 +1,9 @@
 data "aws_eks_cluster_auth" "this" {
-  name = module.eks_blueprints.eks_cluster_id
+  name = module.eks.cluster_name
+}
+
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
 }
 
 data "aws_availability_zones" "available" {}
@@ -10,10 +14,15 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
-data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id = aws_secretsmanager_secret.grafana.id
+# This data source can be used to get the latest AMI for Managed Node Groups
+data "aws_ami" "x86" {
+  owners      = ["amazon"]
+  most_recent = true
 
-  depends_on = [aws_secretsmanager_secret_version.grafana]
+  filter {
+    name   = "name"
+    values = ["amazon-eks-node-${module.eks.cluster_version}-*"] # Update this for ARM ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
+  }
 }
 
 #---------------------------------------------------------------
@@ -56,7 +65,7 @@ data "aws_iam_policy_document" "fluent_bit" {
   statement {
     sid       = ""
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::${aws_s3_bucket.this.id}/*"]
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.s3_bucket.s3_bucket_id}/*"]
 
     actions = [
       "s3:ListBucket",

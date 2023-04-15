@@ -1,0 +1,77 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: prod
+  namespace: demo
+spec:
+  description: "Cluster Demo for DoEKS"
+  # Choose your PostGres Database Version
+  imageName: ghcr.io/cloudnative-pg/postgresql:15.2
+  # Number of Replicas
+  instances: 3
+  startDelay: 300
+  stopDelay: 300
+  replicationSlots:
+    highAvailability:
+      enabled: true
+    updateInterval: 300
+  primaryUpdateStrategy: unsupervised
+  serviceAccountTemplate:
+    # For backup and restore, we use IRSA for barman tool.
+    # You will find this IAM role on terraform outputs.
+    metadata:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa
+  postgresql:
+    parameters:
+      shared_buffers: 256MB
+      pg_stat_statements.max: '10000'
+      pg_stat_statements.track: all
+      auto_explain.log_min_duration: '10s'
+    pg_hba:
+      # - hostssl app all all cert
+      - host app app all password
+  logLevel: debug
+  # Choose the right storageclass for type of workload.
+  storage:
+    storageClass: storageclass-io2
+    size: 1Gi
+  walStorage:
+    storageClass: storageclass-io2
+    size: 1Gi
+  monitoring:
+    enablePodMonitor: true
+  bootstrap:
+    initdb: # Deploying a new cluster
+      database: WorldDB
+      owner: app
+      secret:
+        name: app-auth
+  backup:
+    barmanObjectStore:
+    # For backup, we S3 backet to store data.
+    # On this Blueprint, we create an S3 check the terraform output for it.
+      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket
+      s3Credentials:
+        inheritFromIAMRole: true
+      wal:
+        compression: gzip
+        maxParallel: 8
+    retentionPolicy: "30d"
+
+  # resources: # m5large: m5xlarge 2vCPU, 8GI RAM
+  #   requests:
+  #     memory: "512Mi"
+  #     cpu: "1"
+  #   limits:
+  #     memory: "1Gi"
+  #     cpu: "2"
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: failure-domain.beta.kubernetes.io/zone
+
+  nodeMaintenanceWindow:
+    inProgress: false
+    reusePVC: false

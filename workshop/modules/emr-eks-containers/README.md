@@ -1,3 +1,7 @@
+# Amazon EMR on EKS Terraform Module
+
+This Terraform module simplifies the process of creating Amazon EMR on EKS virtual clusters for multiple teams. With the ability to either choose an existing namespace or create a new one, the module allows for easy management and allocation of resources. The module also provides the option to create a new execution IAM role and a CloudWatch log group for job logs.
+
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
 

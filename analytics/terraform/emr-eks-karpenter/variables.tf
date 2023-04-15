@@ -28,6 +28,12 @@ variable "vpc_cidr" {
   type        = string
 }
 
+variable "enable_vpc_endpoints" {
+  description = "Enable VPC Endpoints"
+  default     = false
+  type        = string
+}
+
 # Only two Subnets for with low IP range for internet access
 variable "public_subnets" {
   description = "Public Subnets CIDRs. 62 IPs per Subnet"
