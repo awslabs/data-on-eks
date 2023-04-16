@@ -827,26 +827,24 @@ These pods will be replaced with the actual Spark Driver and Executor pods once 
 ![img.png](img/karpenter-yunikorn-gang-schedule.png)
 
 
-<CollapsibleContent header={<h2><span>Data Lake Table Formats</span></h2>}>
+<CollapsibleContent header={<h2><span>Delta Lake Table Format</span></h2>}>
 
-Data lakes are a storage approach that allows for the storage of vast amounts of raw, unstructured data in their native formats.
-Table formats allow us to interact with data lakes as easily as we interact with databases, using our favorite tools and languages. 
-A table format allows us to abstract different data files as a singular dataset, a table.
+Delta Lake is a leading table format which is used to organize and store data.
+The table format allows us to abstract different data files stored as objects as a singular dataset, a table.
 
-The leading table formats which are used to organize and store data are Hudi, Iceberg and Delta Lake.
-These are open source formats that provides a transactional and scalable layer for data lakes, enabling efficient and easy-to-manage data processing. 
-They offer features such as
+The source format provides a transactional and scalable layer, enabling efficient and easy-to-manage data processing. 
+It offer features such as
+
   - ACID (Atomicity, Consistency, Isolation, and Durability) transactions
-  - schema evolution
   - data merge operations
   - data versioning
   - processing performance
 
-Below quickstart examples showcases the features and usage of the different data table formats.
+Below quickstart examples showcases the features and usage of the delta lake table formats.
 
 <Tabs>
-  <TabItem value="delta" label="delta lake" default>
-In this first example we will load a csv file into a delta lake table format by running Spark jobs on an EMR on EKS cluster.
+  <TabItem value="deltalake" label="insert & merge operations" default>
+In this example we will load a csv file into a delta lake table format by running Spark jobs on an EMR on EKS cluster.
 
 ### Prerequisites:
 
@@ -909,12 +907,6 @@ cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 
 ** Verify successful job completion. Re-run the query in Athena and verify data is merged (insert and updates) and shown correctly in delta lake table.**
 
-  </TabItem>
-  <TabItem value="hudi" label="hudi">
-    Hudi examples -- TBD
-  </TabItem>
-  <TabItem value="iceberg" label="iceberg">
-    Iceberg examples -- TBD
   </TabItem>
 </Tabs>
 
