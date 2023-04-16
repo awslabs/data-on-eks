@@ -41,18 +41,21 @@ resource "aws_eks_addon" "vpc_cni" {
   cluster_name = module.eks.cluster_name
   addon_name   = "vpc-cni"
   service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+  preserve   = true
   depends_on = [module.eks.eks_managed_node_groups]
 }
 
 resource "aws_eks_addon" "coredns" {
   cluster_name = module.eks.cluster_name
   addon_name   = "coredns"
+  preserve   = true
   depends_on = [module.eks.eks_managed_node_groups]
 }
 
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name = module.eks.cluster_name
   addon_name   = "kube-proxy"
+  preserve   = true
   depends_on = [module.eks.eks_managed_node_groups]
 }
 
@@ -66,7 +69,6 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
 #---------------------------------------------------------------
 # Cluster Autoscaler
 #---------------------------------------------------------------
-
 resource "helm_release" "cluster-autoscaler" {
     name       = "cluster-autoscaler"
     repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
@@ -114,6 +116,10 @@ provisioner: ebs.csi.aws.com
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
 YAML
+
+depends_on = [
+  module.eks
+]
 }
 
 resource "helm_release" "cert_manager" {
@@ -159,17 +165,17 @@ resource "helm_release" "strimzi_operator" {
 #---------------------------------------------------------------
 resource "kubectl_manifest" "kafka_namespace" {
   yaml_body  = file("./kafka-manifests/kafka-ns.yml")
-  depends_on = [module.eks.cluster_id]
+  depends_on = [ module.eks.cluster_id ]
 }
 
 resource "kubectl_manifest" "kafka_cluster" {
   yaml_body  = file("./kafka-manifests/kafka-cluster.yml")
-  depends_on = [helm_release.strimzi_operator]
+  depends_on = [ helm_release.strimzi_operator ]
 }
 
 resource "kubectl_manifest" "kafka_metric_config" {
   yaml_body  = file("./kafka-manifests/kafka-metrics-configmap.yml")
-  depends_on = [helm_release.strimzi_operator]
+  depends_on = [ helm_release.strimzi_operator ]
 }
 
 #---------------------------------------------------------------
@@ -194,35 +200,35 @@ resource "kubectl_manifest" "kafka_metric_config" {
 
   resource "kubectl_manifest" "podmonitor_cluster_operator_metrics" {
   yaml_body = file("./monitoring-manifests/podmonitor-cluster-operator-metrics.yml")
-  depends_on = [kubectl_manifest.kafka_namespace]
+  depends_on = [ kubectl_manifest.kafka_namespace ]
   }
 
   resource "kubectl_manifest" "podmonitor_entity_operator_metrics" {
   yaml_body = file("./monitoring-manifests/podmonitor-entity-operator-metrics.yml")
-  depends_on = [kubectl_manifest.kafka_namespace]
+  depends_on = [ kubectl_manifest.kafka_namespace ]
   }
 
   resource "kubectl_manifest" "podmonitor_kafka_resources_metrics" {
   yaml_body = file("./monitoring-manifests/podmonitor-kafka-resources-metrics.yml")
-  depends_on = [kubectl_manifest.kafka_namespace]
+  depends_on = [ kubectl_manifest.kafka_namespace ]
   }
 
   resource "kubectl_manifest" "grafana_strimzi_exporter_dashboard" {
   yaml_body = file("./monitoring-manifests/grafana-strimzi-exporter-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
+  depends_on = [ helm_release.kube_prometheus_stack ]
   }
 
   resource "kubectl_manifest" "grafana_strimzi_kafka_dashboard" {
   yaml_body = file("./monitoring-manifests/grafana-strimzi-kafka-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
+  depends_on = [ helm_release.kube_prometheus_stack ]
   }
 
   resource "kubectl_manifest" "grafana_strimzi_operators_dashboard" {
   yaml_body = file("./monitoring-manifests/grafana-strimzi-operators-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
+  depends_on = [ helm_release.kube_prometheus_stack ]
   }
 
   resource "kubectl_manifest" "grafana_strimzi_zookeeper_dashboard" {
   yaml_body = file("./monitoring-manifests/grafana-strimzi-zookeeper-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
+  depends_on = [ helm_release.kube_prometheus_stack ]
   }
