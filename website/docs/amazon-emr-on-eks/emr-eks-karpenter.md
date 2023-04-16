@@ -826,7 +826,6 @@ These pods will be replaced with the actual Spark Driver and Executor pods once 
 
 ![img.png](img/karpenter-yunikorn-gang-schedule.png)
 
-<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
 <CollapsibleContent header={<h2><span>Data Lake Table Formats</span></h2>}>
 
@@ -922,7 +921,7 @@ cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 </CollapsibleContent>
 
 ## Cleanup
-
+<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
