@@ -18,6 +18,21 @@ variable "spark_operator_helm_config" {
   default     = {}
 }
 
+#---------------------------------------------------
+# Argo Workflows
+#---------------------------------------------------
+variable "enable_argo_workflows" {
+  description = "Enable Argo Workflows add-on"
+  type        = bool
+  default     = false
+}
+
+variable "argo_workflows_helm_config" {
+  description = "Helm configuration for Argo Workflows"
+  type        = any
+  default     = {}
+}
+
 #-----------APACHE YUNIKORN ADDON-------------
 variable "enable_yunikorn" {
   description = "Enable Apache YuniKorn K8s scheduler add-on"

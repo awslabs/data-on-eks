@@ -3,6 +3,11 @@ output "spark_operator" {
   description = "Spark Operator Helm Chart metadata"
 }
 
+output "argo_workflows" {
+  value       = try(helm_release.argo_workflows[0].metadata, null)
+  description = "argo_workflows Helm Chart metadata"
+}
+
 output "yunikorn" {
   value       = try(helm_release.yunikorn[0].metadata, null)
   description = "Yunikorn Helm Chart metadata"
