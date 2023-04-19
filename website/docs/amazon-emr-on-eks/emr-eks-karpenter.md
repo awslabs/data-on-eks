@@ -826,8 +826,94 @@ These pods will be replaced with the actual Spark Driver and Executor pods once 
 
 ![img.png](img/karpenter-yunikorn-gang-schedule.png)
 
-<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
+<CollapsibleContent header={<h2><span>Delta Lake Table Format</span></h2>}>
+
+Delta Lake is a leading table format which is used to organize and store data.
+The table format allows us to abstract different data files stored as objects as a singular dataset, a table.
+
+The source format provides a transactional and scalable layer, enabling efficient and easy-to-manage data processing. 
+It offer features such as
+
+  - ACID (Atomicity, Consistency, Isolation, and Durability) transactions
+  - data merge operations
+  - data versioning
+  - processing performance
+
+Below quickstart examples showcases the features and usage of the delta lake table formats.
+
+<Tabs>
+  <TabItem value="deltalake" label="insert & merge operations" default>
+In this example we will load a csv file into a delta lake table format by running Spark jobs on an EMR on EKS cluster.
+
+### Prerequisites:
+
+The necessary EMR on EKS cluster has been provisioned as per instructions in the begining of this page.
+This script requires input parameters which can be extracted from `terraform apply` output values.    
+Execute the Spark job using the below shell script.
+
+
+```bash
+Navigate to folder and execute script:
+  
+cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
+./execute-deltacreate.sh
+```    
+
+:::tip
+    This shell script uploads test data and pyspark scripts to S3 bucket. 
+    Specify the S3 bucket where you want to upload the artifacts and create the delta table.
+    
+    Verify successful job completion by navigating to the EMR on EKS virtual cluster and view the job status.
+    For job failures, you can navigate to the S3 bucket emr-on-eks-logs and drill-down to the jobs folder and investigate the spark driver stdout and stderr logs.
+:::
+
+**Following artifacts are created in S3 once the script is executed and the EMR on EKS job is successfully completed.**
+
+![](img/deltalake-s3.png)
+
+  - The data folder contains two csv files.(initial_emp.csv and update_emp.csv)
+  - The scripts folder contains two pyspark scripts.(delta-create.py and delta-merge.py) for intial load and subsequent merge.
+  - The delta lake table is created in the delta\delta_emp folder.
+  - There is also a symlink manifest file created in the delta\delta_emp\_symlink_format_manifest and registered to glue catalog for athena to query the initial table.
+
+
+** Using Athena to query the created delta table. **
+
+Athena, is a serverless query service offered by AWS. 
+It requires a symlink file for Delta tables registered to the Glue catalog.
+This is required because Delta Lake uses a specific directory structure to store data and metadata.
+The symlink file serves as a pointer to the latest version of the Delta log file. Without this symlink, 
+Athena would not be able to determine the correct version of the metadata file to use for a given query
+
+  - Navigate to Athena query editor.
+  - The delta table should appear under the default database in AWSDataCatalog as shown below.
+  - Select the table and preview the data and verify if all records from the initial_emp.csv is shown.
+
+![](img/athena-query-1.png)
+
+**Query output as table**
+
+![](img/athena-query-results.png)
+
+In the second example we will load an updated csv file into into the previously created delta lake table by running the merge Spark job.
+
+```bash
+Navigate to folder and execute script:
+  
+cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
+./execute-deltamerge.sh
+```    
+
+** Verify successful job completion. Re-run the query in Athena and verify data is merged (insert and updates) and shown correctly in delta lake table.**
+
+  </TabItem>
+</Tabs>
+
+</CollapsibleContent>
+
+## Cleanup
+<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash

@@ -290,7 +290,7 @@ module "s3_bucket" {
 resource "aws_s3_object" "this" {
   bucket       = module.s3_bucket.s3_bucket_id
   acl          = "private"
-  key          = "spark-event-history-logs/"
+  key          = "spark-event-logs/"
   content_type = "application/x-directory"
 }
 

@@ -1,6 +1,6 @@
 ---
 title: Kafka on EKS
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # Apache Kafka

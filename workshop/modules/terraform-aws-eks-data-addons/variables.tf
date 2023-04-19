@@ -82,3 +82,16 @@ variable "grafana_helm_config" {
   type        = any
   default     = {}
 }
+
+#-----------FLINK OPERATOR-------------
+variable "enable_flink_operator" {
+  description = "Enable Flink Operator add-on"
+  type        = bool
+  default     = false
+}
+
+variable "flink_operator_helm_config" {
+  description = "Flink Operator Helm Chart config"
+  type        = any
+  default     = {}
+}
