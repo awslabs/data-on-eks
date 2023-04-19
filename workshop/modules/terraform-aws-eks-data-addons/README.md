@@ -36,6 +36,7 @@ Your understanding and cooperation are greatly appreciated :pray:
 | Name | Type |
 |------|------|
 | [aws_iam_policy.grafana](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [helm_release.argo_workflows](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [helm_release.flink_operator](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [helm_release.grafana](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [helm_release.kubecost](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
@@ -52,6 +53,8 @@ Your understanding and cooperation are greatly appreciated :pray:
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_argo_workflows_helm_config"></a> [argo\_workflows\_helm\_config](#input\_argo\_workflows\_helm\_config) | Helm configuration for Argo Workflows | `any` | `{}` | no |
+| <a name="input_enable_argo_workflows"></a> [enable\_argo\_workflows](#input\_enable\_argo\_workflows) | Enable Argo Workflows add-on | `bool` | `false` | no |
 | <a name="input_enable_flink_operator"></a> [enable\_flink\_operator](#input\_enable\_flink\_operator) | Enable Flink Operator add-on | `bool` | `false` | no |
 | <a name="input_enable_grafana"></a> [enable\_grafana](#input\_enable\_grafana) | Enable Grafana add-on | `bool` | `false` | no |
 | <a name="input_enable_kubecost"></a> [enable\_kubecost](#input\_enable\_kubecost) | Enable Kubecost add-on | `bool` | `false` | no |
@@ -72,6 +75,7 @@ Your understanding and cooperation are greatly appreciated :pray:
 
 | Name | Description |
 |------|-------------|
+| <a name="output_argo_workflows"></a> [argo\_workflows](#output\_argo\_workflows) | argo\_workflows Helm Chart metadata |
 | <a name="output_kubecost"></a> [kubecost](#output\_kubecost) | Kubecost Helm Chart metadata |
 | <a name="output_prometheus"></a> [prometheus](#output\_prometheus) | Prometheus Helm Chart metadata |
 | <a name="output_spark_history_server"></a> [spark\_history\_server](#output\_spark\_history\_server) | Spark History Server Helm Chart metadata |
