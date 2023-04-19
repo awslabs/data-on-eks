@@ -3,15 +3,13 @@ locals {
   spark_operator_repository = "https://googlecloudplatform.github.io/spark-on-k8s-operator"
   spark_operator_version    = "1.1.27"
 
-<<<<<<< HEAD
   flink_operator_name       = "flink-kubernetes-operator"
   flink_operator_repository = "https://downloads.apache.org/flink/flink-kubernetes-operator-${local.flink_operator_version}"
   flink_operator_version    = try(var.flink_operator_helm_config["version"], "1.4.0")
-=======
+  
   argo_workflows_name       = "argo-workflows"
   argo_workflows_repository = "https://argoproj.github.io/argo-helm"
   argo_workflows_version    = "v0.20.1"
->>>>>>> 1508882 (add argo workflow addon)
 
   yunikorn_name       = "yunikorn"
   yunikorn_repository = "https://apache.github.io/yunikorn-release"
