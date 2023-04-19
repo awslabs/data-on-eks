@@ -11,6 +11,21 @@ module "irsa" {
   kubernetes_service_account = "data-team-a"
 }
 
+#---------------------------------------
+# Argo Events controller, webhook and eventbus
+#---------------------------------------
+data "kubectl_path_documents" "argoevents_install" {
+  pattern = "${path.module}/argoevents-install/*.yaml"
+}
+
+resource "kubectl_manifest" "argoevents_install" {
+  for_each  = toset(data.kubectl_path_documents.argoevents_install.documents)
+  yaml_body = each.value
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
+}
+
+
 resource "aws_iam_policy" "spark" {
   description = "IAM role policy for Spark Job execution"
   name        = "${local.name}-spark-irsa"

@@ -134,7 +134,7 @@ module "eks_data_addons" {
   }
 
   #---------------------------------------------------------------
-  # Argo Events Add-on
+  # Argo Workflows Add-on
   #---------------------------------------------------------------
   enable_argo_workflows = true
 

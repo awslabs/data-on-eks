@@ -134,18 +134,6 @@ The workflow status from web UI
 
 ## Trigger a workflow to create a spark job based on SQS message
 
-### Install argo events controllers
-
-```bash
-kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-events/stable/manifests/install.yaml
-kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-events/stable/manifests/install-validating-webhook.yaml
-```
-
-### Install [eventbus](https://argoproj.github.io/argo-events/eventbus/eventbus/) which is for event transmission in argo events
-
-```bash
-kubectl apply -f argo-events/eventbus.yaml
-```
 
 ### Deploy `eventsource-sqs.yaml` to link with external SQS
 
