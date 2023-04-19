@@ -14,7 +14,7 @@ module "emr_containers" {
 
       execution_role_name                    = format("%s-%s", module.eks.cluster_name, "emr-eks-data-team-a")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess","arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"] # Attach additional policies for execution IAM Role
+      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess", "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"] # Attach additional policies for execution IAM Role
       tags = {
         Name = "emr-data-team-a"
       }
@@ -28,7 +28,7 @@ module "emr_containers" {
 
       execution_role_name                    = format("%s-%s", module.eks.cluster_name, "emr-eks-data-team-b")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-b"
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess","arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"] # Attach additional policies for execution IAM Role
+      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess", "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"] # Attach additional policies for execution IAM Role
 
       tags = {
         Name = "emr-data-team-b"
@@ -36,4 +36,3 @@ module "emr_containers" {
     }
   }
 }
-

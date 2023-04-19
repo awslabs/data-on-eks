@@ -6,7 +6,7 @@ locals {
   flink_operator_name       = "flink-kubernetes-operator"
   flink_operator_repository = "https://downloads.apache.org/flink/flink-kubernetes-operator-${local.flink_operator_version}"
   flink_operator_version    = try(var.flink_operator_helm_config["version"], "1.4.0")
-  
+
   argo_workflows_name       = "argo-workflows"
   argo_workflows_repository = "https://argoproj.github.io/argo-helm"
   argo_workflows_version    = "v0.20.1"
