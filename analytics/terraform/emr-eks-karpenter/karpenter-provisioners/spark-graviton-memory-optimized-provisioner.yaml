@@ -81,6 +81,8 @@ spec:
       DISK_ARRAY+=("/dev/$${DEV}")
     done
 
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
     if [ $${DISK_COUNT} -eq 0 ]; then
       echo "No SSD disks available. No further action needed."
     else
@@ -92,6 +94,12 @@ spec:
         mkfs.xfs /dev/md0
         TARGET_DEV=/dev/md0
       fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
+    fi
 
     --BOUNDARY--
 
