@@ -14,9 +14,9 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
+    # aws-ebs-csi-driver = {
+      # service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    # }
     coredns = {
       preserve = true
     }
@@ -105,13 +105,13 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Amazon Managed Prometheus
   #---------------------------------------
-  enable_amazon_prometheus             = true
+  enable_amazon_prometheus             = false
   amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp.prometheus_endpoint
 
   #---------------------------------------
   # Prometheus Server Add-on
   #---------------------------------------
-  enable_prometheus = true
+  enable_prometheus = false
   prometheus_helm_config = {
     name       = "prometheus"
     repository = "https://prometheus-community.github.io/helm-charts"
@@ -160,18 +160,18 @@ module "eks_blueprints_kubernetes_addons" {
 # ---------------------------------------
 # Kubecost
 # ---------------------------------------
-resource "helm_release" "kubecost" {
-  name                = "kubecost"
-  repository          = "oci://public.ecr.aws/kubecost"
-  chart               = "cost-analyzer"
-  version             = "1.97.0"
-  namespace           = "kubecost"
-  create_namespace    = true
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
-  timeout             = "300"
-  values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-}
+# resource "helm_release" "kubecost" {
+#   name                = "kubecost"
+#   repository          = "oci://public.ecr.aws/kubecost"
+#   chart               = "cost-analyzer"
+#   version             = "1.97.0"
+#   namespace           = "kubecost"
+#   create_namespace    = true
+#   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+#   repository_password = data.aws_ecrpublic_authorization_token.token.password
+#   timeout             = "300"
+#   values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+# }
 
 #---------------------------------------------------------------
 # Apache YuniKorn Add-on
