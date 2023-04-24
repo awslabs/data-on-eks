@@ -66,7 +66,7 @@ variable "enable_aws_for_fluentbit" {
 }
 
 variable "enable_grafana" {
-  default     = true
+  default     = false
   description = "Enable Open source Grafana addon"
   type        = bool
 }
