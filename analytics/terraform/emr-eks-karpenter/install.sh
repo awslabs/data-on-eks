@@ -33,21 +33,12 @@ do
 done
 
 # Final apply to catch any remaining resources
-echo "Applying any custom resources..."
-terraform apply -auto-approve -var-file="custom.tfvars"
-custom_apply_output=$(terraform apply -auto-approve -var-file="custom.tfvars" 2>&1)
-if [[ $? -eq 0 && $custom_apply_output == *"Apply complete"* ]]; then
-  echo "SUCCESS: Terraform apply of custom modules completed successfully"
+echo "Applying remaining resources..."
+terraform apply -auto-approve
+apply_output=$(terraform apply -auto-approve 2>&1)
+if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then
+  echo "SUCCESS: Terraform apply of all modules completed successfully"
 else
-  echo "FAILED: Terraform apply of custom modules failed"
+  echo "FAILED: Terraform apply of all modules failed"
   exit 1
 fi
-# echo "Applying remaining resources..."
-# terraform apply -auto-approve
-# apply_output=$(terraform apply -auto-approve 2>&1)
-# if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then
-#   echo "SUCCESS: Terraform apply of all modules completed successfully"
-# else
-#   echo "FAILED: Terraform apply of all modules failed"
-#   exit 1
-# fi

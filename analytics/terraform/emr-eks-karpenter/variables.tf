@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "emr-eks-karpenter3"
+  default     = "emr-eks-karpenter"
   type        = string
 }
 
