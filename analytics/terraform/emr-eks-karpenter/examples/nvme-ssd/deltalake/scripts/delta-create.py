@@ -14,12 +14,12 @@ TABLE_LOCATION=f"{S3_BUCKET_NAME}/delta/delta_emp"
 
 # Define schema for source file
 emp_schema = StructType(
-      [ StructField("id",IntegerType(),True), 
-       StructField("firstname",StringType(),True), 
-       StructField("lastname",StringType(),True), 
+      [ StructField("id",IntegerType(),True),
+       StructField("firstname",StringType(),True),
+       StructField("lastname",StringType(),True),
        StructField("ssn", StringType(), True),
        StructField("salary", IntegerType(), True)])
-       
+
 
 #Create Delta Table with initial file
 df_intial_csv = spark.read.schema(emp_schema)\
@@ -30,7 +30,7 @@ df_intial_csv = spark.read.schema(emp_schema)\
  .write.format("delta")\
  .mode("overwrite")\
  .save(TABLE_LOCATION)
- 
+
 # Generate and register the symlink file in the Glue Data Catalog
 spark.sql(f"""CREATE TABLE IF NOT EXISTS delta_table_emp USING DELTA LOCATION '{TABLE_LOCATION}'""")
 spark.sql("GENERATE symlink_format_manifest FOR TABLE delta_table_emp")
@@ -50,4 +50,3 @@ ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
 STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat'
 OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
 LOCATION '{TABLE_LOCATION}/_symlink_format_manifest/'""")
-
