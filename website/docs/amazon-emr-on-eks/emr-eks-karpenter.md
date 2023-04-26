@@ -832,7 +832,7 @@ These pods will be replaced with the actual Spark Driver and Executor pods once 
 Delta Lake is a leading table format which is used to organize and store data.
 The table format allows us to abstract different data files stored as objects as a singular dataset, a table.
 
-The source format provides a transactional and scalable layer, enabling efficient and easy-to-manage data processing. 
+The source format provides a transactional and scalable layer, enabling efficient and easy-to-manage data processing.
 It offer features such as
 
   - ACID (Atomicity, Consistency, Isolation, and Durability) transactions
@@ -849,21 +849,21 @@ In this example we will load a csv file into a delta lake table format by runnin
 ### Prerequisites:
 
 The necessary EMR on EKS cluster has been provisioned as per instructions in the begining of this page.
-This script requires input parameters which can be extracted from `terraform apply` output values.    
+This script requires input parameters which can be extracted from `terraform apply` output values.  
 Execute the Spark job using the below shell script.
 
 
 ```bash
 Navigate to folder and execute script:
-  
+
 cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 ./execute-deltacreate.sh
-```    
+```  
 
 :::tip
-    This shell script uploads test data and pyspark scripts to S3 bucket. 
+    This shell script uploads test data and pyspark scripts to S3 bucket.
     Specify the S3 bucket where you want to upload the artifacts and create the delta table.
-    
+
     Verify successful job completion by navigating to the EMR on EKS virtual cluster and view the job status.
     For job failures, you can navigate to the S3 bucket emr-on-eks-logs and drill-down to the jobs folder and investigate the spark driver stdout and stderr logs.
 :::
@@ -880,10 +880,10 @@ cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 
 ** Using Athena to query the created delta table. **
 
-Athena, is a serverless query service offered by AWS. 
+Athena, is a serverless query service offered by AWS.
 It requires a symlink file for Delta tables registered to the Glue catalog.
 This is required because Delta Lake uses a specific directory structure to store data and metadata.
-The symlink file serves as a pointer to the latest version of the Delta log file. Without this symlink, 
+The symlink file serves as a pointer to the latest version of the Delta log file. Without this symlink,
 Athena would not be able to determine the correct version of the metadata file to use for a given query
 
   - Navigate to Athena query editor.
@@ -900,10 +900,10 @@ In the second example we will load an updated csv file into into the previously 
 
 ```bash
 Navigate to folder and execute script:
-  
+
 cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 ./execute-deltamerge.sh
-```    
+```  
 
 ** Verify successful job completion. Re-run the query in Athena and verify data is merged (insert and updates) and shown correctly in delta lake table.**
 
