@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-persist
+  namespace: k8-jupyterhub
+spec:
+  capacity:
+    storage: 123Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: ${efs_id}.efs.us-east-1.amazonaws.com
+    path: "/"
