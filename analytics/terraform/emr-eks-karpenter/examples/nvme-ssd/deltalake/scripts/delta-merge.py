@@ -13,9 +13,9 @@ TABLE_LOCATION=f"{S3_BUCKET_NAME}/delta/delta_emp"
 
 # Define schema for file
 emp_schema = StructType(
-      [ StructField("id",IntegerType(),True), 
-       StructField("firstname",StringType(),True), 
-       StructField("lastname",StringType(),True), 
+      [ StructField("id",IntegerType(),True),
+       StructField("firstname",StringType(),True),
+       StructField("lastname",StringType(),True),
        StructField("ssn", StringType(), True),
        StructField("salary", IntegerType(), True)])
 
@@ -55,4 +55,3 @@ deltaTableEmp.alias("emp") \
     }
   ) \
   .execute()
-

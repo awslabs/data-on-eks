@@ -41,7 +41,7 @@ aws emr-containers start-job-run \
   --configuration-overrides '{
     "applicationConfiguration": [
       {
-        "classification": "spark-defaults", 
+        "classification": "spark-defaults",
         "properties": {
           "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension",
           "spark.sql.catalog.spark_catalog":"org.apache.spark.sql.delta.catalog.DeltaCatalog",
@@ -50,6 +50,6 @@ aws emr-containers start-job-run \
           "spark.hadoop.hive.metastore.client.factory.class":"com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory",
           "spark.jars": "https://repo1.maven.org/maven2/io/delta/delta-core_2.12/2.1.0/delta-core_2.12-2.1.0.jar,https://repo1.maven.org/maven2/io/delta/delta-storage/2.1.0/delta-storage-2.1.0.jar"
       }}
-    ], 
+    ],
     "monitoringConfiguration": {
       "s3MonitoringConfiguration": {"logUri": "s3://'$CLOUDWATCH_LOG_GROUP'/elasticmapreduce/emr-containers"}}}'
