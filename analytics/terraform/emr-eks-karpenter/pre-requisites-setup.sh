@@ -14,9 +14,9 @@ aws configure set default.region ${AWS_REGION}
 aws configure get default.region
 
 # don't need this line once the prev lab EMR on EKS is up
-export S3BUCKET=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='CODEBUCKET'].OutputValue" --output text)
-echo "export S3BUCKET=${S3BUCKET}" | tee -a ~/.bash_profile
-source ~/.bash_profile
+# export S3BUCKET=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='CODEBUCKET'].OutputValue" --output text)
+# echo "export S3BUCKET=${S3BUCKET}" | tee -a ~/.bash_profile
+# source ~/.bash_profile
 
 
 #2. Install Terraform v1.2.8
