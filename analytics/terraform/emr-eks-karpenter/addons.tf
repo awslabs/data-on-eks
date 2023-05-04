@@ -94,7 +94,7 @@ module "eks_blueprints_kubernetes_addons" {
     name       = "aws-for-fluent-bit"
     chart      = "aws-for-fluent-bit"
     repository = "https://aws.github.io/eks-charts"
-    version    = "0.1.21"
+    version    = "0.1.24"
     namespace  = "aws-for-fluent-bit"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = var.region,
@@ -152,7 +152,7 @@ resource "helm_release" "kubecost" {
   name                = "kubecost"
   repository          = "oci://public.ecr.aws/kubecost"
   chart               = "cost-analyzer"
-  version             = "1.97.0"
+  version             = "1.102.2"
   namespace           = "kubecost"
   create_namespace    = true
   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
