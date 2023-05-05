@@ -16,6 +16,7 @@ module "eks_blueprints_kubernetes_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+      preserve                 = true
     }
     coredns = {
       preserve = true
@@ -88,7 +89,7 @@ module "eks_blueprints_kubernetes_addons" {
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
   enable_aws_for_fluentbit                 = var.enable_aws_for_fluentbit
-  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Add-on creates this log group
+  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # TODO: Add-on creates this log group, this doesn't get deleted automatically....
   aws_for_fluentbit_cw_log_group_retention = 30
   aws_for_fluentbit_helm_config = {
     name       = "aws-for-fluent-bit"
