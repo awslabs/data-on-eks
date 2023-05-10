@@ -20,6 +20,7 @@ resource "random_password" "master_password" {
 }
 
 resource "aws_opensearch_domain" "es" {
+  depends_on = [aws_iam_service_linked_role.es]
   domain_name = "${var.prefix}-es-domain"
   engine_version = "OpenSearch_1.1"
   cluster_config {
@@ -202,6 +203,7 @@ resource "aws_db_instance" "datahub_rds" {
 
   username = "admin"
   password = random_password.mysql_password.result
+  skip_final_snapshot = true
 }
 
 resource "kubernetes_namespace" "datahub" {

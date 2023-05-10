@@ -6,6 +6,7 @@ read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
 targets=(
+  "module.datahub"
   "module.eks_blueprints_kubernetes_addons"
   "module.eks"
 )
