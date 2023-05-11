@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.24"
+  default     = "1.25"
   type        = string
 }
 
@@ -34,12 +34,11 @@ variable "private_subnets" {
   type        = list(string)
 }
 
-variable "eks_cluster_domain" {
+variable "cognito_domain" {
+  description = "URL of the jupyter notebook."
   type        = string
-  description = "A Route53 Public Hosted Zone configured in the account where you are deploying this example. E.g. example.com"
-  default     = ""
+  default     = "cog-jupyterhub"
 }
-
 
 variable "jupyterhub_username" {
   type        = string

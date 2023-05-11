@@ -5,7 +5,7 @@ module "eks_blueprints_kubernetes_addons" {
   eks_cluster_endpoint = module.eks.cluster_endpoint
   eks_oidc_provider    = module.eks.oidc_provider
   eks_cluster_version  = module.eks.cluster_version
-  eks_cluster_domain   = var.eks_cluster_domain
+  
 
   # Wait on the node group(s) before provisioning addons
   data_plane_wait_arn = join(",", [for group in module.eks.eks_managed_node_groups : group.node_group_arn])
@@ -29,6 +29,12 @@ module "eks_blueprints_kubernetes_addons" {
   create_namespace = true
   values = [templatefile("${path.module}/helm-values/jupyter-values.yaml", {
          ssl_cert_arn   = data.aws_acm_certificate.issued.arn
+         jupyterdomain  = "https://${var.acm_certificate_domain}/hub/oauth_callback"
+         authorize_url  = "https://${local.cog_domain_name}.auth.${local.region}.amazoncognito.com/oauth2/authorize"
+         token_url      = "https://${local.cog_domain_name}.auth.${local.region}.amazoncognito.com/oauth2/token"
+         userdata_url   = "https://${local.cog_domain_name}.auth.${local.region}.amazoncognito.com/oauth2/userInfo"
+         client_id      =  aws_cognito_user_pool_client.user_pool_client.id
+         client_secret  =  aws_cognito_user_pool_client.user_pool_client.client_secret
     })]
   }
   
@@ -81,39 +87,40 @@ resource "kubectl_manifest" "pvc" {
     })
   }
   
+#---------------------------------------------------------------
+# Cognito pool, domain and client creation. 
+# This can be used 
+# Auth integration later.
+#---------------------------------------------------------------
 
-# #---------------------------------------------------------------
-# # Cognito pool, domain and client creation. T
-# # This can be used 
-# # Auth integration later.
-# #---------------------------------------------------------------
-
-# resource "aws_cognito_user_pool" "pool" {
-#   name                       = "userpool"
+resource "aws_cognito_user_pool" "pool" {
+  name                       = "userpool"
   
-#   username_attributes = ["email"]
-#   auto_verified_attributes = ["email"]
+  username_attributes = ["email"]
+  auto_verified_attributes = ["email"]
   
-#   password_policy {
-#     minimum_length    = 6
-#   }
-# }
+  password_policy {
+    minimum_length    = 6
+  }
+}
     
   
-# resource "aws_cognito_user_pool_domain" "domain" {
-#   domain       = local.name
-#   user_pool_id = aws_cognito_user_pool.pool.id
-# }
+resource "aws_cognito_user_pool_domain" "domain" {
+  domain       = local.cog_domain_name
+  user_pool_id = aws_cognito_user_pool.pool.id
+}
 
-# resource "aws_cognito_user_pool_client" "user_pool_client" {
-#   name = "jupyter-client"
-#   user_pool_id = aws_cognito_user_pool.pool.id
-#   callback_urls = ["https://${data.kubernetes_service.elb.status[0].load_balancer[0].ingress[0].hostname}"]
-#   allowed_oauth_flows_user_pool_client = true
-#   allowed_oauth_flows = ["code"]
-#   allowed_oauth_scopes = ["openid","email"]
-#   supported_identity_providers = [
-#     "COGNITO"
-#   ]
-#   depends_on = [helm_release.jupyterhub]
-# }
+resource "aws_cognito_user_pool_client" "user_pool_client" {
+  name = "jupyter-client"
+  callback_urls                        = ["https://${var.acm_certificate_domain}/hub/oauth_callback"]
+  user_pool_id                         = aws_cognito_user_pool.pool.id
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid","email"]
+  generate_secret                      = true
+  supported_identity_providers = [
+    "COGNITO"
+  ]
+}
+
+
