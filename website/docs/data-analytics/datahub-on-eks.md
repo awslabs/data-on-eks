@@ -20,7 +20,7 @@ DataHub also depends on many underlying infrastructure and services to function,
 3. For search engine, this blueprint uses Amazon OpenSearch service to provide fast and scalable search capabilities for the metadata.   
 4. This blueprint deployes a Schema Registry service on EKS for DataHub.  You may also choose to use Glue Schema Registry (https://docs.aws.amazon.com/glue/latest/dg/schema-registry.html) instead.  Support for Glue Schema Registry will be included in future release of this blueprint.
 
-![img.png](img/datahub-arch.png)
+![img.jpg](img/datahub-arch.jpg)
 
 ## Deploying the Solution
 
@@ -75,13 +75,10 @@ chmod +x install.sh
 `install.sh` script runs `terraform apply -target` for each module in order.  The module dependencies are configured so they will be applied in the right sequence when you just run `terraform apply`.  However, provisioning addons and MSK, OpenSearch, and RDS instances often take longer than 15 minutes, causing error when provisioning kubernetes and helm resources/modules afterwards due to expired auth token.  So if you use `terraform apply` instead running `install.sh`, you may need to run it multiple times and terraform will resume the failed resource with a new token each time and complete the deployment eventually.
 :::
 
-### Customize
-You may change the values in variables.tf 
 
-## Access DataHub UI
+### Verify Deployment
 
-After the deployment completes, we can try the DataHub UI and import metadata from a few sample datasources.  
-
+After the deployment completes, we can access the DataHub UI and import metadata from a few sample datasources.  
 
 ```sh
 kubectl get ingress datahub-datahub-frontend -n datahub
