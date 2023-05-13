@@ -13,7 +13,16 @@ datahub-frontend:
     tag: "v0.8.45"
   # Set up ingress to expose react front-end
   ingress:
-    enabled: false
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: instance
+      alb.ingress.kubernetes.io/inbound-cidrs: 0.0.0.0/0
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    hosts:
+      - paths:
+          - /*
 
 acryl-datahub-actions:
   enabled: true

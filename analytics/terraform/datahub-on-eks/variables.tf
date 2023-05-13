@@ -59,3 +59,9 @@ variable "enable_aws_for_fluentbit" {
   description = "Enable Fluentbit addon"
   type        = bool
 }
+
+variable "create_iam_service_linked_role_es" {
+  type        = bool
+  default     = true
+  description = "Whether to create `AWSServiceRoleForAmazonOpensearchService` service-linked role. Set it to `false` if the role already exists"
+}

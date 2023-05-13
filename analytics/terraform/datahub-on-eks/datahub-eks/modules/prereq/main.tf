@@ -1,3 +1,6 @@
+#---------------------------------------------------------------
+# OpenSearch For DataHub metadata
+#---------------------------------------------------------------
 resource "aws_security_group" "es" {
   name = "${var.prefix}-es-sg"
   description = "Allow inbound traffic to ElasticSearch from VPC CIDR"
@@ -12,11 +15,16 @@ resource "aws_security_group" "es" {
 
 resource "aws_iam_service_linked_role" "es" {
   aws_service_name = "opensearchservice.amazonaws.com"
+  count            = var.create_iam_service_linked_role_es ? 1 : 0
 }
 
 resource "random_password" "master_password" {
   length  = 16
   special = true
+  min_upper = 1
+  min_lower = 1
+  min_numeric = 1
+  min_special = 1
 }
 
 resource "aws_opensearch_domain" "es" {
@@ -83,6 +91,10 @@ resource "aws_opensearch_domain_policy" "main" {
 POLICIES
 }
 
+#---------------------------------------------------------------
+# MSK For DataHub
+#---------------------------------------------------------------
+
 resource "aws_security_group" "msk" {
   name = "${var.prefix}-msk-sg"
   description = "Allow inbound traffic to MSK from VPC CIDR"
@@ -99,6 +111,8 @@ resource "aws_kms_key" "kms" {
   description =  "${var.prefix}-msk-kms-key"
 }
 
+# Allow auto-create-topics
+
 resource "aws_msk_configuration" "mskconf" {
   kafka_versions = ["2.8.1"]
   name           = "mskconf"
@@ -112,6 +126,8 @@ PROPERTIES
 resource "aws_cloudwatch_log_group" "msklg" {
   name = "msk_broker_logs"
 }
+
+# Create cluster with smallest instance
 
 resource "aws_msk_cluster" "msk" {
   cluster_name           = "${var.prefix}-msk"
@@ -157,6 +173,9 @@ resource "aws_msk_cluster" "msk" {
   }
 }
 
+#---------------------------------------------------------------
+# RDS MySQL for DataHub metadata
+#---------------------------------------------------------------
 resource "aws_security_group" "rds" {
   name = "${var.prefix}-rds-sg"
   description = "Allow inbound traffic to MSK from VPC CIDR"
@@ -180,13 +199,16 @@ resource "aws_db_subnet_group" "rds" {
 resource "random_password" "mysql_password" {
   length  = 16
   special = true
+  min_upper = 1
+  min_lower = 1
+  min_numeric = 1
+  min_special = 1
 }
 
 resource "aws_db_instance" "datahub_rds" {
   
   identifier = "${var.prefix}-mysql"
 
-  # All available versions: http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_MySQL.html#MySQL.Concepts.VersionMgmt
   engine               = "mysql"
   engine_version       = "8.0"
   instance_class       = "db.m6g.large"
@@ -206,42 +228,3 @@ resource "aws_db_instance" "datahub_rds" {
   skip_final_snapshot = true
 }
 
-resource "kubernetes_namespace" "datahub" {
-  metadata {
-    annotations = {
-      name = local.datahub_namespace
-    }
-
-    labels = {
-      mylabel = local.datahub_namespace
-    }
-
-    name = local.datahub_namespace
-  }
-}
-
-resource "kubernetes_secret" "datahub_es_secret" {
-  depends_on = [kubernetes_namespace.datahub, random_password.master_password]
-  metadata {
-    name = "elasticsearch-secrets"
-    namespace = local.datahub_namespace
-  }
-
-  data = {
-    elasticsearch_password= random_password.master_password.result
-  }
-
-}
-
-resource "kubernetes_secret" "datahub_rds_secret" {
-  depends_on = [kubernetes_namespace.datahub, random_password.mysql_password]
-  metadata {
-    name = "mysql-secrets"
-    namespace = local.datahub_namespace
-  }
-
-  data = {
-    mysql_root_password = random_password.mysql_password.result
-  }
-
-}

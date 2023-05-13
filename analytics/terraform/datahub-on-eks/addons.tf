@@ -62,6 +62,11 @@ module "eks_blueprints_kubernetes_addons" {
     })]
   }
 
+  #---------------------------------------
+  # ALB Controller
+  #---------------------------------------
+  enable_aws_load_balancer_controller = true
+  
 
   #---------------------------------------
   # CloudWatch metrics for EKS
@@ -154,11 +159,3 @@ module "vpc_cni_irsa" {
   tags = local.tags
 }
 
-module "datahub" {
-  depends_on            = [module.eks, module.eks_blueprints_kubernetes_addons]
-  source                = "./datahub-eks"
-  prefix                = local.name
-  vpc_id                = module.vpc.vpc_id
-  vpc_cidr              = local.vpc_cidr
-  vpc_private_subnets   = module.vpc.private_subnets
-}

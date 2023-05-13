@@ -1,3 +1,4 @@
+
 locals {
   datahub_name       = "datahub"
   prereq_name        = "datahub-prerequisites"
@@ -10,27 +11,77 @@ locals {
 
   datahub_merged_values_yaml = yamlencode(merge(
     yamldecode(templatefile("${path.module}/values/datahub_values.yaml", { 
-        es_endpoint = aws_opensearch_domain.es.endpoint
-        msk_bootstrap_brokers = aws_msk_cluster.msk.bootstrap_brokers
-        msk_zookeeper_connect_string = aws_msk_cluster.msk.zookeeper_connect_string
+        es_endpoint = module.prereq.es_endpoint
+        msk_bootstrap_brokers = module.prereq.msk_bootstrap_brokers
+        msk_zookeeper_connect_string = module.prereq.msk_zookeeper_connect_string
         msk_partitions = length(var.vpc_private_subnets)
-        datahub_rds_address = aws_db_instance.datahub_rds.address
-        datahub_rds_endpoint = aws_db_instance.datahub_rds.endpoint
+        datahub_rds_address = module.prereq.rds_address
+        datahub_rds_endpoint = module.prereq.rds_endpoint
     })),
     try(yamldecode(var.datahub_helm_config.values[0]), {})
   ))
   
   prereq_merged_values_yaml = yamlencode(merge(
     yamldecode(templatefile("${path.module}/values/prereq_values.yaml", { 
-        msk_bootstrap_brokers = aws_msk_cluster.msk.bootstrap_brokers
+        msk_bootstrap_brokers = module.prereq.msk_bootstrap_brokers
     })),
     try(yamldecode(var.prereq_helm_config.values[0]), {})
   ))
   
 }
 
+
+
+module "prereq" {
+  source = "./modules/prereq"
+  
+  prefix                = var.prefix
+  vpc_id                = var.vpc_id
+  vpc_cidr              = var.vpc_cidr
+  vpc_private_subnets   = var.vpc_private_subnets
+}
+
+resource "kubernetes_namespace" "datahub" {
+  metadata {
+    annotations = {
+      name = local.datahub_namespace
+    }
+
+    labels = {
+      mylabel = local.datahub_namespace
+    }
+
+    name = local.datahub_namespace
+  }
+}
+
+resource "kubernetes_secret" "datahub_es_secret" {
+  depends_on = [kubernetes_namespace.datahub]
+  metadata {
+    name = "elasticsearch-secrets"
+    namespace = local.datahub_namespace
+  }
+
+  data = {
+    elasticsearch_password= module.prereq.es_password
+  }
+
+}
+
+resource "kubernetes_secret" "datahub_rds_secret" {
+  depends_on = [kubernetes_namespace.datahub]
+  metadata {
+    name = "mysql-secrets"
+    namespace = local.datahub_namespace
+  }
+
+  data = {
+    mysql_root_password = module.prereq.rds_password
+  }
+}
+
 resource "helm_release" "prereq" {
-  depends_on                 = [kubernetes_secret.datahub_es_secret, kubernetes_secret.datahub_rds_secret]
+  depends_on                 = [module.prereq]
 
   name                       = try(var.prereq_helm_config["name"], local.prereq_name)
   repository                 = try(var.prereq_helm_config["repository"], local.datahub_repository)

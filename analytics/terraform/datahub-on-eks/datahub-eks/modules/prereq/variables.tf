@@ -1,15 +1,3 @@
-variable "datahub_helm_config" {
-  description = "Datahub Helm Chart config"
-  type        = any
-  default     = {}
-}
-
-variable "prereq_helm_config" {
-  description = "Datahub PreReq Helm Chart config"
-  type        = any
-  default     = {}
-}
-
 
 variable "prefix" {
   description = "local name"
