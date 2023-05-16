@@ -152,19 +152,19 @@ eksctl create iamserviceaccount \
 
 Next, we will grant permissions to Amazon EKS add-ons to install ADOT and then we will installing the ADOT Add-on :
 
-```
-`kubectl apply -f https://amazon-eks.s3.amazonaws.com/docs/addons-otel-permissions.yaml
-``aws eks create``-``addon \`
-`  ``--``addon``-``name adot \`
-`  ``--``cluster``-``name $KFL_EKS_CLUSTER                                                          `
+```bash
+kubectl apply -f https://amazon-eks.s3.amazonaws.com/docs/addons-otel-permissions.yaml
+aws eks create-addon \
+  --addon-name adot \
+  --cluster-name $KFL_EKS_CLUSTER
 ```
 
 Now, wait for 30 seconds and execute the following command. You should see `"ACTIVE"` as result indicating that the add-on is installed successfully.
 
-```
-`aws eks describe``-``addon \`
-`  ``--``addon``-``name adot \`
-`  ``--``cluster``-``name $KFL_EKS_CLUSTER  ``|`` jq ``.``addon``.``status`
+```bash
+aws eks describe-addon \
+  --addon-name adot \
+  --cluster-name $KFL_EKS_CLUSTER  | jq .addon.status
 ```
 
 Next, we will Install the OTel Collector Custom Resource Definition(CRD) and then we will configure the ADOT collector to push metrics to Amazon Managed Service for Prometheus endpoint.
