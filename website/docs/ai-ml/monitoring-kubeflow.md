@@ -38,7 +38,7 @@ export AWS_RELEASE_VERSION=v1.7.0-aws-b1.0.1
 
 Next, let's start with installing prerequisites such as [AWS CLI version 2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html), [eksctl](https://eksctl.io/introduction/#installation), [kubectl](https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html), [python3.8](https://www.python.org/downloads/release/python-389/), [yq](https://mikefarah.gitbook.io/yq/), [jq](https://stedolan.github.io/jq/download/), [awscurl,](https://github.com/okigan/awscurl)[kustomize version 5+](https://kubectl.docs.kubernetes.io/installation/kustomize/) required to run the demonstration. Clone the `awslabs/kubeflow-manifests` [repo](https://github.com/awslabs/kubeflow-manifests) and checkout a release. Substitute the value for `AWS_RELEASE_VERSION` with `v1.7.0-aws-b1.0.1` and run the following command. Read more about [releases and versioning](https://github.com/awslabs/kubeflow-manifests/blob/v1.3-branch/distributions/aws/examples/README.md#releases-and-versioning) policy to determine the right version for you for installing Kubeflow.
 
-```
+```bash
 git clone https://github.com/awslabs/kubeflow-manifests.git && cd kubeflow-manifests
 git checkout ${AWS_RELEASE_VERSION}
 git clone --branch ${KUBEFLOW_RELEASE_VERSION} https://github.com/kubeflow/manifests.git upstream
@@ -49,26 +49,26 @@ git clone --branch ${KUBEFLOW_RELEASE_VERSION} https://github.com/kubeflow/manif
 
 Let’s create an Amazon EKS cluster using `eksctl`:
 
-```
-`## eksctl Cluster creation command for EKS cluster.`
-`eksctl create cluster \`
-`  ``--``name $KFL_EKS_CLUSTER`` \`
-`  ``--``version $KFL_EKS_CLUSTER_V`` \`
-`  ``--``region $KFL_AWS_REGION`` \`
-`  ``--``nodegroup``-``name linux``-``nodes \`
-`  ``--``node``-``type m5``.``xlarge \`
-`  ``--``nodes ``5`` \`
-`  ``--``nodes``-``min ``1`` \`
-`  ``--``nodes``-``max ``10`` \`
-`  ``--``managed \`
-`  ``--``with``-``oidc`
+```bash
+## eksctl Cluster creation command for EKS cluster.
+eksctl create cluster \
+  --name $KFL_EKS_CLUSTER \
+  --version $KFL_EKS_CLUSTER_V \
+  --region $KFL_AWS_REGION \
+  --nodegroup-name linux-nodes \
+  --node-type m5.xlarge \
+  --nodes 5 \
+  --nodes-min 1 \
+  --nodes-max 10 \
+  --managed \
+  --with-oidc
 ```
 
 ### Installing **Amazon Elastic Block Store (EBS) Container Storage Interface Driver**
 
 A [Container Storage Interface (CSI) driver](https://kubernetes.io/blog/2019/01/15/container-storage-interface-ga/) is needed in order to get your `PersisentVolumeClaims` served by a `PersistentVolume`. Please run the following commands to create Amazon EBS CSI driver IAM role and add EBS CSI add-on :
 
-```
+```bash
 eksctl create iamserviceaccount \
   --name ebs-csi-controller-sa \
   --namespace kube-system \
@@ -89,7 +89,7 @@ eksctl create addon \
 
 You can install all Kubeflow official components (residing under `apps`) and all common services (residing under `common`) using the following command:
 
-```
+```bash
 make deploy-kubeflow INSTALLATION_OPTION=kustomize DEPLOYMENT_OPTION=vanilla
 ```
 
@@ -97,7 +97,7 @@ It takes around 5 minutes for all components to get installed. Once everything i
 
 After installation, it will take some time for all Pods to become ready. Make sure all Pods are ready before trying to connect, otherwise you might get unexpected errors. To check that all Kubeflow-related Pods are ready, use the following command:
 
-```
+```bash
 kubectl get pods -A -o json | jq -r '.items[] | select(.metadata.namespace=="cert-manager" or "istio-system" or "auth" or "knative-eventing" or "knative-serving" or "kubeflow" or "kubeflow-user-example-com") | .metadata.namespace + "|" + .metadata.name + "|" + .status.phase'
 ```
 
@@ -105,7 +105,7 @@ kubectl get pods -A -o json | jq -r '.items[] | select(.metadata.namespace=="cer
 
 Kubeflow can be accessed via port-forward and this enables you to get started quickly without imposing any requirements on your environment. Run the following to port-forward Istio's Ingress-Gateway to local port `8080`:
 
-```
+```bash
 kubectl port-forward svc/istio-ingressgateway -n istio-system 8080:80
 ```
 
