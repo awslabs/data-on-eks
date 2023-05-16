@@ -8,7 +8,7 @@ As part of day 2 operations, customers want to monitor their Infrastructure, Ama
 
 ### **Architecture**
 
-The following diagram shows the complete setup that we will walk through in this post :
+The following diagram shows the complete setup that we will walk through in this walk through:
 
 ![Mon-Kubeflow](img/mon-kubeflow-1.jpg)
 
@@ -23,7 +23,7 @@ You will need the following to complete the steps in this post:
 
 First, Let’s start by setting a few environment variables:
 
-```
+```bash
 export KFL_EKS_CLUSTER=KFL-EKS-CLUSTER
 export KFL_EKS_CLUSTER_V=1.25
 export KFL_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
@@ -39,7 +39,6 @@ export AWS_RELEASE_VERSION=v1.7.0-aws-b1.0.1
 Next, let's start with installing prerequisites such as [AWS CLI version 2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html), [eksctl](https://eksctl.io/introduction/#installation), [kubectl](https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html), [python3.8](https://www.python.org/downloads/release/python-389/), [yq](https://mikefarah.gitbook.io/yq/), [jq](https://stedolan.github.io/jq/download/), [awscurl,](https://github.com/okigan/awscurl)[kustomize version 5+](https://kubectl.docs.kubernetes.io/installation/kustomize/) required to run the demonstration. Clone the `awslabs/kubeflow-manifests` [repo](https://github.com/awslabs/kubeflow-manifests) and checkout a release. Substitute the value for `AWS_RELEASE_VERSION` with `v1.7.0-aws-b1.0.1` and run the following command. Read more about [releases and versioning](https://github.com/awslabs/kubeflow-manifests/blob/v1.3-branch/distributions/aws/examples/README.md#releases-and-versioning) policy to determine the right version for you for installing Kubeflow.
 
 ```
-
 git clone https://github.com/awslabs/kubeflow-manifests.git && cd kubeflow-manifests
 git checkout ${AWS_RELEASE_VERSION}
 git clone --branch ${KUBEFLOW_RELEASE_VERSION} https://github.com/kubeflow/manifests.git upstream
