@@ -1,6 +1,6 @@
 ---
-sidebar_position: 2
-sidebar_label: Monitoring ML Workflows with Kubeflow on EKS
+sidebar_position: 4
+sidebar_label: Observability for Kubeflow on EKS
 ---
 import CollapsibleContent from '../../src/components/CollapsibleContent';
 
