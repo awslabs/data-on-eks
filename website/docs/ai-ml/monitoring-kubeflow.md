@@ -169,50 +169,50 @@ aws eks describe-addon \
 
 Next, we will Install the OTel Collector Custom Resource Definition(CRD) and then we will configure the ADOT collector to push metrics to Amazon Managed Service for Prometheus endpoint.
 
-```
-`KFL_WORKSPACE_ID``=``$``(``aws amp list``-``workspaces \`
-`  ``--``alias`` $KFL_AMP_WORKSPACE_NAME \
-  ``--``region``=``$``{KFL_AWS_REGION``}`` \
-  ``--``query ``'workspaces[0].[workspaceId]'`` \
-  ``--``output text``)`
-`KFL_AMP_ENDPOINT_URL``=``$``(``aws amp describe``-``workspace \`
-`  ``--``workspace``-``id $KFL_WORKSPACE_ID ``|`` jq ``.``workspace``.``prometheusEndpoint ``-``r``)`
-`KFL_AMP_REMOTE_WRITE_URL``=``$``{``KFL_``AMP_ENDPOINT_URL``}``api``/``v1``/``remote_write`
-`curl ``-``O https``:``//raw.githubusercontent.com/aws-samples/one-observability-demo/main/PetAdoptions/cdk/pet_stack/resources/otel-collector-prometheus.yaml`
-`sed ``-``i ``-``e s``/``AWS_REGION``/``$KFL_AWS_REGION``/``g otel``-``collector``-``prometheus``.``yaml`
-`sed ``-``i ``-``e s``^``AMP_WORKSPACE_URL``^``$KFL_AMP_REMOTE_WRITE_URL``^``g otel``-``collector``-``prometheus``.``yaml`
-`kubectl apply ``-``f ``./``otel``-``collector``-``prometheus``.``yaml`
+```bash
+KFL_WORKSPACE_ID=$(aws amp list-workspaces \
+  --alias $KFL_AMP_WORKSPACE_NAME \
+  --region=${KFL_AWS_REGION} \
+  --query 'workspaces[0].[workspaceId]' \
+  --output text)
+KFL_AMP_ENDPOINT_URL=$(aws amp describe-workspace \
+  --workspace-id $KFL_WORKSPACE_ID | jq .workspace.prometheusEndpoint -r)
+KFL_AMP_REMOTE_WRITE_URL=${KFL_AMP_ENDPOINT_URL}api/v1/remote_write
+curl -O https://raw.githubusercontent.com/aws-samples/one-observability-demo/main/PetAdoptions/cdk/pet_stack/resources/otel-collector-prometheus.yaml
+sed -i -e s/AWS_REGION/$KFL_AWS_REGION/g otel-collector-prometheus.yaml
+sed -i -e s^AMP_WORKSPACE_URL^$KFL_AMP_REMOTE_WRITE_URL^g otel-collector-prometheus.yaml
+kubectl apply -f ./otel-collector-prometheus.yaml
 ```
 
 Now, lets verify that the ADOT collector is running and you should see a result like the one below showing that the collector has been successfully installed and being ready.
 
-```
+```bash
 kubectl get all -n prometheus
 ```
 
-```
-`NAME                                           READY   STATUS    RESTARTS   ``AGEpod``/``observability``-``collector``-``5774bbc68d``-``7nj54``   ``1``/``1``     ``Running``   ``0``          ``59s`
+```bash
+NAME                                           READY   STATUS    RESTARTS   AGEpod/observability-collector-5774bbc68d-7nj54   1/1     Running   0          59s
 
-`NAME                                         TYPE        CLUSTER``-``IP     EXTERNAL``-``IP   PORT``(``S``)``    AGE`
-`service``/``observability``-``collector``-``monitoring   ``ClusterIP``   ``10.100``.``114.1``   ``<none>``        ``8888``/``TCP   ``59s`
+NAME                                         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/observability-collector-monitoring   ClusterIP   10.100.114.1   <none>        8888/TCP   59s
 
-`NAME                                      READY   UP``-``TO``-``DATE   AVAILABLE   AGE`
-`deployment``.``apps``/``observability``-``collector   ``1``/``1``     ``1``            ``1``           ``59s`
+NAME                                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/observability-collector   1/1     1            1           59s
 
-`NAME                                                 DESIRED   CURRENT   READY   AGE`
-`replicaset``.``apps``/``observability``-``collector``-``5774bbc68d``   ``1``         ``1``         ``1``       ``59s`
+NAME                                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/observability-collector-5774bbc68d   1         1         1       59s
 ```
 
 Now you have successfully deployed the ADOT Collector to collect metrics from the EKS cluster and send it to the Amazon Managed Service for Prometheus workspace you created. To test whether Amazon Managed Service for Prometheus received the metrics, use `awscurl`. This tool enables you to send HTTP requests through the command line with AWS Sigv4 authentication, so you must have AWS credentials set up locally with the correct permissions to query from Amazon Managed Service for Prometheus. For instructions on installing awscurl, see [awscurl](https://github.com/okigan/awscurl).
 
-```
-`awscurl ``--``service``=``"aps"`` \`
-` ``--``region``=``"$KFL_AWS_REGION"`` ``"https://aps-workspaces.$KFL_AWS_REGION.amazonaws.com/workspaces/$KFL_WORKSPACE_ID/api/v1/query?query=istio_requests_total``"`
+```bash
+awscurl --service="aps" \
+ --region="$KFL_AWS_REGION" "https://aps-workspaces.$KFL_AWS_REGION.amazonaws.com/workspaces/$KFL_WORKSPACE_ID/api/v1/query?query=istio_requests_total"
 ```
 
 Your results should look similar to shown below:
 
-```
+```json
 {
     "status": "success",
     "data": {
@@ -257,7 +257,7 @@ Now that we have configured Amazon Managed Grafana with the Prometheus data sour
 
 Before we create the notebook to use Kubeflow Pipelines SDK, we have to supply a token so that the notebook can authenticate with the Kubeflow Pipelines API. To do so, run the following command to create a Pod to mount a token volume:
 
-```
+```yaml
 cat <<EOF | kubectl apply -f -
 apiVersion: kubeflow.org/v1alpha1
 kind: PodDefault
@@ -290,8 +290,7 @@ EOF
 Now, access Kubeflow dashboard as described in the previous sections, via port-forwarding. Select `Notebooks`, and create a new CPU-based notebook, using the following configurations:
 
 * name: `ml-training-notebook`
-* docker image: `kubeflow-on-aws/notebook-servers/jupyter-
-    pytorch:2.0.0-cpu-py310-ubuntu20.04-ec2-v1.0`
+* docker image: `kubeflow-on-aws/notebook-servers/jupyter-pytorch:2.0.0-cpu-py310-ubuntu20.04-ec2-v1.0`
 * Requested CPUs: `1`
 * Requested memory in Gi: `5`
 * Advanced Options → Configurations: `Allow access to Kubeflow Pipelines`  (This configuration is the token we have generated above)
@@ -302,11 +301,11 @@ With all other configurations as defaults, you should be able to see the noteboo
 
 You can also verify that the notebook is created by verifying the Kubernetes resources being created:
 
-```
+```bash
 kubectl get pods -n kubeflow-user-example-com --field-selector=status.phase==Running
 ```
 
-```
+```bash
 NAME                                               READY   STATUS     RESTARTS   AGE
 ml-pipeline-ui-artifact-5b7794c7b5-5hkqf           2/2     Running   0          100m
 ml-pipeline-visualizationserver-85c6d6cc9f-vs24x   2/2     Running   0          100m
@@ -344,11 +343,11 @@ As we configure workflows with Kubeflow, alerting is a mechanism we can employ t
 
 Use the following commands to clean up the created AWS resources for this demonstration:
 
-```
-`# Clean up ADOT Collector and Prometheus.`
-`kubectl ``delete`` ``-``f https``:``//amazon-eks.s3.amazonaws.com/docs/addons-otel-permissions.yaml
+```bash
+# Clean up ADOT Collector and Prometheus.
+kubectl delete -f https://amazon-eks.s3.amazonaws.com/docs/addons-otel-permissions.yaml
 kubectl delete -f ./otel-collector-prometheus.yaml
-rm -rf ./otel-collector-prometheus.yaml`
+rm -rf ./otel-collector-prometheus.yaml
 
 aws eks delete-addon \
     --addon-name adot \
@@ -380,7 +379,7 @@ aws eks delete-addon \
     --cluster-name $KFL_EKS_CLUSTER
 
 # Cleaning up Amazon EKS Cluster.
-`eksctl ``delete`` cluster ``--``region $AWS_REGION ``--``name ``$KFL_EKS_CLUSTER`
+eksctl delete cluster --region $AWS_REGION --name $KFL_EKS_CLUSTER
 ```
 
 Finally navigate to Amazon Managed Grafana console to delete the created Grafana workspace.
