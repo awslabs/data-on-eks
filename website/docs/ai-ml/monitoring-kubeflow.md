@@ -8,7 +8,7 @@ As part of day 2 operations, customers want to monitor their Infrastructure, Ama
 
 ### **Architecture**
 
-The following diagram shows the complete setup that we will walk through in this blog post :
+The following diagram shows the complete setup that we will walk through in this post :
 
 ![Mon-Kubeflow](img/mon-kubeflow-1.jpg)
 
