@@ -390,7 +390,7 @@ eksctl delete cluster --region $AWS_REGION --name $KFL_EKS_CLUSTER
 
 Finally navigate to Amazon Managed Grafana console to delete the created Grafana workspace.
 
-## Conclusion :
+## Conclusion
 
 This post demonstrated the detailed steps on how you can setup Amazon EKS cluster with Kubeflow, Amazon Managed Service for Prometheus and Amazon Managed Grafana to monitor your Kubeflow machine learning workflows.  
 
