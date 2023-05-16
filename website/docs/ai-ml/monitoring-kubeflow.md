@@ -122,10 +122,10 @@ A workspace in [Amazon Managed Service for Prometheus](https://aws.amazon.com/pr
 
 Please open a new terminal window and setup all environment variables as you did in start of the demonstration. Please use the below command to create an Amazon Managed Service for Prometheus workspace.
 
-```
-`aws amp create``-``workspace \`
-`  ``--``alias`` $KFL_AMP_WORKSPACE_NAME \`
-`  ``--``region $KFL_AWS_REGION`
+```bash
+aws amp create-workspace \
+  --alias $KFL_AMP_WORKSPACE_NAME \
+  --region $KFL_AWS_REGION
 ```
 
 The Amazon Managed Service for Prometheus  workspace should be created in just a few seconds.
@@ -140,14 +140,14 @@ One of the easiest ways to collect Prometheus metrics from Amazon EKS workloads 
 
 The best way to provision permissions for resources running on EKS clusters is through [IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html). The command below will use AWS CloudFormation to create a K8s namespace called `prometheus`, create a K8s Service Account called `amp-iamproxy-ingest-role`, create a new IAM Role with the `AmazonPrometheusRemoteWriteAccess` policy attached to it. It will also create a trust policy between the EKS cluster's IAM OpenID Connect Provider (OIDC) and the created Service Account. See [this link](https://eksctl.io/usage/iamserviceaccounts/) to learn more about this command.
 
-```
-`kubectl create ``namespace ``prometheus`
-`eksctl create iamserviceaccount \`
-`  ``--``name amp``-``iamproxy``-``ingest``-``role \`
-`  ``--``namespace`` prometheus \`
-`  ``--``cluster $KFL_EKS_CLUSTER`` \`
-`  ``--``attach``-``policy``-``arn arn``:``aws``:``iam``::``aws``:``policy``/``AmazonPrometheusRemoteWriteAccess`` \`
-`  ``--``approve \-``-``override``-``existing``-``serviceaccounts`
+```bash
+kubectl create namespace prometheus
+eksctl create iamserviceaccount \
+  --name amp-iamproxy-ingest-role \
+  --namespace prometheus \
+  --cluster $KFL_EKS_CLUSTER \
+  --attach-policy-arn arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess \
+  --approve \--override-existing-serviceaccounts
 ```
 
 Next, we will grant permissions to Amazon EKS add-ons to install ADOT and then we will installing the ADOT Add-on :
