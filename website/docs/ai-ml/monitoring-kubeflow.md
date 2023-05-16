@@ -1,3 +1,9 @@
+---
+sidebar_position: 2
+sidebar_label: Monitoring ML Workflows with Kubeflow on EKS
+---
+import CollapsibleContent from '../../src/components/CollapsibleContent';
+
 # Monitor Machine Learning workflows with Kubeflow on Amazon EKS
 
 As part of day 2 operations, customers want to monitor their Infrastructure, Amazon EKS clusters and application components. AWS customers use Amazon EKS to run machine learning workloads. Containerization allows machine learning engineers to package and distribute models easily, while Kubernetes helps in deploying, scaling, and improving. In addition to monitoring the behavior of the Amazon EKS clusters, it’s essential to monitor the behavior of machine learning workflows as well to ensure the operational resilience of workloads and platforms run by an organization.
@@ -6,15 +12,15 @@ As part of day 2 operations, customers want to monitor their Infrastructure, Ama
 
 [OpenTelemetry](https://opentelemetry.io/docs/concepts/what-is-opentelemetry/) is a set of APIs, SDKs, and tools that are designed for the creation and management of telemetry data such as traces, metrics, and logs. [AWS Distro for OpenTelemetry Collector (ADOT Collector)](https://github.com/aws-observability/aws-otel-collector) is an AWS-supported version of the upstream OpenTelemetry Collector that is fully compatible with AWS computing platforms, including EKS. It enables users to send telemetry data to AWS managed services such as Amazon CloudWatch, Amazon Managed Service for Prometheus, and AWS X-Ray. In this post, We’ll show how you can configure an [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/eks/) cluster with Kubeflow, [Amazon Managed Service for Prometheus](https://aws.amazon.com/prometheus/), and[Amazon Managed Grafana](https://aws.amazon.com/grafana/) using [AWS Distro for OpenTelemetry (ADOT)](https://aws-otel.github.io/docs/introduction) for monitoring your Kubeflow machine learning workflows.
 
-### **Architecture**
+## **Architecture**
 
 The following diagram shows the complete setup that we will walk through in this walk through:
 
 ![Mon-Kubeflow](img/mon-kubeflow-1.jpg)
 
-### Solution Walkthrough
+## Solution Walkthrough
 
-#### Prerequisites
+### Prerequisites
 
 You will need the following to complete the steps in this post:
 
@@ -45,7 +51,7 @@ git clone --branch ${KUBEFLOW_RELEASE_VERSION} https://github.com/kubeflow/manif
 `make install``-``tools`
 ```
 
-#### Create an EKS Cluster
+### Create an EKS Cluster
 
 Let’s create an Amazon EKS cluster using `eksctl`:
 
@@ -85,7 +91,7 @@ eksctl create addon \
     --force
 ```
 
-#### Installing Kubeflow
+### Installing Kubeflow
 
 You can install all Kubeflow official components (residing under `apps`) and all common services (residing under `common`) using the following command:
 
@@ -101,7 +107,7 @@ After installation, it will take some time for all Pods to become ready. Make su
 kubectl get pods -A -o json | jq -r '.items[] | select(.metadata.namespace=="cert-manager" or "istio-system" or "auth" or "knative-eventing" or "knative-serving" or "kubeflow" or "kubeflow-user-example-com") | .metadata.namespace + "|" + .metadata.name + "|" + .status.phase'
 ```
 
-#### Accessing Kubeflow Central Dashboard
+### Accessing Kubeflow Central Dashboard
 
 Kubeflow can be accessed via port-forward and this enables you to get started quickly without imposing any requirements on your environment. Run the following to port-forward Istio's Ingress-Gateway to local port `8080`:
 
@@ -116,7 +122,7 @@ After running the command, you can access the Kubeflow Central Dashboard by doin
 
 ![Mon-Kubeflow](img/mon-kubeflow-2.jpg)
 
-#### Setup Amazon Managed Service for Prometheus
+### Setup Amazon Managed Service for Prometheus
 
 A workspace in [Amazon Managed Service for Prometheus](https://aws.amazon.com/prometheus/) is a logical and isolated Prometheus server dedicated to Prometheus resources such as metrics. A workspace supports fine-grained access control for authorizing its management such as update, list, describe, delete, and the ingestion and querying of metrics.
 
@@ -132,7 +138,7 @@ The Amazon Managed Service for Prometheus  workspace should be created in just a
 
 As a best practice, create a [VPC endpoint](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html)for Amazon Managed Service for Prometheus in VPC running your Amazon EKS cluster. Please visit [Using Amazon Managed Service for Prometheus with interface VPC endpoints](https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-and-interface-VPC.html) for more information.
 
-#### Setting up the AWS Distro for OpenTelemetry (ADOT) Collector to Ingest Metrics
+### Setting up the AWS Distro for OpenTelemetry (ADOT) Collector to Ingest Metrics
 
 Amazon Managed Service for Prometheus does not directly scrape operational metrics from containerized workloads in a Kubernetes or ECS cluster. It requires users to deploy a collection agent such as Prometheus server or an OpenTelemetry agent such as the AWS Distro for OpenTelemetry Collector in their cluster to perform this task.
 
@@ -190,7 +196,7 @@ Now, lets verify that the ADOT collector is running and you should see a result 
 kubectl get all -n prometheus
 ```
 
-```bash
+```
 NAME                                           READY   STATUS    RESTARTS   AGEpod/observability-collector-5774bbc68d-7nj54   1/1     Running   0          59s
 
 NAME                                         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
@@ -212,7 +218,7 @@ awscurl --service="aps" \
 
 Your results should look similar to shown below:
 
-```json
+```
 {
     "status": "success",
     "data": {
@@ -237,11 +243,11 @@ Your results should look similar to shown below:
 }
 ```
 
-#### Amazon Managed Grafana Setup
+### Amazon Managed Grafana Setup
 
 Two steps are necessary for setting up AWS IAM Identity Center, setting up and logging in to Amazon Managed Grafana, and querying metrics from Amazon Managed Service for Prometheus workspace from the post. To set up Authentication and Authorization, follow the instructions in the [Amazon Managed Grafana User Guide](https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-users-and-groups-AMG.html) for enabling AWS IAM Identity Center. Second, setup the data source for [Amazon Managed Service for Prometheus](https://docs.aws.amazon.com/grafana/latest/userguide/AMP-adding-AWS-config.html). You may also reference [Monitor Istio on EKS using Amazon Managed Prometheus and Amazon Managed Grafana](https://aws.amazon.com/blogs/mt/monitor-istio-on-eks-using-amazon-managed-prometheus-and-amazon-managed-grafana/#:~:text=AWS%20Single%20Sign%2DOn%20(SSO)) blog, starting from the AWS Single Sign-On (SSO) section for Amazon Managed Grafana setup.
 
-#### Query Kubeflow Metrics
+### Query Kubeflow Metrics
 
 Next lets navigate to Amazon Managed Grafana console and import Grafana dashboards which allows us to visualize metrics from Istio environment. Go to the `plus` sign on the left navigation bar and select `Import` as shown below:
 
@@ -251,7 +257,7 @@ In the Import screen, type `7630 (Istio Workload Dashboard)` in `Import via graf
 
 ![Mon-Kubeflow](img/mon-kubeflow-4.jpg)
 
-#### Creating a sample Machine Learning pipeline in Kubeflow
+### Creating a sample Machine Learning pipeline in Kubeflow
 
 Now that we have configured Amazon Managed Grafana with the Prometheus data source within our cluster, we can initiate a Machine Learning pipeline in Kubeflow, and be able to display metrics on the Grafana dashboards.
 
@@ -305,7 +311,7 @@ You can also verify that the notebook is created by verifying the Kubernetes res
 kubectl get pods -n kubeflow-user-example-com --field-selector=status.phase==Running
 ```
 
-```bash
+```
 NAME                                               READY   STATUS     RESTARTS   AGE
 ml-pipeline-ui-artifact-5b7794c7b5-5hkqf           2/2     Running   0          100m
 ml-pipeline-visualizationserver-85c6d6cc9f-vs24x   2/2     Running   0          100m
@@ -325,7 +331,7 @@ We will run a simple pipeline training notebook that uses Kubeflow Pipelines, fr
 
 ![Mon-Kubeflow](img/mon-kubeflow-7.jpg)
 
-**Visualizing Machine Learning pipeline metrics on Amazon Managed Grafana**
+### Visualizing Machine Learning pipeline metrics on Amazon Managed Grafana
 
 Using the Amazon Managed Grafana, we can show the resource utilization from our Machine Learning Pipelines with the same method we used to look above: using the `Istio Workload Dashboard` (7630). Select the following to monitor your resources for this particular ML pipeline:
 
@@ -335,11 +341,11 @@ Using the Amazon Managed Grafana, we can show the resource utilization from our 
 
 ![Mon-Kubeflow](img/mon-kubeflow-8.jpg)
 
-#### Alerting Kubeflow workflows with Amazon Managed Grafana
+### Alerting Kubeflow workflows with Amazon Managed Grafana
 
 As we configure workflows with Kubeflow, alerting is a mechanism we can employ to alert on specific situations. By quickly identifying unintended changes in your workflow and notifying the same using alerts, you can take actions to minimize disruptions to your services. Amazon Managed Grafana supports multiple notification channels such as SNS, Slack, PagerDuty etc to which you can send alerts notifications. [Alerts](https://docs.aws.amazon.com/grafana/latest/userguide/alerts-overview.html) page will show you more information on how to setup alerts in Amazon Managed Grafana. You learn about setting up alerts from Amazon Managed Grafana to [Slack](https://slack.com/) from  our [Monitoring hybrid environments using Amazon Managed Grafana](https://aws.amazon.com/blogs/mt/monitoring-hybrid-environments-using-amazon-managed-service-for-grafana/) blog. Also check our Blog on [Monitor Istio on EKS using Amazon Managed Prometheus and Amazon Managed Grafana](https://aws.amazon.com/blogs/mt/monitor-istio-on-eks-using-amazon-managed-prometheus-and-amazon-managed-grafana/) which will show you on triggering Amazon Managed Grafana alerts to [PagerDuty](https://www.pagerduty.com/).
 
-#### **Clean-up**
+## Clean-up
 
 Use the following commands to clean up the created AWS resources for this demonstration:
 
@@ -384,7 +390,7 @@ eksctl delete cluster --region $AWS_REGION --name $KFL_EKS_CLUSTER
 
 Finally navigate to Amazon Managed Grafana console to delete the created Grafana workspace.
 
-### **Conclusion :**
+## Conclusion :
 
 This post demonstrated the detailed steps on how you can setup Amazon EKS cluster with Kubeflow, Amazon Managed Service for Prometheus and Amazon Managed Grafana to monitor your Kubeflow machine learning workflows.  
 
