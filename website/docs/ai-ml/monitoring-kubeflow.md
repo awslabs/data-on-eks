@@ -78,7 +78,7 @@ eksctl create iamserviceaccount \
   --approve \
   --role-only \
   --role-name AmazonEKS_EBS_CSI_DriverRole
-  
+
 eksctl create addon \
     --name aws-ebs-csi-driver \
     --cluster $KFL_EKS_CLUSTER \
@@ -129,7 +129,7 @@ Please open a new terminal window and setup all environment variables as you did
 `  ``--``region $KFL_AWS_REGION`
 ```
 
-The Amazon Managed Service for Prometheus  workspace should be created in just a few seconds. 
+The Amazon Managed Service for Prometheus  workspace should be created in just a few seconds.
 
 As a best practice, create a [VPC endpoint](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html)for Amazon Managed Service for Prometheus in VPC running your Amazon EKS cluster. Please visit [Using Amazon Managed Service for Prometheus with interface VPC endpoints](https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-and-interface-VPC.html) for more information.
 
@@ -297,7 +297,7 @@ Now, access Kubeflow dashboard as described in the previous sections, via port-f
 * Requested memory in Gi: `5`
 * Advanced Options → Configurations: `Allow access to Kubeflow Pipelines`  (This configuration is the token we have generated above)
 
-With all other configurations as defaults, you should be able to see the notebook generate successfully and show up on the Kubeflow dashboard. 
+With all other configurations as defaults, you should be able to see the notebook generate successfully and show up on the Kubeflow dashboard.
 
 ![Mon-Kubeflow](img/mon-kubeflow-5.jpg)
 
@@ -321,7 +321,7 @@ You will be able to access the JupyterLab notebook by clicking CONNECT. This wil
 
 We will run a simple pipeline training notebook that uses Kubeflow Pipelines, from an existing [AWS Deep Learning sample repository](https://github.com/aws-samples/aws-deeplearning-labs). This is a simple model training to predict the taxi fare of Chicago cabs, and demonstrates continuous training using a recursive loop. It triggers a Kubeflow pipeline to train the initial model and then gradually trains the model until evaluation metrics are good enough. Lets run the Kubeflow pipeline using the following steps on the console :
 
-* Clone the following repo by selecting `Git -> Clone a Repository` from the top navigation bar and paste `https://github.com/aws-samples/aws-deeplearning-labs` and press enter. 
+* Clone the following repo by selecting `Git -> Clone a Repository` from the top navigation bar and paste `https://github.com/aws-samples/aws-deeplearning-labs` and press enter.
 * Open the following notebook from the directory view in the left pane: `aws-deeplearning-labs/workshop/pytorch-distributed-training/STEP2_simple_xgboost_training_pipeline.ipynb`.
 * Run all the cells of the model by selecting `Kernel -> Restart Kernel and Run All Cells` from the top menu
 
@@ -354,7 +354,7 @@ rm -rf ./otel-collector-prometheus.yaml`
 aws eks delete-addon \
     --addon-name adot \
     --cluster-name $KFL_EKS_CLUSTER
-    
+
 aws amp delete-workspace \
   --workspace-id $KFL_WORKSPACE_ID \
   --region $KFL_AWS_REGION
@@ -375,7 +375,7 @@ eksctl delete iamserviceaccount \
   --name ebs-csi-controller-sa \
   --namespace kube-system \
   --cluster $KFL_EKS_CLUSTER
-  
+
 aws eks delete-addon \
     --addon-name aws-ebs-csi-driver \
     --cluster-name $KFL_EKS_CLUSTER
