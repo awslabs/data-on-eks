@@ -137,3 +137,41 @@ This will remove the finalizers on the namespace.
 NAMESPACE=<namespace>
 kubectl get namespace $NAMESPACE -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$NAMESPACE/finalize" -f -
 ```
+
+## Resolve Conflicts error while deploying VPC CNI managed add-on
+
+```error
+╷
+│ Error: unexpected EKS Add-On (spark-operator-doeks:vpc-cni) state returned during creation: unexpected state 'CREATE_FAILED', wanted target 'ACTIVE'. last error: 1 error occurred:
+│       * : ConfigurationConflict: Conflicts found when trying to apply. Will not continue due to resolve conflicts mode. Conflicts:
+│ ServiceAccount aws-node - .metadata.labels.app.kubernetes.io/version
+│ ClusterRole.rbac.authorization.k8s.io aws-node - .metadata.labels.app.kubernetes.io/version
+│ ClusterRoleBinding.rbac.authorization.k8s.io aws-node - .metadata.labels.app.kubernetes.io/version
+│ DaemonSet.apps aws-node - .metadata.labels.app.kubernetes.io/version
+│ DaemonSet.apps aws-node - .spec.template.spec.containers[name="aws-node"].env
+│ DaemonSet.apps aws-node - .spec.template.spec.containers[name="aws-node"].env[name="MY_NODE_NAME"].valueFrom
+│ DaemonSet.apps aws-node - .spec.template.spec.containers[name="aws-node"].env[name="MY_NODE_NAME"].valueFrom.fieldRef
+│ DaemonSet.apps aws-node - .spec.template.spec.initContainers[name="aws-vpc-cni-init"].image
+│
+│
+│ [WARNING] Running terraform apply again will remove the kubernetes add-on and attempt to create it again effectively purging previous add-on configuration
+│
+│   with aws_eks_addon.vpc_cni,
+│   on addons.tf line 22, in resource "aws_eks_addon" "vpc_cni":
+│   22: resource "aws_eks_addon" "vpc_cni" {
+│
+╵
+```
+
+### Solution:
+
+Make sure vpc cni add-on uses
+
+```terraform
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name      = module.eks.cluster_name
+  addon_name        = "vpc-cni"
+  addon_version     = data.aws_eks_addon_version.this.version
+  resolve_conflicts = "OVERWRITE"
+}  
+```

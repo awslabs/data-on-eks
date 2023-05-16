@@ -7,7 +7,7 @@ webhook:
   port: 8080
 
 # -- Set this if running spark jobs in a different namespace than the operator
-sparkJobNamespace: "spark-team-a"
+#sparkJobNamespace: "spark-team-a"
 
 # -- Operator concurrency, higher values might increase memory usage
 controllerThreads: 10

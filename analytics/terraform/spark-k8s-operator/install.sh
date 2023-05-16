@@ -7,11 +7,15 @@ export AWS_DEFAULT_REGION=$region
 targets=(
   "module.vpc"
   "module.eks"
-  "module.karpenter"
   "module.ebs_csi_driver_irsa"
   "module.vpc_cni_irsa"
+  "aws_eks_addon.vpc_cni"
   "module.eks_blueprints_kubernetes_addons"
+  "module.kubernetes_data_addons"
 )
+
+# Initialize Terraform
+terraform init --upgrade
 
 # Apply modules in sequence
 for target in "${targets[@]}"

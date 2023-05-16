@@ -14,6 +14,12 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
+data "aws_eks_addon_version" "this" {
+  addon_name         = "vpc-cni"
+  kubernetes_version = var.eks_cluster_version
+  most_recent        = true
+}
+
 # This data source can be used to get the latest AMI for Managed Node Groups
 data "aws_ami" "x86" {
   owners      = ["amazon"]
@@ -77,4 +83,31 @@ data "aws_iam_policy_document" "fluent_bit" {
       "s3:DeleteObjectVersion"
     ]
   }
+
+  statement {
+    sid    = "PutLogEvents"
+    effect = "Allow"
+    resources = [
+      "arn:${data.aws_partition.current.partition}:logs:${local.region}:${data.aws_caller_identity.current.account_id}:log-group:*:log-stream:*",
+    ]
+    actions = [
+      "logs:PutLogEvents"
+    ]
+  }
+
+  statement {
+    sid    = "CreateCWLogs"
+    effect = "Allow"
+    resources = [
+      "arn:${data.aws_partition.current.partition}:logs:${local.region}:${data.aws_caller_identity.current.account_id}:log-group:*",
+    ]
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:PutRetentionPolicy",
+    ]
+  }
+
 }
