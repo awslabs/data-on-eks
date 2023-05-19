@@ -85,29 +85,17 @@ data "aws_iam_policy_document" "fluent_bit" {
   }
 
   statement {
-    sid    = "PutLogEvents"
-    effect = "Allow"
-    resources = [
-      "arn:${data.aws_partition.current.partition}:logs:${local.region}:${data.aws_caller_identity.current.account_id}:log-group:*:log-stream:*",
-    ]
-    actions = [
-      "logs:PutLogEvents"
-    ]
-  }
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:*"]
 
-  statement {
-    sid    = "CreateCWLogs"
-    effect = "Allow"
-    resources = [
-      "arn:${data.aws_partition.current.partition}:logs:${local.region}:${data.aws_caller_identity.current.account_id}:log-group:*",
-    ]
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
       "logs:PutRetentionPolicy",
     ]
   }
-
 }

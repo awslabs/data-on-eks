@@ -22,6 +22,7 @@ JOB_NAME="$3"
 
 INPUT_DATA_S3_PATH="s3://${S3_BUCKET}/${JOB_NAME}/input/"
 
+mkdir input
 # Copy PySpark Script to S3 bucket
 aws s3 cp pyspark-taxi-trip.py s3://${S3_BUCKET}/${JOB_NAME}/scripts/ --region ${REGION}
 
@@ -29,7 +30,7 @@ aws s3 cp pyspark-taxi-trip.py s3://${S3_BUCKET}/${JOB_NAME}/scripts/ --region $
 wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "input/yellow_tripdata_2022-0.parquet"
 
 # Making duplicate copies to increase the size of the data.
-max=20
+max=100
 for (( i=1; i <= $max; ++i ))
 do
    cp -rf "input/yellow_tripdata_2022-0.parquet" "input/yellow_tripdata_2022-${i}.parquet"

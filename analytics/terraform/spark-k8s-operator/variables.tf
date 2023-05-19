@@ -30,7 +30,7 @@ variable "public_subnets" {
   type        = list(string)
 }
 
-# Routable Public subnets only for Private NAT Gateway -> Transit Gateway -> Second VPC for overlapping overlapping CIDRs
+# Routable Private subnets only for Private NAT Gateway -> Transit Gateway -> Second VPC for overlapping overlapping CIDRs
 variable "private_subnets" {
   description = "Private Subnets CIDRs. 254 IPs per Subnet/AZ for Private NAT + NLB + Airflow + EC2 Jumphost etc."
   default     = ["10.1.1.0/24", "10.1.2.0/24"]

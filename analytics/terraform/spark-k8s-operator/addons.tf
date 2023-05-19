@@ -50,8 +50,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
   # Short commit hash from 8th May using git rev-parse --short HEAD
-  #  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed2474e"
-  source = "/Users/vabonthu/Documents/GITHUB/terraform-aws-eks-blueprints-addons"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -78,6 +77,19 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
+  #---------------------------------------------------------------
+  # CoreDNS Autoscaler helps to scale for large EKS Clusters
+  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
+  #---------------------------------------------------------------
+  enable_cluster_proportional_autoscaler = true
+  cluster_proportional_autoscaler = {
+    timeout = "300"
+    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
+      target = "deployment/coredns"
+    })]
+    description = "Cluster Proportional Autoscaler for CoreDNS Service"
+  }
+
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -139,7 +151,7 @@ module "eks_blueprints_kubernetes_addons" {
 
   aws_for_fluentbit = {
     create_namespace = true
-    namespace        = "aws-fluentbit"
+    namespace        = "aws-for-fluentbit"
     create_role      = true
     role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
 
@@ -172,7 +184,7 @@ module "eks_blueprints_kubernetes_addons" {
 #---------------------------------------------------------------
 # NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
 module "kubernetes_data_addons" {
-  # Please noe that local source will be replaced once the below repo is public
+  # Please note that local source will be replaced once the below repo is public
   # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
   source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
   oidc_provider_arn = module.eks.oidc_provider_arn
