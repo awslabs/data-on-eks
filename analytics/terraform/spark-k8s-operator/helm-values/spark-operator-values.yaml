@@ -39,4 +39,4 @@ uiService:
 # 1/ Enable ingressUrlFormat to create an Ingress object for each Spark Job submitted using Spark Operator
 # 2/ This setup also requires ingres-nginx to be deployed with NLB as LB with IP based routing.
 # 3. Enter the NLB DNS name or enter Custom Domain name from route53 below which points to the NLB
-ingressUrlFormat: 'abd8bcbf1de0d4209ab3055b5bfc3795-794d44dd4da6d2c2.elb.us-west-2.amazonaws.com/{{$appName}}'
+ingressUrlFormat: '<ENTER_NLB_DNS_NAME/CUSTOM_DOMAIN_NAME>/{{$appName}}'

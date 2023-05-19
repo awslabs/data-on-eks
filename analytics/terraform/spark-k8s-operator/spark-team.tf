@@ -70,16 +70,6 @@ resource "aws_iam_policy" "spark" {
   policy      = data.aws_iam_policy_document.spark_operator.json
 }
 
-#module "irsa" {
-#  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa?ref=ac7fd74d9df282ce6f8d068c4fd17ccd5638ae3a"
-#
-#  eks_cluster_id             = local.name
-#  eks_oidc_provider_arn      = module.eks.oidc_provider_arn
-#  irsa_iam_policies          = [aws_iam_policy.spark.arn]
-#  kubernetes_namespace       = local.spark_team
-#  kubernetes_service_account = local.spark_team
-#}
-
 #---------------------------------------------------------------
 # Kubernetes Cluster role for service Account analytics-k8s-data-team-a
 #---------------------------------------------------------------
