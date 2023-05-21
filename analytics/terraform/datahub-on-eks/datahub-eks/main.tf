@@ -39,6 +39,8 @@ module "prereq" {
   vpc_id                = var.vpc_id
   vpc_cidr              = var.vpc_cidr
   vpc_private_subnets   = var.vpc_private_subnets
+  
+  create_iam_service_linked_role_es = var.create_iam_service_linked_role_es
 }
 
 resource "kubernetes_namespace" "datahub" {

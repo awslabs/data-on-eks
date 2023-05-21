@@ -11,3 +11,10 @@ data "aws_availability_zones" "available" {}
 data "aws_caller_identity" "current" {}
 
 
+data "aws_eks_addon_version" "this" {
+  addon_name         = "vpc-cni"
+  kubernetes_version = var.eks_cluster_version
+  most_recent        = true
+}
+
+

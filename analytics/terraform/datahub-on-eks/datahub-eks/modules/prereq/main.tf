@@ -198,11 +198,10 @@ resource "aws_db_subnet_group" "rds" {
 
 resource "random_password" "mysql_password" {
   length  = 16
-  special = true
+  special = false
   min_upper = 1
   min_lower = 1
   min_numeric = 1
-  min_special = 1
 }
 
 resource "aws_db_instance" "datahub_rds" {

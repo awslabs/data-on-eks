@@ -2,12 +2,11 @@
 module "eks_blueprints_kubernetes_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
-
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
+  
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.cluster_oidc_issuer_url
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
@@ -16,16 +15,15 @@ module "eks_blueprints_kubernetes_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+      most_recent = true
     }
     coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
+      preserve    = true
+      most_recent = true
     }
     kube-proxy = {
-      preserve = true
+      most_recent = true
+      preserve    = true
     }
   }
   #---------------------------------------
@@ -35,12 +33,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Metrics Server
   #---------------------------------------
   enable_metrics_server = true
-  metrics_server_helm_config = {
-    name       = "metrics-server"
-    repository = "https://kubernetes-sigs.github.io/metrics-server/" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "metrics-server"
-    version    = "3.8.2"
-    namespace  = "kube-system"
+  metrics_server = {
     timeout    = "300"
     values     = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
@@ -49,15 +42,10 @@ module "eks_blueprints_kubernetes_addons" {
   # Cluster Autoscaler
   #---------------------------------------
   enable_cluster_autoscaler = true
-  cluster_autoscaler_helm_config = {
-    name       = "cluster-autoscaler"
-    repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "cluster-autoscaler"
-    version    = "9.21.0"
-    namespace  = "kube-system"
+  cluster_autoscaler = {
     timeout    = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = var.region,
+      aws_region     = local.region,
       eks_cluster_id = local.name
     })]
   }
@@ -71,27 +59,41 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_cloudwatch_metrics = var.enable_cloudwatch_metrics
+  enable_aws_cloudwatch_metrics = var.enable_cloudwatch_metrics
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
   enable_aws_for_fluentbit                 = var.enable_aws_for_fluentbit
-  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Add-on creates this log group
-  aws_for_fluentbit_cw_log_group_retention = 30
-  aws_for_fluentbit_helm_config = {
-    name       = "aws-for-fluent-bit"
-    chart      = "aws-for-fluent-bit"
-    repository = "https://aws.github.io/eks-charts"
-    version    = "0.1.21"
-    namespace  = "aws-for-fluent-bit"
+  aws_for_fluentbit_cw_log_group = {
+    create            = true
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  
+  aws_for_fluentbit = {
+    create_namespace = true
+    namespace        = "aws-for-fluentbit"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = var.region,
-      cloudwatch_log_group = "/${var.name}/fluentbit-logs"
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/fluentbit-logs"
     })]
   }
 
-  #---------------------------------------
+  tags = local.tags
+}
+
+module "eks_blueprints_addons" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.31.0"
+
+  eks_cluster_id       = module.eks.cluster_name
+  eks_cluster_endpoint = module.eks.cluster_endpoint
+  eks_oidc_provider    = module.eks.oidc_provider
+  eks_cluster_version  = module.eks.cluster_version
+  
+  
+    #---------------------------------------
   # Amazon Managed Prometheus
   #---------------------------------------
   enable_amazon_prometheus             = true
@@ -110,12 +112,8 @@ module "eks_blueprints_kubernetes_addons" {
     timeout    = "300"
     values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
   }
-
-  tags = local.tags
+  
 }
-
-
-
 #---------------------------------------------------------------
 # Amazon Prometheus Workspace
 #---------------------------------------------------------------
@@ -130,7 +128,7 @@ resource "aws_prometheus_workspace" "amp" {
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
@@ -147,7 +145,7 @@ module "ebs_csi_driver_irsa" {
 module "vpc_cni_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
+  role_name_prefix      = format("%s-%s-", local.name, "vpc-cni")
   attach_vpc_cni_policy = true
   vpc_cni_enable_ipv4   = true
   oidc_providers = {
@@ -158,4 +156,18 @@ module "vpc_cni_irsa" {
   }
   tags = local.tags
 }
+
+#---------------------------------------------------------------
+# VPC CNI Addon should run before the nodes are created
+# Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
+#---------------------------------------------------------------
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name             = module.eks.cluster_name
+  addon_name               = "vpc-cni"
+  addon_version            = data.aws_eks_addon_version.this.version
+  resolve_conflicts        = "OVERWRITE"
+  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
+  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+}
+
 
