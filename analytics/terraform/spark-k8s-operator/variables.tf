@@ -16,14 +16,14 @@ variable "eks_cluster_version" {
   type        = string
 }
 
-# VPC with 2046 IPs
+# VPC
 variable "vpc_cidr" {
   description = "VPC CIDR. This should be a valid private (RFC 1918) CIDR range"
   default     = "10.1.0.0/16"
   type        = string
 }
 
-# Routable Public subnets with NAT Gateway and Internet Gateway
+# Routable Public subnets with NAT Gateway and Internet Gateway. Not required for fully private clusters
 variable "public_subnets" {
   description = "Public Subnets CIDRs. 62 IPs per Subnet/AZ"
   default     = ["10.1.0.0/26", "10.1.0.64/26"]
@@ -53,6 +53,7 @@ variable "eks_data_plane_subnet_secondary_cidr" {
   type        = list(string)
 }
 
+# Enable this for fully private clusters
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
   default     = false
