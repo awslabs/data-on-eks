@@ -165,7 +165,7 @@ kubectl get namespace $NAMESPACE -o json | sed 's/"kubernetes"//' | kubectl repl
 
 ### Solution:
 
-Make sure vpc cni add-on uses
+Make sure vpc cni add-on uses `resolve_conflicts` as `OVERWRITE`
 
 ```terraform
 resource "aws_eks_addon" "vpc_cni" {
