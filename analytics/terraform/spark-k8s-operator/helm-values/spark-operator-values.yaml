@@ -31,12 +31,12 @@ batchScheduler:
 #------------------------------------
 # THIS WILL CREATE SERVICE AND INGRESS OBJECT FOR EACH SPARK APPLICATION
 #------------------------------------
-uiService:
-  # -- Enable UI service creation for Spark application
-  enable: true
-# -- Ingress URL format.
-# Requires the UI service to be enabled by setting `uiService.enable` to true.
-# 1/ Enable ingressUrlFormat to create an Ingress object for each Spark Job submitted using Spark Operator
-# 2/ This setup also requires ingres-nginx to be deployed with NLB as LB with IP based routing.
-# 3. Enter the NLB DNS name or enter Custom Domain name from route53 below which points to the NLB
-ingressUrlFormat: '<ENTER_NLB_DNS_NAME/CUSTOM_DOMAIN_NAME>/{{$appName}}'
+#uiService:
+##  # -- Enable UI service creation for Spark application
+#  enable: true
+### -- Ingress URL format.
+### Requires the UI service to be enabled by setting `uiService.enable` to true.
+### 1/ Enable ingressUrlFormat to create an Ingress object for each Spark Job submitted using Spark Operator
+### 2/ This setup also requires ingres-nginx to be deployed with NLB as LB with IP based routing.
+### 3. Enter the NLB DNS name or enter Custom Domain name from route53 below which points to the NLB
+#ingressUrlFormat: '<ENTER_NLB_DNS_NAME/CUSTOM_DOMAIN_NAME>/{{$appName}}'
