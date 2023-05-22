@@ -289,7 +289,7 @@ pytorch-kuberay-head-9tx56   0/2     Pending   0          43s
 Once running, we can forward the port for server, taking care that we foward it to another local port as 8265 may be occupied by the xgboost connection.
 
 ```bash
-kubectl port-forward service/pytorch-kuberay-head-svc -n pytorch 8265:8266
+kubectl port-forward service/pytorch-kuberay-head-svc -n pytorch 8266:8265
 ```
 
 We can then submit the job for PyTorch benchmark workload.
