@@ -14,7 +14,6 @@ service:
         Format  regex
         Regex   ^(?<namespace_name>[^_]+)\.(?<container_name>.+)\.(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)\.(?<docker_id>[a-z0-9]{64})-$
 
-
 input:
   name: "tail"
   enabled: true
@@ -111,6 +110,10 @@ filter:
 #     "stream": "stdout",
 #     "time": "2023-03-15T14:32:51.537116726Z"
 # }
+
+# https://github.com/aws/eks-charts/blob/0ad957e7a3f4531cd0d8c10b68d462f2cb972714/stable/aws-for-fluent-bit/values.yaml#LL107C16-L107C16
+#cloudWatchLogs:
+#  enabled: false
 
 cloudWatch:
   enabled: true

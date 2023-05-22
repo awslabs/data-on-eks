@@ -25,20 +25,25 @@ server:
 
 alertmanager:
   enabled: false
-
+kube-state-metrics:
+  enabled: true
+prometheus-node-exporter:
+  enabled: true
 prometheus-pushgateway:
   enabled: false
 
-# Additional scrape config for KubeCost
-extraScrapeConfigs: |
-  - job_name: kubecost
-    honor_labels: true
-    scrape_interval: 1m
-    scrape_timeout: 10s
-    metrics_path: /metrics
-    scheme: http
-    dns_sd_configs:
-      - names:
-          - kubecost-cost-analyzer.kubecost.svc
-        type: 'A'
-        port: 9003
+## Additional scrape config for KubeCost
+## Have your Prometheus scrape the cost-model /metrics endpoint.
+## These metrics are needed for reporting accurate pricing data. Here is an example scrape config:
+#extraScrapeConfigs: |
+#  - job_name: kubecost
+#    honor_labels: true
+#    scrape_interval: 1m
+#    scrape_timeout: 10s
+#    metrics_path: /metrics
+#    scheme: http
+#    dns_sd_configs:
+#      - names:
+#          - kubecost-cost-analyzer.kubecost.svc
+#        type: 'A'
+#        port: 9003

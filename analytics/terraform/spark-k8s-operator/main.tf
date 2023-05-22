@@ -1,13 +1,14 @@
 locals {
-  name     = var.name
-  region   = var.region
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
+  name   = var.name
+  region = var.region
+  azs    = slice(data.aws_availability_zones.available.names, 0, 2)
 
   tags = {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
   }
+  # This role will be created
+  karpenter_iam_role_name = format("%s-%s", "karpenter", local.name)
 }
 
 #---------------------------------------------------------------
@@ -15,7 +16,7 @@ locals {
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.9"
+  version = "~> 19.13"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -23,14 +24,15 @@ module "eks" {
   cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  vpc_id = module.vpc.vpc_id
+  # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
+  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      rolearn  = module.karpenter.role_arn
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.karpenter_iam_role_name}"
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -100,6 +102,8 @@ module "eks" {
     core_node_group = {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
       ami_id = data.aws_ami.x86.image_id
       # This will ensure the bootstrap user data is used to join the node
@@ -117,8 +121,6 @@ module "eks" {
       post_bootstrap_user_data = <<-EOT
         echo "Bootstrap complete.Ready to Go!"
       EOT
-
-      subnet_ids = module.vpc.private_subnets
 
       min_size     = 3
       max_size     = 9
@@ -156,6 +158,8 @@ module "eks" {
     spark_ondemand_r5d = {
       name        = "spark-ondemand-r5d"
       description = "Spark managed node group for Driver pods"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
       ami_type = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
 
@@ -207,11 +211,9 @@ module "eks" {
         echo "Bootstrap complete.Ready to Go!"
       EOT
 
-      subnet_ids = [element(module.vpc.private_subnets, 0)] # Single AZ node group for Spark workloads
-
-      min_size     = 1
-      max_size     = 12
-      desired_size = 1
+      min_size     = 0
+      max_size     = 20
+      desired_size = 0
 
       force_update_version = true
       instance_types       = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
@@ -252,6 +254,8 @@ module "eks" {
     spark_spot_x86_48cpu = {
       name        = "spark-spot-48cpu"
       description = "Spark Spot node group for executor workloads"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
       ami_type = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
       # Current default AMI used by managed node groups - pseudo "custom"
@@ -299,8 +303,6 @@ module "eks" {
         echo "Bootstrap complete.Ready to Go!"
       EOT
 
-      subnet_ids = [element(module.vpc.private_subnets, 0)] # Single AZ node group for Spark workloads
-
       min_size     = 0
       max_size     = 12
       desired_size = 0
@@ -337,20 +339,4 @@ module "eks" {
       }
     }
   }
-}
-
-#---------------------------------------
-# Karpenter IAM instance profile
-#---------------------------------------
-
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
-
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  create_irsa                  = false # EKS Blueprints add-on module creates IRSA
-  enable_spot_termination      = false # EKS Blueprints add-on module adds this feature
-  tags                         = local.tags
-  iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
 }
