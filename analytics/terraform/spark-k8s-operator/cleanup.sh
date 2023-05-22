@@ -6,12 +6,14 @@ read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
 targets=(
+  "module.kubernetes_data_addons"
   "module.eks_blueprints_kubernetes_addons"
-  "module.eks_blueprints"
+  "module.eks"
 )
 
 for target in "${targets[@]}"
 do
+  terraform destroy -target="$target" -auto-approve
   destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
   if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
@@ -21,6 +23,7 @@ do
   fi
 done
 
+terraform destroy -auto-approve
 destroy_output=$(terraform destroy -auto-approve 2>&1)
 if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
   echo "SUCCESS: Terraform destroy of all targets completed successfully"

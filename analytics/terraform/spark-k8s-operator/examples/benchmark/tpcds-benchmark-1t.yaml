@@ -1,129 +1,102 @@
 # NOTE: This example requires the following prerequisites before executing the jobs
 # 1. Ensure spark-team-a name space exists
-# 2. replace <ENTER_YOUR_BUCKET> with your bucket name
-# 3. Ensure you run "analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml" to generate the INPUT data in S3 bucket and update INPUT argument(      "s3a://<ENTER_YOUR_BUCKET>/TPCDS-TEST-1T/catalog_sales/") path in the below yaml
+# 2. replace <ENTER_YOUR_BUCKET_NAME> with your bucket name
+# 3. Ensure you run "analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml"  which generates 3 TB input data
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: tpcds-benchmark-10g
+  name: tpcds-benchmark-3tb
   namespace: spark-team-a
-  labels:
-    yunikorn.apache.org/username: "vara"
-    queue: "root.spark-team-a"
 spec:
   type: Scala
-  pythonVersion: "3"
-  sparkVersion: "3.1.2"
   mode: cluster
-  image: ghcr.io/aws-samples/eks-spark-benchmark:3.1.2
-  imagePullPolicy: Always
+  image: ghcr.io/aws-samples/emr-on-eks-benchmark:3.1.2
+  imagePullPolicy: IfNotPresent
+  sparkVersion: 3.1.2
   mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
-  #  volumes:
-  #    - name: "spark-local-dir-1"     # Support mapping spark.local.dir to hostPath volume
-  #      hostPath:
-  #        path: "/tmp/mnt-1"
-  batchScheduler: yunikorn
-  #  batchSchedulerOptions:
-  #    resources:
-  #      cpu: "2"
-  #      memory: "4096m"
   arguments:
     # TPC-DS data location
-    - "s3a://<ENTER_YOUR_BUCKET_NAME>/TPCDS-TEST-1T"
+    - "s3a://<ENTER_YOUR_BUCKET_NAME>/TPCDS-TEST-3T"
     # results location
-    - "s3a://<ENTER_YOUR_BUCKET_NAME>/TPCDS-TEST-1T-RESULT"
+    - "s3a://<ENTER_YOUR_BUCKET_NAME>/TPCDS-TEST-3T-RESULT"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
     - "parquet"
     # Scale factor (in GB)
-    - "10"
+    - "3000"
     # Number of iterations
     - "1"
-    # Optimize queries
+    # Optimize queries with hive tables
     - "false"
-    # Filter queries, will run all if empty - "q70-v2.4,q82-v2.4,q64-v2.4"
+    # Filter queries, will run all if empty - "q98-v2.4,q99-v2.4,ss_max-v2.4,q95-v2.4"
     - ""
     # Logging set to WARN
     - "true"
-  hadoopConf:
-    # IRSA configuration
-    "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
-    #    "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.InstanceProfileCredentialsProvider"
-    "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
-    "mapreduce.fileoutputcommitter.algorithm.version": "2"
   sparkConf:
-    "spark.speculation": "false"
-    "spark.network.timeout": "2400"
-    #    "spark.kubernetes.local.dirs.tmpfs": "true"
-    # TPCDs Specific
-    "spark.sql.broadcastTimeout": "7200"
-    "spark.sql.crossJoin.enabled": "true"
-    "spark.sql.parquet.mergeSchema": "false"
-    "spark.sql.parquet.filterPushdown": "true"
-    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
-    "spark.hadoop.fs.s3a.path.style.access": "true"
-    "spark.hadoop.fs.s3a.connection.maximum": "200"
-    "spark.hadoop.fs.s3a.fast.upload": "true"
-    "spark.hadoop.fs.s3a.readahead.range": "256K"
-    "spark.hadoop.fs.s3a.input.fadvise": "random"
-    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
-    "spark.sql.execution.arrow.pyspark.enabled": "true"
-    # YuniKorn Config
-    "spark.kubernetes.driver.label.queue": "root.spark-team-a"
-    "spark.kubernetes.driver.label.yunikorn.apache.org/username": "vara"
-    "spark.kubernetes.executor.label.queue": "root.spark-team-a"
-    "spark.kubernetes.executor.label.yunikorn.apache.org/username": "vara"
-  restartPolicy:
-    type: OnFailure
-    onFailureRetries: 3
-    onFailureRetryInterval: 10
-    onSubmissionFailureRetries: 5
-    onSubmissionFailureRetryInterval: 20
-  volumes: # using NVMe instance storage mounted on /local1
-    - name: spark-local-dir-1
-      hostPath:
-        path: /local1/benchmark
-        type: DirectoryOrCreate
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    # AQE
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+    # "spark.sql.adaptive.logLevel": "WARN"
+    # IRSA for S3 connection
+    "spark.kubernetes.executor.podNamePrefix": "oss-spark-tpcds-2g1000"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
+    # Keep pods in a single AZ
+    # "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "us-west-1b"
+    # "spark.kubernetes.node.selector.eks.amazonaws.com/capacityType": "ON_DEMAND"
   driver:
-    volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
+    volumeMounts: # Points to InstanceStore NVMe SSD for shuffle spill over from memory
       - name: spark-local-dir-1
-        mountPath: /local1/benchmark
+        mountPath: /data1
+        readOnly: false
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1/benchmark' ]
+        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
         volumeMounts:
-          - mountPath: "/local1/benchmark"
+          - mountPath: "/local1"
             name: "spark-local-dir-1"
-    cores: 1
-    memory: "10g"
-    memoryOverhead: "2g"
+    cores: 4
+    coreLimit: "4.1"
+    memory: "5g"
+    memoryOverhead: "1000"
     serviceAccount: spark-team-a
-    labels:
-      version: 3.1.1
     nodeSelector:
-      NodeGroupType: "spark"
+      NodeGroupType: "SparkMemoryOptimized"
+      karpenter.sh/capacity-type: on-demand
+    tolerations:
+      - key: "spark-memory-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
   executor:
     volumeMounts:
       - name: spark-local-dir-1
-        mountPath: /local1/benchmark
-    initContainers:
-      - name: volume-permissions
-        image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1/benchmark' ]
-        volumeMounts:
-          - mountPath: "/local1/benchmark"
-            name: "spark-local-dir-1"
-    cores: 1
-    instances: 10
+        mountPath: /data1
+        readOnly: false
+    cores: 4
+    coreLimit: "4.3"
     memory: "6g"
     memoryOverhead: "2g"
+    # 8 executors per node
+    instances: 47
     serviceAccount: spark-team-a
-    labels:
-      version: 3.1.1
     nodeSelector:
-      NodeGroupType: "spark"
+      NodeGroupType: "SparkMemoryOptimized"
+      karpenter.sh/capacity-type: on-demand
+    tolerations:
+      - key: "spark-memory-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+  restartPolicy:
+    type: Never

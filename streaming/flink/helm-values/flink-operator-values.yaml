@@ -1,0 +1,52 @@
+---
+# List of kubernetes namespaces to watch for FlinkDeployment changes, empty means all namespaces.
+# When enabled RBAC is only created for said namespaces, otherwise it is done for the cluster scope.
+# watchNamespaces: ["flink"]
+
+image:
+  repository: ghcr.io/apache/flink-kubernetes-operator
+  pullPolicy: IfNotPresent
+  tag: latest
+
+# Replicas must be 1 unless operator leader election is configured
+replicas: 1
+
+operatorPod:
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "2G"
+    requests:
+      cpu: "1000m"
+      memory: "2G"
+  webhook:
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "2G"
+      requests:
+        cpu: "1000m"
+        memory: "2G"
+
+  flink-conf.yaml: |+
+    # Flink Config Overrides
+    kubernetes.operator.metrics.reporter.slf4j.factory.class: org.apache.flink.metrics.slf4j.Slf4jReporterFactory
+    kubernetes.operator.metrics.reporter.slf4j.interval: 5 MINUTE
+
+    kubernetes.operator.metrics.reporter.prom.class: org.apache.flink.metrics.prometheus.PrometheusReporter
+    kubernetes.operator.metrics.reporter.prom.port: 9999
+
+    kubernetes.operator.reconcile.interval: 15 s
+    kubernetes.operator.observer.progress-check.interval: 5 s
+  log4j-operator.properties: |+
+    # Flink Operator Logging Overrides
+    # rootLogger.level = DEBUG
+    # logger.operator.name= org.apache.flink.kubernetes.operator
+    # logger.operator.level = DEBUG
+  log4j-console.properties: |+
+    # Flink Deployment Logging Overrides
+    # rootLogger.level = DEBUG
+
+# (Optional) Exposes metrics port on the container if defined
+metrics:
+  port: 9999

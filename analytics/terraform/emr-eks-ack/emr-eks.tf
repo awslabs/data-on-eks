@@ -1,5 +1,5 @@
 module "emr_containers" {
-  source = "./modules/emr-eks-containers"
+  source = "../../../workshop/modules/emr-eks-containers"
 
   eks_cluster_id        = module.eks.cluster_name
   eks_oidc_provider_arn = module.eks.oidc_provider_arn

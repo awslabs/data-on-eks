@@ -1,0 +1,77 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: prod
+  namespace: demo
+spec:
+  description: "Cluster Demo for DoEKS"
+  imageName: ghcr.io/cloudnative-pg/postgresql:15.2
+  instances: 3
+  startDelay: 300
+  stopDelay: 300
+  primaryUpdateStrategy: unsupervised
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa
+  postgresql:
+    parameters:
+      shared_buffers: 256MB
+      pg_stat_statements.max: '10000'
+      pg_stat_statements.track: all
+      auto_explain.log_min_duration: '10s'
+    pg_hba:
+      # - hostssl app all all cert
+      - host app app all password
+  storage:
+    storageClass: ebs-sc
+    size: 1Gi
+  walStorage:
+    storageClass: ebs-sc
+    size: 1Gi
+  monitoring:
+    enablePodMonitor: true
+  bootstrap:
+    recovery:
+      source: prod
+
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://<your-s3-barman-bucket>/restore # ie: s3://xxxx-cnpg-barman-bucket
+      s3Credentials:
+        inheritFromIAMRole: true
+      wal:
+        compression: gzip
+        encryption: AES256
+      data:
+        compression: gzip
+        encryption: AES256
+        immediateCheckpoint: false
+        jobs: 2
+    retentionPolicy: "30d"
+
+  externalClusters:
+    - name: prod
+      barmanObjectStore:
+        destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket
+        s3Credentials:
+          inheritFromIAMRole: true
+        wal:
+          maxParallel: 8
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "1"
+    limits:
+      memory: "1Gi"
+      cpu: "2"
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: failure-domain.beta.kubernetes.io/zone
+
+  nodeMaintenanceWindow:
+    inProgress: false
+    reusePVC: false

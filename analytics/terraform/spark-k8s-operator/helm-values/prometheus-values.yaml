@@ -15,21 +15,6 @@ server:
       cpu: 500m
       memory: 1Gi
 
-  verticalAutoscaler:
-    enabled: true
-    updateMode: "Auto"
-    containerPolicies:
-      - containerName: "prometheus-server"
-        minAllowed:
-          cpu: 500m
-          memory: 1Gi
-        maxAllowed:
-          cpu: 1000m
-          memory: 4Gi
-
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: ${node_group_type}
   persistentVolume:
     accessModes:
       - ReadWriteOnce
@@ -39,27 +24,26 @@ server:
     storageClass: gp2
 
 alertmanager:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: ${node_group_type}
-
+  enabled: false
 kube-state-metrics:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: ${node_group_type}
+  enabled: true
+prometheus-node-exporter:
+  enabled: true
+prometheus-pushgateway:
+  enabled: false
 
-pushgateway:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-    NodeGroupType: ${node_group_type}
-
-nodeExporter:
-  nodeSelector:
-    kubernetes.io/os: ${operating_system}
-
-  # Additional scrape config for Apache YuniKorn Scheduler metrics
-  #      - job_name: 'yunikorn'
-  #        metrics_path: '/ws/v1/metrics'
-  #        static_configs:
-  #          - targets:
-  #              - yunikorn-service.yunikorn.svc.cluster.local:9080
+## Additional scrape config for KubeCost
+## Have your Prometheus scrape the cost-model /metrics endpoint.
+## These metrics are needed for reporting accurate pricing data. Here is an example scrape config:
+#extraScrapeConfigs: |
+#  - job_name: kubecost
+#    honor_labels: true
+#    scrape_interval: 1m
+#    scrape_timeout: 10s
+#    metrics_path: /metrics
+#    scheme: http
+#    dns_sd_configs:
+#      - names:
+#          - kubecost-cost-analyzer.kubecost.svc
+#        type: 'A'
+#        port: 9003

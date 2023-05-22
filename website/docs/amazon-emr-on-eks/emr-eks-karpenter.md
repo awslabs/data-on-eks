@@ -4,6 +4,7 @@ sidebar_label: EMR on EKS with Karpenter
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
@@ -54,6 +55,8 @@ We don't recommend removing critical add-ons (`Amazon VPC CNI`, `CoreDNS`, `Kube
 | FSx for Lustre CSI driver | No | This can be used for running Spark application using FSx for Lustre | [FSx for Lustre CSI Driver Documentation](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html) |
 
 
+<CollapsibleContent header={<h3><span>Customizing Add-ons</span></h3>}>
+
 ### Customizing Add-ons
 
 You can customize your deployment anytime either by changing recommended system add-ons in `addons.tf` or by changing optional add-ons in `variables.tf`.
@@ -85,7 +88,9 @@ Once the changes are saved, follow the [deployment guide](#deploying-the-solutio
 terraform apply
 ```
 
-## Deploying the Solution
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
 Let's go through the deployment steps
 
@@ -154,6 +159,8 @@ kubectl get pods --namespace=kube-system | grep  metrics-server # Output shows M
 kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output shows Cluster Autoscaler pod
 ```
 
+</CollapsibleContent>
+
 ## Run Sample Spark job
 
 The pattern shows how to run spark jobs in a multi-tenant EKS cluster. The examples showcases two data teams using namespaces `emr-data-team-a` and `emr-data-team-b` mapped to their EMR virtual clusters. You can use different Karpenter provisioners for each team so that they can submit jobs that are unique to their workload. Teams can also use different storage requirements to run their Spark jobs. For example, you can use compute optimized provisioner that has `taints` and specify `tolerations` using pod templates so that you can run spark on compute optimized EC2 instances. In terms of storage, you can decide whether to use [EC2 instance-store](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html) or [EBS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html) or [FSx for lustre](https://docs.aws.amazon.com/fsx/latest/LustreGuide/what-is.html) volumes for data processing. The default storage that is used in these examples is EC2 instance store because of performance benefit
@@ -165,7 +172,7 @@ The pattern shows how to run spark jobs in a multi-tenant EKS cluster. The examp
 <Tabs>
 <TabItem value="spark-compute-optimized" lebal="spark-compute-optimized"default>
 
-In this tutorial, you will use Karpenter provisioner that uses compute optimized instances. This template leverages the pre-created AWS Launch templates.
+In this tutorial, you will use Karpenter provisioner that uses compute optimized instances. This template leverages the Karpenter AWSNodeTemplates.
 
 <details>
 <summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary>
@@ -244,21 +251,36 @@ spec:
     #!/bin/bash
     echo "Running a custom user data script"
     set -ex
+    yum install mdadm -y
 
-    IDX=1
     DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    DISK_ARRAY=()
 
     for DEV in $DEVICES
     do
-      mkfs.xfs /dev/$${DEV}
-      mkdir -p /local$${IDX}
-      echo /dev/$${DEV} /local$${IDX} xfs defaults,noatime 1 2 >> /etc/fstab
-      IDX=$(($${IDX} + 1))
+      DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    mount -a
+    DISK_COUNT=$${#DISK_ARRAY[@]}
 
-    /usr/bin/chown -hR +999:+1000 /local*
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
+    fi
 
     --BOUNDARY--
 
@@ -400,16 +422,27 @@ spec:
 
     for DEV in $DEVICES
     do
-    DISK_ARRAY+=("/dev/$${DEV}")
+      DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    if [ $${#DISK_ARRAY[@]} -gt 0 ]; then
-    mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${#DISK_ARRAY[@]} $${DISK_ARRAY[@]}
-    mkfs.xfs /dev/md0
-    mkdir -p /local1
-    echo /dev/md0 /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-    mount -a
-    /usr/bin/chown -hR +999:+1000 /local1
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
     fi
 
     --BOUNDARY--
@@ -553,11 +586,22 @@ spec:
       DISK_ARRAY+=("/dev/$${DEV}")
     done
 
-    if [ $${#DISK_ARRAY[@]} -gt 0 ]; then
-      mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${#DISK_ARRAY[@]} $${DISK_ARRAY[@]}
-      mkfs.xfs /dev/md0
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
       mkdir -p /local1
-      echo /dev/md0 /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
       mount -a
       /usr/bin/chown -hR +999:+1000 /local1
     fi
@@ -782,14 +826,102 @@ These pods will be replaced with the actual Spark Driver and Executor pods once 
 
 ![img.png](img/karpenter-yunikorn-gang-schedule.png)
 
-## Cleanup
 
+<CollapsibleContent header={<h2><span>Delta Lake Table Format</span></h2>}>
+
+Delta Lake is a leading table format which is used to organize and store data.
+The table format allows us to abstract different data files stored as objects as a singular dataset, a table.
+
+The source format provides a transactional and scalable layer, enabling efficient and easy-to-manage data processing.
+It offer features such as
+
+  - ACID (Atomicity, Consistency, Isolation, and Durability) transactions
+  - data merge operations
+  - data versioning
+  - processing performance
+
+Below quickstart examples showcases the features and usage of the delta lake table formats.
+
+<Tabs>
+  <TabItem value="deltalake" label="insert & merge operations" default>
+In this example we will load a csv file into a delta lake table format by running Spark jobs on an EMR on EKS cluster.
+
+### Prerequisites:
+
+The necessary EMR on EKS cluster has been provisioned as per instructions in the begining of this page.
+This script requires input parameters which can be extracted from `terraform apply` output values.  
+Execute the Spark job using the below shell script.
+
+
+```bash
+Navigate to folder and execute script:
+
+cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
+./execute-deltacreate.sh
+```  
+
+:::tip
+    This shell script uploads test data and pyspark scripts to S3 bucket.
+    Specify the S3 bucket where you want to upload the artifacts and create the delta table.
+
+    Verify successful job completion by navigating to the EMR on EKS virtual cluster and view the job status.
+    For job failures, you can navigate to the S3 bucket emr-on-eks-logs and drill-down to the jobs folder and investigate the spark driver stdout and stderr logs.
+:::
+
+**Following artifacts are created in S3 once the script is executed and the EMR on EKS job is successfully completed.**
+
+![](img/deltalake-s3.png)
+
+  - The data folder contains two csv files.(initial_emp.csv and update_emp.csv)
+  - The scripts folder contains two pyspark scripts.(delta-create.py and delta-merge.py) for intial load and subsequent merge.
+  - The delta lake table is created in the delta\delta_emp folder.
+  - There is also a symlink manifest file created in the delta\delta_emp\_symlink_format_manifest and registered to glue catalog for athena to query the initial table.
+
+
+** Using Athena to query the created delta table. **
+
+Athena, is a serverless query service offered by AWS.
+It requires a symlink file for Delta tables registered to the Glue catalog.
+This is required because Delta Lake uses a specific directory structure to store data and metadata.
+The symlink file serves as a pointer to the latest version of the Delta log file. Without this symlink,
+Athena would not be able to determine the correct version of the metadata file to use for a given query
+
+  - Navigate to Athena query editor.
+  - The delta table should appear under the default database in AWSDataCatalog as shown below.
+  - Select the table and preview the data and verify if all records from the initial_emp.csv is shown.
+
+![](img/athena-query-1.png)
+
+**Query output as table**
+
+![](img/athena-query-results.png)
+
+In the second example we will load an updated csv file into into the previously created delta lake table by running the merge Spark job.
+
+```bash
+Navigate to folder and execute script:
+
+cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
+./execute-deltamerge.sh
+```  
+
+** Verify successful job completion. Re-run the query in Athena and verify data is merged (insert and updates) and shown correctly in delta lake table.**
+
+  </TabItem>
+</Tabs>
+
+</CollapsibleContent>
+
+## Cleanup
+<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd analytics/terraform/emr-eks-karpenter/ && chmod +x cleanup.sh
+cd analytics/terraform/emr-eks-karpenter && chmod +x cleanup.sh
 ./cleanup.sh
 ```
+</CollapsibleContent>
+
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
