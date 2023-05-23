@@ -101,21 +101,13 @@ module "eks_blueprints_kubernetes_addons" {
     values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
-
   #---------------------------------------
-  # Adding AWS Load Balancer with associated Nginx Ingress
+  # Adding AWS Load Balancer Controller
   #---------------------------------------
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
     version = "1.4.7"
     timeout = "300"
-  }
-
-  enable_ingress_nginx = true
-  ingress_nginx = {
-    version = "4.5.2"
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
   #---------------------------------------
