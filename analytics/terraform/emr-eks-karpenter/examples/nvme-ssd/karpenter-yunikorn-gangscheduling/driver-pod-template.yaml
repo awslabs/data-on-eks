@@ -28,7 +28,7 @@ metadata:
         },
         {
           "name": "spark-executor",
-          "minMember": 5,
+          "minMember": 20,
           "minResource": {
             "cpu": "1200m",
             "memory": "15Gi"

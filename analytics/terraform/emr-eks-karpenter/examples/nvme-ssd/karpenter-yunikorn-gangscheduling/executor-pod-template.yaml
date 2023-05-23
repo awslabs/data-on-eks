@@ -7,7 +7,7 @@ metadata:
     applicationId: ny-taxi-yunikorn
     queue: root.test # YuniKorn Queue
   annotations:
-    yunikorn.apache.org/task-group-name: "spark-app" # YuniKorn Gang Scheduling annotation
+    yunikorn.apache.org/task-group-name: "spark-executor" # YuniKorn Gang Scheduling annotation
 
 spec:
   volumes:
