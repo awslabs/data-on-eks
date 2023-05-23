@@ -15,6 +15,7 @@ targets=(
   "module.ebs_csi_driver_irsa"
   "module.vpc_cni_irsa"
   "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
   "module.datahub.module.prereq"
   "module.datahub"
 )

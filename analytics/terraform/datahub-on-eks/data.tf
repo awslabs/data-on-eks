@@ -17,4 +17,11 @@ data "aws_eks_addon_version" "this" {
   most_recent        = true
 }
 
+data "kubernetes_ingress_v1" "datahub-datahub-frontend" {
+  depends_on=["module.datahub"]
+  metadata {
+    name = "datahub-datahub-frontend"
+    namespace = "datahub"
+  }
+}
 

@@ -39,6 +39,11 @@ output "configure_kubectl" {
   value       = "aws eks --region ${local.region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
 
+output "frontend_url" {
+  description = "URL for datahub frontend"
+  value       = format("http://%s/", data.kubernetes_ingress_v1.datahub-datahub-frontend.status.0.load_balancer.0.ingress.0.hostname)
+ 
+}
 
 
 ################################################################################

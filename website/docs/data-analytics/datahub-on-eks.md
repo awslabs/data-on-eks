@@ -78,7 +78,7 @@ chmod +x install.sh
 
 ### Verify Deployment
 
-After the deployment completes, we can access the DataHub UI and import metadata from a few sample datasources.  
+After the deployment completes, we can access the DataHub UI and test importing metadata from sample datasources.  You may find the URL to the datahub frontend from the output `frontend_url`, or by running kubectl command below:
 
 ```sh
 kubectl get ingress datahub-datahub-frontend -n datahub
