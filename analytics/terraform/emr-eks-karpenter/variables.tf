@@ -67,26 +67,20 @@ variable "enable_vpc_endpoints" {
 }
 
 variable "enable_yunikorn" {
-  default     = true
+  default     = false
   description = "Enable Apache YuniKorn Scheduler"
   type        = bool
 }
 
 variable "enable_fsx_for_lustre" {
-  default     = true
+  default     = false
   description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
   type        = bool
 }
 
-variable "enable_cloudwatch_metrics" {
+variable "enable_aws_cloudwatch_metrics" {
   default     = true
   description = "Enable Cloudwatch metrics"
-  type        = bool
-}
-
-variable "enable_aws_for_fluentbit" {
-  default     = true
-  description = "Enable Fluentbit addon"
   type        = bool
 }
 
@@ -94,4 +88,15 @@ variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
   default     = true
+}
+variable "enable_grafana" {
+  description = "Enable Grafana"
+  type        = bool
+  default     = true
+}
+
+variable "enable_kubecost" {
+  description = "Enable Kubecost"
+  type        = bool
+  default     = false
 }

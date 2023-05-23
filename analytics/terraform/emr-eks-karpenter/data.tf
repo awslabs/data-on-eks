@@ -8,11 +8,8 @@ data "aws_ecrpublic_authorization_token" "token" {
 
 data "aws_availability_zones" "available" {}
 
-data "aws_region" "current" {}
-
 data "aws_caller_identity" "current" {}
 
-data "aws_partition" "current" {}
 
 data "aws_eks_addon_version" "this" {
   addon_name         = "vpc-cni"
@@ -30,4 +27,3 @@ data "aws_ami" "x86" {
     values = ["amazon-eks-node-${module.eks.cluster_version}-*"] # Update this for ARM ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
   }
 }
-

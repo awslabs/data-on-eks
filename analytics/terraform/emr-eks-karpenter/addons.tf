@@ -66,7 +66,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    timeout = "300"
+    timeout     = "300"
     create_role = true
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
@@ -95,7 +95,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
+  enable_aws_cloudwatch_metrics = var.enable_aws_cloudwatch_metrics
   aws_cloudwatch_metrics = {
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
@@ -165,7 +165,7 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Kubecost Add-on
   #---------------------------------------------------------------
-  enable_kubecost = true
+  enable_kubecost = var.enable_kubecost
   kubecost_helm_config = {
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
@@ -175,7 +175,7 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Prometheus Add-on
   #---------------------------------------------------------------
-  enable_prometheus = true
+  enable_prometheus = var.enable_amazon_prometheus
   prometheus_helm_config = {
     values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
     # Use only when Amazon managed Prometheus is enabled with `amp.tf` resources
@@ -202,7 +202,7 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Open Source Grafana Add-on
   #---------------------------------------------------------------
-  enable_grafana = true
+  enable_grafana = var.enable_grafana
   grafana_helm_config = {
     create_irsa = true # Creates IAM Role with trust policy, default IAM policy and adds service account annotation
     set_sensitive = [
@@ -345,4 +345,3 @@ module "amp_ingest_irsa" {
   }
   tags = local.tags
 }
-
