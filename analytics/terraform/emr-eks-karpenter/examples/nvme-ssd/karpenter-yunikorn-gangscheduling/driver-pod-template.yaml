@@ -15,11 +15,11 @@ metadata:
     # Resource below should never be less than the actual resources defined for Driver and Executor with sidecar containers
     yunikorn.apache.org/task-groups: |-
       [{
-          "name": "spark-driver",
+          "name": "spark-app",
           "minMember": 1,
           "minResource": {
             "cpu": "1200m",
-            "memory": "15Gi"
+            "memory": "10Gi"
           },
           "nodeSelector": {
             "NodeGroupType": "SparkMemoryOptimized"
@@ -28,10 +28,10 @@ metadata:
         },
         {
           "name": "spark-executor",
-          "minMember": 20,
+          "minMember": 5,
           "minResource": {
             "cpu": "1200m",
-            "memory": "15Gi"
+            "memory": "10Gi"
           },
           "nodeSelector": {
             "NodeGroupType": "SparkMemoryOptimized"

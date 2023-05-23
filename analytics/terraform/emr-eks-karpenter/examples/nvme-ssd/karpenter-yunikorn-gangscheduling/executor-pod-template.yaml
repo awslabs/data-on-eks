@@ -7,7 +7,7 @@ metadata:
     applicationId: ny-taxi-yunikorn
     queue: root.test # YuniKorn Queue
   annotations:
-    yunikorn.apache.org/task-group-name: "spark-executor" # YuniKorn Gang Scheduling annotation
+    yunikorn.apache.org/task-group-name: "spark-app" # YuniKorn Gang Scheduling annotation
 
 spec:
   volumes:
@@ -18,7 +18,6 @@ spec:
 
   nodeSelector:
     NodeGroupType: "SparkMemoryOptimized"
-    topology.kubernetes.io/zone: "us-west-2b"
 
   containers:
     - name: spark-kubernetes-executor # Don't change this name. EMR on EKS looking for this name

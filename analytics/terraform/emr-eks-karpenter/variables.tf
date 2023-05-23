@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.25"
+  default     = "1.26"
   type        = string
 }
 
@@ -22,10 +22,42 @@ variable "tags" {
   type        = map(string)
 }
 
+# VPC with 2046 IPs
 variable "vpc_cidr" {
-  description = "VPC CIDR"
+  description = "VPC CIDR. This should be a valid private (RFC 1918) CIDR range"
   default     = "10.1.0.0/16"
   type        = string
+}
+
+# Routable Public subnets with NAT Gateway and Internet Gateway
+variable "public_subnets" {
+  description = "Public Subnets CIDRs. 62 IPs per Subnet/AZ"
+  default     = ["10.1.0.0/26", "10.1.0.64/26"]
+  type        = list(string)
+}
+
+# Routable Private subnets only for Private NAT Gateway -> Transit Gateway -> Second VPC for overlapping overlapping CIDRs
+variable "private_subnets" {
+  description = "Private Subnets CIDRs. 254 IPs per Subnet/AZ for Private NAT + NLB + Airflow + EC2 Jumphost etc."
+  default     = ["10.1.1.0/24", "10.1.2.0/24"]
+  type        = list(string)
+}
+
+
+# RFC6598 range 100.64.0.0/10
+# Note you can only /16 range to VPC. You can add multiples of /16 if required
+variable "secondary_cidr_blocks" {
+  description = "Secondary CIDR blocks to be attached to VPC"
+  default     = ["100.64.0.0/16"]
+  type        = list(string)
+}
+
+# EKS Worker nodes and pods will be placed on these subnets. Each Private subnet can get 32766 IPs.
+# RFC6598 range 100.64.0.0/10
+variable "eks_data_plane_subnet_secondary_cidr" {
+  description = "Secondary CIDR blocks. 32766 IPs per Subnet per Subnet/AZ for EKS Node and Pods"
+  default     = ["100.64.0.0/17", "100.64.128.0/17"]
+  type        = list(string)
 }
 
 variable "enable_vpc_endpoints" {
@@ -34,27 +66,14 @@ variable "enable_vpc_endpoints" {
   type        = string
 }
 
-# Only two Subnets for with low IP range for internet access
-variable "public_subnets" {
-  description = "Public Subnets CIDRs. 62 IPs per Subnet"
-  default     = ["10.1.255.128/26", "10.1.255.192/26"]
-  type        = list(string)
-}
-
-variable "private_subnets" {
-  description = "Private Subnets CIDRs. 32766 Subnet1 and 16382 Subnet2 IPs per Subnet"
-  default     = ["10.1.0.0/17", "10.1.128.0/18"]
-  type        = list(string)
-}
-
 variable "enable_yunikorn" {
-  default     = false
+  default     = true
   description = "Enable Apache YuniKorn Scheduler"
   type        = bool
 }
 
 variable "enable_fsx_for_lustre" {
-  default     = false
+  default     = true
   description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
   type        = bool
 }
@@ -69,4 +88,10 @@ variable "enable_aws_for_fluentbit" {
   default     = true
   description = "Enable Fluentbit addon"
   type        = bool
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = true
 }
