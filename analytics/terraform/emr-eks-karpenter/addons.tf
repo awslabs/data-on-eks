@@ -2,12 +2,12 @@
 module "eks_blueprints_kubernetes_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650fd2b4bc894bde7b51313a8dc9598d82e925"
+  # Short commit hash from 8th May using git rev-parse --short HEAD
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.cluster_oidc_issuer_url
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
@@ -16,65 +16,78 @@ module "eks_blueprints_kubernetes_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+      preserve                 = true
+      most_recent              = true
     }
     coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
+      most_recent = true
+      preserve    = true
     }
     kube-proxy = {
-      preserve = true
+      most_recent = true
+      preserve    = true
     }
   }
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
+  #---------------------------------------------------------------
+  # CoreDNS Autoscaler helps to scale for large EKS Clusters
+  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
+  #---------------------------------------------------------------
+  enable_cluster_proportional_autoscaler = true
+  cluster_proportional_autoscaler = {
+    timeout = "300"
+    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
+      target = "deployment/coredns"
+    })]
+    description = "Cluster Proportional Autoscaler for CoreDNS Service"
+  }
+
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
   enable_metrics_server = true
-  metrics_server_helm_config = {
-    name       = "metrics-server"
-    repository = "https://kubernetes-sigs.github.io/metrics-server/" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "metrics-server"
-    version    = "3.8.2"
-    namespace  = "kube-system"
-    timeout    = "300"
-    values     = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  metrics_server = {
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # VPA
+  #---------------------------------------
+  enable_vpa = true
+  vpa = {
+    timeout = "300"
   }
 
   #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
   enable_cluster_autoscaler = true
-  cluster_autoscaler_helm_config = {
-    name       = "cluster-autoscaler"
-    repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
-    chart      = "cluster-autoscaler"
-    version    = "9.21.0"
-    namespace  = "kube-system"
-    timeout    = "300"
+  cluster_autoscaler = {
+    timeout     = "300"
+    create_role = true
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
-      eks_cluster_id = local.name
+      eks_cluster_id = module.eks.cluster_name
     })]
   }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                           = true
-  karpenter_enable_spot_termination_handling = true
-  karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
+  karpenter_node = {
+    create_iam_role          = true
+    iam_role_use_name_prefix = false
+    # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
+    iam_role_name = local.karpenter_iam_role_name
+  }
 
-  karpenter_helm_config = {
-    name                = "karpenter"
-    chart               = "karpenter"
-    repository          = "oci://public.ecr.aws/karpenter"
-    version             = "v0.25.0"
-    namespace           = "karpenter"
+  karpenter = {
+    timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -82,56 +95,26 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_cloudwatch_metrics = var.enable_cloudwatch_metrics
-
-  #---------------------------------------
-  # AWS for FluentBit - DaemonSet
-  #---------------------------------------
-  enable_aws_for_fluentbit                 = var.enable_aws_for_fluentbit
-  aws_for_fluentbit_cw_log_group_name      = "/${var.name}/fluentbit-logs" # Add-on creates this log group
-  aws_for_fluentbit_cw_log_group_retention = 30
-  aws_for_fluentbit_helm_config = {
-    name       = "aws-for-fluent-bit"
-    chart      = "aws-for-fluent-bit"
-    repository = "https://aws.github.io/eks-charts"
-    version    = "0.1.21"
-    namespace  = "aws-for-fluent-bit"
-    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = var.region,
-      cloudwatch_log_group = "/${var.name}/fluentbit-logs"
-    })]
+  enable_aws_cloudwatch_metrics = var.enable_aws_cloudwatch_metrics
+  aws_cloudwatch_metrics = {
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
-  # Amazon Managed Prometheus
+  # Adding AWS Load Balancer Controller
   #---------------------------------------
-  enable_amazon_prometheus             = true
-  amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp.prometheus_endpoint
-
-  #---------------------------------------
-  # Prometheus Server Add-on
-  #---------------------------------------
-  enable_prometheus = true
-  prometheus_helm_config = {
-    name       = "prometheus"
-    repository = "https://prometheus-community.github.io/helm-charts"
-    chart      = "prometheus"
-    version    = "15.10.1"
-    namespace  = "prometheus"
-    timeout    = "300"
-    values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
+  enable_aws_load_balancer_controller = true
+  aws_load_balancer_controller = {
+    version = "1.4.7"
+    timeout = "300"
   }
 
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
   enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
-  aws_fsx_csi_driver_helm_config = {
-    name       = "aws-fsx-csi-driver"
-    chart      = "aws-fsx-csi-driver"
-    repository = "https://kubernetes-sigs.github.io/aws-fsx-csi-driver/"
-    version    = "1.5.1"
-    namespace  = "kube-system"
+  aws_fsx_csi_driver = {
     # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
     values = [
       <<-EOT
@@ -143,41 +126,86 @@ module "eks_blueprints_kubernetes_addons" {
   }
 
   tags = local.tags
+
+
 }
 
-#---------------------------------------
-# Kubecost
-#---------------------------------------
-resource "helm_release" "kubecost" {
-  name                = "kubecost"
-  repository          = "oci://public.ecr.aws/kubecost"
-  chart               = "cost-analyzer"
-  version             = "1.97.0"
-  namespace           = "kubecost"
-  create_namespace    = true
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
-  timeout             = "300"
-  values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-}
+
 
 #---------------------------------------------------------------
-# Apache YuniKorn Add-on
+# Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-resource "helm_release" "yunikorn" {
-  count = var.enable_yunikorn ? 1 : 0
+# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
+module "kubernetes_data_addons" {
+  # Please note that local source will be replaced once the below repo is public
+  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
+  source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
-  name             = "yunikorn"
-  repository       = "https://apache.github.io/yunikorn-release"
-  chart            = "yunikorn"
-  version          = "1.1.0"
-  namespace        = "yunikorn"
-  create_namespace = true
-  timeout          = "300"
-  values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-    image_version = "1.1.0"
-  })]
+
+  #---------------------------------------------------------------
+  # Apache YuniKorn Add-on
+  #---------------------------------------------------------------
+  enable_yunikorn = var.enable_yunikorn
+  yunikorn_helm_config = {
+    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+      image_version = "1.2.0"
+    })]
+  }
+
+
+  #---------------------------------------------------------------
+  # Kubecost Add-on
+  #---------------------------------------------------------------
+  enable_kubecost = var.enable_kubecost
+  kubecost_helm_config = {
+    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------------------------------
+  # Prometheus Add-on
+  #---------------------------------------------------------------
+  enable_prometheus = var.enable_amazon_prometheus
+  prometheus_helm_config = {
+    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
+    # Use only when Amazon managed Prometheus is enabled with `amp.tf` resources
+    set = var.enable_amazon_prometheus ? [
+      {
+        name  = "serviceAccounts.server.name"
+        value = local.amp_ingest_service_account
+      },
+      {
+        name  = "serviceAccounts.server.annotations.eks\\.amazonaws\\.com/role-arn"
+        value = module.amp_ingest_irsa[0].iam_role_arn
+      },
+      {
+        name  = "server.remoteWrite[0].url"
+        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+      },
+      {
+        name  = "server.remoteWrite[0].sigv4.region"
+        value = local.region
+      }
+    ] : []
+  }
+
+  #---------------------------------------------------------------
+  # Open Source Grafana Add-on
+  #---------------------------------------------------------------
+  enable_grafana = var.enable_grafana
+  grafana_helm_config = {
+    create_irsa = true # Creates IAM Role with trust policy, default IAM policy and adds service account annotation
+    set_sensitive = [
+      {
+        name  = "adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ]
+  }
 }
+
 
 #---------------------------------------
 # Karpenter Provisioners
@@ -197,16 +225,9 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-#---------------------------------------------------------------
-# Amazon Prometheus Workspace
-#---------------------------------------------------------------
-resource "aws_prometheus_workspace" "amp" {
-  alias = format("%s-%s", "amp-ws", local.name)
-  tags  = local.tags
-}
 
 #---------------------------------------------------------------
-# IRSA for EBS CSI Driver
+# IRSA for EBS
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
@@ -235,6 +256,83 @@ module "vpc_cni_irsa" {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# VPC CNI Addon should run before the nodes are created
+# Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
+#---------------------------------------------------------------
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name             = module.eks.cluster_name
+  addon_name               = "vpc-cni"
+  addon_version            = data.aws_eks_addon_version.this.version
+  resolve_conflicts        = "OVERWRITE"
+  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
+  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+}
+
+#------------------------------------------
+# Amazon Prometheus
+#------------------------------------------
+locals {
+  amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
+  namespace                  = "prometheus"
+}
+
+resource "aws_prometheus_workspace" "amp" {
+  count = var.enable_amazon_prometheus ? 1 : 0
+
+  alias = format("%s-%s", "amp-ws", local.name)
+  tags  = local.tags
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "${local.name}-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
+}
+
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "amp_ingest_irsa" {
+  count = var.enable_amazon_prometheus ? 1 : 0
+
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version   = "~> 5.14"
+  role_name = format("%s-%s", local.name, "amp-ingest")
+
+  attach_amazon_managed_service_prometheus_policy  = true
+  amazon_managed_service_prometheus_workspace_arns = [aws_prometheus_workspace.amp[0].arn]
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["${local.namespace}:${local.amp_ingest_service_account}"]
     }
   }
   tags = local.tags
