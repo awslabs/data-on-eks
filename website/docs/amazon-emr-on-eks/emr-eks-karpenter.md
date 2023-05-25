@@ -671,7 +671,7 @@ We will create Storageclass that will be used by drivers and executors. We'll cr
 Create StorageClass and PVC using example provided
 ```bash
 cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/ebs-pvc/karpenter-compute-provisioner-ebs/
-kubectl apply -f emr-eks-karpenter-ebs.yaml
+kubectl apply -f ebs-storageclass-pvc.yaml
 ```
 Let's run the job
 
@@ -727,9 +727,9 @@ kubectl get pods --namespace=emr-data-team-a -w
 This will show the mounted `/data` directory with FSx DNS name
 
 ```bash
-kubectl exec -ti ny-taxi-trip-static-exec-1 -c analytics-kubernetes-executor -n emr-data-team-a -- df -h
+kubectl exec -ti taxidata-exec-1 -c spark-kubernetes-executor -n emr-data-team-a -- df -h
 
-kubectl exec -ti ny-taxi-trip-static-exec-1 -c analytics-kubernetes-executor -n emr-data-team-a -- ls -lah /static
+kubectl exec -ti taxidata-exec-1 -c spark-kubernetes-executor -n emr-data-team-a -- ls -lah /static
 ```
 </TabItem>
 
@@ -765,9 +765,9 @@ kubectl get pods --namespace=emr-data-team-a -w
 ```
 
 ```bash
-kubectl exec -ti ny-taxi-trip-dyanmic-exec-1 -c analytics-kubernetes-executor -n emr-data-team-a -- df -h
+kubectl exec -ti taxidata-exec-1 -c spark-kubernetes-executor -n emr-data-team-a -- df -h
 
-kubectl exec -ti ny-taxi-trip-dyanmic-exec-1 -c analytics-kubernetes-executor -n emr-data-team-a -- ls -lah /dyanmic
+kubectl exec -ti taxidata-exec-1 -c spark-kubernetes-executor -n emr-data-team-a -- ls -lah /dynamic
 ```
 </TabItem>
 </Tabs>
