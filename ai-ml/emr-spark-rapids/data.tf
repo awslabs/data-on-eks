@@ -17,6 +17,16 @@ data "aws_eks_addon_version" "this" {
   most_recent        = true
 }
 
+data "aws_ami" "eks_gpu_node" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amazon-eks-gpu-node-${var.eks_cluster_version}-*"]
+  }
+}
+
 # This data source can be used to get the latest AMI for Managed Node Groups
 data "aws_ami" "x86" {
   owners      = ["amazon"]

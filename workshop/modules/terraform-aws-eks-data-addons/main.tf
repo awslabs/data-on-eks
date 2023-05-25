@@ -7,6 +7,10 @@ locals {
   flink_operator_repository = "https://downloads.apache.org/flink/flink-kubernetes-operator-${local.flink_operator_version}"
   flink_operator_version    = try(var.flink_operator_helm_config["version"], "1.4.0")
 
+  nvidia_gpu_operator_name       = "nvidia-gpu-operator"
+  nvidia_gpu_operator_repository = "https://helm.ngc.nvidia.com/nvidia"
+  nvidia_gpu_operator_version    = "v23.3.2"
+
   yunikorn_name       = "yunikorn"
   yunikorn_repository = "https://apache.github.io/yunikorn-release"
   yunikorn_version    = "1.2.0"

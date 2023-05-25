@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "emr-eks-karpenter"
+  default     = "emr-spark-rapids"
   type        = string
 }
 
@@ -43,7 +43,6 @@ variable "private_subnets" {
   type        = list(string)
 }
 
-
 # RFC6598 range 100.64.0.0/10
 # Note you can only /16 range to VPC. You can add multiples of /16 if required
 variable "secondary_cidr_blocks" {
@@ -64,18 +63,6 @@ variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
   default     = false
   type        = string
-}
-
-variable "enable_yunikorn" {
-  default     = false
-  description = "Enable Apache YuniKorn Scheduler"
-  type        = bool
-}
-
-variable "enable_fsx_for_lustre" {
-  default     = false
-  description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
-  type        = bool
 }
 
 variable "enable_aws_cloudwatch_metrics" {

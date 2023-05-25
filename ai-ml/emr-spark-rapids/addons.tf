@@ -54,14 +54,6 @@ module "eks_blueprints_kubernetes_addons" {
   }
 
   #---------------------------------------
-  # VPA
-  #---------------------------------------
-  enable_vpa = true
-  vpa = {
-    timeout = "300"
-  }
-
-  #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
   enable_cluster_autoscaler = true
@@ -106,31 +98,12 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    version = "1.4.7"
     timeout = "300"
-  }
-
-  #---------------------------------------
-  # Enable FSx for Lustre CSI Driver
-  #---------------------------------------
-  enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
-  aws_fsx_csi_driver = {
-    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
-    values = [
-      <<-EOT
-        node:
-          tolerations:
-            - operator: Exists
-      EOT
-    ]
   }
 
   tags = local.tags
 
-
 }
-
-
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
@@ -139,20 +112,19 @@ module "eks_blueprints_kubernetes_addons" {
 module "kubernetes_data_addons" {
   # Please note that local source will be replaced once the below repo is public
   # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
-  source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
+  source = "../../workshop/modules/terraform-aws-eks-data-addons"
+
   oidc_provider_arn = module.eks.oidc_provider_arn
 
-
   #---------------------------------------------------------------
-  # Apache YuniKorn Add-on
+  # NVIDIA GPU Operator Add-on
   #---------------------------------------------------------------
-  enable_yunikorn = var.enable_yunikorn
-  yunikorn_helm_config = {
-    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.2.0"
-    })]
-  }
-
+  enable_nvidia_gpu_operator = true
+  #  nvidia_gpu_operator_helm_config = {
+  #    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+  #    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  #    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  #  }
 
   #---------------------------------------------------------------
   # Kubecost Add-on
@@ -205,7 +177,6 @@ module "kubernetes_data_addons" {
     ]
   }
 }
-
 
 #---------------------------------------
 # Karpenter Provisioners

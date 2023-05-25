@@ -307,6 +307,7 @@ module "eks" {
       max_size     = 12
       desired_size = 0
 
+      capacity_type        = "SPOT"
       force_update_version = true
       instance_types       = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
 
