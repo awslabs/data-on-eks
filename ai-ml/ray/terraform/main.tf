@@ -119,6 +119,10 @@ module "eks" {
   cluster_addons = {
     coredns = {
       most_recent = true
+      timeouts = {
+        create = "25m"
+        delete = "10m"
+      }
     }
     kube-proxy = {
       most_recent = true
@@ -142,6 +146,10 @@ module "eks" {
         }
       })
     }
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
   }
 
   # This MNG will be used to host infrastructure add-ons for
@@ -159,6 +167,43 @@ module "eks" {
   tags = merge(local.tags, {
     "karpenter.sh/discovery" = local.name
   })
+}
+
+module "ebs_csi_driver_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.14"
+
+  role_name_prefix = "${local.name}-ebs-csi-driver-"
+
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+
+  tags = local.tags
+}
+
+module "vpc_cni_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.14"
+
+  role_name_prefix = "${local.name}-vpc-cni-"
+
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+
+  tags = local.tags
 }
 
 #---------------------------------------------------------------
@@ -185,61 +230,14 @@ resource "kubectl_manifest" "eni_config" {
 }
 
 #---------------------------------------------------------------
-# Karpenter Infrastructure
-#---------------------------------------------------------------
-
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
-
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  create_irsa                  = false # IRSA will be created by the kubernetes-addons module
-  iam_role_additional_policies = [module.karpenter_policy.arn]
-
-  tags = local.tags
-}
-
-# We have to augment default the karpenter node IAM policy with
-# permissions we need for Ray Jobs to run until IRSA is added
-# upstream in kuberay-operator. See issue
-# https://github.com/ray-project/kuberay/issues/746
-module "karpenter_policy" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
-  version = "~> 5.11.1"
-
-  name        = "KarpenterS3ReadOnlyPolicy"
-  description = "IAM Policy to allow read from an S3 bucket for karpenter nodes"
-
-  policy = jsonencode(
-    {
-      Version = "2012-10-17"
-      Statement = [
-        {
-          Sid      = "ListObjectsInBucket"
-          Effect   = "Allow"
-          Action   = ["s3:ListBucket"]
-          Resource = ["arn:aws:s3:::air-example-data-2"]
-        },
-        {
-          Sid      = "AllObjectActions"
-          Effect   = "Allow"
-          Action   = "s3:Get*"
-          Resource = ["arn:aws:s3:::air-example-data-2/*"]
-        }
-      ]
-    }
-  )
-}
-
-#---------------------------------------------------------------
 # Operational Add-Ons using EKS Blueprints
 #---------------------------------------------------------------
 
 module "eks_blueprints_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650fd2b4bc894bde7b51313a8dc9598d82e925"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "0.1.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -247,12 +245,9 @@ module "eks_blueprints_addons" {
   oidc_provider     = module.eks.oidc_provider
   oidc_provider_arn = module.eks.oidc_provider_arn
 
-  enable_cloudwatch_metrics = true
-
   enable_aws_for_fluentbit = true
-  aws_for_fluentbit_helm_config = {
-    aws_for_fluent_bit_cw_log_group           = "/${local.name}/worker-fluentbit-logs"
-    aws_for_fluentbit_cwlog_retention_in_days = 7 #days
+  aws_for_fluentbit = {
+    aws_for_fluentbit_cwlog_retention = 7 #days
     values = [
       yamlencode({
         name              = "kubernetes"
@@ -290,14 +285,51 @@ module "eks_blueprints_addons" {
   }
 
   enable_karpenter = true
-  karpenter_helm_config = {
+  karpenter = {
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
-  karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
+  karpenter_node = {
+    iam_role_additional_policies = [module.karpenter_policy.arn]
+  }
   karpenter_enable_spot_termination_handling = true
 
+  enable_kube_prometheus_stack        = true
+  enable_aws_load_balancer_controller = true
+
   tags = local.tags
+}
+
+# We have to augment default the karpenter node IAM policy with
+# permissions we need for Ray Jobs to run until IRSA is added
+# upstream in kuberay-operator. See issue
+# https://github.com/ray-project/kuberay/issues/746, please +1
+module "karpenter_policy" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
+  version = "~> 5.11.1"
+
+  name        = "KarpenterS3ReadOnlyPolicy"
+  description = "IAM Policy to allow read from an S3 bucket for karpenter nodes"
+
+  policy = jsonencode(
+    {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Sid      = "ListObjectsInBucket"
+          Effect   = "Allow"
+          Action   = ["s3:ListBucket"]
+          Resource = ["arn:aws:s3:::air-example-data-2"]
+        },
+        {
+          Sid      = "AllObjectActions"
+          Effect   = "Allow"
+          Action   = "s3:Get*"
+          Resource = ["arn:aws:s3:::air-example-data-2/*"]
+        }
+      ]
+    }
+  )
 }
 
 #---------------------------------------------------------------
@@ -310,9 +342,68 @@ resource "helm_release" "kuberay_operator" {
   name             = "kuberay-operator"
   repository       = "https://ray-project.github.io/kuberay-helm/"
   chart            = "kuberay-operator"
-  version          = "0.4.0"
+  version          = "0.5.0"
 
   depends_on = [
     module.eks
   ]
+}
+
+#---------------------------------------------------------------
+# Memory DB (Redis) Cluster for GCS
+#---------------------------------------------------------------
+
+module "memory-db" {
+  source  = "terraform-aws-modules/memory-db/aws"
+  version = "1.1.2"
+
+  name        = local.name
+  description = "Cluster for Ray GCS"
+
+  node_type              = "db.t4g.small"
+  num_shards             = 2
+  num_replicas_per_shard = 2
+  tls_enabled            = true
+  security_group_ids     = [module.security_group.security_group_id]
+  subnet_ids             = module.vpc
+
+  users = {
+    admin = {
+      user_name     = "admin-user"
+      access_string = "on ~* &* +@all"
+      passwords     = [random_password.password["admin"].result]
+      tags          = { user = "admin" }
+    }
+    readonly = {
+      user_name     = "readonly-user"
+      access_string = "on ~* &* -@all +@read"
+      passwords     = [random_password.password["readonly"].result]
+      tags          = { user = "readonly" }
+    }
+  }
+}
+
+module "security_group" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 4.0"
+
+  name        = local.name
+  description = "Redis Cluster Security group for ${local.name}"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_cidr_blocks = module.vpc.private_subnets_cidr_blocks
+  ingress_rules       = ["redis-tcp"]
+
+  egress_cidr_blocks = [module.vpc.vpc_cidr_block]
+  egress_rules       = ["all-all"]
+
+  tags = local.tags
+}
+
+resource "random_password" "password" {
+  for_each = toset(["admin", "readonly"])
+
+  length           = 16
+  special          = true
+  override_special = "_%@"
 }
