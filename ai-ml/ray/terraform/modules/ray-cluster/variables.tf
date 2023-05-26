@@ -14,13 +14,19 @@ variable "namespace" {
 }
 
 variable "ray_cluster_version" {
-  description = "Namespace for the Ray Cluster"
+  description = "Version for the Ray Cluster"
   type        = string
-  default     = "0.4.0"
+  default     = "0.5.0"
 }
 
 variable "helm_values" {
   description = "Helm values for Ray Cluster helm chart"
   type        = list(any)
   default     = []
+}
+
+variable "region" {
+  description = "AWS Region"
+  type        = string
+  default     = "us-west-2"
 }

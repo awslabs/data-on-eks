@@ -63,13 +63,19 @@ data "aws_ecrpublic_authorization_token" "token" {
   provider = aws.ecr_public_region
 }
 
+data "aws_caller_identity" "current" {}
+
+data "aws_partition" "current" {}
+
 #---------------------------------------------------------------
 # Locals
 #---------------------------------------------------------------
 
 locals {
-  name   = var.name
-  region = var.region
+  name       = var.name
+  region     = var.region
+  account_id = data.aws_caller_identity.current.account_id
+  partition  = data.aws_partition.current.partition
 
   vpc_cidr           = "10.0.0.0/16"
   secondary_vpc_cidr = "100.64.0.0/16"
@@ -106,7 +112,7 @@ module "eks" {
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     {
-      rolearn  = module.karpenter.role_arn
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -133,7 +139,6 @@ module "eks" {
       # See README for further details
       before_compute = true
       most_recent    = true # To ensure access to the latest settings provided
-      preserve       = true
       configuration_values = jsonencode({
         env = {
           # Reference https://aws.github.io/aws-eks-best-practices/reliability/docs/networkmanagement/#cni-custom-networking
@@ -157,7 +162,7 @@ module "eks" {
   # etc.
   eks_managed_node_groups = {
     infra = {
-      instance_types = ["m5.large"]
+      instance_types = ["m5.xlarge"]
       min_size       = 3
       max_size       = 3
       desired_size   = 3
@@ -242,7 +247,6 @@ module "eks_blueprints_addons" {
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.oidc_provider
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_for_fluentbit = true
@@ -292,10 +296,13 @@ module "eks_blueprints_addons" {
   karpenter_node = {
     iam_role_additional_policies = [module.karpenter_policy.arn]
   }
-  karpenter_enable_spot_termination_handling = true
+  karpenter_enable_spot_termination = true
 
   enable_kube_prometheus_stack        = true
   enable_aws_load_balancer_controller = true
+  enable_external_secrets             = true
+  enable_cert_manager                 = true
+  enable_metrics_server               = true
 
   tags = local.tags
 }
@@ -353,9 +360,9 @@ resource "helm_release" "kuberay_operator" {
 # Memory DB (Redis) Cluster for GCS
 #---------------------------------------------------------------
 
-module "memory-db" {
+module "memory_db" {
   source  = "terraform-aws-modules/memory-db/aws"
-  version = "1.1.2"
+  version = "~> 1.1.2"
 
   name        = local.name
   description = "Cluster for Ray GCS"
@@ -363,24 +370,14 @@ module "memory-db" {
   node_type              = "db.t4g.small"
   num_shards             = 2
   num_replicas_per_shard = 2
-  tls_enabled            = true
+  tls_enabled            = false
   security_group_ids     = [module.security_group.security_group_id]
-  subnet_ids             = module.vpc
+  subnet_ids             = module.vpc.database_subnets
+  parameter_group_family = "memorydb_redis7"
+  create_acl             = false 
+  acl_name               = "open-access"
 
-  users = {
-    admin = {
-      user_name     = "admin-user"
-      access_string = "on ~* &* +@all"
-      passwords     = [random_password.password["admin"].result]
-      tags          = { user = "admin" }
-    }
-    readonly = {
-      user_name     = "readonly-user"
-      access_string = "on ~* &* -@all +@read"
-      passwords     = [random_password.password["readonly"].result]
-      tags          = { user = "readonly" }
-    }
-  }
+  tags = local.tags
 }
 
 module "security_group" {
@@ -400,10 +397,26 @@ module "security_group" {
   tags = local.tags
 }
 
-resource "random_password" "password" {
-  for_each = toset(["admin", "readonly"])
-
+resource "random_password" "redis" {
   length           = 16
   special          = true
   override_special = "_%@"
 }
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "redis" {
+  name                    = "redis"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "redis" {
+  secret_id = aws_secretsmanager_secret.redis.id
+  secret_string = jsonencode(
+    {
+      host     = "redis://${module.memory_db.cluster_endpoint_address}:${module.memory_db.cluster_endpoint_port}"
+      password = random_password.redis.result
+    }
+  )
+}
+
+#TODO: Add Karpenter monitoring 

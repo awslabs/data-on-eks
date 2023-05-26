@@ -4,7 +4,7 @@ provider "aws" {
 
 provider "kubernetes" {
   host                   = data.aws_eks_cluster.this.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.example.certificate_authority[0].data)
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
@@ -34,12 +34,12 @@ data "aws_eks_cluster" "this" {
 
 locals {
   region      = var.region
-  name        = "pytorch"
+  name        = "xgboost"
   eks_cluster = "ray-cluster"
 }
 
-module "pytorch_cluster" {
-  source = "../../modules/ray-cluster"
+module "xgboost_cluster" {
+  source = "../../../modules/ray-cluster"
 
   namespace        = local.name
   ray_cluster_name = local.name
@@ -49,20 +49,21 @@ module "pytorch_cluster" {
     yamlencode({
       image = {
         repository = "rayproject/ray-ml"
-        # This is a different version than the xgboost version
-        tag        = "2.3.0"
+        tag        = "2.0.0"
         pullPolicy = "IfNotPresent"
       }
       head = {
         enableInTreeAutoscaling = "True"
         resources = {
           limits = {
-            cpu    = "4"
-            memory = "24G"
+            cpu               = "14"
+            memory            = "54Gi"
+            ephemeral-storage = "700Gi"
           }
           requests = {
-            cpu    = "4"
-            memory = "12G"
+            cpu               = "14"
+            memory            = "54Gi"
+            ephemeral-storage = "700Gi"
           }
         }
         tolerations = [
@@ -76,23 +77,20 @@ module "pytorch_cluster" {
           {
             name  = "RAY_LOG_TO_STDERR"
             value = "1"
-          },
-          {
-            # workaround for protobuf protoc >= 3.19.0 issue
-            name  = "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"
-            value = "python"
           }
         ]
       }
       worker = {
         resources = {
           limits = {
-            cpu    = "8"
-            memory = "24G"
+            cpu               = "14"
+            memory            = "54Gi"
+            ephemeral-storage = "700Gi"
           }
           requests = {
-            cpu    = "4"
-            memory = "12G"
+            cpu               = "14"
+            memory            = "54Gi"
+            ephemeral-storage = "700Gi"
           }
         }
         tolerations = [
@@ -104,16 +102,11 @@ module "pytorch_cluster" {
         ]
         replicas    = "0"
         minReplicas = "0"
-        maxReplicas = "30"
+        maxReplicas = "9"
         containerEnv = [
           {
             name  = "RAY_LOG_TO_STDERR"
             value = "1"
-          },
-          {
-            # workaround for protobuf protoc >= 3.19.0 issue
-            name  = "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"
-            value = "python"
           }
         ]
       }
