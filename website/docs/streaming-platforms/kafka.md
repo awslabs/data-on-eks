@@ -84,13 +84,13 @@ Run Terraform plan to verify the resources created by this execution.
 
 ```bash
 export AWS_REGION="us-west-2"   # Select your own region
-terraform plan
+terraform plan -var="region=$AWS_REGION"
 ```
 
 Deploy the pattern
 
 ```bash
-terraform apply
+terraform apply -var="region=$AWS_REGION"
 ```
 
 Enter `yes` to apply.
@@ -108,7 +108,7 @@ This deployment may take between 20 to 30mins.
 Create kube config file.
 
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name kafka-on-eks
+aws eks --region $AWS_REGION update-kubeconfig --name kafka-on-eks
 ```
 
 ### Get nodes
