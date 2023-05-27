@@ -27,6 +27,20 @@ data "aws_ami" "eks_gpu_node" {
   }
 }
 
+# aws ec2 describe-images --owner $(aws ssm get-parameters \
+#--names /aws/service/canonical/meta/publisher-id \
+#--query 'Parameters[0].[Value]' \
+#--output text)
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["ubuntu-eks/k8s_${module.eks.cluster_version}/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+  owners = ["099720109477"]
+}
+
 # This data source can be used to get the latest AMI for Managed Node Groups
 data "aws_ami" "x86" {
   owners      = ["amazon"]

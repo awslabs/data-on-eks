@@ -1,0 +1,29 @@
+# nvidia-smi.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nvidia-smi-ns
+
+---
+# nvidia-smi.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nvidia-smi-al2
+  namespace: nvidia-smi-ns
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: nvidia-smi
+    image: ubuntu:22.04
+    args:
+    - "nvidia-smi"
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+  nodeSelector:
+    NodeGroupType: "spark-al2-gpu-ca"
+  tolerations:
+    - key: "spark-al2-gpu-ca"
+      operator: "Exists"
+      effect: "NoSchedule"

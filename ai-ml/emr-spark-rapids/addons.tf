@@ -120,11 +120,9 @@ module "kubernetes_data_addons" {
   # NVIDIA GPU Operator Add-on
   #---------------------------------------------------------------
   enable_nvidia_gpu_operator = true
-  #  nvidia_gpu_operator_helm_config = {
-  #    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-  #    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  #    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  #  }
+  nvidia_gpu_operator_helm_config = {
+    values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
+  }
 
   #---------------------------------------------------------------
   # Kubecost Add-on

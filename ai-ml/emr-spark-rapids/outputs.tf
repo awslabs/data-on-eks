@@ -52,3 +52,7 @@ output "amp_workspace_id" {
   description = "The id of amp"
   value       = aws_prometheus_workspace.amp[0].id
 }
+
+output "test" {
+  value = data.aws_ami.ubuntu
+}

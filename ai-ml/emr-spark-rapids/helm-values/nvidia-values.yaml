@@ -1,0 +1,110 @@
+# Default values for gpu-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+daemonsets:
+  labels: {}
+  annotations: {}
+  priorityClassName: system-node-critical
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+    - key: spark-al2-gpu-ca
+      operator: Exists
+      effect: NoSchedule
+    - key: spark-ubuntu-gpu-ca
+      operator: Exists
+      effect: NoSchedule
+validator:
+  repository: nvcr.io/nvidia/cloud-native
+  image: gpu-operator-validator
+
+operator:
+  repository: nvcr.io/nvidia
+  image: gpu-operator
+  # cleanup CRD on chart un-install
+  cleanupCRD: true
+  # upgrade CRD on chart upgrade, requires --disable-openapi-validation flag
+  # to be passed during helm upgrade.
+  upgradeCRD: true
+  resources:
+    limits:
+      cpu: 500m
+      memory: 350Mi
+    requests:
+      cpu: 200m
+      memory: 100Mi
+
+mig:
+  strategy: single
+
+driver:
+  enabled: true
+  repository: nvcr.io/nvidia
+  image: driver
+#  version: "525.105.17"
+  upgradePolicy:
+    autoUpgrade: true
+    gpuPodDeletion:
+      force: true
+    drain:
+      enable: true
+      force: true
+  manager:
+    image: k8s-driver-manager
+    repository: nvcr.io/nvidia/cloud-native
+    env:
+      - name: ENABLE_GPU_POD_EVICTION
+        value: "true"
+      - name: ENABLE_AUTO_DRAIN
+        value: "true"
+      - name: DRAIN_USE_FORCE
+        value: "true"
+      - name: DRAIN_POD_SELECTOR_LABEL
+        value: ""
+      - name: DRAIN_TIMEOUT_SECONDS
+        value: "0s"
+      - name: DRAIN_DELETE_EMPTYDIR_DATA
+        value: "false"
+
+toolkit:
+  enabled: true
+
+devicePlugin:
+  enabled: true
+
+dcgm:
+  enabled: false
+
+dcgmExporter:
+  enabled: false
+
+gfd:
+  enabled: true
+
+migManager:
+  enabled: true
+
+nodeStatusExporter:
+  enabled: false
+
+gds:
+  enabled: false
+
+vgpuManager:
+  enabled: false
+
+vgpuDeviceManager:
+  enabled: true
+
+vfioManager:
+  enabled: true
+
+sandboxDevicePlugin:
+  enabled: true
+
+node-feature-discovery:
+  enableNodeFeatureApi: true
+
+

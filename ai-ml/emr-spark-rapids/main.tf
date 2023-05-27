@@ -237,7 +237,6 @@ module "eks" {
         Name = "spark-driver-ca",
       }
     }
-
     spark_al2_gpu_ng = {
       name        = "spark-al2-gpu-ng"
       description = "Spark managed GPU node group for executor pods with launch template"
@@ -329,7 +328,6 @@ module "eks" {
         Name = "spark-al2-gpu",
       }
     }
-
     spark_ubuntu_gpu_ng = {
       name        = "spark-ubuntu-gpu-ng"
       description = "Spark managed Ubuntu GPU node group for executor pods with launch template"
@@ -337,7 +335,7 @@ module "eks" {
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
       # Ubuntu image for EKs Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
-      ami_id = "ami-0e96ee2ce9fc03bd4"
+      ami_id = data.aws_ami.ubuntu.image_id
 
       # This will ensure the bootstrap user data is used to join the node
       # By default, EKS managed node groups will not append bootstrap script;
@@ -351,34 +349,6 @@ module "eks" {
         set -ex
         apt-get update
         apt-get install -y mdadm
-
-        DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-        DISK_ARRAY=()
-
-        for DEV in $DEVICES
-        do
-          DISK_ARRAY+=("/dev/$${DEV}")
-        done
-
-        DISK_COUNT=$${#DISK_ARRAY[@]}
-
-        if [ $${DISK_COUNT} -eq 0 ]; then
-          echo "No SSD disks available. No further action needed."
-        else
-          if [ $${DISK_COUNT} -eq 1 ]; then
-            TARGET_DEV=$${DISK_ARRAY[0]}
-            mkfs.xfs -f $${TARGET_DEV}
-          else
-            mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-            mkfs.xfs -f /dev/md0
-            TARGET_DEV=/dev/md0
-          fi
-
-          mkdir -p /local1
-          echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-          mount -a
-          chown -hR +999:+1000 /local1
-        fi
       EOT
 
       # Optional - Post bootstrap data to verify anything
