@@ -9,7 +9,7 @@ metadata:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nvidia-smi-ubuntu
+  name: nvidia-smi-ubuntu-ca
   namespace: nvidia-smi-ns
 spec:
   restartPolicy: OnFailure

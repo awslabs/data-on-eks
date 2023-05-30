@@ -16,10 +16,7 @@ spec:
       values: [${azs}b] #Update the correct region and zone
     - key: "karpenter.k8s.aws/instance-family"
       operator: In
-      values: ["g"]
-    - key: "karpenter.k8s.aws/instance-generation"
-      operator: In
-      values: [ "5" ]
+      values: ["g5"]
     - key: "karpenter.k8s.aws/instance-size"
       operator: In
       values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge" ]
