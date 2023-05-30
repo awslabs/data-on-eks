@@ -145,65 +145,32 @@ module "eks" {
         "karpenter.sh/discovery" = local.name
       }
     }
-    spark_driver_ng = {
-      name        = "spark-driver-ng"
+    spark_driver_ubuntu_cpu_ng = {
+      name        = "spark-driver-ubuntu-cpu-ng"
       description = "Spark managed node group for Driver pods with launch template"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
-      ami_type = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
+      # Ubuntu image for EKs Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
+      ami_id = data.aws_ami.ubuntu.image_id
 
-      # Current default AMI used by managed node groups - pseudo "custom"
-      ami_id = data.aws_ami.x86.image_id
       # This will ensure the bootstrap user data is used to join the node
       # By default, EKS managed node groups will not append bootstrap script;
       # this adds it back in using the default template provided by the module
       # Note: this assumes the AMI provided is an EKS optimized AMI derivative
       enable_bootstrap_user_data = true
 
-      # NVMe instance store volumes are automatically enumerated and assigned a device
       pre_bootstrap_user_data = <<-EOT
         echo "Running a custom user data script"
-        set -ex
-        yum install mdadm -y
-
-        DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-        DISK_ARRAY=()
-
-        for DEV in $DEVICES
-        do
-          DISK_ARRAY+=("/dev/$${DEV}")
-        done
-
-        DISK_COUNT=$${#DISK_ARRAY[@]}
-
-        if [ $${DISK_COUNT} -eq 0 ]; then
-          echo "No SSD disks available. No further action needed."
-        else
-          if [ $${DISK_COUNT} -eq 1 ]; then
-            TARGET_DEV=$${DISK_ARRAY[0]}
-            mkfs.xfs $${TARGET_DEV}
-          else
-            mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-            mkfs.xfs /dev/md0
-            TARGET_DEV=/dev/md0
-          fi
-
-          mkdir -p /local1
-          echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-          mount -a
-          /usr/bin/chown -hR +999:+1000 /local1
-        fi
       EOT
 
-      # Optional - Post bootstrap data to verify anything
       post_bootstrap_user_data = <<-EOT
         echo "Bootstrap complete.Ready to Go!"
       EOT
 
-      min_size     = 1
+      min_size     = 0
       max_size     = 20
-      desired_size = 1
+      desired_size = 0
 
       force_update_version = true
       instance_types       = ["m5.xlarge"]
@@ -213,7 +180,7 @@ module "eks" {
       # NOTE: Dont use this volume for Spark workloads
       block_device_mappings = {
         xvda = {
-          device_name = "/dev/xvda"
+          device_name = "/dev/sda1"
           ebs = {
             volume_size = 100
             volume_type = "gp3"
@@ -237,14 +204,14 @@ module "eks" {
         Name = "spark-driver-ca",
       }
     }
-    spark_al2_gpu_ng = {
-      name        = "spark-al2-gpu-ng"
-      description = "Spark managed GPU node group for executor pods with launch template"
+    spark_ubuntu_gpu_ng = {
+      name        = "spark-ubuntu-gpu-ng"
+      description = "Spark managed Ubuntu GPU node group for executor pods with launch template"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
-      # Current default AMI used by managed node groups - pseudo "custom"
-      ami_id = data.aws_ami.eks_gpu_node.image_id
+      # Ubuntu image for EKs Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
+      ami_id = data.aws_ami.ubuntu.image_id
 
       # This will ensure the bootstrap user data is used to join the node
       # By default, EKS managed node groups will not append bootstrap script;
@@ -256,20 +223,30 @@ module "eks" {
       pre_bootstrap_user_data = <<-EOT
         echo "Running a custom user data script"
         set -ex
-        yum install mdadm -y
+        apt-get update
+        apt-get install -y nvme-cli mdadm xfsprogs
 
-        DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+        # Fetch the list of NVMe devices
+        DEVICES=$(lsblk -d -o NAME | grep nvme)
+
         DISK_ARRAY=()
 
         for DEV in $DEVICES
         do
-          DISK_ARRAY+=("/dev/$${DEV}")
+          # Exclude the root disk, /dev/nvme0n1, from the list of devices
+          if [[ $${DEV} != "nvme0n1" ]]; then
+            NVME_INFO=$(nvme id-ctrl --raw-binary "/dev/$${DEV}" | cut -c3073-3104 | tr -s ' ' | sed 's/ $//g')
+            # Check if the device is Amazon EC2 NVMe Instance Storage
+            if [[ $${NVME_INFO} == *"ephemeral"* ]]; then
+              DISK_ARRAY+=("/dev/$${DEV}")
+            fi
+          fi
         done
 
         DISK_COUNT=$${#DISK_ARRAY[@]}
 
         if [ $${DISK_COUNT} -eq 0 ]; then
-          echo "No SSD disks available. No further action needed."
+          echo "No NVMe SSD disks available. No further action needed."
         else
           if [ $${DISK_COUNT} -eq 1 ]; then
             TARGET_DEV=$${DISK_ARRAY[0]}
@@ -303,73 +280,10 @@ module "eks" {
       ebs_optimized = true
       # This block device is used only for root volume. Adjust volume according to your size.
       # NOTE: Don't use this volume for Spark workloads
+      # Ubuntu uses /dev/sda1 as root volume
       block_device_mappings = {
         xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 100
-            volume_type = "gp3"
-          }
-        }
-      }
-
-      update_config = {
-        max_unavailable_percentage = 50
-      }
-
-      labels = {
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark-al2-gpu-ca"
-      }
-
-      taints = [{ key = "spark-al2-gpu-ca", value = true, effect = "NO_SCHEDULE" }]
-
-      tags = {
-        Name = "spark-al2-gpu",
-      }
-    }
-    spark_ubuntu_gpu_ng = {
-      name        = "spark-ubuntu-gpu-ng"
-      description = "Spark managed Ubuntu GPU node group for executor pods with launch template"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
-
-      # Ubuntu image for EKs Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
-      ami_id = data.aws_ami.ubuntu.image_id
-
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # NVMe instance store volumes are automatically enumerated and assigned a device
-      pre_bootstrap_user_data = <<-EOT
-        echo "Running a custom user data script"
-        set -ex
-        apt-get update
-        apt-get install -y mdadm
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      min_size     = 1
-      max_size     = 20
-      desired_size = 1
-
-      capacity_type        = "SPOT"
-      force_update_version = true
-      instance_types       = ["g5.2xlarge"]
-
-      ebs_optimized = true
-      # This block device is used only for root volume. Adjust volume according to your size.
-      # NOTE: Don't use this volume for Spark workloads
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
+          device_name = "/dev/sda1"
           ebs = {
             volume_size = 100
             volume_type = "gp3"
@@ -393,21 +307,4 @@ module "eks" {
       }
     }
   }
-}
-
-
-#---------------------------------------
-# Karpenter IAM instance profile
-#---------------------------------------
-
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
-
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  create_irsa                  = false # EKS Blueprints add-on module creates IRSA
-  enable_spot_termination      = false # EKS Blueprints add-on module adds this feature
-  tags                         = local.tags
-  iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
 }

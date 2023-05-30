@@ -1,37 +1,39 @@
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
-  name: spark-compute-optimized
-  namespace: karpenter # Same namespace as Karpenter add-on installed
+  name: spark-ubuntu-gpu-karpenter
+  namespace: karpenter
 spec:
   kubeletConfiguration:
     containerRuntime: containerd
-    #    podsPerCore: 2
-    #    maxPods: 20
+#    maxPods: 20
   requirements:
-    - key: "topology.kubernetes.io/zone"
-      operator: In
-      values: [${azs}a] #Update the correct region and zones
     - key: "karpenter.sh/capacity-type"
       operator: In
-      values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
+      values: [ "spot", "on-demand" ]
+    - key: "topology.kubernetes.io/zone"
       operator: In
-      values: ["c5d.large","c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
+      values: [${azs}b] #Update the correct region and zone
+    - key: "karpenter.k8s.aws/instance-family"
+      operator: In
+      values: ["g"]
+    - key: "karpenter.k8s.aws/instance-generation"
+      operator: In
+      values: [ "5" ]
+    - key: "karpenter.k8s.aws/instance-size"
+      operator: In
+      values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge" ]
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
-  limits:
-    resources:
-      cpu: 1000
   providerRef:
-    name: spark-compute-optimized
+    name: spark-ubuntu-gpu-karpenter
   labels:
     type: karpenter
-    provisioner: spark-compute-optimized
-    NodeGroupType: SparkComputeOptimized
+    provisioner: spark-ubuntu-gpu-karpenter
+    NodeGroupType: spark-ubuntu-gpu-karpenter
   taints:
-    - key: spark-compute-optimized
+    - key: spark-ubuntu-gpu-karpenter
       value: 'true'
       effect: NoSchedule
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
@@ -40,13 +42,14 @@ spec:
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
 metadata:
-  name: spark-compute-optimized
+  name: spark-ubuntu-gpu-karpenter
   namespace: karpenter
 spec:
+  amiFamily: ubuntu
   blockDeviceMappings:
-    - deviceName: /dev/xvda
+    - deviceName: /dev/sda1
       ebs:
-        volumeSize: 100Gi
+        volumeSize: 20Gi
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
@@ -71,21 +74,30 @@ spec:
     #!/bin/bash
     echo "Running a custom user data script"
     set -ex
-    yum install mdadm -y
+    apt-get update
+    apt-get install -y nvme-cli mdadm xfsprogs
 
-    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+    # Fetch the list of NVMe devices
+    DEVICES=$(lsblk -d -o NAME | grep nvme)
 
     DISK_ARRAY=()
 
     for DEV in $DEVICES
     do
-      DISK_ARRAY+=("/dev/$${DEV}")
+      # Exclude the root disk, /dev/nvme0n1, from the list of devices
+      if [[ $${DEV} != "nvme0n1" ]]; then
+        NVME_INFO=$(nvme id-ctrl --raw-binary "/dev/$${DEV}" | cut -c3073-3104 | tr -s ' ' | sed 's/ $//g')
+        # Check if the device is Amazon EC2 NVMe Instance Storage
+        if [[ $${NVME_INFO} == *"ephemeral"* ]]; then
+          DISK_ARRAY+=("/dev/$${DEV}")
+        fi
+      fi
     done
 
     DISK_COUNT=$${#DISK_ARRAY[@]}
 
     if [ $${DISK_COUNT} -eq 0 ]; then
-      echo "No SSD disks available. No further action needed."
+      echo "No NVMe SSD disks available. No further action needed."
     else
       if [ $${DISK_COUNT} -eq 1 ]; then
         TARGET_DEV=$${DISK_ARRAY[0]}
@@ -105,4 +117,4 @@ spec:
     --BOUNDARY--
 
   tags:
-    InstanceType: "spark-compute-optimized"    # optional, add tags for your own use
+    InstanceType: "spark-ubuntu-gpu-karpenter"    # optional, add tags for your own use
