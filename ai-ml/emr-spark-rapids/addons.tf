@@ -180,7 +180,7 @@ module "kubernetes_data_addons" {
 # Karpenter Provisioners
 #---------------------------------------
 data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/spark-*.yaml"
+  pattern = "${path.module}/karpenter-provisioners/ubuntu-*.yaml"
   vars = {
     azs            = local.region
     eks_cluster_id = module.eks.cluster_name

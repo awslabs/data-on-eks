@@ -1,4 +1,4 @@
-# Scaling EMR on EKS Spark Jobs with Karpenter Autoscaler
+# Scaling EMR with Nvidia Spark-RAPIDS Accelerator for Spark
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
@@ -49,7 +49,6 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | [aws_secretsmanager_secret_version.grafana](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [kubectl_manifest.karpenter_provisioner](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [random_password.grafana](https://registry.terraform.io/providers/hashicorp/random/3.3.2/docs/resources/password) | resource |
-| [aws_ami.eks_gpu_node](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_ami.ubuntu](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_ami.x86](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
@@ -92,5 +91,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_eks_managed_node_groups_iam_role_name"></a> [eks\_managed\_node\_groups\_iam\_role\_name](#output\_eks\_managed\_node\_groups\_iam\_role\_name) | List of the autoscaling group names created by EKS managed node groups |
 | <a name="output_emr_on_eks"></a> [emr\_on\_eks](#output\_emr\_on\_eks) | EMR on EKS |
 | <a name="output_oidc_provider_arn"></a> [oidc\_provider\_arn](#output\_oidc\_provider\_arn) | The ARN of the OIDC Provider if `enable_irsa = true` |
-| <a name="output_test"></a> [test](#output\_test) | n/a |
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->

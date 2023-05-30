@@ -145,9 +145,9 @@ module "eks" {
         "karpenter.sh/discovery" = local.name
       }
     }
-    spark_driver_ubuntu_cpu_ng = {
-      name        = "spark-driver-ubuntu-cpu-ng"
-      description = "Spark managed node group for Driver pods with launch template"
+    spark_driver_ng = {
+      name        = "spark-driver-ng"
+      description = "Spark managed node group for Driver pods with cpu and Ubuntu AMI"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
@@ -204,8 +204,8 @@ module "eks" {
         Name = "spark-driver-ca",
       }
     }
-    spark_ubuntu_gpu_ng = {
-      name        = "spark-ubuntu-gpu-ng"
+    spark_gpu_ng = {
+      name        = "spark-gpu-ng"
       description = "Spark managed Ubuntu GPU node group for executor pods with launch template"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]

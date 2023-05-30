@@ -17,21 +17,6 @@ data "aws_eks_addon_version" "this" {
   most_recent        = true
 }
 
-data "aws_ami" "eks_gpu_node" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amazon-eks-gpu-node-${var.eks_cluster_version}-*"]
-  }
-}
-
-# aws ec2 describe-images --owner $(aws ssm get-parameters \
-#--names /aws/service/canonical/meta/publisher-id \
-#--query 'Parameters[0].[Value]' \
-#--output text)
-
 data "aws_ami" "ubuntu" {
   most_recent = true
   filter {

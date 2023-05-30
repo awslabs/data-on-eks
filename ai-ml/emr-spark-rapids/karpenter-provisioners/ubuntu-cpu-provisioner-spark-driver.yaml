@@ -42,7 +42,7 @@ metadata:
   name: spark-driver-cpu-karpenter
   namespace: karpenter
 spec:
-  amiFamily: ubuntu
+  amiFamily: Ubuntu
   blockDeviceMappings:
     - deviceName: /dev/sda1
       ebs:

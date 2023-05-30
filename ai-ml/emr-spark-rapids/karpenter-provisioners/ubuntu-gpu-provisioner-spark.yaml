@@ -45,7 +45,7 @@ metadata:
   name: spark-ubuntu-gpu-karpenter
   namespace: karpenter
 spec:
-  amiFamily: ubuntu
+  amiFamily: Ubuntu
   blockDeviceMappings:
     - deviceName: /dev/sda1
       ebs:
