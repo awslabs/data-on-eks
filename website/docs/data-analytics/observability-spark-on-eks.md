@@ -14,7 +14,7 @@ We will reuse the previous Spark on Operator example. Please follow [this link](
 ## Set up data and py script
 let's navigate to one example folder under spark-k8s-operator and run the shell script to upload data and py script to the S3 bucket created by terraform above.
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/nvme-ephemeral-storage
+cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
 
 # replace <S3_BUCKET> with your S3 bucket and <REGION> with your region, then run
 ./taxi-trip-execute.sh
@@ -37,8 +37,9 @@ To try Spark web UI, let's update <S3_BUCKET> with your bucket name and <JOB_NAM
 ```
 
 Then run port forward command to expose spark web service.
+
 ```bash
-kubectl port-forward -n=spark &lt;SPARK_DRIVER_NAME&gt; 4040:4040
+kubectl port-forward po/taxi-trip 4040:4040 -nspark-team-a
 ```
 
 Then open browser and enter localhost:4040. You can view your spark application like below.
