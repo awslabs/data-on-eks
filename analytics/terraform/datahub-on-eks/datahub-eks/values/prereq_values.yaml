@@ -57,6 +57,7 @@ mysql:
     existingSecret: mysql-secrets
 
 cp-helm-charts:
+  enabled: true
   # Schema registry is under the community license
   cp-schema-registry:
     enabled: true

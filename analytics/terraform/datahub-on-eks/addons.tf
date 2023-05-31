@@ -2,7 +2,7 @@
 module "eks_blueprints_kubernetes_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
+  source = "aws-ia/eks-blueprints-addons/aws"
   
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -13,6 +13,12 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
+    # vpc_cni = {
+    #   preserve = true
+    #   most_recent = true
+    #   addon_version            = data.aws_eks_addon_version.this.version
+    #   service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+    # }
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
       most_recent = true
@@ -80,46 +86,13 @@ module "eks_blueprints_kubernetes_addons" {
       cloudwatch_log_group = "/${local.name}/fluentbit-logs"
     })]
   }
-
-  tags = local.tags
-}
-
-module "eks_blueprints_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.31.0"
-
-  eks_cluster_id       = module.eks.cluster_name
-  eks_cluster_endpoint = module.eks.cluster_endpoint
-  eks_oidc_provider    = module.eks.oidc_provider
-  eks_cluster_version  = module.eks.cluster_version
   
-  
-    #---------------------------------------
-  # Amazon Managed Prometheus
-  #---------------------------------------
-  enable_amazon_prometheus             = true
-  amazon_prometheus_workspace_endpoint = aws_prometheus_workspace.amp.prometheus_endpoint
-
-  #---------------------------------------
-  # Prometheus Server Add-on
-  #---------------------------------------
-  enable_prometheus = true
-  prometheus_helm_config = {
-    name       = "prometheus"
-    repository = "https://prometheus-community.github.io/helm-charts"
-    chart      = "prometheus"
-    version    = "15.10.1"
-    namespace  = "prometheus"
-    timeout    = "300"
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
     values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
   }
-  
-}
-#---------------------------------------------------------------
-# Amazon Prometheus Workspace
-#---------------------------------------------------------------
-resource "aws_prometheus_workspace" "amp" {
-  alias = format("%s-%s", "amp-ws", local.name)
-  tags  = local.tags
+
+  tags = local.tags
 }
 
 #---------------------------------------------------------------

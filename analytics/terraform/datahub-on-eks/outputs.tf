@@ -46,11 +46,11 @@ output "frontend_url" {
 }
 
 
-################################################################################
-# AMP
-################################################################################
+# ################################################################################
+# # AMP
+# ################################################################################
 
-output "amp_workspace_id" {
-  description = "The id of amp"
-  value       = aws_prometheus_workspace.amp.id
-}
+# output "amp_workspace_id" {
+#   description = "The id of amp"
+#   value       = aws_prometheus_workspace.amp.id
+# }

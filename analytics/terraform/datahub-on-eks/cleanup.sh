@@ -8,7 +8,6 @@ export AWS_DEFAULT_REGION=$region
 targets=(
   "module.datahub"
   "module.datahub.module.prereq"
-  "module.eks_blueprints_addons"
   "module.eks_blueprints_kubernetes_addons"
   "module.vpc_cni_irsa"
   "module.ebs_csi_driver_irsa"
