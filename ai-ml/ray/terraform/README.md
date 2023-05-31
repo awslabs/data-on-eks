@@ -18,10 +18,10 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.0.0 |
-| <a name="provider_aws.ecr_public_region"></a> [aws.ecr\_public\_region](#provider\_aws.ecr\_public\_region) | 5.0.0 |
-| <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | 1.14.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.5.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
+| <a name="provider_aws.ecr_public_region"></a> [aws.ecr\_public\_region](#provider\_aws.ecr\_public\_region) | >= 3.72 |
+| <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | >= 1.14 |
+| <a name="provider_random"></a> [random](#provider\_random) | n/a |
 
 ## Modules
 

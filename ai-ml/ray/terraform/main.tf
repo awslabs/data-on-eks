@@ -418,4 +418,4 @@ resource "aws_secretsmanager_secret_version" "redis" {
   )
 }
 
-#TODO: Add Karpenter monitoring 
+#TODO: Add Karpenter monitoring
