@@ -36,94 +36,46 @@ locals {
   region      = var.region
   name        = "fruitstand"
   eks_cluster = "ray-cluster"
-  ray_version = "2.5.0"
 }
 
-module "fruitstand_cluster" {
-  source = "../../../modules/ray-cluster"
+module "fruitstand_service" {
+  source = "../../../modules/ray-service"
 
   namespace        = local.name
   ray_cluster_name = local.name
   eks_cluster_name = local.eks_cluster
-
-  helm_values = [
-    yamlencode({
-      annotations = {
-        "ray.io/ft-enabled" = "true"
-      }
-      image = {
-        repository = "rayproject/ray-ml"
-        # This is a different version than the xgboost version
-        tag        = local.ray_version
-        pullPolicy = "IfNotPresent"
-      }
-      head = {
-        rayVersion              = local.ray_version
-        enableInTreeAutoscaling = "True"
-        tolerations = [
-          {
-            key      = local.name
-            effect   = "NoSchedule"
-            operator = "Exists"
-          }
-        ]
-        containerEnv = [
-          {
-            name  = "RAY_LOG_TO_STDERR"
-            value = "1"
-          },
-          {
-            # workaround for protobuf protoc >= 3.19.0 issue
-            name  = "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"
-            value = "python"
-          },
-          {
-            name = "RAY_REDIS_ADDRESS"
-            valueFrom = {
-              secretKeyRef = {
-                name = "redis-secret"
-                key  = "host"
-              }
-            }
-          },
-          #{
-          #  name = "REDIS_PASSWORD"
-          #  valueFrom = {
-          #    secretKeyRef = {
-          #      name = "redis-secret"
-          #      key  = "password"
-          #    }
-          #  }
-          #}
-        ]
-        #rayStartParams = {
-        #  # External GCS store (redis) password
-        #  redis-password = "$REDIS_PASSWORD"
-        #}
-      }
-      worker = {
-        tolerations = [
-          {
-            key      = local.name
-            effect   = "NoSchedule"
-            operator = "Exists"
-          }
-        ]
-        replicas    = "0"
-        minReplicas = "0"
-        maxReplicas = "30"
-        containerEnv = [
-          {
-            name  = "RAY_LOG_TO_STDERR"
-            value = "1"
-          },
-          {
-            # workaround for protobuf protoc >= 3.19.0 issue
-            name  = "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"
-            value = "python"
-          }
-        ]
-      }
-    })
-  ]
+  serve_config = yamldecode(<<EOF
+importPath: fruit.deployment_graph
+runtimeEnv: |
+  working_dir: "https://github.com/ray-project/test_dag/archive/41d09119cbdf8450599f993f51318e9e27c59098.zip"
+deployments:
+  - name: MangoStand
+    numReplicas: 1
+    userConfig: |
+      price: 3
+    rayActorOptions:
+      numCpus: 0.1
+  - name: OrangeStand
+    numReplicas: 1
+    userConfig: |
+      price: 2
+    rayActorOptions:
+      numCpus: 0.1
+  - name: PearStand
+    numReplicas: 1
+    userConfig: |
+      price: 1
+    rayActorOptions:
+      numCpus: 0.1
+  - name: FruitMarket
+    numReplicas: 1
+    rayActorOptions:
+      numCpus: 0.1
+  - name: DAGDriver
+    numReplicas: 1
+    routePrefix: "/"
+    rayActorOptions:
+      numCpus: 0.1
+EOF
+  )
 }

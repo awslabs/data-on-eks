@@ -1,0 +1,67 @@
+
+rayVersion: 2.5.0
+enableInTreeAutoscaling: true
+######################headGroupSpecs#################################
+# Ray head pod template.
+headGroupSpec:
+  rayStartParams:
+    dashboard-host: '0.0.0.0'
+  #pod template
+  template:
+    spec:
+      containers:
+        - name: ray-head
+          image: rayproject/ray:2.5.0
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 2
+              memory: 2Gi
+            requests:
+              cpu: 2
+              memory: 2Gi
+          ports:
+            - containerPort: 6379
+              name: gcs-server
+            - containerPort: 8265 # Ray dashboard
+              name: dashboard
+            - containerPort: 10001
+              name: client
+            - containerPort: 8000
+              name: serve
+          env:
+            - name: RAY_REDIS_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: host
+      nodeSelector:
+        owner: ${ray_cluster_name}
+workerGroupSpecs:
+  # the pod replicas in this group typed worker
+  - replicas: 1
+    minReplicas: 1
+    maxReplicas: 10
+    # logical group name, for this called small-group, also can be functional
+    groupName: small-group
+    rayStartParams: {}
+    #pod template
+    template:
+      spec:
+        containers:
+          - name: ray-worker
+            image: rayproject/ray:2.5.0
+            imagePullPolicy: IfNotPresent
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh","-c","ray stop"]
+            resources:
+              limits:
+                cpu: "1"
+                memory: "2Gi"
+              requests:
+                cpu: "500m"
+                memory: "2Gi"
+        nodeSelector:
+          owner: ${ray_cluster_name}

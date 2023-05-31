@@ -169,6 +169,10 @@ module "eks" {
     }
   }
 
+  # Manage tagging
+  node_security_group_tags = {
+    "kubernetes.io/cluster/${local.name}" = null # or any other value other than "owned"
+  }
   tags = merge(local.tags, {
     "karpenter.sh/discovery" = local.name
   })
@@ -186,25 +190,6 @@ module "ebs_csi_driver_irsa" {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-
-  tags = local.tags
-}
-
-module "vpc_cni_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.14"
-
-  role_name_prefix = "${local.name}-vpc-cni-"
-
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
     }
   }
 
@@ -242,7 +227,7 @@ module "eks_blueprints_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "0.1.0"
+  version = "0.2.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -303,6 +288,39 @@ module "eks_blueprints_addons" {
   enable_external_secrets             = true
   enable_cert_manager                 = true
   enable_metrics_server               = true
+  enable_ingress_nginx                = true
+  ingress_nginx = {
+    values = [
+      yamlencode({
+        controller = {
+          service = {
+            externalTrafficPolicy = "Local"
+            annotations = {
+              "service.beta.kubernetes.io/aws-load-balancer-type"             = "external"
+              "service.beta.kubernetes.io/aws-load-balancer-nlb-target-type"  = "ip"
+              "service.beta.kubernetes.io/aws-load-balancer-backend-protocol" = "http"
+              "service.beta.kubernetes.io/aws-load-balancer-scheme"           = "internet-facing"
+            }
+            targetPorts = {
+              http  = "http"
+              https = "http" #use https in production
+            }
+          }
+        }
+      })
+    ]
+  }
+
+  helm_releases = {
+    kuberay-operator = {
+      namespace        = "kuberay-operator"
+      create_namespace = true
+      name             = "kuberay-operator"
+      repository       = "https://ray-project.github.io/kuberay-helm/"
+      chart            = "kuberay-operator"
+      version          = "0.5.0"
+    }
+  }
 
   tags = local.tags
 }
@@ -340,23 +358,6 @@ module "karpenter_policy" {
 }
 
 #---------------------------------------------------------------
-# KubeRay Operator using Helm Release
-#---------------------------------------------------------------
-
-resource "helm_release" "kuberay_operator" {
-  namespace        = "kuberay-operator"
-  create_namespace = true
-  name             = "kuberay-operator"
-  repository       = "https://ray-project.github.io/kuberay-helm/"
-  chart            = "kuberay-operator"
-  version          = "0.5.0"
-
-  depends_on = [
-    module.eks
-  ]
-}
-
-#---------------------------------------------------------------
 # Memory DB (Redis) Cluster for GCS
 #---------------------------------------------------------------
 
@@ -368,13 +369,11 @@ module "memory_db" {
   description = "Cluster for Ray GCS"
 
   node_type              = "db.t4g.small"
-  num_shards             = 2
-  num_replicas_per_shard = 2
   tls_enabled            = false
   security_group_ids     = [module.security_group.security_group_id]
   subnet_ids             = module.vpc.database_subnets
   parameter_group_family = "memorydb_redis7"
-  create_acl             = false 
+  create_acl             = false
   acl_name               = "open-access"
 
   tags = local.tags

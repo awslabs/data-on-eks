@@ -13,16 +13,10 @@ variable "namespace" {
   type        = string
 }
 
-variable "ray_cluster_version" {
-  description = "Version for the Ray Cluster"
-  type        = string
-  default     = "2.4.0"
-}
-
-variable "helm_values" {
-  description = "Helm values for Ray Cluster helm chart"
-  type        = list(any)
-  default     = []
+variable "serve_config" {
+  description = "Ray Service Deployment config"
+  type        = any
+  default     = {}
 }
 
 variable "region" {

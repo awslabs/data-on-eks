@@ -12,7 +12,6 @@
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | n/a |
-| <a name="provider_helm"></a> [helm](#provider\_helm) | 2.9.0 |
 | <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | 1.14.0 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 
@@ -26,10 +25,10 @@
 
 | Name | Type |
 |------|------|
-| [helm_release.this](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [kubectl_manifest.external_secret](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubectl_manifest.karpenter_node_template](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubectl_manifest.karpenter_provisioner](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
+| [kubectl_manifest.ray_service](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubectl_manifest.secret_store](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubernetes_ingress_v1.raycluster_ingress_head_ingress](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/ingress_v1) | resource |
 | [kubernetes_namespace_v1.this](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace_v1) | resource |
@@ -43,11 +42,10 @@
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_name"></a> [eks\_cluster\_name](#input\_eks\_cluster\_name) | Name of the EKS Cluster | `string` | n/a | yes |
-| <a name="input_helm_values"></a> [helm\_values](#input\_helm\_values) | Helm values for Ray Cluster helm chart | `list(any)` | `[]` | no |
 | <a name="input_namespace"></a> [namespace](#input\_namespace) | Namespace for the Ray Cluster | `string` | n/a | yes |
 | <a name="input_ray_cluster_name"></a> [ray\_cluster\_name](#input\_ray\_cluster\_name) | Name of the Ray Cluster | `string` | n/a | yes |
-| <a name="input_ray_cluster_version"></a> [ray\_cluster\_version](#input\_ray\_cluster\_version) | Version for the Ray Cluster | `string` | `"2.4.0"` | no |
 | <a name="input_region"></a> [region](#input\_region) | AWS Region | `string` | `"us-west-2"` | no |
+| <a name="input_serve_config"></a> [serve\_config](#input\_serve\_config) | Ray Service Deployment config | `any` | `{}` | no |
 
 ## Outputs
 
