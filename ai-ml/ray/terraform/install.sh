@@ -2,30 +2,23 @@
 set -o errexit
 set -o pipefail
 
-targets=(
-  "module.vpc"
-  "module.karpenter_policy"
-  "module.memory_db"
-  "module.eks"
-  "module.eks_blueprints_addons"
-  "module.eks"
-)
+echo "Running terraform init..."
+terraform init -upgrade > /dev/null 2>&1
 
-for target in "${targets[@]}"
-do
-  apply_output=$(terraform apply -target="$target" -auto-approve)
-  if [[ $? -eq 0 && $apply_output == *"Apply complete!"* ]]; then
-    echo "SUCCESS: Terraform apply of $target completed successfully"
-  else
-    echo "FAILED: Terraform apply of $target failed"
-    exit 1
-  fi
-done
+echo "Creating VPC..."
+terraform apply -target=module.vpc -auto-approve || exit 1
 
-apply_output=$(terraform apply -auto-approve)
-if [[ $? -eq 0 && $apply_output == *"Apply complete!"* ]]; then
-  echo "SUCCESS: Terraform apply of all targets completed successfully"
-else
-  echo "FAILED: Terraform apply of all targets failed"
-  exit 1
-fi
+echo "Creating Karpenter Policy..."
+terraform apply -target=module.karpenter_policy -auto-approve || exit 1
+
+echo "Creating Redis (MemoryDb)..."
+terraform apply -target=module.memory_db -auto-approve || exit 1
+
+echo "Creating EKS Cluster..."
+terraform apply -target=module.eks -target=kubectl_manifest.eni_config -auto-approve || exit 1
+
+echo "Creating AddOns..."
+terraform apply -target=module.eks_blueprints_addons -auto-approve || exit 1
+
+echo "Creating everything else..."
+terraform apply -auto-approve || exit 1
