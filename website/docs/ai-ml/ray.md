@@ -57,7 +57,7 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/ter
 
 <CollapsibleContent header={<h3><span>Pre-requisites</span></h3>}>
 
-Ensure that you have installed the following tools on your machine.
+Ensure that you have installed the following tools on your machine. You will use the helper script `cloud9-init.sh` from the git repo you will clone in the next steps
 
 1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
@@ -73,6 +73,7 @@ Ensure that you have installed the following tools on your machine.
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
+git switch -c feat/ray-serve origin/feat/ray-serve
 ```
 
 #### Initialize Terraform
@@ -83,6 +84,13 @@ Navigate into the example directory
 cd data-on-eks/ai-ml/ray/terraform
 ```
 
+#### Setup your Cloud9 IDE
+Use the helper script to setup your **Cloud9 IDE**.
+
+```bash
+./cloud9-init.sh
+```
+
 #### Run the install script
 
 
@@ -90,7 +98,7 @@ Use the provided helper script `install.sh` to run the terraform init and apply 
 
 
 ```bash
-./install .sh
+./install.sh
 ```
 
 </CollapsibleContent>
@@ -106,7 +114,7 @@ aws eks update-kubeconfig --name ray-cluster #or whatever you used for EKS clust
 First, lets verify that we have worker nodes running in the cluster.
 
 ```bash
-kuebctl get nodes
+kubectl get nodes
 ```
 :::info
 ```bash
@@ -123,25 +131,9 @@ Next, lets verify all the pods are running.
 kubectl get pods -n kuberay-operator
 ```
 :::info
-```bash
-NAMESPACE            NAME                               READY   STATUS    RESTARTS        AGE
-amazon-cloudwatch    aws-cloudwatch-metrics-d4xrr       1/1     Running   1 (1h37m ago)   1h
-amazon-cloudwatch    aws-cloudwatch-metrics-tpqsz       1/1     Running   1 (1h37m ago)   1h
-amazon-cloudwatch    aws-cloudwatch-metrics-z7wbn       1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-h82w4           1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-r5kxt           1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-wgxxl           1/1     Running   1 (1h37m ago)   1h
-karpenter            karpenter-668c669897-fmxdr         1/1     Running   1 (1h37m ago)   1h
-karpenter            karpenter-668c669897-prbr6         1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-fnwp5                     1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-r45xd                     1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-vfq66                     1/1     Running   1 (1h37m ago)   1h
-kube-system          coredns-79989457d9-2jldd           1/1     Running   1 (1h37m ago)   1h
-kube-system          coredns-79989457d9-cgtkf           1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-5jrtf                   1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-fjxsk                   1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-tzr79                   1/1     Running   1 (1h37m ago)   1h
-kuberay-operator     kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
+```
+NAME                                READY   STATUS    RESTARTS   AGE
+kuberay-operator-86957f45c4-l488x   1/1     Running   0          74m
 ```
 :::
 
@@ -404,6 +396,86 @@ curl http://k8s-ingressn-ingressn-b2adc0a198-22872ac42151f510.elb.us-west-2.amaz
 :::
 
 Next, we recommend you run through the different failure modes described in Ray [documentation]](https://docs.ray.io/en/latest/serve/production-guide/fault-tolerance.html#worker-node-failure) to validate that the RayService recovers from failure as expected.
+
+</CollapsibleContent>
+
+
+<CollapsibleContent header={<h3><span>Observability</span></h3>}>
+
+#### Logs
+
+we have already enabled FluentBit as part of previous steps. You can confirm it under `kubernetes_addons` section in your `main.tf` file:
+
+```bash
+enable_aws_for_fluentbit             = true
+```
+
+Above will enable EKS Data plane logs to be senr to AWS CloudWatch logs.
+
+Fluent bit runs as a DaemonSet on each worker node. You can see its pods under `kube-system` namespace. Run this command:
+
+```bash
+kubectl get daemonsets.apps -n kube-system aws-for-fluent-bit
+```
+
+Fluentbit is set to send the logs to Cloudwatch already and it will appear in the loggroup `/${local.name}/worker-fluentbit-logs`. View the logs in Cloudwatch AWS Console
+
+```bash
+....
+cloudWatch = {
+          enabled         = "true"
+          match           = "*"
+          region          = local.region
+          logGroupName    = "/${local.name}/worker-fluentbit-logs"
+          logStreamPrefix = "fluentbit-"
+          autoCreateGroup = "true"
+        }
+.....
+```
+
+![CloudWatchLogs](img/ray-on-eks-cloudwatch-logs.png)
+
+
+#### Metrics with Kube Prometheus Stack
+
+Another `add-on` that is available on EKS Blueprints for Terraform is Kube Prometheus Stack. This particular `add-on` when enabled installs Prometheus instance, Prometheus operator, kube-state-metrics, node-exporter, alertmanager as well as Grafana instance with preconfigured dashboards. This stack is meant for cluster monitoring, so it is pre-configured to collect metrics from all Kubernetes components. In addition to that it delivers a default set of dashboards and alerting rules.
+More on [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack).
+
+we have already enabled kube_prometheus_stack as part of previous steps. You can confirm it under `kubernetes_addons` section in your `main.tf` file:
+
+```bash
+  enable_kube_prometheus_stack         = true 
+```
+
+You can verify all Kube Prometheus Stack pods created and running under `kube-prometheus-stack` namespace:
+
+```bash
+$ kubectl -n kube-prometheus-stack get pods
+NAME                                                        READY   STATUS    RESTARTS   AGE
+alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   0          32d
+kube-prometheus-stack-grafana-78457d9fc8-p48d9              3/3     Running   0          32d
+kube-prometheus-stack-kube-state-metrics-5f6d6c64d5-xvcpw   1/1     Running   0          32d
+kube-prometheus-stack-operator-6f4f8975fb-slt5c             1/1     Running   0          32d
+kube-prometheus-stack-prometheus-node-exporter-jsfz6        1/1     Running   0          32d
+kube-prometheus-stack-prometheus-node-exporter-qgxqp        1/1     Running   0          32d
+kube-prometheus-stack-prometheus-node-exporter-xh2z7        1/1     Running   0          32d
+prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0          32d
+```
+
+1.	Get Grafana admin password: 
+
+```bash
+kubectl get secret --namespace kube-prometheus-stack kube-prometheus-stack-grafana  -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+```
+
+2.	To access Grafana dashboard you should forward your local port 8080 to the Grafana port 3030 with next command:
+
+```bash
+kubectl port-forward kube-prometheus-stack-grafana-78457d9fc8-p48d9 -n kube-prometheus-stack --address 0.0.0.0 8080:3000
+```
+3. Open your browser and go to http://localhost:8080/. Then, login with username `admin` and above received password (default password: `prom-operator`).
+
+4. Inside Grafana, under Dashboards you can browse different preconfigured dashboards available for you out of the box. 
 
 </CollapsibleContent>
 
