@@ -39,9 +39,9 @@ headGroupSpec:
         owner: ${ray_cluster_name}
 workerGroupSpecs:
   # the pod replicas in this group typed worker
-  - replicas: 1
-    minReplicas: 1
-    maxReplicas: 10
+  - replicas: 3
+    minReplicas: 3
+    maxReplicas: 9
     # logical group name, for this called small-group, also can be functional
     groupName: small-group
     rayStartParams: {}
@@ -65,3 +65,10 @@ workerGroupSpecs:
                 memory: "2Gi"
         nodeSelector:
           owner: ${ray_cluster_name}
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchLabels:
+                    ray.io/node-type: worker
+                topologyKey: topology.kubernetes.io/zone

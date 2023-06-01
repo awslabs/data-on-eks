@@ -40,8 +40,4 @@ module "vpc" {
     "kubernetes.io/role/internal-elb" = 1
     "karpenter.sh/discovery"          = local.name
   }
-
-  tags = merge(local.tags, {
-    "karpenter.sh/discovery" = local.name
-  })
 }

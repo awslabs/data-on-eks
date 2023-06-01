@@ -178,8 +178,10 @@ locals {
       namespace = kubernetes_namespace_v1.this.id
     }
     spec = {
-      serveConfig      = var.serve_config
-      rayClusterConfig = local.cluster_config
+      serviceUnhealthySecondThreshold    = 300
+      deploymentUnhealthySecondThreshold = 300
+      serveConfig                        = var.serve_config
+      rayClusterConfig                   = local.cluster_config
     }
   }
 }

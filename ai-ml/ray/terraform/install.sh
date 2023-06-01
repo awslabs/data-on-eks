@@ -15,7 +15,8 @@ echo "Creating Redis (MemoryDb)..."
 terraform apply -target=module.memory_db -auto-approve || exit 1
 
 echo "Creating EKS Cluster..."
-terraform apply -target=module.eks -target=kubectl_manifest.eni_config -auto-approve || exit 1
+#terraform apply -target=module.eks -target=kubectl_manifest.eni_config -auto-approve || exit 1
+terraform apply -target=module.eks -auto-approve || exit 1
 
 echo "Creating AddOns..."
 terraform apply -target=module.eks_blueprints_addons -auto-approve || exit 1

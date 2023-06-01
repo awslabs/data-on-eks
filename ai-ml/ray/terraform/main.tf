@@ -107,6 +107,9 @@ module "eks" {
   subnet_ids               = slice(module.vpc.private_subnets, 0, 3)
   control_plane_subnet_ids = module.vpc.intra_subnets
 
+  create_cluster_security_group = false
+  create_node_security_group    = false
+
   # Update aws-auth configmap with Karpenter node role so they
   # can join the cluster
   manage_aws_auth_configmap = true
@@ -139,17 +142,17 @@ module "eks" {
       # See README for further details
       before_compute = true
       most_recent    = true # To ensure access to the latest settings provided
-      configuration_values = jsonencode({
-        env = {
-          # Reference https://aws.github.io/aws-eks-best-practices/reliability/docs/networkmanagement/#cni-custom-networking
-          AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG = "true"
-          ENI_CONFIG_LABEL_DEF               = "topology.kubernetes.io/zone"
-
-          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
-          ENABLE_PREFIX_DELEGATION = "true"
-          WARM_PREFIX_TARGET       = "1"
-        }
-      })
+      #configuration_values = jsonencode({
+      #  env = {
+      #    # Reference https://aws.github.io/aws-eks-best-practices/reliability/docs/networkmanagement/#cni-custom-networking
+      #    AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG = "true"
+      #    ENI_CONFIG_LABEL_DEF               = "topology.kubernetes.io/zone"
+#
+      #    # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+      #    ENABLE_PREFIX_DELEGATION = "true"
+      #    WARM_PREFIX_TARGET       = "1"
+      #  }
+      #})
     }
     aws-ebs-csi-driver = {
       most_recent              = true
@@ -169,10 +172,6 @@ module "eks" {
     }
   }
 
-  # Manage tagging
-  node_security_group_tags = {
-    "kubernetes.io/cluster/${local.name}" = null # or any other value other than "owned"
-  }
   tags = merge(local.tags, {
     "karpenter.sh/discovery" = local.name
   })
@@ -200,24 +199,24 @@ module "ebs_csi_driver_irsa" {
 # VPC-CNI Custom Networking ENIConfig
 #---------------------------------------------------------------
 
-resource "kubectl_manifest" "eni_config" {
-  for_each = zipmap(local.azs, slice(module.vpc.private_subnets, 3, 6))
-
-  yaml_body = yamlencode({
-    apiVersion = "crd.k8s.amazonaws.com/v1alpha1"
-    kind       = "ENIConfig"
-    metadata = {
-      name = each.key
-    }
-    spec = {
-      securityGroups = [
-        module.eks.cluster_primary_security_group_id,
-        module.eks.node_security_group_id,
-      ]
-      subnet = each.value
-    }
-  })
-}
+#resource "kubectl_manifest" "eni_config" {
+#  for_each = zipmap(local.azs, slice(module.vpc.private_subnets, 3, 6))
+#
+#  yaml_body = yamlencode({
+#    apiVersion = "crd.k8s.amazonaws.com/v1alpha1"
+#    kind       = "ENIConfig"
+#    metadata = {
+#      name = each.key
+#    }
+#    spec = {
+#      securityGroups = [
+#        module.eks.cluster_primary_security_group_id,
+#        module.eks.node_security_group_id,
+#      ]
+#      subnet = each.value
+#    }
+#  })
+#}
 
 #---------------------------------------------------------------
 # Operational Add-Ons using EKS Blueprints
@@ -418,4 +417,4 @@ resource "aws_secretsmanager_secret_version" "redis" {
   )
 }
 
-#TODO: Add Karpenter monitoring
+#TODO: Add Karpenter monitoring 
