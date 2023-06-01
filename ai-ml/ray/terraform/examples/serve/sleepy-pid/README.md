@@ -18,7 +18,7 @@
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_fruitstand_service"></a> [fruitstand\_service](#module\_fruitstand\_service) | ../../../modules/ray-service | n/a |
+| <a name="module_sleepy_pid_service"></a> [sleepy_pid\_service](#module\sleepy_pid\_service) | ../../../modules/ray-service | n/a |
 
 ## Resources
 

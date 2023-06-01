@@ -34,11 +34,11 @@ data "aws_eks_cluster" "this" {
 
 locals {
   region      = var.region
-  name        = "fruitstand"
+  name        = "sleepy-pid"
   eks_cluster = "ray-cluster"
 }
 
-module "fruitstand_service" {
+module "sleepy_pid_service" {
   source = "../../../modules/ray-service"
 
   namespace        = local.name

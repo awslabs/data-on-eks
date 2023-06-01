@@ -48,9 +48,9 @@ Before moving forward with the deployment please make sure you have read the per
 
 *Source: https://docs.ray.io/en/latest/cluster/kubernetes/index.html*
 
-## Deploying the Example
+## Deploying the Examples
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform), you will provision Ray Cluster on Amazon EKS using the KubeRay Operator. The example also demonstrates the use of Karpenter of autoscaling of worker nodes for job specific Ray Clusters.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform), you will provision Ray Cluster on Amazon EKS using the KubeRay Operator. The examples also demonstrates the use of Karpenter of autoscaling of worker nodes for job specific Ray Clusters.
 
 
 ![RayOnEKS](img/ray-on-eks.png)
@@ -149,7 +149,7 @@ kuberay-operator     kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h3
 At this point we are ready to deploy Ray Clusters.
 </CollapsibleContent>
 
-<CollapsibleContent header={<h3><span>Deploy Ray Clusters and Workloads</span></h3>}>
+<CollapsibleContent header={<h3><span>Deploy Ray Cluster Jobs</span></h3>}>
 
 For convenience, we have packaged the helm chart deployent of Ray Cluster as a repeatable terraform [module](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform/modules/ray-cluster/). This allows us to codify organizational best practices and requirements for deploying Ray Clusters for multiple Data Science teams. The module also creates configuration needed for karpenter to be able to provision EC2 instances for Ray applications as and when they are needed for the duration of the job. This model can be replicated via GitOps tooling such as ArgoCD or Flux but is done here via terraform for demonstration purpose.
 
@@ -160,7 +160,7 @@ First, we will deploy a Ray Cluster for our [XGBoost benchmark](https://docs.ray
 Go to the xgboost directory followed by terraform init, and plan.
 
 ```bash
-cd examples/xgboost
+cd train/examples/xgboost
 terraform init
 terraform plan
 ```
@@ -301,6 +301,112 @@ python job/pytorch_submit.py
 You can open http://localhost:8266 to monitor the progress of the pytorch benchmark.
 </CollapsibleContent>
 
+<CollapsibleContent header={<h3><span>Deploy RayService</span></h3>}>
+
+In this example, we will demonstrate how to run a fault-tolerant [RayService](https://ray-project.github.io/kuberay/guidance/rayservice/). Ray documentation recommends using an [external redis](https://ray-project.github.io/kuberay/guidance/gcs-ft/#use-external-redis-cluster) cluster as the backend storage. We use [Amazon MemoryDB for Redis](https://aws.amazon.com/memorydb/) for this purpose (alternatively Amazon Elasticache for Redis can also be used). We also use the [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.5/) and [Ingress Nginx](https://kubernetes.github.io/ingress-nginx/) to provide Ingress for the RayService. We use [Karpenter](https://karpenter.sh) for provisioning just-in-time compute for the Ray Cluster. And, finally we use [Kube Prometheus Stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) and [AWS for FluentBit](https://github.com/aws/eks-charts/tree/master/stable/aws-for-fluent-bit) to provide us with a basic observability stack.
+
+By running `./install.sh` in the prior steps you have already provisioned the infrastructure described above. But if you haven't run it yet, please do so now.
+
+```bash
+cd ai-ml/ray/terraform
+./install.sh
+```
+Time for a :coffee: break as this will take anywhere between 20-30 minutes.
+
+Next, we will deploy our sample RayService. This example is borrowed from Ray documentation as described [here](https://docs.ray.io/en/latest/serve/production-guide/fault-tolerance.html#serve-e2e-ft). Tl;dr it simply returns the pid of the process its running in using python's `os.getpid()`. In the future, we will add more interesting examples and patterns.
+
+For now, lets go and deploy our simple example.
+
+```bash
+cd examples/serve/sleepy-pid
+terraform init
+```
+
+:::info
+```bash
+Initializing the backend...
+Initializing modules...
+- sleepy_pid_service in ../../../modules/ray-service
+Downloading registry.terraform.io/terraform-aws-modules/iam/aws 5.20.0 for sleepy_pid_service.external_secrets_irsa...
+- sleepy_pid_service.external_secrets_irsa in .terraform/modules/sleepy_pid_service.external_secrets_irsa/modules/iam-role-for-service-accounts-eks
+
+Initializing provider plugins...
+- Reusing previous version of hashicorp/helm from the dependency lock file
+- Reusing previous version of gavinbunney/kubectl from the dependency lock file
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Reusing previous version of hashicorp/kubernetes from the dependency lock file
+- Using previously-installed hashicorp/helm v2.10.0
+- Using previously-installed gavinbunney/kubectl v1.14.0
+- Using previously-installed hashicorp/aws v5.0.1
+- Using previously-installed hashicorp/kubernetes v2.20.0
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+```
+:::
+
+```bash
+terraform apply -auto-approve
+```
+
+:::info
+```bash
+...
+...
+Apply complete! Resources: 14 added, 0 changed, 0 destroyed.
+```
+:::
+
+With `eks-node-viewer` you can verify that karpenter has provisioned 3 EC2 instances to accomodate our RayServe cluster. After a few minutes, verify that the RayService cluster is up and running.
+
+```sh
+kubectl get pods -n sleepy-pid
+```
+
+:::info
+```bash
+NAME                                                   READY   STATUS     RESTARTS   AGE
+sleepy-pid-raycluster-6wm7n-head-sxzkj                 2/2     Running    0          4m
+sleepy-pid-raycluster-6wm7n-worker-small-group-6bkpd   1/1     Running    0          4m
+sleepy-pid-raycluster-6wm7n-worker-small-group-86ndp   1/1     Running    0          4m
+sleepy-pid-raycluster-6wm7n-worker-small-group-w6rsz   1/1     Running    0          4m
+```
+:::
+
+Our Ingress should now be available to serve the requests as well.
+
+```sh
+kubectl get ingress -n sleepy-pid 
+```
+:::info
+```sh
+NAME         CLASS   HOSTS   ADDRESS                                                                         PORTS   AGE
+sleepy-pid   nginx   *       k8s-ingressn-ingressn-b2adc0a198-22872ac42151f510.elb.us-west-2.amazonaws.com   80      5m16s
+```
+:::
+
+We can use `curl` to verify that requests are being served.
+
+```sh
+curl http://k8s-ingressn-ingressn-b2adc0a198-22872ac42151f510.elb.us-west-2.amazonaws.com/sleepy-pid/serve/
+```
+:::info
+```sh
+482
+```
+:::
+
+Next, we recommend you run through the different failure modes described in Ray [documentation]](https://docs.ray.io/en/latest/serve/production-guide/fault-tolerance.html#worker-node-failure) to validate that the RayService recovers from failure as expected.
+
+</CollapsibleContent>
+
 <CollapsibleContent header={<h3><span>Teardown</span></h3>}>
 
 :::caution
@@ -313,6 +419,13 @@ From the pytorch directory.
 
 ```bash
 cd ../pytorch
+terraform destroy -auto-approve
+```
+
+From the xgboost directory.
+
+```bash
+cd ../xgboost
 terraform destroy -auto-approve
 ```
 
