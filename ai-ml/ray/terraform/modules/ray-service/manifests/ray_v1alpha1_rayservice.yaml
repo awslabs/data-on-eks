@@ -41,8 +41,8 @@ headGroupSpec:
 workerGroupSpecs:
   # the pod replicas in this group typed worker
   - replicas: 3
-    minReplicas: 3
-    maxReplicas: 9
+    minReplicas: 2
+    maxReplicas: 3
     # logical group name, for this called small-group, also can be functional
     groupName: small-group
     rayStartParams: {}
