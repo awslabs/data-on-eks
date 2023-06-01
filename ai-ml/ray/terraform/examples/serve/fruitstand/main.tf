@@ -45,37 +45,14 @@ module "fruitstand_service" {
   ray_cluster_name = local.name
   eks_cluster_name = local.eks_cluster
   serve_config = yamldecode(<<EOF
-importPath: fruit.deployment_graph
+importPath: "sleepy_pid:app"
 runtimeEnv: |
-  working_dir: "https://github.com/ray-project/test_dag/archive/41d09119cbdf8450599f993f51318e9e27c59098.zip"
+  working_dir: "https://github.com/ray-project/serve_config_examples/archive/42d10bab77741b40d11304ad66d39a4ec2345247.zip"
 deployments:
-  - name: MangoStand
-    numReplicas: 1
-    userConfig: |
-      price: 3
+  - name: SleepyPid
+    numReplicas: 6
     rayActorOptions:
-      numCpus: 0.1
-  - name: OrangeStand
-    numReplicas: 1
-    userConfig: |
-      price: 2
-    rayActorOptions:
-      numCpus: 0.1
-  - name: PearStand
-    numReplicas: 1
-    userConfig: |
-      price: 1
-    rayActorOptions:
-      numCpus: 0.1
-  - name: FruitMarket
-    numReplicas: 1
-    rayActorOptions:
-      numCpus: 0.1
-  - name: DAGDriver
-    numReplicas: 1
-    routePrefix: "/"
-    rayActorOptions:
-      numCpus: 0.1
+      numCpus: 0
 EOF
-  )
+)
 }

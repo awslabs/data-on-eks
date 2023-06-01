@@ -24,6 +24,8 @@ resource "kubectl_manifest" "karpenter_provisioner" {
       name = var.ray_cluster_name
     }
     spec = {
+      ttlSecondsAfterEmpty = 30
+      #ttlSecondsUntilExpired = 600
       requirements = [
         {
           key      = "karpenter.sh/capacity-type"
@@ -38,9 +40,6 @@ resource "kubectl_manifest" "karpenter_provisioner" {
       }
       providerRef = {
         name = var.ray_cluster_name
-      }
-      consolidation = {
-        enabled = true
       }
       labels = {
         owner = var.ray_cluster_name
@@ -176,6 +175,10 @@ locals {
     metadata = {
       name      = var.ray_cluster_name
       namespace = kubernetes_namespace_v1.this.id
+      annotations = {
+        "ray.io/ft-enabled"                 = "true"
+        "ray.io/external-storage-namespace" = var.ray_cluster_name
+      }
     }
     spec = {
       serviceUnhealthySecondThreshold    = 300
@@ -242,4 +245,39 @@ resource "kubernetes_ingress_v1" "raycluster_ingress_head_ingress" {
       }
     }
   }
+}
+
+#---------------------------------------------------------------
+# Pod Disruption Budget
+#---------------------------------------------------------------
+
+resource "kubernetes_pod_disruption_budget_v1" "ray_workers" {
+  metadata {
+    name      = "ray-worker"
+    namespace = kubernetes_namespace_v1.this.id
+  }
+  spec {
+    min_available = 2
+    selector {
+      match_labels = {
+        "ray.io/node-type" = "worker"
+      }
+    }
+  }
+}
+
+#---------------------------------------------------------------
+# Monitoring
+#---------------------------------------------------------------
+
+resource "kubectl_manifest" "service_monitor" {
+  yaml_body = templatefile("${path.module}/manifests/serviceMonitor.yaml", {
+    namespace = var.namespace
+  })
+}
+
+resource "kubectl_manifest" "pod_monitor" {
+  yaml_body = templatefile("${path.module}/manifests/podMonitor.yaml", {
+    namespace = var.namespace
+  })
 }

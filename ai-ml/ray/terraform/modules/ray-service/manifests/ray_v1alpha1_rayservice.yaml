@@ -6,6 +6,7 @@ enableInTreeAutoscaling: true
 headGroupSpec:
   rayStartParams:
     dashboard-host: '0.0.0.0'
+    num-cpus: '0'
   #pod template
   template:
     spec:
