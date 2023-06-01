@@ -1,4 +1,4 @@
-# Spark Structured Streaming Demo with EMR on EKS
+# EMR on EKS with Spark Streaming
 
 This is a project developed in Python [CDK](https://docs.aws.amazon.com/cdk/latest/guide/home.html).
 It includes sample data, Kafka producer simulator, and a consumer example that can be run with EMR on EC2 or EMR on EKS. Additionally, we have added few Kinesis examples for difference use cases.
@@ -25,13 +25,13 @@ The infrastructure deployment includes the following:
 Spark consumer applications reading from Amazon MSK:
 
 * [1. Run a job with EMR on EKS](#1-submit-a-job-with-emr-on-eks) 
-* [2. Same job with Fargate on EMR on EKS](#2-EMR-on-EKS-with-Fargate) 
-* [3. Same job with EMR on EC2](#3-optional-Submit-step-to-EMR-on-EC2) 
+* [2. Same job with Fargate on EMR on EKS](#2-emr-on-eks-with-fargate) 
+* [3. Same job with EMR on EC2](#3-optional-submit-step-to-emr-on-ec2) 
 
 ## Spark examples - read stream from Kinesis
-* [1. (Optional) Build a custom docker image](#1-optional-Build-custom-docker-image) 
-* [2. Run a job with kinesis-sql connector](#2-Use-kinesis-sql-connector) 
-* [3. Run a job with Spark's DStream](#3-use-spark-s-dstream) 
+* [1. (Optional) Build a custom docker image](#1-optional-build-custom-docker-image) 
+* [2. Run a job with kinesis-sql connector](#2-use-kinesis-sql-connector) 
+* [3. Run a job with Spark's DStream](#3-use-sparks-dstream) 
 
 ## Deploy Infrastructure
 
@@ -45,7 +45,7 @@ Two ways to deploy:
   |   Region  |   Launch Template |
   |  ---------------------------   |   -----------------------  |
   |  ---------------------------   |   -----------------------  |
-  **US East (N. Virginia)**| [![Deploy to AWS](source/app_resources/00-deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?stackName=emr-stream-demo&templateURL=https://blogpost-sparkoneks-us-east-1.s3.amazonaws.com/emr-stream-demo/v2.0.0/emr-stream-demo.template) 
+  **US East (N. Virginia)**| [![Deploy to AWS](img/00-deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?stackName=emr-stream-demo&templateURL=https://blogpost-sparkoneks-us-east-1.s3.amazonaws.com/emr-stream-demo/v2.0.0/emr-stream-demo.template) 
 
 * To launch in a different AWS Region, check out the following customization section, or use the CDK deployment option.
 
@@ -57,6 +57,7 @@ export AWS_REGION=<your-region>
 export SOLUTION_NAME=emr-stream-demo
 export VERSION=v2.0.0 # version number for the customized code
 
+cd data-on-eks/analytics/cdk/stream-emr-on-eks
 ./deployment/build-s3-dist.sh $BUCKET_NAME_PREFIX $SOLUTION_NAME $VERSION
 
 # create the bucket where customized code will reside
@@ -129,7 +130,7 @@ kafka_2.12-2.8.1/bin/kafka-console-consumer.sh \
 ## MSK integration
 ### 1. Submit a job with EMR on EKS 
 
-- [Sample job](deployment/app_code/job/msk_consumer.py) to consume data stream in MSK
+- [Sample job](https://github.com/aws-samples/stream-emr-on-eks/blob/main/deployment/app_code/job/msk_consumer.py) to consume data stream in MSK
 - Submit the job:
 ```bash
 aws emr-containers start-job-run \
@@ -170,7 +171,7 @@ aws emr-containers cancel-job-run --virtual-cluster-id $VIRTUAL_CLUSTER_ID  --id
 ```
 
 ### 2. EMR on EKS with Fargate
-Run the [same job](deployment/app_code/job/msk_consumer.py) on the same EKS cluster, but with the serverless option - Fargate compute choice.
+Run the [same job](https://github.com/aws-samples/stream-emr-on-eks/blob/main/deployment/app_code/job/msk_consumer.py) on the same EKS cluster, but with the serverless option - Fargate compute choice.
 
 To ensure it is picked up by Fargate not by the managed nodegroup on EC2, we will tag the Spark job by a `serverless` label, which has setup in a Fargate profile prevously:
 ```yaml
@@ -256,7 +257,7 @@ This demo uses the `com.qubole.spark/spark-sql-kinesis_2.12/1.2.0-spark_3.0` con
 
 To enable the job-level access control, ie. the [IRSA feature](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html), we have forked the [kinesis-sql git repo](https://github.com/aws-samples/kinesis-sql) and recompiled a new jar after upgraded the AWS java SDK. The custom docker build above will pick up the upgraded connector automatically.
 
-- [Sample job](deployment/app_code/job/qubole-kinesis.py) to consume data stream in Kinesis
+- [Sample job](https://github.com/aws-samples/stream-emr-on-eks/blob/main/deployment/app_code/job/qubole-kinesis.py) to consume data stream in Kinesis
 - Submit the job:
 ```bash
 export AWS_REGION=$(aws configure list | grep region | awk '{print $2}')
@@ -292,7 +293,7 @@ aws emr-containers start-job-run \
 
 This demo uses the `spark-streaming-kinesis-asl_2.12` library to read from Kinesis. Check out the [Spark's official document](https://spark.apache.org/docs/latest/streaming-kinesis-integration.html). The Spark syntax is slightly different from the spark-sql-kinesis approach. It operates at RDD level.
 
-- [Sample job](deployment/app_code/job/pyspark-kinesis.py) to consume data stream from Kinesis
+- [Sample job](https://github.com/aws-samples/stream-emr-on-eks/blob/main/deployment/app_code/job/pyspark-kinesis.py) to consume data stream from Kinesis
 - Submit the job:
 ```bash
 export AWS_REGION=$(aws configure list | grep region | awk '{print $2}')
