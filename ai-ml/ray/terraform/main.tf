@@ -266,7 +266,7 @@ module "eks_blueprints_addons" {
           region          = local.region
           logGroupName    = "/${local.name}/worker-fluentbit-logs"
           logStreamPrefix = "fluentbit-"
-          autoCreateGroup = "false"
+          autoCreateGroup = "true"
         }
       })
     ]
