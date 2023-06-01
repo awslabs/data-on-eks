@@ -269,9 +269,9 @@ module "eks" {
         echo "Bootstrap complete.Ready to Go!"
       EOT
 
-      min_size     = 8
+      min_size     = 1
       max_size     = 20
-      desired_size = 8
+      desired_size = 1
 
       capacity_type        = "SPOT"
       force_update_version = true
