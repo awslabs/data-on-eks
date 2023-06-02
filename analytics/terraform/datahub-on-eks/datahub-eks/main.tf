@@ -1,4 +1,3 @@
-
 locals {
   datahub_name       = "datahub"
   prereq_name        = "datahub-prerequisites"
@@ -29,8 +28,6 @@ locals {
   ))
   
 }
-
-
 
 module "prereq" {
   source = "./modules/prereq"

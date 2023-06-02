@@ -44,13 +44,3 @@ output "frontend_url" {
   value       = format("http://%s/", data.kubernetes_ingress_v1.datahub-datahub-frontend.status.0.load_balancer.0.ingress.0.hostname)
  
 }
-
-
-# ################################################################################
-# # AMP
-# ################################################################################
-
-# output "amp_workspace_id" {
-#   description = "The id of amp"
-#   value       = aws_prometheus_workspace.amp.id
-# }

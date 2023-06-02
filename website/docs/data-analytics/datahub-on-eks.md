@@ -92,6 +92,9 @@ Copy the ADDRESS field from the output, then open browser and enter the URL as `
 
 ![img.png](img/datahub-ui.png)
 
+## Testing
+
+Follow steps from this [blog](https://aws.amazon.com/blogs/big-data/part-2-deploy-datahub-using-aws-managed-services-and-ingest-metadata-from-aws-glue-and-amazon-redshift/) to populate metadata from AWS Glue Data Catalog and Amazon Redshift, and business glossary and data lineage, into DataHub. 
 
 ## Cleanup
 

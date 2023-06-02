@@ -10,7 +10,6 @@ variable "prereq_helm_config" {
   default     = {}
 }
 
-
 variable "prefix" {
   description = "local name"
   type        = string
@@ -40,6 +39,3 @@ variable "create_iam_service_linked_role_es" {
   default     = true
   description = "Whether to create `AWSServiceRoleForAmazonOpensearchService` service-linked role. Set it to `false` if the role already exists"
 }
-
-
-

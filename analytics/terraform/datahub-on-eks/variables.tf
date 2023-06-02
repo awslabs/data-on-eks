@@ -47,19 +47,6 @@ variable "private_subnets" {
   type        = list(string)
 }
 
-
-variable "enable_cloudwatch_metrics" {
-  default     = true
-  description = "Enable Cloudwatch metrics"
-  type        = bool
-}
-
-variable "enable_aws_for_fluentbit" {
-  default     = true
-  description = "Enable Fluentbit addon"
-  type        = bool
-}
-
 variable "create_iam_service_linked_role_es" {
   type        = bool
   default     = true

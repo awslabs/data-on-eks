@@ -1,8 +1,10 @@
-
 module "eks_blueprints_kubernetes_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
   source = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 0.2.0"
+  
+  depends_on = [aws_eks_addon.vpc_cni]
   
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -13,12 +15,6 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
-    # vpc_cni = {
-    #   preserve = true
-    #   most_recent = true
-    #   addon_version            = data.aws_eks_addon_version.this.version
-    #   service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-    # }
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
       most_recent = true
@@ -60,17 +56,16 @@ module "eks_blueprints_kubernetes_addons" {
   # ALB Controller
   #---------------------------------------
   enable_aws_load_balancer_controller = true
-  
 
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = var.enable_cloudwatch_metrics
+  enable_aws_cloudwatch_metrics = true
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit                 = var.enable_aws_for_fluentbit
+  enable_aws_for_fluentbit       = true
   aws_for_fluentbit_cw_log_group = {
     create            = true
     use_name_prefix   = false

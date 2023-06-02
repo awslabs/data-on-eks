@@ -12,9 +12,6 @@ targets=(
   "module.vpc_cni_irsa"
   "module.ebs_csi_driver_irsa"
   "module.eks"
-  "module.vpc_endpoints"
-  "module.vpc_endpoints_sg"
-  "module.vpc"
 )
 
 #-------------------------------------------
