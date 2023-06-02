@@ -1,0 +1,65 @@
+{
+    "name": "spark-rapids-emr",
+    "virtualClusterId": "< EMR Virtual Cluster ID >",
+    "executionRoleArn": "arn:aws:iam::< Account ID >:role/emr-spark-rapids-emr-eks-data-team-a",
+    "releaseLabel": "emr-6.10.0-spark-rapids-latest",
+    "jobDriver": {
+      "sparkSubmitJobDriver": {
+        "entryPoint": "s3://< BUCKET NAME >/scripts/nvidia/etl-xgboost-train-transform-us-west-2.py",
+        "entryPointArguments": ["s3://< BUCKET NAME >/< DATA ROOT PREFIX >/"],
+         "sparkSubmitParameters": "--conf spark.kubernetes.container.image=< ACCOUNT ID >.dkr.ecr.< REGION >.amazonaws.com/emr-6.10.0-spark-rapids:< TAG > --jars=s3://< BUCKET NAME >/nvidia/xgboost4j-spark_3.0-1.4.2-0.3.0.jar,s3://< BUCKET NAME >/nvidia/xgboost4j_3.0-1.4.2-0.3.0.jar --conf spark.pyspark.python=/opt/venv/bin/python"
+      }
+    },
+    "configurationOverrides": {
+      "applicationConfiguration": [
+        {
+          "classification": "spark-defaults",
+          "properties": {
+            "spark.plugins": "com.nvidia.spark.SQLPlugin",
+            "spark.executor.extraLibraryPath": "/usr/local/cuda/lib:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:/usr/local/cuda/targets/x86_64-linux/lib:/usr/lib/hadoop/lib/native:/usr/lib/hadooplzo/lib/native:/docker/usr/lib/hadoop/lib/native:/docker/usr/lib/hadoop-lzo/lib/native",
+            "spark.executor.instances": "8",
+            "spark.executor.cores": "5",
+            "spark.executor.memory": "26G",
+            "spark.driver.cores": "2",
+            "spark.driver.memory": "8G",
+            "spark.rapids.shuffle.mode": "MULTITHREADED",
+            "spark.rapids.sql.concurrentGpuTasks": "1",
+            "spark.rapids.sql.explain":"ALL", 
+            "spark.rapids.sql.concurrentGpuTasks":"1", 
+            "spark.rapids.memory.pinnedPool.size":"1G", 
+            "spark.rapids.memory.gpu.pool":"ASYNC",
+            "spark.rapids.memory.gpu.allocFraction":"0.6",
+            "spark.rapids.sql.incompatibleOps.enabled": "true",
+            "spark.rapids.sql.enabled":"true",
+            "spark.rapids.sql.batchSizeBytes": "1gb",
+            "spark.executor.resource.gpu.amount": "1",
+            "spark.task.cpus":"1",
+            "spark.task.resource.gpu.amount": "1",
+            "spark.sql.files.maxPartitionBytes": "2gb",
+            "spark.driver.maxResultSize": "2gb",
+            "spark.sql.adaptive.enabled": "true",
+            "spark.executor.memoryOverhead": "2G",
+            "spark.locality.wait": "0s",
+            "spark.dynamicAllocation.enabled": "false",
+            "spark.shuffle.manager": "com.nvidia.spark.rapids.spark331.RapidsShuffleManager",
+            "spark.sql.sources.useV1SourceList": "parquet",
+            "spark.executor.resource.gpu.vendor": "nvidia.com",
+            "spark.eventLog.enabled": "true",
+            "spark.eventLog.compress": "true",
+            "spark.eventLog.dir": "s3://< BUCKET NAME >/logs/emr-eks/logs/gpu/",
+            "spark.kubernetes.executor.podTemplateFile": "s3://< BUCKET NAME >/nvidia/pod-templates/executor-pod-template.yaml",
+            "spark.kubernetes.driver.podTemplateFile": "s3://< BUCKET NAME >/nvidia/pod-templates/driver-pod-template.yaml"
+           }
+        }
+      ],
+      "monitoringConfiguration": {
+        "persistentAppUI": "ENABLED",
+        "cloudWatchMonitoringConfiguration": {
+          "logGroupName": "/emr-on-eks-logs/emr-spark-rapids/emr-ml-team-a"
+        },
+        "s3MonitoringConfiguration": {
+          "logUri": "s3://< BUCKET NAME >/logs/gpu/spark/"
+        }
+      }
+    }
+  }
