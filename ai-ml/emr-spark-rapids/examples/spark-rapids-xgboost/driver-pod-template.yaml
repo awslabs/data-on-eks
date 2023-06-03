@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: <job_name>-driver
+  name: xgboost-mortgage-driver
   namespace: emr-ml-team-a
 spec:
   nodeSelector:
     NodeGroupType: "spark-driver-ca"
-    topology.kubernetes.io/zone: us-west-2a
+    topology.kubernetes.io/zone: "us-west-2b"
 
   tolerations:
     - key: "spark-driver-ca"

@@ -168,12 +168,12 @@ module "eks" {
         echo "Bootstrap complete.Ready to Go!"
       EOT
 
-      min_size     = 0
+      min_size     = 1
       max_size     = 20
-      desired_size = 0
+      desired_size = 1
 
       force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types       = ["m5.xlarge"] # 4 vCPU and 16GB
 
       ebs_optimized = true
       # This bloc device is used only for root volume. Adjust volume according to your size.
