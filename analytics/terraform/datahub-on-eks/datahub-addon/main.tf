@@ -6,7 +6,8 @@ locals {
   prereq_chart       = "datahub-prerequisites"
   datahub_namespace  = "datahub"
   datahub_repository = "https://helm.DataHubproject.io/"
-  datahub_version    = "0.2.164"
+  datahub_version    = "0.2.165"
+  prereq_version     = "0.0.17"
 
   datahub_merged_values_yaml = yamlencode(merge(
     yamldecode(templatefile("${path.module}/values/datahub_values.yaml", { 
@@ -85,7 +86,7 @@ resource "helm_release" "prereq" {
   name                       = try(var.prereq_helm_config["name"], local.prereq_name)
   repository                 = try(var.prereq_helm_config["repository"], local.datahub_repository)
   chart                      = try(var.prereq_helm_config["chart"], local.prereq_chart)
-  #version                    = try(var.prereq_helm_config["version"], local.datahub_version)
+  version                    = try(var.prereq_helm_config["version"], local.prereq_version)
   timeout                    = try(var.prereq_helm_config["timeout"], 300)
   values                     = [local.prereq_merged_values_yaml]
   create_namespace           = try(var.datahub_helm_config["create_namespace"], false)

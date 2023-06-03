@@ -4,13 +4,11 @@ datahub-gms:
   enabled: true
   image:
     repository: linkedin/datahub-gms
-    tag: "v0.8.45"
 
 datahub-frontend:
   enabled: true
   image:
     repository: linkedin/datahub-frontend-react
-    tag: "v0.8.45"
   # Set up ingress to expose react front-end
   ingress:
     enabled: true
@@ -28,7 +26,6 @@ acryl-datahub-actions:
   enabled: true
   image:
     repository: acryldata/datahub-actions
-    tag: "v0.0.7"
   resources:
     limits:
       memory: 512Mi
@@ -39,24 +36,20 @@ acryl-datahub-actions:
 datahub-mae-consumer:
   image:
     repository: linkedin/datahub-mae-consumer
-    tag: "v0.8.45"
 
 datahub-mce-consumer:
   image:
     repository: linkedin/datahub-mce-consumer
-    tag: "v0.8.45"
 
 datahub-ingestion-cron:
   enabled: false
   image:
     repository: acryldata/datahub-ingestion
-    tag: "v0.8.45"
 
 elasticsearchSetupJob:
   enabled: true
   image:
     repository: linkedin/datahub-elasticsearch-setup
-    tag: "v0.8.45"
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -70,7 +63,6 @@ kafkaSetupJob:
   enabled: true
   image:
     repository: linkedin/datahub-kafka-setup
-    tag: "v0.8.45"
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -81,7 +73,6 @@ mysqlSetupJob:
   enabled: true
   image:
     repository: acryldata/datahub-mysql-setup
-    tag: "v0.8.45"
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -92,7 +83,6 @@ postgresqlSetupJob:
   enabled: false
   image:
     repository: acryldata/datahub-postgres-setup
-    tag: "v0.8.45"
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -209,6 +199,7 @@ global:
     partitions: ${msk_partitions}
     replicationFactor: ${msk_partitions}
     schemaregistry:
+      type: KAFKA
       url: "http://datahub-prerequisites-cp-schema-registry:8081"
       # type: AWS_GLUE
       # glue:
@@ -248,21 +239,19 @@ global:
 
   datahub:
     
+    # force older version until the OpenSearch issue with latest version is resolved
+    version: v0.8.45
+    
     # disable systemUpdate due to bug in creating auth-secrets
     systemUpdate: 
       enabled: false
-    
+
     gms:
       port: "8080"
-      nodePort: "30001"
-
     monitoring:
       enablePrometheus: true
-
     mae_consumer:
       port: "9091"
-      nodePort: "30002"
-
     appVersion: "1.0"
 
     encryptionKey:
@@ -278,7 +267,7 @@ global:
 
     managed_ingestion:
       enabled: true
-      defaultCliVersion: "0.8.45"
+      defaultCliVersion: "0.10.3"
 
     metadata_service_authentication:
       enabled: true

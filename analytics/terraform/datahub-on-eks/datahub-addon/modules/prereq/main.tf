@@ -73,7 +73,6 @@ resource "aws_opensearch_domain" "es" {
 }
  
 # Creating the AWS Elasticsearch domain policy
- 
 resource "aws_opensearch_domain_policy" "main" {
   domain_name = aws_opensearch_domain.es.domain_name
   access_policies = <<POLICIES
@@ -94,7 +93,6 @@ POLICIES
 #---------------------------------------------------------------
 # MSK For DataHub
 #---------------------------------------------------------------
-
 resource "aws_security_group" "msk" {
   name = "${var.prefix}-msk-sg"
   description = "Allow inbound traffic to MSK from VPC CIDR"
@@ -112,7 +110,6 @@ resource "aws_kms_key" "kms" {
 }
 
 # Allow auto-create-topics
-
 resource "aws_msk_configuration" "mskconf" {
   kafka_versions = ["2.8.1"]
   name           = "mskconf"
@@ -128,7 +125,6 @@ resource "aws_cloudwatch_log_group" "msklg" {
 }
 
 # Create cluster with smallest instance
-
 resource "aws_msk_cluster" "msk" {
   cluster_name           = "${var.prefix}-msk"
   kafka_version          = "2.8.1"
@@ -205,7 +201,6 @@ resource "random_password" "mysql_password" {
 }
 
 resource "aws_db_instance" "datahub_rds" {
-  
   identifier = "${var.prefix}-mysql"
 
   engine               = "mysql"

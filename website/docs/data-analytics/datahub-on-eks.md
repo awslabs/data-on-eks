@@ -78,7 +78,23 @@ chmod +x install.sh
 
 ### Verify Deployment
 
-After the deployment completes, we can access the DataHub UI and test importing metadata from sample datasources.  You may find the URL to the datahub frontend from the output `frontend_url`, or by running kubectl command below:
+After the deployment completes, we can access the DataHub UI and test importing metadata from sample datasources.  For demo purpose, this blueprint creates the Ingress object for the datahub FrontEnd UI with public LoadBalancer(internet-facing).  For production workloads, you can modify datahub_values.yaml to use internal LB:
+
+```
+datahub-frontend:
+  enabled: true
+  image:
+    repository: linkedin/datahub-frontend-react
+  # Set up ingress to expose react front-end
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: **internet-facing**
+      alb.ingress.kubernetes.io/target-type: instance
+```
+
+You may find the URL to the datahub frontend from the output `frontend_url`, or by running kubectl command below:
 
 ```sh
 kubectl get ingress datahub-datahub-frontend -n datahub
