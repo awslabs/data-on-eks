@@ -19,6 +19,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
 | <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | >= 3.72 |
+| <a name="provider_helm"></a> [helm](#provider\_helm) | >= 2.4.1 |
 | <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | >= 1.14 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.3.2 |
@@ -50,6 +51,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | [aws_s3_object.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object) | resource |
 | [aws_secretsmanager_secret.grafana](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
 | [aws_secretsmanager_secret_version.grafana](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
+| [helm_release.emr_spark_operator](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [kubectl_manifest.karpenter_provisioner](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubernetes_cluster_role.spark_role](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/cluster_role) | resource |
 | [kubernetes_cluster_role_binding.spark_role_binding](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/cluster_role_binding) | resource |
