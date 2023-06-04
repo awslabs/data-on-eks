@@ -75,10 +75,13 @@ module "s3_bucket" {
   count = var.enable_fsx_for_lustre ? 1 : 0
 
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "v3.3.0"
+  version = "v3.10.1"
 
   bucket_prefix = format("%s-%s", "fsx", data.aws_caller_identity.current.account_id)
-  acl           = "private"
+  # https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/3.10.1#input_acl
+  # https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html
+  # acl           = "private"
+
 
   # For example only - please evaluate for your environment
   force_destroy = true

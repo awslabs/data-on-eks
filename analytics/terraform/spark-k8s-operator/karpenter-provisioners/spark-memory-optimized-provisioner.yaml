@@ -15,9 +15,15 @@ spec:
     - key: "karpenter.sh/capacity-type"
       operator: In
       values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
+    - key: "karpenter.k8s.aws/instance-family"
       operator: In
-      values: ["r5d.4xlarge","r5d.8xlarge","r5d.12xlarge"] # 2 NVMe disk
+      values: ["r5d"]
+    - key: "karpenter.k8s.aws/instance-size"
+      operator: In
+      values: ["2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge", "24xlarge"]
+#    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
+#      operator: In
+#      values: ["r5d.4xlarge","r5d.8xlarge","r5d.12xlarge"] # 2 NVMe disk
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
@@ -34,7 +40,15 @@ spec:
     - key: spark-memory-optimized
       value: 'true'
       effect: NoSchedule
-  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
+  # If omitted, the feature is disabled, nodes will never scale down due to low utilization
+  ttlSecondsAfterEmpty: 120
+  # Enables consolidation which attempts to reduce cluster cost by both removing un-needed nodes and down-sizing those
+  # that can't be removed.  Mutually exclusive with the ttlSecondsAfterEmpty parameter.
+#  consolidation:
+#    enabled: true
+  # If omitted, the feature is disabled and nodes will never expire.  If set to less time than it requires for a node
+  # to become ready, the node may expire before any pods successfully start.
+#  ttlSecondsUntilExpired: 2592000 # 30 Days = 60 * 60 * 24 * 30 Seconds;
 
 ---
 apiVersion: karpenter.k8s.aws/v1alpha1

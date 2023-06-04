@@ -33,7 +33,7 @@ data "aws_eks_cluster" "this" {
 }
 
 locals {
-  region      = "us-east-1"
+  region      = var.region
   name        = "pytorch"
   eks_cluster = "ray-cluster"
 }

@@ -1,10 +1,40 @@
 #---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name_prefix      = format("%s-%s-", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+  tags = local.tags
+}
+#---------------------------------------------------------------
+# VPC CNI Addon should run before the nodes are created
+# Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
+#---------------------------------------------------------------
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name             = module.eks.cluster_name
+  addon_name               = "vpc-cni"
+  addon_version            = data.aws_eks_addon_version.this.version
+  resolve_conflicts        = "OVERWRITE"
+  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
+  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+}
+
+#---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
@@ -16,33 +46,15 @@ module "ebs_csi_driver_irsa" {
 }
 
 #---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
+  # Short commit hash from 8th May using git rev-parse --short HEAD
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.cluster_oidc_issuer_url
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
@@ -50,28 +62,39 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   eks_addons = {
     aws-ebs-csi-driver = {
+      most_recent              = true
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
     coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
+      most_recent = true
+      preserve    = true
     }
     kube-proxy = {
-      preserve = true
+      most_recent = true
+      preserve    = true
     }
   }
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
+  #---------------------------------------------------------------
+  # CoreDNS Autoscaler helps to scale for large EKS Clusters
+  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
+  #---------------------------------------------------------------
+  enable_cluster_proportional_autoscaler = true
+  cluster_proportional_autoscaler = {
+    timeout = "300"
+    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
+      target = "deployment/coredns"
+    })]
+    description = "Cluster Proportional Autoscaler for CoreDNS Service"
+  }
+
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
   enable_metrics_server = true
-  metrics_server_helm_config = {
-    version = "3.8.4"
+  metrics_server = {
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
@@ -80,8 +103,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Cluster Autoscaler
   #---------------------------------------
   enable_cluster_autoscaler = true
-  cluster_autoscaler_helm_config = {
-    version = "9.27.0"
+  cluster_autoscaler = {
     timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
@@ -92,12 +114,16 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                           = true
-  karpenter_enable_spot_termination_handling = true
-  karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
+  karpenter_node = {
+    create_iam_role          = true
+    iam_role_use_name_prefix = false
+    # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
+    iam_role_name = local.karpenter_iam_role_name
+  }
 
-  karpenter_helm_config = {
-    version             = "v0.25.0"
+  karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -106,9 +132,8 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_cloudwatch_metrics = true
-  cloudwatch_metrics = {
-    version = "0.0.8"
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics = {
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
   }
@@ -116,27 +141,36 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit            = true
-  aws_for_fluentbit_cw_log_group_name = "/${var.name}/fluentbit-logs" # Add-on creates this log group
-  aws_for_fluentbit_irsa_policies     = [aws_iam_policy.fluentbit.arn]
-  aws_for_fluentbit_helm_config = {
-    version = "0.1.22"
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    create            = true
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+
+  aws_for_fluentbit = {
+    create_namespace = true
+    namespace        = "aws-for-fluentbit"
+    create_role      = true
+    role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
+
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = var.region,
-      cloudwatch_log_group = "/${var.name}/fluentbit-logs"
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
       s3_bucket_name       = module.s3_bucket.s3_bucket_id
       cluster_name         = module.eks.cluster_name
     })]
   }
 
   enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller_helm_config = {
+  aws_load_balancer_controller = {
     version = "1.4.7"
     timeout = "300"
   }
 
   enable_ingress_nginx = true
-  ingress_nginx_helm_config = {
+  ingress_nginx = {
     version = "4.5.2"
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
@@ -149,7 +183,9 @@ module "eks_blueprints_kubernetes_addons" {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 # NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
-module "eks_data_addons" {
+module "kubernetes_data_addons" {
+  # Please note that local source will be replaced once the below repo is public
+  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
   source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -255,25 +291,15 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
   bucket_prefix = "${local.name}-spark-logs-"
-  acl           = "private"
 
   # For example only - please evaluate for your environment
   force_destroy = true
-
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
 
   server_side_encryption_configuration = {
     rule = {
@@ -289,7 +315,6 @@ module "s3_bucket" {
 # Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
 resource "aws_s3_object" "this" {
   bucket       = module.s3_bucket.s3_bucket_id
-  acl          = "private"
   key          = "spark-event-logs/"
   content_type = "application/x-directory"
 }
@@ -306,12 +331,12 @@ data "aws_secretsmanager_secret_version" "admin_password_version" {
 resource "random_password" "grafana" {
   length           = 16
   special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  override_special = "@_"
 }
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "grafana-login"
+  name                    = "${local.name}-grafana"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 

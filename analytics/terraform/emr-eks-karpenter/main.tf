@@ -1,7 +1,6 @@
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.9"
+  version = "~> 19.13"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -9,14 +8,16 @@ module "eks" {
   cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  vpc_id = module.vpc.vpc_id
+  # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
+  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
+
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      rolearn  = module.karpenter.role_arn
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.karpenter_iam_role_name}"
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -28,7 +29,7 @@ module "eks" {
       rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
       username = "emr-containers"
       groups   = []
-    },
+    }
   ]
 
   #---------------------------------------
@@ -99,7 +100,7 @@ module "eks" {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
 
-      ami_id = data.aws_ami.eks.image_id
+      ami_id = data.aws_ami.x86.image_id
       # This will ensure the bootstrap user data is used to join the node
       # By default, EKS managed node groups will not append bootstrap script;
       # this adds it back in using the default template provided by the module

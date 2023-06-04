@@ -1,5 +1,3 @@
-
-
 resource "helm_release" "prometheus" {
   count = var.enable_prometheus ? 1 : 0
 
