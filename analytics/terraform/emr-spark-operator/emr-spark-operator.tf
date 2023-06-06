@@ -10,6 +10,9 @@ resource "helm_release" "emr_spark_operator" {
 
   create_namespace = true
 
+  repository_username = data.aws_ecr_authorization_token.token.user_name
+  repository_password = data.aws_ecr_authorization_token.token.password
+
   values = [
     file("${path.module}/helm-values/emr-spark-operator-values.yaml")
   ]
