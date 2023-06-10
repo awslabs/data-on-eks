@@ -16,8 +16,8 @@ sdfRides = spark \
   .option("startingOffsets", "latest") \
   .option("auto.offset.reset", "latest") \
   .load() \
-  .selectExpr("decode(CAST(value AS STRING),'utf-8') as value") 
-    
+  .selectExpr("decode(CAST(value AS STRING),'utf-8') as value")
+
 taxiRidesSchema = StructType([ \
   StructField("rideId", LongType()), StructField("isStart", StringType()), \
   StructField("endTime", TimestampType()), StructField("startTime", TimestampType()), \
@@ -28,9 +28,9 @@ taxiRidesSchema = StructType([ \
 
 def parse_data_from_kafka_message(sdf, schema):
   assert sdf.isStreaming == True, "DataFrame doesn't receive streaming data"
-  col = split(sdf['value'], ',') 
-  for idx, field in enumerate(schema): 
-      sdf = sdf.withColumn(field.name, col.getItem(idx).cast(field.dataType)) 
+  col = split(sdf['value'], ',')
+  for idx, field in enumerate(schema):
+      sdf = sdf.withColumn(field.name, col.getItem(idx).cast(field.dataType))
       if field.name=="timestamp":
           sdf = sdf.withColumn(field.name, current_timestamp())
   return sdf.select([field.name for field in schema])

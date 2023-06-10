@@ -66,47 +66,40 @@ const config = {
         items: [
           {
             type: 'doc',
-            docId: 'intro',
+            docId: 'introduction/intro',
             position: 'left',
-            label: 'Welcome',
+            label: 'Introduction',
           },
           {
             type: 'doc',
-            docId: 'amazon-emr-on-eks/index',
+            docId: 'blueprints/amazon-emr-on-eks/index',
             position: 'left',
-            label: 'EMR on EKS'
+            label: 'Blueprints'
           },
           {
             type: 'doc',
-            docId: 'data-analytics/index',
+            docId: 'bestpractices/intro',
             position: 'left',
-            label: 'Data Analytics',
+            label: 'Best Practices'
           },
           {
             type: 'doc',
-            docId: 'ai-ml/index',
+            docId: 'benchmarks/emr-on-eks',
             position: 'left',
-            label: 'AI/ML',
+            label: 'Benchmarks'
           },
           {
             type: 'doc',
-            docId: 'job-schedulers/index',
+            docId: 'workshop/intro',
             position: 'left',
-            label: 'Job Schedulers',
+            label: 'Workshop'
           },
           {
             type: 'doc',
-            docId: 'streaming-platforms/index',
+            docId: 'resources/intro',
             position: 'left',
-            label: 'Streaming Platforms',
+            label: 'Resources'
           },
-          {
-            type: 'doc',
-            docId: 'distributed-databases/index',
-            position: 'left',
-            label: 'Distributed Databases',
-          },
-          {to: '/blog', label: 'Blog', position: 'left'},
           {
             href: 'https://github.com/awslabs/data-on-eks',
             label: 'GitHub',

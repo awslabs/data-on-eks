@@ -28,14 +28,14 @@ class MSKStack(NestedStack):
         super().__init__(scope, id, **kwargs)
 
         # launch Cloud9 as Kafka client
-        self._c9env = cloud9.CfnEnvironmentEC2(self, "KafkaClientEnv", 
+        self._c9env = cloud9.CfnEnvironmentEC2(self, "KafkaClientEnv",
             name= "kafka_client",
             instance_type="t3.small",
             subnet_id=eksvpc.public_subnets[0].subnet_id,
             automatic_stop_time_minutes=60
         )
         self._c9env.apply_removal_policy(RemovalPolicy.DESTROY)
-        
+
         # create MSK Cluster
         self._msk_cluster = msk.Cluster(self, "EMR-EKS-stream",
             cluster_name=cluster_name,
@@ -58,4 +58,3 @@ class MSKStack(NestedStack):
             self._msk_cluster.connections.allow_from(ec2.Peer.ipv4(subnet.ipv4_cidr_block), ec2.Port.tcp(9094), "Zookeeper Plaintext")
         for subnet in eksvpc.private_subnets:
             self._msk_cluster.connections.allow_from(ec2.Peer.ipv4(subnet.ipv4_cidr_block), ec2.Port.all_traffic(), "All private traffic")
-   

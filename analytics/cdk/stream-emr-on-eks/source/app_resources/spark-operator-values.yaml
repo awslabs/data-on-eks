@@ -2,7 +2,7 @@ serviceAccounts:
   spark:
     create: false
   sparkoperator:
-    create: true  
+    create: true
 metrics:
 # -- Disable prometheus metric scraping
   enable: false

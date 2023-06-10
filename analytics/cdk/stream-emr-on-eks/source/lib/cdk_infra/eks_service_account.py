@@ -28,16 +28,16 @@ class EksSAConst(Construct):
 # //****** Associating IAM role to K8s Service Account to provide fine-grain security control ******//
 # //***********************************************************************************************//
         # Cluster Auto-scaler
-        self._scaler_sa = eks_cluster.add_service_account('AutoScalerSa', 
-            name='cluster-autoscaler', 
+        self._scaler_sa = eks_cluster.add_service_account('AutoScalerSa',
+            name='cluster-autoscaler',
             namespace='kube-system'
-        )  
+        )
         _scaler_role = load_yaml_local(source_dir+'/app_resources/autoscaler-iam-role.yaml')
         for statmt in _scaler_role:
             self._scaler_sa.add_to_principal_policy(iam.PolicyStatement.from_json(statmt))
 
         # ALB Ingress
-        self._alb_sa = eks_cluster.add_service_account('ALBServiceAcct', 
+        self._alb_sa = eks_cluster.add_service_account('ALBServiceAcct',
             name='alb-aws-load-balancer-controller',
             namespace='kube-system'
         )

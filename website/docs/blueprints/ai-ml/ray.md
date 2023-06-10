@@ -2,7 +2,7 @@
 sidebar_position: 2
 sidebar_label: Ray on EKS
 ---
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Ray on EKS
 
