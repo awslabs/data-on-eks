@@ -2,7 +2,7 @@
 sidebar_position: 4
 sidebar_label: EMR on EKS with ACK Controller
 ---
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # ACK Controller for EMR on EKS
 

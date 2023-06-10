@@ -4,7 +4,7 @@ sidebar_label: Spark Operator with YuniKorn
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Spark Operator with YuniKorn
 

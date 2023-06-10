@@ -2,7 +2,7 @@
 sidebar_position: 3
 sidebar_label: Kubeflow on AWS
 ---
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Kubeflow on AWS
 
