@@ -1,15 +1,13 @@
 ---
-slug: Data Platform with AWS CDK
-title: EMR on EKS Data Platform with AWS CDK
-authors: [aws]
-tags: [emr-on-eks, Spark, emr-studio, CDK]
+sidebar_position: 6
+sidebar_label: EMR on EKS Data Platform with AWS CDK
 ---
 
-## Introduction
+# EMR on EKS Data Platform with AWS CDK
 
-In this blog we will show you how you can use AWS CDK and the [Analytics Reference Architecture](https://aws.amazon.com/blogs/opensource/adding-cdk-constructs-to-the-aws-analytics-reference-architecture/) (ARA) library to deploy an end to end data analytics platform. This platform will allow you to run Spark interactive Session in Jupyter notebook with EMR Studio supported by EMR on EKS and run Spark jobs with EMR on EKS. The architecture below shows the infrasturcture you will deploy using the CDK and ARA library.
+In this document we will show you how you can use AWS CDK and the [Analytics Reference Architecture](https://aws.amazon.com/blogs/opensource/adding-cdk-constructs-to-the-aws-analytics-reference-architecture/) (ARA) library to deploy an end to end data analytics platform. This platform will allow you to run Spark interactive Session in Jupyter notebook with EMR Studio supported by EMR on EKS and run Spark jobs with EMR on EKS. The architecture below shows the infrasturcture you will deploy using the CDK and ARA library.
 
-![emr-eks-studio-ara-architecture](./emr-eks-studio-cdk-ara.png)
+![emr-eks-studio-ara-architecture](./img/emr-eks-studio-cdk-ara.png)
 
 ## [Analytics Reference Architecture](https://aws.amazon.com/blogs/opensource/adding-cdk-constructs-to-the-aws-analytics-reference-architecture/)
 
@@ -39,11 +37,11 @@ This solution will deploy the following:
 
 - EKS cluster and a set of Nodegroups:
 
-    - Managed Nodegroup called tooling for running system critical pods. e.g., Cluster Autoscaler, CoreDNS, EBS CSI Driver..
-    - Three Managed Nodegroup called critical for critical jobs, each in one AZ, this nodegroup use on-demand instances
-    - Three Managed Nodegroup called non-critical for non-critical jobs, each in one AZ, this nodegroup use spot instances
-    - Three Managed Nodegroup called notebook-driver for non-critical jobs, each in one AZ, this nodegroup use on-demand instances to have a stable driver.
-    - Three Managed Nodegroup called notebook-executor for non-critical jobs, each in one AZ, this nodegroup use spot instances instances for executors.
+- Managed Nodegroup called tooling for running system critical pods. e.g., Cluster Autoscaler, CoreDNS, EBS CSI Driver..
+- Three Managed Nodegroup called critical for critical jobs, each in one AZ, this nodegroup use on-demand instances
+- Three Managed Nodegroup called non-critical for non-critical jobs, each in one AZ, this nodegroup use spot instances
+- Three Managed Nodegroup called notebook-driver for non-critical jobs, each in one AZ, this nodegroup use on-demand instances to have a stable driver.
+- Three Managed Nodegroup called notebook-executor for non-critical jobs, each in one AZ, this nodegroup use spot instances instances for executors.
 
 - Enable EKS Cluster to be with with EMR on EKS service
 - EMR Virtual Cluster called `batchjob`, used to submitted jobs
@@ -51,7 +49,7 @@ This solution will deploy the following:
 - EMR Studio called `platform`
 - A `managed endpoint`, called `platform-myendpoint` , to use with Jupyter notebooks you will create in the EMR Studio
 - [Execution role](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/iam-execution-role.html) to use when submiting jobs with EMR on EKS `start-job-run`
-- Execution role to use with managed endpoint.  
+- Execution role to use with managed endpoint.
 - pod templates stored in an S3 bucket called "EKS-CLUSTER-NAME-emr-eks-assets-ACCOUNT-ID-REGION"
 
 ### Customize
@@ -64,11 +62,11 @@ In order to simplify this example we use IAM authentication with IAM user for `E
 
 ```ts
 const notebookPlatform = new ara.NotebookPlatform(this, 'platform-notebook', {
-      emrEks: emrEks,
-      eksNamespace: 'dataanalysis',
-      studioName: 'platform',
-      studioAuthMode: ara.StudioAuthMode.IAM,
-      });
+emrEks: emrEks,
+eksNamespace: 'dataanalysis',
+studioName: 'platform',
+studioAuthMode: ara.StudioAuthMode.IAM,
+});
 ```
 
 ### Deploy
@@ -77,13 +75,13 @@ Before you run the solution, you **MUST** change the `eksAdminRoleArn` of the `p
 
 ```ts
 notebookPlatform.addUser([{
-        identityName:'',
-        notebookManagedEndpoints: [{
-        emrOnEksVersion: 'emr-6.8.0-latest',
-        executionPolicy: emrEksPolicy,
-        managedEndpointName: 'myendpoint'
-              }],
-      }]);
+identityName:'',
+notebookManagedEndpoints: [{
+emrOnEksVersion: 'emr-6.8.0-latest',
+executionPolicy: emrEksPolicy,
+managedEndpointName: 'myendpoint'
+}],
+}]);
 ```
 
 Last you shold also update the IAM policies passed to the `createExecutionRole`, if you want to process data that is in S3 buckets that you own.
@@ -104,7 +102,7 @@ cdk deploy
 
 At the end of the deployment you will see output like follow:
 
-![ara-cdk-output](./cdk-deploy-result.png)
+![ara-cdk-output](./img/cdk-deploy-result.png)
 
 In the output you will find job sample configurations with the best practices for Spark on Kubernetes like `dynamicAllocation` and `pod collocation`.
 
@@ -114,6 +112,7 @@ In this example we will use the `crittical-job` job configuration to submit a jo
 To submit a job we will use Below you use `start-job-run` command with AWS CLI.
 
 Before you run the command below, make sure to change update the following parameters with the on created by your own deployment.
+
     - <CLUSTER-ID> – The EMR virtual cluster ID, which you get from the AWS CDK output
     - <SPARK-JOB-NAME> – The name of your Spark job
     - <ROLE-ARN> – The execution role you created, which you get from the AWS CDK output
@@ -122,47 +121,44 @@ Before you run the command below, make sure to change update the following param
     - <Log_Group_Name> – Your CloudWatch log group name
     - <Log_Stream_Prefix> – Your CloudWatch log stream prefix
 
-
-
 <details>
-<summary>AWS CLI for start-job-run command</summary>
+    <summary>AWS CLI for start-job-run command</summary>
 
-```bash
-
-aws emr-containers start-job-run \
-    --virtual-cluster-id CLUSTER-ID\
-    --name=SPARK-JOB-NAME\
-    --execution-role-arn ROLE-ARN \
-    --release-label emr-6.8.0-latest \
-    --job-driver '{
+    ```bash
+    aws emr-containers start-job-run \
+        --virtual-cluster-id CLUSTER-ID\
+        --name=SPARK-JOB-NAME\
+        --execution-role-arn ROLE-ARN \
+        --release-label emr-6.8.0-latest \
+        --job-driver '{
         "sparkSubmitJobDriver":{
-        "entryPoint": "local:///usr/lib/spark/examples/src/main/python/pi.py"
+            "entryPoint": "local:///usr/lib/spark/examples/src/main/python/pi.py"
         }
     }' \
     --configuration-overrides '{
         "applicationConfiguration": [
-            {
-                "classification": "spark-defaults",
-                "properties": {
-                    "spark.hadoop.hive.metastore.client.factory.class": "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory",
-                    "spark.sql.catalogImplementation": "hive",
-                    "spark.dynamicAllocation.enabled":"true",
-                    "spark.dynamicAllocation.minExecutors": "8",
-                    "spark.dynamicAllocation.maxExecutors": "40",
-                    "spark.kubernetes.allocation.batch.size": "8",
-                    "spark.executor.cores": "8",
-                    "spark.kubernetes.executor.request.cores": "7",
-                    "spark.executor.memory": "28G",
-                    "spark.driver.cores": "2",
-                    "spark.kubernetes.driver.request.cores": "2",
-                    "spark.driver.memory": "6G",
-                    "spark.dynamicAllocation.executorAllocationRatio": "1",
-                    "spark.dynamicAllocation.shuffleTracking.enabled": "true",
-                    "spark.dynamicAllocation.shuffleTracking.timeout": "300s",
-                    "spark.kubernetes.driver.podTemplateFile": "s3://EKS-CLUSTER-NAME-emr-eks-assets-ACCOUNT-ID-REGION/EKS-CLUSTER-NAME/pod-template/critical-driver.yaml",
-                    "spark.kubernetes.executor.podTemplateFile": "s3://EKS-CLUSTER-NAME-emr-eks-assets-ACCOUNT-ID-REGION/EKS-CLUSTER-NAME/pod-template/critical-executor.yaml"
-                }
+        {
+            "classification": "spark-defaults",
+            "properties": {
+                "spark.hadoop.hive.metastore.client.factory.class": "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory",
+                "spark.sql.catalogImplementation": "hive",
+                "spark.dynamicAllocation.enabled":"true",
+                "spark.dynamicAllocation.minExecutors": "8",
+                "spark.dynamicAllocation.maxExecutors": "40",
+                "spark.kubernetes.allocation.batch.size": "8",
+                "spark.executor.cores": "8",
+                "spark.kubernetes.executor.request.cores": "7",
+                "spark.executor.memory": "28G",
+                "spark.driver.cores": "2",
+                "spark.kubernetes.driver.request.cores": "2",
+                "spark.driver.memory": "6G",
+                "spark.dynamicAllocation.executorAllocationRatio": "1",
+                "spark.dynamicAllocation.shuffleTracking.enabled": "true",
+                "spark.dynamicAllocation.shuffleTracking.timeout": "300s",
+                "spark.kubernetes.driver.podTemplateFile": "s3://EKS-CLUSTER-NAME-emr-eks-assets-ACCOUNT-ID-REGION/EKS-CLUSTER-NAME/pod-template/critical-driver.yaml",
+                "spark.kubernetes.executor.podTemplateFile": "s3://EKS-CLUSTER-NAME-emr-eks-assets-ACCOUNT-ID-REGION/EKS-CLUSTER-NAME/pod-template/critical-executor.yaml"
             }
+        }
         ],
         "monitoringConfiguration": {
             "cloudWatchMonitoringConfiguration": {
@@ -171,7 +167,7 @@ aws emr-containers start-job-run \
             }
         }
     }'
-```
+    ```
 </details>
 
 Verify the job execution

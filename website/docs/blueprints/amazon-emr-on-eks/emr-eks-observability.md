@@ -1,9 +1,9 @@
 ---
-slug: Observability EMR on EKS
-title: Observability EMR on EKS
-authors: [vara-bonthu]
-tags: [emr-on-eks, Spark, Observability, Amazon Managed Prometheus, Amazon Managed Grafana]
+sidebar_position: 2
+sidebar_label: EMR on EKS Observability
 ---
+
+# EMR on EKS Observability
 
 ## [Monitoring Amazon EMR on EKS with Amazon Managed Prometheus and Amazon Managed Grafana](https://aws.amazon.com/blogs/mt/monitoring-amazon-emr-on-eks-with-amazon-managed-prometheus-and-amazon-managed-grafana/)
 
@@ -14,9 +14,9 @@ Checkout the full blog [here](https://aws.amazon.com/blogs/mt/monitoring-amazon-
 ### Architecture
 The following diagram illustrates the solution architecture for scraping Spark Driver and Executors’ metrics, as well as writing to Amazon Managed Service for Prometheus.
 
-![emr-eks-amp-amg](./emr-eks-amp-amg.png)
+![emr-eks-amp-amg](./img/emr-eks-amp-amg.png)
 
 ### Grafana Dashboard for Spark
 The following Grafana dashboard displays the EMR on EKS Spark job metrics with Driver and Executor details.
 
-![emr-eks-amp-amg-output](./emr-eks-amp-amg-output.png)
+![emr-eks-amp-amg-output](./img/emr-eks-amp-amg-output.png)

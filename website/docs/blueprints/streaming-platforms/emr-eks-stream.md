@@ -1,3 +1,8 @@
+---
+title: EMR on EKS with Spark Streaming
+sidebar_position: 2
+---
+
 # EMR on EKS with Spark Streaming
 
 This is a project developed in Python [CDK](https://docs.aws.amazon.com/cdk/latest/guide/home.html).
