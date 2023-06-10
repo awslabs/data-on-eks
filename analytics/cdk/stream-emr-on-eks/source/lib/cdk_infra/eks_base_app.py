@@ -21,7 +21,7 @@ class EksBaseAppConst(Construct):
         super().__init__(scope, id, **kwargs)
 
         source_dir=os.path.split(os.environ['VIRTUAL_ENV'])[0]+'/source'
-        
+
         # Add ALB ingress controller to EKS
         self._alb = eks_cluster.add_helm_chart('ALBChart',
             chart='aws-load-balancer-controller',
@@ -32,17 +32,17 @@ class EksBaseAppConst(Construct):
             namespace='kube-system',
             values=load_yaml_replace_var_local(source_dir+'/app_resources/alb-values.yaml',
                 fields={
-                    "{{region_name}}": Aws.REGION, 
-                    "{{cluster_name}}": eks_cluster.cluster_name, 
+                    "{{region_name}}": Aws.REGION,
+                    "{{cluster_name}}": eks_cluster.cluster_name,
                     "{{vpc_id}}": eks_cluster.vpc.vpc_id
                 }
             )
         )
-        
+
         # Add Cluster Autoscaler to EKS
         _var_mapping = {
-            "{{region_name}}": Aws.REGION, 
-            "{{cluster_name}}": eks_cluster.cluster_name, 
+            "{{region_name}}": Aws.REGION,
+            "{{cluster_name}}": eks_cluster.cluster_name,
         }
         eks_cluster.add_helm_chart('ClusterAutoScaler',
             chart='cluster-autoscaler',
@@ -54,8 +54,8 @@ class EksBaseAppConst(Construct):
         )
         # Add container insight (CloudWatch Log) to EKS
         KubernetesManifest(self,'ContainerInsight',
-            cluster=eks_cluster, 
-            manifest=load_yaml_replace_var_remotely('https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/quickstart/cwagent-fluentd-quickstart.yaml', 
+            cluster=eks_cluster,
+            manifest=load_yaml_replace_var_remotely('https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/quickstart/cwagent-fluentd-quickstart.yaml',
                     fields=_var_mapping,
                     multi_resource=True
             )

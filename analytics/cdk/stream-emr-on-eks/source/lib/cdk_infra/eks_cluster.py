@@ -14,15 +14,15 @@ class EksConst(Construct):
 
     @property
     def awsAuth(self):
-        return self._my_cluster.aws_auth       
+        return self._my_cluster.aws_auth
 
-    def __init__(self, scope: Construct, id:str, 
-        eksname: str, 
-        eksvpc: ec2.IVpc, 
-        noderole: IRole, 
-        eks_adminrole: IRole, 
-        emr_svc_role: IRole, 
-        fg_pod_role: IRole, 
+    def __init__(self, scope: Construct, id:str,
+        eksname: str,
+        eksvpc: ec2.IVpc,
+        noderole: IRole,
+        eks_adminrole: IRole,
+        emr_svc_role: IRole,
+        fg_pod_role: IRole,
         **kwargs
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -51,8 +51,8 @@ class EksConst(Construct):
             labels = {'app':'spark', 'lifecycle':'OnDemand'},
             subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,one_per_az=True),
             tags = {'Name':'OnDemand-'+eksname,'k8s.io/cluster-autoscaler/enabled': 'true', 'k8s.io/cluster-autoscaler/'+eksname: 'owned'}
-        )  
-    
+        )
+
 
         # 3. Add Spot managed NodeGroup to EKS (Run Spark exectutor on spot)
         self._my_cluster.add_nodegroup_capacity('spot-mn',
@@ -75,11 +75,9 @@ class EksConst(Construct):
             }],
             pod_execution_role=fg_pod_role
         )
-        
+
         # 5. Map EMR user to IAM role
         self._my_cluster.aws_auth.add_role_mapping(emr_svc_role, groups=[], username="emr-containers")
 
-        # # 6. Allow EKS access from Cloud9      
+        # # 6. Allow EKS access from Cloud9
         self._my_cluster.cluster_security_group.add_ingress_rule(ec2.Peer.ipv4(eksvpc.vpc_cidr_block),ec2.Port.all_tcp())
-
-        

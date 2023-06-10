@@ -21,7 +21,7 @@ class NetworkSgConst(Construct):
 
     def __init__(self,scope: Construct, id:str, eksname:str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
-        
+
         # //*************************************************//
         # //******************* NETWORK ********************//
         # //************************************************//
@@ -36,13 +36,11 @@ class NetworkSgConst(Construct):
         )
         self._vpc_endpoint_sg.add_ingress_rule(ec2.Peer.ipv4(self._vpc.vpc_cidr_block),ec2.Port.tcp(port=443))
         Tags.of(self._vpc_endpoint_sg).add('Name','SparkOnEKS-VPCEndpointSg')
-        
-        # Add VPC endpoint 
+
+        # Add VPC endpoint
         self._vpc.add_gateway_endpoint("S3GatewayEndpoint",
                                         service=ec2.GatewayVpcEndpointAwsService.S3,
                                         subnets=[ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
                                                  ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)])
-                                                 
+
         self._vpc.add_interface_endpoint("CWLogsEndpoint", service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,security_groups=[self._vpc_endpoint_sg])
-
-

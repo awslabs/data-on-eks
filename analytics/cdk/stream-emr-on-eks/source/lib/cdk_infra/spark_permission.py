@@ -24,21 +24,21 @@ class SparkOnEksConst(Construct):
 
     @property
     def EMRFargateVC(self):
-        return self.emr_vc_fg.attr_id    
+        return self.emr_vc_fg.attr_id
 
     @property
     def EMRExecRole(self):
-        return self._emr_exec_role.role_arn 
+        return self._emr_exec_role.role_arn
 
-    def __init__(self,scope: Construct, id: str, 
-        eks_cluster: ICluster, 
-        code_bucket: str, 
+    def __init__(self,scope: Construct, id: str,
+        eks_cluster: ICluster,
+        code_bucket: str,
         awsAuth: AwsAuth,
         **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        source_dir=os.path.split(os.environ['VIRTUAL_ENV'])[0]+'/source'  
-   
+        source_dir=os.path.split(os.environ['VIRTUAL_ENV'])[0]+'/source'
+
 # //****************************************************************************************//
 # //************************** SETUP PERMISSION FOR OSS SPARK JOBS *************************//
 # //******* create k8s namespace, service account, and IAM role for service account ********//
@@ -48,13 +48,13 @@ class SparkOnEksConst(Construct):
         etl_ns = eks_cluster.add_manifest('SparkNamespace',{
                 "apiVersion": "v1",
                 "kind": "Namespace",
-                "metadata": { 
+                "metadata": {
                     "name": "spark",
                     "labels": {"name":"spark"}
                 }
             }
-        )  
-        
+        )
+
         self._spark_sa = eks_cluster.add_service_account('NativeSparkSa',
             name='nativejob',
             namespace='spark'
@@ -90,7 +90,7 @@ class SparkOnEksConst(Construct):
         emr_ns = eks_cluster.add_manifest('EMRNamespace',{
                 "apiVersion": "v1",
                 "kind": "Namespace",
-                "metadata": { 
+                "metadata": {
                     "name":  _emr_01_name,
                     "labels": {"name": _emr_01_name}
                 }
@@ -100,7 +100,7 @@ class SparkOnEksConst(Construct):
         emr_serverless_ns = eks_cluster.add_manifest('EMRFargateNamespace',{
                 "apiVersion": "v1",
                 "kind": "Namespace",
-                "metadata": { 
+                "metadata": {
                     "name": _emr_02_name,
                     "labels": {"name": _emr_01_name}
                 }
@@ -114,20 +114,20 @@ class SparkOnEksConst(Construct):
         ###########################################
         _emr_rb = KubernetesManifest(self,'EMRRoleBinding',
             cluster=eks_cluster,
-            manifest=load_yaml_replace_var_local(source_dir+'/app_resources/emr-rbac.yaml', 
+            manifest=load_yaml_replace_var_local(source_dir+'/app_resources/emr-rbac.yaml',
             fields= {
                 "{{NAMESPACE}}": _emr_01_name,
-            }, 
+            },
             multi_resource=True)
         )
         _emr_rb.node.add_dependency(emr_ns)
 
         _emr_fg_rb = KubernetesManifest(self,'EMRFargateRoleBinding',
             cluster=eks_cluster,
-            manifest=load_yaml_replace_var_local(source_dir+'/app_resources/emr-rbac.yaml', 
+            manifest=load_yaml_replace_var_local(source_dir+'/app_resources/emr-rbac.yaml',
             fields= {
                 "{{NAMESPACE}}": _emr_02_name
-            }, 
+            },
             multi_resource=True)
         )
         _emr_fg_rb.node.add_dependency(emr_serverless_ns)
@@ -139,11 +139,11 @@ class SparkOnEksConst(Construct):
         #######                         #######
         #######################################
         self._emr_exec_role = iam.Role(self, "EMRJobExecRole", assumed_by=iam.ServicePrincipal("eks.amazonaws.com"))
-        
+
         # trust policy
-        _eks_oidc_provider=eks_cluster.open_id_connect_provider 
-        _eks_oidc_issuer=_eks_oidc_provider.open_id_connect_provider_issuer 
-         
+        _eks_oidc_provider=eks_cluster.open_id_connect_provider
+        _eks_oidc_issuer=_eks_oidc_provider.open_id_connect_provider_issuer
+
         sub_str_like = CfnJson(self, "ConditionJsonIssuer",
             value={
                 f"{_eks_oidc_issuer}:sub": f"system:serviceaccount:{_emr_01_name}:emr-containers-sa-*-*-{Aws.ACCOUNT_ID}-*"
@@ -168,7 +168,7 @@ class SparkOnEksConst(Construct):
                 principals=[iam.OpenIdConnectPrincipal(_eks_oidc_provider, conditions={"StringEquals": aud_str_like})]
             )
         )
-        # custom policy      
+        # custom policy
         _emr_iam = load_yaml_replace_var_local(source_dir+'/app_resources/emr-iam-role.yaml',
             fields={
                  "{{codeBucket}}": code_bucket
@@ -203,5 +203,5 @@ class SparkOnEksConst(Construct):
             ),
             name="EMROnEKSFargate"
         )
-        self.emr_vc_fg.node.add_dependency(self._emr_exec_role) 
-        self.emr_vc_fg.node.add_dependency(_emr_fg_rb) 
+        self.emr_vc_fg.node.add_dependency(self._emr_exec_role)
+        self.emr_vc_fg.node.add_dependency(_emr_fg_rb)

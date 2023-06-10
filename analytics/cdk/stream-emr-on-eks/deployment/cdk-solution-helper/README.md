@@ -5,8 +5,8 @@ them for use with the AWS Solutions publishing pipeline. This function performs 
 
 #### Lambda function preparation
 
-Replaces the AssetParameter-style properties that identify source code for Lambda functions with the common variables 
-used by the AWS Solutions publishing pipeline. 
+Replaces the AssetParameter-style properties that identify source code for Lambda functions with the common variables
+used by the AWS Solutions publishing pipeline.
 
 - `Code.S3Bucket` is assigned the `%%BUCKET_NAME%%` placeholder value.
 - `Code.S3Key` is assigned the `%%SOLUTION_NAME%%`/`%%VERSION%%` placeholder value.
@@ -98,8 +98,8 @@ After CloudFormation deployment:
 
 #### Template cleanup
 
-Cleans-up the parameters section and improves readability by removing the AssetParameter-style fields that would have 
-been used to specify Lambda source code properties. This allows solution-specific parameters to be highlighted and 
+Cleans-up the parameters section and improves readability by removing the AssetParameter-style fields that would have
+been used to specify Lambda source code properties. This allows solution-specific parameters to be highlighted and
 removes unnecessary clutter.
 
 Before:

@@ -50,7 +50,7 @@ schema = StructType([
             StructField("message_type", StringType()),
             StructField("count", IntegerType())])
 
-     
+
 kinesis.selectExpr('CAST(data AS STRING)')\
     .select(from_json('data', schema).alias('data'))\
     .select('data.*')\

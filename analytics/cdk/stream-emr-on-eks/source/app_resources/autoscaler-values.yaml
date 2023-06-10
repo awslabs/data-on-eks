@@ -4,7 +4,7 @@ awsRegion: {{region_name}}
 image:
     tag: v1.19.1
 nodeSelector:
-    app: spark    
+    app: spark
 podAnnotations:
     cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
 extraArgs:
@@ -15,5 +15,3 @@ rbac:
     serviceAccount:
         create: false
         name: cluster-autoscaler
-
-  

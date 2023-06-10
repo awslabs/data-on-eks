@@ -24,4 +24,4 @@ aws emr-containers start-job-run \
     "monitoringConfiguration": {
         "s3MonitoringConfiguration": {"logUri": "s3://'${S3BUCKET}'/elasticmapreduce/kinesis-fargate-log/"}
     }
-}'        
+}'

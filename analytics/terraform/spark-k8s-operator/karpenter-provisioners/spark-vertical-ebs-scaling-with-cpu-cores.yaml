@@ -89,39 +89,39 @@ spec:
       echo "No SSD disks available. Creating new EBS volume according to number of cores available in the node."
       yum install -y jq awscli
       TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 3600")
-  
+
       # Get instance info
       INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
       AVAILABILITY_ZONE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
       REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/[a-z]$//')
-  
+
       # Get the number of cores available
       CORES=$(nproc --all)
-  
+
       # Define volume size based on the number of cores and EBS volume size per core
       VOLUME_SIZE=$(expr $CORES \* 10) # 10GB per core. Change as desired
-  
+
       # Create a volume
       VOLUME_ID=$(aws ec2 create-volume --availability-zone $AVAILABILITY_ZONE --size $VOLUME_SIZE --volume-type gp3 --region $REGION --output text --query 'VolumeId')
-  
+
       # Check whether the volume is available
       while [ "$(aws ec2 describe-volumes --volume-ids $VOLUME_ID --region $REGION --query "Volumes[*].State" --output text)" != "available" ]; do
         echo "Waiting for volume to become available"
         sleep 5
       done
-  
+
       # Update the state to delete the volume when the node is terminated
       aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --block-device-mappings "[{\"DeviceName\": \"/dev/xvdb\",\"Ebs\":{\"DeleteOnTermination\":true}}]" --region $REGION
-  
+
       # Attach the volume to the instance
       aws ec2 attach-volume --volume-id $VOLUME_ID --instance-id $INSTANCE_ID --device /dev/xvdb --region $REGION
-  
+
       # Wait for the volume to be attached
       while [ "$(aws ec2 describe-volumes --volume-ids $VOLUME_ID --region $REGION --query "Volumes[*].Attachments[*].State" --output text)" != "attached" ]; do
         echo "Waiting for volume to be attached"
         sleep 5
       done
-  
+
       # Format the volume
       sudo mkfs -t ext4 /dev/xvdb # Improve this to get this value dynamically
       # Create a mount point
@@ -130,7 +130,7 @@ spec:
       sudo mount /dev/xvdb /local1
       # To mount this EBS volume on every system reboot, you need to add an entry in /etc/fstab
       echo "/dev/xvdb /local1 ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
-  
+
       # Adding permissions to the mount
       /usr/bin/chown -hR +999:+1000 /local1
     else

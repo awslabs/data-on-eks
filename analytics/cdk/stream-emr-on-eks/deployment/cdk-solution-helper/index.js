@@ -49,7 +49,7 @@ fs.readdirSync(global_s3_assets).forEach(file => {
     const rsrctype=[
       "AWS::Lambda::Function",
       "AWS::Lambda::LayerVersion",
-      "Custom::CDKBucketDeployment", 
+      "Custom::CDKBucketDeployment",
       "AWS::CloudFormation::Stack",
       "AWS::CloudFront::Distribution"
     ]
@@ -68,7 +68,7 @@ fs.readdirSync(global_s3_assets).forEach(file => {
         else if (fn.Properties.hasOwnProperty('Content') && fn.Properties.Content.hasOwnProperty('S3Bucket')) {
           // Set Lambda::LayerVersion S3 bucket reference
           fn.Properties.Content.S3Key = `%%SOLUTION_NAME%%/%%VERSION%%/asset`+fn.Properties.Content.S3Key;
-          fn.Properties.Content.S3Bucket = {'Fn::Sub': '%%BUCKET_NAME%%-${AWS::Region}'};    
+          fn.Properties.Content.S3Bucket = {'Fn::Sub': '%%BUCKET_NAME%%-${AWS::Region}'};
         }
         else if (fn.Properties.hasOwnProperty('SourceBucketNames')) {
           // Set CDKBucketDeployment S3 bucket reference
@@ -112,7 +112,7 @@ fs.readdirSync(global_s3_assets).forEach(file => {
           }
         }
     });
-    
+
     //6. Output modified template file
     const output_template = JSON.stringify(template, null, 2);
     fs.writeFileSync(`${global_s3_assets}/${file}`, output_template);

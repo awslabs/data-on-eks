@@ -14,14 +14,14 @@ class IamConst(Construct):
     @property
     def admin_role(self):
         return self._clusterAdminRole
-    
+
     @property
     def fg_pod_role(self):
-        return self._fg_pod_role    
+        return self._fg_pod_role
 
     @property
     def emr_svc_role(self):
-        return self._emrsvcrole 
+        return self._emrsvcrole
 
     def __init__(self,scope: Construct, id:str, cluster_name:str, **kwargs,) -> None:
         super().__init__(scope, id, **kwargs)
@@ -41,7 +41,7 @@ class IamConst(Construct):
             ],
         ))
         Tags.of(self._clusterAdminRole).add(
-            key='eks/%s/type' % cluster_name, 
+            key='eks/%s/type' % cluster_name,
             value='admin-role'
         )
 
@@ -50,7 +50,7 @@ class IamConst(Construct):
             iam.ManagedPolicy.from_aws_managed_policy_name('AmazonEKSWorkerNodePolicy'),
             iam.ManagedPolicy.from_aws_managed_policy_name('AmazonEKS_CNI_Policy'),
             iam.ManagedPolicy.from_aws_managed_policy_name('AmazonEC2ContainerRegistryReadOnly'),
-            iam.ManagedPolicy.from_aws_managed_policy_name('CloudWatchAgentServerPolicy'), 
+            iam.ManagedPolicy.from_aws_managed_policy_name('CloudWatchAgentServerPolicy'),
         )
         self._managed_node_role = iam.Role(self,'NodeInstanceRole',
             path='/',
@@ -67,8 +67,8 @@ class IamConst(Construct):
         )
 
         # EMR container service role
-        self._emrsvcrole = iam.Role.from_role_arn(self, "EmrSvcRole", 
-            role_arn=f"arn:aws:iam::{Aws.ACCOUNT_ID}:role/AWSServiceRoleForAmazonEMRContainers", 
+        self._emrsvcrole = iam.Role.from_role_arn(self, "EmrSvcRole",
+            role_arn=f"arn:aws:iam::{Aws.ACCOUNT_ID}:role/AWSServiceRoleForAmazonEMRContainers",
             mutable=False
         )
 

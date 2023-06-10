@@ -38,7 +38,7 @@ if __name__ == "__main__":
     #         StreamName=stream_name,
     #         Data=json.dumps(message),
     #         PartitionKey='part_key')
- 
+
 
     # start Spark process, read from kinesis
     appName = "PythonStreamingKinesisAsl"

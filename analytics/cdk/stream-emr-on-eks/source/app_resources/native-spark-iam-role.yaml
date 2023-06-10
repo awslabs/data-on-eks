@@ -14,7 +14,7 @@
   Action:
   - s3:DeleteObject
   Resource:
-  - arn:aws:s3:::{{codeBucket}}/*  
+  - arn:aws:s3:::{{codeBucket}}/*
 - Effect: Allow
   Action:
   - kms:Encrypt
@@ -22,4 +22,4 @@
   - kms:GenerateDataKey*
   - kms:DescribeKey
   Resource:
-  - '*'    
+  - '*'

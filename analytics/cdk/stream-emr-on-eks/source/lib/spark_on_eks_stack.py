@@ -21,7 +21,7 @@ class SparkOnEksStack(Stack):
     @property
     def eksvpc(self):
         return self.network_sg.vpc
-       
+
 
     @property
     def EMRVC(self):
@@ -29,12 +29,12 @@ class SparkOnEksStack(Stack):
 
     @property
     def EMRFargateVC(self):
-        return self.emr.EMRFargateVC    
+        return self.emr.EMRFargateVC
 
     @property
     def EMRExecRole(self):
-        return self.emr.EMRExecRole    
-        
+        return self.emr.EMRExecRole
+
     def __init__(self, scope: Construct, id: str, eksname: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 

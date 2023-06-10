@@ -137,7 +137,7 @@ sed -i '' -e $replace $template_dist_dir/*.template
 if [ -z "$4" ]; then
     replace="s/%%TEMPLATE_OUTPUT_BUCKET%%/$1"-"${AWS_REGION}/g"
 else
-    replace="s/%%TEMPLATE_OUTPUT_BUCKET%%/$4/g"    
+    replace="s/%%TEMPLATE_OUTPUT_BUCKET%%/$4/g"
 fi
 
 echo "sed -i '' -e $replace $template_dist_dir/*.template"
@@ -185,7 +185,7 @@ for d in `find . -mindepth 1 -maxdepth 1 -type d`; do
         cd $staging_dist_dir/$fname
         rm -rf $venv_folder
         zip -grq $staging_dist_dir/$fname.zip .
-       
+
     elif ls *.js 1> /dev/null 2>&1; then
         echo "===================================="
         echo "This is Node runtime"
@@ -207,7 +207,7 @@ for d in `find . -mindepth 1 -maxdepth 1 -type d`; do
         # Zip the artifact
         echo "zip -r $staging_dist_dir/$fname"
         zip -rq $staging_dist_dir/$fname.zip .
-    fi    
+    fi
 
     cd $staging_dist_dir
     # Copy the zipped artifact from /staging to /regional-s3-assets
@@ -230,7 +230,7 @@ for d in `find . -mindepth 1 -maxdepth 1`; do
     pfname="$(basename -- $d)"
     fname="$(echo $pfname | sed -e 's/asset./asset/g')"
     mv $d $build_dist_dir/$fname
-done    
+done
 
 echo "------------------------------------------------------------------------------"
 echo "[Cleanup] Remove temporary files"
@@ -239,4 +239,3 @@ echo "--------------------------------------------------------------------------
 # Delete the temporary /staging folder
 echo "rm -rf $staging_dist_dir"
 rm -rf $staging_dist_dir
-

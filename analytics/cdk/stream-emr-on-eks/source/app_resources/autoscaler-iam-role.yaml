@@ -7,6 +7,5 @@
   - autoscaling:SetDesiredCapacity
   - autoscaling:TerminateInstanceInAutoScalingGroup
   - ec2:DescribeLaunchTemplateVersions
-  Resource: 
+  Resource:
   - "*"
-   
