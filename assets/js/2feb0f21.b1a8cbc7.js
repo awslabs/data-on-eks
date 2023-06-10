@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[6461],{2882:e=>{e.exports=JSON.parse('{"permalink":"/data-on-eks/blog/tags/amazon-managed-grafana","page":1,"postsPerPage":10,"totalPages":1,"totalCount":2,"blogDescription":"Blog","blogTitle":"Blog"}')}}]);

@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[2596],{3748:e=>{e.exports=JSON.parse('{"label":"CDK","permalink":"/data-on-eks/blog/tags/cdk","allTagsPath":"/data-on-eks/blog/tags","count":1}')}}]);

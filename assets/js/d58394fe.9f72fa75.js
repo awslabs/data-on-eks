@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[4822],{8370:e=>{e.exports=JSON.parse('{"label":"Spark","permalink":"/data-on-eks/blog/tags/spark","allTagsPath":"/data-on-eks/blog/tags","count":3}')}}]);

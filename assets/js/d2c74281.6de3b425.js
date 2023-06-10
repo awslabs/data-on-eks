@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[1469],{2287:a=>{a.exports=JSON.parse('{"label":"Amazon Managed Grafana","permalink":"/data-on-eks/blog/tags/amazon-managed-grafana","allTagsPath":"/data-on-eks/blog/tags","count":2}')}}]);
