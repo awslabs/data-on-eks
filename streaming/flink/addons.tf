@@ -255,7 +255,6 @@ module "s3_bucket" {
   version = "~> 3.0"
 
   bucket_prefix = "${local.name}-flink-logs-"
-  acl           = "private"
 
   # For example only - please evaluate for your environment
   force_destroy = true
