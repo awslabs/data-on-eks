@@ -38,15 +38,6 @@ const config = {
           editUrl:
             'https://github.com/awslabs/data-on-eks/blob/main/website/',
         },
-        blog: {
-          blogSidebarTitle: 'All posts',
-          blogSidebarCount: 'ALL',
-          showReadingTime: true,
-          readingTime: ({content, frontMatter, defaultReadingTime}) =>
-              defaultReadingTime({content, options: {wordsPerMinute: 300}}),
-          editUrl:
-              'https://github.com/awslabs/data-on-eks/blob/main/website/',
-        },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
@@ -136,15 +127,6 @@ const config = {
               {
                 label: 'Github',
                 href: 'https://github.com/awslabs/data-on-eks',
-              }
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
               }
             ],
           },
