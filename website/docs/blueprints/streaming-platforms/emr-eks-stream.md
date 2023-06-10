@@ -1,3 +1,8 @@
+---
+title: EMR on EKS with Spark Streaming
+sidebar_position: 2
+---
+
 # EMR on EKS with Spark Streaming
 
 This is a project developed in Python [CDK](https://docs.aws.amazon.com/cdk/latest/guide/home.html).
@@ -6,38 +11,38 @@ It includes sample data, Kafka producer simulator, and a consumer example that c
 The infrastructure deployment includes the following:
 - A new S3 bucket to store sample data and stream job code
 - An EKS cluster v1.24 in a new VPC across 2 AZs
-    - The Cluster has 2 default managed node groups: the OnDemand nodegroup scales from 1 to 5, SPOT instance nodegroup can scale from 1 to 30. 
+    - The Cluster has 2 default managed node groups: the OnDemand nodegroup scales from 1 to 5, SPOT instance nodegroup can scale from 1 to 30.
     - It also has a Fargate profile labelled with the value `serverless`
 - An EMR virtual cluster in the same VPC
-    - The virtual cluster links to `emr` namespace 
+    - The virtual cluster links to `emr` namespace
     - The namespace accommodates two types of Spark jobs, ie. run on managed node group or serverless job on Fargate
     - All EMR on EKS configuration are done, including fine-grained access controls for pods by the AWS native solution IAM roles for service accounts
 - A MSK Cluster in the same VPC with 2 brokers in total. Kafka version is 2.8.1
-    - A Cloud9 IDE as the command line environment in the demo. 
+    - A Cloud9 IDE as the command line environment in the demo.
     - Kafka Client tool will be installed on the Cloud9 IDE
 - An EMR on EC2 cluster with managed scaling enabled.
     - 1 primary and 1 core nodes with r5.xlarge.
     - configured to run one Spark job at a time.
     - can scale from 1 to 10 core + task nodes
-    - mounted EFS for checkpointing test/demo (a bootstrap action) 
+    - mounted EFS for checkpointing test/demo (a bootstrap action)
 
 ## Spark examples - read stream from MSK
 Spark consumer applications reading from Amazon MSK:
 
-* [1. Run a job with EMR on EKS](#1-submit-a-job-with-emr-on-eks) 
-* [2. Same job with Fargate on EMR on EKS](#2-emr-on-eks-with-fargate) 
-* [3. Same job with EMR on EC2](#3-optional-submit-step-to-emr-on-ec2) 
+* [1. Run a job with EMR on EKS](#1-submit-a-job-with-emr-on-eks)
+* [2. Same job with Fargate on EMR on EKS](#2-emr-on-eks-with-fargate)
+* [3. Same job with EMR on EC2](#3-optional-submit-step-to-emr-on-ec2)
 
 ## Spark examples - read stream from Kinesis
-* [1. (Optional) Build a custom docker image](#1-optional-build-custom-docker-image) 
-* [2. Run a job with kinesis-sql connector](#2-use-kinesis-sql-connector) 
-* [3. Run a job with Spark's DStream](#3-use-sparks-dstream) 
+* [1. (Optional) Build a custom docker image](#1-optional-build-custom-docker-image)
+* [2. Run a job with kinesis-sql connector](#2-use-kinesis-sql-connector)
+* [3. Run a job with Spark's DStream](#3-use-sparks-dstream)
 
 ## Deploy Infrastructure
 
-The provisioning takes about 30 minutes to complete. 
+The provisioning takes about 30 minutes to complete.
 Two ways to deploy:
-1. AWS CloudFormation template (CFN) 
+1. AWS CloudFormation template (CFN)
 2. [AWS Cloud Development Kit (AWS CDK)](https://docs.aws.amazon.com/cdk/latest/guide/home.html).
 
 ### CloudFormation Deployment
@@ -45,12 +50,12 @@ Two ways to deploy:
   |   Region  |   Launch Template |
   |  ---------------------------   |   -----------------------  |
   |  ---------------------------   |   -----------------------  |
-  **US East (N. Virginia)**| [![Deploy to AWS](img/00-deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?stackName=emr-stream-demo&templateURL=https://blogpost-sparkoneks-us-east-1.s3.amazonaws.com/emr-stream-demo/v2.0.0/emr-stream-demo.template) 
+  **US East (N. Virginia)**| [![Deploy to AWS](img/00-deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?stackName=emr-stream-demo&templateURL=https://blogpost-sparkoneks-us-east-1.s3.amazonaws.com/emr-stream-demo/v2.0.0/emr-stream-demo.template)
 
 * To launch in a different AWS Region, check out the following customization section, or use the CDK deployment option.
 
 ### Customization
-You can customize the solution, such as set to a different region, then generate the CFN templates in your required region: 
+You can customize the solution, such as set to a different region, then generate the CFN templates in your required region:
 ```bash
 export BUCKET_NAME_PREFIX=<my-bucket-name> # bucket where customized code will reside
 export AWS_REGION=<your-region>
@@ -72,7 +77,7 @@ echo -e "\nIn web browser, paste the URL to launch the template: https://console
 
 ### CDK Deployment
 
-#### Prerequisites 
+#### Prerequisites
 Install the folowing tools:
 1. [Python 3.6 +](https://www.python.org/downloads/).
 2. [Node.js 10.3.0 +](https://nodejs.org/en/)
@@ -93,12 +98,12 @@ cdk deploy
 
 The following `post-deployment.sh` is executable in Linux, not for Mac OSX. Modify the script if needed.
 
-1. Open the "Kafka Client" IDE in Cloud9 console. Create one if the Cloud9 IDE doesn't exist. 
+1. Open the "Kafka Client" IDE in Cloud9 console. Create one if the Cloud9 IDE doesn't exist.
 ```
 VPC prefix: 'emr-stream-demo'
 Instance Type: 't3.small'
 ```
-2. [Attach the IAM role that contains `Cloud9Admin` to your IDE](https://catalog.us-east-1.prod.workshops.aws/workshops/d90c2f2d-a84b-4e80-b4f9-f5cee0614426/en-US/30-emr-serverless/31-set-up-env#setup-cloud9-ide). 
+2. [Attach the IAM role that contains `Cloud9Admin` to your IDE](https://catalog.us-east-1.prod.workshops.aws/workshops/d90c2f2d-a84b-4e80-b4f9-f5cee0614426/en-US/30-emr-serverless/31-set-up-env#setup-cloud9-ide).
 
 3. Turn off AWS managed temporary credentials in Cloud9:
 ```bash
@@ -128,7 +133,7 @@ kafka_2.12-2.8.1/bin/kafka-console-consumer.sh \
 ```
 
 ## MSK integration
-### 1. Submit a job with EMR on EKS 
+### 1. Submit a job with EMR on EKS
 
 - [Sample job](https://github.com/aws-samples/stream-emr-on-eks/blob/main/deployment/app_code/job/msk_consumer.py) to consume data stream in MSK
 - Submit the job:
@@ -146,7 +151,7 @@ aws emr-containers start-job-run \
 --configuration-overrides '{
     "applicationConfiguration": [
       {
-        "classification": "spark-defaults", 
+        "classification": "spark-defaults",
         "properties": {
           "spark.kubernetes.driver.podTemplateFile":"s3://'$S3BUCKET'/app_code/job/driver_template.yaml","spark.kubernetes.executor.podTemplateFile":"s3://'$S3BUCKET'/app_code/job/executor_template.yaml"
          }
@@ -194,7 +199,7 @@ aws emr-containers start-job-run \
         "sparkSubmitParameters": "--conf spark.jars.packages=org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7 --conf spark.cleaner.referenceTracking.cleanCheckpoints=true --conf spark.executor.instances=2 --conf spark.executor.memory=2G --conf spark.driver.memory=2G --conf spark.executor.cores=2 --conf spark.kubernetes.driver.label.type=serverless --conf spark.kubernetes.executor.label.type=serverless"}}' \
 --configuration-overrides '{
     "monitoringConfiguration": {
-        "s3MonitoringConfiguration": {"logUri": "s3://'${S3BUCKET}'/elasticmapreduce/emreksfg-log/"}}}'        
+        "s3MonitoringConfiguration": {"logUri": "s3://'${S3BUCKET}'/elasticmapreduce/emreksfg-log/"}}}'  
 ```
 ### Verify the job is running on EKS Fargate
 ```bash
@@ -212,7 +217,7 @@ kafka_2.12-2.8.1/bin/kafka-console-consumer.sh \
 
 ```bash
 cluster_id=$(aws emr list-clusters --cluster-states WAITING --query 'Clusters[?Name==`emr-stream-demo`].Id' --output text)
-MSK_SERVER=$(echo $MSK_SERVER | cut -d',' -f 2) 
+MSK_SERVER=$(echo $MSK_SERVER | cut -d',' -f 2)
 
 aws emr add-steps \
 --cluster-id $cluster_id \
@@ -253,7 +258,7 @@ docker push $ECR_URL/emr6.5_custom_boto3
 ```
 
 ### 2. Use kinesis-sql connector
-This demo uses the `com.qubole.spark/spark-sql-kinesis_2.12/1.2.0-spark_3.0` connector to interact with Kinesis. 
+This demo uses the `com.qubole.spark/spark-sql-kinesis_2.12/1.2.0-spark_3.0` connector to interact with Kinesis.
 
 To enable the job-level access control, ie. the [IRSA feature](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html), we have forked the [kinesis-sql git repo](https://github.com/aws-samples/kinesis-sql) and recompiled a new jar after upgraded the AWS java SDK. The custom docker build above will pick up the upgraded connector automatically.
 
@@ -322,7 +327,7 @@ aws emr-containers start-job-run \
     "monitoringConfiguration": {
         "s3MonitoringConfiguration": {"logUri": "s3://'${S3BUCKET}'/elasticmapreduce/kinesis-fargate-log/"}
     }
-}'        
+}'  
 ```
 
 ## Useful commands

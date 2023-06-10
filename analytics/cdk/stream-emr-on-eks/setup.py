@@ -15,7 +15,7 @@ setuptools.setup(
     description="A CDK Python app for Spark Structured Streaming ETL",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    
+
     author="meloyang",
 
     package_dir={"": "source"},

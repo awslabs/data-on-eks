@@ -1,5 +1,5 @@
   - Effect: Allow
-    Action: 
+    Action:
     - s3:ListBucket
     Resource:
     - arn:aws:s3:::{{codeBucket}}
@@ -23,9 +23,9 @@
     - kms:GenerateDataKey*
     - kms:DescribeKey
     Resource:
-      - '*'  
+      - '*'
   - Effect: Allow
-    Action:    
+    Action:
     - logs:PutLogEvents
     - logs:CreateLogStream
     - logs:DescribeLogGroups
@@ -40,4 +40,4 @@
     - kinesis:Get*
     - kinesis:DeleteStream
     Resource:
-      - '*'     
+      - '*'

@@ -4,7 +4,7 @@ sidebar_label: EMR on EKS with Karpenter
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 

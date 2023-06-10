@@ -1,9 +1,9 @@
 ---
-slug: EMR on EKS Best Practices
-title: EMR on EKS Best Practices
-authors: [aws]
-tags: [emr-on-eks, Spark, Observability, Amazon Managed Prometheus, Amazon Managed Grafana]
+sidebar_position: 3
+sidebar_label: EMR on EKS Best Practices
 ---
+
+# EMR on EKS Best Practices
 
 ## [EMR Containers Best Practices Guides](https://aws.github.io/aws-emr-containers-best-practices/)
 

@@ -14,7 +14,7 @@ class EMREC2Stack(NestedStack):
 
         source_dir=os.path.split(os.environ['VIRTUAL_ENV'])[0]+'/source'
         # The VPC requires a Tag to allow EMR to create the relevant security groups
-        Tags.of(eksvpc).add("for-use-with-amazon-emr-managed-policies", "true")   
+        Tags.of(eksvpc).add("for-use-with-amazon-emr-managed-policies", "true")
 
         #######################################
         #######                         #######
@@ -54,7 +54,7 @@ class EMREC2Stack(NestedStack):
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore")
             ]
         )
-        _iam = load_yaml_replace_var_local(source_dir+'/app_resources/emr-iam-role.yaml', 
+        _iam = load_yaml_replace_var_local(source_dir+'/app_resources/emr-iam-role.yaml',
             fields= {
                 "{{codeBucket}}": code_bucket
             })
@@ -100,13 +100,13 @@ class EMREC2Stack(NestedStack):
             instances=CfnCluster.JobFlowInstancesConfigProperty(
                 termination_protected=False,
                 master_instance_group=CfnCluster.InstanceGroupConfigProperty(
-                    instance_count=1, 
-                    instance_type="r5.xlarge", 
+                    instance_count=1,
+                    instance_type="r5.xlarge",
                     market="ON_DEMAND"
                 ),
                 core_instance_group=CfnCluster.InstanceGroupConfigProperty(
-                    instance_count=1, 
-                    instance_type="r5.xlarge", 
+                    instance_count=1,
+                    instance_type="r5.xlarge",
                     market="ON_DEMAND",
                     ebs_configuration=CfnCluster.EbsConfigurationProperty(
                         ebs_block_device_configs=[CfnCluster.EbsBlockDeviceConfigProperty(
@@ -139,12 +139,12 @@ class EMREC2Stack(NestedStack):
             ],
             managed_scaling_policy=CfnCluster.ManagedScalingPolicyProperty(
                 compute_limits=CfnCluster.ComputeLimitsProperty(
-                    unit_type="Instances", 
+                    unit_type="Instances",
                     maximum_capacity_units=10,
-                    minimum_capacity_units=1, 
+                    minimum_capacity_units=1,
                     maximum_core_capacity_units=1,
                     maximum_on_demand_capacity_units=1
-                )   
+                )
             ),
             bootstrap_actions=[CfnCluster.BootstrapActionConfigProperty(
                 name="mountEFS",

@@ -11,14 +11,14 @@ def load_yaml_remotely(url, multi_resource=False):
         if multi_resource:
             yaml_data = list(yaml.full_load_all(file_to_parse))
         else:
-            yaml_data = yaml.full_load(file_to_parse) 
-        # print(yaml_data)  
+            yaml_data = yaml.full_load(file_to_parse)
+        # print(yaml_data)
     except:
         print("Cannot read yaml config file {}, check formatting."
                 "".format(file_to_parse))
         sys.exit(1)
-        
-    return yaml_data 
+
+    return yaml_data
 
 def load_yaml_local(yaml_file, multi_resource=False):
 
@@ -33,14 +33,14 @@ def load_yaml_local(yaml_file, multi_resource=False):
             if multi_resource:
                 yaml_data = list(yaml.full_load_all(yaml_stream))
             else:
-                yaml_data = yaml.full_load(yaml_stream) 
-            # print(yaml_data)    
+                yaml_data = yaml.full_load(yaml_stream)
+            # print(yaml_data)
     except:
         print("Cannot read yaml config file {}, check formatting."
                 "".format(file_to_parse))
         sys.exit(1)
-        
-    return yaml_data 
+
+    return yaml_data
 
 def load_yaml_replace_var_remotely(url, fields, multi_resource=False):
     try:
@@ -52,7 +52,7 @@ def load_yaml_replace_var_remotely(url, fields, multi_resource=False):
         if multi_resource:
             yaml_data = list(yaml.full_load_all(file_to_replace))
         else:
-            yaml_data = yaml.full_load(file_to_replace) 
+            yaml_data = yaml.full_load(file_to_replace)
         # print(yaml_data)
     except request.URLError as e:
         print(e.reason)
@@ -78,11 +78,11 @@ def load_yaml_replace_var_local(yaml_file, fields, multi_resource=False, write_o
             if multi_resource:
                 yaml_data = list(yaml.full_load_all(filedata))
             else:
-                yaml_data = yaml.full_load(filedata) 
+                yaml_data = yaml.full_load(filedata)
         if write_output:
             with open(file_to_replace, "w") as f:
                 yaml.dump(yaml_data, f, default_flow_style=False, allow_unicode = True, sort_keys=False)
-    
+
         # print(yaml_data)
     except request.URLError as e:
         print(e.reason)
