@@ -1,8 +1,5 @@
 
 module "eks_blueprints_kubernetes_addons" {
-  # Users should pin the version to the latest available release
-  # tflint-ignore: terraform_module_pinned_source
-  # Short commit hash from 8th May using git rev-parse --short HEAD
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "v1.0.0"
 

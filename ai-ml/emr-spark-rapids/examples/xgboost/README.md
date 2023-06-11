@@ -7,7 +7,7 @@ Assuming that you are in the `emr-spark-rapids` folder as <ROOT> and we are usin
 ```
 $ cd <ROOT>/examples/xgboost
 
-# Login to the ECR in us-west-2 to download the Spark Rapids EMR on EKS image. 
+# Login to the ECR in us-west-2 to download the Spark Rapids EMR on EKS image.
 # If you are in a different region, refer to: https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/docker-custom-images-tag.html
 
 $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 895885662937.dkr.ecr.us-west-2.amazonaws.com
@@ -26,8 +26,8 @@ $ docker push < ACCOUNT ID >.dkr.ecr.us-west-2.amazonaws.com/emr-6.10.0-spark-ra
 
 ## Configuring your pod templates
 
-- Assuming that you are using us-west-2 as the region, the only change to the pod templates (driver-pod-template.yaml and executor-pod-template.yaml) required is to give your job name and replace `<job_name>` 
- 
+- Assuming that you are using us-west-2 as the region, the only change to the pod templates (driver-pod-template.yaml and executor-pod-template.yaml) required is to give your job name and replace `<job_name>`
+
 ```
 metadata:
   name: <job_name>-driver
@@ -63,7 +63,7 @@ $ aws cp etl-xgboost-train-transform-us-west-2.py s3://< BUCKET NAME >/scripts/n
 
 - Dataset is derived from [Fannie Mae’s Single-Family Loan Performance Data](http://www.fanniemae.com/portal/funding-the-market/data/loan-performance-data.html) with all rights reserved by Fannie Mae. Refer to these [instructions](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/docs/get-started/xgboost-examples/dataset/mortgage.md) to download the dataset.
 - **IMPORTANT**: Download the data and UPLOAD the data files into a bucket and in any prefix but ensure that the last prefix is `fannie-mae-single-family-loan-performance/`. Example:
-``` 
+```
 s3://< BUCKET NAME >/emr-eks-xgboost-gpu/data/fannie-mae-single-family-loan-performance/
 ```
 
@@ -82,23 +82,23 @@ s3://< BUCKET NAME >/emr-eks-xgboost-gpu/data/fannie-mae-single-family-loan-perf
 7. Copy only the csv files to a new folder for the ETL to read
 
 #### Notes
-1. Refer to the [Loan Performance Data Tutorial](https://capitalmarkets.fanniemae.com/media/9066/display) for more details. 
+1. Refer to the [Loan Performance Data Tutorial](https://capitalmarkets.fanniemae.com/media/9066/display) for more details.
 2. Note that *Single-Family Loan Performance Data* has 2 componenets. However, the Mortgage ETL requires only the first one (primary dataset)
     * Primary Dataset:  Acquisition and Performance Files
     * HARP Dataset
 3. Use the [Resources](https://datadynamics.fanniemae.com/data-dynamics/#/resources/HP) section to know more about the dataset
-4. 
+4.
 
-## Modify the xgboost-spark-job.json 
+## Modify the xgboost-spark-job.json
 
 ### **NOTE**: This section will be changed to use a wrapper script to generate the JSON file
 
-- Look through the JSON file carefully and replace any variables ( example: < BUCKET NAME > ). 
+- Look through the JSON file carefully and replace any variables ( example: < BUCKET NAME > ).
 - As long as the script, pod templates, and JAR files are uploaded in the same prefix structure as outlined in the above section, only the BUCKET_NAME and DATA_ROOT_PREFIX needs to be changed for these entities.
 - For the IAM Role for the Job execution, modify the Account ID. If running in namespace `emr-ml-team-a`, the IAM role name need not be changed.
 - If running in the namespace as emr-ml-team-a, find the EMR Virtual Cluster ID for `emr-spark-rapids-emr-ml-team-a`. Modify as necessary for another team.
 - Save the JSON file
-- 
+-
 ## Submit the job
 
 $ aws emr-containers start-job-run --cli-input-json file://xgboost-spark-job.json --region us-west-2
