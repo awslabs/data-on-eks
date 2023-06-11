@@ -3,7 +3,9 @@ module "eks_blueprints_kubernetes_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
   # Short commit hash from 8th May using git rev-parse --short HEAD
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "v1.0.0"
+
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -194,7 +196,6 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-
 #---------------------------------------------------------------
 # IRSA for EBS
 #---------------------------------------------------------------
@@ -235,12 +236,12 @@ module "vpc_cni_irsa" {
 # Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
 #---------------------------------------------------------------
 resource "aws_eks_addon" "vpc_cni" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "vpc-cni"
-  addon_version            = data.aws_eks_addon_version.this.version
-  resolve_conflicts        = "OVERWRITE"
-  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
-  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "vpc-cni"
+  addon_version               = data.aws_eks_addon_version.this.version
+  resolve_conflicts_on_create = "OVERWRITE"
+  preserve                    = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
+  service_account_role_arn    = module.vpc_cni_irsa.iam_role_arn
 }
 
 #------------------------------------------
@@ -283,7 +284,6 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
 }
-
 
 #---------------------------------------------------------------
 # IRSA for VPC CNI
