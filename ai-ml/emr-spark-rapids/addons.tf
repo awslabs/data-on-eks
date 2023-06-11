@@ -3,7 +3,6 @@ module "eks_blueprints_kubernetes_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "v1.0.0"
 
-
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
@@ -76,7 +75,6 @@ module "eks_blueprints_kubernetes_addons" {
     # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
     iam_role_name = local.karpenter_iam_role_name
   }
-
   karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
