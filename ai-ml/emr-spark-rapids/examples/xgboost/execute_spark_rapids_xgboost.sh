@@ -98,6 +98,9 @@ aws emr-containers start-job-run \
       "cloudWatchMonitoringConfiguration": {
         "logGroupName":"'"$CLOUDWATCH_LOG_GROUP"'",
         "logStreamNamePrefix":"'"$JOB_NAME"'"
+      },
+      "s3MonitoringConfiguration": {
+        "logUri": "s3://'"$S3_BUCKET"'/logs/spark/"
       }
     }
   }'
