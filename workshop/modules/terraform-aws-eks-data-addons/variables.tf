@@ -95,3 +95,18 @@ variable "flink_operator_helm_config" {
   type        = any
   default     = {}
 }
+
+#---------------------------------------------------
+# NVIDIA GPU OPERATOR
+#---------------------------------------------------
+variable "enable_nvidia_gpu_operator" {
+  description = "Enable NVIDIA GPU Operator add-on"
+  type        = bool
+  default     = false
+}
+
+variable "nvidia_gpu_operator_helm_config" {
+  description = "Helm configuration for NVIDIA GPU Operator"
+  type        = any
+  default     = {}
+}
