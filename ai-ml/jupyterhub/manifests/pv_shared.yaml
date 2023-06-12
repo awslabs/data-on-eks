@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: efs-persist
+  name: efs-persist-shared
   namespace: ${namespace}
 spec:
   capacity:
@@ -9,5 +9,5 @@ spec:
   accessModes:
     - ReadWriteMany
   nfs:
-    server: ${efs_id}.efs.${region}.amazonaws.com
+    server: ${efs_shared_id}.efs.${region}.amazonaws.com
     path: "/"

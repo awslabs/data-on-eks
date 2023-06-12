@@ -19,11 +19,20 @@ singleuser:
     static:
       pvcName: "efs-persist"
       subPath: "home/{username}"
+    extraVolumes:
+    - name: jupyterhub-shared
+      persistentVolumeClaim:
+        claimName: efs-persist-shared
+    extraVolumeMounts:
+    - name: jupyterhub-shared
+      mountPath: /etc/shared
+      readOnly: false
   extraEnv:
     CHOWN_HOME: "yes"
+    CHOWN_EXTRA: "/etc/shared"
   uid: 0
   fsGid: 0
-  cmd: "start-singleuser.sh"
+  cmd: "start-singleuser.sh" 
 hub:
   config:
     GenericOAuthenticator:

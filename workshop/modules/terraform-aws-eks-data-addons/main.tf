@@ -26,6 +26,12 @@ locals {
   grafana_name       = "grafana"
   grafana_repository = "https://grafana.github.io/helm-charts"
   grafana_version    = "6.52.4"
+  
+  
+  jupyterhub_name       = "jupyterhub"
+  jupyterhub_repository = "https://jupyterhub.github.io/helm-chart/"
+  jupyterhub_version    = "2.0.0"
+
 
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition

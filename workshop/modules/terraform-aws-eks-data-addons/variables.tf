@@ -95,3 +95,16 @@ variable "flink_operator_helm_config" {
   type        = any
   default     = {}
 }
+
+#-----------JupyterHub ADDON-------------
+variable "enable_jupyterhub" {
+  description = "Enable Jupyterhub Add-On"
+  type        = bool
+  default     = false
+}
+
+variable "jupyterhub_helm_config" {
+  description = "Helm configuration for JupyterHub"
+  type        = any
+  default     = {}
+}
