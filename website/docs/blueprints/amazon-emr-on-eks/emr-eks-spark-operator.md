@@ -2,7 +2,7 @@
 sidebar_position: 6
 sidebar_label: Spark Operator with EMR Runtime
 ---
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Spark Operator with EMR Runtime
 
@@ -60,7 +60,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `terraform init`
 
 ```bash
-cd data-on-eks/analytics/terraform/emr-spark-operator
+cd ./data-on-eks/workshop/emr-eks
 terraform init
 ```
 
@@ -70,6 +70,31 @@ Set `AWS_REGION` and Run Terraform plan to verify the resources created by this 
 export AWS_REGION="us-west-1" # Change region according to your needs
 terraform plan
 ```
+<CollapsibleContent header={<h3><span>Customizing Add-ons</span></h3>}>
+
+### Customizing Add-ons
+
+You can add or remove add-ons by setting the flags in `variables.tf` to true or false.
+
+For example, let's say you want to remove Amazon Managed Prometheus because you have another application that captures Prometheus metrics, you can edit `addons.tf` using your favorite editor, find Amazon Managed Prometheus and change to `false`
+```yaml
+  enable_prometheus = false
+  prometheus_helm_config = {
+    name       = "prometheus"
+    repository = "https://prometheus-community.github.io/helm-charts"
+    chart      = "prometheus"
+    version    = "15.10.1"
+    namespace  = "prometheus"
+    timeout    = "300"
+    values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
+  }
+```
+
+```
+terraform apply
+```
+
+</CollapsibleContent>
 
 Deploy the pattern
 
