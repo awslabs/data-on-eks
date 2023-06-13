@@ -11,7 +11,7 @@ In this post, we will learn to deploy EKS with Spark Operator and submit Spark j
 
 <CollapsibleContent header={<h2><span>Resources Deployed</span></h2>}>
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-spark-operator), you will provision the following resources required to run Spark Applications using the Spark Operator and EMR runtime.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/workshop/examples), you will provision the following resources required to run Spark Applications using the Spark Operator and EMR runtime.
 
 - Creates EKS Cluster Control plane with public endpoint (for demo purpose only)
 - Two managed node groups

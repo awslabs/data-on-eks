@@ -99,3 +99,9 @@ variable "enable_kubecost" {
   type        = bool
   default     = false
 }
+
+variable "enable_emr_spark_operator" {
+  description = "Enable the Spark Operator to submit jobs with EMR Runtime"
+  default     = false
+  type        = bool
+}
