@@ -57,12 +57,14 @@ Clone the repository
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate into one of the example directories and run `terraform init`
+Navigate to `analytics/terraform/emr-eks-karpenter` and run `terraform init`
 
 ```bash
-cd ./data-on-eks/workshop/emr-eks
+cd ./data-on-eks/analytics/terraform/emr-eks-karpenter
 terraform init
 ```
+
+Activate the Spark Operator Add-on with EMR runtime in the `variables.tf`. You need to set the `enable_emr_spark_operator` to `true`.
 
 Set `AWS_REGION` and Run Terraform plan to verify the resources created by this execution.
 
@@ -74,7 +76,7 @@ terraform plan
 
 ### Customizing Add-ons
 
-You can add or remove add-ons by setting the flags in `variables.tf` to true or false.
+You can add or remove add-ons by setting the flags in `variables.tf` to true or false, you can also customize the add-ons through the `addons.tf`.
 
 For example, let's say you want to remove Amazon Managed Prometheus because you have another application that captures Prometheus metrics, you can edit `addons.tf` using your favorite editor, find Amazon Managed Prometheus and change to `false`
 ```yaml
@@ -139,7 +141,7 @@ kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output sho
 Navigate to example directory and submit the Spark job.
 
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/karpenter
+cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/emr-spark-operator
 kubectl apply -f pyspark-pi-job.yaml
 ```
 
