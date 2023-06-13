@@ -153,6 +153,21 @@ kubectl get pods -n spark-team-a -w
 ```
 </CollapsibleContent>
 
+<CollapsibleContent header={<h2><span>Execute Job</span></h2>}>
+
+Navigate to example directory and submit the Spark job.
+
+```bash
+cd /Users/mouhib/data-on-eks/analytics/terraform/emr-eks-karpenter/examples/emr-spark-operator
+kubectl apply -f pyspark-pi.yaml
+```
+
+Monitor the job status using the below command.
+You should see the new nodes triggered by the karpenter and the YuniKorn will schedule one driver pod and 2 executor pods on this node.
+
+</CollapsibleContent>
+
+
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
