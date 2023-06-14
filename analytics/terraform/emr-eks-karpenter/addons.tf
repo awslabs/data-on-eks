@@ -158,7 +158,7 @@ module "kubernetes_data_addons" {
   # EMR Spark Operator
   #---------------------------------------------------------------
   enable_emr_spark_operator = var.enable_emr_spark_operator
-  emr_spark_operator_config = {
+  emr_spark_operator_helm_config = {
     private_ecr_token_user_name = data.aws_ecr_authorization_token.token.user_name
     private_ecr_token_password  = data.aws_ecr_authorization_token.token.password
     values = [templatefile("${path.module}/helm-values/emr-spark-operator-values.yaml", {

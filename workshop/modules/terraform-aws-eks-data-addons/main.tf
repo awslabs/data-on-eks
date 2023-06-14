@@ -31,6 +31,10 @@ locals {
   grafana_repository = "https://grafana.github.io/helm-charts"
   grafana_version    = "6.52.4"
 
+  emr_spark_operator_name      = "spark-operator"
+  emr_spark_operator_version   = "1.1.26-amzn-1"
+  emr_spark_operator_namespace = "spark-operator"
+
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
   region     = data.aws_region.current.name

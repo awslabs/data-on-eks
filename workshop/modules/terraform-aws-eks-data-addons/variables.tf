@@ -121,7 +121,7 @@ variable "enable_emr_spark_operator" {
   type        = bool
 }
 
-variable "emr_spark_operator_config" {
+variable "emr_spark_operator_helm_config" {
   description = "Helm configuration for Spark Operator with EMR Runtime"
   type        = any
   default     = {}
