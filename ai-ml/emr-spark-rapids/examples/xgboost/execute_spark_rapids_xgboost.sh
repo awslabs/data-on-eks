@@ -10,15 +10,18 @@
 read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
 read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
+read -p "Enter the customized Docker image URI: " XGBOOST_IMAGE
 read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
-read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: " S3_BUCKET
+read -p "Enter the S3 Bucket (Just the Bucket Name) for storing PySpark Scripts, Pod Templates, Input data and Output data. For e.g., <bucket-name>: " S3_BUCKET
 
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
 JOB_NAME='spark-rapids-emr'
 EMR_EKS_RELEASE_LABEL="emr-6.10.0-spark-rapids-latest"
-XGBOOST_IMAGE="public.ecr.aws/o7d8v7g9/emr-6.10.0-spark-rapids:0.11"
+#XGBOOST_IMAGE="public.ecr.aws/o7d8v7g9/emr-6.10.0-spark-rapids:0.11"
+
+S3_BUCKET="s3://${S3_BUCKET}"
 
 SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
 SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
@@ -31,6 +34,7 @@ JARS_PATH="${SCRIPTS_S3_PATH}/jars"
 mkdir jars
 curl -o ./jars/xgboost4j-spark_3.0-1.4.2-0.3.0.jar https://repo1.maven.org/maven2/com/nvidia/xgboost4j-spark_3.0/1.4.2-0.3.0/xgboost4j-spark_3.0-1.4.2-0.3.0.jar
 curl -o ./jars/xgboost4j_3.0-1.4.2-0.3.0.jar https://mvnrepository.com/artifact/com.nvidia/xgboost4j_3.0/1.4.2-0.3.0/xgboost4j_3.0-1.4.2-0.3.0.jar
+
 
 #--------------------------------------------
 # Copy PySpark Scripts, Pod Templates and Input data to S3 bucket
@@ -49,7 +53,7 @@ aws emr-containers start-job-run \
   --job-driver '{
     "sparkSubmitJobDriver": {
       "entryPoint": "'"$SCRIPTS_S3_PATH"'/etl-xgboost-train-transform.py",
-      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'"],
+      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'","'"$OUTPUT_DATA_S3_PATH"'"],
       "sparkSubmitParameters": "--conf spark.kubernetes.container.image='"$XGBOOST_IMAGE"' --jars='"$JARS_PATH"'/xgboost4j-spark_3.0-1.4.2-0.3.0.jar,'"$JARS_PATH"'/xgboost4j_3.0-1.4.2-0.3.0.jar --conf spark.pyspark.python=/opt/venv/bin/python"
     }
   }' \
@@ -100,7 +104,7 @@ aws emr-containers start-job-run \
         "logStreamNamePrefix":"'"$JOB_NAME"'"
       },
       "s3MonitoringConfiguration": {
-        "logUri": "s3://'"$S3_BUCKET"'/logs/spark/"
+        "logUri": "'"$S3_BUCKET"'/logs/spark/"
       }
     }
   }'
