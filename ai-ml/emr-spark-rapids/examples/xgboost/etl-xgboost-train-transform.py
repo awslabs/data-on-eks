@@ -10,15 +10,15 @@ from pyspark.sql.window import Window
 
 dataRoot = None
 
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:
    dataRoot = sys.argv[1]
+   outputRoot = sys.argv[2]
 else:
    print("Data Root path not provided")
    sys.exit(1)
 
-#dataRoot = "s3://emr-spark-rapids-228924278364-us-west-2/emr-eks-xgboost-gpu/data"
 orig_raw_path = f"{dataRoot}/fannie-mae-single-family-loan-performance/"
-orig_raw_path_csv2parquet = f"{dataRoot}/output/csv2parquet/"
+orig_raw_path_csv2parquet = f"{outputRoot}/csv2parquet/"
 
 # if you pass/unpack the archive file and enable the environment
 # conf.set("spark.yarn.dist.archives", "your_pyspark_venv.tar.gz#environment")
@@ -36,9 +36,9 @@ reader = spark.read
 # Set False, the dataset after ETL will be directly used in XGBoost train and transform
 
 is_save_dataset=True
-output_path_data=f"{dataRoot}/fannie-mae-single-family-loan-performance/mortgage/output/data/"
+output_path_data=f"{outputRoot}/fannie-mae-single-family-loan-performance/mortgage/output/data/"
 # the path to save the xgboost model
-output_path_model=f"{dataRoot}/fannie-mae-single-family-loan-performance/mortgage/output/model/"
+output_path_model=f"{outputRoot}/fannie-mae-single-family-loan-performance/mortgage/output/model/"
 
 # File schema
 
