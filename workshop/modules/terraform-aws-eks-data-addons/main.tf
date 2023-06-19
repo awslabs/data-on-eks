@@ -31,7 +31,7 @@ locals {
   grafana_repository = "https://grafana.github.io/helm-charts"
   grafana_version    = "6.52.4"
 
-  emr_spark_operator_name      = "spark-operator"
+  emr_spark_operator_name      = "emr-spark-operator"
   emr_spark_operator_version   = "1.1.26-amzn-1"
   emr_spark_operator_namespace = "spark-operator"
 

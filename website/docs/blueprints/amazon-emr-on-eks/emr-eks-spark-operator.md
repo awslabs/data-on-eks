@@ -69,7 +69,7 @@ Activate the Spark Operator Add-on with EMR runtime in the `variables.tf`. You n
 Set `AWS_REGION` and Run Terraform plan to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION="us-west-1" # Change region according to your needs
+export AWS_REGION="us-west-2" # Change region according to your needs
 terraform plan
 ```
 <CollapsibleContent header={<h3><span>Customizing Add-ons</span></h3>}>
@@ -123,7 +123,7 @@ aws amp list-workspaces --alias amp-ws-emr-eks-karpenter
 Verify Namespace `emr-data-team-a` and Pod status for `Prometheus`, `Vertical Pod Autoscaler`, `Metrics Server` and `Cluster Autoscaler`.
 
 ```bash
-aws eks --region us-west-1 update-kubeconfig --name spark-operator-doeks # Creates k8s config file to authenticate with EKS Cluster
+aws eks --region us-west-2 update-kubeconfig --name spark-operator-doeks # Creates k8s config file to authenticate with EKS Cluster
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
@@ -173,7 +173,7 @@ You should see the new nodes triggered by the karpenter and the YuniKorn will sc
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd analytics/terraform/emr-eks-ack && chmod +x cleanup.sh
+cd analytics/terraform/emr-eks-karpenter && chmod +x cleanup.sh
 ./cleanup.sh
 ```
 </CollapsibleContent>

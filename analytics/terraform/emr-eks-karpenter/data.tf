@@ -2,6 +2,9 @@ data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
 }
 
+#This uses the AWS account id for us-west-2
+#if you are using a different region, make sure to change it, you can get the account from the link below
+#https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/docker-custom-images-tag.html
 data "aws_ecr_authorization_token" "token" {
   registry_id = "895885662937"
 }
