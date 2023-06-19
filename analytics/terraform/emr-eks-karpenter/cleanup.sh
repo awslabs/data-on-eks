@@ -2,9 +2,6 @@
 set -o errexit
 set -o pipefail
 
-read -p "Enter the region: " region
-export AWS_DEFAULT_REGION=$region
-
 targets=(
   "module.emr_containers"
   "module.kubernetes_data_addons"
@@ -32,8 +29,8 @@ done
 #-------------------------------------------
 for target in "${targets[@]}"
 do
-  terraform destroy -target="$target" -auto-approve
-  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
+  terraform destroy -auto-approve
+  destroy_output=$(terraform destroy -auto-approve 2>&1)
   if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else

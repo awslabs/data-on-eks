@@ -1,5 +1,3 @@
-replicaCount: 1
-
 webhook:
   # -- Enable webhook server
   enable: true

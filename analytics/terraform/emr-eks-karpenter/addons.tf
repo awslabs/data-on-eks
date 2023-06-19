@@ -151,8 +151,8 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   enable_emr_spark_operator = var.enable_emr_spark_operator
   emr_spark_operator_helm_config = {
-    private_ecr_token_user_name = data.aws_ecr_authorization_token.token.user_name
-    private_ecr_token_password  = data.aws_ecr_authorization_token.token.password
+    repository_username = data.aws_ecr_authorization_token.token.user_name
+    repository_password = data.aws_ecr_authorization_token.token.password
     values = [templatefile("${path.module}/helm-values/emr-spark-operator-values.yaml", {
       aws_region = var.region
     })]
@@ -268,12 +268,12 @@ module "vpc_cni_irsa" {
 # Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
 #---------------------------------------------------------------
 resource "aws_eks_addon" "vpc_cni" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "vpc-cni"
-  addon_version            = data.aws_eks_addon_version.this.version
-  resolve_conflicts        = "OVERWRITE"
-  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
-  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "vpc-cni"
+  addon_version               = data.aws_eks_addon_version.this.version
+  resolve_conflicts_on_create = "OVERWRITE"
+  preserve                    = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
+  service_account_role_arn    = module.vpc_cni_irsa.iam_role_arn
 }
 
 #------------------------------------------
