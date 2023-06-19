@@ -1,8 +1,5 @@
 #!/bin/bash
 
-read -p "Enter the region: " region
-export AWS_DEFAULT_REGION=$region
-
 echo "Initializing ..."
 terraform init || echo "\"terraform init\" failed"
 
@@ -24,8 +21,8 @@ targets=(
 for target in "${targets[@]}"
 do
   echo "Applying module $target..."
-  terraform apply -target="$target" -var="region=$region" -auto-approve
-  apply_output=$(terraform apply -target="$target" -var="region=$region" -auto-approve 2>&1)
+  terraform apply -target="$target" -auto-approve
+  apply_output=$(terraform apply -target="$target" -auto-approve 2>&1)
   if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then
     echo "SUCCESS: Terraform apply of $target completed successfully"
   else
@@ -36,8 +33,8 @@ done
 
 # Final apply to catch any remaining resources
 echo "Applying remaining resources..."
-terraform apply -var="region=$region" -auto-approve
-apply_output=$(terraform apply -var="region=$region" -auto-approve 2>&1)
+terraform apply -auto-approve
+apply_output=$(terraform apply -auto-approve 2>&1)
 if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then
   echo "SUCCESS: Terraform apply of all modules completed successfully"
 else

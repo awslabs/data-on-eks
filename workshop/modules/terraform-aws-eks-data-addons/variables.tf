@@ -110,3 +110,18 @@ variable "nvidia_gpu_operator_helm_config" {
   type        = any
   default     = {}
 }
+
+#---------------------------------------------------
+# EMR Runtime Spark Operator
+#---------------------------------------------------
+variable "enable_emr_spark_operator" {
+  description = "Enable the Spark Operator to submit jobs with EMR Runtime"
+  default     = false
+  type        = bool
+}
+
+variable "emr_spark_operator_helm_config" {
+  description = "Helm configuration for Spark Operator with EMR Runtime"
+  type        = any
+  default     = {}
+}

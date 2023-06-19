@@ -6,6 +6,7 @@ variable "name" {
 
 variable "region" {
   description = "Region"
+  default     = "us-west-2"
   type        = string
 }
 
@@ -41,7 +42,6 @@ variable "private_subnets" {
   default     = ["10.1.1.0/24", "10.1.2.0/24"]
   type        = list(string)
 }
-
 
 # RFC6598 range 100.64.0.0/10
 # Note you can only /16 range to VPC. You can add multiples of /16 if required
@@ -88,6 +88,7 @@ variable "enable_amazon_prometheus" {
   type        = bool
   default     = true
 }
+
 variable "enable_grafana" {
   description = "Enable Grafana"
   type        = bool
@@ -98,4 +99,10 @@ variable "enable_kubecost" {
   description = "Enable Kubecost"
   type        = bool
   default     = false
+}
+
+variable "enable_emr_spark_operator" {
+  description = "Enable the Spark Operator to submit jobs with EMR Runtime"
+  default     = false
+  type        = bool
 }

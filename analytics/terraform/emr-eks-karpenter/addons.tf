@@ -1,9 +1,6 @@
-
 module "eks_blueprints_kubernetes_addons" {
-  # Users should pin the version to the latest available release
-  # tflint-ignore: terraform_module_pinned_source
-  # Short commit hash from 8th May using git rev-parse --short HEAD
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "v1.0.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -28,6 +25,7 @@ module "eks_blueprints_kubernetes_addons" {
       preserve    = true
     }
   }
+
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
@@ -85,7 +83,6 @@ module "eks_blueprints_kubernetes_addons" {
     # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
     iam_role_name = local.karpenter_iam_role_name
   }
-
   karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
@@ -106,7 +103,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    version = "1.4.7"
     timeout = "300"
   }
 
@@ -127,10 +123,7 @@ module "eks_blueprints_kubernetes_addons" {
 
   tags = local.tags
 
-
 }
-
-
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
@@ -153,6 +146,17 @@ module "kubernetes_data_addons" {
     })]
   }
 
+  #---------------------------------------------------------------
+  # EMR Spark Operator
+  #---------------------------------------------------------------
+  enable_emr_spark_operator = var.enable_emr_spark_operator
+  emr_spark_operator_helm_config = {
+    repository_username = data.aws_ecr_authorization_token.token.user_name
+    repository_password = data.aws_ecr_authorization_token.token.password
+    values = [templatefile("${path.module}/helm-values/emr-spark-operator-values.yaml", {
+      aws_region = var.region
+    })]
+  }
 
   #---------------------------------------------------------------
   # Kubecost Add-on
@@ -206,7 +210,6 @@ module "kubernetes_data_addons" {
   }
 }
 
-
 #---------------------------------------
 # Karpenter Provisioners
 #---------------------------------------
@@ -224,7 +227,6 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
-
 
 #---------------------------------------------------------------
 # IRSA for EBS
@@ -266,12 +268,12 @@ module "vpc_cni_irsa" {
 # Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
 #---------------------------------------------------------------
 resource "aws_eks_addon" "vpc_cni" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "vpc-cni"
-  addon_version            = data.aws_eks_addon_version.this.version
-  resolve_conflicts        = "OVERWRITE"
-  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
-  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "vpc-cni"
+  addon_version               = data.aws_eks_addon_version.this.version
+  resolve_conflicts_on_create = "OVERWRITE"
+  preserve                    = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
+  service_account_role_arn    = module.vpc_cni_irsa.iam_role_arn
 }
 
 #------------------------------------------
