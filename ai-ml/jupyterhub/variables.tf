@@ -1,5 +1,5 @@
 variable "name" {
-  description = "Name of the VPC and EKS Cluster"
+  description = "Name of the VPC and EKS Cluster "
   default     = "jupyterhub"
   type        = string
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-read -p "An ACM Certificate in the account + region where you are deploying.: " acm_certificate_domain
+read -p "An ACM Certificate in the account + region where you are deploying: " acm_certificate_domain
 
 echo "Initializing ..."
 terraform init || echo "\"terraform init\" failed"
@@ -33,7 +33,7 @@ do
 done
 
 # Final apply to catch any remaining resources
-echo "Applying remaining resources..."
+echo "Applying remaining resources...."
 terraform apply -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve
 apply_output=$(terraform apply -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve 2>&1)
 if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then

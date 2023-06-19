@@ -6,7 +6,7 @@ module "eks_blueprints_kubernetes_addons" {
   cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------
-  # Amazon EKS Managed Add-ons
+  # Amazon EKS Managed Add-ons 
   #---------------------------------------
   eks_addons = {
     aws-ebs-csi-driver = {

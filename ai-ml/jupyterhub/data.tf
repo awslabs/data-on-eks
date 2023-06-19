@@ -25,7 +25,7 @@ data "aws_eks_addon_version" "this" {
   kubernetes_version = var.eks_cluster_version
   most_recent        = true
 }
-# This data source can be used to get the latest AMI for Managed Node Groups
+# This data source can be used to get the latest AMI for Managed Node Groups 
 data "aws_ami" "x86" {
   owners      = ["amazon"]
   most_recent = true

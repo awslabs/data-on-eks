@@ -2,7 +2,7 @@
 set -o errexit
 set -o pipefail
 
-read -p "Enter acm certificate: " acm_certificate_domain
+read -p "Enter acm certificate : " acm_certificate_domain
 
 targets=(
   "module.kubernetes_data_addons"

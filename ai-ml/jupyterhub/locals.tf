@@ -8,6 +8,6 @@ locals {
     GithubRepo = "github.com/awslabs/data-on-eks"
   }
   
-    # This role will be created
+    # This role will be created 
   karpenter_iam_role_name = format("%s-%s", "karpenter", local.name)
 }

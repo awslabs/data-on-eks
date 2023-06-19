@@ -22,7 +22,7 @@ provider "kubectl" {
   token                  = data.aws_eks_cluster_auth.this.token
   load_config_file       = false
 }
-# ECR always authenticates with `us-east-1` region
+# ECR always authenticates with `us-east-1`  region
 # Docs -> https://docs.aws.amazon.com/AmazonECR/latest/public/public-registries.html
 provider "aws" {
   alias  = "ecr"
