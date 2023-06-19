@@ -1,9 +1,6 @@
-
 module "eks_blueprints_kubernetes_addons" {
-  # Users should pin the version to the latest available release
-  # tflint-ignore: terraform_module_pinned_source
-  # Short commit hash from 8th May using git rev-parse --short HEAD
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "v1.0.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -28,6 +25,7 @@ module "eks_blueprints_kubernetes_addons" {
       preserve    = true
     }
   }
+
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
@@ -85,7 +83,6 @@ module "eks_blueprints_kubernetes_addons" {
     # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
     iam_role_name = local.karpenter_iam_role_name
   }
-
   karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
@@ -106,7 +103,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    version = "1.4.7"
     timeout = "300"
   }
 
@@ -127,10 +123,7 @@ module "eks_blueprints_kubernetes_addons" {
 
   tags = local.tags
 
-
 }
-
-
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
@@ -217,7 +210,6 @@ module "kubernetes_data_addons" {
   }
 }
 
-
 #---------------------------------------
 # Karpenter Provisioners
 #---------------------------------------
@@ -235,7 +227,6 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
-
 
 #---------------------------------------------------------------
 # IRSA for EBS
