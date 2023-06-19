@@ -1,17 +1,15 @@
 ---
 sidebar_position: 6
-sidebar_label: Spark Operator with EMR Runtime
+sidebar_label: EMR Runtime with Spark Operator
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
-# Spark Operator with EMR Runtime
+# EMR Runtime with Spark Operator
 
 ## Introduction
-In this post, we will learn to deploy EKS with Spark Operator and submit Spark job with running on EMR runtime.
+In this post, we will learn to deploy EKS with EMR Spark Operator and execute sample Spark job with EMR runtime.
 
-<CollapsibleContent header={<h2><span>Resources Deployed</span></h2>}>
-
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/workshop/examples), you will provision the following resources required to run Spark Applications using the Spark Operator and EMR runtime.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will provision the following resources required to run Spark Applications using the Spark Operator and EMR runtime.
 
 - Creates EKS Cluster Control plane with public endpoint (for demo purpose only)
 - Two managed node groups
@@ -28,9 +26,8 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/workshop/exam
     - Self Managed Add-ons
         - Metrics server with HA, CoreDNS Cluster proportional Autoscaler, Cluster Autoscaler, Prometheus Server and Node Exporter, AWS for FluentBit, CloudWatchMetrics for EKS
 
-</CollapsibleContent>
 
-<CollapsibleContent header={<h2><span>Spark Operator</span></h2>}>
+<CollapsibleContent header={<h2><span>EMR Spark Operator</span></h2>}>
 
 The Kubernetes Operator for Apache Spark aims to make specifying and running Spark applications as easy and idiomatic as running other workloads on Kubernetes. To submit Spark Applications to Spark Operator and leverage the EMR Runtime we use the Helm Chart hosted in the EMR on EKS ECR repository. The charts are stored under the following path: `ECR_URI/spark-operator`. The ECR repository can be obtained from this [link](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-emr-runtime.html).
 
@@ -41,6 +38,7 @@ The Kubernetes Operator for Apache Spark aims to make specifying and running Spa
 
 </CollapsibleContent>
 
+<CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 ### Prerequisites:
 
 Ensure that you have installed the following tools on your machine.
@@ -64,39 +62,18 @@ cd ./data-on-eks/analytics/terraform/emr-eks-karpenter
 terraform init
 ```
 
-Activate the Spark Operator Add-on with EMR runtime in the `variables.tf`. You need to set the `enable_emr_spark_operator` to `true`.
+:::info
+To deploy the EMR Spark Operator Add-on. You need to set the the below value to `true` in `variables.tf` file.
 
-Set `AWS_REGION` and Run Terraform plan to verify the resources created by this execution.
-
-```bash
-export AWS_REGION="us-west-2" # Change region according to your needs
-terraform plan
-```
-<CollapsibleContent header={<h3><span>Customizing Add-ons</span></h3>}>
-
-### Customizing Add-ons
-
-You can add or remove add-ons by setting the flags in `variables.tf` to true or false, you can also customize the add-ons through the `addons.tf`.
-
-For example, let's say you want to remove Amazon Managed Prometheus because you have another application that captures Prometheus metrics, you can edit `addons.tf` using your favorite editor, find Amazon Managed Prometheus and change to `false`
-```yaml
-  enable_prometheus = false
-  prometheus_helm_config = {
-    name       = "prometheus"
-    repository = "https://prometheus-community.github.io/helm-charts"
-    chart      = "prometheus"
-    version    = "15.10.1"
-    namespace  = "prometheus"
-    timeout    = "300"
-    values     = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
-  }
+```hcl
+variable "enable_emr_spark_operator" {
+  description = "Enable the Spark Operator to submit jobs with EMR Runtime"
+  default     = true
+  type        = bool
+}
 ```
 
-```
-terraform apply
-```
-
-</CollapsibleContent>
+:::
 
 Deploy the pattern
 
@@ -136,6 +113,8 @@ kubectl get pods --namespace=kube-system | grep  metrics-server # Output shows M
 kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output shows Cluster Autoscaler pod
 ```
 
+</CollapsibleContent>
+
 <CollapsibleContent header={<h2><span>Execute Sample Spark job with Karpenter</span></h2>}>
 
 Navigate to example directory and submit the Spark job.
@@ -152,21 +131,6 @@ You should see the new nodes triggered by the karpenter and the YuniKorn will sc
 kubectl get pods -n spark-team-a -w
 ```
 </CollapsibleContent>
-
-<CollapsibleContent header={<h2><span>Execute Job</span></h2>}>
-
-Navigate to example directory and submit the Spark job.
-
-```bash
-cd /Users/mouhib/data-on-eks/analytics/terraform/emr-eks-karpenter/examples/emr-spark-operator
-kubectl apply -f pyspark-pi.yaml
-```
-
-Monitor the job status using the below command.
-You should see the new nodes triggered by the karpenter and the YuniKorn will schedule one driver pod and 2 executor pods on this node.
-
-</CollapsibleContent>
-
 
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
