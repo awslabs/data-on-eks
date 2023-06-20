@@ -58,7 +58,7 @@ elasticsearchSetupJob:
   extraEnvs:
       - name: USE_AWS_ELASTICSEARCH
         value: "true"
-  
+
 kafkaSetupJob:
   enabled: true
   image:
@@ -238,12 +238,12 @@ global:
       #   secretKey: postgres-password
 
   datahub:
-    
+
     # force older version until the OpenSearch issue with latest version is resolved
     version: v0.8.45
-    
+
     # disable systemUpdate due to bug in creating auth-secrets
-    systemUpdate: 
+    systemUpdate:
       enabled: false
 
     gms:

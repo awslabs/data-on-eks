@@ -6,6 +6,7 @@ variable "name" {
 
 variable "region" {
   description = "region"
+  default     = "us-west-2"
   type        = string
 }
 
@@ -32,4 +33,3 @@ variable "private_subnets" {
   default     = ["10.1.0.0/18", "10.1.64.0/18", "10.1.128.0/18"]
   type        = list(string)
 }
-

@@ -1,11 +1,11 @@
 module "eks_blueprints_kubernetes_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
-  source = "aws-ia/eks-blueprints-addons/aws"
+  source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 0.2.0"
-  
+
   depends_on = [aws_eks_addon.vpc_cni]
-  
+
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
@@ -17,7 +17,7 @@ module "eks_blueprints_kubernetes_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      most_recent = true
+      most_recent              = true
     }
     coredns = {
       preserve    = true
@@ -36,8 +36,8 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server = {
-    timeout    = "300"
-    values     = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -45,7 +45,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    timeout    = "300"
+    timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = local.region,
       eks_cluster_id = local.name
@@ -65,14 +65,14 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit       = true
+  enable_aws_for_fluentbit = true
   aws_for_fluentbit_cw_log_group = {
     create            = true
     use_name_prefix   = false
     name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
     retention_in_days = 30
   }
-  
+
   aws_for_fluentbit = {
     create_namespace = true
     namespace        = "aws-for-fluentbit"
@@ -81,9 +81,9 @@ module "eks_blueprints_kubernetes_addons" {
       cloudwatch_log_group = "/${local.name}/fluentbit-logs"
     })]
   }
-  
+
   enable_kube_prometheus_stack = true
-  
+
   tags = local.tags
 }
 
@@ -134,5 +134,3 @@ resource "aws_eks_addon" "vpc_cni" {
   preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
   service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
 }
-
-

@@ -18,7 +18,7 @@ module "eks" {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
-  
+
   eks_managed_node_groups = {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
@@ -26,7 +26,7 @@ module "eks" {
     core_node_group = {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
-      subnet_ids = module.vpc.private_subnets
+      subnet_ids  = module.vpc.private_subnets
 
       min_size     = 1
       max_size     = 9
@@ -52,11 +52,8 @@ module "eks" {
       }
 
       tags = {
-        Name                     = "core-node-grp"
+        Name = "core-node-grp"
       }
     }
   }
 }
-
-
-
