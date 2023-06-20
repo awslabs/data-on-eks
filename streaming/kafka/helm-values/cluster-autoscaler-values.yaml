@@ -1,5 +1,11 @@
 autoDiscovery:
   clusterName: ${eks_cluster_id}
+  tags:
+    - k8s.io/cluster-autoscaler/enabled
+    - k8s.io/cluster-autoscaler/{{ .Values.autoDiscovery.clusterName }}
+
+  roles:
+    - worker
 
 awsRegion: ${aws_region}
 
@@ -11,9 +17,10 @@ extraArgs:
   v: 4
   aws-use-static-instance-list: true
 
-nodeSelector:
-  NodeGroupType: ${node_group_type}
-  kubernetes.io/os: ${operating_system}
+podDisruptionBudget:
+  maxUnavailable: 1
+
+priorityClassName: "system-cluster-critical"
 
 rbac:
   create: true
@@ -26,12 +33,12 @@ replicaCount: 1
 
 # Best practice to update the resource requests and limits for each add-on
 resources:
-   limits:
-     cpu: 1000m
-     memory: 1G
-   requests:
-     cpu: 200m
-     memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1G
+  requests:
+    cpu: 200m
+    memory: 512Mi
 
 # Best practice to updateStrategy for each add-on
 updateStrategy:

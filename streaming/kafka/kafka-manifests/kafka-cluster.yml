@@ -6,7 +6,7 @@ metadata:
 spec:
   cruiseControl: {}
   kafka:
-    version: 3.2.3
+    version: 3.4.0
     replicas: 3
     listeners:
       - name: plain
@@ -23,10 +23,10 @@ spec:
       transaction.state.log.min.isr: 2
       default.replication.factor: 3
       min.insync.replicas: 2
-      inter.broker.protocol.version: "3.2"
+      inter.broker.protocol.version: "3.4"
     resources:
       requests:
-        memory: 60Gi
+        memory: 58Gi
         cpu: "6"
       limits:
         memory: 64Gi
@@ -58,11 +58,6 @@ spec:
                     operator: In
                     values:
                     - kafka
-        metadata:
-          annotations:
-            prometheus.io/path: /metrics
-            prometheus.io/port: "9404"
-            prometheus.io/scrape: "true"
     metricsConfig:
       type: jmxPrometheusExporter
       valueFrom:
@@ -71,22 +66,8 @@ spec:
           key: kafka-metrics-config.yml
     rack:
       topologyKey: topology.kubernetes.io/zone
-  kafkaExporter:
-    template:
-      pod:
-        metadata:
-          annotations:
-            prometheus.io/path: /metrics
-            prometheus.io/port: "9404"
-            prometheus.io/scrape: "true"
+  kafkaExporter: {}
   zookeeper:
-    template:
-      pod:
-        metadata:
-          annotations:
-            prometheus.io/path: /metrics
-            prometheus.io/port: "9404"
-            prometheus.io/scrape: "true"
     replicas: 3
     storage:
       type: persistent-claim

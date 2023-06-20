@@ -10,7 +10,7 @@ watchAnyNamespace: true
 
 defaultImageRegistry: quay.io
 defaultImageRepository: strimzi
-defaultImageTag: 0.31.1
+defaultImageTag: 0.34.0
 
 nodeSelector:
   kubernetes.io/os: ${operating_system}
