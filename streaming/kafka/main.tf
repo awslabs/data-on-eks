@@ -108,7 +108,7 @@ module "eks" {
       }
 
       tags = {
-        Name                     = "core-node-grp"
+        Name = "core-node-grp"
       }
     }
     kafka_node_group = {
@@ -161,7 +161,7 @@ module "eks" {
       taints = [{ key = "dedicated", value = "kafka", effect = "NO_SCHEDULE" }]
 
       tags = {
-        Name                     = "kafka-node-grp"
+        Name = "kafka-node-grp"
       }
     }
   }

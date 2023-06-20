@@ -1,5 +1,5 @@
 ################################################################################
-# Prerequisites outputs for ES, MSK, RDS 
+# Prerequisites outputs for ES, MSK, RDS
 ################################################################################
 output "es_endpoint" {
   description = "ElasticSearch Cluster Endpoint"
@@ -27,9 +27,9 @@ output "rds_endpoint" {
 }
 
 output "rds_password" {
-  value       = random_password.mysql_password.result
+  value = random_password.mysql_password.result
 }
 
 output "es_password" {
-  value       = random_password.master_password.result
+  value = random_password.master_password.result
 }

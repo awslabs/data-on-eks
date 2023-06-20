@@ -5,19 +5,19 @@ sidebar_label: DataHub on EKS
 # DataHub on EKS
 
 ## Introduction
-DataHub is an open source data catalog that enables end-to-end data discovery, data observability, and data governance.  This extensive metadata platform allows users to collect, store, and explore metadata from various sources, such as databases, data lakes, streaming platforms, and ML feature stores.   DataHub provides many [features](https://datahubproject.io/docs/features/), a rich UI for searching and browsing metadata, as well as an API for integrating with other applications. 
+DataHub is an open source data catalog that enables end-to-end data discovery, data observability, and data governance.  This extensive metadata platform allows users to collect, store, and explore metadata from various sources, such as databases, data lakes, streaming platforms, and ML feature stores.   DataHub provides many [features](https://datahubproject.io/docs/features/), a rich UI for searching and browsing metadata, as well as an API for integrating with other applications.
 
-This [blueprint](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/datahub-on-eks) deploys DataHub on an EKS cluster, using Amazon OpenSearch Service, Amazon Managed Streaming for Apache Kafka (Amazon MSK), and Amazon RDS for MySQL as the storage layer for the underlying data model and indexes. 
+This [blueprint](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/datahub-on-eks) deploys DataHub on an EKS cluster, using Amazon OpenSearch Service, Amazon Managed Streaming for Apache Kafka (Amazon MSK), and Amazon RDS for MySQL as the storage layer for the underlying data model and indexes.
 
 ## DataHub on AWS
 
-On AWS, DataHub can run on EKS cluster.  By using EKS, you can leverage the power and flexibility of Kubernetes to deploy and scale DataHub components, and take advantage of other AWS services and features, such as IAM, VPC, and CloudWatch, to monitor and secure the DataHub cluster.   
+On AWS, DataHub can run on EKS cluster.  By using EKS, you can leverage the power and flexibility of Kubernetes to deploy and scale DataHub components, and take advantage of other AWS services and features, such as IAM, VPC, and CloudWatch, to monitor and secure the DataHub cluster.  
 
-DataHub also depends on many underlying infrastructure and services to function, including a message broker, a search engine, graph database, and a relational database like MySQL or PostgreSQL.  AWS offers a range of managed and serverless services that can meet the needs of DataHub and simplify its deployment and operation. 
+DataHub also depends on many underlying infrastructure and services to function, including a message broker, a search engine, graph database, and a relational database like MySQL or PostgreSQL.  AWS offers a range of managed and serverless services that can meet the needs of DataHub and simplify its deployment and operation.
 
-1. DataHub can use Amazon Managed Streaming for Apache Kafka (MSK) as the messaging layer for metadata ingestion and consumption.  MSK is a fully managed Apach Kakfa service, so you don't need to handles the provisioning, configuration, and maintenance of Kafka cluster. 
+1. DataHub can use Amazon Managed Streaming for Apache Kafka (MSK) as the messaging layer for metadata ingestion and consumption.  MSK is a fully managed Apach Kakfa service, so you don't need to handles the provisioning, configuration, and maintenance of Kafka cluster.
 2. DataHub stores metadata in both relational database and a search engine.  For the relational database, this blueprint uses Amazon RDS for MySQL, which is also a managed service that simplifies the setup and operation of MySQL databases.  RDS for MySQL also provides the high availability, security, and other features DataHub needs to store the metadata.
-3. For search engine, this blueprint uses Amazon OpenSearch service to provide fast and scalable search capabilities for the metadata.   
+3. For search engine, this blueprint uses Amazon OpenSearch service to provide fast and scalable search capabilities for the metadata.  
 4. This blueprint deployes a Schema Registry service on EKS for DataHub.  You may also choose to use Glue Schema Registry (https://docs.aws.amazon.com/glue/latest/dg/schema-registry.html) instead.  Support for Glue Schema Registry will be included in future release of this blueprint.
 
 ![img.jpg](img/datahub-arch.jpg)
@@ -29,7 +29,7 @@ This blueprint deploys an EKS Cluster into a new VPC.
 - Creates a new sample VPC, 2 Private Subnets and 2 Public Subnets
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
 - Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with core managed node group, on-demand node group and Spot node group for Spark workloads.
-- Deploys Metrics server, Cluster Autoscaler, Prometheus server and AMP workspace, and AWS LoadBalancer Controller. 
+- Deploys Metrics server, Cluster Autoscaler, Prometheus server and AMP workspace, and AWS LoadBalancer Controller.
 
 It then provisions the storage services for DataHub.
 
@@ -44,7 +44,7 @@ You may customize the blueprint by changing values in `variables.tf`, to deploy 
 :::
 
 :::info
-If you already have opensearch service in the account, the service-linked role for OpenSearch exists already.  You will need to change default value for variable `create_iam_service_linked_role_es` to `false` to avoid error in deployment. 
+If you already have opensearch service in the account, the service-linked role for OpenSearch exists already.  You will need to change default value for variable `create_iam_service_linked_role_es` to `false` to avoid error in deployment.
 :::
 
 ### Prerequisites
@@ -110,7 +110,7 @@ Copy the ADDRESS field from the output, then open browser and enter the URL as `
 
 ## Testing
 
-Follow steps from this [blog](https://aws.amazon.com/blogs/big-data/part-2-deploy-datahub-using-aws-managed-services-and-ingest-metadata-from-aws-glue-and-amazon-redshift/) to populate metadata from AWS Glue Data Catalog and Amazon Redshift, and business glossary and data lineage, into DataHub. 
+Follow steps from this [blog](https://aws.amazon.com/blogs/big-data/part-2-deploy-datahub-using-aws-managed-services-and-ingest-metadata-from-aws-glue-and-amazon-redshift/) to populate metadata from AWS Glue Data Catalog and Amazon Redshift, and business glossary and data lineage, into DataHub.
 
 ## Cleanup
 
@@ -120,4 +120,3 @@ To clean up your environment, run the `cleanup.sh` script.script
 chmod +x cleanup.sh
 ./cleanup.sh
 ```
-

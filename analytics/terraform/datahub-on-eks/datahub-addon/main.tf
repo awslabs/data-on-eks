@@ -1,7 +1,7 @@
 locals {
-  datahub_name       = "datahub"
-  prereq_name        = "datahub-prerequisites"
-  
+  datahub_name = "datahub"
+  prereq_name  = "datahub-prerequisites"
+
   datahub_chart      = "datahub"
   prereq_chart       = "datahub-prerequisites"
   datahub_namespace  = "datahub"
@@ -10,34 +10,34 @@ locals {
   prereq_version     = "0.0.17"
 
   datahub_merged_values_yaml = yamlencode(merge(
-    yamldecode(templatefile("${path.module}/values/datahub_values.yaml", { 
-        es_endpoint = module.prereq.es_endpoint
-        msk_bootstrap_brokers = module.prereq.msk_bootstrap_brokers
-        msk_zookeeper_connect_string = module.prereq.msk_zookeeper_connect_string
-        msk_partitions = length(var.vpc_private_subnets)
-        datahub_rds_address = module.prereq.rds_address
-        datahub_rds_endpoint = module.prereq.rds_endpoint
+    yamldecode(templatefile("${path.module}/values/datahub_values.yaml", {
+      es_endpoint                  = module.prereq.es_endpoint
+      msk_bootstrap_brokers        = module.prereq.msk_bootstrap_brokers
+      msk_zookeeper_connect_string = module.prereq.msk_zookeeper_connect_string
+      msk_partitions               = length(var.vpc_private_subnets)
+      datahub_rds_address          = module.prereq.rds_address
+      datahub_rds_endpoint         = module.prereq.rds_endpoint
     })),
     try(yamldecode(var.datahub_helm_config.values[0]), {})
   ))
-  
+
   prereq_merged_values_yaml = yamlencode(merge(
-    yamldecode(templatefile("${path.module}/values/prereq_values.yaml", { 
-        msk_bootstrap_brokers = module.prereq.msk_bootstrap_brokers
+    yamldecode(templatefile("${path.module}/values/prereq_values.yaml", {
+      msk_bootstrap_brokers = module.prereq.msk_bootstrap_brokers
     })),
     try(yamldecode(var.prereq_helm_config.values[0]), {})
   ))
-  
+
 }
 
 module "prereq" {
   source = "./modules/prereq"
-  
-  prefix                = var.prefix
-  vpc_id                = var.vpc_id
-  vpc_cidr              = var.vpc_cidr
-  vpc_private_subnets   = var.vpc_private_subnets
-  
+
+  prefix              = var.prefix
+  vpc_id              = var.vpc_id
+  vpc_cidr            = var.vpc_cidr
+  vpc_private_subnets = var.vpc_private_subnets
+
   create_iam_service_linked_role_es = var.create_iam_service_linked_role_es
 }
 
@@ -58,12 +58,12 @@ resource "kubernetes_namespace" "datahub" {
 resource "kubernetes_secret" "datahub_es_secret" {
   depends_on = [kubernetes_namespace.datahub]
   metadata {
-    name = "elasticsearch-secrets"
+    name      = "elasticsearch-secrets"
     namespace = local.datahub_namespace
   }
 
   data = {
-    elasticsearch_password= module.prereq.es_password
+    elasticsearch_password = module.prereq.es_password
   }
 
 }
@@ -71,7 +71,7 @@ resource "kubernetes_secret" "datahub_es_secret" {
 resource "kubernetes_secret" "datahub_rds_secret" {
   depends_on = [kubernetes_namespace.datahub]
   metadata {
-    name = "mysql-secrets"
+    name      = "mysql-secrets"
     namespace = local.datahub_namespace
   }
 
@@ -81,7 +81,7 @@ resource "kubernetes_secret" "datahub_rds_secret" {
 }
 
 resource "helm_release" "prereq" {
-  depends_on                 = [module.prereq]
+  depends_on = [module.prereq]
 
   name                       = try(var.prereq_helm_config["name"], local.prereq_name)
   repository                 = try(var.prereq_helm_config["repository"], local.datahub_repository)
@@ -119,7 +119,7 @@ resource "helm_release" "prereq" {
     binary_path = try(var.prereq_helm_config["postrender"], "")
   }
 
- 
+
   dynamic "set_sensitive" {
     iterator = each_item
     for_each = try(var.prereq_helm_config["set_sensitive"], [])
@@ -133,7 +133,7 @@ resource "helm_release" "prereq" {
 }
 
 resource "helm_release" "datahub" {
-  depends_on                 = [kubernetes_secret.datahub_es_secret, kubernetes_secret.datahub_rds_secret, helm_release.prereq]
+  depends_on = [kubernetes_secret.datahub_es_secret, kubernetes_secret.datahub_rds_secret, helm_release.prereq]
 
   name                       = try(var.datahub_helm_config["name"], local.datahub_name)
   repository                 = try(var.datahub_helm_config["repository"], local.datahub_repository)
@@ -171,7 +171,7 @@ resource "helm_release" "datahub" {
     binary_path = try(var.datahub_helm_config["postrender"], "")
   }
 
- 
+
   dynamic "set_sensitive" {
     iterator = each_item
     for_each = try(var.datahub_helm_config["set_sensitive"], [])
@@ -183,5 +183,3 @@ resource "helm_release" "datahub" {
     }
   }
 }
-
-
