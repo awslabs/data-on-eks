@@ -67,9 +67,11 @@ aws emr-containers start-job-run \
             "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
             "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
             "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
+
             "spark.driver.cores":"2",
             "spark.driver.memory":"8G",
             "spark.driver.maxResultSize":"2gb",
+
             "spark.executor.instances":"8",
             "spark.executor.cores":"5",
             "spark.executor.memory":"26G",
@@ -77,20 +79,25 @@ aws emr-containers start-job-run \
             "spark.executor.extraLibraryPath":"/usr/local/cuda/lib:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:/usr/local/cuda/targets/x86_64-linux/lib:/usr/lib/hadoop/lib/native:/usr/lib/hadooplzo/lib/native:/docker/usr/lib/hadoop/lib/native:/docker/usr/lib/hadoop-lzo/lib/native",
             "spark.executor.resource.gpu.vendor":"nvidia.com",
             "spark.executor.resource.gpu.amount":"1",
+
             "spark.task.cpus":"1",
             "spark.task.resource.gpu.amount":"1",
+
             "spark.rapids.sql.enabled":"true",
-            "spark.rapids.sql.concurrentGpuTasks":"1",
+            "spark.rapids.sql.concurrentGpuTasks":"2",
             "spark.rapids.sql.explain":"ALL",
             "spark.rapids.sql.batchSizeBytes":"1gb",
             "spark.rapids.sql.incompatibleOps.enabled":"true",
-            "spark.rapids.memory.pinnedPool.size":"1G",
+
+            "spark.rapids.memory.pinnedPool.size":"2G",
             "spark.rapids.memory.gpu.pool":"ASYNC",
             "spark.rapids.memory.gpu.allocFraction":"0.6",
             "spark.rapids.shuffle.mode":"MULTITHREADED",
+
             "spark.sql.sources.useV1SourceList":"parquet",
             "spark.sql.files.maxPartitionBytes":"2gb",
             "spark.sql.adaptive.enabled":"true",
+            "spark.sql.execution.arrow.maxRecordsPerBatch":"200000",
             "spark.locality.wait":"0s",
             "spark.dynamicAllocation.enabled":"false",
             "spark.local.dir":"/data1"
