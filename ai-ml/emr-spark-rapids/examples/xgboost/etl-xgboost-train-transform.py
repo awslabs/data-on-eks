@@ -30,14 +30,6 @@ spark = SparkSession\
             .enableHiveSupport()\
             .getOrCreate()
 
-# Make sure it runs on GPU
-# spark.conf.set("spark.rapids.sql.enabled", "true")
-# spark.conf.set("spark.sql.files.maxPartitionBytes", "1G")
-# spark.conf.set("spark.rapids.sql.explain", "ALL")
-# spark.rapids.sql.batchSizeBytes= min(2GiB - 1 byte, ((gpu_memory - 1 GiB) / gpu_concurrency) / 4)
-# spark.conf.set("spark.rapids.sql.batchSizeBytes", "2G")
-# spark.conf.set("spark.rapids.sql.reader.batchSizeBytes", "768M")
-
 # Set True to save processed dataset after ETL
 # Set False, the dataset after ETL will be directly used in XGBoost train and transform
 
