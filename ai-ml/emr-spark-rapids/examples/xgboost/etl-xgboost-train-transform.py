@@ -606,8 +606,8 @@ result = with_benchmark("Transformation", transform)
 
 result.select(label, "rawPrediction", "probability", "prediction").show(5)
 
-# Evaluation takes x seconds
-# Accuracy is x
+# Evaluation takes x seconds will be printed here
+# Accuracy is x (e.g., 0.9999999999999999)
 
 accuracy = with_benchmark(
     "Evaluation",

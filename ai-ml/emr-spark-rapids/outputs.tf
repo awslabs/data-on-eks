@@ -47,8 +47,12 @@ output "emr_on_eks" {
 ################################################################################
 # AMP
 ################################################################################
-
 output "amp_workspace_id" {
   description = "The id of amp"
   value       = aws_prometheus_workspace.amp[0].id
+}
+
+output "s3_bucket_id" {
+  description = "S3 bucket for Spark input and output data"
+  value       = module.s3_bucket.s3_bucket_id
 }

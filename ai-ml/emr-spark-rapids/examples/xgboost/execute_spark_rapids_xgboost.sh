@@ -4,13 +4,14 @@
 #       ${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/${JOB_NAME}/input/fannie-mae-single-family-loan-performance/
 #       Follow these instructions to download the input data -> https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/docs/get-started/xgboost-examples/dataset/mortgage.md
 #--------------------------------------------
-read -p "Did you copy the fannie-mae-single-family-loan-performance data to S3 bucket(y/n): "
+read -p "Did you copy the Fannie Mae Loan Performance data to S3 bucket (y/n): "
 read -p "Enter the customized Docker image URI: " XGBOOST_IMAGE
 read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
 read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
 read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
 read -p "Enter the S3 Bucket (Just the Bucket Name) for storing PySpark Scripts, Pod Templates, Input data and Output data. For e.g., <bucket-name>: " S3_BUCKET
+read -p "Enter the number of executor instances (4 to 8): " NUM_WORKERS
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
@@ -48,8 +49,7 @@ aws s3 sync "./" ${SCRIPTS_S3_PATH}
 # spark.rapids.memory.pinnedPool.size=2G
 # spark.rapids.sql.concurrentGpuTasks=2
 #--------------------------------------------
-# Update the number of executor instances based on the cluster size
-EXECUTOR_INSTANCES="8"
+
 #--------------------------------------------
 # Execute Spark job
 #--------------------------------------------
@@ -62,7 +62,7 @@ aws emr-containers start-job-run \
   --job-driver '{
     "sparkSubmitJobDriver": {
       "entryPoint": "'"$SCRIPTS_S3_PATH"'/etl-xgboost-train-transform.py",
-      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'","'"$OUTPUT_DATA_S3_PATH"'","'"$EXECUTOR_INSTANCES"'"],
+      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'","'"$OUTPUT_DATA_S3_PATH"'","'"$NUM_WORKERS"'"],
       "sparkSubmitParameters": "--conf spark.kubernetes.container.image='"$XGBOOST_IMAGE"' --jars='"$JARS_PATH"'/xgboost4j-spark_3.0-1.4.2-0.3.0.jar,'"$JARS_PATH"'/xgboost4j_3.0-1.4.2-0.3.0.jar --conf spark.pyspark.python=/opt/venv/bin/python"
     }
   }' \
@@ -81,7 +81,7 @@ aws emr-containers start-job-run \
             "spark.driver.memory":"8G",
             "spark.driver.maxResultSize":"2gb",
 
-            "spark.executor.instances":"'"$EXECUTOR_INSTANCES"'",
+            "spark.executor.instances":"'"$NUM_WORKERS"'",
             "spark.executor.cores":"5",
             "spark.executor.memory":"26G",
             "spark.executor.memoryOverhead":"2G",

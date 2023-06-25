@@ -13,3 +13,4 @@ The following Terraform templates are available to deploy.
 
 * [Ray on EKS](ray.md): This template deploys [RayCluster](https://docs.ray.io/en/latest/cluster/getting-started.html) on EKS.
 * [Kubeflow on AWS](kubeflow.md): This template deploys the [Kubeflow on AWS](https://awslabs.github.io/kubeflow-manifests/) distribution on EKS.
+* [EMR NVIDIA Spark-RAPIDS](emr-spark-rapids.md): This template deploys the EMR NVIDIA Spark-RAPIDS blueprint with NVIDIA GPU Operator.
