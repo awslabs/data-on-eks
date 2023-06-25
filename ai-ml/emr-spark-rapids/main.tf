@@ -1,3 +1,16 @@
+locals {
+  name   = var.name
+  region = var.region
+
+  # Only two AZs for this example
+  azs = slice(data.aws_availability_zones.available.names, 0, 2)
+
+  tags = merge(var.tags, {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  })
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.13"
@@ -5,8 +18,7 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
-  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
@@ -14,9 +26,8 @@ module "eks" {
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
-    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.karpenter_iam_role_name}"
+      rolearn  = module.eks_blueprints_kubernetes_addons.karpenter.iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -95,29 +106,12 @@ module "eks" {
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
-      ami_id = data.aws_ami.x86.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
       min_size     = 3
       max_size     = 9
       desired_size = 3
 
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      ami_type       = "AL2_x86_64"
+      instance_types = ["m5.xlarge"]
 
       ebs_optimized = true
       block_device_mappings = {
@@ -128,10 +122,6 @@ module "eks" {
             volume_type = "gp3"
           }
         }
-      }
-
-      update_config = {
-        max_unavailable_percentage = 50
       }
 
       labels = {
@@ -169,7 +159,7 @@ module "eks" {
       EOT
 
       min_size     = 1
-      max_size     = 20
+      max_size     = 8
       desired_size = 1
 
       force_update_version = true
@@ -210,7 +200,7 @@ module "eks" {
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
-      # Ubuntu image for EKs Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
+      # Ubuntu image for EKS Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
       ami_id = data.aws_ami.ubuntu.image_id
 
       # This will ensure the bootstrap user data is used to join the node
@@ -270,7 +260,7 @@ module "eks" {
       EOT
 
       min_size     = 8
-      max_size     = 20
+      max_size     = 8
       desired_size = 8
 
       capacity_type        = "SPOT"

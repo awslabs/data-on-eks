@@ -1,7 +1,41 @@
+#---------------------------------------------------------------
+# IRSA for EBS
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+  tags = local.tags
+}
 
 module "eks_blueprints_kubernetes_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "v1.0.0"
+  version = "~> 1.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -12,19 +46,16 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
+    # NOTE: If you are using a custom VPC CNI, you must disable the VPC CNI add-on before you can delete the custom VPC CNI.
+    # VPC CNI should be installed before the worker nodes are created for custom VPC CNI to work properly.
+    vpc-cni = {
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+    }
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      preserve                 = true
-      most_recent              = true
     }
-    coredns = {
-      most_recent = true
-      preserve    = true
-    }
-    kube-proxy = {
-      most_recent = true
-      preserve    = true
-    }
+    coredns    = {}
+    kube-proxy = {}
   }
   #---------------------------------------
   # Kubernetes Add-ons
@@ -69,12 +100,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
-  karpenter_node = {
-    create_iam_role          = true
-    iam_role_use_name_prefix = false
-    # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
-    iam_role_name = local.karpenter_iam_role_name
-  }
   karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
@@ -84,7 +109,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = var.enable_aws_cloudwatch_metrics
+  enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
@@ -191,54 +216,6 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
-#---------------------------------------------------------------
-# IRSA for EBS
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# VPC CNI Addon should run before the nodes are created
-# Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
-#---------------------------------------------------------------
-resource "aws_eks_addon" "vpc_cni" {
-  cluster_name                = module.eks.cluster_name
-  addon_name                  = "vpc-cni"
-  addon_version               = data.aws_eks_addon_version.this.version
-  resolve_conflicts_on_create = "OVERWRITE"
-  preserve                    = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
-  service_account_role_arn    = module.vpc_cni_irsa.iam_role_arn
-}
-
 #------------------------------------------
 # Amazon Prometheus
 #------------------------------------------
@@ -281,7 +258,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 }
 
 #---------------------------------------------------------------
-# IRSA for VPC CNI
+# IRSA for Amazon Managed Prometheus
 #---------------------------------------------------------------
 module "amp_ingest_irsa" {
   count = var.enable_amazon_prometheus ? 1 : 0

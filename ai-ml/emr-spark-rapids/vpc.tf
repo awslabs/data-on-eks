@@ -3,18 +3,18 @@
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   name = local.name
   cidr = var.vpc_cidr
   azs  = local.azs
 
   # Secondary CIDR block attached to VPC for EKS Control Plane ENI + Nodes + Pods
-  secondary_cidr_blocks = var.secondary_cidr_blocks
+  secondary_cidr_blocks = [var.secondary_cidr_blocks]
 
-  # 1/ EKS Data Plane secondary CIDR blocks for two subnets across two AZs for EKS Control Plane ENI + Nodes + Pods
+  # 1/ RFC6598 range 100.64.0.0/16 for EKS Data Plane for two subnets(32766 IPs per Subnet) across two AZs for EKS Control Plane ENI + Nodes + Pods
   # 2/ Two private Subnets with RFC1918 private IPv4 address range for Private NAT + NLB + Airflow + EC2 Jumphost etc.
-  private_subnets = concat(var.private_subnets, var.eks_data_plane_subnet_secondary_cidr)
+  private_subnets = concat(var.private_subnets, cidrsubnets(var.secondary_cidr_blocks, 1, 1))
 
   # ------------------------------
   # Optional Public Subnets for NAT and IGW for PoC/Dev/Test environments
@@ -42,7 +42,7 @@ module "vpc_endpoints_sg" {
   count = var.enable_vpc_endpoints ? 1 : 0
 
   source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   name        = "${local.name}-vpc-endpoints"
   description = "Security group for VPC endpoint access"
@@ -71,7 +71,7 @@ module "vpc_endpoints" {
   count = var.enable_vpc_endpoints ? 1 : 0
 
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   vpc_id             = module.vpc.vpc_id
   security_group_ids = [module.vpc_endpoints_sg[0].security_group_id]

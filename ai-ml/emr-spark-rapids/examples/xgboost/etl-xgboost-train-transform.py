@@ -7,12 +7,16 @@ from pyspark.sql import SparkSession, HiveContext
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from pyspark.sql.window import Window
+# Import ML Libraries
+from xgboost.spark import SparkXGBClassifier, SparkXGBClassifierModel
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 dataRoot = None
 
 if len(sys.argv) > 2:
    dataRoot = sys.argv[1]
    outputRoot = sys.argv[2]
+   num_workers = sys.argv[3]
 else:
    print("Data Root path not provided")
    sys.exit(1)
@@ -20,17 +24,19 @@ else:
 orig_raw_path = f"{dataRoot}/fannie-mae-single-family-loan-performance/"
 orig_raw_path_csv2parquet = f"{outputRoot}/csv2parquet/"
 
-# if you pass/unpack the archive file and enable the environment
-# conf.set("spark.yarn.dist.archives", "your_pyspark_venv.tar.gz#environment")
-
 # Create spark session
-
 spark = SparkSession\
             .builder.appName("EMR-XGBoost-Spark-GPU")\
             .enableHiveSupport()\
             .getOrCreate()
 
-reader = spark.read
+# Make sure it runs on GPU
+# spark.conf.set("spark.rapids.sql.enabled", "true")
+# spark.conf.set("spark.sql.files.maxPartitionBytes", "1G")
+# spark.conf.set("spark.rapids.sql.explain", "ALL")
+# spark.rapids.sql.batchSizeBytes= min(2GiB - 1 byte, ((gpu_memory - 1 GiB) / gpu_concurrency) / 4)
+# spark.conf.set("spark.rapids.sql.batchSizeBytes", "2G")
+# spark.conf.set("spark.rapids.sql.reader.batchSizeBytes", "768M")
 
 # Set True to save processed dataset after ETL
 # Set False, the dataset after ETL will be directly used in XGBoost train and transform
@@ -41,7 +47,6 @@ output_path_data=f"{outputRoot}/fannie-mae-single-family-loan-performance/mortga
 output_path_model=f"{outputRoot}/fannie-mae-single-family-loan-performance/mortgage/output/model/"
 
 # File schema
-
 _csv_raw_schema = StructType([
       StructField("reference_pool_id", StringType()),
       StructField("loan_id", LongType()),
@@ -251,6 +256,7 @@ cate_col_names = [
 ]
 # Numeric columns
 label_col_name = "delinquency_12"
+
 numeric_col_names = [
         "orig_interest_rate",
         "orig_upb",
@@ -273,9 +279,14 @@ numeric_col_names = [
 ]
 all_col_names = cate_col_names + numeric_col_names
 
+#-------------------------------------------
+# Define the function to do the ETL process
+#-------------------------------------------
+# Define function to get quarter from input CSV file name
 def _get_quarter_from_csv_file_name():
     return substring_index(substring_index(input_file_name(), ".", 1), "/", -1)
 
+# Define function to read raw CSV data file
 def read_raw_csv(spark, path):
     return spark.read.format('csv') \
             .option('nullValue', '') \
@@ -285,6 +296,7 @@ def read_raw_csv(spark, path):
             .load(path) \
             .withColumn('quarter', _get_quarter_from_csv_file_name())
 
+# Functions to extract perf and acq columns from raw schema
 def extract_perf_columns(rawDf):
     perfDf = rawDf.select(
       col("loan_id"),
@@ -352,9 +364,9 @@ def extract_acq_columns(rawDf):
       dense_rank().over(Window.partitionBy("loan_id").orderBy(to_date(col("monthly_reporting_period"),"MMyyyy"))).alias("rank"),
       col('quarter')
       )
-
     return acqDf.select("*").filter(col("rank")==1)
 
+# Define function to parse dates in Performance data
 def _parse_dates(perf):
     return perf \
             .withColumn("monthly_reporting_period", to_date(col("monthly_reporting_period"), "MM/dd/yyyy")) \
@@ -367,6 +379,7 @@ def _parse_dates(perf):
             .withColumn("maturity_date", to_date(col("maturity_date"), "MM/yyyy")) \
             .withColumn("zero_balance_effective_date", to_date(col("zero_balance_effective_date"), "MM/yyyy"))
 
+# Define function to create deliquency dataframe from Performance data
 def _create_perf_deliquency(spark, perf):
     aggDF = perf.select(
             col("quarter"),
@@ -432,6 +445,7 @@ def _create_perf_deliquency(spark, perf):
             .join(testDf, ["quarter", "loan_id", "timestamp_year", "timestamp_month"], "left") \
             .drop("timestamp_year", "timestamp_month")
 
+# Define function to create acquisition dataframe from Acquisition data
 def _create_acquisition(spark, acq):
     nameMapping = spark.createDataFrame(_name_mapping, ["from_seller_name", "to_seller_name"])
     return acq.join(nameMapping, col("seller_name") == col("from_seller_name"), "left") \
@@ -442,6 +456,7 @@ def _create_acquisition(spark, acq):
       .withColumn("orig_date", to_date(col("orig_date"), "MM/yyyy")) \
       .withColumn("first_pay_date", to_date(col("first_pay_date"), "MM/yyyy"))
 
+# Define function to get column dictionary
 def _gen_dictionary(etl_df, col_names):
     cnt_table = etl_df.select(posexplode(array([col(i) for i in col_names])))\
                     .withColumnRenamed("pos", "column_id")\
@@ -452,6 +467,7 @@ def _gen_dictionary(etl_df, col_names):
     windowed = Window.partitionBy("column_id").orderBy(desc("count"))
     return cnt_table.withColumn("id", row_number().over(windowed)).drop("count")
 
+# Define function to convert string columns to numeric
 def _cast_string_columns_to_numeric(spark, input_df):
     cached_dict_df = _gen_dictionary(input_df, cate_col_names).cache()
     output_df = input_df
@@ -466,6 +482,16 @@ def _cast_string_columns_to_numeric(spark, input_df):
                         .withColumnRenamed("id", col_name)
     return output_df
 
+# -------------------------------------------
+# In this Main Function:
+
+# 1/ Parse date in Performance data by calling _parse_dates (parsed_perf)
+# 2/ Create deliqency dataframe(perf_deliqency) form Performance data by calling _create_perf_deliquency
+# 3/ Create cleaned acquisition dataframe(cleaned_acq) from Acquisition data by calling _create_acquisition
+# 4/ Join deliqency dataframe(perf_deliqency) and cleaned acquisition dataframe(cleaned_acq), get clean_df
+# 5/ Cast String column to Numeric in clean_df by calling _cast_string_columns_to_numeric, get casted_clean_df
+# 6/ Return casted_clean_df as final result
+# -------------------------------------------
 def run_mortgage(spark, perf, acq):
     parsed_perf = _parse_dates(perf)
     perf_deliqency = _create_perf_deliquency(spark, parsed_perf)
@@ -477,23 +503,16 @@ def run_mortgage(spark, perf, acq):
                     .fillna(float(0))
     return casted_clean_df
 
-# GPU run, set to true
-spark.conf.set("spark.rapids.sql.enabled", "true")
-# CPU run, set to false, it can only make ETL run on CPU when is_save_dataset=True.
-# spark.conf.set("spark.rapids.sql.enabled", "false")
-spark.conf.set("spark.sql.files.maxPartitionBytes", "1G")
-spark.conf.set("spark.rapids.sql.explain", "ALL")
-spark.conf.set("spark.rapids.sql.batchSizeBytes", "512M")
-spark.conf.set("spark.rapids.sql.reader.batchSizeBytes", "768M")
-
+# Read Raw Data and Run ETL Process, Save the Result
 rawDf = read_raw_csv(spark, orig_raw_path)
+print(f"Raw Dataframe CSV Rows count : {rawDf.count()}")
 
+# Save raw data to parquet
 rawDf.write.parquet(orig_raw_path_csv2parquet, mode='overwrite',compression='snappy')
 
-# read raw dataset
-#rawDf = read_raw_csv(spark, orig_raw_path)
-#rawDf.write.parquet(orig_raw_path_csv2parquet, mode='overwrite')
+# Read data from parquet
 rawDf = spark.read.parquet(orig_raw_path_csv2parquet)
+print(f"Raw Dataframe Parquet Rows count : {rawDf.count()}")
 
 acq = extract_acq_columns(rawDf)
 perf = extract_perf_columns(rawDf)
@@ -507,15 +526,10 @@ if is_save_dataset:
     out.write.parquet(output_path_data, mode="overwrite")
     end = time.time()
     print("ETL takes {}".format(end - start))
-
-from xgboost.spark import SparkXGBClassifier, SparkXGBClassifierModel
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-
-# Make sure it runs on GPU
-spark.conf.set("spark.rapids.sql.enabled", "true")
-
-reader = spark.read
-
+#-------------------------------------------
+# XGBoost Spark with GPU
+#-------------------------------------------
+# Specify the Data Schema and Load the Data
 label = "delinquency_12"
 schema = StructType([
     StructField("orig_channel", FloatType()),
@@ -551,7 +565,7 @@ features = [ x.name for x in schema if x.name != label ]
 
 if is_save_dataset:
     # load dataset from file
-    etlDf = reader.parquet(output_path_data)
+    etlDf = spark.read.parquet(output_path_data)
     splits = etlDf.randomSplit([0.8, 0.2])
     train_data = splits[0]
     test_data = splits[1]
@@ -563,11 +577,11 @@ else:
 
 train_data.printSchema()
 
-# This sample uses 1 worker(GPU) to run XGBoost training, you can change according to your GPU resources
+# This sample uses 8 worker(GPU) to run XGBoost training, you can change according to your GPU resources
 params = {
     "tree_method": "gpu_hist",
     "grow_policy": "depthwise",
-    "num_workers": 1,
+    "num_workers": int(num_workers),
     "use_gpu": "true",
 }
 params['features_col'] = features
@@ -582,21 +596,29 @@ def with_benchmark(phrase, action):
     print("{} takes {} seconds".format(phrase, end - start))
     return result
 
-
+# Training time will be printed here
+# e.g., Training takes 18.92583155632019 seconds
 model = with_benchmark("Training", lambda: classifier.fit(train_data))
 
 model.write().overwrite().save(output_path_model)
 
 loaded_model = SparkXGBClassifierModel().load(output_path_model)
 
+# Transformation time in seconds will be printed here
 def transform():
     result = loaded_model.transform(test_data).cache()
     result.foreachPartition(lambda _: None)
     return result
+
 result = with_benchmark("Transformation", transform)
+
 result.select(label, "rawPrediction", "probability", "prediction").show(5)
+
+# Evaluation takes x seconds
+# Accuracy is x
 
 accuracy = with_benchmark(
     "Evaluation",
     lambda: MulticlassClassificationEvaluator().setLabelCol(label).evaluate(result))
+
 print("Accuracy is " + str(accuracy))

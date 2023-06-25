@@ -56,7 +56,7 @@ dcgm:
   enabled: false
 
 dcgmExporter:
-  enabled: false
+  enabled: true
 
 gfd:
   enabled: true

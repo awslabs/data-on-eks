@@ -1,6 +1,6 @@
 # Submitting a XGBoost-PySpark job
 
-## Create custom Docker image
+## Step1: Create custom Docker image
 
 Assuming that you are in the `emr-spark-rapids` folder as <ROOT> and we are using us-west-2 as the example region
 
