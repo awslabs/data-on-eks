@@ -14,7 +14,7 @@ The RAPIDS Accelerator for Apache Spark combines the power of the RAPIDS cuDF li
 ![Alt text](img/nvidia.png)
 
 ### EMR support for NVIDIA RAPIDS Accelerator for Apache Spark
-Amazon EMR on EKS now supports accelerated computing over graphics processing unit (GPU) instance types using Nvidia RAPIDS Accelerator for Apache Spark. The growing adoption of artificial intelligence (AI) and machine learning (ML) in analytics has increased the need for processing data quickly and cost efficiently with GPUs. Nvidia RAPIDS Accelerator for Apache Spark helps users to leverage the benefit of GPU performance while saving infrastructure costs. 
+Amazon EMR on EKS now supports accelerated computing over graphics processing unit (GPU) instance types using Nvidia RAPIDS Accelerator for Apache Spark. The growing adoption of artificial intelligence (AI) and machine learning (ML) in analytics has increased the need for processing data quickly and cost efficiently with GPUs. Nvidia RAPIDS Accelerator for Apache Spark helps users to leverage the benefit of GPU performance while saving infrastructure costs.
 
 ### Features
 - Accelerate the performance of data preparation tasks to quickly move to the next stage of the pipeline. This allows models to be trained faster, while freeing up data scientists and engineers to focus on the most critical activities.
@@ -84,7 +84,7 @@ aws eks describe-cluster --name emr-spark-rapids
 ```
 
 ```bash
-# Creates k8s config file to authenticate with EKS 
+# Creates k8s config file to authenticate with EKS
 aws eks --region us-west-2 update-kubeconfig --name emr-spark-rapids Cluster
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
@@ -94,26 +94,26 @@ kubectl get ns | grep emr-ml-team
 ```
 
 ```bash
-kubectl get pods --namespace=gpu-operator 
+kubectl get pods --namespace=gpu-operator
 
-# Output example for GPU node group with one node running 
+# Output example for GPU node group with one node running
 
-    NAME                                                              READY   STATUS 
-    gpu-feature-discovery-7gccd                                       1/1     Running 
+    NAME                                                              READY   STATUS
+    gpu-feature-discovery-7gccd                                       1/1     Running
     gpu-operator-784b7c5578-pfxgx                                     1/1     Running
-    nvidia-container-toolkit-daemonset-xds6r                          1/1     Running 
+    nvidia-container-toolkit-daemonset-xds6r                          1/1     Running
     nvidia-cuda-validator-j2b42                                       0/1     Completed
-    nvidia-dcgm-exporter-vlttv                                        1/1     Running 
-    nvidia-device-plugin-daemonset-r5m7z                              1/1     Running 
-    nvidia-device-plugin-validator-hg78p                              0/1     Completed 
-    nvidia-driver-daemonset-6s9qv                                     1/1     Running 
+    nvidia-dcgm-exporter-vlttv                                        1/1     Running
+    nvidia-device-plugin-daemonset-r5m7z                              1/1     Running
+    nvidia-device-plugin-validator-hg78p                              0/1     Completed
+    nvidia-driver-daemonset-6s9qv                                     1/1     Running
     nvidia-gpu-operator-node-feature-discovery-master-6f78fb7cbx79z   1/1     Running  
-    nvidia-gpu-operator-node-feature-discovery-worker-b2f6b           1/1     Running 
-    nvidia-gpu-operator-node-feature-discovery-worker-dc2pq           1/1     Running 
-    nvidia-gpu-operator-node-feature-discovery-worker-h7tpq           1/1     Running 
-    nvidia-gpu-operator-node-feature-discovery-worker-hkj6x           1/1     Running 
+    nvidia-gpu-operator-node-feature-discovery-worker-b2f6b           1/1     Running
+    nvidia-gpu-operator-node-feature-discovery-worker-dc2pq           1/1     Running
+    nvidia-gpu-operator-node-feature-discovery-worker-h7tpq           1/1     Running
+    nvidia-gpu-operator-node-feature-discovery-worker-hkj6x           1/1     Running
     nvidia-gpu-operator-node-feature-discovery-worker-zjznr           1/1     Running  
-    nvidia-operator-validator-j7lzh                                   1/1     Running 
+    nvidia-operator-validator-j7lzh                                   1/1     Running
 ```
 
 </CollapsibleContent>
@@ -162,9 +162,9 @@ docker push <ACCOUNT_NUMBER>.dkr.ecr.us-west-2.amazonaws.com/<REPOSITORY_NAME>:<
 aws ecr describe-repositories --repository-names <REPOSITORY_NAME> --region us-west-2
 ```
 
-### Step2: Download Input data(Fannie Mae’s Single-Family Loan Performance Data) 
+### Step2: Download Input data(Fannie Mae’s Single-Family Loan Performance Data)
 
-Dataset is derived from [Fannie Mae’s Single-Family Loan Performance Data](http://www.fanniemae.com/portal/funding-the-market/data/loan-performance-data.html) with all rights reserved by Fannie Mae. 
+Dataset is derived from [Fannie Mae’s Single-Family Loan Performance Data](http://www.fanniemae.com/portal/funding-the-market/data/loan-performance-data.html) with all rights reserved by Fannie Mae.
 
 1. Go to the [Fannie Mae](https://capitalmarkets.fanniemae.com/credit-risk-transfer/single-family-credit-risk-transfer/fannie-mae-single-family-loan-performance-data) website
 2. Click on [Single-Family Loan Performance Data](https://datadynamics.fanniemae.com/data-dynamics/?&_ga=2.181456292.2043790680.1657122341-289272350.1655822609#/reportMenu;category=HP)
@@ -194,7 +194,7 @@ Dataset is derived from [Fannie Mae’s Single-Family Loan Performance Data](htt
 
 ### Step3: Execute the EMR Spark Job
 
-In this step, we will use helper shell script to run the job. This script asks for input 
+In this step, we will use helper shell script to run the job. This script asks for input
 
 ```bash
 cd ai-ml/emr-spark-rapids/examples/xgboost/ && chmod +x execute_spark_rapids_xgboost.sh
@@ -219,14 +219,14 @@ First time this execution make take longer to download the image for EMR Job Pod
 
 - Login to verify the Spark driver pod logs from Cloudwatch logs or S3 bucket
 
-e.g., CW Log fie path 
+e.g., CW Log fie path
 
 ```
 /emr-on-eks-logs/emr-spark-rapids/emr-ml-team-a
 spark-rapids-emr/949wt7zuphox1beiv0i30v65i/jobs/0000000327fe50tosa4/containers/spark-0000000327fe50tosa4/spark-0000000327fe50tosa4-driver/stdout
 ```
 
-The following is a sample output from the above log file 
+The following is a sample output from the above log file
 
     Raw Dataframe CSV Rows count : 215386024
     Raw Dataframe Parquet Rows count : 215386024
@@ -252,7 +252,7 @@ The following is a sample output from the above log file
 
 ### Step5: Monitor GPU with Grafana Dashboard
 
-NVIDIA GPU Operator helm add-on is configured to is export metrics to Prometheus server. Prometheus remote writes these metrics to Amazon Managed Prometheus(AMP). 
+NVIDIA GPU Operator helm add-on is configured to is export metrics to Prometheus server. Prometheus remote writes these metrics to Amazon Managed Prometheus(AMP).
 
 Login to Grafana WebUI deployed by this blueprint and login with `admin` and fetch the password from AWS Secrets Manager to login to Grafana.
 
@@ -283,4 +283,3 @@ cd data-on-eks/ai-ml/emr-spark-rapids/ && chmod +x cleanup.sh
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
-
