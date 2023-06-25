@@ -11,7 +11,6 @@ The NVIDIA RAPIDS Accelerator for Apache Spark is a powerful tool that builds on
 With the invention of the RAPIDS Accelerator for Spark 3, NVIDIA has successfully revolutionized extract, transform, and load pipelines by significantly enhancing the efficiency of Spark SQL and DataFrame operations. By merging the capabilities of the RAPIDS cuDF library and the extensive reach of the Spark distributed computing ecosystem, the RAPIDS Accelerator for Apache Spark provides a robust solution to handle large-scale computations.
 Moreover, the RAPIDS Accelerator library incorporates an advanced shuffle optimized by UCX, which can be configured to support GPU-to-GPU communication and RDMA capabilities, hence further boosting its performance.
 
-
 ![Alt text](img/nvidia.png)
 
 ### EMR support for NVIDIA RAPIDS Accelerator for Apache Spark
@@ -132,6 +131,9 @@ cd ai-ml/emr-spark-rapids/examples/xgboost
 ```
 
 - If you don't already have an ECR repository, create one with the following command:
+
+Replace all the variables starting with `$` before executing the following commands.
+
 ```bash
 aws create-repository --registry-id $ACCOUNT_NUMBER --repository-name $REPOSITORY_NAME --region us-west-2
 ```
@@ -139,31 +141,31 @@ aws create-repository --registry-id $ACCOUNT_NUMBER --repository-name $REPOSITOR
 - To pull the Spark Rapids base image from the EMR on EKS ECR repository located in `us-west-2`, log in:
 
 ```bash
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <BASE_IMAGE_ACCOUNT>.dkr.ecr.us-west-2.amazonaws.com
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $BASE_IMAGE_ACCOUNT.dkr.ecr.us-west-2.amazonaws.com
 ```
 If you're located in a different region, please refer to: this [guide](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/docker-custom-images-tag.html.).
 
 - To build your Docker image locally, use the following command:
 
 ```bash
-docker build -t <ACCOUNT_NUMBER.dkr.ecr.us-west-2.amazonaws.com/<REPOSITORY_NAME>:<TAG> -f Dockerfile .
+docker build -t $ACCOUNT_NUMBER.dkr.ecr.us-west-2.amazonaws.com/$REPOSITORY_NAME:$TAG -f Dockerfile .
 ```
 
 - Log in to your ECR repository with the following command:
 
 ```bash
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <ACCOUNT_NUMBER>.dkr.ecr.us-west-2.amazonaws.com
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $ACCOUNT_NUMBER.dkr.ecr.us-west-2.amazonaws.com
 ```
 
 - To push your Docker image to your ECR, use:
 
 ```bash
-docker push <ACCOUNT_NUMBER>.dkr.ecr.us-west-2.amazonaws.com/<REPOSITORY_NAME>:<TAG>
+docker push $ACCOUNT_NUMBER.dkr.ecr.us-west-2.amazonaws.com/$REPOSITORY_NAME:$TAG
 ```
 
 - Verify the creation of your ECR repository:
 ```bash
-aws ecr describe-repositories --repository-names <REPOSITORY_NAME> --region us-west-2
+aws ecr describe-repositories --repository-names $REPOSITORY_NAME --region us-west-2
 ```
 
 ### Step2: Acquire the Input Data (Fannie Mae’s Single-Family Loan Performance Data)
