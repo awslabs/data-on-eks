@@ -207,9 +207,10 @@ cd ai-ml/emr-spark-rapids/examples/xgboost/ && chmod +x execute_spark_rapids_xgb
     Enter the customized Docker image URI: public.ecr.aws/o7d8v7g9/emr-6.10.0-spark-rapids:0.11
     Enter EMR Virtual Cluster AWS Region: us-west-2
     Enter the EMR Virtual Cluster ID: 949wt7zuphox1beiv0i30v65i
-    Enter the EMR Execution Role ARN: arn:aws:iam::464566837657:role/emr-spark-rapids-emr-eks-data-team-a
+    Enter the EMR Execution Role ARN: arn:aws:iam::<ACCOUNTID>:role/emr-spark-rapids-emr-eks-data-team-a
     Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-spark-rapids/emr-ml-team-a
-    Enter the S3 Bucket for storing PySpark Scripts, Pod Templates, Input data and Output data.<bucket-name>: emr-spark-rapids-464566837657-us-west-2
+    Enter the S3 Bucket for storing PySpark Scripts, Pod Templates, Input data and Output data.<bucket-name>: emr-spark-rapids-<ACCOUNTID>-us-west-2
+    Enter the number of executor instances (4 to 8): 8
 ```
 
 :::info
