@@ -124,49 +124,42 @@ Fannie Mae’s Single-Family Loan Performance Data has a comprehensive dataset s
 
 #### Step 1: Building a Custom Docker Image
 
-- First, navigate to the following directory:
-
-```bash
-cd ai-ml/emr-spark-rapids/examples/xgboost
-```
-
-- If you don't already have an ECR repository, create one with the following command:
-
-Replace all the variables starting with `$` before executing the following commands.
-
-```bash
-aws create-repository --registry-id $ACCOUNT_NUMBER --repository-name $REPOSITORY_NAME --region us-west-2
-```
-
 - To pull the Spark Rapids base image from the EMR on EKS ECR repository located in `us-west-2`, log in:
 
 ```bash
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $BASE_IMAGE_ACCOUNT.dkr.ecr.us-west-2.amazonaws.com
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 895885662937.dkr.ecr.us-west-2.amazonaws.com
 ```
+
 If you're located in a different region, please refer to: this [guide](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/docker-custom-images-tag.html.).
 
 - To build your Docker image locally, use the following command:
 
+Build the custom Docker image using the provided `Dockerfile`. Choose a tag for the image, such as 0.10.
+
+:::info
+Please note that the build process may take some time, depending on your network speed. Keep in mind that the resulting image size will be approximately `23.5GB`.
+:::
+
+
 ```bash
-docker build -t $ACCOUNT_NUMBER.dkr.ecr.us-west-2.amazonaws.com/$REPOSITORY_NAME:$TAG -f Dockerfile .
+cd ~/data-on-eks/ai-ml/emr-spark-rapids/examples/xgboost
+docker build -t emr-6.10.0-spark-rapids-custom:0.10 -f Dockerfile .
 ```
 
-- Log in to your ECR repository with the following command:
+- Replace `<ACCOUNTID>` with your AWS account ID. Log in to your ECR repository with the following command:
 
 ```bash
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $ACCOUNT_NUMBER.dkr.ecr.us-west-2.amazonaws.com
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <ACCOUNTID>.dkr.ecr.us-west-2.amazonaws.com
 ```
 
 - To push your Docker image to your ECR, use:
 
 ```bash
-docker push $ACCOUNT_NUMBER.dkr.ecr.us-west-2.amazonaws.com/$REPOSITORY_NAME:$TAG
+$ docker tag emr-6.10.0-spark-rapids-custom:0.10 <ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/emr-6.10.0-spark-rapids-custom:0.10
+$ docker push <ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/emr-6.10.0-spark-rapids-custom:0.10
 ```
 
-- Verify the creation of your ECR repository:
-```bash
-aws ecr describe-repositories --repository-names $REPOSITORY_NAME --region us-west-2
-```
+You can use this image during the job execution in `Step3` .
 
 ### Step2: Acquire the Input Data (Fannie Mae’s Single-Family Loan Performance Data)
 
@@ -178,10 +171,10 @@ This dataset is sourced from [Fannie Mae’s Single-Family Loan Performance Data
     - Register as a new user if you are using the website for the first time
     - Use the credentials to login
 3. Select [HP](https://datadynamics.fanniemae.com/data-dynamics/#/reportMenu;category=HP)
-4. Click on  **Download Data** and choose *Single-Family Loan Performance Data*
-5. You will find a tabular list of `Acquisition and Performance` files sorted based on year and quarter. Click on the file to download `Eg: 2017Q1.zip`
-6. Unzip the downlad file to extract the csv file `Eg: 2017Q1.csv`
-7. Copy only the CSV files to an S3 bucket under `${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/spark-rapids-emr/input/fannie-mae-single-family-loan-performance/`. The example below uses three years of data (one file for each quarter, 12 files in total).
+4. Click on  `Download Data` and choose `Single-Family Loan Performance Data`
+5. You will find a tabular list of Acquisition and Performance` files sorted based on year and quarter. Click on the file to download. You can download three years(2020, 2021 and 2022 - 4 files for each year and one for each quarter) worth of data that will be used in our example job.  e.g.,: 2017Q1.zip
+6. Unzip the downlad file to extract the csv file to your local machine. e.g.,: 2017Q1.csv
+7. Copy only the CSV files to an S3 bucket under ${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/spark-rapids-emr/input/fannie-mae-single-family-loan-performance/. The example below uses three years of data (one file for each quarter, 12 files in total). Note: `${S3_BUCKET}` and `${EMR_VIRTUAL_CLUSTER_ID}` values can be extracted from Terraform outputs.
 
 ```
  aws s3 ls s3://emr-spark-rapids-<aws-account-id>-us-west-2/949wt7zuphox1beiv0i30v65i/spark-rapids-emr/input/fannie-mae-single-family-loan-performance/
