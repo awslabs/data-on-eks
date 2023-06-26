@@ -24,7 +24,7 @@ function HomepageHeader() {
           <Link
             className="button button--secondary button--lg button-3d button-sparkles"
             style={{padding: '0.5rem 1.5rem', fontSize: '0.9rem'}}
-            to="/docs/intro">
+            to="/docs/introduction/intro">
             Let's Spin Up
           </Link>
         </div>

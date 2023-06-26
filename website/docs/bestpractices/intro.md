@@ -7,7 +7,7 @@ sidebar_label: Introduction
 
 :::info
 
-WORK IN PROGRESS
+COMING SOON
 
 Please note that this section is currently a work in progress and will provide a collection of best practices for running Data and ML workloads on EKS.
 These best practices will cover various aspects, including cluster configuration, resource management, data storage, security, monitoring, and more.

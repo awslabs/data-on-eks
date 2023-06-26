@@ -1,3 +1,8 @@
+# This is the executor pod template for the XGBoost example.
+# The executor pod is launched in the same node group as the Spark executor.
+# Make sure to update the availability zone and node group name to match your cluster.
+# The toleration is required to allow the executor pod to be scheduled on the same node as the Spark executor.
+# /local1 is the local disk mount point on the node. This is used for shuffle data.
 apiVersion: v1
 kind: Pod
 metadata:
