@@ -5,8 +5,7 @@ terraform init || echo "\"terraform init\" failed"
 
 
 echo "Applying ..."
-terraform apply -auto-approve
-apply_output=$(terraform apply -auto-approve 2>&1)
+apply_output=$(terraform apply -auto-approve 2>&1 | tee /dev/tty)
 if [[ $? -eq 0 && $apply_output == *"Apply complete"* ]]; then
   echo "SUCCESS: Terraform apply completed successfully"
 else
