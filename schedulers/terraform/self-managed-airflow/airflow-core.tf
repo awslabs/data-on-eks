@@ -2,7 +2,7 @@
 # RDS Postgres Database for Apache Airflow Metadata
 #---------------------------------------------------------------
 module "db" {
-  count = var.enable_airflow ? 1 : 0
+  count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 5.0"
 
@@ -65,19 +65,19 @@ module "db" {
 # Apache Airflow Postgres Metastore DB Master password
 #---------------------------------------------------------------
 resource "random_password" "postgres" {
-  count = var.enable_airflow ? 1 : 0
+  count   = var.enable_airflow ? 1 : 0
   length  = 16
   special = false
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "postgres" {
-  count = var.enable_airflow ? 1 : 0
+  count                   = var.enable_airflow ? 1 : 0
   name                    = "postgres-2"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
 resource "aws_secretsmanager_secret_version" "postgres" {
-  count = var.enable_airflow ? 1 : 0
+  count         = var.enable_airflow ? 1 : 0
   secret_id     = aws_secretsmanager_secret.postgres[0].id
   secret_string = random_password.postgres[0].result
 }
@@ -86,7 +86,7 @@ resource "aws_secretsmanager_secret_version" "postgres" {
 # PostgreSQL RDS security group
 #---------------------------------------------------------------
 module "security_group" {
-  count = var.enable_airflow ? 1 : 0
+  count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 5.0"
 
@@ -154,12 +154,12 @@ module "airflow_irsa_scheduler" {
   source = "../../../workshop/modules/terraform-aws-eks-data-addons/irsa"
   count  = var.enable_airflow ? 1 : 0
   # IAM role for service account (IRSA)
-  create_role                   = var.enable_airflow
-  role_name                     = local.airflow_scheduler_service_account
-  role_description              = "IRSA for ${local.airflow_name} Scheduler"
+  create_role      = var.enable_airflow
+  role_name        = local.airflow_scheduler_service_account
+  role_description = "IRSA for ${local.airflow_name} Scheduler"
 
   role_policy_arns = merge({ AirflowScheduler = aws_iam_policy.airflow_scheduler[0].arn })
-  
+
   oidc_providers = {
     this = {
       provider_arn    = module.eks.oidc_provider_arn
@@ -211,10 +211,10 @@ module "airflow_irsa_webserver" {
   source = "../../../workshop/modules/terraform-aws-eks-data-addons/irsa"
   count  = var.enable_airflow ? 1 : 0
   # IAM role for service account (IRSA)
-  create_role                   = var.enable_airflow
-  role_name                     = local.airflow_webserver_service_account
-  role_description              = "IRSA for ${local.airflow_name} Webserver"
-  
+  create_role      = var.enable_airflow
+  role_name        = local.airflow_webserver_service_account
+  role_description = "IRSA for ${local.airflow_name} Webserver"
+
   role_policy_arns = merge({ AirflowWebserver = aws_iam_policy.airflow_webserver[0].arn })
 
   oidc_providers = {
@@ -240,19 +240,19 @@ resource "aws_iam_policy" "airflow_webserver" {
 ## Apache Airflow Webserver Secret
 ##---------------------------------------------------------------
 resource "random_id" "airflow_webserver" {
-  count = var.enable_airflow ? 1 : 0
+  count       = var.enable_airflow ? 1 : 0
   byte_length = 16
 }
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "airflow_webserver" {
-  count = var.enable_airflow ? 1 : 0
+  count                   = var.enable_airflow ? 1 : 0
   name                    = "airflow_webserver_secret_key_2"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
 resource "aws_secretsmanager_secret_version" "airflow_webserver" {
-  count = var.enable_airflow ? 1 : 0
+  count         = var.enable_airflow ? 1 : 0
   secret_id     = aws_secretsmanager_secret.airflow_webserver[0].id
   secret_string = random_id.airflow_webserver[0].hex
 }
@@ -272,7 +272,7 @@ kind: Secret
 metadata:
    name: ${local.airflow_webserver_secret_name}
    namespace: ${kubernetes_namespace_v1.airflow[0].metadata[0].name}
-   labels: 
+   labels:
     app.kubernetes.io/managed-by: "Helm"
    annotations:
     meta.helm.sh/release-name: "airflow"
@@ -316,10 +316,10 @@ module "airflow_irsa_worker" {
   source = "../../../workshop/modules/terraform-aws-eks-data-addons/irsa"
   count  = var.enable_airflow ? 1 : 0
   # IAM role for service account (IRSA)
-  create_role                   = var.enable_airflow
-  role_name                     = local.airflow_workers_service_account
-  role_description              = "IRSA for ${local.airflow_name} Workers"
-  
+  create_role      = var.enable_airflow
+  role_name        = local.airflow_workers_service_account
+  role_description = "IRSA for ${local.airflow_name} Workers"
+
   role_policy_arns = merge({ AirflowWorker = aws_iam_policy.airflow_worker[0].arn })
 
   oidc_providers = {
@@ -345,7 +345,7 @@ resource "aws_iam_policy" "airflow_worker" {
 # Managing DAG files with GitSync - EFS Storage Class
 #---------------------------------------------------------------
 resource "kubectl_manifest" "efs_sc" {
-  count = var.enable_airflow ? 1 : 0
+  count     = var.enable_airflow ? 1 : 0
   yaml_body = <<-YAML
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -367,7 +367,7 @@ YAML
 # Persistent Volume Claim for EFS
 #---------------------------------------------------------------
 resource "kubectl_manifest" "efs_pvc" {
-  count = var.enable_airflow ? 1 : 0
+  count     = var.enable_airflow ? 1 : 0
   yaml_body = <<-YAML
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -389,7 +389,7 @@ YAML
 # EFS Filesystem for Airflow DAGs
 #---------------------------------------------------------------
 resource "aws_efs_file_system" "efs" {
-  count = var.enable_airflow ? 1 : 0
+  count          = var.enable_airflow ? 1 : 0
   creation_token = "efs"
   encrypted      = true
 
@@ -405,7 +405,7 @@ resource "aws_efs_mount_target" "efs_mt" {
 }
 
 resource "aws_security_group" "efs" {
-  count = var.enable_airflow ? 1 : 0
+  count       = var.enable_airflow ? 1 : 0
   name        = "${local.name}-efs"
   description = "Allow inbound NFS traffic from private subnets of the VPC"
   vpc_id      = module.vpc.vpc_id
@@ -427,7 +427,7 @@ resource "aws_security_group" "efs" {
 
 #tfsec:ignore:*
 module "airflow_s3_bucket" {
-  count = var.enable_airflow ? 1 : 0
+  count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 

@@ -19,14 +19,14 @@ module "vpc" {
   # ------------------------------
   # Optional Public Subnets for NAT and IGW for PoC/Dev/Test environments
   # Public Subnets can be disabled while deploying to Production and use Private NAT + TGW
-  public_subnets       = var.public_subnets
+  public_subnets = var.public_subnets
 
   # ------------------------------
   # Private Subnets for Airflow metadata store
-  database_subnets = var.db_private_subnets
+  database_subnets                   = var.db_private_subnets
   create_database_subnet_group       = true
   create_database_subnet_route_table = true
-  
+
   enable_nat_gateway   = true
   single_nat_gateway   = true
   enable_dns_hostnames = true

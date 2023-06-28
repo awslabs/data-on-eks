@@ -38,7 +38,7 @@ locals {
   airflow_name       = "airflow"
   airflow_repository = "https://airflow.apache.org"
   airflow_version    = "1.9.0"
-  
+
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
   region     = data.aws_region.current.name

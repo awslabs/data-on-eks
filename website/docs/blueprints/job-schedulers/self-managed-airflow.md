@@ -302,7 +302,7 @@ spec:
 ```
 </details>
 
-To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your Spark Application manifest. Additionally, to ensure Spark Driver pods run only on `On-Demand` nodes and Spark Executors run only on `Spot` nodes, add the `karpenter.sh/capacity-type` node selectors. 
+To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your Spark Application manifest. Additionally, to ensure Spark Driver pods run only on `On-Demand` nodes and Spark Executors run only on `Spot` nodes, add the `karpenter.sh/capacity-type` node selectors.
 
 For example,
 

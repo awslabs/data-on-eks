@@ -20,12 +20,12 @@ module "vpc_cni_irsa" {
 # Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
 #---------------------------------------------------------------
 resource "aws_eks_addon" "vpc_cni" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "vpc-cni"
-  addon_version            = data.aws_eks_addon_version.this.version
-  resolve_conflicts_on_create        = "OVERWRITE"
-  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
-  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "vpc-cni"
+  addon_version               = data.aws_eks_addon_version.this.version
+  resolve_conflicts_on_create = "OVERWRITE"
+  preserve                    = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
+  service_account_role_arn    = module.vpc_cni_irsa.iam_role_arn
 }
 
 #---------------------------------------------------------------
@@ -79,12 +79,12 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
-  
+
   #---------------------------------------
   # EFS CSI driver
   #---------------------------------------
   enable_aws_efs_csi_driver = true
-  
+
   #---------------------------------------------------------------
   # CoreDNS Autoscaler helps to scale for large EKS Clusters
   #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
@@ -173,7 +173,7 @@ module "eks_blueprints_kubernetes_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-#    version = "1.4.7"
+    #    version = "1.4.7"
     timeout = "300"
   }
 
@@ -199,7 +199,7 @@ module "kubernetes_data_addons" {
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
-  
+
   #---------------------------------------------------------------
   # Prometheus Add-on
   #---------------------------------------------------------------
@@ -246,19 +246,19 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   enable_airflow = true
   airflow_helm_config = {
-    airflow_namespace                 = try(kubernetes_namespace_v1.airflow[0].metadata[0].name, local.airflow_namespace)
+    airflow_namespace = try(kubernetes_namespace_v1.airflow[0].metadata[0].name, local.airflow_namespace)
 
     values = [templatefile("${path.module}/helm-values/airflow-values.yaml", {
       # Airflow Postgres RDS Config
-      airflow_version  = local.airflow_version
-      airflow_db_user  = local.airflow_name
-      airflow_db_pass  = try(sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string), "")
-      airflow_db_name  = try(module.db[0].db_instance_name, "")
-      airflow_db_host  = try(element(split(":", module.db[0].db_instance_endpoint), 0), "")
+      airflow_version = local.airflow_version
+      airflow_db_user = local.airflow_name
+      airflow_db_pass = try(sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string), "")
+      airflow_db_name = try(module.db[0].db_instance_name, "")
+      airflow_db_host = try(element(split(":", module.db[0].db_instance_endpoint), 0), "")
       # S3 bucket config for Logs
-      s3_bucket_name                   = try(module.airflow_s3_bucket[0].s3_bucket_id, "")
-      webserver_secret_name           = local.airflow_webserver_secret_name
-      efs_pvc                         = local.efs_pvc
+      s3_bucket_name        = try(module.airflow_s3_bucket[0].s3_bucket_id, "")
+      webserver_secret_name = local.airflow_webserver_secret_name
+      efs_pvc               = local.efs_pvc
     })]
     # Use only when Apache Airflow is enabled with `airflow-core.tf` resources
     set = var.enable_amazon_prometheus ? [
@@ -284,11 +284,11 @@ module "kubernetes_data_addons" {
       },
       {
         name  = "workers.serviceAccount.name"
-        value = try(kubernetes_service_account_v1.airflow_worker[0].metadata[0].name, local.airflow_workers_service_account) 
+        value = try(kubernetes_service_account_v1.airflow_worker[0].metadata[0].name, local.airflow_workers_service_account)
       }
     ] : []
   }
-  
+
   #---------------------------------------------------------------
   # Spark Operator Add-on
   #---------------------------------------------------------------
@@ -305,12 +305,12 @@ module "kubernetes_data_addons" {
     create_irsa = false
     values = [
       templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
-        s3_bucket_name   = try(module.spark_logs_s3_bucket[0].s3_bucket_id, "") 
-        s3_bucket_prefix = try(aws_s3_object.this[0].key, "") 
+        s3_bucket_name   = try(module.spark_logs_s3_bucket[0].s3_bucket_id, "")
+        s3_bucket_prefix = try(aws_s3_object.this[0].key, "")
       })
     ]
   }
-  
+
 }
 
 
@@ -352,7 +352,7 @@ resource "aws_iam_policy" "fluentbit" {
 }
 
 #---------------------------------------------------------------
-# S3 log bucket for FluentBit 
+# S3 log bucket for FluentBit
 #---------------------------------------------------------------
 
 #tfsec:ignore:*
@@ -375,4 +375,3 @@ module "fluentbit_s3_bucket" {
 
   tags = local.tags
 }
-

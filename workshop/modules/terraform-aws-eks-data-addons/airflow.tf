@@ -1,5 +1,5 @@
 locals {
-  airflow_namespace                  = try(var.airflow_helm_config["airflow_namespace"], "airflow")
+  airflow_namespace = try(var.airflow_helm_config["airflow_namespace"], "airflow")
 }
 
 resource "helm_release" "airflow" {
@@ -44,7 +44,7 @@ resource "helm_release" "airflow" {
   dynamic "set" {
     iterator = each_item
     for_each = try(var.airflow_helm_config["set"], [])
-    
+
 
     content {
       name  = each_item.value.name
@@ -64,4 +64,3 @@ resource "helm_release" "airflow" {
     }
   }
 }
-

@@ -42,7 +42,7 @@ resource "kubernetes_secret_v1" "spark_team_a" {
 #---------------------------------------------------------------
 module "spark_team_a_irsa" {
   source  = "aws-ia/eks-blueprints-addon/aws"
-  count = var.enable_airflow_spark_example ? 1 : 0
+  count   = var.enable_airflow_spark_example ? 1 : 0
   version = "~> 1.0"
 
   # Disable helm release
@@ -69,7 +69,7 @@ module "spark_team_a_irsa" {
 # Creates IAM policy for IRSA. Provides IAM permissions for Spark driver/executor pods
 #---------------------------------------------------------------
 resource "aws_iam_policy" "spark" {
-  count = var.enable_airflow_spark_example ? 1 : 0
+  count       = var.enable_airflow_spark_example ? 1 : 0
   description = "IAM role policy for Spark Job execution"
   name        = "${local.name}-spark-irsa"
   policy      = data.aws_iam_policy_document.spark_operator.json
@@ -147,7 +147,7 @@ resource "kubernetes_cluster_role_binding" "spark_role_binding" {
     name      = local.spark_team
     namespace = local.spark_team
   }
-  
+
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
@@ -158,12 +158,12 @@ resource "kubernetes_cluster_role_binding" "spark_role_binding" {
 }
 
 #---------------------------------------------------------------
-# S3 log bucket for Spark logs 
+# S3 log bucket for Spark logs
 #---------------------------------------------------------------
 
 #tfsec:ignore:*
 module "spark_logs_s3_bucket" {
-  count = var.enable_airflow_spark_example ? 1 : 0
+  count   = var.enable_airflow_spark_example ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
@@ -185,7 +185,7 @@ module "spark_logs_s3_bucket" {
 
 # Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
 resource "aws_s3_object" "this" {
-  count = var.enable_airflow_spark_example ? 1 : 0
+  count        = var.enable_airflow_spark_example ? 1 : 0
   bucket       = module.spark_logs_s3_bucket[0].s3_bucket_id
   key          = "spark-event-logs/"
   content_type = "application/x-directory"

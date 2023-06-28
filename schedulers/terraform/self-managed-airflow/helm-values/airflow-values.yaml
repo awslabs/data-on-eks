@@ -75,7 +75,7 @@ airflowLocalSettings: |-
   ]
   {{- end }}
   {{- end }}
-  
+
 ###################################
 # Enable RBAC (default on most clusters these days)
 ###################################
@@ -83,7 +83,7 @@ rbac:
   # Specifies whether RBAC resources should be created
   create: true
   createSCCRoleBinding: false
-  
+
 ###################################
 # Airflow executor
 ###################################
@@ -240,7 +240,7 @@ scheduler:
     requests:
      cpu: 500m
      memory: 1024Mi
-     
+
   # This setting tells kubernetes that its ok to evict
   # when it wants to scale a node down.
   safeToEvict: false
@@ -424,7 +424,7 @@ pgbouncer:
   # Number of PgBouncer replicas to run in Deployment
   replicas: 1
   auth_type: scram-sha-256
-  
+
 ###################################
 # All ports used by chart
 ###################################
@@ -528,7 +528,7 @@ dags:
     branch: main
     rev: HEAD
     depth: 1
-    
+
     # the number of consecutive failures allowed before aborting
     maxFailures: 5
     # subpath wihin the repo where dags are located
@@ -537,12 +537,12 @@ dags:
 
     # If you are using an ssh clone url, you can specify the name of the secret below
     sshKeySecret: airflow-ssh-secret
-    
+
     # If you are using an ssh private key, you can additionally
-    # specify the content of your known_hosts file, example: 
+    # specify the content of your known_hosts file, example:
     #https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
     #https://airflow.apache.org/docs/helm-chart/stable/production-guide.html#knownhosts
-    
+
     knownHosts: |
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
       github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
