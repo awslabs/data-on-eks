@@ -1,20 +1,50 @@
 #---------------------------------------------------------------
-# EKS Blueprints
+# EKS Cluster
 #---------------------------------------------------------------
-module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.15.0"
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.13"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
+  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
+  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+
+  vpc_id = module.vpc.vpc_id
+  # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
+  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
+
+  manage_aws_auth_configmap = true
+  aws_auth_roles = [
+    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
+    {
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.karpenter_iam_role_name}"
+      username = "system:node:{{EC2PrivateDNSName}}"
+      groups = [
+        "system:bootstrappers",
+        "system:nodes",
+      ]
+    }
+  ]
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
+  # Extend cluster security group rules
+  cluster_security_group_additional_rules = {
+    ingress_nodes_ephemeral_ports_tcp = {
+      description                = "Nodes on ephemeral ports"
+      protocol                   = "tcp"
+      from_port                  = 1025
+      to_port                    = 65535
+      type                       = "ingress"
+      source_node_security_group = true
+    }
+  }
+
+  # Extend node-to-node security group rules
   node_security_group_additional_rules = {
-    # Extend node-to-node security group rules. Recommended and required for the Add-ons
     ingress_self_all = {
       description = "Node to node all ports/protocols"
       protocol    = "-1"
@@ -23,7 +53,6 @@ module "eks_blueprints" {
       type        = "ingress"
       self        = true
     }
-    # Recommended outbound traffic for Node groups
     egress_all = {
       description      = "Node all egress"
       protocol         = "-1"
@@ -46,317 +75,89 @@ module "eks_blueprints" {
     }
   }
 
-  managed_node_groups = {
-    # Core node group for deploying all the critical add-ons
-    mng1 = {
-      node_group_name = "core-node-grp"
-      subnet_ids      = module.vpc.private_subnets
+  eks_managed_node_group_defaults = {
+    iam_role_additional_policies = {
+      # Not required, but used in the example to access the nodes to inspect mounted volumes
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
 
-      instance_types = ["m5.xlarge"]
-      ami_type       = "AL2_x86_64"
-      capacity_type  = "ON_DEMAND"
+  eks_managed_node_groups = {
+    #  We recommend to have a MNG to place your critical workloads and add-ons
+    #  Then rely on Karpenter to scale your workloads
+    #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
+    core_node_group = {
+      name        = "core-node-group"
+      description = "EKS managed node group example launch template"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
-      disk_size = 100
-      disk_type = "gp3"
+      ami_id = data.aws_ami.x86.image_id
+      # This will ensure the bootstrap user data is used to join the node
+      # By default, EKS managed node groups will not append bootstrap script;
+      # this adds it back in using the default template provided by the module
+      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
+      enable_bootstrap_user_data = true
 
-      max_size               = 9
-      min_size               = 3
-      desired_size           = 3
-      create_launch_template = true
-      launch_template_os     = "amazonlinux2eks"
+      # Optional - This is to show how you can pass pre bootstrap data
+      pre_bootstrap_user_data = <<-EOT
+        echo "Node bootstrap process started by Data on EKS"
+      EOT
 
-      update_config = [{
+      # Optional - Post bootstrap data to verify anything
+      post_bootstrap_user_data = <<-EOT
+        echo "Bootstrap complete.Ready to Go!"
+      EOT
+
+      min_size     = 3
+      max_size     = 9
+      desired_size = 3
+
+      force_update_version = true
+      instance_types       = ["m5.xlarge"]
+
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
+
+      update_config = {
         max_unavailable_percentage = 50
-      }]
+      }
 
-      k8s_labels = {
-        Environment   = "preprod"
-        Zone          = "test"
+      labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
       }
 
-      # See this doc node-template tags https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
-      additional_tags = {
-        Name                                                             = "core-node-grp"
-        subnet_type                                                      = "private"
-        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "core"
-        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-        "k8s.io/cluster-autoscaler/${local.name}"                        = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                              = "true"
+      tags = {
+        Name                     = "core-node-grp",
+        "karpenter.sh/discovery" = local.name
       }
     }
   }
-
-  tags = local.tags
 }
 
-#---------------------------------------------------------------
-# RDS Postgres Database for Apache Airflow Metadata
-#---------------------------------------------------------------
-module "db" {
-  source  = "terraform-aws-modules/rds/aws"
-  version = "~> 5.0"
-
-  identifier = local.airflow_name
-
-  engine               = "postgres"
-  engine_version       = "14.3"
-  family               = "postgres14"
-  major_engine_version = "14"
-  instance_class       = "db.m6i.xlarge"
-
-  storage_type      = "io1"
-  allocated_storage = 100
-  iops              = 3000
-
-  db_name                = local.airflow_name
-  username               = local.airflow_name
-  create_random_password = false
-  password               = sensitive(aws_secretsmanager_secret_version.postgres.secret_string)
-  port                   = 5432
-
-  multi_az               = true
-  db_subnet_group_name   = module.vpc.database_subnet_group
-  vpc_security_group_ids = [module.security_group.security_group_id]
-
-  maintenance_window              = "Mon:00:00-Mon:03:00"
-  backup_window                   = "03:00-06:00"
-  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
-  create_cloudwatch_log_group     = true
-
-  backup_retention_period = 5
-  skip_final_snapshot     = true
-  deletion_protection     = false
-
-  performance_insights_enabled          = true
-  performance_insights_retention_period = 7
-  create_monitoring_role                = true
-  monitoring_interval                   = 60
-  monitoring_role_name                  = "airflow-metastore"
-  monitoring_role_use_name_prefix       = true
-  monitoring_role_description           = "Airflow Postgres Metastore for monitoring role"
-
-  parameters = [
-    {
-      name  = "autovacuum"
-      value = 1
-    },
-    {
-      name  = "client_encoding"
-      value = "utf8"
-    }
-  ]
-
-  tags = local.tags
-}
-
-#tfsec:ignore:*
-module "airflow_s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
-
-  bucket = "airflow-logs-${data.aws_caller_identity.current.account_id}"
-  acl    = "private"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
+#---------------------------------------
+# Karpenter Provisioners for workloads
+#---------------------------------------
+data "kubectl_path_documents" "karpenter_provisioners" {
+  pattern = "${path.module}/karpenter-provisioners/*.yaml"
+  vars = {
+    azs            = local.region
+    eks_cluster_id = module.eks.cluster_name
   }
-
-  tags = local.tags
 }
 
-#---------------------------------------------------------------
-# Apache Airflow Postgres Metastore DB Master password
-#---------------------------------------------------------------
-resource "random_password" "postgres" {
-  length  = 16
-  special = false
-}
-#tfsec:ignore:aws-ssm-secret-use-customer-key
-resource "aws_secretsmanager_secret" "postgres" {
-  name                    = "postgres"
-  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
-}
+resource "kubectl_manifest" "karpenter_provisioner" {
+  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
+  yaml_body = each.value
 
-resource "aws_secretsmanager_secret_version" "postgres" {
-  secret_id     = aws_secretsmanager_secret.postgres.id
-  secret_string = random_password.postgres.result
-}
-
-##---------------------------------------------------------------
-## Apache Airflow Webserver Secret
-##---------------------------------------------------------------
-resource "random_id" "airflow_webserver" {
-  byte_length = 16
-}
-
-#tfsec:ignore:aws-ssm-secret-use-customer-key
-resource "aws_secretsmanager_secret" "airflow_webserver" {
-  name                    = "airflow_webserver_secret_key"
-  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
-}
-
-resource "aws_secretsmanager_secret_version" "airflow_webserver" {
-  secret_id     = aws_secretsmanager_secret.airflow_webserver.id
-  secret_string = random_id.airflow_webserver.hex
-}
-
-#---------------------------------------------------------------
-# Webserver Secret Key
-#---------------------------------------------------------------
-resource "kubectl_manifest" "airflow_webserver" {
-  sensitive_fields = [
-    "data.webserver-secret-key"
-  ]
-
-  yaml_body = <<-YAML
-apiVersion: v1
-kind: Secret
-metadata:
-   name: ${local.airflow_webserver_secret_name}
-   namespace: ${module.airflow_irsa.namespace}
-type: Opaque
-data:
-  webserver-secret-key: ${base64encode(aws_secretsmanager_secret_version.airflow_webserver.secret_string)}
-YAML
-}
-
-#---------------------------------------------------------------
-# Managing DAG files with GitSync - EFS Storage Class
-#---------------------------------------------------------------
-resource "kubectl_manifest" "efs_sc" {
-  yaml_body = <<-YAML
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: ${local.efs_storage_class}
-provisioner: efs.csi.aws.com
-parameters:
-  provisioningMode: efs-ap
-  fileSystemId: ${aws_efs_file_system.efs.id}
-  directoryPerms: "700"
-  gidRangeStart: "1000"
-  gidRangeEnd: "2000"
-YAML
-
-  depends_on = [module.eks_blueprints.eks_cluster_id]
-}
-
-#---------------------------------------------------------------
-# Persistent Volume Claim for EFS
-#---------------------------------------------------------------
-resource "kubectl_manifest" "efs_pvc" {
-  yaml_body = <<-YAML
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${local.efs_pvc}
-  namespace: ${module.airflow_irsa.namespace}
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: ${local.efs_storage_class}
-  resources:
-    requests:
-      storage: 10Gi
-YAML
-
-  depends_on = [kubectl_manifest.efs_sc]
-}
-#---------------------------------------------------------------
-# EFS Filesystem for Airflow DAGs
-#---------------------------------------------------------------
-resource "aws_efs_file_system" "efs" {
-  creation_token = "efs"
-  encrypted      = true
-
-  tags = local.tags
-}
-
-resource "aws_efs_mount_target" "efs_mt" {
-  count = length(module.vpc.private_subnets)
-
-  file_system_id  = aws_efs_file_system.efs.id
-  subnet_id       = module.vpc.private_subnets[count.index]
-  security_groups = [aws_security_group.efs.id]
-}
-
-resource "aws_security_group" "efs" {
-  name        = "${local.name}-efs"
-  description = "Allow inbound NFS traffic from private subnets of the VPC"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    description = "Allow NFS 2049/tcp"
-    cidr_blocks = module.vpc.private_subnets_cidr_blocks
-    from_port   = 2049
-    to_port     = 2049
-    protocol    = "tcp"
-  }
-
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for Airflow S3 logging
-#---------------------------------------------------------------
-module "airflow_irsa" {
-  source                     = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.15.0"
-  eks_cluster_id             = module.eks_blueprints.eks_cluster_id
-  eks_oidc_provider_arn      = module.eks_blueprints.eks_oidc_provider_arn
-  irsa_iam_policies          = [aws_iam_policy.airflow.arn]
-  kubernetes_namespace       = "airflow"
-  kubernetes_service_account = local.airflow_service_account
-}
-
-#---------------------------------------------------------------
-# Creates IAM policy for accessing s3 bucket
-#---------------------------------------------------------------
-resource "aws_iam_policy" "airflow" {
-  description = "IAM role policy for Airflow S3 Logs"
-  name        = "${local.name}-airflow-irsa"
-  policy      = data.aws_iam_policy_document.airflow_s3_logs.json
-}
-
-#---------------------------------------------------------------
-# PostgreSQL RDS security group
-#---------------------------------------------------------------
-module "security_group" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 4.0"
-
-  name        = local.name
-  description = "Complete PostgreSQL example security group"
-  vpc_id      = module.vpc.vpc_id
-
-  # ingress
-  ingress_with_cidr_blocks = [
-    {
-      from_port   = 5432
-      to_port     = 5432
-      protocol    = "tcp"
-      description = "PostgreSQL access from within VPC"
-      cidr_blocks = module.vpc.vpc_cidr_block
-    },
-  ]
-
-  tags = local.tags
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }

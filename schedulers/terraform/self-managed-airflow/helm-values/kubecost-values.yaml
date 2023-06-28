@@ -1,0 +1,90 @@
+# KubeCost WebUI -> kubectl port-forward --namespace kubecost deployment/kubecost-cost-analyzer 9090
+global:
+  grafana:
+    enabled: false
+    proxy: false
+
+#pricingCsv:
+#  enabled: false
+#  location:
+#    provider: "AWS"
+#    region: "us-east-1"
+#    URI: s3://kc-csv-test/pricing_schema.csv # a valid file URI
+#    csvAccessCredentials: pricing-schema-access-secret
+
+  # This Prometheus setup is reusing the existing Prometheus deployment
+  # Check for more docs under https://guide.kubecost.com/hc/en-us/articles/4407595941015
+#  prometheus:
+#    fqdn: http://prometheus-server.prometheus.svc
+#    enabled: false
+# If you have node-exporter and/or KSM running on your cluster, follow this step to disable the Kubecost included versions.
+prometheus:
+  server:
+    image:
+      repository: public.ecr.aws/kubecost/prometheus
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+  nodeExporter:
+    enabled: false
+  serviceAccounts:
+    nodeExporter:
+      create: false
+  kube-state-metrics:
+    disabled: true
+
+kubecostFrontend:
+  image: public.ecr.aws/kubecost/frontend
+  imagePullPolicy: Always
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+
+kubecostMetrics:
+  emitPodAnnotations: true
+  emitNamespaceAnnotations: true
+
+kubecostModel:
+  image: public.ecr.aws/kubecost/cost-model
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+
+# Set this to false if you're bringing your own service account.
+#serviceAccount:
+#  create: false
+#  name: kubecost-cost-analyzer
+#  annotations:
+#    eks.amazonaws.com/role-arn: <iam-role-arn>
+
+# Define persistence volume for cost-analyzer
+persistentVolume:
+  size: 32Gi
+  dbSize: 32.0Gi
+  enabled: true # Note that setting this to false means configurations will be wiped out on pod restart.
+  storageClass: gp2
+  # existingClaim: kubecost-cost-analyzer # a claim in the same namespace as kubecost
+
+ingress:
+  enabled: false
+  # className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  paths: ["/"] # There's no need to route specifically to the pods-- we have an nginx deployed that handles routing
+  hosts:
+    - cost-analyzer.local
+  tls: []
+
+service:
+  type: ClusterIP
+  port: 9090
+  targetPort: 9090
+  # nodePort:
+  labels: {}
+  annotations: {}
