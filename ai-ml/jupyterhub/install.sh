@@ -10,7 +10,6 @@ targets=(
   "module.eks"
   "module.ebs_csi_driver_irsa"
   "module.vpc_cni_irsa"
-  "module.efs"
   "aws_cognito_user_pool.pool"
   "aws_cognito_user_pool_domain.domain"
   "aws_cognito_user_pool_client.user_pool_client"

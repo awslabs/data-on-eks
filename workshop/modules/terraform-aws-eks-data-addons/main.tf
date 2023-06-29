@@ -35,6 +35,10 @@ locals {
   emr_spark_operator_repository = "oci://${local.account_region_map[local.region]}.dkr.ecr.${local.region}.amazonaws.com"
   emr_spark_operator_version    = "1.1.26-amzn-1"
 
+  jupyterhub_name       = "jupyterhub"
+  jupyterhub_repository = "https://jupyterhub.github.io/helm-chart/"
+  jupyterhub_version    = "2.0.0"
+
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
   region     = data.aws_region.current.name

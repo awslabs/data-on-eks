@@ -102,6 +102,7 @@ module "kubernetes_data_addons" {
     })]
   }
 }
+
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
 #---------------------------------------------------------------
@@ -111,6 +112,7 @@ resource "aws_efs_file_system" "efs" {
 
   tags = local.tags
 }
+
 resource "aws_efs_mount_target" "efs_mt" {
   count = length(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]))
 
@@ -118,6 +120,7 @@ resource "aws_efs_mount_target" "efs_mt" {
   subnet_id       = element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), count.index)
   security_groups = [aws_security_group.efs.id]
 }
+
 resource "aws_security_group" "efs" {
   name        = "${local.name}-efs"
   description = "Allow inbound NFS traffic from private subnets of the VPC"
@@ -140,7 +143,7 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: efs-persist
-  namespace: ${local.name}
+  namespace: jupyterhub
 spec:
   capacity:
     storage: 123Gi
@@ -158,7 +161,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: efs-persist
-  namespace: ${local.name}
+  namespace: jupyterhub
 spec:
   accessModes:
     - ReadWriteMany
@@ -175,7 +178,7 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: efs-persist-shared
-  namespace: ${local.name}
+  namespace: jupyterhub
 spec:
   capacity:
     storage: 123Gi
@@ -193,7 +196,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: efs-persist-shared
-  namespace: ${local.name}
+  namespace: jupyterhub
 spec:
   accessModes:
     - ReadWriteMany
@@ -208,7 +211,6 @@ YAML
 # This can be used
 # Auth integration later.
 #---------------------------------------------------------------
-
 resource "aws_cognito_user_pool" "pool" {
   name = "userpool"
 
@@ -219,6 +221,7 @@ resource "aws_cognito_user_pool" "pool" {
     minimum_length = 6
   }
 }
+
 resource "aws_cognito_user_pool_domain" "domain" {
   domain       = local.cog_domain_name
   user_pool_id = aws_cognito_user_pool.pool.id

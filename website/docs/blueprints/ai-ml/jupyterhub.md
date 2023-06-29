@@ -37,7 +37,7 @@ Ensure that you have installed the following tools on your machine.
    After domain creation, navigate to the DNS manager and create a sub-domain for hosting the jupyterhub.
    The sub-domains CNAME record would need to be updated to the JupyterHub Load Balancer url which is mentioned in the deployment steps.
 
-    ![](img/ChangeIP.png)       
+    ![](img/ChangeIP.png)  
 
 5. Also, you need to obtain an SSL certificate from a trusted Certificate Authority (CA) or through your web hosting provider to attach to the domain.
    For testing environments we can use a self-signed certificate.
@@ -48,12 +48,12 @@ Ensure that you have installed the following tools on your machine.
     ```
     When installing the certificate use the sub-domain which is registered with the DNS service in the above step.
     The service generates the private key and self-signed certificate.
-    
+
 6. Import the certificate into AWS Certificate Manager.
    Open the private key(key.pem) in a text editor and copy the contents into the private key section of ACM.
    Simmilarly, copy the contents of the certificate.pem file into the certificate body section and submit.
-        
-     ![](img/ACM.png) 
+
+     ![](img/ACM.png)
 
 </CollapsibleContent>
 <CollapsibleContent header={<h3><span>Deploy the EKS Cluster with JupyterHub add-on.</span></h3>}>
@@ -126,8 +126,8 @@ To test the setup of the shared and personal directories in JupyterHub, you can 
 ```bash
 df -h
 ```
-Verify EFS mounts created.    
-Each user's private home directory is available at /home/jovyan    
+Verify EFS mounts created.  
+Each user's private home directory is available at /home/jovyan  
 The shared directory is available at /home/shared
 
 </CollapsibleContent>

@@ -125,3 +125,16 @@ variable "emr_spark_operator_helm_config" {
   type        = any
   default     = {}
 }
+
+#-----------JupyterHub ADDON-------------
+variable "enable_jupyterhub" {
+  description = "Enable Jupyterhub Add-On"
+  type        = bool
+  default     = true
+}
+
+variable "jupyterhub_helm_config" {
+  description = "Helm configuration for JupyterHub"
+  type        = any
+  default     = {}
+}
