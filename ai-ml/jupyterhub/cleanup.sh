@@ -7,24 +7,32 @@ read -p "Enter acm certificate: " acm_certificate_domain
 targets=(
   "module.kubernetes_data_addons"
   "module.eks_blueprints_kubernetes_addons"
-  "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_irsa"
-  "aws_cognito_user_pool.pool"
-  "aws_cognito_user_pool_domain.domain"
-  "aws_cognito_user_pool_client.user_pool_client"
   "module.eks"
-  "module.vpc"
 )
 
+#-------------------------------------------
+# Helpful to delete the stuck in "Terminating" namespaces
+# Rerun the cleanup.sh script to detect and delete the stuck resources
+#-------------------------------------------
+terminating_namespaces=$(kubectl get namespaces --field-selector status.phase=Terminating -o json | jq -r '.items[].metadata.name')
+
+# If there are no terminating namespaces, exit the script
+if [[ -z $terminating_namespaces ]]; then
+    echo "No terminating namespaces found"
+fi
+
+for ns in $terminating_namespaces; do
+    echo "Terminating namespace: $ns"
+    kubectl get namespace $ns -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f -
+done
 
 #-------------------------------------------
 # Terraform destroy per module target
 #-------------------------------------------
 for target in "${targets[@]}"
 do
-  terraform destroy -target="$target" -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve
-  destroy_output=$(terraform destroy -target="$target" -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve 2>&1)
-  if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
+  destroy_output=$(terraform destroy -target="$target" -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve 2>&1 | tee /dev/tty)
+  if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else
     echo "FAILED: Terraform destroy of $target failed"
@@ -35,9 +43,8 @@ done
 #-------------------------------------------
 # Terraform destroy full
 #-------------------------------------------
-terraform destroy -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve
-destroy_output=$(terraform destroy -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve 2>&1)
-if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
+destroy_output=$(terraform destroy -var="acm_certificate_domain=$acm_certificate_domain" -auto-approve 2>&1 | tee /dev/tty)
+if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
   echo "SUCCESS: Terraform destroy of all targets completed successfully"
 else
   echo "FAILED: Terraform destroy of all targets failed"

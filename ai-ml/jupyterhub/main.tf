@@ -1,3 +1,15 @@
+data "aws_availability_zones" "available" {}
+
+locals {
+  name   = var.name
+  region = var.region
+  azs    = slice(data.aws_availability_zones.available.names, 0, 2)
+  tags = {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  }
+}
+
 #---------------------------------------------------------------
 # EKS Cluster
 #---------------------------------------------------------------
@@ -51,18 +63,10 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
+
     # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
-    # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
-    # Change this according to your security requirements if needed
+    # This can be restricted further to specific port based on the requirement for each Add-on e.g., coreDNS 53, metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
+    # Update this according to your security requirements if needed
     ingress_cluster_to_node_all_traffic = {
       description                   = "Cluster API to Nodegroup all traffic"
       protocol                      = "-1"
@@ -81,18 +85,18 @@ module "eks" {
   }
 
   eks_managed_node_groups = {
-    #  We recommend to have a MNG to place your critical workloads and add-ons
-    #  Then rely on Karpenter to scale your workloads
-    #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
+    #  It's recommended to have a Managed Node group for hosting critical add-ons
+    #  It's recommeded to use Karpenter to place your workloads instead of using Managed Node groups
+    #  You can leverage nodeSelector and Taints/tolerations to distribute workloads across Managed Node group or Karpenter nodes.
     core_node_group = {
       name        = "jupyterhub-node-group"
-      description = "EKS managed node group example launch template"
+      description = "EKS Core node group for hosting critical add-ons"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
-      min_size     = 1
-      max_size     = 3
-      desired_size = 2
+      min_size     = 4
+      max_size     = 8
+      desired_size = 4
 
       instance_types = ["m5.xlarge"]
 
@@ -101,7 +105,7 @@ module "eks" {
         xvda = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
+            volume_size = 100
             volume_type = "gp3"
           }
         }
@@ -112,10 +116,10 @@ module "eks" {
         NodeGroupType = "core"
       }
 
-      tags = {
+      tags = merge(local.tags, {
         Name                     = "core-node-grp",
         "karpenter.sh/discovery" = local.name
-      }
+      })
     }
   }
 }

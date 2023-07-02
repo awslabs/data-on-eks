@@ -1,55 +1,27 @@
-module "eks_blueprints_kubernetes_addons" {
-  source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
-
-  cluster_name      = module.eks.cluster_name
-  cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_version   = module.eks.cluster_version
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  #---------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------
-  eks_addons = {
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
-      most_recent              = true
-    }
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      preserve                 = true
-      most_recent              = true
-    }
-    coredns = {
-      most_recent = true
-      preserve    = true
-    }
-    kube-proxy = {
-      most_recent = true
-      preserve    = true
-    }
-  }
-
-  #---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
-  enable_karpenter                  = true
-  karpenter_enable_spot_termination = true
-  karpenter = {
-    timeout             = "300"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
 }
 
+# Use this data source to get the ARN of a certificate in AWS Certificate Manager (ACM)
+data "aws_acm_certificate" "issued" {
+  domain   = var.acm_certificate_domain
+  statuses = ["ISSUED"]
+}
+
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
+}
+
+locals {
+  cognito_custom_domain = var.cognito_custom_domain
+}
 #---------------------------------------------------------------
-# IRSA for EBS
+# IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  version               = "~> 5.20"
+  role_name_prefix      = format("%s-%s", local.name, "ebs-csi-driver-")
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
@@ -65,8 +37,8 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "vpc_cni_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
+  version               = "~> 5.20"
+  role_name_prefix      = format("%s-%s", local.name, "vpc-cni-")
   attach_vpc_cni_policy = true
   vpc_cni_enable_ipv4   = true
   oidc_providers = {
@@ -75,6 +47,91 @@ module "vpc_cni_irsa" {
       namespace_service_accounts = ["kube-system:aws-node"]
     }
   }
+  tags = local.tags
+}
+
+module "eks_blueprints_kubernetes_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.0"
+
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  eks_addons = {
+    vpc-cni = {
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+    }
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns    = {}
+    kube-proxy = {}
+  }
+
+  #---------------------------------------
+  # Kubernetes Add-ons
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # CoreDNS Autoscaler helps to scale for large EKS Clusters
+  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
+  #---------------------------------------------------------------
+  enable_cluster_proportional_autoscaler = true
+  cluster_proportional_autoscaler = {
+    timeout = "300"
+    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
+      target = "deployment/coredns"
+    })]
+    description = "Cluster Proportional Autoscaler for CoreDNS Service"
+  }
+
+  #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  metrics_server = {
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # Cluster Autoscaler
+  #---------------------------------------
+  enable_cluster_autoscaler = true
+  cluster_autoscaler = {
+    timeout     = "300"
+    create_role = true
+    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
+      aws_region     = var.region,
+      eks_cluster_id = module.eks.cluster_name
+    })]
+  }
+
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
+  karpenter = {
+    timeout             = "300"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics = {
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+  }
+
+  enable_aws_load_balancer_controller = true
+
   tags = local.tags
 }
 
@@ -90,19 +147,58 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # JupyterHub Add-on
   #---------------------------------------------------------------
+  enable_jupyterhub = true
   jupyterhub_helm_config = {
-    values = [templatefile("${path.module}/helm-values/jupyter-values.yaml", {
+    values = [templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
       ssl_cert_arn  = data.aws_acm_certificate.issued.arn
       jupyterdomain = "https://${var.acm_certificate_domain}/hub/oauth_callback"
-      authorize_url = "https://${local.cog_domain_name}.auth.${local.region}.amazoncognito.com/oauth2/authorize"
-      token_url     = "https://${local.cog_domain_name}.auth.${local.region}.amazoncognito.com/oauth2/token"
-      userdata_url  = "https://${local.cog_domain_name}.auth.${local.region}.amazoncognito.com/oauth2/userInfo"
+      authorize_url = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize"
+      token_url     = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token"
+      userdata_url  = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo"
       client_id     = aws_cognito_user_pool_client.user_pool_client.id
       client_secret = aws_cognito_user_pool_client.user_pool_client.client_secret
     })]
   }
 }
 
+
+resource "kubectl_manifest" "storage_class_gp2" {
+  force_new = true
+  yaml_body = <<YAML
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp2
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: kubernetes.io/aws-ebs
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+parameters:
+  type: gp2
+  fsType: ext4
+YAML
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
+}
+
+resource "kubectl_manifest" "storage_class_gp3" {
+  yaml_body = <<YAML
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  csi.storage.k8s.io/fstype: ext4
+  encrypted: "true"
+YAML
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
+}
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
 #---------------------------------------------------------------
@@ -153,6 +249,8 @@ spec:
     server: ${aws_efs_file_system.efs.dns_name}
     path: "/"
 YAML
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 resource "kubectl_manifest" "pvc" {
@@ -170,6 +268,8 @@ spec:
     requests:
       storage: 1Gi
 YAML
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 resource "kubectl_manifest" "pv_shared" {
@@ -188,6 +288,8 @@ spec:
     server: ${aws_efs_file_system.efs.dns_name}
     path: "/"
 YAML
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 resource "kubectl_manifest" "pvc_shared" {
@@ -205,14 +307,17 @@ spec:
     requests:
       storage: 1Gi
 YAML
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
+
 #---------------------------------------------------------------
 # Cognito pool, domain and client creation.
 # This can be used
 # Auth integration later.
-#---------------------------------------------------------------
+# #---------------------------------------------------------------
 resource "aws_cognito_user_pool" "pool" {
-  name = "userpool"
+  name = "jupyterhub-userpool"
 
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
@@ -223,7 +328,7 @@ resource "aws_cognito_user_pool" "pool" {
 }
 
 resource "aws_cognito_user_pool_domain" "domain" {
-  domain       = local.cog_domain_name
+  domain       = local.cognito_custom_domain
   user_pool_id = aws_cognito_user_pool.pool.id
 }
 
@@ -238,4 +343,6 @@ resource "aws_cognito_user_pool_client" "user_pool_client" {
   supported_identity_providers = [
     "COGNITO"
   ]
+
+  depends_on = [aws_cognito_user_pool_domain.domain]
 }

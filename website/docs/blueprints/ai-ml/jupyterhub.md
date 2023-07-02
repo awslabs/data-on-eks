@@ -57,24 +57,27 @@ Ensure that you have installed the following tools on your machine.
 
 </CollapsibleContent>
 <CollapsibleContent header={<h3><span>Deploy the EKS Cluster with JupyterHub add-on.</span></h3>}>
-#### Clone the repository
+
+### Deploy
+
+Clone the repository
+
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-#### Initialize Terraform
-
-Navigate into the example directory
+Navigate into one of the blueprint directory
 
 ```bash
 cd data-on-eks/ai-ml/jupyterhub
 ```
+Run the install script
 
-#### Run the install script
+Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region or other variables.
 
-
-Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region. This is also the time to update any other input variables or make any other changes to the terraform template.
-
+:::info
+Please note that this script will asks for an input value for `var.acm_certificate_domain`. You need to this to deploy the blueprint. Checkout the pre-requisite scripts
+:::
 
 ```bash
 ./install.sh
@@ -85,15 +88,23 @@ Use the provided helper script `install.sh` to run the terraform init and apply 
 <CollapsibleContent header={<h3><span>Verify Deployment</span></h3>}>
 To validate that the JupyterHub add-on is running ensure that the add-on deployments for the controller and the webhook are in RUNNING state.
 
-Run Command - kubectl get pods -n jupyterhub (Provided the default namespace jupyterhub is used.)
+Run the following command
+
+```bash
+kubectl get pods -n jupyterhub
+```
 
 ![](img/jupyterhub_running.png)
 
 JupyterHub, by default, creates a proxy service called proxy-public which is exposed by Load Balancer.
+
 To validate that the proxy service and running and exposed via LoadBalancer.  
 
-Run Command - kubectl get svc -n jupyterhub
+Run the following command
 
+```bash
+kubectl get svc -n jupyterhub
+```
 
 ![](img/jupyterhub_service.png)
 
