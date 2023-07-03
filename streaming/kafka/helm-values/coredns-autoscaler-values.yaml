@@ -27,10 +27,6 @@ podSecurityContext:
   supplementalGroups: [ 65534 ]
   fsGroup: 65534
 
-nodeSelector:
-  kubernetes.io/os: ${operating_system}
-  NodeGroupType: ${node_group_type}
-
 resources:
   limits:
     cpu: 100m
