@@ -1,6 +1,6 @@
 locals {
   emr_spark_operator_values = yamlencode(merge(
-    yamldecode(templatefile("${path.module}/values/emr-spark-operator-values.yaml", { aws_region = local.region })),
+    yamldecode(templatefile("${path.module}/helm-values/emr-spark-operator-values.yaml", { aws_region = local.region })),
     try(yamldecode(var.emr_spark_operator_helm_config.values[0]), {})
   ))
 }

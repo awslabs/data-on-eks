@@ -141,7 +141,7 @@ module "eks_blueprints_kubernetes_addons" {
 # NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
 module "kubernetes_data_addons" {
   # Please note that local source will be replaced once the below repo is public
-  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
+  # source = "https://github.com/aws-ia/terraform-aws-eks-data-addons"
   source            = "../../workshop/modules/terraform-aws-eks-data-addons"
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------------------------------
@@ -201,6 +201,7 @@ YAML
 }
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
+# This will be repalced with Dynamic EFS provision using EFS CSI Driver
 #---------------------------------------------------------------
 resource "aws_efs_file_system" "efs" {
   creation_token = "efs"
@@ -315,7 +316,7 @@ YAML
 # Cognito pool, domain and client creation.
 # This can be used
 # Auth integration later.
-# #---------------------------------------------------------------
+# ---------------------------------------------------------------
 resource "aws_cognito_user_pool" "pool" {
   name = "jupyterhub-userpool"
 

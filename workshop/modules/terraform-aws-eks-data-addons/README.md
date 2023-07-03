@@ -1,12 +1,42 @@
-# Data on EKS Kubernetes add-ons
+# Terraform Module: Data & AI/ML Kubernetes Add-ons
 
-:exclamation: :exclamation: Notice to Users :exclamation: :exclamation:
+This Terraform module contains commonly used Data & AI/ML related Kubernetes add-ons that are typically included in [Data on EKS](https://github.com/awslabs/data-on-eks) blueprints.
+The purpose of this module is to provide customers with the flexibility to select and customize the add-ons they require while leveraging the Data on EKS blueprints.
 
-This Terraform module is specifically designed to support Data on EKS blueprints.
-To maintain focus and avoid code duplication across various blueprints, we kindly request that you refrain from adding new Kubernetes add-ons to this module, unless they are directly related to Data on EKS Blueprints.
-Your understanding and cooperation are greatly appreciated :pray:
----
+## Important Note
 
+Please be aware that this module is primarily intended for use with supported Data on EKS blueprints.
+We kindly request that you refrain from adding new Kubernetes add-ons to this module unless they are directly related to [Data on EKS](https://github.com/awslabs/data-on-eks) blueprints.
+Your understanding and cooperation are greatly appreciated. :pray:
+
+## Available Add-ons
+
+The following add-ons are included in this Terraform module:
+
+| Add-on Name                                                                                                              | Description                                                     |
+|--------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------|
+| [EMR Spark Operator](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/spark-operator-gs.html)   | A Helm chart for EMR Spark Operator for EKS                   |
+| [Apache Flink Operator](https://github.com/apache/flink-kubernetes-operator/tree/main/helm/flink-kubernetes-operator) | A Helm chart for Apache Flink Kubernetes Operator               |
+| [Apache YuniKorn](https://github.com/apache/yunikorn-release/tree/master/helm-charts/yunikorn)                           | A Helm Chart for Apache YuniKorn Batch schdeuler for Kubernetes |
+| [Spark History Server](https://github.com/Hyper-Mesh/spark-history-server)                       | A Helm Chart for Spark History Server for Kubernetes            |
+| [JupyterHub](https://github.com/jupyterhub/zero-to-jupyterhub-k8s/tree/main/jupyterhub)                       | A Helm Chart for zero-to-jupyterhub-k8s on Kubernetes          |
+| [NVIDIA GPU Operator](https://github.com/NVIDIA/gpu-operator/tree/master/deployments/gpu-operator)                       | A Helm Chart for NVIDIA GPU Operator for Kubernetes            |
+| [Spark Operator](https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/tree/master/charts/spark-operator-chart)   | A Helm chart for Spark on Kubernetes operator  
+
+Other commonly used add-ons with Data on EKS Blueprints:
+
+**NOTE**: Please be aware that some of these add-ons may be deprecated in favor of EKS Blueprints add-ons or EKS Managed add-ons.
+
+
+| Add-on Name                                                   | Description                 |
+|---------------------------------------------------------------|-----------------------------|
+| [prometheus](https://prometheus-community.github.io/helm-charts) | A Helm Chart for Prometheus |
+| [kubecost](oci://public.ecr.aws/kubecost)  | A Helm Chart for Kubecost   |
+| [Grafana](https://grafana.github.io/helm-charts) | A Helm Chart for Grafana    |
+
+Please refer to the documentation of each add-on for more details on usage and configuration.
+
+----
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
@@ -81,6 +111,7 @@ Your understanding and cooperation are greatly appreciated :pray:
 
 | Name | Description |
 |------|-------------|
+| <a name="output_jupyterhub"></a> [jupyterhub](#output\_jupyterhub) | jupyterhub Helm Chart metadata |
 | <a name="output_kubecost"></a> [kubecost](#output\_kubecost) | Kubecost Helm Chart metadata |
 | <a name="output_prometheus"></a> [prometheus](#output\_prometheus) | Prometheus Helm Chart metadata |
 | <a name="output_spark_history_server"></a> [spark\_history\_server](#output\_spark\_history\_server) | Spark History Server Helm Chart metadata |

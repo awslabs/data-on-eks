@@ -31,14 +31,16 @@ variable "secondary_cidr_blocks" {
   type        = list(string)
 }
 
+#  Domain name is public so make sure you use a unique while deploying
 variable "cognito_custom_domain" {
-  description = "URL of the jupyter notebook. e.g..,https://cog.yourdomain.com"
+  description = "Cognito domain prefix for Hosted UI authentication endpoints"
   type        = string
-  default     = "ml-jupy" #  Domain cannot contain reserved word: cognito
+  default     = "eks-jupy"
 }
 
 # NOTE: You need to use private domain or public domain name with ACM certificate
 # This website doc will show you how to create free public domain name with ACM certificate for testing purpose only
+# Example of public domain name(<subdomain-name>.<domain-name>.com): eks.jupyter-doeks.dynamic-dns.com
 variable "acm_certificate_domain" {
   type        = string
   description = "Enter domain name with wildcard and ensure ACM certificate is created for this domain name, e.g. *.example.com"
