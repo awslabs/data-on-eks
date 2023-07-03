@@ -1,49 +1,55 @@
 #---------------------------------------------------------------
-# VPC and Subnets
+# Supporting Network Resources
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
   name = local.name
-  cidr = local.vpc_cidr
+  cidr = var.vpc_cidr
+  azs  = local.azs
 
-  azs              = local.azs
-  public_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k)]
-  private_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 10)]
-  database_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 20)]
+  # Secondary CIDR block attached to VPC for EKS Control Plane ENI + Nodes + Pods
+  secondary_cidr_blocks = var.secondary_cidr_blocks
 
+  # 1/ RFC6598 range 100.64.0.0/16 for EKS Data Plane for two subnets(32766 IPs per Subnet) across two AZs for EKS Control Plane ENI + Nodes + Pods
+  # 2/ Two private Subnets with RFC1918 private IPv4 address range for Private NAT + NLB + Airflow + EC2 Jumphost etc.
+  private_subnets = concat(var.private_subnets, var.eks_data_plane_subnet_secondary_cidr)
+
+  # ------------------------------
+  # Optional Public Subnets for NAT and IGW for PoC/Dev/Test environments
+  # Public Subnets can be disabled while deploying to Production and use Private NAT + TGW
+  public_subnets = var.public_subnets
+
+  # ------------------------------
+  # Private Subnets for Airflow metadata store
+  database_subnets                   = var.db_private_subnets
   create_database_subnet_group       = true
   create_database_subnet_route_table = true
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
   enable_dns_hostnames = true
-
-  # Manage so we can name
-  manage_default_network_acl    = true
-  default_network_acl_tags      = { Name = "${local.name}-default" }
-  manage_default_route_table    = true
-  default_route_table_tags      = { Name = "${local.name}-default" }
-  manage_default_security_group = true
-  default_security_group_tags   = { Name = "${local.name}-default" }
+  #-------------------------------
 
   public_subnet_tags = {
-    "kubernetes.io/cluster/${local.name}" = "shared"
-    "kubernetes.io/role/elb"              = 1
+    "kubernetes.io/role/elb" = 1
   }
 
   private_subnet_tags = {
-    "kubernetes.io/cluster/${local.name}" = "shared"
-    "kubernetes.io/role/internal-elb"     = 1
+    "kubernetes.io/role/internal-elb" = 1
+    # Tags subnets for Karpenter auto-discovery
+    "karpenter.sh/discovery" = local.name
   }
 
   tags = local.tags
 }
 
 module "vpc_endpoints_sg" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
   source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   name        = "${local.name}-vpc-endpoints"
   description = "Security group for VPC endpoint access"
@@ -69,11 +75,13 @@ module "vpc_endpoints_sg" {
 }
 
 module "vpc_endpoints" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
+  security_group_ids = [module.vpc_endpoints_sg[0].security_group_id]
 
   endpoints = merge({
     s3 = {
@@ -85,7 +93,7 @@ module "vpc_endpoints" {
       }
     }
     },
-    { for service in toset(local.vpc_endpoints) :
+    { for service in toset(["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]) :
       replace(service, ".", "_") =>
       {
         service             = service
