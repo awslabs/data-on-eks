@@ -22,3 +22,7 @@ output "spark_history_server" {
   value       = try(helm_release.spark_history_server[0].metadata, null)
   description = "Spark History Server Helm Chart metadata"
 }
+output "strimzi_kafka_operator" {
+  value       = try(helm_release.strimzi_kafka_operator[0].metadata, null)
+  description = "Strimzi Kafka Operator Helm Chart metadata"
+}

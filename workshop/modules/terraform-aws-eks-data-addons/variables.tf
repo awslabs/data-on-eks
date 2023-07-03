@@ -125,3 +125,18 @@ variable "emr_spark_operator_helm_config" {
   type        = any
   default     = {}
 }
+
+#---------------------------------------------------
+# Srimzi Kafka Operator
+#---------------------------------------------------
+variable "enable_strimzi_kafka_operator" {
+  description = "Enable the Strimzi Kafka Operator"
+  default     = false
+  type        = bool
+}
+
+variable "strimzi_kafka_operator_helm_config" {
+  description = "Helm configuration for Strimzi Kafka Operator"
+  type        = any
+  default     = {}
+}
