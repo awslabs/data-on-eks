@@ -49,6 +49,10 @@ locals {
   prometheus_repository = "https://prometheus-community.github.io/helm-charts"
   prometheus_version    = "22.6.0"
 
+  airflow_name       = "airflow"
+  airflow_repository = "https://airflow.apache.org"
+  airflow_version    = "1.9.0"
+
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
   region     = data.aws_region.current.name
