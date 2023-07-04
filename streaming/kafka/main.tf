@@ -1,35 +1,43 @@
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}
+
+data "aws_availability_zones" "available" {}
+
+locals {
+  name   = var.name
+  region = var.region
+
+  cluster_version = var.eks_cluster_version
+
+  kafka_namespace = "kafka"
+
+  vpc_cidr = var.vpc_cidr
+  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+
+  tags = {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  }
+}
+
+################################################################################
+# Cluster
+################################################################################
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.9"
+  version = "~> 19.13"
 
-  cluster_name    = local.name
-  cluster_version = var.eks_cluster_version
-
-  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
-  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_name                   = local.name
+  cluster_version                = local.cluster_version
+  cluster_endpoint_public_access = true
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
   manage_aws_auth_configmap = true
 
-  #---------------------------------------
-  # Note: This can further restricted to specific required for each Add-on and your application
-  #---------------------------------------
-  # Extend cluster security group rules
-  cluster_security_group_additional_rules = {
-    ingress_nodes_ephemeral_ports_tcp = {
-      description                = "Nodes on ephemeral ports"
-      protocol                   = "tcp"
-      from_port                  = 1025
-      to_port                    = 65535
-      type                       = "ingress"
-      source_node_security_group = true
-    }
-  }
-
-  # Extend node-to-node security group rules
   node_security_group_additional_rules = {
     ingress_self_all = {
       description = "Node to node all ports/protocols"
@@ -56,42 +64,19 @@ module "eks" {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
+
   eks_managed_node_groups = {
-    #  We recommend to have a MNG to place your critical workloads and add-ons
-    #  Then rely on Karpenter to scale your workloads
-    #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
     core_node_group = {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
-
-      ami_id = data.aws_ami.eks.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = module.vpc.private_subnets
 
       min_size     = 1
       max_size     = 9
       desired_size = 3
 
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types = ["m5.xlarge"]
 
       ebs_optimized = true
-      # This is the root filesystem
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
@@ -101,12 +86,10 @@ module "eks" {
           }
         }
       }
-
       labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
       }
-
       tags = {
         Name = "core-node-grp"
       }
@@ -115,33 +98,12 @@ module "eks" {
       name        = "kafka-node-group"
       description = "EKS managed node group example launch template"
 
-      ami_id = data.aws_ami.eks.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = module.vpc.private_subnets
-
       min_size     = 1
       max_size     = 12
       desired_size = 3
 
-      force_update_version = true
-      instance_types       = ["r6i.2xlarge"]
-
-      ebs_optimized = true
+      instance_types = ["r6i.2xlarge"]
+      ebs_optimized  = true
       # This is the root filesystem Not used by the brokers
       block_device_mappings = {
         xvda = {
@@ -152,17 +114,62 @@ module "eks" {
           }
         }
       }
-
       labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "kafka"
       }
-
-      taints = [{ key = "dedicated", value = "kafka", effect = "NO_SCHEDULE" }]
-
+      taints = [
+        {
+          key    = "dedicated"
+          value  = "kafka"
+          effect = "NO_SCHEDULE"
+        }
+      ]
       tags = {
         Name = "kafka-node-grp"
       }
     }
   }
+
+  tags = local.tags
+}
+
+
+#---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+
+resource "kubernetes_annotations" "gp2_default" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks]
+}
+
+resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+  volume_binding_mode    = "WaitForFirstConsumer"
+  parameters = {
+    fsType    = "xfs"
+    encrypted = true
+    type      = "gp3"
+  }
+
+  depends_on = [kubernetes_annotations.gp2_default]
 }

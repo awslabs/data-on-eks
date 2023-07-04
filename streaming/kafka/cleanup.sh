@@ -6,9 +6,8 @@ read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
 targets=(
-  "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_irsa"
-  "module.eks"
+  "module.kubernetes_data_addons"
+  "module.eks_blueprints_kubernetes_addons"
 )
 
 for target in "${targets[@]}"

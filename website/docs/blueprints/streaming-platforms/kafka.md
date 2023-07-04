@@ -238,14 +238,14 @@ kubectl -n kafka run kafka-consumer -ti --image=strimzi/kafka:0.14.0-kafka-2.3.0
 Login to Grafana dashboard by running the following command.
 
 ```bash
-kubectl port-forward svc/grafana-service 3000:3000 -n grafana
+kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack
 ```
-Open browser with local [Grafana Web UI](http://localhost:3000/)
+Open browser with local [Grafana Web UI](http://localhost:8080/)
 
 Enter username as `admin` and **password** can be extracted from the below command.
 
 ```bash
-kubectl get secrets/grafana-admin-credentials --template={{.data.GF_SECURITY_ADMIN_PASSWORD}} -n grafana | base64 -D
+kubectl get secret kube-prometheus-stack-grafana -n kube-prometheus-stack -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 ```
 
 ### Open Strimzi Kafka Dashboard
@@ -258,7 +258,7 @@ The below are builtin Kafka dashboards which created during the deployment.
 
 ![Kafka Zookeeper](img/zookeeper.png)
 
-### Open Strimzi Zookeeper Dashboard
+### Open Strimzi Kafka Exporter
 You can verify the `test-topic` with three partitions below.
 
 ![img.png](img/kafka-exporter.png)
