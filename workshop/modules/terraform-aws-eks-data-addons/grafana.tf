@@ -18,7 +18,7 @@ locals {
   ] : []
 
   grafana_merged_values_yaml = yamlencode(merge(
-    yamldecode(templatefile("${path.module}/values/grafana.yaml", { region = local.region })),
+    yamldecode(templatefile("${path.module}/helm-values/grafana.yaml", { region = local.region })),
     try(yamldecode(var.grafana_helm_config.values[0]), {})
   ))
 }
