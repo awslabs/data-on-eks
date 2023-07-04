@@ -28,7 +28,8 @@ module "vpc_cni_ipv4_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.20"
 
-  role_name             = "${module.eks.cluster_name}-vpc-cni-ipv4"
+  role_name_prefix = "${module.eks.cluster_name}-vpc-cni-ipv4"
+
   attach_vpc_cni_policy = true
   vpc_cni_enable_ipv4   = true
 
@@ -58,16 +59,11 @@ module "eks_blueprints_addons" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns = {
-      most_recent = true
-    }
     vpc-cni = {
-      most_recent              = true
       service_account_role_arn = module.vpc_cni_ipv4_irsa.iam_role_arn
     }
-    kube-proxy = {
-      most_recent = true
-    }
+    coredns    = {}
+    kube-proxy = {}
   }
 
   #---------------------------------------
@@ -98,11 +94,6 @@ module "eks_blueprints_addons" {
       node_group_type  = "core"
     })]
   }
-
-  #---------------------------------------
-  # Cert Manager
-  #---------------------------------------
-  enable_cert_manager = true
 
   #---------------------------------------
   # Cluster Autoscaler
@@ -163,7 +154,7 @@ module "kubernetes_data_addons" {
 
 resource "kubernetes_namespace" "kafka_namespace" {
   metadata {
-    name = var.kafka_namespace
+    name = local.kafka_namespace
   }
 
   depends_on = [module.eks.cluster_name]

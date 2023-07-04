@@ -10,6 +10,8 @@ locals {
 
   cluster_version = var.eks_cluster_version
 
+  kafka_namespace = "kafka"
+
   vpc_cidr = var.vpc_cidr
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 

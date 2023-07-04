@@ -54,7 +54,6 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.27"` | no |
-| <a name="input_kafka_namespace"></a> [kafka\_namespace](#input\_kafka\_namespace) | Kafka namespace | `string` | `"kafka"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"kafka-on-eks"` | no |
 | <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR | `string` | `"10.1.0.0/16"` | no |
