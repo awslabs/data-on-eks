@@ -18,7 +18,7 @@ locals {
   ] : []
 
   spark_history_server_merged_values_yaml = yamlencode(merge(
-    yamldecode(templatefile("${path.module}/values/spark-history-server.yaml", {})),
+    yamldecode(templatefile("${path.module}/helm-values/spark-history-server.yaml", {})),
     try(yamldecode(var.spark_history_server_helm_config.values[0]), {})
   ))
 }

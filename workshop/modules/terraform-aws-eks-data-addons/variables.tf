@@ -139,4 +139,29 @@ variable "strimzi_kafka_operator_helm_config" {
   description = "Helm configuration for Strimzi Kafka Operator"
   type        = any
   default     = {}
+}    
+  
+#-----------JupyterHub ADDON-------------
+variable "enable_jupyterhub" {
+  description = "Enable Jupyterhub Add-On"
+  type        = bool
+  default     = false
+}
+variable "jupyterhub_helm_config" {
+  description = "Helm configuration for JupyterHub"
+  type        = any
+  default     = {}
+}
+#---------------------------------------------------
+# Airflow
+#---------------------------------------------------
+variable "enable_airflow" {
+  description = "Enable Airflow add-on"
+  type        = bool
+  default     = false
+}
+variable "airflow_helm_config" {
+  description = "Airflow Helm Chart config"
+  type        = any
+  default     = {}
 }

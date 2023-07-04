@@ -3,7 +3,7 @@
 
 💥 **Welcome to Data on Amazon EKS (DoEKS)** 💥
 
-Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable data platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS.
+Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable Data/ML platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS.
 
 > **Note**: DoEKS is actively being developed for various patterns. To see what features are in progress, please check out the [issues](https://github.com/awslabs/data-on-eks/issues) section of our repository.
 
@@ -16,32 +16,34 @@ The following diagram illustrates the open source data tools, Kubernetes operato
 ## 🌟 Features
 Data on EKS(DoEKS) solution is categorized into the following areas.
 
-🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/data-analytics) on EKS
+🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics) on EKS
 
-🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/ai-ml) on EKS
+🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml) on EKS
 
-🎯  [Distributed Databases & Query Engine](https://awslabs.github.io/data-on-eks/docs/distributed-databases) on EKS
+🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms) on EKS
 
-🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/streaming-platforms) on EKS
+🎯  [Scheduler Workflow Platforms](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers) on EKS
 
-🎯  [Scheduler Workflow Platforms](https://awslabs.github.io/data-on-eks/docs/job-schedulers) on EKS
+🎯  [Distributed Databases & Query Engine](https://awslabs.github.io/data-on-eks/docs/blueprints/distributed-databases) on EKS
 
 ## 🏃‍♀️Getting Started
-In this repository, you'll find a variety of deployment examples for creating data platforms with Amazon EKS clusters and Kubernetes add-ons. These examples are just a small selection of the available blueprints - visit the [DoEKS website](https://awslabs.github.io/data-on-eks/) for the complete list of options.
+In this repository, you'll find a variety of deployment blueprints for creating Data/ML platforms with Amazon EKS clusters. These examples are just a small selection of the available blueprints - visit the [DoEKS website](https://awslabs.github.io/data-on-eks/) for the complete list of options.
 
-🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) - 👈 Start here if you are new to EMR on EKS. This template deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
+🚀 [EMR on EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-karpenter) - 👈 Start here if you are new to EMR on EKS. This blueprint deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
 
-🚀 [Spark Operator on EKS](https://awslabs.github.io/data-on-eks/docs/data-analytics/spark-operator-yunikorn) - This template deploys EKS cluster and uses Spark Operator and Apache YuniKorn for running self-managed Spark jobs
+🚀 [Spark Operator with Apache YuniKorn on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/spark-operator-yunikorn) - This blueprint deploys EKS cluster and uses Spark Operator and Apache YuniKorn for running self-managed Spark jobs
 
-🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/ai-ml/ray) - This template deploys Ray Operator on EKS with sample scripts.
+🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/ray) - This blueprint deploys Ray Operator on EKS with sample scripts.
 
-🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/job-schedulers/aws-managed-airflow) - This template deploys EMR on EKS cluster and uses Amazon Managed Workflows for Apache Airflow (MWAA) to run Spark jobs.
+🚀 [Amazon Manged Workflows for Apache Airflow (MWAA)](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/aws-managed-airflow) - This blueprint deploys EMR on EKS cluster and uses Amazon Managed Workflows for Apache Airflow (MWAA) to run Spark jobs.
 
-🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers/self-managed-airflow) - This template sets up a self-managed Apache Airflow on an Amazon EKS cluster, following best practices.
+🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/self-managed-airflow) - This blueprint sets up a self-managed Apache Airflow on an Amazon EKS cluster, following best practices.
 
-🚀 [Argo Workflows on EKS](https://awslabs.github.io/data-on-eks/docs/job-schedulers/argo-workflows-eks) - This template sets up a self-managed Argo Workflow on an Amazon EKS cluster, following best practices.
+🚀 [Argo Workflows on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/argo-workflows-eks) - This blueprint sets up a self-managed Argo Workflow on an Amazon EKS cluster, following best practices.
 
-🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/streaming-platforms/kafka) - This template deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
+🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms/kafka) - This blueprint deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
+
+🚀 [JupyterHub on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub) - This blueprint deploys a self-managed JupyterHub on EKS with Amazon Cognito authentication.
 
 ## 🗂️ Documentation
 For instructions on how to deploy Data on EKS patterns and run sample tests, visit the [DoEKS website](https://awslabs.github.io/data-on-eks/).
