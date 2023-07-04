@@ -151,7 +151,7 @@ module "kubernetes_data_addons" {
   jupyterhub_helm_config = {
     values = [templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
       ssl_cert_arn  = data.aws_acm_certificate.issued.arn
-      jupyterdomain = "https://${var.acm_certificate_domain}/hub/oauth_callback"
+      jupyterdomain = "https://${var.jupyterhub_domain}/hub/oauth_callback"
       authorize_url = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize"
       token_url     = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token"
       userdata_url  = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo"
@@ -335,7 +335,7 @@ resource "aws_cognito_user_pool_domain" "domain" {
 
 resource "aws_cognito_user_pool_client" "user_pool_client" {
   name                                 = "jupyter-client"
-  callback_urls                        = ["https://${var.acm_certificate_domain}/hub/oauth_callback"]
+  callback_urls                        = ["https://${var.jupyterhub_domain}/hub/oauth_callback"]
   user_pool_id                         = aws_cognito_user_pool.pool.id
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]

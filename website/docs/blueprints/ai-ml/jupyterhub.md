@@ -6,6 +6,9 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # JupyterHub on EKS
 
+:::info
+As part of our ongoing efforts to make this blueprint more enterprise-ready, we are actively working on adding several additional functionalities
+:::
 
 ## Introduction
 
@@ -33,12 +36,7 @@ Ensure that you have installed the following tools on your machine.
 1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
-4. Domain for hosting: For testing, use any free domain service provider. I have used [changeip](https://www.changeip.com/accounts/index.php) to create a domain.
-   After domain creation, navigate to the DNS manager and create a sub-domain for hosting the jupyterhub.
-   The sub-domains CNAME record would need to be updated to the JupyterHub Load Balancer url which is mentioned in the deployment steps.
-
-    ![](img/ChangeIP.png)  
-
+4. Domain for hosting: For testing, use any free domain service provider. You can use [changeip](https://www.changeip.com/accounts/index.php) to create a domain.
 5. Also, you need to obtain an SSL certificate from a trusted Certificate Authority (CA) or through your web hosting provider to attach to the domain.
    For testing environments we can use a self-signed certificate.
    You can use the openssl service to create a self-signed certificate.
@@ -46,14 +44,22 @@ Ensure that you have installed the following tools on your machine.
     ```bash
     openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
     ```
-    When installing the certificate use the sub-domain which is registered with the DNS service in the above step.
+    When creating the certificate use a wildcard, so that it can secure a domain and all its subdomains with a single certificate
     The service generates the private key and self-signed certificate.
+    Sample prompts to generate a certificate :
+
+    ![](img/Cert_Install.png)
+
 
 6. Import the certificate into AWS Certificate Manager.
    Open the private key(key.pem) in a text editor and copy the contents into the private key section of ACM.
    Simmilarly, copy the contents of the certificate.pem file into the certificate body section and submit.
 
      ![](img/ACM.png)
+
+     Verify certificate is installed correctly in the console in ACM.
+
+     ![](img/Cert_List.png)
 
 </CollapsibleContent>
 <CollapsibleContent header={<h3><span>Deploy the EKS Cluster with JupyterHub add-on.</span></h3>}>
@@ -76,7 +82,8 @@ Run the install script
 Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region or other variables.
 
 :::info
-Please note that this script will asks for an input value for `var.acm_certificate_domain`. You need to this to deploy the blueprint. Checkout the pre-requisite scripts
+Please note that this script will asks for  input values for 'Certificate Domain'.Please provide the wildcard root domain for which certificate has been imported into ACM.(e.g. *.jupyterhubeks.dynamic-dns.net)
+The script will also ask for the sub-domain where Jupyterhub will be hosted. Please provide the FQDN for that domain.(e.g. eks.jupyterhubeks.dynamic-dns.net)
 :::
 
 ```bash
@@ -113,7 +120,14 @@ kubectl get svc -n jupyterhub
 
 <CollapsibleContent header={<h3><span>Login into JupyterHub via Cognito</span></h3>}>
 
-Update the CNAME DNS record of your domain with the load balancer url.
+Add the CNAME DNS record in ChangeIP for the JupyterHub domain with the load balancer url.
+
+![](img/CNAME.png)
+
+:::info
+When adding the load balancer url in the value field of CNAME in ChangeIP make sure to add a dot(.) at the end of the load-balancer url.
+:::
+
 Now typing the domain url in the browser should redirect to the Cognito login page.
 
 ![](img/Cognito-Sign-in.png)
@@ -138,8 +152,8 @@ To test the setup of the shared and personal directories in JupyterHub, you can 
 df -h
 ```
 Verify EFS mounts created.  
-Each user's private home directory is available at /home/jovyan  
-The shared directory is available at /home/shared
+Each user's private home directory is available at '''/home/jovyan'''  
+The shared directory is available at '''/home/shared'''
 
 </CollapsibleContent>
 

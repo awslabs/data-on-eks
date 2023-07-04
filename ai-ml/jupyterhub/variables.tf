@@ -46,3 +46,8 @@ variable "acm_certificate_domain" {
   description = "Enter domain name with wildcard and ensure ACM certificate is created for this domain name, e.g. *.example.com"
   default     = ""
 }
+variable "jupyterhub_domain" {
+  type        = string
+  description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com"
+  default     = ""
+}
