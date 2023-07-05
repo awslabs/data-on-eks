@@ -139,8 +139,8 @@ variable "strimzi_kafka_operator_helm_config" {
   description = "Helm configuration for Strimzi Kafka Operator"
   type        = any
   default     = {}
-}    
-  
+}
+
 #-----------JupyterHub ADDON-------------
 variable "enable_jupyterhub" {
   description = "Enable Jupyterhub Add-On"
