@@ -125,14 +125,14 @@ spec:
       # Format the volume
       sudo mkfs -t ext4 /dev/xvdb # Improve this to get this value dynamically
       # Create a mount point
-      sudo mkdir /local1 # Change directory as you like
+      sudo mkdir /mnt/k8s-disks # Change directory as you like
       # Mount the volume
-      sudo mount /dev/xvdb /local1
+      sudo mount /dev/xvdb /mnt/k8s-disks
       # To mount this EBS volume on every system reboot, you need to add an entry in /etc/fstab
-      echo "/dev/xvdb /local1 ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+      echo "/dev/xvdb /mnt/k8s-disks ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
 
       # Adding permissions to the mount
-      /usr/bin/chown -hR +999:+1000 /local1
+      /usr/bin/chown -hR +999:+1000 /mnt/k8s-disks
     else
       if [ $${DISK_COUNT} -eq 1 ]; then
         TARGET_DEV=$${DISK_ARRAY[0]}
@@ -143,10 +143,10 @@ spec:
         TARGET_DEV=/dev/md0
       fi
 
-      mkdir -p /local1
-      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mkdir -p /mnt/k8s-disks
+      echo $${TARGET_DEV} /mnt/k8s-disks xfs defaults,noatime 1 2 >> /etc/fstab
       mount -a
-      /usr/bin/chown -hR +999:+1000 /local1
+      /usr/bin/chown -hR +999:+1000 /mnt/k8s-disks
     fi
 
     --BOUNDARY--

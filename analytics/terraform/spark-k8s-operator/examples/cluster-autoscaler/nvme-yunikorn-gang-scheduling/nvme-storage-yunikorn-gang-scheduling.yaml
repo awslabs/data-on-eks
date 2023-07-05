@@ -41,7 +41,7 @@ spec:
     "spark.app.name": "taxi-trip"
     "spark.kubernetes.driver.pod.name": "taxi-trip"
     "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
-    "spark.local.dir": "/data1"
+    "spark.local.dir": "/mnt/k8s-disks"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
@@ -79,23 +79,23 @@ spec:
     onFailureRetryInterval: 10
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
-  volumes:  # using NVMe instance storage mounted on /local1
+  volumes:  # using NVMe instance storage mounted on /mnt/k8s-disks
     - name: spark-local-dir-1
       hostPath:
-        path: /local1
+        path: /mnt/k8s-disks
         type: Directory
 
   driver:
     volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
       - name: spark-local-dir-1
-        mountPath: /data1
+        mountPath: /mnt/k8s-disks
         readOnly: false
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
+        command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
         volumeMounts:
-          - mountPath: "/local1"
+          - mountPath: "/mnt/k8s-disks"
             name: "spark-local-dir-1"
     cores: 1
     coreLimit: "1200m"
@@ -145,14 +145,14 @@ spec:
       fsGroup: 185
     volumeMounts:
       - name: spark-local-dir-1
-        mountPath: /data1
+        mountPath: /mnt/k8s-disks
         readOnly: false
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
+        command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
         volumeMounts:
-          - mountPath: "/local1"
+          - mountPath: "/mnt/k8s-disks"
             name: "spark-local-dir-1"
     cores: 1
     coreLimit: "1200m"

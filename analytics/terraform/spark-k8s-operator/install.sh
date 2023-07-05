@@ -7,10 +7,7 @@ export AWS_DEFAULT_REGION=$region
 targets=(
   "module.vpc"
   "module.eks"
-  "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_irsa"
-  "aws_eks_addon.vpc_cni"
-  "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
   "module.kubernetes_data_addons"
 )
 

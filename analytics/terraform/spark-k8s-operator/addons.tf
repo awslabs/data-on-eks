@@ -1,39 +1,10 @@
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name_prefix      = format("%s-%s-", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
-#---------------------------------------------------------------
-# VPC CNI Addon should run before the nodes are created
-# Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
-#---------------------------------------------------------------
-resource "aws_eks_addon" "vpc_cni" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "vpc-cni"
-  addon_version            = data.aws_eks_addon_version.this.version
-  resolve_conflicts        = "OVERWRITE"
-  preserve                 = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
-  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-}
 
 #---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
+  version               = "~> 5.27"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
@@ -46,11 +17,11 @@ module "ebs_csi_driver_irsa" {
 }
 
 #---------------------------------------------------------------
-# EKS Blueprints Kubernetes Addons
+# EKS Blueprints Addons
 #---------------------------------------------------------------
-module "eks_blueprints_kubernetes_addons" {
-  # Short commit hash from 8th May using git rev-parse --short HEAD
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
+module "eks_blueprints_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -62,18 +33,16 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   eks_addons = {
     aws-ebs-csi-driver = {
-      most_recent              = true
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns = {
-      most_recent = true
-      preserve    = true
-    }
-    kube-proxy = {
+    coredns    = {}
+    kube-proxy = {}
+    vpc-cni = {
       most_recent = true
       preserve    = true
     }
   }
+
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
@@ -116,13 +85,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
-  karpenter_node = {
-    create_iam_role          = true
-    iam_role_use_name_prefix = false
-    # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
-    iam_role_name = local.karpenter_iam_role_name
-  }
-
   karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
@@ -142,38 +104,13 @@ module "eks_blueprints_kubernetes_addons" {
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
   enable_aws_for_fluentbit = true
-  aws_for_fluentbit_cw_log_group = {
-    create            = true
-    use_name_prefix   = false
-    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
-    retention_in_days = 30
-  }
-
   aws_for_fluentbit = {
-    create_namespace = true
-    namespace        = "aws-for-fluentbit"
-    create_role      = true
-    role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
-
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
       s3_bucket_name       = module.s3_bucket.s3_bucket_id
       cluster_name         = module.eks.cluster_name
     })]
-  }
-
-  enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller = {
-    version = "1.4.7"
-    timeout = "300"
-  }
-
-  enable_ingress_nginx = true
-  ingress_nginx = {
-    version = "4.5.2"
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
   tags = local.tags
@@ -288,7 +225,7 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
   yaml_body = each.value
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 #tfsec:ignore:*
@@ -343,13 +280,4 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
-}
-
-#---------------------------------------------------------------
-# IAM Policy for FluentBit Add-on
-#---------------------------------------------------------------
-resource "aws_iam_policy" "fluentbit" {
-  description = "IAM policy policy for FluentBit"
-  name        = "${local.name}-fluentbit-additional"
-  policy      = data.aws_iam_policy_document.fluent_bit.json
 }

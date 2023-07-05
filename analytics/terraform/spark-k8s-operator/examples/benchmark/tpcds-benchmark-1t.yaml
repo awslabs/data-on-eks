@@ -57,14 +57,14 @@ spec:
   driver:
     volumeMounts: # Points to InstanceStore NVMe SSD for shuffle spill over from memory
       - name: spark-local-dir-1
-        mountPath: /data1
+        mountPath: /mnt/k8s-disks
         readOnly: false
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
+        command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
         volumeMounts:
-          - mountPath: "/local1"
+          - mountPath: "/mnt/k8s-disks"
             name: "spark-local-dir-1"
     cores: 4
     coreLimit: "4.1"
@@ -81,7 +81,7 @@ spec:
   executor:
     volumeMounts:
       - name: spark-local-dir-1
-        mountPath: /data1
+        mountPath: /mnt/k8s-disks
         readOnly: false
     cores: 4
     coreLimit: "4.3"
