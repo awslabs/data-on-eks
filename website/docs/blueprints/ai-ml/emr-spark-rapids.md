@@ -273,6 +273,7 @@ The following is a sample output from the above log file:
 
 **Step7**: Finally, with a trained and validated XGBoost model, you can use it to make predictions on new, unseen loan data. These predictions can help in identifying potential risks associated with loan default or evaluating loan performance.
 
+
 ![Alt text](img/emr-spark-rapids-fannie-mae.png)
 
 ###  GPU Monitoring with DCGM Exporter, Prometheus and Grafana
