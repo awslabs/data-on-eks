@@ -213,6 +213,11 @@ cd ai-ml/emr-spark-rapids/examples/xgboost/ && chmod +x execute_spark_rapids_xgb
     Enter the number of executor instances (4 to 8): 8
 ```
 
+Verify the pod status
+
+![Alt text](img/spark-rapids-pod-status.png)
+
+
 :::info
 Note that the first execution might take longer as it needs to download the image for the EMR Job Pod, Driver, and Executor pods. Each pod may take up to 8 minutes to download the Docker image. Subsequent runs should be faster (usually under 30 seconds), thanks to image caching
 :::
@@ -252,6 +257,25 @@ The following is a sample output from the above log file:
     Evaluation takes 3.8372223377227783 seconds
     Accuracy is 0.996563056111921
 
+### ML Pipeline for Fannie Mae Single Loan Performance Dataset
+
+**Step1**: Preprocess and clean the dataset to handle missing values, categorical variables, and other data inconsistencies.This may involve techniques like data imputation,one-hot encoding, and data normalization.
+
+**Step2**: Create additional features from the existing ones that might provide more useful information for predicting loan performance. For example, you could extract features like loan-to-value ratio, borrower's credit score range, or loan origination year.
+
+**Step3**: Divide the dataset into two parts: one for training the XGBoost model and one for evaluating its performance. This allows you to assess how well the model generalizes to unseen data.
+
+**Step4**: Feed the training dataset into XGBoost to train the model. XGBoost will analyze the loan attributes and their corresponding loan performance labels to learn the patterns and relationships between them. The objective is to predict whether a loan is likely to default or perform well based on the given features.
+
+**Step5**: Once the model is trained, use the evaluation dataset to assess its performance. This involves analyzing metrics such as accuracy, precision, recall, or area under the receiver operating characteristic curve (AUC-ROC) to measure how well the model predicts loan performance
+
+**Step6**: If the performance is not satisfactory, you can tune the XGBoost hyperparameters, such as the learning rate, tree depth, or regularization parameters, to improve the model's accuracy or address issues like overfitting.
+
+**Step7**: Finally, with a trained and validated XGBoost model, you can use it to make predictions on new, unseen loan data. These predictions can help in identifying potential risks associated with loan default or evaluating loan performance.
+
+
+![Alt text](img/emr-spark-rapids-fannie-mae.png)
+
 ###  GPU Monitoring with DCGM Exporter, Prometheus and Grafana
 
 Observability plays a crucial role in managing and optimizing hardware resources such as GPUs, particularly in machine learning workloads where the GPU utilization is high. The ability to monitor GPU usage in real-time, identify trends, and detect anomalies can significantly impact performance tuning, troubleshooting, and efficient resource utilization.
@@ -272,16 +296,21 @@ The NVIDIA GPU Operator is configured to export metrics to the Prometheus server
 4. **Amazon Managed Service for Prometheus (AMP)**: AMP is a fully-managed Prometheus service provided by AWS. It takes care of long-term storage, scalability, and security of your Prometheus data.
 5. **Grafana**: Grafana is a visualization tool that can query AMP for the collected metrics, and display them on informative dashboards.
 
-You can log in to the Grafana WebUI deployed by this blueprint using the `admin` account. Retrieve the password from AWS Secrets Manager to log in to Grafana.
+In this blueprint, we leverage DCGM to write GPU metrics to both Prometheus and Amazon Managed Prometheus (AMP). To verify the GPU metrics, you can use Grafana by running the following command:
 
-```
+```bash
 kubectl port-forward svc/grafana 3000:80 -n grafana
+``
+
+Login to Grafana using `admin` as the username, and retrieve the password from Secrets Manager using the following AWS CLI command:
+
+```bash
+aws secretsmanager get-secret-value --secret-id emr-spark-rapids-grafana --region us-west-2
 ```
 
-After logging in, add the AMP datasource to Grafana and import this Open Source [GPU monitoring dashboard](https://grafana.com/grafana/dashboards/12239-nvidia-dcgm-exporter-dashboard/). Check out the metrics in the screenshot below.
+Once logged in, add the AMP datasource to Grafana and import the Open Source GPU monitoring dashboard. You can then explore the metrics and visualize them using the Grafana dashboard, as shown in the screenshot below.
 
 ![Alt text](img/gpu-dashboard.png)
-
 
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
