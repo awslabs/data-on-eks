@@ -120,10 +120,61 @@ module "eks_blueprints_addons" {
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
     values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+    set = var.enable_amazon_prometheus ? [
+      {
+        name  = "prometheus.serviceAccount.name"
+        value = local.amp_ingest_service_account
+      },
+      {
+        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+        value = module.amp_ingest_irsa[0].iam_role_arn
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
+        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
+        value = local.region
+      }
+    ] : []
   }
 
   tags = local.tags
 }
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "${local.name}-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
+}
+
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons

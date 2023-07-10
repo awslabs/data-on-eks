@@ -1,21 +1,32 @@
 prometheus:
   prometheusSpec:
-    serviceMonitorSelectorNilUsesHelmValues: false
-    podMonitorSelectorNilUsesHelmValues: false
-    serviceMonitorSelector: {}
-    serviceMonitorNamespaceSelector: {}
+#    serviceMonitorSelectorNilUsesHelmValues: false
+#    podMonitorSelectorNilUsesHelmValues: false
+    retention: 5h
+#    remoteWrite: 
+#      - queueConfig:
+#          max_samples_per_send: 1000
+#          max_shards: 200
+#          capacity: 2500
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    scrapeTimeout: 10s
+
+#    serviceMonitorSelector: {}
+#    serviceMonitorNamespaceSelector: {}
+alertmanager:
+ enabled: false
+
 grafana:
   enabled: true
-  adminUser: admin
-  #adminPassword: secret
   defaultDashboardsEnabled: false
   # -- Additional plugins to be installed during Grafana startup,
   # `grafana-polystat-panel` is used by the default Cassandra dashboards.
-  plugins:
-    - grafana-polystat-panel
-  grafana.ini: {}
-  image:
-    repository: grafana/grafana
-    tag: 7.5.11
-    sha: ""
-    pullPolicy: IfNotPresent
+#  plugins:
+#    - grafana-polystat-panel
+#  grafana.ini: {}
+#  image:
+#    repository: grafana/grafana
+#    tag: 7.5.11
+#    sha: ""
+#    pullPolicy: IfNotPresent
