@@ -1,3 +1,11 @@
+data "aws_vpc" "this" {
+  id = var.vpc_id
+}
+
+locals {
+  cidr_blocks = coalescelist([var.vpc_cidr], data.aws_vpc.this.cidr_block)
+}
+
 #---------------------------------------------------------------
 # OpenSearch For DataHub metadata
 #---------------------------------------------------------------
@@ -9,7 +17,7 @@ resource "aws_security_group" "es" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = local.cidr_blocks
   }
 }
 
@@ -101,7 +109,7 @@ resource "aws_security_group" "msk" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = local.cidr_blocks
   }
 }
 
@@ -180,7 +188,7 @@ resource "aws_security_group" "rds" {
     from_port   = 0
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = local.cidr_blocks
   }
 }
 
