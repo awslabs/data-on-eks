@@ -27,7 +27,7 @@ data "aws_ami" "eks" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.9"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -160,7 +160,7 @@ module "eks" {
 # Creating a IAM instance profile for Karpenter nodes
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
+  version = "~> 19.15"
 
   cluster_name                 = module.eks.cluster_name
   irsa_oidc_provider_arn       = module.eks.oidc_provider_arn

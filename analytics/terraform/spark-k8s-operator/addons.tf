@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "vpc_cni_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
+  version               = "~> 5.20"
   role_name_prefix      = format("%s-%s-", local.name, "vpc-cni")
   attach_vpc_cni_policy = true
   vpc_cni_enable_ipv4   = true
@@ -33,7 +33,7 @@ resource "aws_eks_addon" "vpc_cni" {
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
+  version               = "~> 5.20"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {

@@ -12,9 +12,8 @@ module "vpc" {
   public_subnets  = var.public_subnets  # Two Subnets. 4094 IPs per Subnet
   private_subnets = var.private_subnets # Three Subnets. 16382 IPs per Subnet
 
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
+  enable_nat_gateway = true
+  single_nat_gateway = true
 
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1
