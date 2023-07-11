@@ -20,7 +20,7 @@ def get_examples():
     projects = {
         x.replace('/versions.tf', '')
         for x in glob.glob('**/**/**/versions.tf', recursive=True)
-        if not re.match(r'.*modules.*', x)
+        if not re.match(r'.*(modules|workshop).*', x)
     }
 
     print(json.dumps(list(projects.difference(exclude))))
