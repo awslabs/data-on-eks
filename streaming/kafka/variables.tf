@@ -1,7 +1,7 @@
 variable "region" {
-  description = "region"
-  default     = "us-west-2"
+  description = "Region"
   type        = string
+  default     = "us-west-2"
 }
 
 variable "name" {

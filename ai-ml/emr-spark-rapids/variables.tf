@@ -3,11 +3,13 @@ variable "name" {
   default     = "emr-spark-rapids"
   type        = string
 }
+
 variable "region" {
-  description = "region"
+  description = "Region"
   type        = string
   default     = "us-west-2"
 }
+
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   default     = "1.26"

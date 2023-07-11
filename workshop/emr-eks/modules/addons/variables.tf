@@ -30,7 +30,7 @@ variable "oidc_provider_arn" {
 }
 
 variable "region" {
-  description = "region"
+  description = "Region"
   type        = string
   default     = "us-west-2"
 }
