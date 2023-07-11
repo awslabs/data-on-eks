@@ -3,8 +3,8 @@
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  version               = "~> 5.20"
+  role_name_prefix             = format("%s-%s", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
@@ -20,8 +20,8 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "vpc_cni_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
+  version               = "~> 5.20"
+  role_name_prefix             = format("%s-%s", local.name, "vpc-cni")
   attach_vpc_cni_policy = true
   vpc_cni_enable_ipv4   = true
   oidc_providers = {
@@ -37,12 +37,12 @@ module "vpc_cni_irsa" {
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ac7fd74d9df282ce6f8d068c4fd17ccd5638ae3a"
+  source = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.cluster_oidc_issuer_url
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
@@ -52,16 +52,11 @@ module "eks_blueprints_kubernetes_addons" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns = {
-      preserve = true
-    }
     vpc-cni = {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
     }
-    kube-proxy = {
-      preserve = true
-    }
+    kube-proxy = {}
+    coredns = {}
   }
   #---------------------------------------
   # Kubernetes Add-ons
@@ -70,8 +65,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Metrics Server
   #---------------------------------------
   enable_metrics_server = true
-  metrics_server_helm_config = {
-    version = "3.8.4"
+  metrics_server = {
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
@@ -81,8 +75,8 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    version = "9.28.0"
     timeout = "300"
+    create_role = true
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -92,12 +86,16 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                           = true
-  karpenter_enable_spot_termination_handling = true
-  karpenter_node_iam_instance_profile        = module.karpenter.instance_profile_name
+  enable_karpenter                   = true
+  karpenter_enable_spot_termination  = true
+  karpenter_node = {
+    create_iam_role         = true
+    iam_role_use_name_prefix = false
+  # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
+    iam_role_name = local.karpenter_iam_role_name
+  }
 
-  karpenter_helm_config = {
-    version             = "v0.25.0"
+  karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -106,29 +104,36 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_cloudwatch_metrics = true
-  cloudwatch_metrics = {
-    version = "0.0.8"
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics = {
     timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
+    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
   enable_aws_for_fluentbit            = true
-  aws_for_fluentbit_cw_log_group_name = "/${var.name}/fluentbit-logs" # Add-on creates this log group
-  aws_for_fluentbit_irsa_policies     = [aws_iam_policy.fluentbit.arn]
-  aws_for_fluentbit_helm_config = {
-    version = "0.1.24"
+  aws_for_fluentbit_cw_log_group = {
+    create            = true
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+
+  aws_for_fluentbit = {
+    create_namespace = true
+    namespace        = "aws-for-fluentbit"
+    create_role      = true
+    role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = var.region,
-      cloudwatch_log_group = "/${var.name}/fluentbit-logs"
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
       s3_bucket_name       = module.s3_bucket.s3_bucket_id
       cluster_name         = module.eks.cluster_name
     })]
   }
-
+  
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
     values = [
@@ -139,16 +144,14 @@ module "eks_blueprints_kubernetes_addons" {
   }
 
   enable_ingress_nginx = true
-  ingress_nginx_helm_config = {
-    version = "4.5.2"
+  ingress_nginx = {
     timeout = "300"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
   # Required Flink Deployment
   enable_cert_manager = true
-  cert_manager_helm_config = {
-    version = "1.11.1"
+  cert_manager = {
     set_values = [
       {
         name  = "extraArgs[0]"
@@ -156,6 +159,44 @@ module "eks_blueprints_kubernetes_addons" {
       },
     ]
   }
+
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --outp
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+    set = var.enable_amazon_prometheus ? [
+      {
+        name  = "prometheus.serviceAccount.name"
+        value = local.amp_ingest_service_account
+      },
+      {
+        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+        value = module.amp_ingest_irsa[0].iam_role_arn
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
+        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
+        value = local.region
+      }
+    ] : []
+  }  
 
   tags = local.tags
 }
@@ -187,48 +228,6 @@ module "eks_data_addons" {
     })]
   }
 
-  #---------------------------------------------------------------
-  # Prometheus Add-on
-  #---------------------------------------------------------------
-  enable_prometheus = true
-  prometheus_helm_config = {
-    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
-    # Use only when Amazon managed Prometheus is enabled with `amp.tf` resources
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "serviceAccounts.server.name"
-        value = local.amp_ingest_service_account
-      },
-      {
-        name  = "serviceAccounts.server.annotations.eks\\.amazonaws\\.com/role-arn"
-        value = module.amp_ingest_irsa[0].iam_role_arn
-      },
-      {
-        name  = "server.remoteWrite[0].url"
-        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-      },
-      {
-        name  = "server.remoteWrite[0].sigv4.region"
-        value = local.region
-      }
-    ] : []
-  }
-
-  #---------------------------------------------------------------
-  # Open Source Grafana Add-on
-  #---------------------------------------------------------------
-  enable_grafana = true
-  grafana_helm_config = {
-    create_irsa = true # Creates IAM Role with trust policy, default IAM policy and adds service account annotation
-    set_sensitive = [
-      {
-        name  = "adminPassword"
-        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
-      }
-    ]
-  }
-
-  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
 
 #---------------------------------------

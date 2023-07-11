@@ -1,0 +1,11 @@
+prometheus:
+  prometheusSpec:
+    retention: 5h
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    scrapeTimeout: 10s
+alertmanager:
+ enabled: false
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: false
