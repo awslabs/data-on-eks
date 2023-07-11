@@ -14,13 +14,13 @@ resource "aws_prometheus_workspace" "amp" {
 }
 
 #---------------------------------------------------------------
-# IRSA for VPC CNI
+# IRSA for VPC AMP
 #---------------------------------------------------------------
 module "amp_ingest_irsa" {
   count = var.enable_amazon_prometheus ? 1 : 0
 
   source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version   = "~> 5.14"
+  version   = "~> 5.20"
   role_name = format("%s-%s", local.name, "amp-ingest")
 
   attach_amazon_managed_service_prometheus_policy  = true

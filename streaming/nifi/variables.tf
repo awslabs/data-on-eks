@@ -11,7 +11,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.24"
+  default     = "1.27"
   type        = string
 }
 
@@ -53,4 +53,10 @@ variable "nifi_username" {
   type        = string
   description = "NiFi login username"
   default     = "admin"
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = true
 }
