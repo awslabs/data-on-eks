@@ -73,7 +73,7 @@ module "vpc_endpoints" {
   create = var.enable_vpc_endpoints
 
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoints_sg[0].security_group_id]
+  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
 
   endpoints = merge({
     s3 = {
