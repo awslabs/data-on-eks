@@ -242,10 +242,11 @@ kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheu
 ```
 Open browser with local [Grafana Web UI](http://localhost:8080/)
 
-Enter username as `admin` and **password** can be extracted from the below command.
+Enter username as `admin` and **password** can be extracted from AWS Secrets Manager with the below command.
 
 ```bash
-kubectl get secret kube-prometheus-stack-grafana -n kube-prometheus-stack -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+aws secretsmanager get-secret-value \
+    --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text
 ```
 
 ### Open Strimzi Kafka Dashboard
