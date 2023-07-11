@@ -20,29 +20,6 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-
-module "vpc_cni_ipv4_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.20"
-
-  role_name_prefix = "${module.eks.cluster_name}-vpc-cni-ipv4"
-
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-
-  tags = local.tags
-}
-
 module "eks_blueprints_kubernetes_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.0"
@@ -56,13 +33,16 @@ module "eks_blueprints_kubernetes_addons" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_ipv4_irsa.iam_role_arn
+    coredns = {
+      preserve = true
     }
-    coredns    = {}
-    kube-proxy = {}
+    vpc-cni = {
+      preserve = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
   }
-
 
   #---------------------------------------------------------------
   # Kubernetes Add-ons

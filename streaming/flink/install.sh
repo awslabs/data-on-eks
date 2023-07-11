@@ -9,7 +9,6 @@ targets=(
   "module.eks"
   "module.karpenter"
   "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_irsa"
   "module.eks_blueprints_kubernetes_addons"
 )
 
