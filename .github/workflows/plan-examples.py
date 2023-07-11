@@ -10,6 +10,7 @@ def get_examples():
     """
     exclude = {
         'ai-ml/ray/terraform', # Skip until we fix CI script to test as per v5 convention
+        'ai-ml/jupyterhub', # Requires a domain name
         'analytics/terraform/datahub-on-eks/datahub-addon', # Internal module, covered under root example and not standalone
         'analytics/terraform/datahub-on-eks/datahub-addon/modules/prereq' # Internal module, covered under root example and not standalone
     }
