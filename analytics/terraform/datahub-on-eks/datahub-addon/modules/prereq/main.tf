@@ -1,9 +1,5 @@
-data "aws_vpc" "this" {
-  id = var.vpc_id
-}
-
 locals {
-  cidr_blocks = coalescelist([var.vpc_cidr], data.aws_vpc.this.cidr_block)
+  cidr_blocks = coalescelist([var.vpc_cidr], ["10.1.0.0/16"])
 }
 
 #---------------------------------------------------------------
