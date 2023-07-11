@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   name = local.name
   cidr = var.vpc_cidr
@@ -19,10 +19,9 @@ module "vpc" {
   # ------------------------------
   # Optional Public Subnets for NAT and IGW for PoC/Dev/Test environments
   # Public Subnets can be disabled while deploying to Production and use Private NAT + TGW
-  public_subnets       = var.public_subnets
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
+  public_subnets     = var.public_subnets
+  enable_nat_gateway = true
+  single_nat_gateway = true
   #-------------------------------
 
   public_subnet_tags = {
@@ -39,10 +38,10 @@ module "vpc" {
 }
 
 module "vpc_endpoints_sg" {
-  count = var.enable_vpc_endpoints ? 1 : 0
-
   source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
+
+  create = var.enable_vpc_endpoints
 
   name        = "${local.name}-vpc-endpoints"
   description = "Security group for VPC endpoint access"
@@ -68,10 +67,10 @@ module "vpc_endpoints_sg" {
 }
 
 module "vpc_endpoints" {
-  count = var.enable_vpc_endpoints ? 1 : 0
-
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 4.0"
+  version = "~> 5.0"
+
+  create = var.enable_vpc_endpoints
 
   vpc_id             = module.vpc.vpc_id
   security_group_ids = [module.vpc_endpoints_sg[0].security_group_id]

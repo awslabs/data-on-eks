@@ -3,17 +3,17 @@
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
-  name            = local.name
-  cidr            = local.vpc_cidr
-  azs             = local.azs
+  name = local.name
+  cidr = local.vpc_cidr
+  azs  = local.azs
+
   public_subnets  = var.public_subnets
   private_subnets = var.private_subnets
 
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
+  enable_nat_gateway = true
+  single_nat_gateway = true
 
   # Manage so we can name
   manage_default_network_acl    = true
