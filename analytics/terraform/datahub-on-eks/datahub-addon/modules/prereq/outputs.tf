@@ -27,9 +27,13 @@ output "rds_endpoint" {
 }
 
 output "rds_password" {
-  value = random_password.mysql_password.result
+  description = "RDS password"
+  value       = random_password.mysql_password.result
+  sensitive   = true
 }
 
 output "es_password" {
-  value = random_password.master_password.result
+  description = "ElasticSearch password"
+  value       = random_password.master_password.result
+  sensitive   = true
 }
