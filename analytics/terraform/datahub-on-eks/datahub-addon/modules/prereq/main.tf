@@ -42,7 +42,7 @@ resource "aws_opensearch_domain" "es" {
     instance_type          = "m6g.large.search"
     zone_awareness_enabled = true
     zone_awareness_config {
-      availability_zone_count = length(var.vpc_private_subnets)
+      availability_zone_count = min(length(var.vpc_private_subnets), 3)
     }
   }
   vpc_options {
