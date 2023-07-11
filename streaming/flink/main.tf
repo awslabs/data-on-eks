@@ -3,7 +3,7 @@ locals {
   region   = var.region
   vpc_cidr = var.vpc_cidr
   azs      = slice(data.aws_availability_zones.available.names, 0, 2)
-  
+
   karpenter_iam_role_name = format("%s-%s", "karpenter", local.name)
 
   tags = {

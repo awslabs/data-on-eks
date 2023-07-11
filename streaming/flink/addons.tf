@@ -4,7 +4,7 @@
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version               = "~> 5.20"
-  role_name_prefix             = format("%s-%s", local.name, "ebs-csi-driver")
+  role_name_prefix      = format("%s-%s", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
@@ -21,7 +21,7 @@ module "ebs_csi_driver_irsa" {
 module "vpc_cni_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version               = "~> 5.20"
-  role_name_prefix             = format("%s-%s", local.name, "vpc-cni")
+  role_name_prefix      = format("%s-%s", local.name, "vpc-cni")
   attach_vpc_cni_policy = true
   vpc_cni_enable_ipv4   = true
   oidc_providers = {
@@ -37,7 +37,7 @@ module "vpc_cni_irsa" {
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "aws-ia/eks-blueprints-addons/aws"
+  source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.0"
 
   cluster_name      = module.eks.cluster_name
@@ -56,7 +56,7 @@ module "eks_blueprints_kubernetes_addons" {
       service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
     }
     kube-proxy = {}
-    coredns = {}
+    coredns    = {}
   }
   #---------------------------------------
   # Kubernetes Add-ons
@@ -75,7 +75,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    timeout = "300"
+    timeout     = "300"
     create_role = true
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
@@ -86,12 +86,12 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                   = true
-  karpenter_enable_spot_termination  = true
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
   karpenter_node = {
-    create_iam_role         = true
+    create_iam_role          = true
     iam_role_use_name_prefix = false
-  # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
+    # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
     iam_role_name = local.karpenter_iam_role_name
   }
 
@@ -113,7 +113,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit            = true
+  enable_aws_for_fluentbit = true
   aws_for_fluentbit_cw_log_group = {
     create            = true
     use_name_prefix   = false
@@ -133,7 +133,7 @@ module "eks_blueprints_kubernetes_addons" {
       cluster_name         = module.eks.cluster_name
     })]
   }
-  
+
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
     values = [
@@ -196,7 +196,7 @@ module "eks_blueprints_kubernetes_addons" {
         value = local.region
       }
     ] : []
-  }  
+  }
 
   tags = local.tags
 }
