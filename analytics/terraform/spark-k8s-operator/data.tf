@@ -7,18 +7,9 @@ data "aws_ecrpublic_authorization_token" "token" {
 }
 
 data "aws_availability_zones" "available" {}
-
 data "aws_region" "current" {}
-
 data "aws_caller_identity" "current" {}
-
 data "aws_partition" "current" {}
-
-data "aws_eks_addon_version" "this" {
-  addon_name         = "vpc-cni"
-  kubernetes_version = var.eks_cluster_version
-  most_recent        = true
-}
 
 # This data source can be used to get the latest AMI for Managed Node Groups
 data "aws_ami" "x86" {

@@ -13,16 +13,15 @@ module "eks_blueprints_kubernetes_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      preserve                 = true
-      most_recent              = true
     }
     coredns = {
-      most_recent = true
-      preserve    = true
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
     }
     kube-proxy = {
-      most_recent = true
-      preserve    = true
+      preserve = true
     }
   }
 
@@ -243,37 +242,6 @@ module "ebs_csi_driver_irsa" {
     }
   }
   tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# VPC CNI Addon should run before the nodes are created
-# Ideally VPC CNI with custom configuration values should be deployed before the nodes are created to use the correct VPC CNI config
-#---------------------------------------------------------------
-resource "aws_eks_addon" "vpc_cni" {
-  cluster_name                = module.eks.cluster_name
-  addon_name                  = "vpc-cni"
-  addon_version               = data.aws_eks_addon_version.this.version
-  resolve_conflicts_on_create = "OVERWRITE"
-  preserve                    = true # Ensure VPC CNI is not deleted before the add-ons and nodes are deleted during the cleanup/destroy.
-  service_account_role_arn    = module.vpc_cni_irsa.iam_role_arn
 }
 
 #------------------------------------------
