@@ -5,9 +5,9 @@ variable "name" {
 }
 
 variable "region" {
-  description = "region"
+  description = "Region"
   type        = string
-  default     = "us-east-2"
+  default     = "us-west-2"
 }
 
 variable "eks_cluster_version" {

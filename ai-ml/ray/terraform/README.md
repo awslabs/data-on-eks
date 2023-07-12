@@ -27,11 +27,11 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.10 |
+| <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.15 |
 | <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | 08650fd2b4bc894bde7b51313a8dc9598d82e925 |
-| <a name="module_karpenter"></a> [karpenter](#module\_karpenter) | terraform-aws-modules/eks/aws//modules/karpenter | ~> 19.9 |
-| <a name="module_karpenter_policy"></a> [karpenter\_policy](#module\_karpenter\_policy) | terraform-aws-modules/iam/aws//modules/iam-policy | ~> 5.11.1 |
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 3.0 |
+| <a name="module_karpenter"></a> [karpenter](#module\_karpenter) | terraform-aws-modules/eks/aws//modules/karpenter | ~> 19.15 |
+| <a name="module_karpenter_policy"></a> [karpenter\_policy](#module\_karpenter\_policy) | terraform-aws-modules/iam/aws//modules/iam-policy | ~> 5.20 |
+| <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 5.0 |
 
 ## Resources
 
@@ -48,7 +48,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.25"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC, EKS Cluster and Ray cluster | `string` | `"ray-cluster"` | no |
-| <a name="input_region"></a> [region](#input\_region) | AWS Region | `string` | `"us-west-2"` | no |
+| <a name="input_region"></a> [region](#input\_region) | Region | `string` | `"us-west-2"` | no |
 
 ## Outputs
 

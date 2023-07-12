@@ -26,7 +26,7 @@ resource "aws_fsx_data_repository_association" "this" {
   count = var.enable_fsx_for_lustre ? 1 : 0
 
   file_system_id       = aws_fsx_lustre_file_system.this[0].id
-  data_repository_path = "s3://${module.s3_bucket[0].s3_bucket_id}"
+  data_repository_path = "s3://${module.s3_bucket.s3_bucket_id}"
   file_system_path     = "/data" # This directory will be used in Spark podTemplates under volumeMounts as subPath
 
   s3 {
@@ -72,16 +72,15 @@ resource "aws_security_group" "fsx" {
 #---------------------------------------------------------------
 #tfsec:ignore:aws-s3-enable-bucket-logging tfsec:ignore:aws-s3-enable-versioning
 module "s3_bucket" {
-  count = var.enable_fsx_for_lustre ? 1 : 0
-
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "v3.10.1"
+  version = "~> 3.0"
+
+  create_bucket = var.enable_fsx_for_lustre
 
   bucket_prefix = format("%s-%s", "fsx", data.aws_caller_identity.current.account_id)
   # https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/3.10.1#input_acl
   # https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html
   # acl           = "private"
-
 
   # For example only - please evaluate for your environment
   force_destroy = true
