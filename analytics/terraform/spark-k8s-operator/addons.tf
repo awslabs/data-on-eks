@@ -21,7 +21,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -52,7 +52,6 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------
   enable_cluster_proportional_autoscaler = true
   cluster_proportional_autoscaler = {
-    timeout = "300"
     values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
       target = "deployment/coredns"
     })]
@@ -64,8 +63,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -73,7 +71,6 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -86,7 +83,6 @@ module "eks_blueprints_addons" {
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
   karpenter = {
-    timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -96,21 +92,40 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
   }
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
   enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
   aws_for_fluentbit = {
+    s3_bucket_arns = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*}"
+    ]
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
       s3_bucket_name       = module.s3_bucket.s3_bucket_id
       cluster_name         = module.eks.cluster_name
     })]
+  }
+
+  enable_aws_load_balancer_controller = true
+  aws_load_balancer_controller = {
+    chart_version = "1.5.4"
+  }
+
+  enable_ingress_nginx = true
+  ingress_nginx = {
+    version = "4.5.2"
+    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
   tags = local.tags

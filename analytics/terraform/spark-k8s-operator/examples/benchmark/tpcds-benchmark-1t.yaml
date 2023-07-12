@@ -57,7 +57,7 @@ spec:
   driver:
     volumeMounts: # Points to InstanceStore NVMe SSD for shuffle spill over from memory
       - name: spark-local-dir-1
-        mountPath: /mnt/k8s-disks
+        mountPath: /data1
         readOnly: false
     initContainers:
       - name: volume-permissions
@@ -81,7 +81,7 @@ spec:
   executor:
     volumeMounts:
       - name: spark-local-dir-1
-        mountPath: /mnt/k8s-disks
+        mountPath: /data1
         readOnly: false
     cores: 4
     coreLimit: "4.3"

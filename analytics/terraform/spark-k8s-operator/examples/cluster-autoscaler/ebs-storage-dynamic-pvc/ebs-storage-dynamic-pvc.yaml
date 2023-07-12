@@ -83,13 +83,13 @@ spec:
     "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
     "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp2"
     "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "500Gi"
-    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/mnt/k8s-disks"
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false"
 
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp2"
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "500Gi"
-    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/mnt/k8s-disks"
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false"
 
     # Support shuffle data recovery on the reused PVCs (SPARK-35593)
@@ -115,9 +115,9 @@ spec:
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
+        command: [ 'sh', '-c', 'chown -R 185 /data1' ]
         volumeMounts:
-          - mountPath: "/mnt/k8s-disks"
+          - mountPath: "/data1"
             name: "spark-local-dir-1"
     cores: 1
     coreLimit: "1200m"
@@ -138,9 +138,9 @@ spec:
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
+        command: [ 'sh', '-c', 'chown -R 185 /data1' ]
         volumeMounts:
-          - mountPath: "/mnt/k8s-disks"
+          - mountPath: "/data1"
             name: "spark-local-dir-1"
     cores: 1
     coreLimit: "1200m"
