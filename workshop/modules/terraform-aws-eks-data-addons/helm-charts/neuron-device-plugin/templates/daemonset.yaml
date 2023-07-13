@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  updateStrategy:
+    type: {{ .Values.updateStrategy }}
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        name: neuron-device-plugin-ds
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      tolerations: {{ toYaml .Values.tolerations | nindent 8 }}
+      priorityClassName: "system-node-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "beta.kubernetes.io/instance-type"
+                operator: In
+                values: {{ .Values.nodeTypes }}
+              - key: "node.kubernetes.io/instance-type"
+                operator: In
+                values: {{ .Values.nodeTypes }}
+      containers:
+      - image: {{ .Values.image.repository }}:{{ include "neuron-device-plugin.imageTag" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        name: neuron-device-plugin
+        env:
+        - name: KUBECONFIG
+          value: /etc/kubernetes/kubelet.conf
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - name: device-plugin
+          mountPath: /var/lib/kubelet/device-plugins
+        - name: infa-map
+          mountPath: /run
+      volumes:
+      - name: device-plugin
+        hostPath:
+          path: /var/lib/kubelet/device-plugins
+      - name: infa-map
+        hostPath:
+          path: /run
+

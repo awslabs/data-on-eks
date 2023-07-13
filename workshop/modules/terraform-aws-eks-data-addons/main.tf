@@ -1,3 +1,6 @@
+data "aws_partition" "current" {}
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 locals {
   #---------------------------------------------------------------
   # Helm Charts with IRSA
@@ -14,6 +17,7 @@ locals {
   #---------------------------------------------------------------
   # Helm Charts without IRSA
   #---------------------------------------------------------------
+
   emr_spark_operator_name       = "emr-spark-operator"
   emr_spark_operator_repository = "oci://${local.account_region_map[local.region]}.dkr.ecr.${local.region}.amazonaws.com"
   emr_spark_operator_version    = "1.1.26-amzn-1"
@@ -78,6 +82,3 @@ locals {
   }
 }
 
-data "aws_partition" "current" {}
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}

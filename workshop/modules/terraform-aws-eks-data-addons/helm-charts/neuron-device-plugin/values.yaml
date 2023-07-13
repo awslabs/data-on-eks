@@ -1,0 +1,43 @@
+# Local Hlem Chart
+name: neuron-device-plugin
+namespace: kube-system
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  labels: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: neuron-device-plugin
+
+updateStrategy: RollingUpdate
+
+image: 
+  repository: public.ecr.aws/neuron/neuron-device-plugin
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "2.12.5.0"
+
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
+  - key: aws.amazon.com/neuron
+    operator: Exists
+    effect: NoSchedule
+
+nodeTypes:
+  - inf1.xlarge
+  - inf1.2xlarge
+  - inf1.6xlarge
+  - inf1.24xlarge
+  - inf2.xlarge
+  - inf2.4xlarge
+  - inf2.8xlarge
+  - inf2.24xlarge
+  - inf2.48xlarge
+  - trn1.2xlarge
+  - trn1.32xlarge
+  - trn1n.32xlarge
+
+

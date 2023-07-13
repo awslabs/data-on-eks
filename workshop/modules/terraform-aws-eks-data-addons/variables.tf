@@ -165,3 +165,16 @@ variable "airflow_helm_config" {
   type        = any
   default     = {}
 }
+#---------------------------------------------------
+# AWS Neuron Device Plugin (Using Local Helm Chart)
+#---------------------------------------------------
+variable "enable_aws_neuron_device_plugin" {
+  description = "Enable Airflow add-on"
+  type        = bool
+  default     = false
+}
+variable "aws_neuron_device_plugin_helm_config" {
+  description = "Airflow Helm Chart config"
+  type        = any
+  default     = {}
+}

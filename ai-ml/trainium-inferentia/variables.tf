@@ -4,6 +4,7 @@ variable "name" {
   type        = string
 }
 
+# NOTE: Trainium and Inferentia are only available in us-west-2 and us-east-1 regions
 variable "region" {
   description = "region"
   type        = string
@@ -29,4 +30,10 @@ variable "secondary_cidr_blocks" {
   description = "Secondary CIDR blocks to be attached to VPC"
   default     = ["100.64.0.0/16"]
   type        = list(string)
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = true
 }

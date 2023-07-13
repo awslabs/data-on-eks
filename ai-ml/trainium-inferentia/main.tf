@@ -1,17 +1,5 @@
-data "aws_availability_zones" "available" {}
-
 data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
-}
-
-data "aws_ami" "x86" {
-  owners      = ["amazon"]
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-${module.eks.cluster_version}-*"] # Update this for ARM ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
-  }
 }
 
 locals {
@@ -31,7 +19,7 @@ locals {
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.13"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -44,17 +32,17 @@ module "eks" {
   substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
   manage_aws_auth_configmap = true
-  # aws_auth_roles = [
-  #   # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-  #   {
-  #     rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-  #     username = "system:node:{{EC2PrivateDNSName}}"
-  #     groups = [
-  #       "system:bootstrappers",
-  #       "system:nodes",
-  #     ]
-  #   }
-  # ]
+  aws_auth_roles = [
+    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
+    {
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+      username = "system:node:{{EC2PrivateDNSName}}"
+      groups = [
+        "system:bootstrappers",
+        "system:nodes",
+      ]
+    }
+  ]
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
@@ -72,16 +60,6 @@ module "eks" {
 
   # security group rule from all ipv4 to nodes for port 22
   node_security_group_additional_rules = {
-    ingress_efa_enabled = {
-      description      = "EFA-enabled security group SSH Ingress"
-      protocol         = "-1"
-      from_port        = 22
-      to_port          = 22
-      type             = "ingress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
-
     # Critical Secruity group rule for EFA enabled nodes
     ingress_efa_self_enabled = {
       description = "EFA-enabled self-referencing security group Ingress"
@@ -101,16 +79,6 @@ module "eks" {
       type        = "egress"
       self        = true
     }
-
-    # egress_all = {
-    #   description      = "Node all egress"
-    #   protocol         = "-1"
-    #   from_port        = 0
-    #   to_port          = 0
-    #   type             = "egress"
-    #   cidr_blocks      = ["0.0.0.0/0"]
-    #   ipv6_cidr_blocks = ["::/0"]
-    # }
     # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
     # This can be restricted further to specific port based on the requirement for each Add-on e.g., coreDNS 53, metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
     # Update this according to your security requirements if needed
@@ -132,7 +100,7 @@ module "eks" {
 
     ebs_optimized = true
     # This bloc device is used only for root volume. Adjust volume according to your size.
-    # NOTE: Don't use this volume for Spark workloads
+    # NOTE: Don't use this volume for ML workloads
     block_device_mappings = {
       xvda = {
         device_name = "/dev/xvda"
@@ -156,6 +124,8 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
       )
 
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2/recommended/image_id --region us-west-2
+      ami_type     = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
       min_size     = 2
       max_size     = 8
       desired_size = 2
@@ -173,6 +143,7 @@ module "eks" {
       })
     }
 
+    # Trainium node group creation can take upto 6 mins
     trn1-32xl-ng1 = {
       name        = "trn1-32xl-ng1"
       description = "Tran1 32xlarge node group for hosting ML workloads"
@@ -182,19 +153,21 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      # ami_id = data.aws_ami.x86.image_id
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
-      ami_id   = "ami-0e0deb7ae582f6fe9"
-      key_name = aws_key_pair.this.key_name
+      # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
+      ami_type       = "AL2_x86_64_GPU"
+      instance_types = ["trn1.32xlarge"]
 
-      enable_bootstrap_user_data = true
-
-      bootstrap_extra_args = "--local-disks raid0"
-
-      # NVMe Setup and EFA Setup
       pre_bootstrap_user_data = <<-EOT
+        cat <<-EOF > /etc/profile.d/bootstrap.sh
         #!/bin/sh
-        # EFA Setup
+
+        # Configure NVMe volumes in RAID0 configuration
+        # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
+        # Mount will be: /mnt/k8s-disks
+        export LOCAL_DISKS='raid0'
+
+        # EFA Setup for Trainium and Inferentia
         export FI_EFA_USE_DEVICE_RDMA=1
         export FI_PROVIDER=efa
         export FI_EFA_FORK_SAFE=1
@@ -203,20 +176,22 @@ module "eks" {
         tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
         ./efa_installer.sh -y -g
         /opt/amazon/efa/bin/fi_info -p efa
+        EOF
+
+        # Source extra environment variables in bootstrap script
+        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
       EOT
 
       # Optional - Post bootstrap data to verify anything
       post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
+        echo "Bootstrap complete. Ready to Go!"
       EOT
 
       min_size     = 1
       max_size     = 2
       desired_size = 1
 
-      instance_types = ["trn1.32xlarge"]
-
-      # EFA Network Interfaces configuration
+      # EFA Network Interfaces configuration for Trn1.32xlarge
       network_interfaces = [
         {
           description                 = "NetworkInterfaces Configuration For EFA and EKS"
@@ -284,23 +259,23 @@ module "eks" {
         }
       ]
 
-      # EC2 Placement Group
+      # Commented to investigate further as the node group creation is failing with palcement group
       # placement = {
-      #     spread_domain = "cluster"
-      #     groupName = "trn1-32xl-ng1"
+      #   spread_domain = "cluster"
+      #   groupName     = "trn1-32xl-ng1"
       # }
 
       labels = {
         WorkerType = "trn1-32xl"
       }
 
-      # taints = [
-      #   {
-      #     key = "trn1-32xl-ng1",
-      #     value = true,
-      #     effect = "NO_SCHEDULE"
-      #   }
-      # ]
+      taints = [
+        {
+          key    = "trn1-32xl-ng1",
+          value  = true,
+          effect = "NO_SCHEDULE"
+        }
+      ]
 
       tags = merge(local.tags, {
         Name                     = "trn1-32xl-ng1",
@@ -309,29 +284,3 @@ module "eks" {
     }
   }
 }
-
-resource "tls_private_key" "this" {
-  algorithm = "RSA"
-}
-
-resource "aws_key_pair" "this" {
-  key_name   = local.name
-  public_key = tls_private_key.this.public_key_openssh
-}
-
-# resource "aws_security_group" "efa" {
-#   name_prefix = "${local.name}-efa"
-#   vpc_id      = module.vpc.vpc_id
-
-#   ingress {
-#     from_port = 22
-#     to_port   = 22
-#     protocol  = "tcp"
-#     cidr_blocks = [
-#       "10.1.0.0/21",
-#       "100.64.0.0/16"
-#     ]
-#   }
-
-#   tags = local.tags
-# }
