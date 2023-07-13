@@ -48,7 +48,8 @@ output "emr_on_eks" {
 # AMP
 ################################################################################
 
-output "amp_workspace_id" {
-  description = "The id of amp"
-  value       = aws_prometheus_workspace.amp[0].id
+
+output "grafana_secret_name" {
+  description = "Grafana password secret name"
+  value       = aws_secretsmanager_secret.grafana.name
 }

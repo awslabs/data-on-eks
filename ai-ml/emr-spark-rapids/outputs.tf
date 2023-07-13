@@ -52,6 +52,11 @@ output "amp_workspace_id" {
   value       = aws_prometheus_workspace.amp[0].id
 }
 
+output "grafana_secret_name" {
+  description = "Grafana password secret name"
+  value       = aws_secretsmanager_secret.grafana.name
+}
+
 output "s3_bucket_id" {
   description = "S3 bucket for Spark input and output data"
   value       = module.s3_bucket.s3_bucket_id

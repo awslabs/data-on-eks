@@ -19,8 +19,9 @@ module "ebs_csi_driver_irsa" {
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  # Short commit hash from 8th May using git rev-parse --short HEAD
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=90a70ba"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.0"
+
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -146,6 +147,44 @@ module "eks_blueprints_kubernetes_addons" {
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+    set = var.enable_amazon_prometheus ? [
+      {
+        name  = "prometheus.serviceAccount.name"
+        value = local.amp_ingest_service_account
+      },
+      {
+        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+        value = module.amp_ingest_irsa[0].iam_role_arn
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
+        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
+        value = local.region
+      }
+    ] : []
+  }
+
   tags = local.tags
 }
 
@@ -201,46 +240,6 @@ module "kubernetes_data_addons" {
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
-  #---------------------------------------------------------------
-  # Prometheus Add-on
-  #---------------------------------------------------------------
-  enable_prometheus = true
-  prometheus_helm_config = {
-    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
-    # Use only when Amazon managed Prometheus is enabled with `amp.tf` resources
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "serviceAccounts.server.name"
-        value = local.amp_ingest_service_account
-      },
-      {
-        name  = "serviceAccounts.server.annotations.eks\\.amazonaws\\.com/role-arn"
-        value = module.amp_ingest_irsa[0].iam_role_arn
-      },
-      {
-        name  = "server.remoteWrite[0].url"
-        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-      },
-      {
-        name  = "server.remoteWrite[0].sigv4.region"
-        value = local.region
-      }
-    ] : []
-  }
-
-  #---------------------------------------------------------------
-  # Open Source Grafana Add-on
-  #---------------------------------------------------------------
-  enable_grafana = true
-  grafana_helm_config = {
-    create_irsa = true # Creates IAM Role with trust policy, default IAM policy and adds service account annotation
-    set_sensitive = [
-      {
-        name  = "adminPassword"
-        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
-      }
-    ]
-  }
 }
 
 #---------------------------------------
@@ -291,7 +290,6 @@ resource "aws_s3_object" "this" {
 
 #---------------------------------------------------------------
 # Grafana Admin credentials resources
-# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
 data "aws_secretsmanager_secret_version" "admin_password_version" {
   secret_id  = aws_secretsmanager_secret.grafana.id

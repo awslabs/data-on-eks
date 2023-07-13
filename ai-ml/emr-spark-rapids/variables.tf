@@ -65,11 +65,6 @@ variable "enable_amazon_prometheus" {
   default     = true
 }
 
-variable "enable_grafana" {
-  description = "Enable Grafana"
-  type        = bool
-  default     = true
-}
 variable "enable_kubecost" {
   description = "Enable Kubecost"
   type        = bool
