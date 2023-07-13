@@ -86,13 +86,7 @@ variable "enable_aws_cloudwatch_metrics" {
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
-  default     = true
-}
-
-variable "enable_grafana" {
-  description = "Enable Grafana"
-  type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_kubecost" {

@@ -3,7 +3,7 @@
 #------------------------------------------
 locals {
   amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
-  namespace                  = "prometheus"
+  amp_namespace              = "kube-prometheus-stack"
 }
 
 resource "aws_prometheus_workspace" "amp" {
@@ -29,7 +29,7 @@ module "amp_ingest_irsa" {
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["${local.namespace}:${local.amp_ingest_service_account}"]
+      namespace_service_accounts = ["${local.amp_namespace}:${local.amp_ingest_service_account}"]
     }
   }
   tags = local.tags

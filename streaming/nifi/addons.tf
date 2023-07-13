@@ -93,6 +93,15 @@ module "eks_blueprints_kubernetes_addons" {
 
   enable_aws_cloudwatch_metrics = true
 
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
     values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
@@ -144,7 +153,6 @@ resource "kubernetes_storage_class_v1" "gp3" {
 
 #---------------------------------------------------------------
 # Grafana Admin credentials resources
-# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
 resource "random_password" "grafana" {
   length           = 16
