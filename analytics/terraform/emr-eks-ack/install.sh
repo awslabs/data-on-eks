@@ -10,8 +10,7 @@ terraform init || echo "\"terraform init\" failed"
 targets=(
   "module.vpc"
   "module.eks"
-  "module.ebs_csi_driver_irsa"
-  "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
   "module.emr_containers"
   "module.emr_ack"
 )

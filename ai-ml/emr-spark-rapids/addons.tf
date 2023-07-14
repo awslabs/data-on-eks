@@ -1,10 +1,10 @@
 #---------------------------------------------------------------
-# IRSA for EBS
+# IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  version               = "~> 5.20"
+  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
@@ -15,9 +15,12 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
-module "eks_blueprints_kubernetes_addons" {
+#---------------------------------------------------------------
+# EKS Blueprints Addons
+#---------------------------------------------------------------
+module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -41,6 +44,7 @@ module "eks_blueprints_kubernetes_addons" {
       preserve = true
     }
   }
+
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
@@ -50,7 +54,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_cluster_proportional_autoscaler = true
   cluster_proportional_autoscaler = {
-    timeout = "300"
     values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
       target = "deployment/coredns"
     })]
@@ -62,8 +65,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -71,8 +73,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    timeout     = "300"
-    create_role = true
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -85,7 +85,6 @@ module "eks_blueprints_kubernetes_addons" {
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
   karpenter = {
-    timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -95,18 +94,13 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
   # Adding AWS Load Balancer Controller
   #---------------------------------------
   enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller = {
-    timeout = "300"
-  }
-
   #---------------------------------------
   # Prommetheus and Grafana stack
   #---------------------------------------
@@ -146,7 +140,6 @@ module "eks_blueprints_kubernetes_addons" {
   }
 
   tags = local.tags
-
 }
 
 #---------------------------------------------------------------
@@ -177,7 +170,6 @@ module "kubernetes_data_addons" {
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
-
 }
 
 #---------------------------------------
@@ -195,7 +187,7 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
   yaml_body = each.value
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 #------------------------------------------
@@ -245,7 +237,7 @@ module "amp_ingest_irsa" {
   count = var.enable_amazon_prometheus ? 1 : 0
 
   source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version   = "~> 5.14"
+  version   = "~> 5.20"
   role_name = format("%s-%s", local.name, "amp-ingest")
 
   attach_amazon_managed_service_prometheus_policy  = true
@@ -257,6 +249,7 @@ module "amp_ingest_irsa" {
       namespace_service_accounts = ["${local.amp_namespace}:${local.amp_ingest_service_account}"]
     }
   }
+
   tags = local.tags
 }
 

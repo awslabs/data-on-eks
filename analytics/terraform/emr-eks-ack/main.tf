@@ -1,3 +1,55 @@
+provider "aws" {
+  region = local.region
+}
+
+# ECR always authenticates with `us-east-1` region
+# Docs -> https://docs.aws.amazon.com/AmazonECR/latest/public/public-registries.html
+provider "aws" {
+  alias  = "ecr"
+  region = "us-east-1"
+}
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.this.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    token                  = data.aws_eks_cluster_auth.this.token
+  }
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}
+
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
+}
+
+data "aws_caller_identity" "current" {}
+data "aws_availability_zones" "available" {}
+
+locals {
+  name   = var.name
+  region = var.region
+
+  vpc_cidr = var.vpc_cidr
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
+
+  tags = merge(var.tags, {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  })
+}
+
+#---------------------------------------------------------------
+# EKS Cluster
+#---------------------------------------------------------------
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
@@ -18,7 +70,6 @@ module "eks" {
       # Required for EMR on EKS virtual cluster
       rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
       username = "emr-containers"
-      groups   = []
     },
   ]
 
@@ -48,16 +99,6 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    # Recommended outbound traffic for Node groups
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
   }
 
   eks_managed_node_group_defaults = {
@@ -74,31 +115,11 @@ module "eks" {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
 
-      ami_id = data.aws_ami.eks.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = module.vpc.private_subnets
-
       min_size     = 1
       max_size     = 9
       desired_size = 3
 
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types = ["m5.xlarge"]
 
       ebs_optimized = true
       block_device_mappings = {
@@ -122,4 +143,6 @@ module "eks" {
       }
     }
   }
+
+  tags = local.tags
 }
