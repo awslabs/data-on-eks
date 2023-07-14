@@ -16,12 +16,11 @@ module "ebs_csi_driver_irsa" {
 }
 
 #---------------------------------------------------------------
-# EKS Blueprints Kubernetes Addons
+# EKS Blueprints Addons
 #---------------------------------------------------------------
-module "eks_blueprints_kubernetes_addons" {
+module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
-
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -45,6 +44,7 @@ module "eks_blueprints_kubernetes_addons" {
       preserve = true
     }
   }
+
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
@@ -54,7 +54,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_cluster_proportional_autoscaler = true
   cluster_proportional_autoscaler = {
-    timeout = "300"
     values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
       target = "deployment/coredns"
     })]
@@ -66,8 +65,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -75,7 +73,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -87,15 +84,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
-  karpenter_node = {
-    create_iam_role          = true
-    iam_role_use_name_prefix = false
-    # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
-    iam_role_name = local.karpenter_iam_role_name
-  }
-
   karpenter = {
-    timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -105,8 +94,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
   }
 
   #---------------------------------------
@@ -114,18 +102,15 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_for_fluentbit = true
   aws_for_fluentbit_cw_log_group = {
-    create            = true
     use_name_prefix   = false
     name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
     retention_in_days = 30
   }
-
   aws_for_fluentbit = {
-    create_namespace = true
-    namespace        = "aws-for-fluentbit"
-    create_role      = true
-    role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
-
+    s3_bucket_arns = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*}"
+    ]
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
@@ -136,14 +121,12 @@ module "eks_blueprints_kubernetes_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    version = "1.4.7"
-    timeout = "300"
+    chart_version = "1.5.4"
   }
 
   enable_ingress_nginx = true
   ingress_nginx = {
     version = "4.5.2"
-    timeout = "300"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
@@ -257,7 +240,7 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
   yaml_body = each.value
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 #tfsec:ignore:*
@@ -311,13 +294,4 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
-}
-
-#---------------------------------------------------------------
-# IAM Policy for FluentBit Add-on
-#---------------------------------------------------------------
-resource "aws_iam_policy" "fluentbit" {
-  description = "IAM policy policy for FluentBit"
-  name        = "${local.name}-fluentbit-additional"
-  policy      = data.aws_iam_policy_document.fluent_bit.json
 }
