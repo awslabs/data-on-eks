@@ -4,7 +4,9 @@
 
 module "mwaa" {
   source  = "aws-ia/mwaa/aws"
-  version = "0.0.1"
+  version = "0.0.4"
+
+  depends_on = [aws_s3_object.uploads, module.vpc_endpoints]
 
   name                  = local.name
   airflow_version       = "2.2.2"
@@ -23,7 +25,7 @@ module "mwaa" {
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = slice(module.vpc.private_subnets, 0, 2) # Required 2 subnets only
   source_cidr        = [module.vpc.vpc_cidr_block]             # Add your IP here to access Airflow UI
-
+  
   airflow_configuration_options = {
     "core.load_default_connections" = "false"
     "core.load_examples"            = "false"
@@ -84,10 +86,9 @@ resource "aws_iam_role_policy_attachment" "this" {
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  version = "~> 3.14"
 
   bucket = "mwaa-${random_id.this.hex}"
-  acl    = "private"
 
   # For example only - please evaluate for your environment
   force_destroy = true
@@ -119,16 +120,16 @@ locals {
     kind            = "Config"
     current-context = "mwaa"
     clusters = [{
-      name = module.eks_blueprints.eks_cluster_arn
+      name = module.eks.cluster_arn
       cluster = {
-        certificate-authority-data = module.eks_blueprints.eks_cluster_certificate_authority_data
-        server                     = module.eks_blueprints.eks_cluster_endpoint
+        certificate-authority-data = module.eks.cluster_certificate_authority_data
+        server                     = module.eks.cluster_endpoint
       }
     }]
     contexts = [{
       name = "mwaa" # must match KubernetesPodOperator context
       context = {
-        cluster = module.eks_blueprints.eks_cluster_arn
+        cluster = module.eks.cluster_arn
         user    = "mwaa"
       }
     }]
@@ -152,14 +153,14 @@ locals {
   })
 }
 
-resource "aws_s3_bucket_object" "kube_config" {
+resource "aws_s3_object" "kube_config" {
   bucket  = module.s3_bucket.s3_bucket_id
   key     = "${local.dag_s3_path}/kube_config.yaml"
   content = local.kubeconfig
   etag    = md5(local.kubeconfig)
 }
 
-resource "aws_s3_bucket_object" "uploads" {
+resource "aws_s3_object" "uploads" {
   for_each = fileset("${local.dag_s3_path}/", "*")
 
   bucket = module.s3_bucket.s3_bucket_id
