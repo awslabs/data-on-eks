@@ -86,8 +86,8 @@ module "emr_containers_workshop" {
 
   for_each = toset(["data-team-a", "data-team-b"])
 
-  eks_cluster_id    = module.eks.cluster_name
-  oidc_provider_arn = module.eks.oidc_provider_arn
+  eks_cluster_id    = local.cluster_name
+  oidc_provider_arn = local.oidc_provider_arn
 
   name      = "${local.cluster_name}-emr-${each.value}"
   namespace = "emr-${each.value}"
