@@ -23,7 +23,6 @@ module "eks_blueprints_kubernetes_addons" {
       preserve = true
     }
     vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
       preserve                 = true
     }
     kube-proxy = {
