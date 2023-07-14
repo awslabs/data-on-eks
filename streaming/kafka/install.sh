@@ -8,7 +8,6 @@ targets=(
   "module.vpc"
   "module.eks"
   "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_ipv4_irsa"
   "module.eks_blueprints_addons"
   "module.kubernetes_data_addons"
 )

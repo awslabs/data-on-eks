@@ -15,24 +15,6 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
-
 module "eks_blueprints_kubernetes_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.0"
@@ -46,16 +28,18 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
-    # NOTE: If you are using a custom VPC CNI, you must disable the VPC CNI add-on before you can delete the custom VPC CNI.
-    # VPC CNI should be installed before the worker nodes are created for custom VPC CNI to work properly.
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-    }
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns    = {}
-    kube-proxy = {}
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
   }
   #---------------------------------------
   # Kubernetes Add-ons
@@ -123,6 +107,44 @@ module "eks_blueprints_kubernetes_addons" {
     timeout = "300"
   }
 
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+    set = var.enable_amazon_prometheus ? [
+      {
+        name  = "prometheus.serviceAccount.name"
+        value = local.amp_ingest_service_account
+      },
+      {
+        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+        value = module.amp_ingest_irsa[0].iam_role_arn
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
+        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
+        value = local.region
+      }
+    ] : []
+  }
+
   tags = local.tags
 
 }
@@ -156,46 +178,6 @@ module "kubernetes_data_addons" {
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
-  #---------------------------------------------------------------
-  # Prometheus Add-on
-  #---------------------------------------------------------------
-  enable_prometheus = var.enable_amazon_prometheus
-  prometheus_helm_config = {
-    values = [templatefile("${path.module}/helm-values/prometheus-values.yaml", {})]
-    # Use only when Amazon managed Prometheus is enabled with `amp.tf` resources
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "serviceAccounts.server.name"
-        value = local.amp_ingest_service_account
-      },
-      {
-        name  = "serviceAccounts.server.annotations.eks\\.amazonaws\\.com/role-arn"
-        value = module.amp_ingest_irsa[0].iam_role_arn
-      },
-      {
-        name  = "server.remoteWrite[0].url"
-        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-      },
-      {
-        name  = "server.remoteWrite[0].sigv4.region"
-        value = local.region
-      }
-    ] : []
-  }
-
-  #---------------------------------------------------------------
-  # Open Source Grafana Add-on
-  #---------------------------------------------------------------
-  enable_grafana = var.enable_grafana
-  grafana_helm_config = {
-    create_irsa = true # Creates IAM Role with trust policy, default IAM policy and adds service account annotation
-    set_sensitive = [
-      {
-        name  = "adminPassword"
-        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
-      }
-    ]
-  }
 }
 
 #---------------------------------------
@@ -221,7 +203,7 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 #------------------------------------------
 locals {
   amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
-  namespace                  = "prometheus"
+  amp_namespace              = "kube-prometheus-stack"
 }
 
 resource "aws_prometheus_workspace" "amp" {
@@ -233,7 +215,6 @@ resource "aws_prometheus_workspace" "amp" {
 
 #---------------------------------------------------------------
 # Grafana Admin credentials resources
-# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
 data "aws_secretsmanager_secret_version" "admin_password_version" {
   secret_id  = aws_secretsmanager_secret.grafana.id
@@ -273,7 +254,7 @@ module "amp_ingest_irsa" {
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["${local.namespace}:${local.amp_ingest_service_account}"]
+      namespace_service_accounts = ["${local.amp_namespace}:${local.amp_ingest_service_account}"]
     }
   }
   tags = local.tags

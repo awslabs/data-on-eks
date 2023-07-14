@@ -11,7 +11,6 @@ targets=(
   "module.vpc"
   "module.eks"
   "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_irsa"
   "module.eks_blueprints_kubernetes_addons"
   "module.barman_s3_bucket"
   "module.barman_backup_irsa"
