@@ -4,7 +4,8 @@
 module "eks_blueprints_kubernetes_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650fd2b4bc894bde7b51313a8dc9598d82e925"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "v1.0.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -43,31 +44,13 @@ module "eks_blueprints_kubernetes_addons" {
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
+  version               = "~> 5.20"
   role_name             = format("%s-%s", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
     }
   }
   tags = local.tags

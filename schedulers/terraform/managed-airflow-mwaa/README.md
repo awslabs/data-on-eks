@@ -1,5 +1,5 @@
 # Amazon Managed Workflows for Apache Airflow (MWAA)
-Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/job-schedulers/aws-managed-airflow) to deploy this pattern and run sample tests.
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/aws-managed-airflow) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
@@ -24,16 +24,15 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_amp_ingest_irsa"></a> [amp\_ingest\_irsa](#module\_amp\_ingest\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.14 |
 | <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.14 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.13 |
 | <a name="module_eks_blueprints_kubernetes_addons"></a> [eks\_blueprints\_kubernetes\_addons](#module\_eks\_blueprints\_kubernetes\_addons) | aws-ia/eks-blueprints-addons/aws | v1.0.0 |
 | <a name="module_emr_containers"></a> [emr\_containers](#module\_emr\_containers) | ../../../workshop/modules/emr-eks-containers | n/a |
-| <a name="module_mwaa"></a> [mwaa](#module\_mwaa) | aws-ia/mwaa/aws | 0.0.1 |
+| <a name="module_mwaa"></a> [mwaa](#module\_mwaa) | aws-ia/mwaa/aws | 0.0.2 |
 | <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 4.0 |
-| <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | terraform-aws-modules/vpc/aws//modules/vpc-endpoints | ~> 4.0 |
-| <a name="module_vpc_endpoints_sg"></a> [vpc\_endpoints\_sg](#module\_vpc\_endpoints\_sg) | terraform-aws-modules/security-group/aws | ~> 4.0 |
+| <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 5.0 |
+| <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | terraform-aws-modules/vpc/aws//modules/vpc-endpoints | ~> 5.0 |
+| <a name="module_vpc_endpoints_sg"></a> [vpc\_endpoints\_sg](#module\_vpc\_endpoints\_sg) | terraform-aws-modules/security-group/aws | ~> 5.0 |
 
 ## Resources
 
