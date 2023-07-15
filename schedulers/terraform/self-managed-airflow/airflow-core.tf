@@ -59,8 +59,6 @@ module "db" {
   tags = local.tags
 }
 
-
-
 #---------------------------------------------------------------
 # Apache Airflow Postgres Metastore DB Master password
 #---------------------------------------------------------------
@@ -206,14 +204,18 @@ resource "kubernetes_secret_v1" "airflow_webserver" {
 }
 
 module "airflow_irsa_webserver" {
-  source = "../../../workshop/modules/terraform-aws-eks-data-addons/irsa"
-  count  = var.enable_airflow ? 1 : 0
-  # IAM role for service account (IRSA)
-  create_role      = var.enable_airflow
-  role_name        = local.airflow_webserver_service_account
-  role_description = "IRSA for ${local.airflow_name} Webserver"
+  count = var.enable_airflow ? 1 : 0
 
-  role_policy_arns = merge({ AirflowWebserver = aws_iam_policy.airflow_webserver[0].arn })
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0" #ensure to update this to the latest/desired version
+
+  # Disable helm release
+  create_release = false
+
+  # IAM role for service account (IRSA)
+  create_role   = var.enable_airflow
+  role_name     = local.airflow_webserver_service_account
+  role_policies = merge({ AirflowWebserver = aws_iam_policy.airflow_webserver[0].arn })
 
   oidc_providers = {
     this = {
@@ -222,6 +224,8 @@ module "airflow_irsa_webserver" {
       service_account = local.airflow_webserver_service_account
     }
   }
+
+  tags = local.tags
 }
 
 resource "aws_iam_policy" "airflow_webserver" {
@@ -233,10 +237,9 @@ resource "aws_iam_policy" "airflow_webserver" {
   policy      = data.aws_iam_policy_document.airflow_s3_logs[0].json
 }
 
-
-##---------------------------------------------------------------
-## Apache Airflow Webserver Secret
-##---------------------------------------------------------------
+#---------------------------------------------------------------
+# Apache Airflow Webserver Secret
+#---------------------------------------------------------------
 resource "random_id" "airflow_webserver" {
   count       = var.enable_airflow ? 1 : 0
   byte_length = 16
@@ -447,4 +450,30 @@ module "airflow_s3_bucket" {
   }
 
   tags = local.tags
+}
+
+#---------------------------------------------------------------
+# Example IAM policy for Aiflow S3 logging
+#---------------------------------------------------------------
+data "aws_iam_policy_document" "airflow_s3_logs" {
+  count = var.enable_airflow ? 1 : 0
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket[0].s3_bucket_id}"]
+
+    actions = [
+      "s3:ListBucket"
+    ]
+  }
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket[0].s3_bucket_id}/*"]
+
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+    ]
+  }
 }

@@ -14,7 +14,6 @@ module "ebs_csi_driver_irsa" {
   }
   tags = local.tags
 }
-
 #---------------------------------------------------------------
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
@@ -45,10 +44,6 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
-  #---------------------------------------
-  # Kubernetes Add-ons
-  #---------------------------------------
-
   #---------------------------------------
   # EFS CSI driver
   #---------------------------------------
@@ -121,7 +116,7 @@ module "eks_blueprints_addons" {
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
-      s3_bucket_name       = module.s3_bucket.s3_bucket_id
+      s3_bucket_name       = module.fluentbit_s3_bucket.s3_bucket_id
       cluster_name         = module.eks.cluster_name
     })]
   }
@@ -258,7 +253,6 @@ module "kubernetes_data_addons" {
       })
     ]
   }
-
 }
 
 #---------------------------------------------------------------
@@ -323,5 +317,5 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
   yaml_body = each.value
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
