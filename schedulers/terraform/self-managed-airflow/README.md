@@ -28,7 +28,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_airflow_irsa_scheduler"></a> [airflow\_irsa\_scheduler](#module\_airflow\_irsa\_scheduler) | ../../../workshop/modules/terraform-aws-eks-data-addons/irsa | n/a |
-| <a name="module_airflow_irsa_webserver"></a> [airflow\_irsa\_webserver](#module\_airflow\_irsa\_webserver) | ../../../workshop/modules/terraform-aws-eks-data-addons/irsa | n/a |
+| <a name="module_airflow_irsa_webserver"></a> [airflow\_irsa\_webserver](#module\_airflow\_irsa\_webserver) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |
 | <a name="module_airflow_irsa_worker"></a> [airflow\_irsa\_worker](#module\_airflow\_irsa\_worker) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |
 | <a name="module_airflow_s3_bucket"></a> [airflow\_s3\_bucket](#module\_airflow\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
 | <a name="module_amp_ingest_irsa"></a> [amp\_ingest\_irsa](#module\_amp\_ingest\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.14 |
