@@ -32,3 +32,13 @@ output "jupyterhub" {
   value       = try(helm_release.jupyterhub[0].metadata, null)
   description = "jupyterhub Helm Chart metadata"
 }
+
+output "jupyterhub" {
+  value       = try(helm_release.aws_efa_k8s_device_plugin, null)
+  description = "AWS EFA K8s Plugin Helm Chart metadata"
+}
+
+output "jupyterhub" {
+  value       = try(helm_release.aws_neuron_device_plugin, null)
+  description = "AWS Neuron Device Plugin Helm Chart metadata"
+}

@@ -1,7 +1,3 @@
-data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.ecr
-}
-
 #---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
@@ -166,6 +162,20 @@ module "eks_blueprints_addons" {
 }
 
 #---------------------------------------------------------------
+# Data on EKS Kubernetes Addons
+#---------------------------------------------------------------
+# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
+module "kubernetes_data_addons" {
+  # Please note that local source will be replaced once the below repo is public
+  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
+  source            = "../../workshop/modules/terraform-aws-eks-data-addons"
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  enable_aws_neuron_device_plugin  = true
+  enable_aws_efa_k8s_device_plugin = true
+}
+
+#---------------------------------------------------------------
 # Grafana Admin credentials resources
 # Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
@@ -189,21 +199,6 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
-}
-
-#---------------------------------------------------------------
-# Data on EKS Kubernetes Addons
-#---------------------------------------------------------------
-# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
-module "kubernetes_data_addons" {
-  # Please note that local source will be replaced once the below repo is public
-  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
-  source            = "../../workshop/modules/terraform-aws-eks-data-addons"
-  oidc_provider_arn = module.eks.oidc_provider_arn
-
-  enable_aws_neuron_device_plugin  = true
-  enable_aws_efa_k8s_device_plugin = true
-
 }
 
 #---------------------------------------

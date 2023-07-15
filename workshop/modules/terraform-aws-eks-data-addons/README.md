@@ -123,7 +123,7 @@ Please refer to the documentation of each add-on for more details on usage and c
 
 | Name | Description |
 |------|-------------|
-| <a name="output_jupyterhub"></a> [jupyterhub](#output\_jupyterhub) | jupyterhub Helm Chart metadata |
+| <a name="output_jupyterhub"></a> [jupyterhub](#output\_jupyterhub) | AWS Neuron Device Plugin Helm Chart metadata |
 | <a name="output_kubecost"></a> [kubecost](#output\_kubecost) | Kubecost Helm Chart metadata |
 | <a name="output_prometheus"></a> [prometheus](#output\_prometheus) | Prometheus Helm Chart metadata |
 | <a name="output_spark_history_server"></a> [spark\_history\_server](#output\_spark\_history\_server) | Spark History Server Helm Chart metadata |

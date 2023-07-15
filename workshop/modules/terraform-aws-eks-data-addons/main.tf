@@ -2,56 +2,6 @@ data "aws_partition" "current" {}
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 locals {
-  #---------------------------------------------------------------
-  # Helm Charts with IRSA
-  #---------------------------------------------------------------
-  # Grafana will be deprecated in favour https://github.com/aws-ia/terraform-aws-eks-blueprints-addons/blob/f120cc19056b3f77dab3cc3c9d734692e91b62c7/variables.tf#L445C30-L445C30
-  grafana_name       = "grafana"
-  grafana_repository = "https://grafana.github.io/helm-charts"
-  grafana_version    = "6.52.4"
-
-  spark_history_server_name       = "spark-history-server"
-  spark_history_server_repository = "https://hyper-mesh.github.io/spark-history-server"
-  spark_history_server_version    = "1.0.0"
-
-  #---------------------------------------------------------------
-  # Helm Charts without IRSA
-  #---------------------------------------------------------------
-  emr_spark_operator_name       = "emr-spark-operator"
-  emr_spark_operator_repository = "oci://${local.account_region_map[local.region]}.dkr.ecr.${local.region}.amazonaws.com"
-  emr_spark_operator_version    = "1.1.26-amzn-1"
-
-  spark_operator_name       = "spark-operator"
-  spark_operator_repository = "https://googlecloudplatform.github.io/spark-on-k8s-operator"
-  spark_operator_version    = "1.1.27"
-
-  flink_operator_name       = "flink-kubernetes-operator"
-  flink_operator_repository = "https://downloads.apache.org/flink/flink-kubernetes-operator-${local.flink_operator_version}"
-  flink_operator_version    = try(var.flink_operator_helm_config["version"], "1.4.0")
-
-  yunikorn_name       = "yunikorn"
-  yunikorn_repository = "https://apache.github.io/yunikorn-release"
-  yunikorn_version    = "1.2.0"
-
-  kubecost_name       = "kubecost"
-  kubecost_repository = "oci://public.ecr.aws/kubecost"
-  kubecost_version    = "1.103.2"
-
-  jupyterhub_name       = "jupyterhub"
-  jupyterhub_repository = "https://jupyterhub.github.io/helm-chart/"
-  jupyterhub_version    = "3.0.0-beta.1"
-
-  #---------------------------------------------------------------
-  # Prometheus will be deprecated in favour https://github.com/aws-ia/terraform-aws-eks-blueprints-addons/blob/f120cc19056b3f77dab3cc3c9d734692e91b62c7/variables.tf#L445C30-L445C30
-  #---------------------------------------------------------------
-  prometheus_name       = "prometheus"
-  prometheus_repository = "https://prometheus-community.github.io/helm-charts"
-  prometheus_version    = "22.6.0"
-
-  airflow_name       = "airflow"
-  airflow_repository = "https://airflow.apache.org"
-  airflow_version    = "1.9.0"
-
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
   region     = data.aws_region.current.name

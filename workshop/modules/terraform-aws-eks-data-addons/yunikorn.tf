@@ -1,3 +1,8 @@
+locals {
+  yunikorn_name       = "yunikorn"
+  yunikorn_repository = "https://apache.github.io/yunikorn-release"
+  yunikorn_version    = "1.2.0"
+}
 resource "helm_release" "yunikorn" {
   count = var.enable_yunikorn ? 1 : 0
 
