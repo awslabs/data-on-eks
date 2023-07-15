@@ -195,7 +195,7 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Kubecost Add-on
   #---------------------------------------------------------------
-  enable_kubecost = false
+  enable_kubecost = var.enable_kubecost
   kubecost_helm_config = {
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
