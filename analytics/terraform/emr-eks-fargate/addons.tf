@@ -1,15 +1,13 @@
-################################################################################
-# Kubernetes Addons
-################################################################################
-module "eks_blueprints_kubernetes_addons" {
-  # Users should pin the version to the latest available release
-  # tflint-ignore: terraform_module_pinned_source
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650fd2b4bc894bde7b51313a8dc9598d82e925"
+#---------------------------------------------------------------
+# EKS Blueprints Addons
+#---------------------------------------------------------------
+module "eks_blueprints_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.cluster_oidc_issuer_url
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
@@ -53,9 +51,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
-  #---------------------------------------
-  # Fargate FluentBit
-  #---------------------------------------
+
   enable_fargate_fluentbit = true
 
   tags = local.tags

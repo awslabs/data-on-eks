@@ -114,7 +114,7 @@ resource "kubectl_manifest" "storage_class" {
   })
 
   depends_on = [
-    module.eks_blueprints_kubernetes_addons
+    module.eks_blueprints_addons
   ]
 }
 
@@ -131,7 +131,7 @@ resource "kubectl_manifest" "static_pv" {
   })
 
   depends_on = [
-    module.eks_blueprints_kubernetes_addons,
+    module.eks_blueprints_addons,
     kubectl_manifest.storage_class,
     aws_fsx_lustre_file_system.this
   ]
