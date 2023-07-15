@@ -7,8 +7,8 @@ variable "name" {
 # NOTE: Trainium and Inferentia are only available in us-west-2 and us-east-1 regions
 variable "region" {
   description = "region"
-  type        = string
   default     = "us-west-2"
+  type        = string
 }
 
 variable "eks_cluster_version" {
