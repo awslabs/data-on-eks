@@ -124,7 +124,6 @@ resource "kubernetes_namespace_v1" "airflow" {
 #---------------------------------------------------------------
 # IRSA module for Airflow Scheduler
 #---------------------------------------------------------------
-
 resource "kubernetes_service_account_v1" "airflow_scheduler" {
   count = var.enable_airflow ? 1 : 0
   metadata {
@@ -181,7 +180,6 @@ resource "aws_iam_policy" "airflow_scheduler" {
 #---------------------------------------------------------------
 # IRSA module for Airflow Webserver
 #---------------------------------------------------------------
-
 resource "kubernetes_service_account_v1" "airflow_webserver" {
   count = var.enable_airflow ? 1 : 0
   metadata {
@@ -286,7 +284,6 @@ YAML
 #---------------------------------------------------------------
 # IRSA module for Airflow Workers
 #---------------------------------------------------------------
-
 resource "kubernetes_service_account_v1" "airflow_worker" {
   count = var.enable_airflow ? 1 : 0
   metadata {
@@ -313,14 +310,18 @@ resource "kubernetes_secret_v1" "airflow_worker" {
 }
 
 module "airflow_irsa_worker" {
-  source = "../../../workshop/modules/terraform-aws-eks-data-addons/irsa"
-  count  = var.enable_airflow ? 1 : 0
-  # IAM role for service account (IRSA)
-  create_role      = var.enable_airflow
-  role_name        = local.airflow_workers_service_account
-  role_description = "IRSA for ${local.airflow_name} Workers"
+  count = var.enable_airflow ? 1 : 0
 
-  role_policy_arns = merge({ AirflowWorker = aws_iam_policy.airflow_worker[0].arn })
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0" #ensure to update this to the latest/desired version
+
+  # Disable helm release
+  create_release = false
+
+  # IAM role for service account (IRSA)
+  create_role   = var.enable_airflow
+  role_name     = local.airflow_workers_service_account
+  role_policies = merge({ AirflowWorker = aws_iam_policy.airflow_worker[0].arn })
 
   oidc_providers = {
     this = {
@@ -329,8 +330,9 @@ module "airflow_irsa_worker" {
       service_account = local.airflow_workers_service_account
     }
   }
-}
 
+  tags = local.tags
+}
 
 resource "aws_iam_policy" "airflow_worker" {
   count = var.enable_airflow ? 1 : 0

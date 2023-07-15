@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
+  version               = "~> 5.20"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
@@ -18,10 +18,10 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
-module "eks_blueprints_kubernetes_addons" {
+module "eks_blueprints_addons" {
   # Short commit hash from 8th May using git rev-parse --short HEAD
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "v1.0.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -33,17 +33,16 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   eks_addons = {
     aws-ebs-csi-driver = {
-      most_recent              = true
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-
     }
     coredns = {
-      most_recent = true
-      preserve    = true
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
     }
     kube-proxy = {
-      most_recent = true
-      preserve    = true
+      preserve = true
     }
   }
   #---------------------------------------
@@ -61,7 +60,6 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------------------------------
   enable_cluster_proportional_autoscaler = true
   cluster_proportional_autoscaler = {
-    timeout = "300"
     values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
       target = "deployment/coredns"
     })]
@@ -73,8 +71,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -94,15 +91,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
-  karpenter_node = {
-    create_iam_role          = true
-    iam_role_use_name_prefix = false
-    # We are defining role name so that we can add this to aws-auth during EKS Cluster creation
-    iam_role_name = local.karpenter_iam_role_name
-  }
-
   karpenter = {
-    timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -112,8 +101,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -121,31 +109,24 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_aws_for_fluentbit = true
   aws_for_fluentbit_cw_log_group = {
-    create            = true
     use_name_prefix   = false
     name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
     retention_in_days = 30
   }
-
   aws_for_fluentbit = {
-    create_namespace = true
-    namespace        = "aws-for-fluentbit"
-    create_role      = true
-    role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
-
+    s3_bucket_arns = [
+      module.fluentbit_s3_bucket.s3_bucket_arn,
+      "${module.fluentbit_s3_bucket.s3_bucket_arn}/*}"
+    ]
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
-      s3_bucket_name       = module.fluentbit_s3_bucket.s3_bucket_id
+      s3_bucket_name       = module.s3_bucket.s3_bucket_id
       cluster_name         = module.eks.cluster_name
     })]
   }
 
   enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller = {
-    #    version = "1.4.7"
-    timeout = "300"
-  }
 
   #---------------------------------------
   # Prommetheus and Grafana stack
@@ -259,7 +240,7 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Spark Operator Add-on
   #---------------------------------------------------------------
-  enable_spark_operator = false
+  enable_spark_operator = true
   spark_operator_helm_config = {
     values = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
   }
@@ -267,7 +248,7 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Spark History Server Add-on
   #---------------------------------------------------------------
-  enable_spark_history_server = false
+  enable_spark_history_server = true
   spark_history_server_helm_config = {
     create_irsa = false
     values = [
@@ -306,28 +287,16 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 }
 
 #---------------------------------------------------------------
-# IAM Policy for FluentBit Add-on
-#---------------------------------------------------------------
-resource "aws_iam_policy" "fluentbit" {
-  description = "IAM policy policy for FluentBit"
-  name        = "${local.name}-fluentbit-additional"
-  policy      = data.aws_iam_policy_document.fluent_bit.json
-}
-
-#---------------------------------------------------------------
 # S3 log bucket for FluentBit
 #---------------------------------------------------------------
-
 #tfsec:ignore:*
 module "fluentbit_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket_prefix = "${local.name}-fluentbit-"
-
+  bucket_prefix = "${local.name}-spark-logs-"
   # For example only - please evaluate for your environment
   force_destroy = true
-
   server_side_encryption_configuration = {
     rule = {
       apply_server_side_encryption_by_default = {
@@ -337,4 +306,22 @@ module "fluentbit_s3_bucket" {
   }
 
   tags = local.tags
+}
+
+#---------------------------------------
+# Karpenter Provisioners for workloads
+#---------------------------------------
+data "kubectl_path_documents" "karpenter_provisioners" {
+  pattern = "${path.module}/karpenter-provisioners/*.yaml"
+  vars = {
+    azs            = local.region
+    eks_cluster_id = module.eks.cluster_name
+  }
+}
+
+resource "kubectl_manifest" "karpenter_provisioner" {
+  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
+  yaml_body = each.value
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
 }

@@ -1,4 +1,28 @@
 #---------------------------------------------------------------
+# Local variables
+#---------------------------------------------------------------
+locals {
+  name   = var.name
+  region = var.region
+  azs    = slice(data.aws_availability_zones.available.names, 0, 2)
+
+  airflow_name                      = "airflow"
+  airflow_version                   = "2.5.3"
+  airflow_namespace                 = "airflow"
+  airflow_scheduler_service_account = "airflow-scheduler"
+  airflow_webserver_service_account = "airflow-webserver"
+  airflow_workers_service_account   = "airflow-worker"
+  airflow_webserver_secret_name     = "airflow-webserver-secret-key"
+  efs_storage_class                 = "efs-sc"
+  efs_pvc                           = "airflowdags-pvc"
+
+  tags = {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  }
+}
+
+#---------------------------------------------------------------
 # EKS Cluster
 #---------------------------------------------------------------
 module "eks" {
@@ -8,8 +32,7 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
-  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
@@ -19,7 +42,7 @@ module "eks" {
   aws_auth_roles = [
     # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.karpenter_iam_role_name}"
+      rolearn  = module.eks_blueprints_kubernetes_addons.karpenter.node_iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -53,15 +76,6 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
     # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
     # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
     # Change this according to your security requirements if needed
@@ -88,33 +102,15 @@ module "eks" {
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
     core_node_group = {
       name        = "core-node-group"
-      description = "EKS managed node group example launch template"
+      description = "EKS Core node group for hosting critical add-ons"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
-      ami_id = data.aws_ami.x86.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
+      min_size     = 4
+      max_size     = 8
+      desired_size = 4
 
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      min_size     = 3
-      max_size     = 9
-      desired_size = 3
-
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types = ["m5.xlarge"]
 
       ebs_optimized = true
       block_device_mappings = {
@@ -127,37 +123,15 @@ module "eks" {
         }
       }
 
-      update_config = {
-        max_unavailable_percentage = 50
-      }
-
       labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
       }
 
-      tags = {
+      tags = merge(local.tags, {
         Name                     = "core-node-grp",
         "karpenter.sh/discovery" = local.name
-      }
+      })
     }
   }
-}
-
-#---------------------------------------
-# Karpenter Provisioners for workloads
-#---------------------------------------
-data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/*.yaml"
-  vars = {
-    azs            = local.region
-    eks_cluster_id = module.eks.cluster_name
-  }
-}
-
-resource "kubectl_manifest" "karpenter_provisioner" {
-  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_kubernetes_addons]
 }
