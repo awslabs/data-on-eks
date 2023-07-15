@@ -20,7 +20,7 @@ spec:
       values: ["trn1n"] # trn1.2xlarge, trn1n.32xlarge
     - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
       operator: In
-      values: ["trn1.32xlarge"] # trn1.2xlarge, trn1n.32xlarge 
+      values: ["trn1.32xlarge"] # trn1.2xlarge, trn1n.32xlarge
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
@@ -108,7 +108,7 @@ spec:
         --device-index 1 \
         --network-card-index $network_card_index
     done
-    
+
     # EFA Setup for Trainium and Inferentia
     export FI_EFA_USE_DEVICE_RDMA=1
     export FI_PROVIDER=efa

@@ -3,11 +3,11 @@ resource "helm_release" "aws_neuron_device_plugin" {
 
   name                       = try(var.aws_neuron_device_plugin_helm_config["name"], "neuron-device-plugin")
   repository                 = try(var.aws_neuron_device_plugin_helm_config["repository"], null)
-  chart                      = try(var.aws_neuron_device_plugin_helm_config["chart"], "./helm-charts/aws_neuron_device_plugin")
+  chart                      = try(var.aws_neuron_device_plugin_helm_config["chart"], "${path.module}/helm-charts/neuron-device-plugin")
   version                    = try(var.aws_neuron_device_plugin_helm_config["version"], "0.1.0")
   timeout                    = try(var.aws_neuron_device_plugin_helm_config["timeout"], 300)
   values                     = try(var.aws_neuron_device_plugin_helm_config["values"], null)
-  create_namespace           = try(var.aws_neuron_device_plugin_helm_config["create_namespace"], true)
+  create_namespace           = try(var.aws_neuron_device_plugin_helm_config["create_namespace"], false)
   namespace                  = try(var.aws_neuron_device_plugin_helm_config["namespace"], "kube-system")
   lint                       = try(var.aws_neuron_device_plugin_helm_config["lint"], false)
   description                = try(var.aws_neuron_device_plugin_helm_config["description"], "")

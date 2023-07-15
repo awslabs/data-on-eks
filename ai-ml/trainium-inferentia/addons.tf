@@ -198,14 +198,12 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 module "kubernetes_data_addons" {
   # Please note that local source will be replaced once the below repo is public
   # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
-  source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
+  source            = "../../workshop/modules/terraform-aws-eks-data-addons"
   oidc_provider_arn = module.eks.oidc_provider_arn
 
-  #---------------------------------------------------------------
-  # Spark Operator Add-on
-  #---------------------------------------------------------------
-  enable_aws_neuron_device_plugin = true
-  
+  enable_aws_neuron_device_plugin  = true
+  enable_aws_efa_k8s_device_plugin = true
+
 }
 
 #---------------------------------------

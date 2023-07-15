@@ -17,7 +17,6 @@ locals {
   #---------------------------------------------------------------
   # Helm Charts without IRSA
   #---------------------------------------------------------------
-
   emr_spark_operator_name       = "emr-spark-operator"
   emr_spark_operator_repository = "oci://${local.account_region_map[local.region]}.dkr.ecr.${local.region}.amazonaws.com"
   emr_spark_operator_version    = "1.1.26-amzn-1"
@@ -29,10 +28,6 @@ locals {
   flink_operator_name       = "flink-kubernetes-operator"
   flink_operator_repository = "https://downloads.apache.org/flink/flink-kubernetes-operator-${local.flink_operator_version}"
   flink_operator_version    = try(var.flink_operator_helm_config["version"], "1.4.0")
-
-  nvidia_gpu_operator_name       = "nvidia-gpu-operator"
-  nvidia_gpu_operator_repository = "https://helm.ngc.nvidia.com/nvidia"
-  nvidia_gpu_operator_version    = "v23.3.2"
 
   yunikorn_name       = "yunikorn"
   yunikorn_repository = "https://apache.github.io/yunikorn-release"
@@ -81,4 +76,3 @@ locals {
     us-west-2      = "895885662937"
   }
 }
-

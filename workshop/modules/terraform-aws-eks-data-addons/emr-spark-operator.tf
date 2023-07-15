@@ -44,6 +44,15 @@ resource "helm_release" "emr_spark_operator" {
     binary_path = try(var.emr_spark_operator_helm_config["postrender"], "")
   }
 
+  # webhook:
+  #   # -- Enable webhook server
+  #   enable: true
+  #   # -- Webhook service port
+  #   port: 8080
+
+  # emrContainers:
+  #   awsRegion: ${aws_region}
+
   dynamic "set" {
     iterator = each_item
     for_each = try(var.emr_spark_operator_helm_config["set"], [])
