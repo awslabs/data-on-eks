@@ -48,6 +48,8 @@ data "aws_ecr_authorization_token" "token" {
 
 data "aws_caller_identity" "current" {}
 data "aws_availability_zones" "available" {}
+data "aws_region" "current" {}
+data "aws_partition" "current" {}
 
 locals {
   name   = var.name
@@ -72,13 +74,12 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
-  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_endpoint_public_access = true
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
-
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [

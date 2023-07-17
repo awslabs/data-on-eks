@@ -27,7 +27,7 @@ resource "helm_release" "emr_spark_operator" {
   disable_webhooks           = try(var.emr_spark_operator_helm_config["disable_webhooks"], false)
   reuse_values               = try(var.emr_spark_operator_helm_config["reuse_values"], false)
   reset_values               = try(var.emr_spark_operator_helm_config["reset_values"], false)
-  force_update               = try(var.emr_spark_operator_helm_config["force_update"], false)
+  force_update               = try(var.emr_spark_operator_helm_config["force_update"], true)
   recreate_pods              = try(var.emr_spark_operator_helm_config["recreate_pods"], false)
   cleanup_on_fail            = try(var.emr_spark_operator_helm_config["cleanup_on_fail"], false)
   max_history                = try(var.emr_spark_operator_helm_config["max_history"], 0)

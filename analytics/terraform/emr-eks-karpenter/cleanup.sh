@@ -24,13 +24,10 @@ for ns in $terminating_namespaces; do
     kubectl get namespace $ns -o json | sed 's/"kubernetes"//' | kubectl replace --raw "/api/v1/namespaces/$ns/finalize" -f -
 done
 
-#-------------------------------------------
-# Terraform destroy per module target
-#-------------------------------------------
 for target in "${targets[@]}"
 do
-  terraform destroy -auto-approve
-  destroy_output=$(terraform destroy -auto-approve 2>&1)
+  terraform destroy -target="$target" -auto-approve
+  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
   if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else
@@ -39,9 +36,6 @@ do
   fi
 done
 
-#-------------------------------------------
-# Terraform destroy full
-#-------------------------------------------
 terraform destroy -auto-approve
 destroy_output=$(terraform destroy -auto-approve 2>&1)
 if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then

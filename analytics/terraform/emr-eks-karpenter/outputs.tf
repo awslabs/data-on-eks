@@ -1,23 +1,4 @@
 ################################################################################
-# Cluster
-################################################################################
-
-output "cluster_arn" {
-  description = "The Amazon Resource Name (ARN) of the cluster"
-  value       = module.eks.cluster_arn
-}
-
-output "cluster_name" {
-  description = "The Amazon Resource Name (ARN) of the cluster"
-  value       = module.eks.cluster_id
-}
-
-output "oidc_provider_arn" {
-  description = "The ARN of the OIDC Provider if `enable_irsa = true`"
-  value       = module.eks.oidc_provider_arn
-}
-
-################################################################################
 # EKS Managed Node Group
 ################################################################################
 
@@ -34,8 +15,17 @@ output "emr_on_eks" {
 ################################################################################
 # AMP
 ################################################################################
-
 output "grafana_secret_name" {
   description = "Grafana password secret name"
   value       = aws_secretsmanager_secret.grafana.name
+}
+
+output "emr_s3_bucket_name" {
+  description = "S3 bucket for EMR workloads. Scripts,Logs etc."
+  value       = module.s3_bucket.s3_bucket_id
+}
+
+output "fsx_s3_bucket_name" {
+  description = "FSx filesystem sync with S3 bucket"
+  value       = try(module.fsx_s3_bucket.s3_bucket_id, null)
 }
