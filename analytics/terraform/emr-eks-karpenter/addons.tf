@@ -185,6 +185,7 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Kubecost Add-on
   #---------------------------------------------------------------
+  # Note: Kubecost add-on depdends on Kube Prometheus Stack add-on for storing the metrics
   enable_kubecost = var.enable_kubecost
   kubecost_helm_config = {
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]

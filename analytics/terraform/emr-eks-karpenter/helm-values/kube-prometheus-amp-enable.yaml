@@ -18,13 +18,13 @@ prometheus:
     scrapeInterval: 30s
     evaluationInterval: 30s
     scrapeTimeout: 10s
-    storageSpec: 
+    storageSpec:
       volumeClaimTemplate:
         metadata:
           name: data
         spec:
           storageClassName: gp2
-          accessModes: 
+          accessModes:
             - ReadWriteOnce
           resources:
             requests:
@@ -51,6 +51,9 @@ grafana:
 # Adding AMP datasource to Grafana config
   serviceAccount:
     name: ${amp_sa}
+  grafana.ini:
+    auth:
+      sigv4_auth_enabled: true
   additionalDataSources:
     - name: AMP
       editable: true
@@ -58,5 +61,5 @@ grafana:
         sigV4Auth: true
         sigV4Region: ${region}
       type: prometheus
-      isDefault: true
+      isDefault: false
       url: ${amp_remotewrite_url}
