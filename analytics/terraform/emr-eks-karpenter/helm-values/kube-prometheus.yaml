@@ -4,6 +4,18 @@ prometheus:
     scrapeInterval: 30s
     evaluationInterval: 30s
     scrapeTimeout: 10s
+    storageSpec: 
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          storageClassName: gp2
+          accessModes: 
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
+    # Scrape Cost metrics for Kubecost add-on
     additionalScrapeConfigs:
       - job_name: kubecost
         honor_labels: true
@@ -17,7 +29,9 @@ prometheus:
             type: 'A'
             port: 9003
 alertmanager:
- enabled: false
+  enabled: false
+
 grafana:
   enabled: true
-  defaultDashboardsEnabled: false
+  defaultDashboardsEnabled: true
+

@@ -67,5 +67,5 @@ variable "enable_emr_spark_operator" {
 variable "enable_kubecost" {
   description = "Enable Kubecost add-on"
   type        = bool
-  default     = false
+  default     = true
 }
