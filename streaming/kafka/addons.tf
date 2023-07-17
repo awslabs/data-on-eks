@@ -1,234 +1,229 @@
-
 #---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
+
 module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.20"
+
+  role_name_prefix = "${module.eks.cluster_name}-ebs-csi-driver-"
+
   attach_ebs_csi_policy = true
+
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
     }
   }
+
   tags = local.tags
 }
 
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
+module "eks_blueprints_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.0"
+
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
+    }
+    kube-proxy = {
+      preserve = true
     }
   }
+
+  #---------------------------------------
+  # Kubernetes Add-ons
+  #---------------------------------------
+
+  #---------------------------------------------------------------
+  # CoreDNS Autoscaler helps to scale for large EKS Clusters
+  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
+  #---------------------------------------------------------------
+  enable_cluster_proportional_autoscaler = true
+  cluster_proportional_autoscaler = {
+    timeout = "300"
+    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
+      target = "deployment/coredns"
+    })]
+    description = "Cluster Proportional Autoscaler for CoreDNS Service"
+  }
+
+  #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  metrics_server = {
+    timeout = "300"
+    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {
+      operating_system = "linux"
+      node_group_type  = "core"
+    })]
+  }
+
+  #---------------------------------------
+  # Cluster Autoscaler
+  #---------------------------------------
+  enable_cluster_autoscaler = true
+  cluster_autoscaler = {
+    timeout     = "300"
+    create_role = true
+    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
+      aws_region     = local.region,
+      eks_cluster_id = module.eks.cluster_name
+    })]
+  }
+
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+    set = var.enable_amazon_prometheus ? [
+      {
+        name  = "prometheus.serviceAccount.name"
+        value = local.amp_ingest_service_account
+      },
+      {
+        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+        value = module.amp_ingest_irsa[0].iam_role_arn
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
+        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+      },
+      {
+        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
+        value = local.region
+      }
+    ] : []
+  }
+
   tags = local.tags
 }
 
 #---------------------------------------------------------------
-# Kubernetes Add-ons
+# Grafana Admin credentials resources
 #---------------------------------------------------------------
-resource "aws_eks_addon" "vpc_cni" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "vpc-cni"
-  service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-  preserve                 = true
-  depends_on               = [module.eks.eks_managed_node_groups]
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
 }
 
-resource "aws_eks_addon" "coredns" {
-  cluster_name = module.eks.cluster_name
-  addon_name   = "coredns"
-  preserve     = true
-  depends_on   = [module.eks.eks_managed_node_groups]
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
 }
 
-resource "aws_eks_addon" "kube_proxy" {
-  cluster_name = module.eks.cluster_name
-  addon_name   = "kube-proxy"
-  preserve     = true
-  depends_on   = [module.eks.eks_managed_node_groups]
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "${local.name}-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
-resource "aws_eks_addon" "aws_ebs_csi_driver" {
-  cluster_name             = module.eks.cluster_name
-  addon_name               = "aws-ebs-csi-driver"
-  service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-  depends_on               = [module.eks.eks_managed_node_groups]
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
 }
 
-#---------------------------------------------------------------
-# Cluster Autoscaler
-#---------------------------------------------------------------
-resource "helm_release" "cluster-autoscaler" {
-  name       = "cluster-autoscaler"
-  repository = "https://kubernetes.github.io/autoscaler" # (Optional) Repository URL where to locate the requested chart.
-  chart      = "cluster-autoscaler"
-  version    = "9.21.0"
-  namespace  = "kube-system"
-  timeout    = "300"
-  values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-    aws_region     = var.region,
-    eks_cluster_id = module.eks.cluster_name
-  })]
-  depends_on = [aws_eks_addon.vpc_cni]
-}
 
 #---------------------------------------------------------------
-# Metrics Server
+# Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-resource "helm_release" "metrics-server" {
-  name        = "metrics-server"
-  description = "The Amazon Elastic Block Store Container Storage Interface (CSI) Driver provides a CSI interface used by Container Orchestrators to manage the lifecycle of Amazon EBS volumes."
-  chart       = "metrics-server"
-  repository  = "https://kubernetes-sigs.github.io/metrics-server/"
-  namespace   = "kube-system"
-  wait        = true
-  depends_on  = [aws_eks_addon.vpc_cni]
-}
+# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
+module "kubernetes_data_addons" {
+  # Please note that local source will be replaced once the below repo is public
+  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
+  source = "../../workshop/modules/terraform-aws-eks-data-addons"
 
-#---------------------------------------------------------------
-# GP3 Storage Class
-#---------------------------------------------------------------
-resource "kubectl_manifest" "gp3_sc" {
-  yaml_body = <<-YAML
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "true"
-  name: gp3
-parameters:
-  fsType: xfs
-  type: gp3
-  encrypted: "true"
-allowVolumeExpansion: true
-provisioner: ebs.csi.aws.com
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
-YAML
-
-  depends_on = [
-    module.eks
-  ]
-}
-
-resource "helm_release" "cert_manager" {
-  name             = "cert-manager"
-  chart            = "cert-manager"
-  repository       = "https://charts.jetstack.io"
-  version          = "v1.10.0"
-  namespace        = "cert-manager"
-  create_namespace = true
-  description      = "Cert Manager Add-on"
-  wait             = true
-  set {
-    name  = "installCRDs"
-    value = true
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  #---------------------------------------------------------------
+  # Strimzi Kafka Add-on
+  #---------------------------------------------------------------
+  enable_strimzi_kafka_operator = true
+  strimzi_kafka_operator_helm_config = {
+    values = [templatefile("${path.module}/helm-values/strimzi-kafka-values.yaml", {
+      operating_system = "linux"
+      node_group_type  = "core"
+    })]
   }
-  depends_on = [aws_eks_addon.vpc_cni]
 }
 
 #---------------------------------------------------------------
-# Install Strimzi Operator
-#---------------------------------------------------------------
-
-resource "helm_release" "strimzi_operator" {
-  name             = local.strimzi_kafka_name
-  chart            = local.strimzi_kafka_name
-  repository       = "https://strimzi.io/charts/"
-  version          = "0.35.0"
-  namespace        = local.strimzi_kafka_name
-  create_namespace = true
-  timeout          = 300
-  #    wait             = false # This is critical setting. Check this issue -> https://github.com/hashicorp/terraform-provider-helm/issues/683
-  values = [templatefile("${path.module}/helm-values/kafka-values.yaml", {
-    operating_system = "linux"
-    node_group_type  = "core"
-  })]
-  description = "Strimzi - Apache Kafka on Kubernetes"
-  depends_on  = [module.eks.eks_managed_node_groups]
-}
-
-#---------------------------------------------------------------
-# Install kafka cluster
+# Install Kafka cluster
 # NOTE: Kafka Zookeeper and Broker pod creation may to 2 to 3 mins
 #---------------------------------------------------------------
-resource "kubectl_manifest" "kafka_namespace" {
-  yaml_body  = file("./kafka-manifests/kafka-ns.yml")
-  depends_on = [module.eks.cluster_id]
+
+resource "kubernetes_namespace" "kafka_namespace" {
+  metadata {
+    name = local.kafka_namespace
+  }
+
+  depends_on = [module.eks.cluster_name]
+}
+
+data "kubectl_path_documents" "kafka_cluster" {
+  pattern = "${path.module}/kafka-manifests/kafka-cluster.yaml"
 }
 
 resource "kubectl_manifest" "kafka_cluster" {
-  yaml_body  = file("./kafka-manifests/kafka-cluster.yml")
-  depends_on = [helm_release.strimzi_operator]
-}
+  for_each  = toset(data.kubectl_path_documents.kafka_cluster.documents)
+  yaml_body = each.value
 
-resource "kubectl_manifest" "kafka_metric_config" {
-  yaml_body  = file("./kafka-manifests/kafka-metrics-configmap.yml")
-  depends_on = [helm_release.strimzi_operator]
+  depends_on = [module.kubernetes_data_addons]
 }
 
 #---------------------------------------------------------------
-# Install Kafka Montoring Stack with Prometheus and Grafana
-# 1- Grafana port-forward `kubectl port-forward svc/prometheus-grafana 8080:80 -n strimzi-kafka-operator`
-# 2- Grafana Admin user: admin
+# Deploy Strimzi Kafka and Zookeeper dashboards in Grafana
 #---------------------------------------------------------------
 
-resource "helm_release" "kube_prometheus_stack" {
-  name             = "prometheus-grafana"
-  chart            = "kube-prometheus-stack"
-  repository       = "https://prometheus-community.github.io/helm-charts"
-  version          = "43.2.1"
-  namespace        = local.strimzi_kafka_name
-  create_namespace = true
-  description      = "Kube Prometheus Grafana Stack Operator Chart"
-  # timeout          = 600
-  wait       = true
-  values     = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
-  depends_on = [aws_eks_addon.vpc_cni]
+data "kubectl_path_documents" "podmonitor_metrics" {
+  pattern = "${path.module}/monitoring-manifests/podmonitor-*.yaml"
 }
 
-resource "kubectl_manifest" "podmonitor_cluster_operator_metrics" {
-  yaml_body  = file("./monitoring-manifests/podmonitor-cluster-operator-metrics.yml")
-  depends_on = [kubectl_manifest.kafka_namespace]
+resource "kubectl_manifest" "podmonitor_metrics" {
+  for_each  = toset(data.kubectl_path_documents.podmonitor_metrics.documents)
+  yaml_body = each.value
+
+  depends_on = [module.eks_blueprints_addons]
 }
 
-resource "kubectl_manifest" "podmonitor_entity_operator_metrics" {
-  yaml_body  = file("./monitoring-manifests/podmonitor-entity-operator-metrics.yml")
-  depends_on = [kubectl_manifest.kafka_namespace]
+data "kubectl_path_documents" "grafana_strimzi_dashboard" {
+  pattern = "${path.module}/monitoring-manifests/grafana-strimzi-*-dashboard.yaml"
 }
 
-resource "kubectl_manifest" "podmonitor_kafka_resources_metrics" {
-  yaml_body  = file("./monitoring-manifests/podmonitor-kafka-resources-metrics.yml")
-  depends_on = [kubectl_manifest.kafka_namespace]
-}
+resource "kubectl_manifest" "grafana_strimzi_dashboard" {
+  for_each  = toset(data.kubectl_path_documents.grafana_strimzi_dashboard.documents)
+  yaml_body = each.value
 
-resource "kubectl_manifest" "grafana_strimzi_exporter_dashboard" {
-  yaml_body  = file("./monitoring-manifests/grafana-strimzi-exporter-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
-}
-
-resource "kubectl_manifest" "grafana_strimzi_kafka_dashboard" {
-  yaml_body  = file("./monitoring-manifests/grafana-strimzi-kafka-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
-}
-
-resource "kubectl_manifest" "grafana_strimzi_operators_dashboard" {
-  yaml_body  = file("./monitoring-manifests/grafana-strimzi-operators-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
-}
-
-resource "kubectl_manifest" "grafana_strimzi_zookeeper_dashboard" {
-  yaml_body  = file("./monitoring-manifests/grafana-strimzi-zookeeper-dashboard.yml")
-  depends_on = [helm_release.kube_prometheus_stack]
+  depends_on = [module.eks_blueprints_addons]
 }

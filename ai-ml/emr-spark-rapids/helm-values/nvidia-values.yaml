@@ -41,7 +41,8 @@ driver:
   enabled: true
   repository: nvcr.io/nvidia
   image: driver
-  version: "515-signed" # supported DRIVER_BRANCH value currently are 470, 510 and 515 which will install latest drivers available on that branch for current running kernel version.
+  # Commented this as latest Ubuntu AMIs are failing with this option enabled
+  # version: "515-signed" # supported DRIVER_BRANCH value currently are 470, 510 and 515 which will install latest drivers available on that branch for current running kernel version.
   manager:
     image: k8s-driver-manager
     repository: nvcr.io/nvidia/cloud-native

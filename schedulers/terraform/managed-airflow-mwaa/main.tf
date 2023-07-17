@@ -4,7 +4,7 @@
 
 module "mwaa" {
   source  = "aws-ia/mwaa/aws"
-  version = "0.0.1"
+  version = "0.0.4"
 
   name                  = local.name
   airflow_version       = "2.2.2"

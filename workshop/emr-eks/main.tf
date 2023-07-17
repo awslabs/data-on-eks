@@ -81,52 +81,29 @@ module "addons_workshop" {
 # EMR EKS Module with two teams
 #---------------------------------------------------
 module "emr_containers_workshop" {
-  source = "../modules/emr-eks-containers"
+  source  = "terraform-aws-modules/emr/aws//modules/virtual-cluster"
+  version = "~> 1.0"
 
-  eks_cluster_id        = local.cluster_name
-  eks_oidc_provider_arn = local.oidc_provider_arn
+  for_each = toset(["data-team-a", "data-team-b"])
 
-  emr_on_eks_config = {
-    # Example of all settings
-    emr-data-team-a = {
-      name = format("%s-%s", local.cluster_name, "emr-data-team-a")
+  eks_cluster_id    = local.cluster_name
+  oidc_provider_arn = local.oidc_provider_arn
 
-      create_namespace       = true
-      namespace              = "emr-data-team-a"
-      create_virtual_cluster = var.enable_emr_ack_controller ? false : true
+  name      = "${local.cluster_name}-emr-${each.value}"
+  namespace = "emr-${each.value}"
 
-      execution_role_name                    = format("%s-%s", local.cluster_name, "emr-eks-data-team-a")
-      execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
+  role_name                    = "${local.cluster_name}-emr-${each.value}"
+  iam_role_use_name_prefix     = false
+  iam_role_description         = "EMR Execution Role for emr-${each.value}"
+  iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
 
-      tags = {
-        Name = "emr-data-team-a"
-      }
-    },
-
-    emr-data-team-b = {
-      name = format("%s-%s", local.cluster_name, "emr-data-team-b")
-
-      create_namespace       = true
-      namespace              = "emr-data-team-b"
-      create_virtual_cluster = var.enable_emr_ack_controller ? false : true
-
-      execution_role_name                    = format("%s-%s", local.cluster_name, "emr-eks-data-team-b")
-      execution_iam_role_description         = "EMR Execution Role for emr-data-team-b"
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
-
-      tags = {
-        Name = "emr-data-team-b"
-      }
-    }
-  }
+  tags = merge(local.tags, { Name = "emr-${each.value}" })
 }
 
 #---------------------------------------------------
 # Use Kubectl to deploy Karpenter provisioners
 # /Users/vabonthu/Documents/GITHUB/data-on-eks/workshop/emr-eks/karpenter-provisioners
 #---------------------------------------------------
-
 
 #---------------------------------------------------
 # EMR ACK Controller

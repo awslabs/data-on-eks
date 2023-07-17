@@ -10,12 +10,17 @@ def get_examples():
     """
     exclude = {
         'ai-ml/ray/terraform', # Skip until we fix CI script to test as per v5 convention
+        'ai-ml/ray/terraform/examples/pytorch', # Example relies on cluster created by parent blueprint
+        'ai-ml/ray/terraform/examples/xgboost', # Example relies on cluster created by parent blueprint
+        'ai-ml/jupyterhub', # Requires a domain name
+        'analytics/terraform/datahub-on-eks/datahub-addon', # Internal module, covered under root example and not standalone
+        'streaming/nifi', # Requires a domain name
     }
 
     projects = {
         x.replace('/versions.tf', '')
         for x in glob.glob('**/**/**/versions.tf', recursive=True)
-        if not re.match(r'^.+/_', x)
+        if not re.match(r'.*(modules|workshop).*', x)
     }
 
     print(json.dumps(list(projects.difference(exclude))))

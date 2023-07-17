@@ -1,38 +1,19 @@
 module "emr_containers" {
-  source = "../../workshop/modules/emr-eks-containers"
+  source  = "terraform-aws-modules/emr/aws//modules/virtual-cluster"
+  version = "~> 1.0"
 
-  eks_cluster_id        = module.eks.cluster_name
-  eks_oidc_provider_arn = module.eks.oidc_provider_arn
+  for_each = toset(["data-team-a", "data-team-b"])
 
-  emr_on_eks_config = {
-    # Example of all settings
-    emr-ml-team-a = {
-      name = format("%s-%s", module.eks.cluster_name, "emr-ml-team-a")
+  eks_cluster_id    = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
-      create_namespace = true
-      namespace        = "emr-ml-team-a"
+  name      = "${module.eks.cluster_name}-emr-${each.value}"
+  namespace = "emr-${each.value}"
 
-      execution_role_name                    = format("%s-%s", module.eks.cluster_name, "emr-eks-data-team-a")
-      execution_iam_role_description         = "EMR Execution Role for emr-ml-team-a"
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess", "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"] # Attach additional policies for execution IAM Role
-      tags = {
-        Name = "emr-ml-team-a"
-      }
-    },
+  role_name                    = "${module.eks.cluster_name}-emr-${each.value}"
+  iam_role_use_name_prefix     = false
+  iam_role_description         = "EMR Execution Role for emr-${each.value}"
+  iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
 
-    emr-ml-team-b = {
-      name = format("%s-%s", module.eks.cluster_name, "emr-ml-team-b")
-
-      create_namespace = true
-      namespace        = "emr-ml-team-b"
-
-      execution_role_name                    = format("%s-%s", module.eks.cluster_name, "emr-eks-data-team-b")
-      execution_iam_role_description         = "EMR Execution Role for emr-ml-team-b"
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess", "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"] # Attach additional policies for execution IAM Role
-
-      tags = {
-        Name = "emr-ml-team-b"
-      }
-    }
-  }
+  tags = merge(local.tags, { Name = "emr-${each.value}" })
 }

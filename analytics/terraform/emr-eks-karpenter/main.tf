@@ -1,6 +1,73 @@
+provider "aws" {
+  region = local.region
+}
+
+# ECR always authenticates with `us-east-1` region
+# Docs -> https://docs.aws.amazon.com/AmazonECR/latest/public/public-registries.html
+provider "aws" {
+  alias  = "ecr"
+  region = "us-east-1"
+}
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.this.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    token                  = data.aws_eks_cluster_auth.this.token
+  }
+}
+
+provider "kubectl" {
+  apply_retry_count      = 30
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  load_config_file       = false
+  token                  = data.aws_eks_cluster_auth.this.token
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}
+
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
+}
+
+# This ECR "registry_id" number refers to the AWS account ID for us-west-2 region
+# if you are using a different region, make sure to change it, you can get the account from the link below
+# https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/docker-custom-images-tag.html
+data "aws_ecr_authorization_token" "token" {
+  registry_id = "895885662937"
+}
+
+data "aws_caller_identity" "current" {}
+data "aws_availability_zones" "available" {}
+
+locals {
+  name   = var.name
+  region = var.region
+
+  azs = slice(data.aws_availability_zones.available.names, 0, 2)
+
+  tags = merge(var.tags, {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  })
+}
+
+#---------------------------------------------------------------
+# EKS Cluster
+#---------------------------------------------------------------
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.13"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -17,7 +84,7 @@ module "eks" {
   aws_auth_roles = [
     # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.karpenter_iam_role_name}"
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -29,7 +96,7 @@ module "eks" {
       rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
       username = "emr-containers"
       groups   = []
-    }
+    },
   ]
 
   #---------------------------------------
@@ -57,16 +124,6 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
-
     ingress_fsx1 = {
       description = "Allows Lustre traffic between Lustre clients"
       cidr_blocks = module.vpc.private_subnets_cidr_blocks
@@ -75,7 +132,6 @@ module "eks" {
       protocol    = "tcp"
       type        = "ingress"
     }
-
     ingress_fsx2 = {
       description = "Allows Lustre traffic between Lustre clients"
       cidr_blocks = module.vpc.private_subnets_cidr_blocks
@@ -100,31 +156,11 @@ module "eks" {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
 
-      ami_id = data.aws_ami.x86.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = module.vpc.private_subnets
-
       min_size     = 1
       max_size     = 9
       desired_size = 3
 
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types = ["m5.xlarge"]
 
       ebs_optimized = true
       block_device_mappings = {
@@ -148,4 +184,6 @@ module "eks" {
       }
     }
   }
+
+  tags = local.tags
 }

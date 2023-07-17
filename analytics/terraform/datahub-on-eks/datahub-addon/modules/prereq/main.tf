@@ -1,3 +1,7 @@
+locals {
+  cidr_blocks = [coalesce(var.vpc_cidr, "10.1.0.0/16")]
+}
+
 #---------------------------------------------------------------
 # OpenSearch For DataHub metadata
 #---------------------------------------------------------------
@@ -9,7 +13,7 @@ resource "aws_security_group" "es" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = local.cidr_blocks
   }
 }
 
@@ -38,7 +42,7 @@ resource "aws_opensearch_domain" "es" {
     instance_type          = "m6g.large.search"
     zone_awareness_enabled = true
     zone_awareness_config {
-      availability_zone_count = length(var.vpc_private_subnets)
+      availability_zone_count = min(length(var.vpc_private_subnets), 3)
     }
   }
   vpc_options {
@@ -101,7 +105,7 @@ resource "aws_security_group" "msk" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = local.cidr_blocks
   }
 }
 
@@ -180,7 +184,7 @@ resource "aws_security_group" "rds" {
     from_port   = 0
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = local.cidr_blocks
   }
 }
 

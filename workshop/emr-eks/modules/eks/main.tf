@@ -14,20 +14,9 @@ locals {
 
 data "aws_caller_identity" "current" {}
 
-# This data source can be used to get the latest AMI for Managed Node Groups
-data "aws_ami" "eks" {
-  owners      = ["amazon"]
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-${module.eks.cluster_version}-*"]
-  }
-}
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.9"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -82,15 +71,6 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
   }
 
   eks_managed_node_group_defaults = {
@@ -107,31 +87,11 @@ module "eks" {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
 
-      ami_id = data.aws_ami.eks.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = local.private_subnets
-
       min_size     = 1
       max_size     = 9
       desired_size = 3
 
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types = ["m5.xlarge"]
 
       ebs_optimized = true
       block_device_mappings = {
@@ -155,12 +115,14 @@ module "eks" {
       }
     }
   }
+
+  tags = local.tags
 }
 
 # Creating a IAM instance profile for Karpenter nodes
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
+  version = "~> 19.15"
 
   cluster_name                 = module.eks.cluster_name
   irsa_oidc_provider_arn       = module.eks.oidc_provider_arn

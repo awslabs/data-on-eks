@@ -11,9 +11,13 @@ locals {
   })
 }
 
+#---------------------------------------------------------------
+# EKS Cluster
+#---------------------------------------------------------------
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.13"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -27,7 +31,7 @@ module "eks" {
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     {
-      rolearn  = module.eks_blueprints_kubernetes_addons.karpenter.iam_role_arn
+      rolearn  = module.eks_blueprints_addons.karpenter.iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -39,7 +43,7 @@ module "eks" {
       rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
       username = "emr-containers"
       groups   = []
-    }
+    },
   ]
 
   #---------------------------------------
@@ -66,15 +70,6 @@ module "eks" {
       to_port     = 0
       type        = "ingress"
       self        = true
-    }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
     }
     # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
     # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
@@ -150,14 +145,6 @@ module "eks" {
       # Note: this assumes the AMI provided is an EKS optimized AMI derivative
       enable_bootstrap_user_data = true
 
-      pre_bootstrap_user_data = <<-EOT
-        echo "Running a custom user data script"
-      EOT
-
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
       min_size     = 1
       max_size     = 8
       desired_size = 1
@@ -178,20 +165,20 @@ module "eks" {
         }
       }
 
-      update_config = {
-        max_unavailable_percentage = 50
-      }
-
       labels = {
         WorkerType                       = "ON_DEMAND"
         NodeGroupType                    = "spark-driver-ca"
         "nvidia.com/gpu.deploy.operands" = false
       }
 
-      taints = [{ key = "spark-driver-ca", value = true, effect = "NO_SCHEDULE" }]
+      taints = [{
+        key    = "spark-driver-ca"
+        value  = true
+        effect = "NO_SCHEDULE"
+      }]
 
       tags = {
-        Name = "spark-driver-ca",
+        Name = "spark-driver-ca"
       }
     }
     spark_gpu_ng = {
@@ -254,18 +241,12 @@ module "eks" {
         fi
       EOT
 
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
       min_size     = 8
       max_size     = 8
       desired_size = 8
 
-      capacity_type        = "SPOT"
-      force_update_version = true
-      instance_types       = ["g5.2xlarge"]
+      capacity_type  = "SPOT"
+      instance_types = ["g5.2xlarge"]
 
       ebs_optimized = true
       # This block device is used only for root volume. Adjust volume according to your size.
@@ -281,10 +262,6 @@ module "eks" {
         }
       }
 
-      update_config = {
-        max_unavailable_percentage = 50
-      }
-
       labels = {
         WorkerType    = "SPOT"
         NodeGroupType = "spark-ubuntu-gpu-ca"
@@ -297,4 +274,6 @@ module "eks" {
       }
     }
   }
+
+  tags = local.tags
 }

@@ -4,6 +4,8 @@ locals {
   vpc_cidr = var.vpc_cidr
   azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 
+  karpenter_iam_role_name = format("%s-%s", "karpenter", local.name)
+
   tags = {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
@@ -15,7 +17,7 @@ locals {
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.9"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -30,7 +32,7 @@ module "eks" {
   aws_auth_roles = [
     # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      rolearn  = module.karpenter.role_arn
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.karpenter_iam_role_name}"
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -337,20 +339,4 @@ module "eks" {
       }
     }
   }
-}
-
-#---------------------------------------
-# Karpenter IAM instance profile
-#---------------------------------------
-
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
-
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  create_irsa                  = false # EKS Blueprints add-on module creates IRSA
-  enable_spot_termination      = false # EKS Blueprints add-on module adds this feature
-  tags                         = local.tags
-  iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
 }
