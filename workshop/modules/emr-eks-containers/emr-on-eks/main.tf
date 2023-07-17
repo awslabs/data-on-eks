@@ -43,7 +43,7 @@ resource "kubernetes_role_v1" "this" {
   }
 
   rule {
-    verbs      = ["create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"]
+    verbs      = ["create", "delete", "deletecollection", "get", "list", "patch", "update", "watch", "describe", "edit", "label"]
     api_groups = [""]
     resources  = ["persistentvolumeclaims"]
   }
@@ -68,7 +68,7 @@ resource "kubernetes_role_v1" "this" {
 
   rule {
     verbs      = ["get", "list", "watch", "describe", "create", "edit", "delete", "annotate", "patch", "label"]
-    api_groups = ["extensions"]
+    api_groups = ["extensions", "networking.k8s.io"]
     resources  = ["ingresses"]
   }
 
