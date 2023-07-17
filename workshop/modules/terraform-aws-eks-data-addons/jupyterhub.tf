@@ -1,9 +1,13 @@
+locals {
+  jupyterhub_name = "jupyterhub"
+}
+
 resource "helm_release" "jupyterhub" {
   count                      = var.enable_jupyterhub ? 1 : 0
   name                       = try(var.jupyterhub_helm_config["name"], local.jupyterhub_name)
-  repository                 = try(var.jupyterhub_helm_config["repository"], local.jupyterhub_repository)
+  repository                 = try(var.jupyterhub_helm_config["repository"], "https://jupyterhub.github.io/helm-chart/")
   chart                      = try(var.jupyterhub_helm_config["chart"], local.jupyterhub_name)
-  version                    = try(var.jupyterhub_helm_config["version"], local.jupyterhub_version)
+  version                    = try(var.jupyterhub_helm_config["version"], "3.0.0-beta.1")
   timeout                    = try(var.jupyterhub_helm_config["timeout"], 300)
   values                     = try(var.jupyterhub_helm_config["values"], null)
   create_namespace           = try(var.jupyterhub_helm_config["create_namespace"], true)

@@ -1,3 +1,9 @@
+locals {
+  prometheus_name       = "prometheus"
+  prometheus_repository = "https://prometheus-community.github.io/helm-charts"
+  prometheus_version    = "22.6.0"
+}
+
 resource "helm_release" "prometheus" {
   count = var.enable_prometheus ? 1 : 0
 

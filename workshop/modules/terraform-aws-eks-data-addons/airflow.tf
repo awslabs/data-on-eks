@@ -1,18 +1,14 @@
-locals {
-  airflow_namespace = try(var.airflow_helm_config["airflow_namespace"], "airflow")
-}
-
 resource "helm_release" "airflow" {
   count = var.enable_airflow ? 1 : 0
 
-  name                       = try(var.airflow_helm_config["name"], local.airflow_name)
-  repository                 = try(var.airflow_helm_config["repository"], local.airflow_repository)
-  chart                      = try(var.airflow_helm_config["chart"], local.airflow_name)
-  version                    = try(var.airflow_helm_config["version"], local.airflow_version)
+  name                       = try(var.airflow_helm_config["name"], "airflow")
+  repository                 = try(var.airflow_helm_config["repository"], "https://airflow.apache.org")
+  chart                      = try(var.airflow_helm_config["chart"], "airflow")
+  version                    = try(var.airflow_helm_config["version"], "1.9.0")
   timeout                    = try(var.airflow_helm_config["timeout"], 360)
   values                     = try(var.airflow_helm_config["values"], null)
-  create_namespace           = try(var.airflow_helm_config["create_namespace"], false)
-  namespace                  = try(var.airflow_helm_config["namespace"], local.airflow_namespace)
+  create_namespace           = try(var.airflow_helm_config["create_namespace"], true)
+  namespace                  = try(var.airflow_helm_config["namespace"], "airflow")
   lint                       = try(var.airflow_helm_config["lint"], false)
   description                = try(var.airflow_helm_config["description"], "")
   repository_key_file        = try(var.airflow_helm_config["repository_key_file"], "")

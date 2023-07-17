@@ -1,7 +1,10 @@
+# Creates a Data team with all the required resources for Airflow and Spark
+
 locals {
   spark_team = "spark-team-a"
 }
 
+# Create a namespace for spark-team-a
 resource "kubernetes_namespace_v1" "spark_team_a" {
   count = var.enable_airflow_spark_example ? 1 : 0
   metadata {
@@ -12,6 +15,7 @@ resource "kubernetes_namespace_v1" "spark_team_a" {
   }
 }
 
+# Create a service account for spark-team-a
 resource "kubernetes_service_account_v1" "spark_team_a" {
   count = var.enable_airflow_spark_example ? 1 : 0
   metadata {
@@ -23,6 +27,7 @@ resource "kubernetes_service_account_v1" "spark_team_a" {
   automount_service_account_token = true
 }
 
+# Create a secret for spark-team-a
 resource "kubernetes_secret_v1" "spark_team_a" {
   count = var.enable_airflow_spark_example ? 1 : 0
   metadata {
@@ -41,8 +46,9 @@ resource "kubernetes_secret_v1" "spark_team_a" {
 # IRSA for Spark driver/executor pods for "spark-team-a"
 #---------------------------------------------------------------
 module "spark_team_a_irsa" {
+  count = var.enable_airflow_spark_example ? 1 : 0
+
   source  = "aws-ia/eks-blueprints-addon/aws"
-  count   = var.enable_airflow_spark_example ? 1 : 0
   version = "~> 1.0"
 
   # Disable helm release
@@ -160,7 +166,6 @@ resource "kubernetes_cluster_role_binding" "spark_role_binding" {
 #---------------------------------------------------------------
 # S3 log bucket for Spark logs
 #---------------------------------------------------------------
-
 #tfsec:ignore:*
 module "spark_logs_s3_bucket" {
   count   = var.enable_airflow_spark_example ? 1 : 0
@@ -191,7 +196,6 @@ resource "aws_s3_object" "this" {
   content_type = "application/x-directory"
 }
 
-
 #---------------------------------------------------------------
 # Kubernetes Cluster Role binding role for Airflow Worker with Spark Operator Role
 #---------------------------------------------------------------
@@ -214,4 +218,37 @@ resource "kubernetes_cluster_role_binding" "airflow_worker_spark_role_binding" {
   }
 
   depends_on = [module.airflow_irsa_worker]
+}
+
+#---------------------------------------------------------------
+# Example IAM policy for Spark job execution
+#---------------------------------------------------------------
+data "aws_iam_policy_document" "spark_operator" {
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::*"]
+
+    actions = [
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:PutObject",
+    ]
+  }
+
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
+    ]
+  }
 }
