@@ -8,7 +8,6 @@ targets=(
   "module.vpc"
   "module.eks"
   "module.eks_blueprints_addons"
-  "module.amp_ingest_irsa"
   "module.kubernetes_data_addons"
   "module.emr_containers"
 )
