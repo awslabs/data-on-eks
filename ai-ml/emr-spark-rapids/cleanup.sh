@@ -8,7 +8,6 @@ export AWS_DEFAULT_REGION=$region
 targets=(
   "module.emr_containers"
   "module.kubernetes_data_addons"
-  "amp_ingest_irsa"
   "module.eks_blueprints_addons"
 )
 

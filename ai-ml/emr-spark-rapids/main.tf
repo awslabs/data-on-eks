@@ -34,7 +34,7 @@ module "eks" {
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     {
-      rolearn  = module.eks_blueprints_kubernetes_addons.karpenter.iam_role_arn
+      rolearn  = module.eks_blueprints_addons.karpenter.iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
