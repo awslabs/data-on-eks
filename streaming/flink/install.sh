@@ -10,6 +10,8 @@ targets=(
   "module.karpenter"
   "module.ebs_csi_driver_irsa"
   "module.eks_blueprints_kubernetes_addons"
+  "module.amp_ingest_irsa"
+  "module.eks_data_addons"
 )
 
 # Initialize Terraform

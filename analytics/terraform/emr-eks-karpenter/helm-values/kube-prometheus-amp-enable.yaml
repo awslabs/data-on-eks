@@ -9,7 +9,6 @@ prometheus:
       - url: ${amp_remotewrite_url}
         sigv4:
           region: ${region}
-          roleArn: ${amp_irsa}
         queue_config:
           max_samples_per_send: 1000
           max_shards: 200
@@ -29,7 +28,7 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
-    # Scrape Cost metrics for Kubecost add-on
+    # Scrape Cost metrics for Kubecost and Yunikorn add-ons
     additionalScrapeConfigs:
       - job_name: kubecost
         honor_labels: true
@@ -42,6 +41,17 @@ prometheus:
               - kubecost-cost-analyzer.kubecost.svc
             type: 'A'
             port: 9003
+      - job_name: yunikorn
+        honor_labels: true
+        scrape_interval: 1m
+        scrape_timeout: 10s
+        metrics_path: /ws/v1//metrics
+        scheme: http
+        dns_sd_configs:
+          - names:
+              - yunikorn-service.yunikorn.svc
+            type: 'A'
+            port: 9080
 alertmanager:
   enabled: false
 
@@ -62,4 +72,4 @@ grafana:
         sigV4Region: ${region}
       type: prometheus
       isDefault: false
-      url: ${amp_remotewrite_url}
+      url: ${amp_url}

@@ -5,6 +5,9 @@ locals {
   # Only two AZs for this example
   azs = slice(data.aws_availability_zones.available.names, 0, 2)
 
+  account_id = data.aws_caller_identity.current.account_id
+  partition  = data.aws_partition.current.partition
+
   tags = merge(var.tags, {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
@@ -31,7 +34,7 @@ module "eks" {
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     {
-      rolearn  = module.eks_blueprints_addons.karpenter.iam_role_arn
+      rolearn  = module.eks_blueprints_kubernetes_addons.karpenter.iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",

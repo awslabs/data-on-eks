@@ -4,6 +4,7 @@ set -o pipefail
 
 targets=(
   "module.kubernetes_data_addons"
+  "module.amp_ingest_irsa"
   "module.eks_blueprints_addons"
 )
 
