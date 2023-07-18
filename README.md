@@ -1,20 +1,24 @@
 [![plan-examples](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml/badge.svg?branch=main)](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml)
-# Data on Amazon EKS (DoEKS)
+# [Data on Amazon EKS (DoEKS)](https://awslabs.github.io/data-on-eks/)
+![Data on EKS](website/static/img/doeks-logo-green.png)
 
-💥 **Welcome to Data on Amazon EKS (DoEKS)** 💥
+**Build, Scale, and Optimize Data & AI/ML Platforms on [Amazon EKS](https://aws.amazon.com/eks/)!** 🚀
 
-Data on Amazon EKS (DoEKS) is a comprehensive tool that allows you to build scalable Data/ML platforms on [Amazon EKS](https://aws.amazon.com/eks/), whether you choose an AWS-managed or self-managed approach. This repository provides you with a wealth of resources, including Infrastructure as Code templates (like [Terraform](https://www.terraform.io/), [AWS CDK](https://aws.amazon.com/cdk/)), sample [Apache Spark](https://spark.apache.org/)/[ML](https://aws.amazon.com/machine-learning/) jobs, references to AWS Data blogs, performance benchmark reports, and guidance on best practices for deploying data solutions on Amazon EKS.
+Welcome to the **Data on EKS** repository, a comprehensive resource for scaling your data and machine learning workloads on Amazon EKS and unlocking the power of [Gen AI](https://aws.amazon.com/generative-ai/). Harness the capabilities of [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/), [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) and [NVIDIA GPUs](https://aws.amazon.com/nvidia/) to scale and optimize your Gen AI workloads with ease.
+
+This open-source tool offers a comprehensive collection of Terraform Blueprints, featuring industry best practices, to effortlessly deploy end-to-end solutions on Amazon EKS with advanced logging and observability. Dive into a diverse range of practical examples, showcasing the potential and flexibility of running AI/ML workloads on EKS, including [Apache Spark](https://spark.apache.org/), [PyTorch](https://pytorch.org/), [Tensorflow](https://www.tensorflow.org/), [XGBoost](https://xgboost.readthedocs.io/en/stable/), and more. Unlock valuable insights from benchmark reports and access expert guidance to optimize your data solutions. Discover how to effortlessly create robust clusters for [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html), [Apache Spark](https://spark.apache.org/), [Apache Flink](https://flink.apache.org/), [Apache Kafka](https://kafka.apache.org/), and [Apache Airflow](https://airflow.apache.org/), while exploring cutting-edge machine learning platforms like [Ray](https://www.ray.io/), [Kubeflow](https://awslabs.github.io/kubeflow-manifests/), [Jupyterhub](https://jupyter.org/hub), [NVIDIA GPUs](https://aws.amazon.com/nvidia/), [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/), and [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) on EKS.
+
 
 > **Note**: DoEKS is actively being developed for various patterns. To see what features are in progress, please check out the [issues](https://github.com/awslabs/data-on-eks/issues) section of our repository.
 
 ## 🏗️ Architecture
-The following diagram illustrates the open source data tools, Kubernetes operators, and frameworks covered by DoEKS, as well as the integration of AWS Data Analytics managed services with DoEKS open source tools.
+The diagram below showcases the wide array of open-source data tools, Kubernetes operators, and frameworks supported by DoEKS. It also highlights the seamless integration of AWS Data Analytics managed services with the powerful capabilities of DoEKS open-source tools.
 
 <img width="779" alt="image" src="https://user-images.githubusercontent.com/19464259/208900860-a7ccdaeb-158d-4767-baad-fbc76388bc09.png">
 
 
 ## 🌟 Features
-Data on EKS(DoEKS) solution is categorized into the following areas.
+Data on EKS(DoEKS) solution is categorized into the following focus areas.
 
 🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics) on EKS
 
@@ -49,9 +53,9 @@ In this repository, you'll find a variety of deployment blueprints for creating 
 For instructions on how to deploy Data on EKS patterns and run sample tests, visit the [DoEKS website](https://awslabs.github.io/data-on-eks/).
 
 ## 🏆 Motivation
-[Kubernetes](https://kubernetes.io/) is a widely-used system for the large-scale orchestration of containerized software. It has become more suited for running stateful workloads with the introduction of several storage options in version 1.19. The availability of [Spark on Kubernetes](https://spark.apache.org/docs/2.3.0/running-on-kubernetes.html) and the versatility of Kubernetes has encouraged many users to migrate their existing Hadoop-based clusters to Kubernetes.
+[Kubernetes](https://kubernetes.io/) is a widely adopted system for orchestrating containerized software at scale. As more users migrate their data and machine learning workloads to Kubernetes, they often face the complexity of managing the Kubernetes ecosystem and selecting the right tools and configurations for their specific needs.
 
-However, deploying and managing Kubernetes clusters and scaling data workloads can still be challenging for many users as they are required to be proficient in both Kubernetes and data workloads. To address this, we developed Data on EKS (DoEKS) to help users easily run Spark on EKS, Kubeflow, MLFlow, Airflow, Presto, Kafka, Cassandra, and other data workloads.
+At [AWS](https://aws.amazon.com/), we understand the challenges users encounter when deploying and scaling data workloads on Kubernetes. To simplify the process and enable users to quickly conduct proof-of-concepts and build production-ready clusters, we have developed Data on EKS (DoEKS). DoEKS offers opinionated open-source blueprints that provide end-to-end logging and observability, making it easier for users to deploy and manage Spark on EKS, Kubeflow, MLFlow, Airflow, Presto, Kafka, Cassandra, and other data workloads. With DoEKS, users can confidently leverage the power of Kubernetes for their data and machine learning needs without getting overwhelmed by its complexity.
 
 ## 🤝 Support & Feedback
 DoEKS is maintained by AWS Solution Architects and is not an AWS service. Support is provided on a best effort basis by the Data on EKS Blueprints community. If you have feedback, feature ideas, or wish to report bugs, please use the [Issues](https://github.com/awslabs/data-on-eks/issues) section of this GitHub.
