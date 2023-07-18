@@ -17,13 +17,13 @@ prometheus:
     scrapeInterval: 30s
     evaluationInterval: 30s
     scrapeTimeout: 10s
-    storageSpec: 
+    storageSpec:
       volumeClaimTemplate:
         metadata:
           name: data
         spec:
           storageClassName: gp2
-          accessModes: 
+          accessModes:
             - ReadWriteOnce
           resources:
             requests:
