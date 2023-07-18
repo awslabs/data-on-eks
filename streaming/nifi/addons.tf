@@ -20,9 +20,9 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
-module "eks_blueprints_kubernetes_addons" {
+module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
