@@ -1,10 +1,10 @@
 resource "helm_release" "nvidia_gpu_operator" {
   count = var.enable_nvidia_gpu_operator ? 1 : 0
 
-  name                       = try(var.nvidia_gpu_operator_helm_config["name"], local.nvidia_gpu_operator_name)
-  repository                 = try(var.nvidia_gpu_operator_helm_config["repository"], local.nvidia_gpu_operator_repository)
+  name                       = try(var.nvidia_gpu_operator_helm_config["name"], "nvidia-gpu-operator")
+  repository                 = try(var.nvidia_gpu_operator_helm_config["repository"], "https://helm.ngc.nvidia.com/nvidia")
   chart                      = try(var.nvidia_gpu_operator_helm_config["chart"], "gpu-operator")
-  version                    = try(var.nvidia_gpu_operator_helm_config["version"], local.nvidia_gpu_operator_version)
+  version                    = try(var.nvidia_gpu_operator_helm_config["version"], "v23.3.2")
   timeout                    = try(var.nvidia_gpu_operator_helm_config["timeout"], 300)
   values                     = try(var.nvidia_gpu_operator_helm_config["values"], null)
   create_namespace           = try(var.nvidia_gpu_operator_helm_config["create_namespace"], true)

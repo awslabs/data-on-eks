@@ -69,11 +69,6 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # VPA
-  #---------------------------------------
-  enable_vpa = true
-
-  #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
   enable_cluster_autoscaler = true
@@ -98,7 +93,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = var.enable_aws_cloudwatch_metrics
+  enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
@@ -124,6 +119,29 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
+  # AWS for FluentBit - DaemonSet
+  #---------------------------------------
+  # Fluentbit is required to stream the logs to S3  when EMR Spark Operator is enabled
+  enable_aws_for_fluentbit = var.enable_emr_spark_operator
+  aws_for_fluentbit_cw_log_group = {
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  aws_for_fluentbit = {
+    s3_bucket_arns = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*}"
+    ]
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+      s3_bucket_name       = module.s3_bucket.s3_bucket_id
+      cluster_name         = module.eks.cluster_name
+    })]
+  }
+
+  #---------------------------------------
   # Prommetheus and Grafana stack
   #---------------------------------------
   #---------------------------------------------------------------
@@ -134,31 +152,21 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
-    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    values = [
+      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
+        region              = local.region
+        amp_sa              = local.amp_ingest_service_account
+        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
+        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
+    ]
+    chart_version = "48.1.1"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
     ],
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "prometheus.serviceAccount.name"
-        value = local.amp_ingest_service_account
-      },
-      {
-        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-        value = module.amp_ingest_irsa[0].iam_role_arn
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
-        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
-        value = local.region
-      }
-    ] : []
   }
 
   tags = local.tags
@@ -173,6 +181,18 @@ module "kubernetes_data_addons" {
   # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
   source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
   oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # Kubecost Add-on
+  #---------------------------------------------------------------
+  # Note: Kubecost add-on depdends on Kube Prometheus Stack add-on for storing the metrics
+  enable_kubecost = var.enable_kubecost
+  kubecost_helm_config = {
+    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+    version             = "1.104.5"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
 
   #---------------------------------------------------------------
   # Apache YuniKorn Add-on
@@ -197,13 +217,18 @@ module "kubernetes_data_addons" {
   }
 
   #---------------------------------------------------------------
-  # Kubecost Add-on
+  # Spark History Server Add-on
   #---------------------------------------------------------------
-  enable_kubecost = var.enable_kubecost
-  kubecost_helm_config = {
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  # Spark hsitory server is required only when EMR Spark Operator is enabled
+  enable_spark_history_server = var.enable_emr_spark_operator
+  spark_history_server_helm_config = {
+    create_irsa = true
+    values = [
+      templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
+        s3_bucket_name   = module.s3_bucket.s3_bucket_id
+        s3_bucket_prefix = aws_s3_object.this.key
+      })
+    ]
   }
 }
 
@@ -223,21 +248,6 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   yaml_body = each.value
 
   depends_on = [module.eks_blueprints_addons]
-}
-
-#------------------------------------------
-# Amazon Prometheus
-#------------------------------------------
-locals {
-  amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
-  amp_namespace              = "kube-prometheus-stack"
-}
-
-resource "aws_prometheus_workspace" "amp" {
-  count = var.enable_amazon_prometheus ? 1 : 0
-
-  alias = format("%s-%s", "amp-ws", local.name)
-  tags  = local.tags
 }
 
 #---------------------------------------------------------------
@@ -265,24 +275,30 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_string = random_password.grafana.result
 }
 
-#---------------------------------------------------------------
-# IRSA for Amazon Managed Prometheus
-#---------------------------------------------------------------
-module "amp_ingest_irsa" {
-  count = var.enable_amazon_prometheus ? 1 : 0
+# Creating an s3 bucket for Spark History event logs
+module "s3_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 3.0"
 
-  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version   = "~> 5.20"
-  role_name = format("%s-%s", local.name, "amp-ingest")
+  bucket_prefix = "${local.name}-emr-"
 
-  attach_amazon_managed_service_prometheus_policy  = true
-  amazon_managed_service_prometheus_workspace_arns = [aws_prometheus_workspace.amp[0].arn]
+  # For example only - please evaluate for your environment
+  force_destroy = true
 
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["${local.amp_namespace}:${local.amp_ingest_service_account}"]
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
     }
   }
+
   tags = local.tags
+}
+
+# Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
+resource "aws_s3_object" "this" {
+  bucket       = module.s3_bucket.s3_bucket_id
+  key          = "spark-event-logs/"
+  content_type = "application/x-directory"
 }

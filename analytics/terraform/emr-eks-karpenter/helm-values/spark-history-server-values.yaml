@@ -1,3 +1,5 @@
+sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${s3_bucket_name}/${s3_bucket_prefix}"
+
 # Update spark conf according to your needs
 sparkConf: |-
   spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider

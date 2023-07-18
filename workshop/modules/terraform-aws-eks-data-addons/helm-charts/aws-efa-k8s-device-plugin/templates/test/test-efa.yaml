@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "aws-efa-k8s-device-plugin.fullname" . }}-test-efa"
+  annotations:
+    helm.sh/hook: test
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: efa-test
+          image: public.ecr.aws/w6p6i9i7/aws-efa-nccl-rdma:base-cudnn8-cuda11-ubuntu20.04
+          command: ["/bin/bash"]
+          args: ["-c", "fi_info -p efa && echo 'test:' && if [[ $(fi_info -p efa -t FI_EP_RDM | grep 'provider: efa' | wc -l) == 4 ]]; then echo 'passed' && exit 0; else echo 'failed' && exit 1; fi"]
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              hugepages-2Mi: 20000Mi
+              vpc.amazonaws.com/efa: 4
+              memory: 1070000Mi
+            limits:
+              hugepages-2Mi: 20000Mi
+              vpc.amazonaws.com/efa: 4
+              memory: 1070000Mi
+  backoffLimit: 1
