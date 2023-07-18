@@ -7,7 +7,7 @@ export AWS_DEFAULT_REGION=$region
 
 targets=(
   "module.kubernetes_data_addons"
-  "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
 )
 
 for target in "${targets[@]}"
