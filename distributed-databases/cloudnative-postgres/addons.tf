@@ -1,4 +1,4 @@
-module "eks_blueprints_kubernetes_addons" {
+module "eks_blueprints_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650f"
 
   cluster_name      = module.eks.cluster_name
@@ -38,7 +38,7 @@ resource "kubectl_manifest" "cnpg_prometheus_rule" {
   yaml_body = file("${path.module}/monitoring/cnpg-prometheusrule.yaml")
 
   depends_on = [
-    module.eks_blueprints_kubernetes_addons.kube_prometheus_stack
+    module.eks_blueprints_addons.kube_prometheus_stack
   ]
 }
 
@@ -46,7 +46,7 @@ resource "kubectl_manifest" "cnpg_grafana_cm" {
   yaml_body = file("${path.module}/monitoring/grafana-configmap.yaml")
 
   depends_on = [
-    module.eks_blueprints_kubernetes_addons.kube_prometheus_stack
+    module.eks_blueprints_addons.kube_prometheus_stack
   ]
 }
 

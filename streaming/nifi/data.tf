@@ -10,6 +10,7 @@ data "aws_secretsmanager_secret_version" "admin_password_version" {
   depends_on = [aws_secretsmanager_secret_version.grafana]
 }
 
+data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
 data "aws_acm_certificate" "issued" {

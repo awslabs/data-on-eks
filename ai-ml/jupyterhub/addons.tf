@@ -32,9 +32,9 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
-module "eks_blueprints_kubernetes_addons" {
+module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -165,7 +165,7 @@ parameters:
   fsType: ext4
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "storage_class_gp3" {
@@ -183,7 +183,7 @@ parameters:
   encrypted: "true"
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
@@ -237,7 +237,7 @@ spec:
     path: "/"
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "pvc" {
@@ -256,7 +256,7 @@ spec:
       storage: 1Gi
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "pv_shared" {
@@ -276,7 +276,7 @@ spec:
     path: "/"
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "pvc_shared" {
@@ -295,7 +295,7 @@ spec:
       storage: 1Gi
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 #---------------------------------------------------------------

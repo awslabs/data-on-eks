@@ -52,6 +52,7 @@ prometheus:
               - yunikorn-service.yunikorn.svc
             type: 'A'
             port: 9080
+
 alertmanager:
   enabled: false
 
@@ -60,6 +61,7 @@ grafana:
   defaultDashboardsEnabled: true
 # Adding AMP datasource to Grafana config
   serviceAccount:
+    create: false
     name: ${amp_sa}
   grafana.ini:
     auth:
