@@ -1,0 +1,33 @@
+{
+    "name": "script-endpoint",
+    "virtualClusterId": "q1m25kl2ju3govqip7xtn77l1",
+    "type": "JUPYTER_ENTERPRISE_GATEWAY",
+    "releaseLabel": "emr-6.9.0-latest",
+    "executionRoleArn": "arn:aws:iam::181460066119:role/emr-eks-karpenter-emr-data-team-a",
+    "configurationOverrides":
+    {
+        "applicationConfiguration": 
+        [
+            {
+                "classification": "spark-defaults",
+                "properties":
+                {
+                    "spark.driver.memory": "8G"
+                }
+            }
+        ],
+        "monitoringConfiguration":
+        {
+            "persistentAppUI": "ENABLED",
+            "cloudWatchMonitoringConfiguration":
+            {
+                "logGroupName": "my_log_group",
+                "logStreamNamePrefix": "log_stream_prefix"
+            },
+            "s3MonitoringConfiguration":
+            {
+                "logUri": "s3://emr-eks-managed-endpoint-log-bucket/"
+            }
+        }
+    }
+}
