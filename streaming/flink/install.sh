@@ -9,7 +9,7 @@ targets=(
   "module.eks"
   "module.karpenter"
   "module.ebs_csi_driver_irsa"
-  "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
   "module.eks_data_addons"
 )
 
