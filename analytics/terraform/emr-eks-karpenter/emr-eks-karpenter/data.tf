@@ -41,7 +41,7 @@ data "aws_subnet" "selectedpub" {
 }
 
 data "aws_iam_openid_connect_provider" "eks_oidc" {
-  url =  data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
+  url = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
 }
 
 data "aws_ecrpublic_authorization_token" "token" {

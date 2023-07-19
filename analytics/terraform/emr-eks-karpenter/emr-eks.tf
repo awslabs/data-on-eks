@@ -7,12 +7,12 @@ module "emr_containers" {
   emr_on_eks_config = {
     # Example of all settings
     emr-data-team-a = {
-      name = format("%s-%s",  data.aws_eks_cluster.cluster.name, "emr-data-team-a")
+      name = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-data-team-a")
 
       create_namespace = true
       namespace        = "emr-data-team-a"
 
-      execution_role_name                    = format("%s-%s",  data.aws_eks_cluster.cluster.name, "emr-eks-data-team-a")
+      execution_role_name                    = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-eks-data-team-a")
       execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
       execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
 

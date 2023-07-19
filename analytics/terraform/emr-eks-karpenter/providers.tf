@@ -32,8 +32,8 @@ provider "helm" {
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      args = ["eks", "get-token", "--cluster-name", var.name]
-    } 
+      args        = ["eks", "get-token", "--cluster-name", var.name]
+    }
   }
 }
 

@@ -42,7 +42,7 @@ data "aws_subnet" "selectedpub" {
 }
 
 data "aws_iam_openid_connect_provider" "eks_oidc" {
-  url =  data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
+  url = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
 }
 
 data "aws_ecrpublic_authorization_token" "token" {
@@ -66,6 +66,6 @@ data "aws_ami" "eks" {
 
 # For Grafana Password
 data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id = aws_secretsmanager_secret.grafana.id
+  secret_id  = aws_secretsmanager_secret.grafana.id
   depends_on = [aws_secretsmanager_secret_version.grafana]
 }
