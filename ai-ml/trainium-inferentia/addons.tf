@@ -99,6 +99,21 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
+  # Enable FSx for Lustre CSI Driver
+  #---------------------------------------
+  enable_aws_fsx_csi_driver = true
+  aws_fsx_csi_driver = {
+    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    values = [
+      <<-EOT
+        node:
+          tolerations:
+            - operator: Exists
+      EOT
+    ]
+  }
+
+  #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
   enable_aws_for_fluentbit = true
@@ -173,6 +188,30 @@ module "kubernetes_data_addons" {
 
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
+
+  # Automate these steps
+  # kubectl apply -f https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml
+  # kubectl apply -f https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml
+
+}
+
+#---------------------------------------------------------------
+# Create Volcano Queue once the Volcano add-on is installed
+#---------------------------------------------------------------
+resource "kubectl_manifest" "volcano_queue" {
+  yaml_body = <<YAML
+apiVersion: scheduling.volcano.sh/v1beta1
+kind: Queue
+metadata:
+  name: test
+spec:
+  weight: 1
+  reclaimable: false
+  capability:
+    cpu: 2
+YAML
+
+  depends_on = [module.kubernetes_data_addons]
 }
 
 #---------------------------------------------------------------
