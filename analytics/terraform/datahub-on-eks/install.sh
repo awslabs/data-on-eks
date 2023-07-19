@@ -13,7 +13,6 @@ targets=(
   "module.vpc_endpoints"
   "module.eks"
   "module.ebs_csi_driver_irsa"
-  "module.eks_blueprints_kubernetes_addons"
   "module.eks_blueprints_addons"
   "module.datahub.module.prereq"
   "module.datahub"
