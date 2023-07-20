@@ -1,0 +1,37 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha1
+kind: Terraform
+metadata:
+  name: barman_backup_irsa
+  namespace: flux-system
+spec:
+  alwaysCleanupRunnerPod: true
+  approvePlan: auto
+  destroy: false
+  destroyResourcesOnDeletion: true
+  enableInventory: true
+  interval: 1h
+  path: ./distributed-databases/cloudnative-postgres
+  sourceRef:
+    kind: GitRepository
+    name: data-on-eks
+    namespace: flux-system
+  storeReadablePlan: human
+  target: module.barman_backup_irsa
+  dependsOn:
+  - name: vpc
+  - name: eks
+  - name: ebs_csi_driver_irsa
+  - name: eks_blueprints_addons
+  - name: barman_s3_bucket
+  vars:
+  - name: name
+    value: data-on-eks-cloudnative-postgres
+  - name: region
+    value: us-west-2
+  - name: eks_cluster_version
+    value: "1.25"
+  - name: vpc_cidr
+    value: "10.1.0.0/16"
+  varsFrom:
+  - kind: Secret
+    name: tf-controller-auth
