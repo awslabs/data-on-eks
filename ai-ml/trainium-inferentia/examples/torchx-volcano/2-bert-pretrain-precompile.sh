@@ -1,13 +1,28 @@
 #!/bin/bash
-read -p "Confirm that you have the 'lib' folder with 'trn1_dist_ddp.py' in the same directory (Y/N): " response
-read -p "Enter the region (Should be the same as the region in variables.tf file): " region
+read -p "Did you configure kubeconfig (e.g., aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia):  (y/n): " response
+read -p "Did you install TorchX (e.g., pip3 install torchx[kubernetes]):  (y/n): " response
+read -p "Confirm that you have the 'lib' folder with 'trn1_dist_ddp.py' in the same directory (y/n): " response
 read -p "Enter the ECR REPO (e.g., <AccountId>.dkr.ecr.<region>.amazonaws.com/eks_torchx_test): " ECR_REPO_URI
 read -p "Enter the ECR TAG (e.g., bert_pretrain): " IMAGE_TAG
 
+
+# Install and configure docker-credential-ecr-login
+# TorchX depends on the docker-credential-ecr-login helper to authenticate with your ECR repository in order to push/pull container images. 
+# Run the following commands to install and configure the credential helper:
+
+mkdir -p ~/.docker
+cat <<EOF > ~/.docker/config.json
+{
+    "credsStore": "ecr-login"
+}
+EOF
+
+# sudo yum install -y amazon-ecr-credential-helper
+
 INSTANCE_TYPE="trn1.32xlarge"
-# Login to ECR
-echo -e "ECR Login with podman..."
-aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
+# # Login to ECR
+# echo -e "ECR Login with podman..."
+# aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
 
 torchx run \
     -s kubernetes --workspace="file:///$PWD/docker" \
