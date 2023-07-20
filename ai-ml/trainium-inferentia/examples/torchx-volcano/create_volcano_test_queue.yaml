@@ -9,4 +9,3 @@ spec:
   reclaimable: false
   capability:
     cpu: 2
-

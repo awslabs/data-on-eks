@@ -140,4 +140,3 @@ COPY assets/dump_env.py /
 RUN echo "export PATH=/opt/aws/neuron/bin:\$PATH" >> /root/.bashrc
 RUN echo "export TERM=screen" >> /root/.bashrc
 CMD ["/bin/bash"]
-
