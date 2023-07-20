@@ -48,7 +48,7 @@ module "emr_s3_bucket" {
   version = "~> 3.0"
 
   bucket_prefix = "${local.name}-"
-  acl           = "private"
+  # acl           = "private"
 
   # For example only - please evaluate for your environment
   force_destroy = true
