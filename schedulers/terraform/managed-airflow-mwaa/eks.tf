@@ -1,12 +1,11 @@
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.13"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
-  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -41,12 +40,12 @@ module "eks" {
     }
 
     allow_access_from_mwaa = {
-      description                = "Nodes on ephemeral ports"
-      protocol                   = "tcp"
-      from_port                  = 1025
-      to_port                    = 65535
-      type                       = "ingress"
-      cidr_blocks                = [local.vpc_cidr]
+      description = "Nodes on ephemeral ports"
+      protocol    = "tcp"
+      from_port   = 1025
+      to_port     = 65535
+      type        = "ingress"
+      cidr_blocks = [local.vpc_cidr]
     }
   }
 
@@ -61,34 +60,25 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    # Recommended outbound traffic for Node groups
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
+
   }
 
   eks_managed_node_groups = {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
-    mng1 = {
-      name        = "core-node-group"
-      subnet_ids  = module.vpc.private_subnets
- 
+    core_node_group = {
+      name       = "core-node-group"
+      subnet_ids = module.vpc.private_subnets
+
       max_size     = 9
       min_size     = 3
       desired_size = 3
 
       force_update_version = true
       instance_types       = ["m5.xlarge"]
-      ami_type       = "AL2_x86_64"
-      capacity_type  = "ON_DEMAND"
+      ami_type             = "AL2_x86_64"
+      capacity_type        = "ON_DEMAND"
 
       ebs_optimized = true
       block_device_mappings = {
@@ -109,7 +99,7 @@ module "eks" {
       }
 
       tags = {
-        Name = "core-node-grp"
+        Name                                                             = "core-node-grp"
         subnet_type                                                      = "private"
         "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
         "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
@@ -122,72 +112,4 @@ module "eks" {
   }
 
   tags = local.tags
-}
-
-#------------------------------------------------------------------------
-# Create K8s Namespace and Role for mwaa access directly
-#------------------------------------------------------------------------
-
-resource "kubernetes_namespace_v1" "mwaa" {
-  metadata {
-    annotations = {
-      name = "mwaa"
-    }
-
-    name = "mwaa"
-  }
-}
-
-resource "kubernetes_role_v1" "mwaa" {
-  metadata {
-    name      = "mwaa-role"
-    namespace = kubernetes_namespace_v1.mwaa.metadata[0].name
-  }
-
-  rule {
-    api_groups = [
-      "",
-      "apps",
-      "batch",
-      "extensions",
-    ]
-    resources = [
-      "jobs",
-      "pods",
-      "pods/attach",
-      "pods/exec",
-      "pods/log",
-      "pods/portforward",
-      "secrets",
-      "services",
-    ]
-    verbs = [
-      "create",
-      "delete",
-      "describe",
-      "get",
-      "list",
-      "patch",
-      "update",
-    ]
-  }
-}
-
-resource "kubernetes_role_binding_v1" "mwaa" {
-  metadata {
-    name      = "mwaa-role-binding"
-    namespace = kubernetes_namespace_v1.mwaa.metadata[0].name
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "Role"
-    name      = kubernetes_namespace_v1.mwaa.metadata[0].name
-  }
-
-  subject {
-    kind      = "User"
-    name      = "mwaa-service"
-    api_group = "rbac.authorization.k8s.io"
-  }
 }

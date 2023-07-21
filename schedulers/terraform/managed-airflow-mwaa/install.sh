@@ -11,7 +11,6 @@ targets=(
   "module.vpc"
   "module.mwaa"
   "module.eks"
-  "module.eks_blueprints_kubernetes_addons"
   "module.eks_blueprints_addons"
   "module.datahub"
   "module.emr_containers"
