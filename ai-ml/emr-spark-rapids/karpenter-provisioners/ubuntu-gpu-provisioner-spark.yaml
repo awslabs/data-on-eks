@@ -1,3 +1,5 @@
+# NOTE: Ubuntu 20.04 LTS is not supported by Karpenter yet. So, we are using Ubuntu 18.04 LTS
+---
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
@@ -42,9 +44,7 @@ metadata:
   name: spark-ubuntu-gpu-karpenter
   namespace: karpenter
 spec:
-  amiFamily: Custom
-  amiSelector:
-    id: ami-0e425174814918692
+  amiFamily: Ubuntu
   blockDeviceMappings:
     - deviceName: /dev/sda1
       ebs:

@@ -228,9 +228,9 @@ module "eks" {
         fi
       EOT
 
-      min_size     = 1
-      max_size     = 1
-      desired_size = 1
+      min_size     = 8
+      max_size     = 8
+      desired_size = 8
 
       capacity_type  = "SPOT"
       instance_types = ["g5.2xlarge"]

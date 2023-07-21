@@ -16,8 +16,7 @@ module "emr_containers" {
   # NOTE: S3 full access added only for testing purpose. You should modify this policy to restrict access to S3 buckets
   iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
 
-  cloudwatch_log_group_name            = "/emr-on-eks-logs/${module.eks.cluster_name}/emr-${each.value}/"
-  cloudwatch_log_group_use_name_prefix = false
+  cloudwatch_log_group_name = "/emr-on-eks-logs/${module.eks.cluster_name}/emr-${each.value}/"
 
   tags = merge(local.tags, { Name = "emr-${each.value}" })
 }
