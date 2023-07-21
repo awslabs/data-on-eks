@@ -158,6 +158,7 @@ module "eks_blueprints_addons" {
         amp_sa              = local.amp_ingest_service_account
         amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
         amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
     chart_version = "48.1.1"
