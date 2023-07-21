@@ -6,7 +6,7 @@
     "executionRoleArn": "$EMR_EXECUTION_ROLE_ARN",
     "configurationOverrides":
     {
-        "applicationConfiguration": 
+        "applicationConfiguration":
         [
             {
                 "classification": "spark-defaults",
@@ -21,8 +21,8 @@
             "persistentAppUI": "ENABLED",
             "cloudWatchMonitoringConfiguration":
             {
-                "logGroupName": "my_log_group",
-                "logStreamNamePrefix": "log_stream_prefix"
+                "logGroupName": "$CLOUDWATCH_LOGS_GROUP_NAME",
+                "logStreamNamePrefix": "$CLOUDWATCH_LOGS_PREFIX"
             },
             "s3MonitoringConfiguration":
             {

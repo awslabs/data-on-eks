@@ -1,15 +1,17 @@
 #!/bin/bash
 
-read -p "Enter EMR Virtual Cluster Id: " EMR_VIRTUAL_CLUSTER_ID 
+read -p "Enter EMR Virtual Cluster Id: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Provide your EMR on EKS team (emr-data-team-a or emr-data-team-b): " EMR_EKS_TEAM
-read -p "Enter your AWS Region: " AWS_REGION 
+read -p "Enter your AWS Region: " AWS_REGION
 read -p "Enter a name for your endpoint: " EMR_EKS_MANAGED_ENDPOINT
 read -p "Provide an S3 bucket location for logging (i.e. s3://my-bucket/logging/): " S3_BUCKET
+read -p "Provide CloudWatch Logs Group Name: " CLOUDWATCH_LOGS_GROUP_NAME
+read -p "Provide CloudWatch Logs Prefix: " CLOUDWATCH_LOGS_PREFIX
 read -p "Enter the EMR Execution Role ARN (i.e. arn:aws:00000000000000000:role/EMR-Execution-Role): " EMR_EXECUTION_ROLE_ARN
 read -p "Enter the release label (i.e. emr-6.9.0-latest): " EMR_EKS_RELEASE_LABEL
 
 #-------------------------------------------------------
-# Set Managed Endpoint JSON file with provided variables 
+# Set Managed Endpoint JSON file with provided variables
 #-------------------------------------------------------
 export EMR_VIRTUAL_CLUSTER_ID=$EMR_VIRTUAL_CLUSTER_ID
 export EMR_EKS_TEAM=$EMR_EKS_TEAM
@@ -18,6 +20,8 @@ export EMR_EKS_MANAGED_ENDPOINT=$EMR_EKS_MANAGED_ENDPOINT
 export S3_BUCKET=$S3_BUCKET
 export EMR_EXECUTION_ROLE_ARN=$EMR_EXECUTION_ROLE_ARN
 export EMR_EKS_RELEASE_LABEL=$EMR_EKS_RELEASE_LABEL
+export CLOUDWATCH_LOGS_GROUP_NAME=$CLOUDWATCH_LOGS_GROUP_NAME
+export CLOUDWATCH_LOGS_PREFIX=$CLOUDWATCH_LOGS_PREFIX
 
 envsubst < managed-endpoint.json > managed-endpoint-final.json
 
@@ -44,7 +48,7 @@ aws elbv2 wait load-balancer-available --load-balancer-arns $ARN
 echo -e "The load balancer is in service. \n"
 
 #------------------------------------------------------------------------
-# Revise to add the Karpenter Security Group to the Load Balancer created 
+# Revise to add the Karpenter Security Group to the Load Balancer created
 #------------------------------------------------------------------------
 
 echo "Setting Security Groups for Jupyter Notebook and Karpenter..."
