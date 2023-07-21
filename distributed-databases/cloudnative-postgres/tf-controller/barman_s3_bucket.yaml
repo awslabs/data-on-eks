@@ -16,7 +16,8 @@ spec:
     name: data-on-eks
     namespace: flux-system
   storeReadablePlan: human
-  target: module.barman_s3_bucket
+  target: 
+  - module.barman_s3_bucket
   dependsOn:
   - name: vpc
   - name: eks

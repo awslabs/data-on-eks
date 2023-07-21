@@ -16,7 +16,8 @@ spec:
     name: data-on-eks
     namespace: flux-system
   storeReadablePlan: human
-  target: module.ebs_csi_driver_irsa
+  target: 
+  - module.ebs_csi_driver_irsa
   dependsOn:
   - name: vpc
   - name: eks
