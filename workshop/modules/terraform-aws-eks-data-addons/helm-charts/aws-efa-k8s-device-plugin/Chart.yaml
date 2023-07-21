@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aws-efa-k8s-device-plugin
+description: A Helm chart for EFA device plugin.
+type: application
+version: 0.1.0
+appVersion: "v0.3.3"

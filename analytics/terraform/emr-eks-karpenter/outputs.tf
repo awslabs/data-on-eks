@@ -1,38 +1,6 @@
 ################################################################################
-# Cluster
-################################################################################
-output "cluster_arn" {
-  description = "The Amazon Resource Name (ARN) of the cluster"
-  value       = module.eks.cluster_arn
-}
-
-output "cluster_name" {
-  description = "The Amazon Resource Name (ARN) of the cluster"
-  value       = module.eks.cluster_id
-}
-
-output "oidc_provider_arn" {
-  description = "The ARN of the OIDC Provider if `enable_irsa = true`"
-  value       = module.eks.oidc_provider_arn
-}
-
-################################################################################
 # EKS Managed Node Group
 ################################################################################
-output "eks_managed_node_groups" {
-  description = "Map of attribute maps for all EKS managed node groups created"
-  value       = module.eks.eks_managed_node_groups
-}
-
-output "eks_managed_node_groups_iam_role_name" {
-  description = "List of the autoscaling group names created by EKS managed node groups"
-  value       = compact(flatten([for group in module.eks.eks_managed_node_groups : group.iam_role_name]))
-}
-
-output "aws_auth_configmap_yaml" {
-  description = "Formatted yaml output for base aws-auth configmap containing roles used in cluster node groups/fargate profiles"
-  value       = module.eks.aws_auth_configmap_yaml
-}
 
 output "configure_kubectl" {
   description = "Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig"
@@ -47,8 +15,17 @@ output "emr_on_eks" {
 ################################################################################
 # AMP
 ################################################################################
+output "grafana_secret_name" {
+  description = "Grafana password secret name"
+  value       = aws_secretsmanager_secret.grafana.name
+}
 
-output "amp_workspace_id" {
-  description = "The id of amp"
-  value       = aws_prometheus_workspace.amp[0].id
+output "emr_s3_bucket_name" {
+  description = "S3 bucket for EMR workloads. Scripts,Logs etc."
+  value       = module.s3_bucket.s3_bucket_id
+}
+
+output "fsx_s3_bucket_name" {
+  description = "FSx filesystem sync with S3 bucket"
+  value       = try(module.fsx_s3_bucket.s3_bucket_id, null)
 }

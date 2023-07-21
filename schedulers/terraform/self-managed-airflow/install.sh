@@ -1,16 +1,11 @@
 #!/bin/bash
 
-read -p "Enter the region: " region
-export AWS_DEFAULT_REGION=$region
-
 # List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
   "module.eks"
   "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_irsa"
-  "aws_eks_addon.vpc_cni"
-  "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
   "module.db"
 )
 

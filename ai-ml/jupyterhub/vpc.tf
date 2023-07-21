@@ -15,7 +15,7 @@ locals {
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   name = local.name
   cidr = var.vpc_cidr
@@ -31,10 +31,9 @@ module "vpc" {
   # ------------------------------
   # Optional Public Subnets for NAT and IGW for PoC/Dev/Test environments
   # Public Subnets can be disabled while deploying to Production and use Private NAT + TGW
-  public_subnets       = local.public_subnets
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
+  public_subnets     = local.public_subnets
+  enable_nat_gateway = true
+  single_nat_gateway = true
   #-------------------------------
 
   public_subnet_tags = {

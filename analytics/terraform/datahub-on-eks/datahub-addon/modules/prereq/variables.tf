@@ -1,7 +1,7 @@
 variable "prefix" {
   description = "local name"
   type        = string
-  default     = ""
+  default     = "doeks"
 }
 
 variable "vpc_id" {

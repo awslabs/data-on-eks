@@ -7,6 +7,9 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
+import CodeBlock from '@theme/CodeBlock';
+import SparkComputeOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-compute-optimized-provisioner.yaml';
+
 # Self-managed Apache Airflow deployment on Amazon EKS
 
 ## Introduction
@@ -101,7 +104,7 @@ aws eks describe-cluster --name self-managed-airflow
 ### Verify the EFS PV and PVC created by this deployment
 
 ```bash
-kubectl get pvc -n airflow  
+kubectl get pvc -n airflow
 
 NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 airflow-dags   Bound    pvc-157cc724-06d7-4171-a14d-something   10Gi       RWX            efs-sc         73m
@@ -189,117 +192,7 @@ In this tutorial, you will use Karpenter provisioner that uses memory optimized 
 <details>
 <summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary>
 
-```yaml
-apiVersion: karpenter.sh/v1alpha5
-kind: Provisioner
-metadata:
-  name: spark-compute-optimized
-  namespace: karpenter # Same namespace as Karpenter add-on installed
-spec:
-  kubeletConfiguration:
-    containerRuntime: containerd
-    #    podsPerCore: 2
-    #    maxPods: 20
-  requirements:
-    - key: "topology.kubernetes.io/zone"
-      operator: In
-      values: [${azs}a] #Update the correct region and zones
-    - key: "karpenter.sh/capacity-type"
-      operator: In
-      values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
-      operator: In
-      values: ["c5d.large","c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["amd64"]
-  limits:
-    resources:
-      cpu: 1000
-  providerRef:
-    name: spark-compute-optimized
-  labels:
-    type: karpenter
-    provisioner: spark-compute-optimized
-    NodeGroupType: SparkComputeOptimized
-  taints:
-    - key: spark-compute-optimized
-      value: 'true'
-      effect: NoSchedule
-  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
-
----
-apiVersion: karpenter.k8s.aws/v1alpha1
-kind: AWSNodeTemplate
-metadata:
-  name: spark-compute-optimized
-  namespace: karpenter
-spec:
-  blockDeviceMappings:
-    - deviceName: /dev/xvda
-      ebs:
-        volumeSize: 100Gi
-        volumeType: gp3
-        encrypted: true
-        deleteOnTermination: true
-  metadataOptions:
-    httpEndpoint: enabled
-    httpProtocolIPv6: disabled
-    httpPutResponseHopLimit: 2
-    httpTokens: required
-  subnetSelector:
-    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
-  securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
-  #  instanceProfile: ""      # optional, if already set in controller args
-  #RAID0 config example
-  userData: |
-    MIME-Version: 1.0
-    Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-    --BOUNDARY
-    Content-Type: text/x-shellscript; charset="us-ascii"
-
-    #!/bin/bash
-    echo "Running a custom user data script"
-    set -ex
-    yum install mdadm -y
-
-    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-
-    DISK_ARRAY=()
-
-    for DEV in $DEVICES
-    do
-      DISK_ARRAY+=("/dev/$${DEV}")
-    done
-
-    DISK_COUNT=$${#DISK_ARRAY[@]}
-
-    if [ $${DISK_COUNT} -eq 0 ]; then
-      echo "No SSD disks available. No further action needed."
-    else
-      if [ $${DISK_COUNT} -eq 1 ]; then
-        TARGET_DEV=$${DISK_ARRAY[0]}
-        mkfs.xfs $${TARGET_DEV}
-      else
-        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-        mkfs.xfs /dev/md0
-        TARGET_DEV=/dev/md0
-      fi
-
-      mkdir -p /local1
-      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-      mount -a
-      /usr/bin/chown -hR +999:+1000 /local1
-    fi
-
-    --BOUNDARY--
-
-  tags:
-    InstanceType: "spark-compute-optimized"    # optional, add tags for your own use
-
-```
+<CodeBlock language="yaml">{SparkComputeOptimizedProvisioner}</CodeBlock>
 </details>
 
 To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your Spark Application manifest. Additionally, to ensure Spark Driver pods run only on `On-Demand` nodes and Spark Executors run only on `Spot` nodes, add the `karpenter.sh/capacity-type` node selectors.

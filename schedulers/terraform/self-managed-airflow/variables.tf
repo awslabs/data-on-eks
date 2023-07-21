@@ -1,13 +1,13 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  type        = string
   default     = "self-managed-airflow"
+  type        = string
 }
 
 variable "region" {
-  description = "region"
+  description = "Region"
+  default     = "us-west-2"
   type        = string
-  default     = "us-east-2"
 }
 
 variable "eks_cluster_version" {
@@ -18,8 +18,8 @@ variable "eks_cluster_version" {
 
 variable "vpc_cidr" {
   description = "VPC CIDR"
-  type        = string
   default     = "10.0.0.0/16"
+  type        = string
 }
 
 # Routable Public subnets with NAT Gateway and Internet Gateway. Not required for fully private clusters
@@ -59,19 +59,11 @@ variable "eks_data_plane_subnet_secondary_cidr" {
   type        = list(string)
 }
 
-# Enable this for fully private clusters
-variable "enable_vpc_endpoints" {
-  description = "Enable VPC Endpoints"
-  default     = false
-  type        = string
-}
-
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
   default     = true
 }
-
 
 variable "enable_airflow" {
   description = "Enable Apache Airflow"

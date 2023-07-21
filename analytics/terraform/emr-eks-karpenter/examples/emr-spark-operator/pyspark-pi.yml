@@ -5,7 +5,7 @@ apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
   name: taxi-example
-  namespace: emr-data-team-a
+  namespace: spark-team-a
 spec:
   type: Scala
   mode: cluster
@@ -30,6 +30,17 @@ spec:
     mapreduce.fileoutputcommitter.algorithm.version.emr_internal_use_only.EmrFileSystem: "2"
     mapreduce.fileoutputcommitter.cleanup-failures.ignored.emr_internal_use_only.EmrFileSystem: "true"
   sparkConf:
+    # -----------------------------------------------------
+    # This block is very critical when you get errors like
+    #     Exception in thread \"main\" io.fabric8.kubernetes.client.KubernetesClientException: An error has occurred
+    #     Caused by: java.net.SocketTimeoutException: timeout
+    spark.kubernetes.local.dirs.tmpfs: "true"
+    spark.kubernetes.submission.connectionTimeout: "60000000"
+    spark.kubernetes.submission.requestTimeout: "60000000"
+    spark.kubernetes.driver.connectionTimeout: "60000000"
+    spark.kubernetes.driver.requestTimeout: "60000000"
+    # -----------------------------------------------------
+
     spark.eventLog.enabled: "true"
     spark.eventLog.dir: "s3://<ENTER_S3_BUCKET>/"
     spark.kubernetes.driver.pod.name: driver-nyc-taxi-etl
@@ -50,7 +61,23 @@ spec:
   driver:
     cores: 1
     memory: "4g"
+    serviceAccount: spark-team-a
+    # Using Karpenter provisioner nodeSelectors and tolerations
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
   executor:
     cores: 1
-    instances: 4
+    instances: 2
     memory: "4g"
+    serviceAccount: spark-team-a
+    # Using Karpenter provisioner nodeSelectors and tolerations
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"

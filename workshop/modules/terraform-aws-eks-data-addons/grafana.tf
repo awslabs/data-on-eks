@@ -1,4 +1,5 @@
 locals {
+  grafana_name            = "grafana"
   grafana_service_account = "grafana-sa"
   grafana_create_irsa     = var.enable_grafana && try(var.grafana_helm_config.create_irsa, false)
   grafana_namespace       = try(var.grafana_helm_config["namespace"], local.grafana_name)
@@ -27,9 +28,9 @@ resource "helm_release" "grafana" {
   count = var.enable_grafana ? 1 : 0
 
   name                       = try(var.grafana_helm_config["name"], local.grafana_name)
-  repository                 = try(var.grafana_helm_config["repository"], local.grafana_repository)
+  repository                 = try(var.grafana_helm_config["repository"], "https://grafana.github.io/helm-charts")
   chart                      = try(var.grafana_helm_config["chart"], local.grafana_name)
-  version                    = try(var.grafana_helm_config["version"], local.grafana_version)
+  version                    = try(var.grafana_helm_config["version"], "6.52.4")
   timeout                    = try(var.grafana_helm_config["timeout"], 300)
   values                     = [local.grafana_merged_values_yaml]
   create_namespace           = try(var.grafana_helm_config["create_namespace"], true)

@@ -1,10 +1,14 @@
+locals {
+  kubecost_name = "kubecost"
+}
+
 resource "helm_release" "kubecost" {
   count = var.enable_kubecost ? 1 : 0
 
   name                       = try(var.kubecost_helm_config["name"], local.kubecost_name)
-  repository                 = try(var.kubecost_helm_config["repository"], local.kubecost_repository)
+  repository                 = try(var.kubecost_helm_config["repository"], "oci://public.ecr.aws/kubecost")
   chart                      = try(var.kubecost_helm_config["chart"], "cost-analyzer")
-  version                    = try(var.kubecost_helm_config["version"], local.kubecost_version)
+  version                    = try(var.kubecost_helm_config["version"], "1.103.2")
   timeout                    = try(var.kubecost_helm_config["timeout"], 300)
   values                     = try(var.kubecost_helm_config["values"], null)
   create_namespace           = try(var.kubecost_helm_config["create_namespace"], true)

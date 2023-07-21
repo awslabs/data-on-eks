@@ -6,6 +6,11 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
+import CodeBlock from '@theme/CodeBlock';
+import SparkComputeOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-compute-optimized-provisioner.yaml';
+import SparkMemoryOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-memory-optimized-provisioner.yaml';
+import SparkGravitonMemoryOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-graviton-memory-optimized-provisioner.yaml';
+
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
 ## Introduction
@@ -22,7 +27,7 @@ In terms of infrastructure, here are the resources that are created by this patt
 - Creates an EKS Cluster Control plane with public endpoint (recommended for demo/poc environment)
 - One managed node group
   - Core Node group with 3 instances spanning multi-AZs for running system critical pods. e.g., Cluster Autoscaler, CoreDNS, Observability, Logging etc.
-- Enables EMR on EKS  
+- Enables EMR on EKS
   - Creates two namespaces (`emr-data-team-a`, `emr-data-team-b`) for data teams
   - Creates Kubernetes role and role binding(`emr-containers` user) for both namespaces
   - IAM roles for both teams needed for job execution
@@ -177,116 +182,7 @@ In this tutorial, you will use Karpenter provisioner that uses compute optimized
 <details>
 <summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary>
 
-```yaml
-apiVersion: karpenter.sh/v1alpha5
-kind: Provisioner
-metadata:
-  name: spark-compute-optimized
-  namespace: karpenter # Same namespace as Karpenter add-on installed
-spec:
-  kubeletConfiguration:
-    containerRuntime: containerd
-    #    podsPerCore: 2
-    #    maxPods: 20
-  requirements:
-    - key: "topology.kubernetes.io/zone"
-      operator: In
-      values: [${azs}a] #Update the correct region and zones
-    - key: "karpenter.sh/capacity-type"
-      operator: In
-      values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
-      operator: In
-      values: ["c5d.large","c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["amd64"]
-  limits:
-    resources:
-      cpu: 1000
-  providerRef:
-    name: spark-compute-optimized
-  labels:
-    type: karpenter
-    provisioner: spark-compute-optimized
-    NodeGroupType: SparkComputeOptimized
-  taints:
-    - key: spark-compute-optimized
-      value: 'true'
-      effect: NoSchedule
-  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
-
----
-apiVersion: karpenter.k8s.aws/v1alpha1
-kind: AWSNodeTemplate
-metadata:
-  name: spark-compute-optimized
-  namespace: karpenter
-spec:
-  blockDeviceMappings:
-    - deviceName: /dev/xvda
-      ebs:
-        volumeSize: 100Gi
-        volumeType: gp3
-        encrypted: true
-        deleteOnTermination: true
-  metadataOptions:
-    httpEndpoint: enabled
-    httpProtocolIPv6: disabled
-    httpPutResponseHopLimit: 2
-    httpTokens: required
-  subnetSelector:
-    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
-  securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
-  #  instanceProfile: ""      # optional, if already set in controller args
-
-  userData: |
-    MIME-Version: 1.0
-    Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-    --BOUNDARY
-    Content-Type: text/x-shellscript; charset="us-ascii"
-
-    #!/bin/bash
-    echo "Running a custom user data script"
-    set -ex
-    yum install mdadm -y
-
-    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-
-    DISK_ARRAY=()
-
-    for DEV in $DEVICES
-    do
-      DISK_ARRAY+=("/dev/$${DEV}")
-    done
-
-    DISK_COUNT=$${#DISK_ARRAY[@]}
-
-    if [ $${DISK_COUNT} -eq 0 ]; then
-      echo "No SSD disks available. No further action needed."
-    else
-      if [ $${DISK_COUNT} -eq 1 ]; then
-        TARGET_DEV=$${DISK_ARRAY[0]}
-        mkfs.xfs $${TARGET_DEV}
-      else
-        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-        mkfs.xfs /dev/md0
-        TARGET_DEV=/dev/md0
-      fi
-
-      mkdir -p /local1
-      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-      mount -a
-      /usr/bin/chown -hR +999:+1000 /local1
-    fi
-
-    --BOUNDARY--
-
-  tags:
-    InstanceType: "spark-compute-optimized"
-```
+<CodeBlock language="yaml">{SparkComputeOptimizedProvisioner}</CodeBlock>
 </details>
 
 To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
@@ -340,117 +236,7 @@ In this tutorial, you will use Karpenter provisioner that uses memory optimized 
 <details>
 <summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary>
 
-```yaml
-apiVersion: karpenter.sh/v1alpha5
-kind: Provisioner
-metadata:
-  name: spark-memory-optimized
-  namespace: karpenter
-spec:
-  kubeletConfiguration:
-    containerRuntime: containerd
-#    podsPerCore: 2
-#    maxPods: 20
-  requirements:
-    - key: "topology.kubernetes.io/zone"
-      operator: In
-      values: [${azs}b] #Update the correct region and zone
-    - key: "karpenter.sh/capacity-type"
-      operator: In
-      values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
-      operator: In
-      values: ["r5d.4xlarge","r5d.8xlarge","r5d.8xlarge"] # 2 NVMe disk
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["amd64"]
-  limits:
-    resources:
-      cpu: 1000
-  providerRef: # optional, recommended to use instead of `provider`
-    name: spark-memory-optimized
-  labels:
-    type: karpenter
-    provisioner: spark-memory-optimized
-    NodeGroupType: SparkMemoryOptimized
-  taints:
-    - key: spark-memory-optimized
-      value: 'true'
-      effect: NoSchedule
-  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
-
----
-apiVersion: karpenter.k8s.aws/v1alpha1
-kind: AWSNodeTemplate
-metadata:
-  name: spark-memory-optimized
-  namespace: karpenter
-spec:
-  blockDeviceMappings:
-    - deviceName: /dev/xvda
-      ebs:
-        volumeSize: 200Gi
-        volumeType: gp3
-        encrypted: true
-        deleteOnTermination: true
-  metadataOptions:
-    httpEndpoint: enabled
-    httpProtocolIPv6: disabled
-    httpPutResponseHopLimit: 2
-    httpTokens: required
-  subnetSelector:
-    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
-  securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
-  instanceProfile: "${instance_profile}"      # optional, if already set in controller args
-  # RAID0 ARRAY config
-  userData: |
-    MIME-Version: 1.0
-    Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-    --BOUNDARY
-    Content-Type: text/x-shellscript; charset="us-ascii"
-
-    #!/bin/bash
-    echo "Running a custom user data script"
-    set -ex
-    yum install mdadm -y
-
-    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-
-    DISK_ARRAY=()
-
-    for DEV in $DEVICES
-    do
-      DISK_ARRAY+=("/dev/$${DEV}")
-    done
-
-    DISK_COUNT=$${#DISK_ARRAY[@]}
-
-    if [ $${DISK_COUNT} -eq 0 ]; then
-      echo "No SSD disks available. No further action needed."
-    else
-      if [ $${DISK_COUNT} -eq 1 ]; then
-        TARGET_DEV=$${DISK_ARRAY[0]}
-        mkfs.xfs $${TARGET_DEV}
-      else
-        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-        mkfs.xfs /dev/md0
-        TARGET_DEV=/dev/md0
-      fi
-
-      mkdir -p /local1
-      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-      mount -a
-      /usr/bin/chown -hR +999:+1000 /local1
-    fi
-
-    --BOUNDARY--
-
-  tags:
-    InstanceType: "spark-memory-optimized"    # optional, add tags for your own use
-
-```
+<CodeBlock language="yaml">{SparkMemoryOptimizedProvisioner}</CodeBlock>
 </details>
 
 To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
@@ -502,115 +288,7 @@ In this tutorial, you will use Karpenter provisioner that uses Graviton memory o
 <details>
 <summary> To view Karpenter provisioner for Graviton memory optimized instances, Click to toggle content!</summary>
 
-```yaml
-apiVersion: karpenter.sh/v1alpha5
-kind: Provisioner
-metadata:
-  name: spark-graviton-memory-optimized
-  namespace: karpenter
-spec:
-  kubeletConfiguration:
-    containerRuntime: containerd
-#    podsPerCore: 2
-#    maxPods: 20
-  requirements:
-    - key: "topology.kubernetes.io/zone"
-      operator: In
-      values: [${azs}b] #Update the correct region and zone
-    - key: "karpenter.sh/capacity-type"
-      operator: In
-      values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
-      operator: In
-      values: ["r6gd.4xlarge", "r6gd.8xlarge"] # 2 NVMe disk
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["arm64"]
-  limits:
-    resources:
-      cpu: 1000
-  providerRef: # optional, recommended to use instead of `provider`
-    name: spark-graviton-memory-optimized
-  labels:
-    type: karpenter
-    provisioner: spark-graviton-memory-optimized
-    NodeGroupType: SparkGravitonMemoryOptimized
-  taints:
-    - key: spark-graviton-memory-optimized
-      value: 'true'
-      effect: NoSchedule
-  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
-
----
-apiVersion: karpenter.k8s.aws/v1alpha1
-kind: AWSNodeTemplate
-metadata:
-  name: spark-graviton-memory-optimized
-  namespace: karpenter
-spec:
-  blockDeviceMappings:
-    - deviceName: /dev/xvda
-      ebs:
-        volumeSize: 200Gi
-        volumeType: gp3
-        encrypted: true
-        deleteOnTermination: true
-  metadataOptions:
-    httpEndpoint: enabled
-    httpProtocolIPv6: disabled
-    httpPutResponseHopLimit: 2
-    httpTokens: required
-  subnetSelector:
-    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
-  securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
-#  instanceProfile: ""      # optional, if already set in controller args
-  userData: |
-    MIME-Version: 1.0
-    Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-    --BOUNDARY
-    Content-Type: text/x-shellscript; charset="us-ascii"
-
-    #!/bin/bash
-    echo "Running a custom user data script"
-    set -ex
-    yum install mdadm -y
-
-    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-
-    DISK_ARRAY=()
-
-    for DEV in $DEVICES
-    do
-      DISK_ARRAY+=("/dev/$${DEV}")
-    done
-
-    DISK_COUNT=$${#DISK_ARRAY[@]}
-
-    if [ $${DISK_COUNT} -eq 0 ]; then
-      echo "No SSD disks available. No further action needed."
-    else
-      if [ $${DISK_COUNT} -eq 1 ]; then
-        TARGET_DEV=$${DISK_ARRAY[0]}
-        mkfs.xfs $${TARGET_DEV}
-      else
-        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-        mkfs.xfs /dev/md0
-        TARGET_DEV=/dev/md0
-      fi
-
-      mkdir -p /local1
-      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-      mount -a
-      /usr/bin/chown -hR +999:+1000 /local1
-    fi
-
-    --BOUNDARY--
-
-  tags:
-    InstanceType: "spark-graviton-memory-optimized"    # optional, add tags for your own use
-```
+<CodeBlock language="yaml">{SparkGravitonMemoryOptimizedProvisioner}</CodeBlock>
 </details>
 
 To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
@@ -849,7 +527,7 @@ In this example we will load a csv file into a delta lake table format by runnin
 ### Prerequisites:
 
 The necessary EMR on EKS cluster has been provisioned as per instructions in the begining of this page.
-This script requires input parameters which can be extracted from `terraform apply` output values.  
+This script requires input parameters which can be extracted from `terraform apply` output values.
 Execute the Spark job using the below shell script.
 
 
@@ -858,7 +536,7 @@ Navigate to folder and execute script:
 
 cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 ./execute-deltacreate.sh
-```  
+```
 
 :::tip
     This shell script uploads test data and pyspark scripts to S3 bucket.
@@ -903,7 +581,7 @@ Navigate to folder and execute script:
 
 cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 ./execute-deltamerge.sh
-```  
+```
 
 ** Verify successful job completion. Re-run the query in Athena and verify data is merged (insert and updates) and shown correctly in delta lake table.**
 

@@ -1,7 +1,7 @@
 variable "region" {
-  description = "region"
-  default     = "us-west-2"
+  description = "Region"
   type        = string
+  default     = "us-west-2"
 }
 
 variable "name" {
@@ -20,4 +20,10 @@ variable "vpc_cidr" {
   description = "VPC CIDR"
   type        = string
   default     = "10.1.0.0/16"
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = true
 }

@@ -1,4 +1,8 @@
 locals {
+  spark_history_server_name       = "spark-history-server"
+  spark_history_server_repository = "https://hyper-mesh.github.io/spark-history-server"
+  spark_history_server_version    = "1.0.0"
+
   spark_history_server_service_account = "spark-history-server-sa"
   spark_history_server_create_irsa     = var.enable_spark_history_server && try(var.spark_history_server_helm_config.create_irsa, false)
   spark_history_server_namespace       = try(var.spark_history_server_helm_config["namespace"], local.spark_history_server_name)
@@ -17,10 +21,29 @@ locals {
     }
   ] : []
 
+  spark_history_server_default_values = <<-EOT
+# Update spark conf according to your needs
+sparkConf: |-
+  spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+  spark.history.fs.eventLog.rolling.maxFilesToRetain=5
+  spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+  spark.eventLog.enabled=true
+  spark.history.ui.port=18080
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 2G
+  requests:
+    cpu: 100m
+    memory: 1G
+EOT
+
   spark_history_server_merged_values_yaml = yamlencode(merge(
-    yamldecode(templatefile("${path.module}/helm-values/spark-history-server.yaml", {})),
+    yamldecode(local.spark_history_server_default_values),
     try(yamldecode(var.spark_history_server_helm_config.values[0]), {})
   ))
+
 }
 
 resource "helm_release" "spark_history_server" {

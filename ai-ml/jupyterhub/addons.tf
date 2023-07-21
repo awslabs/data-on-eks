@@ -32,27 +32,9 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.20"
-  role_name_prefix      = format("%s-%s", local.name, "vpc-cni-")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
-
-module "eks_blueprints_kubernetes_addons" {
+module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -62,14 +44,18 @@ module "eks_blueprints_kubernetes_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
-    vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-    }
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns    = {}
-    kube-proxy = {}
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
   }
 
   #---------------------------------------
@@ -179,7 +165,7 @@ parameters:
   fsType: ext4
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "storage_class_gp3" {
@@ -197,7 +183,7 @@ parameters:
   encrypted: "true"
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
@@ -251,7 +237,7 @@ spec:
     path: "/"
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "pvc" {
@@ -270,7 +256,7 @@ spec:
       storage: 1Gi
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "pv_shared" {
@@ -290,7 +276,7 @@ spec:
     path: "/"
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 resource "kubectl_manifest" "pvc_shared" {
@@ -309,7 +295,7 @@ spec:
       storage: 1Gi
 YAML
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 #---------------------------------------------------------------

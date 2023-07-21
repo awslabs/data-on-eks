@@ -1,10 +1,14 @@
+locals {
+  flink_operator_name    = "flink-kubernetes-operator"
+  flink_operator_version = try(var.flink_operator_helm_config["version"], "1.4.0")
+}
 resource "helm_release" "flink_operator" {
   count = var.enable_flink_operator ? 1 : 0
 
   name                       = try(var.flink_operator_helm_config["name"], local.flink_operator_name)
-  repository                 = try(var.flink_operator_helm_config["repository"], local.flink_operator_repository)
+  repository                 = try(var.flink_operator_helm_config["repository"], "https://downloads.apache.org/flink/flink-kubernetes-operator-${local.flink_operator_version}")
   chart                      = try(var.flink_operator_helm_config["chart"], local.flink_operator_name)
-  version                    = try(var.flink_operator_helm_config["version"], local.flink_operator_version)
+  version                    = local.flink_operator_version
   timeout                    = try(var.flink_operator_helm_config["timeout"], 300)
   values                     = try(var.flink_operator_helm_config["values"], null)
   create_namespace           = try(var.flink_operator_helm_config["create_namespace"], true)

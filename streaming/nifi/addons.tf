@@ -1,30 +1,56 @@
-module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.25.0"
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
 
-  eks_cluster_id       = module.eks.cluster_name
-  eks_cluster_endpoint = module.eks.cluster_endpoint
-  eks_oidc_provider    = module.eks.oidc_provider
-  eks_cluster_version  = module.eks.cluster_version
-  eks_cluster_domain   = var.eks_cluster_domain
+module "ebs_csi_driver_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.20"
 
-  # Wait on the node group(s) before provisioning addons
-  data_plane_wait_arn = join(",", [for group in module.eks.eks_managed_node_groups : group.node_group_arn])
+  role_name_prefix = "${module.eks.cluster_name}-ebs-csi-driver-"
+
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+
+  tags = local.tags
+}
+
+module "eks_blueprints_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.2"
+
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
+  }
 
   #---------------------------------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------------------------------
-  enable_amazon_eks_vpc_cni            = true
-  enable_amazon_eks_coredns            = true
-  enable_amazon_eks_kube_proxy         = true
-  enable_amazon_eks_aws_ebs_csi_driver = true
-
-  #---------------------------------------------------------------
-  # Additional Add-ons
+  # Kubernetes Add-ons
   #---------------------------------------------------------------
   enable_aws_load_balancer_controller = true
 
   enable_external_dns = true
-  external_dns_helm_config = {
+  external_dns = {
     values = [templatefile("${path.module}/helm-values/external-dns-values.yaml", {
       txtOwnerId   = local.name
       domainFilter = var.eks_cluster_domain
@@ -34,7 +60,7 @@ module "eks_blueprints_kubernetes_addons" {
   enable_cert_manager = true
 
   enable_metrics_server = true
-  metrics_server_helm_config = {
+  metrics_server = {
     set = [
       {
         name  = "image.repository"
@@ -45,24 +71,55 @@ module "eks_blueprints_kubernetes_addons" {
 
   enable_cluster_autoscaler = true
 
-  enable_aws_for_fluentbit                 = true
-  aws_for_fluentbit_cw_log_group_retention = 30
-
-  enable_prometheus = true
-  prometheus_helm_config = {
-    values = [file("${path.module}/helm-values/prometheus-values.yaml")]
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    create            = true
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  aws_for_fluentbit = {
+    create_namespace = true
+    namespace        = "aws-for-fluentbit"
+    create_role      = true
+    role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+      s3_bucket_name       = module.s3_bucket.s3_bucket_id
+      cluster_name         = module.eks.cluster_name
+    })]
   }
 
   enable_aws_cloudwatch_metrics = true
 
-  enable_grafana = true
-  grafana_helm_config = {
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [
+      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
+        region              = local.region
+        amp_sa              = local.amp_ingest_service_account
+        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
+        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
+    ]
+    chart_version = "48.1.1"
     set_sensitive = [
       {
-        name  = "adminPassword"
+        name  = "grafana.adminPassword"
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
-    ]
+    ],
   }
 
   tags = local.tags
@@ -82,12 +139,11 @@ resource "kubernetes_storage_class_v1" "gp3" {
     fsType    = "ext4"
     type      = "gp3"
   }
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 #---------------------------------------------------------------
 # Grafana Admin credentials resources
-# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
 resource "random_password" "grafana" {
   length           = 16
@@ -198,4 +254,42 @@ resource "helm_release" "nifi" {
   })]
 
   depends_on = [kubernetes_storage_class_v1.gp3]
+}
+
+#---------------------------------------------------------------
+# IAM Policy for FluentBit Add-on
+#---------------------------------------------------------------
+resource "aws_iam_policy" "fluentbit" {
+  description = "IAM policy policy for FluentBit"
+  name        = "${local.name}-fluentbit-additional"
+  policy      = data.aws_iam_policy_document.fluent_bit.json
+}
+
+
+module "s3_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 3.0"
+
+  bucket_prefix = "${local.name}-nifi-logs-"
+
+  # For example only - please evaluate for your environment
+  force_destroy = true
+
+  attach_deny_insecure_transport_policy = true
+  attach_require_latest_tls_policy      = true
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  tags = local.tags
 }

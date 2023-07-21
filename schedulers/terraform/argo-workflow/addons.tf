@@ -1,5 +1,5 @@
-module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.25.0"
+module "eks_blueprints_addons" {
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.32.1"
 
   eks_cluster_id       = module.eks_blueprints.eks_cluster_id
   eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
@@ -156,7 +156,7 @@ resource "kubernetes_role_binding" "admin_rolebinding_data_teama" {
 # IRSA for Argo events to read SQS
 #---------------------------------------------------------------
 module "irsa_argo_events" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.15.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/irsa?ref=v4.32.1"
 
   create_kubernetes_namespace = true
   kubernetes_namespace        = "argo-events"

@@ -165,3 +165,29 @@ variable "airflow_helm_config" {
   type        = any
   default     = {}
 }
+#---------------------------------------------------
+# AWS Neuron Device Plugin (Using Local Helm Chart)
+#---------------------------------------------------
+variable "enable_aws_neuron_device_plugin" {
+  description = "Enable AWS Neuron Device Plugin add-on"
+  type        = bool
+  default     = false
+}
+variable "aws_neuron_device_plugin_helm_config" {
+  description = "AWS Neuron Device Plugin Helm Chart config"
+  type        = any
+  default     = {}
+}
+#---------------------------------------------------
+# AWS EFA K8s Device Plugin (Using Local Helm Chart)
+#---------------------------------------------------
+variable "enable_aws_efa_k8s_device_plugin" {
+  description = "Enable EFA K8s Plugin add-on"
+  type        = bool
+  default     = false
+}
+variable "aws_efa_k8s_device_plugin_helm_config" {
+  description = "EFA K8s Plugin add-on Helm Chart config"
+  type        = any
+  default     = {}
+}

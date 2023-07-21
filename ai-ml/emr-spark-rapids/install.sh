@@ -6,12 +6,9 @@ terraform init || echo "\"terraform init\" failed"
 # List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
-  "module.vpc_endpoints_sg"
   "module.vpc_endpoints"
   "module.eks"
-  "module.ebs_csi_driver_irsa"
-  "module.vpc_cni_irsa"
-  "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
   "module.kubernetes_data_addons"
   "module.emr_containers"
 )
