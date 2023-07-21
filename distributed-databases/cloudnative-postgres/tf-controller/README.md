@@ -9,16 +9,31 @@ In order to use an existing FluxCD to pull data into a kubernetes cluster runnin
 
 ## Method
 
-1. Use the data-on-eks-repo.yaml to set up the GitRepository on the target kubernetes cluster either by using:
-   a. kubectl apply -f data-on-eks-repo.yaml
-   b. Copy the file into a Flux enabled directory of manifests that will sync to the kubernetes cluster
+### CLI commands
+
+1. Use flux to create the gitrepository object:
+```
+flux create source git data-on-eks --url=https://github.com/weavegitops/data-on-eks --interval=1m --branch=main
+```
 2. Create a new kustomization that points to this directory in the GitRepository source using flux:
 ```
 flux create kustomization data-on-eks-cloudnative-postgresql --source=GitRepository/data-on-eks --prune=true --path="./distributed-databases/cloudnative-postgres/tf-controller"
 ```
 
+### Gitops
 
-Let flux sync the files to the cluster and then the TF-controller will deploy the eks cluster with the cloudnative-postgresql component.
+1. Use flux to create the gitrepository object, but output it to the cluster config directory that is already configured:
+```
+flux create source git data-on-eks --url=https://github.com/weavegitops/data-on-eks --interval=1m --branch=main --export > data-on-eks.yaml
+```
+2. Create a new kustomization that points to this directory using flux and output to a file:
+```
+flux create kustomization data-on-eks-cloudnative-postgresql --source=GitRepository/data-on-eks --prune=true --path="./distributed-databases/cloudnative-postgres/tf-controller" --export > data-on-eks-cloudnative-postgres.yaml
+```
+3. Commit the changes to the Git repository and wait for Flux to sync the changes
+
+
+TF-controller will deploy the eks cluster with the cloudnative-postgresql component.
 
 ## Cleanup
 
