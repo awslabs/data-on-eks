@@ -26,37 +26,15 @@ variable "tags" {
 variable "vpc_cidr" {
   description = "VPC CIDR. This should be a valid private (RFC 1918) CIDR range"
   type        = string
-  default     = "10.1.0.0/16"
+  default     = "10.1.0.0/21"
 }
 
-# Routable Public subnets with NAT Gateway and Internet Gateway
-# 65 IPs per subnet/AZ
-variable "public_subnets" {
-  description = "Public Subnets CIDRs. 62 IPs per Subnet/AZ"
-  type        = list(string)
-  default     = ["10.1.0.0/26", "10.1.0.64/26"]
-}
-
-# Routable Private subnets only for Private NAT Gateway -> Transit Gateway -> Second VPC for overlapping overlapping CIDRs
-# 256 IPs per subnet/AZ
-variable "private_subnets" {
-  description = "Private Subnets CIDRs. 254 IPs per Subnet/AZ for Private NAT + NLB + Airflow + EC2 Jumphost etc."
-  type        = list(string)
-  default     = ["10.1.1.0/24", "10.1.2.0/24"]
-}
-
-# RFC6598 range 100.64.0.0/10 for EKS Data Plane
-# Note you can only use /16 range to VPC. You can add multiples of /16 if required
+# RFC6598 range 100.64.0.0/10
+# Note you can only /16 range to VPC. You can add multiples of /16 if required
 variable "secondary_cidr_blocks" {
   description = "Secondary CIDR blocks to be attached to VPC"
-  type        = string
-  default     = "100.64.0.0/16"
-}
-
-variable "enable_vpc_endpoints" {
-  description = "Enable VPC Endpoints"
-  type        = string
-  default     = false
+  type        = list(string)
+  default     = ["100.64.0.0/16"]
 }
 
 variable "enable_amazon_prometheus" {
@@ -67,6 +45,6 @@ variable "enable_amazon_prometheus" {
 
 variable "enable_kubecost" {
   description = "Enable Kubecost"
-  default     = false
+  default     = true
   type        = bool
 }

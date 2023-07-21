@@ -42,11 +42,13 @@ metadata:
   name: spark-ubuntu-gpu-karpenter
   namespace: karpenter
 spec:
-  amiFamily: Ubuntu
+  amiFamily: Custom
+  amiSelector:
+    id: ami-0e425174814918692
   blockDeviceMappings:
     - deviceName: /dev/sda1
       ebs:
-        volumeSize: 20Gi
+        volumeSize: 50Gi
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
