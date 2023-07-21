@@ -134,31 +134,22 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
-    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    values = [
+      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
+        region              = local.region
+        amp_sa              = local.amp_ingest_service_account
+        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
+        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
+    ]
+    chart_version = "48.1.1"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
     ],
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "prometheus.serviceAccount.name"
-        value = local.amp_ingest_service_account
-      },
-      {
-        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-        value = module.amp_ingest_irsa[0].iam_role_arn
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
-        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
-        value = local.region
-      }
-    ] : []
   }
 
   tags = local.tags

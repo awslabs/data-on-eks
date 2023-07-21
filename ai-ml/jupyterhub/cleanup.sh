@@ -7,7 +7,7 @@ read -p "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.co
 
 targets=(
   "module.kubernetes_data_addons"
-  "module.eks_blueprints_kubernetes_addons"
+  "module.eks_blueprints_addons"
   "module.eks"
 )
 

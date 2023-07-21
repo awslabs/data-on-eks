@@ -6,9 +6,7 @@ read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
 targets=(
-  "module.eks_data_addons"
   "module.eks_blueprints_addons"
-  "module.eks"
 )
 
 for target in "${targets[@]}"
