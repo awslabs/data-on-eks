@@ -590,6 +590,47 @@ cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 
 </CollapsibleContent>
 
+## Run Interactive Workload with Managed Endpoint
+
+Managed endpoint is a gateway that provides connectivity from EMR Studio to EMR on EKS so that you can run interactive workloads. You can find out more information about it [here](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/how-it-works.html).
+
+### Creating a managed endpoint
+
+In this example, we will create a managed endpoint under one of the data teams.
+
+```bash
+Navigate to folder and execute script:
+
+cd analytics/terraform/emr-eks-karpenter/examples/managed-endpoints
+./create-managed-endpoint.sh
+```
+```
+Enter the EMR Virtual Cluster Id: 4ucrncg6z4nd19vh1lidna2b3
+Provide your EMR on EKS team (emr-data-team-a or emr-data-team-b): emr-eks-data-team-a
+Enter your AWS Region: us-west-2
+Enter a name for your endpoint: emr-eks-team-a-endpoint
+Provide an S3 bucket location for logging (i.e. s3://my-bucket/logging/): s3://<bucket-name>/logs
+Enter the EMR Execution Role ARN (i.e. arn:aws:00000000000000000:role/EMR-Execution-Role): arn:aws:iam::181460066119:role/emr-eks-karpenter-emr-data-team-a
+```
+
+The script will provide the following:
+- JSON configuration file for the Managed Endpoint
+- Configuration settings:
+  - Default 8G Spark Driver
+  - CloudWatch monitoring, with logs stored in the S3 bucket provided
+- Proper endpoint creation with appropriate security group to allow using Karpenter
+- Outputs: Managed Endpoint ID and Load Balancer ARN. 
+
+Once you have created a managed endpoint, you can follow the instructions [here](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-configure.html) to configure EMR Studio and associate the Managed endpoint to a workspace.
+
+### Cleanup of Endpoint resources
+
+To delete the managed endpoint, simply run the following command:
+
+```bash
+aws emr-containers delete-managed-endpoint --id <Managed Endpoint ID> --virtual-cluster-id <Virtual Cluster ID>
+```
+
 ## Cleanup
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
