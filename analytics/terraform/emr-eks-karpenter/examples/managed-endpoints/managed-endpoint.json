@@ -1,0 +1,33 @@
+{
+    "name": "$EMR_EKS_MANAGED_ENDPOINT",
+    "virtualClusterId": "$EMR_VIRTUAL_CLUSTER_ID",
+    "type": "JUPYTER_ENTERPRISE_GATEWAY",
+    "releaseLabel": "$EMR_EKS_RELEASE_LABEL",
+    "executionRoleArn": "$EMR_EXECUTION_ROLE_ARN",
+    "configurationOverrides":
+    {
+        "applicationConfiguration":
+        [
+            {
+                "classification": "spark-defaults",
+                "properties":
+                {
+                    "spark.driver.memory": "8G"
+                }
+            }
+        ],
+        "monitoringConfiguration":
+        {
+            "persistentAppUI": "ENABLED",
+            "cloudWatchMonitoringConfiguration":
+            {
+                "logGroupName": "$CLOUDWATCH_LOGS_GROUP_NAME",
+                "logStreamNamePrefix": "$CLOUDWATCH_LOGS_PREFIX"
+            },
+            "s3MonitoringConfiguration":
+            {
+                "logUri": "$S3_BUCKET"
+            }
+        }
+    }
+}
