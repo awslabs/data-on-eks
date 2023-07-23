@@ -59,11 +59,11 @@ variable "enable_cloudwatch_metrics" {
   type        = bool
 }
 
-variable "enable_aws_for_fluentbit" {
-  default     = false
-  description = "Enable Fluentbit addon"
-  type        = bool
-}
+# variable "enable_aws_for_fluentbit" {
+#   default     = false
+#   description = "Enable Fluentbit addon"
+#   type        = bool
+# }
 
 # variable "enable_grafana" {
 #   default     = true

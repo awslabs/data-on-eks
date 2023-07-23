@@ -34,7 +34,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
-   enable_metrics_server = true
+  enable_metrics_server = true
   metrics_server = {
     values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
@@ -63,7 +63,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
+  enable_aws_cloudwatch_metrics = var.enable_cloudwatch_metrics
   aws_cloudwatch_metrics = {
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
@@ -87,7 +87,7 @@ module "eks_blueprints_kubernetes_addons" {
   # Prommetheus and Grafana stack
   #---------------------------------------
   #---------------------------------------------------------------
-  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # Install Montoring Stack with Prometheus and Grafana
   # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
@@ -109,7 +109,7 @@ module "eks_blueprints_kubernetes_addons" {
         name  = "grafana.adminPassword"
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
-    ],
+    ]
   }
   
   tags = local.tags
