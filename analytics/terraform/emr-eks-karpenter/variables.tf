@@ -1,5 +1,5 @@
 variable "name" {
-  description = "Name of the EKS Cluster"
+  description = "Name of the VPC and EKS Cluster"
   default     = "emr-roadshow"
   type        = string
 }
@@ -7,7 +7,7 @@ variable "name" {
 variable "region" {
   description = "region"
   type        = string
-  default     = "us-east-1"
+  default     = "us-west-2"
 }
 
 variable "eks_cluster_version" {
@@ -65,8 +65,14 @@ variable "enable_aws_for_fluentbit" {
   type        = bool
 }
 
-variable "enable_grafana" {
-  default     = false
-  description = "Enable Open source Grafana addon"
+# variable "enable_grafana" {
+#   default     = true
+#   description = "Enable Open source Grafana addon"
+#   type        = bool
+# }
+
+variable "enable_amazon_prometheus" {
+  default     = true
+  description = "Enable AWS Managed Prometheus service"
   type        = bool
 }

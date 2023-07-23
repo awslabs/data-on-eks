@@ -1,5 +1,5 @@
+data "aws_partition" "current" {}
 data "aws_eks_cluster_auth" "this" {
-  # provider = aws.eks
   name = var.name
 }
 
@@ -66,6 +66,7 @@ data "aws_ami" "eks" {
 
 # For Grafana Password
 data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id  = aws_secretsmanager_secret.grafana.id
+  secret_id = aws_secretsmanager_secret.grafana.id
+
   depends_on = [aws_secretsmanager_secret_version.grafana]
 }

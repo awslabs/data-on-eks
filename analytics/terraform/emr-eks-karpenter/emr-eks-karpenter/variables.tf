@@ -65,8 +65,14 @@ variable "enable_aws_for_fluentbit" {
   type        = bool
 }
 
-variable "enable_grafana" {
+# variable "enable_grafana" {
+#   default     = true
+#   description = "Enable Open source Grafana addon"
+#   type        = bool
+# }
+
+variable "enable_amazon_prometheus" {
   default     = true
-  description = "Enable Open source Grafana addon"
+  description = "Enable AWS Managed Prometheus service"
   type        = bool
 }
