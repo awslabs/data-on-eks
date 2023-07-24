@@ -12,7 +12,6 @@ targets=(
   "module.mwaa"
   "module.eks"
   "module.eks_blueprints_addons"
-  "module.datahub"
   "module.emr_containers"
 )
 
