@@ -1,0 +1,42 @@
+replicaCount: 1
+
+webhook:
+  # -- Enable webhook server
+  enable: true
+  # -- Webhook service port
+  port: 8080
+
+# -- Set this if running spark jobs in a different namespace than the operator
+#sparkJobNamespace: "spark-team-a"
+
+# -- Operator concurrency, higher values might increase memory usage
+controllerThreads: 10
+
+# resources -- Pod resource requests and limits
+# Note, that each job submission will spawn a JVM within the Spark Operator Pod using "/usr/local/openjdk-11/bin/java -Xmx128m".
+# Kubernetes may kill these Java processes at will to enforce resource limits. When that happens, you will see the following error:
+# 'failed to run spark-submit for SparkApplication [...]: signal: killed' - when this happens, you may want to increase memory limits.
+resources:
+   limits:
+     cpu: 200m
+     memory: 1Gi
+   requests:
+     cpu: 100m
+     memory: 512Mi
+
+batchScheduler:
+  # -- Enable batch scheduler for spark jobs scheduling. If enabled, users can specify batch scheduler name in spark application
+  enable: true
+
+#------------------------------------
+# THIS WILL CREATE SERVICE AND INGRESS OBJECT FOR EACH SPARK APPLICATION
+#------------------------------------
+#uiService:
+##  # -- Enable UI service creation for Spark application
+#  enable: true
+### -- Ingress URL format.
+### Requires the UI service to be enabled by setting `uiService.enable` to true.
+### 1/ Enable ingressUrlFormat to create an Ingress object for each Spark Job submitted using Spark Operator
+### 2/ This setup also requires ingres-nginx to be deployed with NLB as LB with IP based routing.
+### 3. Enter the NLB DNS name or enter Custom Domain name from route53 below which points to the NLB
+#ingressUrlFormat: '<ENTER_NLB_DNS_NAME/CUSTOM_DOMAIN_NAME>/{{$appName}}'

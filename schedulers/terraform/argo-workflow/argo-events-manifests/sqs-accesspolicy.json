@@ -1,0 +1,3 @@
+{
+    "Policy": "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Action\": \"sqs:*\",\"Effect\": \"Allow\",\"Resource\": \"<QueueArn>\",\"Principal\": {\"AWS\": \"<your_event_irsa_arn>\"}}]}"
+}
