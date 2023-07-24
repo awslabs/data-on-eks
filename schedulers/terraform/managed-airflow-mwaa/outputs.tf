@@ -1,19 +1,14 @@
 output "configure_kubectl" {
   description = "Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig"
-  value       = module.eks_blueprints.configure_kubectl
+  value       = "aws eks --region ${local.region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
 
-output "emrcontainers_virtual_cluster_id" {
-  description = "EMR Containers Virtual cluster ID"
-  value       = aws_emrcontainers_virtual_cluster.this.id
+output "emr_on_eks" {
+  description = "EMR on EKS"
+  value       = module.emr_containers
 }
 
-output "emr_on_eks_role_id" {
-  description = "IAM execution role ID for EMR on EKS"
-  value       = module.eks_blueprints.emr_on_eks_role_id
-}
-
-output "emr_on_eks_role_arn" {
-  description = "IAM execution role arn for EMR on EKS"
-  value       = module.eks_blueprints.emr_on_eks_role_arn
+output "mwaa_webserver_url" {
+  description = "MWAA Webserver Url"
+  value       = module.mwaa.mwaa_webserver_url
 }
