@@ -20,6 +20,6 @@ spec:
 #            cpu: "10m"
 #      antiAffinity: false
 #      persistence:
-#        storageClassName: standard
+#        storageClassName: gp3
 #        accessMode: ReadWriteOnce
 #        volumeSize: 10Gi

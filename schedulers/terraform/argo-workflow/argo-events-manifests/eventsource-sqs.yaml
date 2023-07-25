@@ -12,9 +12,9 @@ spec:
       # source will be JSON
       jsonBody: true
       # aws region
-      region: us-east-1
+      region: $region_sqs
       # name of the queue. The eventsource resolves the url of the queue from the queue name.
-      queue: test1
+      queue: $queue_name
       # The duration (in seconds) for which the call waits for a message to arrive in the queue before returning.
       # MUST BE > 0 AND <= 20
       waitTimeSeconds: 20
