@@ -6,7 +6,7 @@ read -p "Enter domain name with wildcard and ensure ACM certificate is created f
 read -p "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com : " jupyterhub_domain
 
 targets=(
-  "module.kubernetes_data_addons"
+  "module.eks_data_addons"
   "module.eks_blueprints_addons"
   "module.eks"
 )
