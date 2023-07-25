@@ -144,24 +144,28 @@ kubectl apply -f argo-events-manifests/eventbus.yaml
 
 ### Deploy `eventsource-sqs.yaml` to link with external SQS
 
+In this case, we configure a EventSource to license to the queue `test1` in region `us-east-1`. The eventsource is capable of monitoring events across regions, so the Amazon EKS cluster and Amazon SQS queue don’t need to be located in the same Region.
+
 ```bash
+queue_name=test1
+reqion_sqs=us-east-1
+
 kubectl apply -f argo-events-manifests/eventsource-sqs.yaml
 ```
 
-In this case, we configure a EventSource to license to the queue `test1` in region `us-east-1`.
-Let's create that queue in your account if you don't have one.
+Let's create that queue in your account.
 
 ```bash
 # create a queue
-aws sqs create-queue --queue-name test1 --region us-east-1
+queue_url=$(aws sqs create-queue --queue-name $queue_name --region $region_sqs --output text)
 
 # get your queue arn
-aws sqs get-queue-attributes --queue-url <your queue url> --attribute-names QueueArn
+aws sqs get-queue-attributes --queue-url $queue_url --attribute-names QueueArn --region $region_sqs
 
 #Replace the following values in argo-events/sqs-accesspolicy.json
 #<your queue arn>  
 #<your event irsa arn> (you can get from terraform output)
-aws sqs set-queue-attributes --queue-url <your queue url> --attributes file://argo-events/sqs-accesspolicy.json --region us-east-1
+aws sqs set-queue-attributes --queue-url $queue_url --attributes file://argo-events/sqs-accesspolicy.json --region $region_sqs
 ```
 
 ### Deploy `sensor-rbac.yaml` and `sensor-sqs-spark-crossns.yaml` for triggering workflow
@@ -232,7 +236,9 @@ rolebinding.rbac.authorization.k8s.io/operate-workflow-role-binding   Role/opera
 
 Send a message from SQS: `{"message": "hello"}`
 
-![sqs](img/sqs.png)
+```bash
+aws sqs send-message --queue-url $queue_url --message-body '{"message": "hello"}' --region $region_sqs
+```
 
 Argo Events would capture the message and trigger Argo Workflows to create a workflow for spark jobs.
 
