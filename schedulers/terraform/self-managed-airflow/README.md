@@ -27,7 +27,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_airflow_irsa_scheduler"></a> [airflow\_irsa\_scheduler](#module\_airflow\_irsa\_scheduler) | ../../../workshop/modules/terraform-aws-eks-data-addons/irsa | n/a |
+| <a name="module_airflow_irsa_scheduler"></a> [airflow\_irsa\_scheduler](#module\_airflow\_irsa\_scheduler) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |
 | <a name="module_airflow_irsa_webserver"></a> [airflow\_irsa\_webserver](#module\_airflow\_irsa\_webserver) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |
 | <a name="module_airflow_irsa_worker"></a> [airflow\_irsa\_worker](#module\_airflow\_irsa\_worker) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |
 | <a name="module_airflow_s3_bucket"></a> [airflow\_s3\_bucket](#module\_airflow\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
@@ -36,8 +36,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.20 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.15 |
 | <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.2 |
+| <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | aws-ia/eks-data-addons/aws | ~> 1.0 |
 | <a name="module_fluentbit_s3_bucket"></a> [fluentbit\_s3\_bucket](#module\_fluentbit\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
-| <a name="module_kubernetes_data_addons"></a> [kubernetes\_data\_addons](#module\_kubernetes\_data\_addons) | ../../../workshop/modules/terraform-aws-eks-data-addons | n/a |
 | <a name="module_security_group"></a> [security\_group](#module\_security\_group) | terraform-aws-modules/security-group/aws | ~> 5.0 |
 | <a name="module_spark_logs_s3_bucket"></a> [spark\_logs\_s3\_bucket](#module\_spark\_logs\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
 | <a name="module_spark_team_a_irsa"></a> [spark\_team\_a\_irsa](#module\_spark\_team\_a\_irsa) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |

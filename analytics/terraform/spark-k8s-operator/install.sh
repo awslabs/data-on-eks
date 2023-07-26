@@ -8,7 +8,7 @@ targets=(
   "module.vpc"
   "module.eks"
   "module.eks_blueprints_addons"
-  "module.kubernetes_data_addons"
+  "module.eks_data_addons"
 )
 
 # Initialize Terraform

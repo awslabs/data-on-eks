@@ -148,14 +148,17 @@ resource "kubernetes_secret_v1" "airflow_scheduler" {
 }
 
 module "airflow_irsa_scheduler" {
-  source = "../../../workshop/modules/terraform-aws-eks-data-addons/irsa"
-  count  = var.enable_airflow ? 1 : 0
-  # IAM role for service account (IRSA)
-  create_role      = var.enable_airflow
-  role_name        = local.airflow_scheduler_service_account
-  role_description = "IRSA for ${local.airflow_name} Scheduler"
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
 
-  role_policy_arns = merge({ AirflowScheduler = aws_iam_policy.airflow_scheduler[0].arn })
+  count = var.enable_airflow ? 1 : 0
+  # IAM role for service account (IRSA)
+  create_release = false
+  create_policy  = false
+  create_role    = var.enable_airflow
+  role_name      = local.airflow_scheduler_service_account
+
+  role_policies = { AirflowScheduler = aws_iam_policy.airflow_scheduler[0].arn }
 
   oidc_providers = {
     this = {
