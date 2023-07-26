@@ -60,6 +60,7 @@ grafana:
   defaultDashboardsEnabled: true
 # Adding AMP datasource to Grafana config
   serviceAccount:
+    create: false
     name: ${amp_sa}
   grafana.ini:
     auth:
