@@ -9,9 +9,9 @@ prometheus:
       - url: ${amp_remotewrite_url}
         sigv4:
           region: ${region}
-        queueConfig:
-          maxSamplesPerSend: 1000
-          maxShards: 200
+        queue_config:
+          max_samples_per_send: 1000
+          max_shards: 200
           capacity: 2500
     retention: 5h
     scrapeInterval: 30s
@@ -58,6 +58,13 @@ alertmanager:
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+# Adding AMP datasource to Grafana config
+  serviceAccount:
+    create: false
+    name: ${amp_sa}
+  grafana.ini:
+    auth:
+      sigv4_auth_enabled: true
   additionalDataSources:
     - name: AMP
       editable: true
