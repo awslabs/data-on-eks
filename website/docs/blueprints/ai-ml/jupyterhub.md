@@ -6,7 +6,7 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # JupyterHub on EKS
 
-::info
+:::info
 Note: We are actively working on enhancing this blueprint with additional functionalities to make it more enterprise-ready.
 :::
 
