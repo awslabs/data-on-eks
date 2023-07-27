@@ -32,11 +32,11 @@ To provision this example:
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 cd data-on-eks/schedulers/terraform/managed-airflow-mwaa
-terraform init
-terraform apply -var region=us-west-2  # Change according to your region
+chmod +x install.sh
+./install.sh
 ```
 
-Enter `yes` at command prompt to apply
+Enter region at command prompt to continue.
 
 Once done, you will see terraform output like below.
 
@@ -58,6 +58,7 @@ The following command will update the `kubeconfig` on your local machine and all
 
 ### Run `update-kubeconfig` command
 
+Run the command below.  You may also copy the command from the terraform output 'configure_kubectl'.
 ```bash
 aws eks --region us-west-2 update-kubeconfig --name managed-airflow-mwaa
 ```
@@ -69,9 +70,9 @@ kubectl get nodes
 
 # Output should look like below
 NAME                         STATUS   ROLES    AGE     VERSION
-ip-10-0-0-42.ec2.internal    Ready    <none>   5h15m   v1.23.9-eks-ba74326
-ip-10-0-22-71.ec2.internal   Ready    <none>   5h15m   v1.23.9-eks-ba74326
-ip-10-0-44-63.ec2.internal   Ready    <none>   5h15m   v1.23.9-eks-ba74326
+ip-10-0-0-42.ec2.internal    Ready    <none>   5h15m   v1.26.4-eks-0a21954
+ip-10-0-22-71.ec2.internal   Ready    <none>   5h15m   v1.26.4-eks-0a21954
+ip-10-0-44-63.ec2.internal   Ready    <none>   5h15m   v1.26.4-eks-0a21954
 ```
 
 ### List the namespaces in EKS cluster
@@ -171,9 +172,10 @@ mwaa-pod-test.4bed823d645844bc8e6899fd858f119d   0/1     Completed   0          
 
 ## Destroy
 
-To teardown and remove the resources created in this example:
+To clean up your environment, run the `cleanup.sh` script.script
 
 ```bash
-terraform destroy -auto-approve
+chmod +x cleanup.sh
+./cleanup.sh
 ```
 ---

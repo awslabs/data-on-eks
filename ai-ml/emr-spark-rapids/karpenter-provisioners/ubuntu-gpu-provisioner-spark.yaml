@@ -1,3 +1,5 @@
+# NOTE: Ubuntu 20.04 LTS is not supported by Karpenter yet. So, we are using Ubuntu 18.04 LTS
+---
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
@@ -46,7 +48,7 @@ spec:
   blockDeviceMappings:
     - deviceName: /dev/sda1
       ebs:
-        volumeSize: 20Gi
+        volumeSize: 50Gi
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
