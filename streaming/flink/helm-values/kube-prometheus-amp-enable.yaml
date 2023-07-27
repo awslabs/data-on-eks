@@ -9,9 +9,9 @@ prometheus:
       - url: ${amp_remotewrite_url}
         sigv4:
           region: ${region}
-        queue_config:
-          max_samples_per_send: 1000
-          max_shards: 200
+        queueConfig:
+          maxSamplesPerSend: 1000
+          maxShards: 200
           capacity: 2500
     retention: 5h
     scrapeInterval: 30s

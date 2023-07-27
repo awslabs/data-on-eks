@@ -49,7 +49,7 @@ variable "enable_yunikorn" {
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_fsx_for_lustre" {
