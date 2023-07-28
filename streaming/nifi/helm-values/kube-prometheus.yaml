@@ -9,7 +9,7 @@ prometheus:
         metadata:
           name: data
         spec:
-          storageClassName: gp3
+          storageClassName: ${storage_class_type}
           accessModes:
             - ReadWriteOnce
           resources:
