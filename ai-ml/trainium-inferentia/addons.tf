@@ -1,4 +1,42 @@
 #---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_annotations" "disable_gp2" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+resource "kubernetes_storage_class" "default_gp3" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+  volume_binding_mode    = "WaitForFirstConsumer"
+  parameters = {
+    fsType    = "xfs"
+    encrypted = true
+    type      = "gp3"
+  }
+
+  depends_on = [kubernetes_annotations.disable_gp2]
+}
+
+#---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
@@ -139,38 +177,29 @@ module "eks_blueprints_addons" {
   # Prommetheus and Grafana stack
   #---------------------------------------
   #---------------------------------------------------------------
-  # Install Kafka Montoring Stack with Prometheus and Grafana
   # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text`
   #---------------------------------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
-    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    values = [
+      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
+        region              = local.region
+        amp_sa              = local.amp_ingest_service_account
+        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
+        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+        storage_class_type  = kubernetes_storage_class.default_gp3.id
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
+    ]
+    chart_version = "48.1.1"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
     ],
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "prometheus.serviceAccount.name"
-        value = local.amp_ingest_service_account
-      },
-      {
-        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-        value = module.amp_ingest_irsa[0].iam_role_arn
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
-        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
-        value = local.region
-      }
-    ] : []
   }
 
   tags = local.tags
@@ -189,6 +218,7 @@ module "eks_data_addons" {
   enable_aws_efa_k8s_device_plugin = true
 
   # Automate these steps
+
   # kubectl apply -f https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml
   # kubectl apply -f https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml
 
@@ -210,7 +240,7 @@ spec:
     cpu: 2
 YAML
 
-  depends_on = [module.kubernetes_data_addons]
+  depends_on = [module.eks_data_addons]
 }
 
 #---------------------------------------------------------------
