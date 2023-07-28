@@ -313,7 +313,7 @@ module "eks" {
       EOT
 
       min_size     = 0
-      max_size     = 0
+      max_size     = 1
       desired_size = 0
 
       # EFA Network Interfaces configuration for Trn1.32xlarge
