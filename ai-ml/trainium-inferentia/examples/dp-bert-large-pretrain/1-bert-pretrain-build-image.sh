@@ -33,13 +33,10 @@ else
   echo "Repository URL: $ECR_REPO_URI"
 fi
 
-# Building Docker image
-echo -e "Building Docker image... $ECR_REPO_URI:$IMAGE_TAG"
-docker build --tag "$ECR_REPO_URI:$IMAGE_TAG" --file Dockerfile.bert_pretrain .
+export DOCKER_BUILDKIT=1
 
-# Tagging the Docker image
-echo -e "Tagging Docker image... $ECR_REPO_URI:$IMAGE_TAG"
-docker tag "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:$IMAGE_TAG"
+echo -e "Building and Tagging Docker image... $ECR_REPO_URI:$IMAGE_TAG"
+docker build ./docker -f docker/Dockerfile.bert_pretrain -t $ECR_REPO_URI:$IMAGE_TAG
 
 # Login to ECR
 echo -e "ECR Login with Docker..."

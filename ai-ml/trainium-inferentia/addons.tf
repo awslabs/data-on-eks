@@ -218,7 +218,6 @@ module "eks_data_addons" {
   enable_aws_efa_k8s_device_plugin = true
 
   # Automate these steps
-
   # kubectl apply -f https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml
   # kubectl apply -f https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml
 

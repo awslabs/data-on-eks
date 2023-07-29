@@ -1,0 +1,11 @@
+# Basic linux container for sys-admin tasks
+FROM ubuntu:20.04
+
+# This arg required to stop docker build waiting for region configuration while installing tz data from ubuntu 20
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y curl unzip inetutils-ping && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip ./awscliv2.zip && ./aws/install
+
+CMD ["/bin/bash"]
