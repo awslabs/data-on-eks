@@ -96,9 +96,9 @@ resource "kubernetes_secret" "datahub_auth_secrets" {
   }
 
   data = {
-    system_client_secret = random_password.auth_secrets.result
+    system_client_secret      = random_password.auth_secrets.result
     token_service_signing_key = random_password.auth_secrets.result
-    token_service_salt = random_password.auth_secrets.result
+    token_service_salt        = random_password.auth_secrets.result
   }
 
 }
