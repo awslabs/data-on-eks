@@ -88,6 +88,22 @@ resource "random_password" "auth_secrets" {
   min_numeric = 1
 }
 
+resource "random_password" "auth_secrets_key" {
+  length      = 32
+  special     = false
+  min_upper   = 0
+  min_lower   = 1
+  min_numeric = 1
+}
+
+resource "random_password" "auth_secrets_salt" {
+  length      = 32
+  special     = false
+  min_upper   = 0
+  min_lower   = 1
+  min_numeric = 1
+}
+
 resource "kubernetes_secret" "datahub_auth_secrets" {
   depends_on = [kubernetes_namespace.datahub]
   metadata {
@@ -97,8 +113,8 @@ resource "kubernetes_secret" "datahub_auth_secrets" {
 
   data = {
     system_client_secret      = random_password.auth_secrets.result
-    token_service_signing_key = random_password.auth_secrets.result
-    token_service_salt        = random_password.auth_secrets.result
+    token_service_signing_key = random_password.auth_secrets_key.result
+    token_service_salt        = random_password.auth_secrets_salt.result
   }
 
 }
