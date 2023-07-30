@@ -251,11 +251,8 @@ global:
       #   secretKey: postgres-password
 
   datahub:
-
-    # force older version until the OpenSearch issue with latest version is resolved
     version: v0.10.4
 
-    # disable systemUpdate due to bug in creating auth-secrets  #295 datahub-helm
     systemUpdate:
       enabled: true
 
@@ -295,7 +292,7 @@ global:
         salt:
           secretRef: "datahub-auth-secrets"
           secretKey: "token_service_salt"
-      # Set to false if you'd like to provide your own auth secrets
+      # Set to false to use existing auth secrets
       provisionSecrets:
         enabled: false
         autoGenerate: false
