@@ -16,7 +16,7 @@
 # yum install tar
 # tar xvf bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar
 #--------------------------------------------------------------------------------
-# NOTE: This training dataset size is 30GB 
+# NOTE: This training dataset size is 30GB
 
 
 read -p "Did you configure kubeconfig (e.g., aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia):  (y/n): " response

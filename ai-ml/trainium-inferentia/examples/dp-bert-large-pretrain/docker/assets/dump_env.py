@@ -19,7 +19,7 @@ print(f"\nNeuron devices:\n{neuron_devs.decode()}")
 pci_devs = subprocess.check_output("lspci", shell=True)
 print(f"\nPCI devices:\n{pci_devs.decode()}")
 
-try: 
+try:
     efa_devs = subprocess.check_output("/opt/amazon/efa/bin/fi_info -p efa", shell=True)
     print(f"\nEFA devices:\n{efa_devs.decode()}")
 except subprocess.CalledProcessError as e:

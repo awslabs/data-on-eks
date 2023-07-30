@@ -1,12 +1,13 @@
 #!/bin/bash
 
-# 1. Training Job Preparation & Launch
-# 1.1 Build the BERT pretraining and command shell container images and push them to ECR
+# Training Job Preparation & Launch
+# Build the BERT pretraining and command shell container images and push them to ECR
+# This job requires a docker folder(with assets folder with dump_env.py file) within the same directory as this script.
 
-read -p "Did you inntall docker (y/n): " response
+read -p "Did you install docker on AMD64(x86-64) machine (y/n): " response
 
 if [[ "$response" == "N" || "$response" == "n" ]]; then
-    echo -e "Please install Podman before proceeding. Install it from here: https://podman.io/."
+    echo -e "Please note that this job may encounter issues on ARM64 architecture. To proceed successfully, ensure that you have installed the Docker client and run it on AMD64 (x86-64) architecture. "
     exit 0
 fi
 
@@ -35,6 +36,7 @@ fi
 
 export DOCKER_BUILDKIT=1
 
+# Build the Docker image and tag it with the ECR repository URI
 echo -e "Building and Tagging Docker image... $ECR_REPO_URI:$IMAGE_TAG"
 docker build ./docker -f docker/Dockerfile.bert_pretrain -t $ECR_REPO_URI:$IMAGE_TAG
 

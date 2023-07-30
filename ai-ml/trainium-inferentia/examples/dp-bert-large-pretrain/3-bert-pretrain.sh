@@ -33,7 +33,7 @@ EOF
 sudo yum install -y amazon-ecr-credential-helper
 
 #--------------------------------------------------------------------------------
-# Installing 
+# Installing
 yum install aws-neuronx-tools-2.* -y
 export PATH=/opt/aws/neuron/bin:$PATH
 #--------------------------------------------------------------------------------
