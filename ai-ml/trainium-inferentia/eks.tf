@@ -83,7 +83,7 @@ module "eks" {
     }
 
     ebs_optimized = true
-    # This bloc device is used only for root volume. Adjust volume according to your size.
+    # This block device is used only for root volume. Adjust volume according to your size.
     # NOTE: Don't use this volume for ML workloads
     block_device_mappings = {
       xvda = {
@@ -139,7 +139,7 @@ module "eks" {
 
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
-      ami_type       = "AL2_x86_64_GPU"
+      ami_type       = "AL2_x86_64_GPU" # Contains Neuron driver
       instance_types = ["trn1.32xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
@@ -266,5 +266,216 @@ module "eks" {
         "karpenter.sh/discovery" = local.name
       })
     }
+    #--------------------------------------------------
+    # Trainium node group for Trn1n.32xlarge
+    #--------------------------------------------------
+    trn1n-32xl-ng = {
+      name        = "trn1n-32xl-ng"
+      description = "trn1n 32xlarge node group for hosting ML workloads"
+      # The code filters the private subnets based on their CIDR blocks and selects the subnet ID if the CIDR block starts with "100." Otherwise, it assigns a null value.
+      # The element(compact([...]), 0) expression ensures that only the first non-null value is included in the resulting list of subnet IDs.
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
+
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+      # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
+      ami_type       = "AL2_x86_64_GPU"
+      instance_types = ["trn1n.32xlarge"]
+
+      pre_bootstrap_user_data = <<-EOT
+        cat <<-EOF > /etc/profile.d/bootstrap.sh
+        #!/bin/sh
+
+        # Configure NVMe volumes in RAID0 configuration
+        # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
+        # Mount will be: /mnt/k8s-disks
+        export LOCAL_DISKS='raid0'
+
+        # EFA Setup for Trainium and Inferentia
+        export FI_EFA_USE_DEVICE_RDMA=1
+        export FI_PROVIDER=efa
+        export FI_EFA_FORK_SAFE=1
+
+        curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
+        tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
+        ./efa_installer.sh -y -g
+        /opt/amazon/efa/bin/fi_info -p efa
+        EOF
+
+        # Source extra environment variables in bootstrap script
+        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+      EOT
+
+      # Optional - Post bootstrap data to verify anything
+      post_bootstrap_user_data = <<-EOT
+        echo "Bootstrap complete. Ready to Go!"
+      EOT
+
+      min_size     = 0
+      max_size     = 1
+      desired_size = 0
+
+      # EFA Network Interfaces configuration for Trn1.32xlarge
+      network_interfaces = [
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 0
+          network_card_index          = 0
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 1
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 2
+          network_card_index          = 2
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 3
+          network_card_index          = 3
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 4
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 5
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 6
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 7
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 8
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 9
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 10
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 11
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 12
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 13
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 14
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+        {
+          description                 = "NetworkInterfaces Configuration For EFA and EKS"
+          delete_on_termination       = true
+          device_index                = 1
+          network_card_index          = 15
+          associate_public_ip_address = false
+          interface_type              = "efa"
+        },
+      ]
+
+      # Commented to investigate further as the node group creation is failing with palcement group
+      # placement = {
+      #   spread_domain = "cluster"
+      #   groupName     = "trn1-32xl-ng1"
+      # }
+
+      labels = {
+        WorkerType = "trn1n-32xl"
+      }
+
+      taints = [
+        {
+          key    = "aws.amazon.com/neuron",
+          value  = true,
+          effect = "NO_SCHEDULE"
+        }
+      ]
+
+      tags = merge(local.tags, {
+        Name                     = "trn1n-32xl-ng1",
+        "karpenter.sh/discovery" = local.name
+      })
+    }
+
+    #--------------------------------------------------
+    # Inferentia2 node group for Inf2.1xlarge
+    #--------------------------------------------------
+    # WORK in PROGRESS
+
   }
 }
