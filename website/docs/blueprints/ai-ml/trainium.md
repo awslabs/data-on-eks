@@ -166,7 +166,6 @@ kubectl exec -i -t -n default aws-cli-cmd-shell -c app -- sh -c "clear; (bash ||
 yum install tar
 cd /data
 aws s3 cp s3://neuron-s3/training_datasets/bert_pretrain_wikicorpus_tokenized_hdf5/bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar . --no-sign-request
-tar xvf bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar
 chmod 744 bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar
 tar xvf bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar
 ```

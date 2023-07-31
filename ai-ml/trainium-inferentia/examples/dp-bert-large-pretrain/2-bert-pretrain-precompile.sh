@@ -4,20 +4,15 @@
 # Pre-requisites - Copy Training Wiki corpus dataset to FSx for Lustre
 #--------------------------------------------------------------------------------
 # kubectl and docker installed
+# NOTE: This training dataset size is 30GB
 
-# kubectl apply -f aws-cli-pod-with-fsx-mount.yml
 # kubectl exec -i -t -n default aws-cli-cmd-shell -c app -- sh -c "clear; (bash || ash || sh)"
-
-# # Once logged into the container
 # yum install tar
 # cd /data
 # aws s3 cp s3://neuron-s3/training_datasets/bert_pretrain_wikicorpus_tokenized_hdf5/bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar . --no-sign-request
-# tar xvf bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar
 # chmod 744 bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar
 # tar xvf bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar
 #--------------------------------------------------------------------------------
-# NOTE: This training dataset size is 30GB
-
 read -p "Did you configure kubeconfig (e.g., aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia):  (y/n): " response
 read -p "Confirm that you have the 'lib' folder with 'trn1_dist_ddp.py' in the same directory (y/n): " response
 read -p "Enter the ECR REPO (e.g., <AccountId>.dkr.ecr.<region>.amazonaws.com/eks_torchx_test): " ECR_REPO_URI
@@ -34,12 +29,6 @@ cat <<EOF > ~/.docker/config.json
 EOF
 
 sudo yum install -y amazon-ecr-credential-helper
-#--------------------------------------------------------------------------------
-
-#--------------------------------------------------------------------------------
-# The following tools are already installed by Terraform
-# kubectl apply -f https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml
-# kubectl apply -f https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml
 #--------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------

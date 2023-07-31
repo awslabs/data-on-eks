@@ -61,6 +61,7 @@ YAML
 
 #---------------------------------------------------------------
 # Static PV for FSx for Lustre
+# Don't change the metdata.name `fsx-claim` as this is referenced in lib/trn1_dist_ddp.py script
 #---------------------------------------------------------------
 resource "kubectl_manifest" "static_pv" {
   yaml_body = <<YAML
@@ -81,7 +82,7 @@ YAML
 }
 
 #---------------------------------------------------------------
-# AWS CLI Command shell pod to copy the files Trianing dataset from S3 to FSx for Lustre
+# AWS CLI Command shell pod to copy the files Training dataset from S3 to FSx for Lustre
 #---------------------------------------------------------------
 resource "kubectl_manifest" "cmd_shell_fsx" {
   yaml_body = <<YAML
