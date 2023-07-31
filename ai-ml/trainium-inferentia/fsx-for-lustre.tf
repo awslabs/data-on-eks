@@ -56,7 +56,7 @@ mountOptions:
   - flock
 YAML
 
-  depends_on = [module.eks_blueprints_addons]
+  depends_on = [module.eks.eks_cluster_id]
 }
 
 #---------------------------------------------------------------
@@ -77,7 +77,7 @@ spec:
       storage: 1200Gi
 YAML
 
-  depends_on = [module.eks_blueprints_addons]
+  depends_on = [resource.kubectl_manifest.fsx_storageclass]
 }
 
 #---------------------------------------------------------------
@@ -105,5 +105,5 @@ spec:
   restartPolicy: Never
 YAML
 
-  depends_on = [module.eks_blueprints_addons]
+  depends_on = [resource.kubectl_manifest.static_pv]
 }
