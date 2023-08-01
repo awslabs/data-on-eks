@@ -18,6 +18,7 @@ singleuser:
       kubespawner_override:
         extra_resource_limits:
           nvidia.com/gpu: "1" # TIME-SLICING: Use a slice of GPU using time-slicing mode
+          # nvidia.com/mig-1g.5gb: 1 # NVIDIA MIG: Use this config with MIG instead
   image:
     name: cschranz/gpu-jupyter # Base image with GPU drivers available
     tag: v1.5_cuda-11.6_ubuntu-20.04_python-only
