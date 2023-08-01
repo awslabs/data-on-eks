@@ -26,11 +26,11 @@ singleuser:
       operator: "Exists"
       effect: "NoSchedule"
   cpu: # Amount of CPU and memory assgined to each notebook pod
-    limit: 2
-    guarantee: 2
+    limit: 1
+    guarantee: 1
   memory:
-    limit: 4G
-    guarantee: 4G
+    limit: 2G
+    guarantee: 2G
   storage:
     type: "static"
     static:
