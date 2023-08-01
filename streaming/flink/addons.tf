@@ -181,9 +181,10 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
 module "eks_data_addons" {
-  source            = "../../workshop/modules/terraform-aws-eks-data-addons"
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
+
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------

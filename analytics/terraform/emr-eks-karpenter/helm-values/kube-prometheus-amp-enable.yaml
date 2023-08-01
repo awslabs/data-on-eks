@@ -9,9 +9,9 @@ prometheus:
       - url: ${amp_remotewrite_url}
         sigv4:
           region: ${region}
-        queue_config:
-          max_samples_per_send: 1000
-          max_shards: 200
+        queueConfig:
+          maxSamplesPerSend: 1000
+          maxShards: 200
           capacity: 2500
     retention: 5h
     scrapeInterval: 30s
@@ -30,6 +30,63 @@ prometheus:
               storage: 50Gi
     # Scrape Cost metrics for Kubecost and Yunikorn add-ons
     additionalScrapeConfigs:
+      # Prometheus Operator doesn't scrape metrics by default from pods or endpoints with prometheus.io/scrape: "true"
+      # Hence we are adding this csutom screape config for  'kubernetes-service-endpoints' and 'kubernetes-pods'
+      - job_name: 'kubernetes-service-endpoints'
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+            action: replace
+            target_label: __scheme__
+            regex: (https?)
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: kubernetes_name
+          - source_labels: [__meta_kubernetes_service_name]
+            action: drop
+            regex: 'node-exporter'
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
       - job_name: kubecost
         honor_labels: true
         scrape_interval: 1m
@@ -56,20 +113,21 @@ alertmanager:
   enabled: false
 
 grafana:
-  enabled: true
-  defaultDashboardsEnabled: true
-# Adding AMP datasource to Grafana config
-  serviceAccount:
-    name: ${amp_sa}
-  grafana.ini:
-    auth:
-      sigv4_auth_enabled: true
   additionalDataSources:
-    - name: AMP
+    - name: amazon-managed-prometheus
+      type: prometheus
+      isDefault: false
+      url: ${amp_url}
       editable: true
       jsonData:
         sigV4Auth: true
         sigV4Region: ${region}
-      type: prometheus
-      isDefault: false
-      url: ${amp_url}
+  enabled: true
+  defaultDashboardsEnabled: true
+  # Adding Amazon Managed Prometheus datasource to Grafana config
+  serviceAccount:
+    create: false
+    name: ${amp_sa}
+  grafana.ini:
+    auth:
+      sigv4_auth_enabled: true

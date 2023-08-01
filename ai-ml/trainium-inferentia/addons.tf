@@ -1,4 +1,42 @@
 #---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_annotations" "disable_gp2" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+resource "kubernetes_storage_class" "default_gp3" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+  volume_binding_mode    = "WaitForFirstConsumer"
+  parameters = {
+    fsType    = "xfs"
+    encrypted = true
+    type      = "gp3"
+  }
+
+  depends_on = [kubernetes_annotations.disable_gp2]
+}
+
+#---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
@@ -99,6 +137,21 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
+  # Enable FSx for Lustre CSI Driver
+  #---------------------------------------
+  enable_aws_fsx_csi_driver = true
+  aws_fsx_csi_driver = {
+    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    values = [
+      <<-EOT
+        node:
+          tolerations:
+            - operator: Exists
+      EOT
+    ]
+  }
+
+  #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
   enable_aws_for_fluentbit = true
@@ -124,38 +177,29 @@ module "eks_blueprints_addons" {
   # Prommetheus and Grafana stack
   #---------------------------------------
   #---------------------------------------------------------------
-  # Install Kafka Montoring Stack with Prometheus and Grafana
   # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text`
   #---------------------------------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
-    values = [templatefile("${path.module}/helm-values/prom-grafana-values.yaml", {})]
+    values = [
+      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
+        region              = local.region
+        amp_sa              = local.amp_ingest_service_account
+        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
+        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+        storage_class_type  = kubernetes_storage_class.default_gp3.id
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
+    ]
+    chart_version = "48.1.1"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
     ],
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "prometheus.serviceAccount.name"
-        value = local.amp_ingest_service_account
-      },
-      {
-        name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-        value = module.amp_ingest_irsa[0].iam_role_arn
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].url"
-        value = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-      },
-      {
-        name  = "prometheus.prometheusSpec.remoteWrite[0].sigv4.region"
-        value = local.region
-      }
-    ] : []
   }
 
   tags = local.tags
@@ -164,15 +208,64 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
-module "kubernetes_data_addons" {
-  # Please note that local source will be replaced once the below repo is public
-  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
-  source            = "../../workshop/modules/terraform-aws-eks-data-addons"
+module "eks_data_addons" {
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
+
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
+}
+
+#---------------------------------------------------------------
+# ETCD for TorchX
+#---------------------------------------------------------------
+data "http" "torchx_etcd_yaml" {
+  url = "https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml"
+}
+
+resource "kubectl_manifest" "torchx_etcd" {
+  yaml_body = <<-YAML
+    ${data.http.torchx_etcd_yaml.response_body}
+  YAML
+
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+#---------------------------------------------------------------
+# Volcano Schduler for TorchX
+# NOTE: This will be replaced with Helm Chart deployment with eks_data_addons
+#---------------------------------------------------------------
+data "http" "volcano_development_yaml" {
+  url = "https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml"
+}
+
+resource "kubectl_manifest" "volcano" {
+  yaml_body = <<-YAML
+    ${data.http.volcano_development_yaml.response_body}
+  YAML
+
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+#---------------------------------------------------------------
+# Create Volcano Queue once the Volcano add-on is installed
+#---------------------------------------------------------------
+resource "kubectl_manifest" "volcano_queue" {
+  yaml_body = <<YAML
+apiVersion: scheduling.volcano.sh/v1beta1
+kind: Queue
+metadata:
+  name: test
+spec:
+  weight: 1
+  reclaimable: false
+  capability:
+    cpu: 2
+YAML
+
+  depends_on = [resource.kubectl_manifest.volcano]
 }
 
 #---------------------------------------------------------------

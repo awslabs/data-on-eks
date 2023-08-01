@@ -50,7 +50,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | [aws_secretsmanager_secret_version.nifi_truststore_password](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [aws_secretsmanager_secret_version.sensitive_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [helm_release.nifi](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
-| [kubernetes_storage_class_v1.gp3](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/storage_class_v1) | resource |
+| [kubernetes_annotations.gp2_default](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/annotations) | resource |
+| [kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/storage_class) | resource |
 | [random_password.grafana](https://registry.terraform.io/providers/hashicorp/random/3.3.2/docs/resources/password) | resource |
 | [random_password.nifi_keystore_password](https://registry.terraform.io/providers/hashicorp/random/3.3.2/docs/resources/password) | resource |
 | [random_password.nifi_login_password](https://registry.terraform.io/providers/hashicorp/random/3.3.2/docs/resources/password) | resource |
