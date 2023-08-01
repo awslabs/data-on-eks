@@ -21,6 +21,9 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
+#---------------------------------------------------------------
+# Trino S3 Bucket
+#---------------------------------------------------------------
 module "trino_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
@@ -63,7 +66,7 @@ module "trino_s3_irsa" {
                                       ]
   kubernetes_namespace              = local.trino_namespace
   kubernetes_service_account        = local.trino_sa
-  create_kubernetes_service_account = false
+  create_kubernetes_service_account = true
   create_kubernetes_namespace       = false
 }
 

@@ -66,3 +66,10 @@ data "aws_iam_policy_document" "trino_glue_s3_access" {
     ]
   }
 }
+
+#---------------------------------------
+# Karpenter
+#---------------------------------------
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
+}

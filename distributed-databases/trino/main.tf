@@ -84,7 +84,7 @@ module "eks" {
 
       min_size     = 1
       max_size     = 9
-      desired_size = 4
+      desired_size = 2
 
       force_update_version = true
       instance_types       = ["m5.xlarge"]

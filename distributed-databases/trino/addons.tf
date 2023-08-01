@@ -1,10 +1,9 @@
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=08650f"
+  source = "aws-ia/eks-blueprints-addons/aws"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.oidc_provider
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------
@@ -34,38 +33,49 @@ module "eks_blueprints_kubernetes_addons" {
   #   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
   #   repository_password = data.aws_ecrpublic_authorization_token.token.password
   # }
+  
   tags = local.tags
 }
 
-resource "helm_release" "trino" {
-  name             = local.name
-  chart            = "trino"
-  repository       = "https://trinodb.github.io/charts"
-  version          = "0.11.0"
-  namespace        = local.trino_namespace
-  create_namespace = true
-  description      = "Trino Helm Chart deployment"
+#---------------------------------------
+# Karpenter Provisioners
+#---------------------------------------
+# data "kubectl_path_documents" "karpenter_provisioners" {
+#   pattern = "${path.module}/karpenter-provisioners/provisioner.yaml"
+#   vars = {
+#     azs            = local.region
+#     eks_cluster_id = module.eks.cluster_name
+#   }
+# }
 
-  set {
-    name  = "serviceAccount.create"
-    value = true
-  }
+# resource "kubectl_manifest" "karpenter_provisioner" {
+#   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
+#   yaml_body = each.value
 
-  set {
-    name  = "serviceAccount.name"
-    value = local.trino_sa
-  }
+#   depends_on = [module.eks_blueprints_kubernetes_addons]
+# }
 
-  set {
-    name = "additionalCatalogs.hive"
-    value = <<EOT
-      connector.name=hive
-      hive.metastore=glue
-      hive.metastore.glue.region=${local.region}
-      hive.metastore.glue.default-warehouse-dir=s3://${module.trino_s3_bucket.s3_bucket_id}
-      hive.metastore.glue.iam-role=${module.trino_s3_irsa.irsa_iam_role_arn}
-      hive.s3.iam-role=${module.trino_s3_irsa.irsa_iam_role_arn}   
-    EOT
-    type="string"
-  }
-}
+#---------------------------------------
+# Trino Helm Add-on
+#---------------------------------------
+# resource "helm_release" "trino" {
+#   name             = local.name
+#   chart            = "trino"
+#   repository       = "https://trinodb.github.io/charts"
+#   version          = "0.11.0"
+#   namespace        = local.trino_namespace
+#   create_namespace = true
+#   description      = "Trino Helm Chart deployment"
+
+#   values = [
+#     templatefile("${path.module}/trino.yaml", 
+#     {
+#       sa        = local.trino_sa
+#       region    = local.region
+#       bucket_id = module.trino_s3_bucket.s3_bucket_id
+#       irsa_arn  = module.trino_s3_irsa.irsa_iam_role_arn
+#     })
+#   ]
+
+#   depends_on=[module.trino_s3_irsa]
+# }
