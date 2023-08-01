@@ -19,18 +19,18 @@ singleuser:
         extra_resource_limits:
           nvidia.com/gpu: "1" # TIME-SLICING: Use a slice of GPU using time-slicing mode
   image:
-    name: public.ecr.aws/t9v6l2p3/jupyter-hub-test-fmops # Notebook image with GPU libs
-    tag: "1"
+    name: cschranz/gpu-jupyter # Base image with GPU drivers available
+    tag: v1.5_cuda-11.6_ubuntu-20.04_python-only
   extraTolerations:
     - key: "nvidia.com/gpu"
       operator: "Exists"
       effect: "NoSchedule"
   cpu: # Amount of CPU and memory assgined to each notebook pod
-    limit: 1
-    guarantee: 1
+    limit: 2
+    guarantee: 2
   memory:
-    limit: 2G
-    guarantee: 2G
+    limit: 4G
+    guarantee: 4G
   storage:
     type: "static"
     static:

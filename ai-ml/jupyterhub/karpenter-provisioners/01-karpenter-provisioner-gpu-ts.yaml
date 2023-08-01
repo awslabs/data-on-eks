@@ -18,7 +18,7 @@ spec:
       values: ["g5"]
     - key: "karpenter.k8s.aws/instance-size"
       operator: In
-      values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge" ]
+      values: [ "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge" ]
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
