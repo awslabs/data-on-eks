@@ -1,0 +1,103 @@
+################################################################################
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
+
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: autoscaling-example
+  namespace: flink-team-a-ns
+spec:
+  image: 110066426187.dkr.ecr.us-west-2.amazonaws.com/flink-autoscaling:latest
+  imagePullPolicy: Always
+  flinkVersion: v1_17
+  flinkConfiguration:
+    # This section covers most of the configs related to autoscaling. We have kept the utilization value low for demonstration purpose. More details here https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-release-1.5/docs/custom-resource/autoscaler/#configuration-guide
+    kubernetes.operator.job.autoscaler.enabled: "true"
+    kubernetes.operator.job.autoscaler.stabilization.interval: "1m"
+    kubernetes.operator.job.autoscaler.metrics.window: "3m"
+
+    kubernetes.operator.job.autoscaler.target.utilization: "0.2"
+    kubernetes.operator.job.autoscaler.target.utilization.boundary: "0.1"
+    kubernetes.operator.job.autoscaler.restart.time: 2m
+    kubernetes.operator.job.autoscaler.catch-up.duration: 2m
+
+    # Enabling Prometheus metric reporter for the FlinkDeployment. More details here https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-release-1.5/docs/operations/metrics-logging/#metric-reporters
+    metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+    metrics.reporter.prom.port: "9249"
+
+    pipeline.max-parallelism: "120"
+    taskmanager.numberOfTaskSlots: "2"
+    state.savepoints.dir: file:///flink/data/checkpoint/savepoints
+    state.checkpoints.dir: file:///flink/data/checkpoint/checkpoints
+    high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    high-availability.storageDir: file:///flink/data/checkpoint/ha
+    job-result-store.storage-path: file:///flink/data/checkpoint/job-result-store
+    # restartNonce: 123 # Application restarts without spec change
+    kubernetes.operator.periodic.savepoint.interval: 1h # periodic savepoint triggering
+    kubernetes.operator.deployment.rollback.enabled: "true"
+    env.log.dir: "/flink/data/log"
+    env.taskmanager.tmp.dirs: "/flink/data/tmp"
+
+  serviceAccount: flink-team-a-sa
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 0.5
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  podTemplate:
+    spec:
+      nodeSelector:
+        NodeGroupType: "flink-on-demand-ca"
+      tolerations:
+        - key: "flink-on-demand-ca"
+          operator: "Exists"
+          effect: "NoSchedule"
+      initContainers:
+        - name: flink-ssd-volume-permissions
+          image: public.ecr.aws/y4g4v0z7/busybox
+          command: [ 'sh', '-c', 'chown -R 9999 /local1' ]
+          volumeMounts:
+            - mountPath: /local1
+              name: flink-ssd-volume
+      containers:
+        # Do not change the main container name
+        - name: flink-main-container
+          ports:
+            - containerPort: 9249
+              name: metrics
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /flink/data/checkpoint
+              name: flink-ssd-volume
+            - mountPath: /flink/data/tmp
+              name: flink-ssd-volume
+            - mountPath: /flink/data/log
+              name: flink-ssd-volume
+      volumes:
+        - name: flink-ssd-volume
+          hostPath:
+            path: /local1
+            type: Directory
+  job:
+    jarURI: local:///opt/flink/usrlib/autoscaling.jar
+    parallelism: 1
+    upgradeMode: last-state
+    args: ["10000"]

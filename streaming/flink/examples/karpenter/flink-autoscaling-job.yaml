@@ -1,0 +1,84 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: autoscaling-example
+  namespace: flink-team-a-ns
+spec:
+  image: <ACCOUNT-ID>.dkr.ecr.us-west-2.amazonaws.com/flink-autoscaling:latest
+  imagePullPolicy: Always
+  flinkVersion: v1_17
+  flinkConfiguration:
+    # This section covers most of the configs related to autoscaling. We have kept the utilization value low for demonstration purpose. More details here https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-release-1.5/docs/custom-resource/autoscaler/#configuration-guide
+    kubernetes.operator.job.autoscaler.enabled: "true"
+    kubernetes.operator.job.autoscaler.stabilization.interval: "1m"
+    kubernetes.operator.job.autoscaler.metrics.window: "3m"
+    kubernetes.operator.job.autoscaler.target.utilization: "0.2"
+    kubernetes.operator.job.autoscaler.target.utilization.boundary: "0.1"
+    kubernetes.operator.job.autoscaler.restart.time: 2m
+    kubernetes.operator.job.autoscaler.catch-up.duration: 2m
+
+    # Enabling Prometheus metric reporter for the FlinkDeployment. More details here https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-release-1.5/docs/operations/metrics-logging/#metric-reporters
+    metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+    metrics.reporter.prom.port: "9249"
+
+    pipeline.max-parallelism: "120"
+    taskmanager.numberOfTaskSlots: "4"
+    state.savepoints.dir: file:///flink/data/checkpoint/savepoints
+    state.checkpoints.dir: file:///flink/data/checkpoint/checkpoints
+    high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    high-availability.storageDir: file:///flink/data/checkpoint/ha
+    job-result-store.storage-path: file:///flink/data/checkpoint/job-result-store
+    # restartNonce: 123 # Application restarts without spec change
+    kubernetes.operator.periodic.savepoint.interval: 1h # periodic savepoint triggering
+    kubernetes.operator.deployment.rollback.enabled: "true"
+    env.log.dir: "/flink/data/log"
+    env.taskmanager.tmp.dirs: "/flink/data/tmp"
+
+  serviceAccount: flink-team-a-sa
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 0.5
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  podTemplate:
+    spec:
+      nodeSelector:
+        NodeGroupType: "flink-compute-optimized"
+      tolerations:
+        - key: "flink-compute-optimized"
+          operator: "Exists"
+          effect: "NoSchedule"
+      initContainers:
+        - name: flink-ssd-volume-permissions
+          image: public.ecr.aws/y4g4v0z7/busybox
+          command: [ 'sh', '-c', 'chown -R 9999 /local1' ]
+          volumeMounts:
+            - mountPath: /local1
+              name: flink-ssd-volume
+      containers:
+        # Do not change the main container name
+        - name: flink-main-container
+          ports:
+            - containerPort: 9249
+              name: metrics
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /flink/data/checkpoint
+              name: flink-ssd-volume
+            - mountPath: /flink/data/tmp
+              name: flink-ssd-volume
+            - mountPath: /flink/data/log
+              name: flink-ssd-volume
+      volumes:
+        - name: flink-ssd-volume
+          hostPath:
+            path: /local1
+            type: Directory
+  job:
+    jarURI: local:///opt/flink/usrlib/autoscaling.jar
+    parallelism: 4
+    upgradeMode: last-state
+    args: ["100000"]

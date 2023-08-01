@@ -1,0 +1,21 @@
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+grafana:
+  enabled: true
+  adminUser: admin
+  #adminPassword: secret
+  defaultDashboardsEnabled: false
+  # -- Additional plugins to be installed during Grafana startup,
+  # `grafana-polystat-panel` is used by the default Cassandra dashboards.
+  plugins:
+    - grafana-polystat-panel
+  grafana.ini: {}
+  image:
+    repository: grafana/grafana
+    tag: 7.5.11
+    sha: ""
+    pullPolicy: IfNotPresent
