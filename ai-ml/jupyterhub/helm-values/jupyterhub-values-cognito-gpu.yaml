@@ -15,9 +15,25 @@ proxy:
       service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
 
 singleuser:
+  profileList: # Enable GPU accelerator for every user
+    - display_name: "GPU Server"
+      description: "Spawns a notebook server with access to a GPU"
+      kubespawner_override:
+        extra_resource_limits:
+          nvidia.com/gpu: "1" # TIME-SLICING: Use a slice of GPU using time-slicing mode
   image:
-    name: jupyter/base-notebook
-    tag: latest
+    name: cschranz/gpu-jupyter # Base image with GPU drivers available
+    tag: v1.5_cuda-11.6_ubuntu-20.04_python-only
+  extraTolerations:
+    - key: "nvidia.com/gpu"
+      operator: "Exists"
+      effect: "NoSchedule"
+  cpu: # Amount of CPU and memory assgined to each notebook pod
+    limit: 2
+    guarantee: 2
+  memory:
+    limit: 4G
+    guarantee: 4G
   storage:
     type: "static"
     static:
@@ -32,7 +48,7 @@ singleuser:
       mountPath: /home/shared
       readOnly: false
   serviceAccountName: ${jupyter_single_user_sa_name}
-  allowPrivilegeEscalation: true # Enable this to execute sudo inside notebook instance
+  allowPrivilegeEscalation: true
   extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
     securityContext:
         fsGroup: 100 
@@ -45,6 +61,27 @@ singleuser:
   uid: 0
   fsGid: 0
   cmd: "start-singleuser.sh"
+
+# Optimizations configured according to this doc https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+scheduling:
+  userScheduler:
+    enabled: true
+  podPriority:
+    enabled: true
+  userPlaceholder:
+    enabled: false
+    replicas: 1
+  userPods:
+    nodeAffinity:
+      matchNodePurpose: require # This will force single-user pods to use an specific karpenter provisioner
+
+prePuller:
+  hook:
+    enabled: false
+  continuous:
+    # NOTE: if used with Karpenter, also add user-placeholders
+    enabled: false
+
 hub:
   config:
     GenericOAuthenticator:

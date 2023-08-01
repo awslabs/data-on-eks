@@ -72,9 +72,6 @@ scheduling:
     nodeAffinity:
       matchNodePurpose: require # This will force single-user pods to use an specific karpenter provisioner
 
-# hub:
-  # nodeSelector:
-  #   karpenter.sh/provisioner-name: default
 
 prePuller:
   hook:
