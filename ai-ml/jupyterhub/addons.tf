@@ -357,9 +357,9 @@ YAML
   depends_on = [module.eks_blueprints_addons]
 }
 
-#---------------------------------------
+#--------------------------------------------------------------------------------
 # Karpenter Provisioners
-#---------------------------------------
+#--------------------------------------------------------------------------------
 data "kubectl_path_documents" "karpenter_provisioners" {
   pattern = "${path.module}/karpenter-provisioners/*-karpenter-provisioner-*.yaml"
   vars = {
@@ -373,12 +373,30 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 
   depends_on = [module.eks_blueprints_addons]
 }
+#----------------------------------------------------------------------------------------
+# "Dummy" pods, to forcefully scale karpenter, 
+# this is needed because GPU Operator needs to configure instance before running notebook
+#----------------------------------------------------------------------------------------
+data "kubectl_path_documents" "dummy_pods" {
+  count = var.jupyter_notebook_support == "gpu" ? 1 : 0
+  pattern = "${path.module}/examples/dummy-pods/*-dummy-pod.yaml"
+  vars = {
+    cluster_name = module.eks.cluster_name
+  }
+}
+
+resource "kubectl_manifest" "dummy_pods" {
+  for_each  = toset(data.kubectl_path_documents.dummy_pods[0].documents)
+  yaml_body = each.value
+
+  depends_on = [module.eks_blueprints_addons]
+}
 
 #---------------------------------------------------------------
 # Cognito pool, domain and client creation.
 # This can be used
 # Auth integration later.
-# ---------------------------------------------------------------
+#----------------------------------------------------------------
 resource "aws_cognito_user_pool" "pool" {
   count = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   name  = "jupyterhub-userpool"
