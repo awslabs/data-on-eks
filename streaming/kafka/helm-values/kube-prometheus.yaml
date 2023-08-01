@@ -1,5 +1,9 @@
 prometheus:
   prometheusSpec:
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
     retention: 5h
     scrapeInterval: 30s
     evaluationInterval: 30s
@@ -20,4 +24,4 @@ alertmanager:
 
 grafana:
   enabled: true
-  defaultDashboardsEnabled: true
+  defaultDashboardsEnabled: false
