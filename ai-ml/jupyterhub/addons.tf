@@ -134,7 +134,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Enable GPU operator
   #---------------------------------------------------------------
-  enable_nvidia_gpu_operator = true
+  enable_nvidia_gpu_operator = var.jupyter_notebook_support == "gpu" ? true : false
   nvidia_gpu_operator_helm_config = {
     values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
   }
