@@ -4,6 +4,7 @@ data "aws_eks_cluster_auth" "this" {
 
 # Use this data source to get the ARN of a certificate in AWS Certificate Manager (ACM)
 data "aws_acm_certificate" "issued" {
+  count    = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   domain   = var.acm_certificate_domain
   statuses = ["ISSUED"]
 }
@@ -86,10 +87,10 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
-  enable_cluster_autoscaler = true
+  enable_cluster_autoscaler = var.enable_cluster_autoscaler
   cluster_autoscaler = {
     timeout     = "300"
-    create_role = true
+    create_role = var.enable_cluster_autoscaler
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -99,8 +100,8 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                  = true
-  karpenter_enable_spot_termination = true
+  enable_karpenter                  = var.enable_karpenter
+  karpenter_enable_spot_termination = var.enable_karpenter
   karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
@@ -129,21 +130,80 @@ module "eks_data_addons" {
   version = "~> 1.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # Enable GPU operator
+  #---------------------------------------------------------------
+  enable_nvidia_gpu_operator = true
+  nvidia_gpu_operator_helm_config = {
+    values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
+  }
   #---------------------------------------------------------------
   # JupyterHub Add-on
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    values = [templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
-      ssl_cert_arn  = data.aws_acm_certificate.issued.arn
-      jupyterdomain = "https://${var.jupyterhub_domain}/hub/oauth_callback"
-      authorize_url = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize"
-      token_url     = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token"
-      userdata_url  = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo"
-      client_id     = aws_cognito_user_pool_client.user_pool_client.id
-      client_secret = aws_cognito_user_pool_client.user_pool_client.client_secret
+    values = [templatefile("${path.module}/helm-values/jupyterhub-values-${var.jupyter_hub_auth_mechanism}-${var.jupyter_notebook_support}.yaml", {
+      ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
+      jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")
+      authorize_url               = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")
+      token_url                   = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token", "")
+      userdata_url                = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
+      client_id                   = try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
+      client_secret               = try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
+      jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
     })]
   }
+}
+
+#-----------------------------------------------------------------------------------------
+# JupyterHub Sinlgle User IRSA, maybe that block could be incorporated in add-on registry
+#-----------------------------------------------------------------------------------------
+resource "kubernetes_namespace" "jupyterhub" {
+  metadata {
+    name = "jupyterhub"
+  }
+}
+
+module "jupyterhub_single_user_irsa" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+
+  role_name = "${module.eks.cluster_name}-jupyterhub-single-user-sa"
+
+  role_policy_arns = {
+    policy = "arn:aws:iam::aws:policy/AdministratorAccess" # TODO: Define just the right permission for Jupyter Notebooks
+  }
+
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["${kubernetes_namespace.jupyterhub.metadata[0].name}:jupyterhub-single-user"]
+    }
+  }
+}
+
+resource "kubernetes_service_account_v1" "jupyterhub_single_user_sa" {
+  metadata {
+    name        = "${module.eks.cluster_name}-jupyterhub-single-user"
+    namespace   = kubernetes_namespace.jupyterhub.metadata[0].name
+    annotations = { "eks.amazonaws.com/role-arn" : module.jupyterhub_single_user_irsa.iam_role_arn }
+  }
+
+  automount_service_account_token = true
+}
+
+resource "kubernetes_secret_v1" "jupyterhub_single_user" {
+  metadata {
+    name      = "${module.eks.cluster_name}-jupyterhub-single-user-secret"
+    namespace = kubernetes_namespace.jupyterhub.metadata[0].name
+    annotations = {
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      "kubernetes.io/service-account.namespace" = kubernetes_namespace.jupyterhub.metadata[0].name
+    }
+  }
+
+  type = "kubernetes.io/service-account-token"
 }
 
 
@@ -189,7 +249,7 @@ YAML
 # This will be repalced with Dynamic EFS provision using EFS CSI Driver
 #---------------------------------------------------------------
 resource "aws_efs_file_system" "efs" {
-  creation_token = "efs"
+  creation_token = "efs-jupyter-single-user"
   encrypted      = true
 
   tags = local.tags
@@ -297,13 +357,31 @@ YAML
   depends_on = [module.eks_blueprints_addons]
 }
 
+#---------------------------------------
+# Karpenter Provisioners
+#---------------------------------------
+data "kubectl_path_documents" "karpenter_provisioners" {
+  pattern = "${path.module}/karpenter-provisioners/*-karpenter-provisioner-*.yaml"
+  vars = {
+    cluster_name = module.eks.cluster_name
+  }
+}
+
+resource "kubectl_manifest" "karpenter_provisioner" {
+  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
+  yaml_body = each.value
+
+  depends_on = [module.eks_blueprints_addons]
+}
+
 #---------------------------------------------------------------
 # Cognito pool, domain and client creation.
 # This can be used
 # Auth integration later.
 # ---------------------------------------------------------------
 resource "aws_cognito_user_pool" "pool" {
-  name = "jupyterhub-userpool"
+  count = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
+  name  = "jupyterhub-userpool"
 
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
@@ -314,14 +392,16 @@ resource "aws_cognito_user_pool" "pool" {
 }
 
 resource "aws_cognito_user_pool_domain" "domain" {
+  count        = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   domain       = local.cognito_custom_domain
-  user_pool_id = aws_cognito_user_pool.pool.id
+  user_pool_id = aws_cognito_user_pool.pool[0].id
 }
 
 resource "aws_cognito_user_pool_client" "user_pool_client" {
+  count                                = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   name                                 = "jupyter-client"
   callback_urls                        = ["https://${var.jupyterhub_domain}/hub/oauth_callback"]
-  user_pool_id                         = aws_cognito_user_pool.pool.id
+  user_pool_id                         = aws_cognito_user_pool.pool[0].id
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid", "email"]
@@ -332,3 +412,4 @@ resource "aws_cognito_user_pool_client" "user_pool_client" {
 
   depends_on = [aws_cognito_user_pool_domain.domain]
 }
+
