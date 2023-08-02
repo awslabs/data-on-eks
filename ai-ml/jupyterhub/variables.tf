@@ -33,11 +33,13 @@ variable "secondary_cidr_blocks" {
 
 # Scaling mechanism
 variable "enable_cluster_autoscaler" {
+  type        = bool
   description = "Enable Cluster Autoscaler in your EKS cluster"
   default     = false
 }
 
 variable "enable_karpenter" {
+  type        = bool
   description = "Enable Karpenter in your EKS cluster"
   default     = true
 }

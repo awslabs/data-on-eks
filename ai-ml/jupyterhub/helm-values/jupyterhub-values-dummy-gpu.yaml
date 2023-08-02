@@ -49,7 +49,7 @@ singleuser:
   allowPrivilegeEscalation: true
   extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
     securityContext:
-        fsGroup: 100 
+        fsGroup: 100
   extraEnv: # Sudo needed to configure the proper permissions to start the notebook instance
     GRANT_SUDO: "yes"
     NOTEBOOK_ARGS: "--allow-root"

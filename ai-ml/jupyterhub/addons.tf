@@ -171,7 +171,7 @@ module "jupyterhub_single_user_irsa" {
   role_name = "${module.eks.cluster_name}-jupyterhub-single-user-sa"
 
   role_policy_arns = {
-    policy = "arn:aws:iam::aws:policy/AdministratorAccess" # TODO: Define just the right permission for Jupyter Notebooks
+    policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
   }
 
 
@@ -374,11 +374,11 @@ resource "kubectl_manifest" "karpenter_provisioner" {
   depends_on = [module.eks_blueprints_addons]
 }
 #----------------------------------------------------------------------------------------
-# "Dummy" pods, to forcefully scale karpenter, 
+# "Dummy" pods, to forcefully scale karpenter,
 # this is needed because GPU Operator needs to configure instance before running notebook
 #----------------------------------------------------------------------------------------
 data "kubectl_path_documents" "dummy_pods" {
-  count = var.jupyter_notebook_support == "gpu" ? 1 : 0
+  count   = var.jupyter_notebook_support == "gpu" ? 1 : 0
   pattern = "${path.module}/examples/dummy-pods/*-dummy-pod.yaml"
   vars = {
     cluster_name = module.eks.cluster_name
@@ -430,4 +430,3 @@ resource "aws_cognito_user_pool_client" "user_pool_client" {
 
   depends_on = [aws_cognito_user_pool_domain.domain]
 }
-
