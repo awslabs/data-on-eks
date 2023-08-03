@@ -151,6 +151,10 @@ module "eks" {
         # Mount will be: /mnt/k8s-disks
         export LOCAL_DISKS='raid0'
 
+        # Install Neuron monitoring tools
+        yum install aws-neuronx-tools-2.* -y
+        export PATH=/opt/aws/neuron/bin:$PATH
+
         # EFA Setup for Trainium and Inferentia
         export FI_EFA_USE_DEVICE_RDMA=1
         export FI_PROVIDER=efa
@@ -250,7 +254,8 @@ module "eks" {
       # }
 
       labels = {
-        WorkerType = "trn1-32xl"
+        WorkerType    = "trn1-32xl"
+        NodeGroupType = "trainium-ca"
       }
 
       taints = [
@@ -291,6 +296,10 @@ module "eks" {
         # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
         # Mount will be: /mnt/k8s-disks
         export LOCAL_DISKS='raid0'
+
+        # Install Neuron monitoring tools
+        yum install aws-neuronx-tools-2.* -y
+        export PATH=/opt/aws/neuron/bin:$PATH
 
         # EFA Setup for Trainium and Inferentia
         export FI_EFA_USE_DEVICE_RDMA=1
@@ -455,7 +464,8 @@ module "eks" {
       # }
 
       labels = {
-        WorkerType = "trn1n-32xl"
+        WorkerType    = "trn1n-32xl"
+        NodeGroupType = "trainium-ca"
       }
 
       taints = [

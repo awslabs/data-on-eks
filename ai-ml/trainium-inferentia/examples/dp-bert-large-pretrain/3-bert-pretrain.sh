@@ -40,3 +40,4 @@ torchx run \
     --bf16 True \
     --cacheset bert-large \
     --instance_type $INSTANCE_TYPE
+    # --annotations "NodeGroupType=trainium-ca,WorkerType=trn1-32xl" # Use labels to target specific nodes e.g., Karpenter or Managed Node groups
