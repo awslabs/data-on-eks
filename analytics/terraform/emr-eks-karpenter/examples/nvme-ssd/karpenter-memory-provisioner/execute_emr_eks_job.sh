@@ -7,9 +7,9 @@ JOB_NAME='taxidata'
 EMR_EKS_RELEASE_LABEL="emr-6.10.0-latest" # Spark 3.3.1
 
 cp ../../../terraform.tfstate .
-VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '.emr_on_eks."emr-data-team-a".virtual_cluster_id')
-EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '.emr_on_eks."emr-data-team-a".job_execution_role_arn')
-CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '.emr_on_eks."emr-data-team-a".cloudwatch_log_group_name')
+VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".virtual_cluster_id')
+EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".job_execution_role_arn')
+CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".cloudwatch_log_group_name')
 rm terraform.tfstate
 
 SPARK_JOB_S3_PATH="s3://${S3BUCKET}/${VIRTUAL_CLUSTER_ID}/${JOB_NAME}"

@@ -41,23 +41,19 @@ prometheus:
               - kubecost-cost-analyzer.kubecost.svc
             type: 'A'
             port: 9003
-      - job_name: yunikorn
-        honor_labels: true
-        scrape_interval: 1m
-        scrape_timeout: 10s
-        metrics_path: /ws/v1//metrics
-        scheme: http
-        dns_sd_configs:
-          - names:
-              - yunikorn-service.yunikorn.svc
-            type: 'A'
-            port: 9080
 alertmanager:
   enabled: false
 
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+  # Adding AMP datasource to Grafana config
+  serviceAccount:
+    create: false
+    name: ${amp_sa}
+  grafana.ini:
+    auth:
+      sigv4_auth_enabled: true
   additionalDataSources:
     - name: AMP
       editable: true

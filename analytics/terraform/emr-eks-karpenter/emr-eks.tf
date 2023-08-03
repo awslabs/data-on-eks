@@ -1,43 +1,66 @@
+# module "emr_containers" {
+#   source = "./modules/emr-eks-containers"
+
+#   eks_cluster_id        = data.aws_eks_cluster.cluster.name
+#   eks_oidc_provider_arn = data.aws_iam_openid_connect_provider.eks_oidc.arn
+
+#   emr_on_eks_config = {
+#     # Example of all settings
+#     emr-data-team-a = {
+#       name = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-data-team-a")
+
+#       create_namespace = true
+#       namespace        = "emr-data-team-a"
+
+#       execution_role_name                    = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-eks-data-team-a")
+#       execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
+#       execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
+
+#       tags = {
+#         Name = "emr-data-team-a"
+#       }
+#     },
+
+#     emr-data-team-b = {
+#       name = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-data-team-b")
+
+#       create_namespace = true
+#       namespace        = "emr-data-team-b"
+
+#       execution_role_name            = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-eks-data-team-b")
+#       execution_iam_role_description = "EMR Execution Role for emr-data-team-b"
+#       # Terraform apply throws an error for_each error if aws_iam_policy.this.arn is passed below hence the policy is hardcoded for testing purpose only. Users can create secured policies and apply terrafrom using -target
+#       execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
+
+#       tags = {
+#         Name = "emr-data-team-b"
+#       }
+#     }
+#   }
+# }
+
 module "emr_containers" {
-  source = "./modules/emr-eks-containers"
+  source  = "terraform-aws-modules/emr/aws//modules/virtual-cluster"
+  version = "~> 1.0"
 
-  eks_cluster_id        = data.aws_eks_cluster.cluster.name
-  eks_oidc_provider_arn = data.aws_iam_openid_connect_provider.eks_oidc.arn
+  for_each = toset(["emr-data-team-a", "emr-data-team-b"])
 
-  emr_on_eks_config = {
-    # Example of all settings
-    emr-data-team-a = {
-      name = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-data-team-a")
+  eks_cluster_id    = data.aws_eks_cluster.cluster.name
+  oidc_provider_arn = data.aws_iam_openid_connect_provider.eks_oidc.arn
 
-      create_namespace = true
-      namespace        = "emr-data-team-a"
+  name      = "${data.aws_eks_cluster.cluster.name}-${each.value}"
+  namespace = "${each.value}"
 
-      execution_role_name                    = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-eks-data-team-a")
-      execution_iam_role_description         = "EMR Execution Role for emr-data-team-a"
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
+  role_name                = "${data.aws_eks_cluster.cluster.name}-${each.value}"
+  iam_role_use_name_prefix = false
+  iam_role_description     = "EMR Execution Role for ${each.value}"
+  # NOTE: S3 full access added only for testing purpose. You should modify this policy to restrict access to S3 buckets
+  iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+  cloudwatch_log_group_name    = "/emr-on-eks-logs/${data.aws_eks_cluster.cluster.name}/${each.value}/"
 
-      tags = {
-        Name = "emr-data-team-a"
-      }
-    },
-
-    emr-data-team-b = {
-      name = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-data-team-b")
-
-      create_namespace = true
-      namespace        = "emr-data-team-b"
-
-      execution_role_name            = format("%s-%s", data.aws_eks_cluster.cluster.name, "emr-eks-data-team-b")
-      execution_iam_role_description = "EMR Execution Role for emr-data-team-b"
-      # Terraform apply throws an error for_each error if aws_iam_policy.this.arn is passed below hence the policy is hardcoded for testing purpose only. Users can create secured policies and apply terrafrom using -target
-      execution_iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"] # Attach additional policies for execution IAM Role
-
-      tags = {
-        Name = "emr-data-team-b"
-      }
-    }
-  }
+  tags = merge(local.tags, { Name = "${each.value}" })
 }
+
 
 #---------------------------------------------------
 # Supporting resources
@@ -71,29 +94,3 @@ module "emr_s3_bucket" {
 
   tags = local.tags
 }
-
-#resource "aws_iam_policy" "this" {
-#  name_prefix = "${local.name}-"
-#  path        = "/"
-#  description = "Job execution role policy for EMR on EKS ${var.name} virtual cluster"
-#  policy      = data.aws_iam_policy_document.this.json
-#  tags        = var.tags
-#}
-#
-#data "aws_iam_policy_document" "this" {
-#  statement {
-#    sid    = "S3Access"
-#    effect = "Allow"
-#
-#    resources = [
-#      module.emr_s3_bucket.s3_bucket_arn,
-#      "${module.emr_s3_bucket.s3_bucket_arn}/*"
-#    ]
-#
-#    actions = [
-#      "s3:PutObject",
-#      "s3:GetObject",
-#      "s3:ListBucket",
-#    ]
-#  }
-#}
