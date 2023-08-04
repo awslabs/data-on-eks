@@ -619,7 +619,7 @@ The script will provide the following:
   - Default 8G Spark Driver
   - CloudWatch monitoring, with logs stored in the S3 bucket provided
 - Proper endpoint creation with appropriate security group to allow using Karpenter
-- Outputs: Managed Endpoint ID and Load Balancer ARN. 
+- Outputs: Managed Endpoint ID and Load Balancer ARN.
 
 Once you have created a managed endpoint, you can follow the instructions [here](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-configure.html) to configure EMR Studio and associate the Managed endpoint to a workspace.
 

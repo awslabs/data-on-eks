@@ -460,19 +460,19 @@ We will be running a simple wordcount example with Beam pipelines using [Flink R
 - We would be deploying a Flink Session cluster which launches beam-worker-pools as sidecars. Replace `<Account_Id>` with your AWS account ID in the yaml file.
 
  ```bash
-  kubectl apply -f flink-operator-python-beam-session-cluster.yaml 
+  kubectl apply -f flink-operator-python-beam-session-cluster.yaml
  ```
 
 - Once the session cluster is deployed we will launch the wordcount job using the command below
 
  ```bash
-  kubectl apply -f flink-operator-python-beam-job.yaml 
+  kubectl apply -f flink-operator-python-beam-job.yaml
  ```
 
 - You can observe the job/cluster details as the screenshot below by port-forwarding and launching locahost:8081
 
  ```bash
-  kubectl port-forward <Session Cluster Pod> 8081 -n flink-team-a-ns 
+  kubectl port-forward <Session Cluster Pod> 8081 -n flink-team-a-ns
  ```
 
 ![Flink Job UI](img/flink-beam.png)
