@@ -4,7 +4,7 @@ metadata:
   name: python-example
   namespace: flink-team-a-ns
 spec:
-  image: 110066426187.dkr.ecr.us-west-2.amazonaws.com/flink-operator-python:latest
+  image: <Account_ID>.dkr.ecr.us-west-2.amazonaws.com/flink-operator-python:latest
   flinkVersion: v1_16
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"

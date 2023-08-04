@@ -4,7 +4,7 @@ metadata:
   name: autoscaling-example
   namespace: flink-team-a-ns
 spec:
-  image: <ACCOUNT-ID>.dkr.ecr.us-west-2.amazonaws.com/flink-autoscaling:latest
+  image: <Account_ID>.dkr.ecr.us-west-2.amazonaws.com/flink-autoscaling:latest
   imagePullPolicy: Always
   flinkVersion: v1_17
   flinkConfiguration:

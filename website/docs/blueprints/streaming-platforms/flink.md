@@ -365,7 +365,7 @@ Grafana
 ```bash
 kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack
 ```
-For grafana login and password use the following commands
+For grafana login and password use the following commands.
 ```bash
 kubectl get secret kube-prometheus-stack-grafana -n kube-prometheus-stack -o jsonpath="{.data.admin-user}" | base64 --decode ; echo
 kubectl get secret kube-prometheus-stack-grafana -n kube-prometheus-stack -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
@@ -457,7 +457,7 @@ We will be running a simple wordcount example with Beam pipelines using [Flink R
   docker push <Account_Id>.dkr.ecr.us-west-2.amazonaws.com/flink-operator-python:latest
   ```
 
-- We would be deploying a Flink Session cluster which launches beam-worker-pools as sidecars.
+- We would be deploying a Flink Session cluster which launches beam-worker-pools as sidecars. Replace `<Account_Id>` with your AWS account ID in the yaml file.
 
  ```bash
   kubectl apply -f flink-operator-python-beam-session-cluster.yaml 

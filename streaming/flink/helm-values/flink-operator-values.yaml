@@ -28,6 +28,10 @@ operatorPod:
         cpu: "1000m"
         memory: "2G"
 
+defaultConfiguration:
+  create: true
+  # Set append to false to replace configuration files
+  append: true
   flink-conf.yaml: |+
     # Flink Config Overrides
     kubernetes.operator.metrics.reporter.slf4j.factory.class: org.apache.flink.metrics.slf4j.Slf4jReporterFactory
