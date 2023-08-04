@@ -63,7 +63,7 @@ variable "jupyter_notebook_support" {
 variable "cognito_custom_domain" {
   description = "Cognito domain prefix for Hosted UI authentication endpoints"
   type        = string
-  default     = "eks-jupyjsah"
+  default     = "eks"
 }
 
 # Only needed if auth mechanism is set to cognito

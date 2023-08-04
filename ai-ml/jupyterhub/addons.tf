@@ -409,9 +409,16 @@ resource "aws_cognito_user_pool" "pool" {
   }
 }
 
+resource "random_string" "random" {
+  count   = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
+  length  = 8
+  special = false
+  lower   = true
+}
+
 resource "aws_cognito_user_pool_domain" "domain" {
   count        = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
-  domain       = local.cognito_custom_domain
+  domain       = "${local.cognito_custom_domain}-${random_string.random[0].result}"
   user_pool_id = aws_cognito_user_pool.pool[0].id
 }
 
