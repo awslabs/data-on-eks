@@ -2,8 +2,8 @@ prometheus:
   prometheusSpec:
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
-    serviceMonitorSelector: { }
-    serviceMonitorNamespaceSelector: { }
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
     retention: 5h
     scrapeInterval: 30s
     evaluationInterval: 30s

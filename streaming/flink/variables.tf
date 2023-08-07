@@ -40,13 +40,13 @@ variable "private_subnets" {
   default     = ["10.1.0.0/17", "10.1.128.0/18"]
   type        = list(string)
 }
-#We are using kube_prometheus_stack here
+
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
   default     = false
 }
-# We are not using Yunikorn here
+
 variable "enable_yunikorn" {
   default     = false
   description = "Enable Apache YuniKorn Scheduler"
