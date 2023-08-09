@@ -3,7 +3,6 @@ sidebar_position: 4
 sidebar_label: Networking for Data
 ---
 
-f
 # Networking for Data
 
 ## VPC and IP Considerations
@@ -55,7 +54,7 @@ This failure delays the launch of the Pod and adds pressure to the kubelet and w
 
 For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_TARGET` to a value slightly higher than the expected number of pods you plan to run on each node. This will allow the CNI to provision all of those IP addresses in a single (or few) calls.
 
-```tf
+```hcl
   [...]
 
   # EKS Addons
@@ -70,7 +69,6 @@ For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_
   }
 
   [...]
-
 ```
 
 ### Limit the number of IPs per node on large instance types with `MAX_ENI` and `max-pods`
@@ -81,7 +79,7 @@ For some workloads the CPU, Memory, or other resource will limit the number of P
 
 
 
-```
+```hcl
   [...]
 
   # EKS Addons
@@ -103,12 +101,12 @@ Setting the `MAX_ENI=1` option on the CNI and that this will limit the number of
 
 To limit the IPs *and* stop k8s from scheduling too many pods you will need to:
 
-1. Update the CNI configuration environment variables to set ``MAX_ENI=1``
-2. Update the ``--max-pods`` option for the kubelet on the worker nodes.
+1. Update the CNI configuration environment variables to set `MAX_ENI=1`
+2. Update the `--max-pods` option for the kubelet on the worker nodes.
 
-To configure the --max-pods option you can update the userdata for your worker nodes to set this option [via the --kubelet -extra-args in the bootstrap.sh script](https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh). By default this script configures the max-pods value for the kubelet, the ``--use-max-pods false`` option disables this behavior when providing your own value:
+To configure the --max-pods option you can update the userdata for your worker nodes to set this option [via the --kubelet -extra-args in the bootstrap.sh script](https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh). By default this script configures the max-pods value for the kubelet, the --use-max-pods false` option disables this behavior when providing your own value:
 
-```
+```hcl
   eks_managed_node_groups = {
     system = {
       instance_types = ["m5.xlarge"]
@@ -130,9 +128,7 @@ One problem is the number of IPs per ENI is different based on the Instance type
 
 In the EKS Optimized AMI releases there is [a script included that can be used to help calculate the AWS Recommended max-pods value](https://github.com/awslabs/amazon-eks-ami/blob/master/files/max-pods-calculator.sh). If you’d like to automate this calculation for mixed isntances you will also need to update the userdata for your instances to use the `--instance-type-from-imds` flag to autodiscover the instance type from instance metadata.
 
-```
-
-
+```hcl
   eks_managed_node_groups = {
     system = {
       instance_types = ["m5.xlarge"]
@@ -157,7 +153,7 @@ By default, Nodes provisioned by Karpenter will have the max pods on a node [bas
 
 Below is the example Provisioner spec:
 
-```
+```yaml
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
@@ -205,7 +201,7 @@ The default `ndots` setting in Kubernetes is five, if your application isn’t t
 
 Here’s an example pod manifest from the Kubernetes documentation with `ndots` set to “2”:
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -238,7 +234,7 @@ If the Pods are spread across multiple Availability Zones (AZs), this shuffle op
 
 To have pods co-located on the same AZ, we can use `podAffinity` based scheduling constraints. The scheduling constraint `preferredDuringSchedulingIgnoredDuringExecution` can be enforced in the Pod spec. For example, ins Spark we can use a custom template for our driver and executor pods:
 
-```
+```yaml
 spec:
   executor:
     affinity:
