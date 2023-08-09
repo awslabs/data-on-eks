@@ -20,6 +20,9 @@ Some of the key features of Flink are:
 - **Exactly-once Semantics**: Flink supports exactly-once processing, which ensures that each record is processed exactly once, even in the presence of failures.
 - **Low Latency**: Flink's streaming engine is optimized for low-latency processing, making it suitable for use cases that require real-time processing of data.
 - **Extensibility**: Flink provides a rich set of APIs and libraries, making it easy to extend and customize to fit your specific use case.
+- **Observability** Flink exposes a metrics system that gathers and exposes metrics to the external systems such as Prometheus. The Flink Operator extends this to centralized monitoring solutions.
+- **Autoscaling** Flink supports Reactive and Adaptive autoscaling. Job autoscaling is supported by the Flink operator for resource and cost optimizations.
+
 
 ## Architecture
 
@@ -166,6 +169,7 @@ To get the most out of Flink on Kubernetes, here are some best practices to foll
 - **Configure Flink optimally**: Tune Flink settings according to your use case. For example, adjust Flink's parallelism settings to ensure that Flink jobs are scaled appropriately based on the size of the input data.
 - **Use checkpoints and savepoints**: Use checkpoints for periodic snapshots of Flink application state and savepoints for more advanced use cases such as upgrading or downgrading the application.
 - **Store checkpoints and savepoints in the right places**: Store checkpoints in distributed file systems or key-value stores like Amazon S3 or another durable external storage. Store savepoints in a durable external storage like Amazon S3.
+- **Cost Optimization**: Flink Task Managers can be scheduled on discounted spare EC2 capacity (EC2 Spot Instances) with minimal impact to SLA.
 
 ## Flink Upgrade
 Flink Operator provides three upgrade modes for Flink jobs. Checkout the [Flink upgrade docs](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/custom-resource/job-management/#stateful-and-stateless-application-upgrades) for up-to-date information.
@@ -335,6 +339,147 @@ kubectl port-forward svc/basic-example-rest 8081 -n flink-team-a-ns
 ![Flink Job UI](img/flink5.png)
 
 </CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Observability</span></h2>}>
+
+In order to scrape the metrics to Prometheus and Grafana, Flink needs podMonitors. We are using two podMonitors here one for the Operator and one for deployments.
+
+<h3><span>Install podMonitors </span></h3>
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/awslabs/data-on-eks/main/streaming/flink/observability/flink-deployment-podMonitor.yaml
+kubectl apply -f https://raw.githubusercontent.com/awslabs/data-on-eks/main/streaming/flink/observability/flink-operator-podMonitor.yaml
+```
+
+<h3><span>Prometheus and Grafana</span></h3>
+
+Prometheus and Grafana can be accessed through port forwarding.
+
+Prometheus
+```bash
+kubectl port-forward prometheus-kube-prometheus-stack-prometheus-0 -n kube-prometheus-stack 9090:9090
+```
+![Flink Design UI](img/flink-prometheus.png)
+
+Grafana
+```bash
+kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack
+```
+For grafana login and password use the following commands.
+```bash
+kubectl get secret kube-prometheus-stack-grafana -n kube-prometheus-stack -o jsonpath="{.data.admin-user}" | base64 --decode ; echo
+kubectl get secret kube-prometheus-stack-grafana -n kube-prometheus-stack -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+```
+
+
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Autoscaling</span></h2>}>
+
+We are using the Flink Autoscaler more details [here](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-release-1.5/docs/custom-resource/autoscaler/). A few key pointers
+
+- Autoscaler with Flink 1.17 and beyond we need to backport for older versions.
+- Autocaler takes into account multiple metrics and scales Flink's [job vertexes](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/internals/job_scheduling/#jobmanager-data-structures).
+- Flink Autoscaler works with Karpenter and Cluster Autoscaler(CA).
+  - Flink schedules the TaskManager replicas(pods) by changing the replica factor and Karpenter/CA scales the nodes.
+
+
+#### Autoscaling Job
+
+We are going to use the sample [autoscaling](https://github.com/apache/flink-kubernetes-operator/tree/main/examples/autoscaling) code provided by Flink. We need to build a custom docker image, which we will push to Amazon ECR.
+
+- Build the jar file [Note: We need Java 11/8 and maven >3.8 ]
+
+  ```bash
+  git clone git@github.com:apache/flink-kubernetes-operator.git
+  cd flink-kubernetes-operator/examples/autoscaling
+  mvn clean install -DskipTests
+  docker build -t flink-autoscaling .
+  ````
+
+- Login to ECR, create the repository and push the image. Replace `<Account_Id>` with your AWS account ID.
+  ```bash
+  aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <Account_Id>.dkr.ecr.us-west-2.amazonaws.com
+  aws ecr create-repository --repository-name flink-autoscaling
+  docker tag flink-autoscaling:latest <Account_Id>.dkr.ecr.us-west-2.amazonaws.com/flink-autoscaling:latest
+  docker push <Account_Id>.dkr.ecr.us-west-2.amazonaws.com/flink-autoscaling:latest
+  ```
+
+### Execute Sample Flink Autoscaling job with Karpenter
+
+Navigate to examples/karpenter directory and submit the Flink job. Replace `<Account_Id>` with your AWS account ID in the yaml file.
+
+```bash
+cd data-on-eks/streaming/flink/examples/karpenter
+kubectl apply -f flink-autoscaling-job.yaml
+```
+
+Monitor the job status using the below command. You should see the taskmanager pods triggered by the Flink and new nodes by Karpenter as in the screenshot below. It generally takes 3-5 mins for the autoscaling to trigger. You will also see Flink jobmanager getting restarted as Flink does not support in-place autoscaling yet.
+
+```bash
+ kubectl get pods -n flink-team-a-ns -w
+```
+![Flink Pods](img/flink-autoscaling.png)
+
+We modified the argument values (Number of Iterations) in the example and saw different scaling trajectories which was noted in Grafana dashboard.
+
+![Flink Autoscaling 10 Iterations](img/flink-autoscaling-10.png) ![Flink Autoscaling 1000 Iterations](img/flink-autoscaling-1000.png)![Flink Autoscaling 100000 Iterations](img/flink-autoscaling-100000.png)
+
+
+### Execute Sample Flink Autoscaling job with Managed Node Groups and Cluster Autoscaler
+
+Navigate to examples/cluster-autoscaler directory and submit the Flink job. Replace `<Account_Id>` with your AWS account ID in the yaml file.
+
+
+```bash
+cd data-on-eks/streaming/flink/examples/cluster-autoscaler
+kubectl apply -f flink-autoscaling-job.yaml
+```
+You can expect similar results as showcased in the Karpenter example above here too.
+
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Execute Sample Beam Python Job on Flink</span></h2>}>
+
+We will be running a simple wordcount example with Beam pipelines using [Flink Runner](https://beam.apache.org/documentation/runners/flink/)
+
+- Build the docker image using the dockerfile provided in flink/examples/python. For more details take a look [here](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/resource-providers/standalone/docker/#using-flink-python-on-docker)
+
+  ```bash
+  docker build -t flink-operator-python .
+  ````
+
+- Login to ECR, create the repository and push the image. Replace `<Account_Id>` with your AWS account ID.
+  ```bash
+  aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <Account_Id>.dkr.ecr.us-west-2.amazonaws.com
+  aws ecr create-repository --repository-name flink-operator-python
+  docker tag flink-operator-python:latest <Account_Id>.dkr.ecr.us-west-2.amazonaws.com/flink-operator-python:latest
+  docker push <Account_Id>.dkr.ecr.us-west-2.amazonaws.com/flink-operator-python:latest
+  ```
+
+- We would be deploying a Flink Session cluster which launches beam-worker-pools as sidecars. Replace `<Account_Id>` with your AWS account ID in the yaml file.
+
+ ```bash
+  kubectl apply -f flink-operator-python-beam-session-cluster.yaml
+ ```
+
+- Once the session cluster is deployed we will launch the wordcount job using the command below
+
+ ```bash
+  kubectl apply -f flink-operator-python-beam-job.yaml
+ ```
+
+- You can observe the job/cluster details as the screenshot below by port-forwarding and launching locahost:8081
+
+ ```bash
+  kubectl port-forward <Session Cluster Pod> 8081 -n flink-team-a-ns
+ ```
+
+![Flink Job UI](img/flink-beam.png)
+
+
+</CollapsibleContent>
+
 
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 

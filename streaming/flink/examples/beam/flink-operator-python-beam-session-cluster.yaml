@@ -1,0 +1,82 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: python-example
+  namespace: flink-team-a-ns
+spec:
+  image: <Account_ID>.dkr.ecr.us-west-2.amazonaws.com/flink-operator-python:latest
+  flinkVersion: v1_16
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+  serviceAccount: flink-team-a-sa
+  podTemplate:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: pod-template
+    spec:
+      nodeSelector:
+        NodeGroupType: "flink-compute-optimized"
+      tolerations:
+        - key: "flink-compute-optimized"
+          operator: "Exists"
+          effect: "NoSchedule"
+      initContainers:
+        - name: flink-ssd-volume-permissions
+          image: public.ecr.aws/y4g4v0z7/busybox
+          command: [ 'sh', '-c', 'chown -R 9999 /local1' ]
+          volumeMounts:
+            - mountPath: /local1
+              name: flink-ssd-volume
+      containers:
+        # Do not change the main container name
+        - name: flink-main-container
+          volumeMounts:
+            - mountPath: /flink/data/checkpoint
+              name: flink-ssd-volume
+            - mountPath: /flink/data/tmp
+              name: flink-ssd-volume
+            - mountPath: /flink/data/log
+              name: flink-ssd-volume
+      volumes:
+        - name: flink-ssd-volume
+          hostPath:
+            path: /local1
+            type: Directory
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    podTemplate:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: job-manager-pod-template
+      spec:
+        nodeSelector:
+          karpenter.sh/capacity-type: on-demand
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    podTemplate:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: task-manager-pod-template
+      spec:
+        nodeSelector:
+          karpenter.sh/capacity-type: spot
+        containers:
+          # Sample sidecar container
+          - name: beam-worker-pool
+            image: apache/beam_python3.7_sdk:2.47.0
+            args: [ "--worker_pool" ]
+            ports:
+              - containerPort: 50000
+                name: pool
+            livenessProbe:
+              tcpSocket:
+                port: 50000
+              initialDelaySeconds: 30
+              periodSeconds: 60

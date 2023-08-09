@@ -44,11 +44,11 @@ variable "private_subnets" {
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_yunikorn" {
-  default     = true
+  default     = false
   description = "Enable Apache YuniKorn Scheduler"
   type        = bool
 }
