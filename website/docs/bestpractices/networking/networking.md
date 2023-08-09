@@ -10,21 +10,21 @@ sidebar_label: Networking
 
 ### Plan for a large amount of IP address usage in your EKS clusters.
 
-The AWS VPC CNI maintains a “warm pool” of IP addresses on the EKS worker nodes to assign to Pods. When more IP addresses are needed for your Pods, the CNI must communicate with EC2 APIs to assign the addresses to your nodes. During periods of high churn or large scale out these EC2 API calls can be rate throttled, which will delay the provisioning of Pods and thus delay the execution of workloads. When designing the VPC for your environment plan for more IP addresses than just your pods to accommodate this warm pool. 
+The AWS VPC CNI maintains a “warm pool” of IP addresses on the EKS worker nodes to assign to Pods. When more IP addresses are needed for your Pods, the CNI must communicate with EC2 APIs to assign the addresses to your nodes. During periods of high churn or large scale out these EC2 API calls can be rate throttled, which will delay the provisioning of Pods and thus delay the execution of workloads. When designing the VPC for your environment plan for more IP addresses than just your pods to accommodate this warm pool.
 
-With the default VPC CNI configuration larger nodes will consume more IP addresses. For example [a `m5.8xlarge` node](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) that is running 10 pods will hold 60 IPs total (to satisfy `WARM_ENI=1`). However a `m5.16xlarge` node would hold 100 IPs. 
+With the default VPC CNI configuration larger nodes will consume more IP addresses. For example [a `m5.8xlarge` node](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) that is running 10 pods will hold 60 IPs total (to satisfy `WARM_ENI=1`). However a `m5.16xlarge` node would hold 100 IPs.
 Configuring the VPC CNI to minimize this warm pool can increase the EC2 API calls from your nodes and increase the risk of rate throttling. Planning for this extra IP address usage can avoid rate throttling problems and managing the IP address usage.
 
 
-### Consider using a secondary CIDR if your IP space is constrained. 
+### Consider using a secondary CIDR if your IP space is constrained.
 
-If you are working with a network that spans multiple connected VPCs or sites the routable address space may be limited. 
+If you are working with a network that spans multiple connected VPCs or sites the routable address space may be limited.
 For example, your VPC may be limited to small subnets like below. In this VPC we wouldn’t be able to run more than one `m5.16xlarge` node without adjusting the CNI configuration.
 
 ![Init VPC](init-vpc.png)
 
-You can add additional VPC CIDRs from a range that is not routable across VPCs (such as the RFC 6598 range, `100.64.0.0/10`). In this case we added `100.64.0.0/16`, `100.65.0.0/16`, and `100.65.0.0/16` to the VPC (as this is the maximum CIDR size), then created new subnets with those CIDRs. 
-Finally we recreated the node groups in the new subnets, leaving the existing EKS cluster control plane in place. 
+You can add additional VPC CIDRs from a range that is not routable across VPCs (such as the RFC 6598 range, `100.64.0.0/10`). In this case we added `100.64.0.0/16`, `100.65.0.0/16`, and `100.65.0.0/16` to the VPC (as this is the maximum CIDR size), then created new subnets with those CIDRs.
+Finally we recreated the node groups in the new subnets, leaving the existing EKS cluster control plane in place.
 
 ![expanded VPC](expanded-vpc.png)
 
@@ -53,7 +53,7 @@ This failure delays the launch of the Pod and adds pressure to the kubelet and w
 
 `WARM_IP_TARGET` can help limit the “wasted” IPs for small clusters, or clusters that has very low pod churn. However, this environment variable on the VPC CNI needs to be carefully configured in large clusters as it may increase the number of EC2 API calls, increasing the risk and impact of rate throttling.  
 
-For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_TARGET` to a value slightly higher than the expected number of pods you plan to run on each node. This will allow the CNI to provision all of those IP addresses in a single (or few) calls. 
+For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_TARGET` to a value slightly higher than the expected number of pods you plan to run on each node. This will allow the CNI to provision all of those IP addresses in a single (or few) calls.
 
 ```tf
   [...]
@@ -75,7 +75,7 @@ For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_
 
 ### Limit the number of IPs per node on large instance types with `MAX_ENI` and `max-pods`
 
-When using larger instance types such as `16xlarge` or `24xlarge` the [number of IP addresses that can be assigned per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) can be fairly large. For example, a `c5.18xlarge` instance type with the default CNI configuration of `WARM_ENI=1` would end up holding 100 IP addresses (50 IPs per ENI * 2 ENIs) when running a handful of pods. 
+When using larger instance types such as `16xlarge` or `24xlarge` the [number of IP addresses that can be assigned per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) can be fairly large. For example, a `c5.18xlarge` instance type with the default CNI configuration of `WARM_ENI=1` would end up holding 100 IP addresses (50 IPs per ENI * 2 ENIs) when running a handful of pods.
 
 For some workloads the CPU, Memory, or other resource will limit the number of Pods on that `c5.18xlarge` before we need more than 50 IPs. In this case you may want to be able to run 30-40 pods maximum on that instance.
 
@@ -99,7 +99,7 @@ For some workloads the CPU, Memory, or other resource will limit the number of P
 ```
 
 
-Setting the `MAX_ENI=1` option on the CNI and that this will limit the number of IP addresses each node is able to provision, but it does not limit the number of pod that kubernetes will try to schedule to the nodes. This can lead to a situation where pods are scheduled to nodes that are unable to provision more IP addresses. 
+Setting the `MAX_ENI=1` option on the CNI and that this will limit the number of IP addresses each node is able to provision, but it does not limit the number of pod that kubernetes will try to schedule to the nodes. This can lead to a situation where pods are scheduled to nodes that are unable to provision more IP addresses.
 
 To limit the IPs *and* stop k8s from scheduling too many pods you will need to:
 
@@ -123,10 +123,10 @@ To configure the --max-pods option you can update the userdata for your worker n
 
       bootstrap_extra_args = "--use-max-pods false --kubelet-extra-args '--max-pods=<your_value>'"
 
-    }   
+    }  
 ```
 
-One problem is the number of IPs per ENI is different based on the Instance type ([for example a `m5d.2xlarge` can have 15 IPs per ENI, where a `m5d.4xlarge` can hold 30 IPs per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI)). This means hard-coding a value for `max-pods` may cause problems if you change instance types or in mixed-instance environments. 
+One problem is the number of IPs per ENI is different based on the Instance type ([for example a `m5d.2xlarge` can have 15 IPs per ENI, where a `m5d.4xlarge` can hold 30 IPs per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI)). This means hard-coding a value for `max-pods` may cause problems if you change instance types or in mixed-instance environments.
 
 In the EKS Optimized AMI releases there is [a script included that can be used to help calculate the AWS Recommended max-pods value](https://github.com/awslabs/amazon-eks-ami/blob/master/files/max-pods-calculator.sh). If you’d like to automate this calculation for mixed isntances you will also need to update the userdata for your instances to use the `--instance-type-from-imds` flag to autodiscover the instance type from instance metadata.
 
@@ -147,7 +147,7 @@ In the EKS Optimized AMI releases there is [a script included that can be used t
 
       bootstrap_extra_args = "--use-max-pods false --kubelet-extra-args '--max-pods=<your_value>'"
 
-    }   
+    }  
 ```
 
 
@@ -155,7 +155,7 @@ In the EKS Optimized AMI releases there is [a script included that can be used t
 
 By default, Nodes provisioned by Karpenter will have the max pods on a node [based on the node instance type](https://github.com/awslabs/amazon-eks-ami/blob/master/files/eni-max-pods.txt). To configure the `--max-pods` option as mentioned above by defining at the Provisioner level by specifying `maxPods` within the `.spec.kubeletConfiguration` . This value will be used during Karpenter pod scheduling and passed through to `--max-pods` on kubelet startup.
 
-Below is the example Provisioner spec: 
+Below is the example Provisioner spec:
 
 ```
 apiVersion: karpenter.sh/v1alpha5
@@ -258,7 +258,7 @@ You can also leverage Kubernetes Topology Aware Routing to have Kubernetes servi
 
 :::info
 
-Having all executors located in a single AZ, means that AZ will be a *single point of failure*. This is a trade off you should consider between lowering network cost and latency, and the event of an AZ failure interrupting workloads. 
+Having all executors located in a single AZ, means that AZ will be a *single point of failure*. This is a trade off you should consider between lowering network cost and latency, and the event of an AZ failure interrupting workloads.
 If your workload is running on instances with constrained capacity you may consider using multiple AZs to avoid Insufficient Capacity errors.
 
 :::

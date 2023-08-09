@@ -26,9 +26,4 @@ The recommendations here were built from working with customers one of two desig
 * The first design is **dynamic clusters** that scale, or “churn”, a lot. These clusters run batch processing with Spark, or other workloads that create pods for a relatively short time but can vary greatly on the scale at any given time. These clusters create and delete resources like pods and nodes, or churn, at a high rate which adds unique pressures to Kubernetes and critical components.
 * The other design is **“static” clusters**. These clusters are often large but have less volatile scaling behavior and are generally running longer-lived jobs, like streaming or training. Avoid interruptions for these workloads is a key concern and care must be taken when making changes.
 
-When we talk about large clusters or high rates of churn, it’s difficult to put a specific number to those phrases because of the [complexity of kubernetes scalability](https://github.com/kubernetes/community/blob/master/sig-scalability/configs-and-limits/thresholds.md). In general, these clusters have >500 nodes and >5000 pods, or are creating/destroying hundreds of resources a minute; however, the scalability constraints are different for every workload (even between two different Spark jobs). 
-
-
-
-
-
+When we talk about large clusters or high rates of churn, it’s difficult to put a specific number to those phrases because of the [complexity of kubernetes scalability](https://github.com/kubernetes/community/blob/master/sig-scalability/configs-and-limits/thresholds.md). In general, these clusters have >500 nodes and >5000 pods, or are creating/destroying hundreds of resources a minute; however, the scalability constraints are different for every workload (even between two different Spark jobs).
