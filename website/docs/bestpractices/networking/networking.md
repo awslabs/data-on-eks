@@ -1,10 +1,10 @@
 ---
 sidebar_position: 4
-sidebar_label: Networking
+sidebar_label: Networking for Data
 ---
 
-
-# Networking
+f
+# Networking for Data
 
 ## VPC and IP Considerations
 
@@ -37,7 +37,7 @@ With this configuration you can still communicate with the EKS cluster control p
 
 When an EKS worker node is launched it initially has a single ENI with a single IP address attached for the EC2 instance to communicate. As the VPC CNI launches it tries to provision a Warm Pool of IP addresses that can be assigned to Kubernetes Pods ([More details in the EKS Best Practices Guide](https://aws.github.io/aws-eks-best-practices/networking/vpc-cni/#overview)).
 
-The VPC CNI must make AWS EC2 API calls (like AssignPrivateIpV4Address and DescribeNetworkInterfaces) to assign those additional IPs and ENIs to the worker node. When the EKS cluster scales out the number of Nodes or Pods there could be a spike in the number of these EC2 API calls. This surge of calls could encounter rate throttling from the EC2 API to help the performance of the service, and to ensure fair usage for all Amazon EC2 customers. This rate throttling can cause the pool of IP address to be exhausted while the CNI tries to allocate more IPs.
+The VPC CNI must make AWS EC2 API calls (like `AssignPrivateIpV4Address` and `DescribeNetworkInterfaces`) to assign those additional IPs and ENIs to the worker node. When the EKS cluster scales out the number of Nodes or Pods there could be a spike in the number of these EC2 API calls. This surge of calls could encounter rate throttling from the EC2 API to help the performance of the service, and to ensure fair usage for all Amazon EC2 customers. This rate throttling can cause the pool of IP address to be exhausted while the CNI tries to allocate more IPs.
 
 These failures will cause errors like the one below, indicating that the provisioning of the container network namespace has failed because the VPC CNI could not provision an IP address.
 
