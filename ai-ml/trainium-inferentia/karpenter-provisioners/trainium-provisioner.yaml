@@ -15,27 +15,17 @@ spec:
     - key: "karpenter.sh/capacity-type"
       operator: In
       values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-family" #If not included, all instance types are considered
+    - key: karpenter.k8s.aws/instance-family
       operator: In
-      values: ["trn1n"] # trn1.2xlarge, trn1n.32xlarge
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
-      operator: In
-      values: ["trn1.32xlarge"] # trn1.2xlarge, trn1n.32xlarge
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["amd64"]
+      values: ["trn1n"] 
   limits:
   providerRef:
     name: trainium
   labels:
     type: karpenter
     provisioner: trainium
-    WorkerType: trn1-32xl
-    NodeGroupType: trainium-karpenter
-  taints:
-    - key: trainium-karpenter
-      value: 'true'
-      effect: NoSchedule
+    #WorkerType: trn1-32xl
+    #NodeGroupType: trainium-karpenter
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
 
 # TODO: Network interface configuraiton for 8 network interfaces
@@ -65,12 +55,6 @@ spec:
   #  instanceProfile: ""      # optional, if already set in controller args
   #RAID0 config example
   userData: |
-    MIME-Version: 1.0
-    Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-    --BOUNDARY
-    Content-Type: text/x-shellscript; charset="us-ascii"
-
     #!/bin/bash
     echo "Running a custom user data script"
     # Configure NVMe volumes in RAID0 configuration
@@ -83,35 +67,40 @@ spec:
     export PATH=/opt/aws/neuron/bin:$PATH
 
     # Create 8 network interfaces similar to Terraform configuration
-    INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+    TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+    INSTANCE_ID=`curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id`
+    echo INSTANCE_ID=${INSTANCE_ID}
+    SUBNET_ID=`curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/network/interfaces/macs/${INSTANCE_MACS}/subnet-id`
+    echo SUBNET_ID=${SUBNET_ID}
 
-    # Create network interface with device_index = 0
-    INTERFACE_ID=$(aws ec2 create-network-interface \
-      --description "NetworkInterfaces Configuration For EFA and EKS" \
-      --delete-on-termination \
-      --query 'NetworkInterface.NetworkInterfaceId' \
-      --output text
-    )
-    aws ec2 attach-network-interface \
-      --network-interface-id $INTERFACE_ID \
-      --instance-id $INSTANCE_ID \
-      --device-index 0 \
-      --network-card-index 0
+    #INTERFACE_ID=$(aws ec2 create-network-interface \
+    #  --description "NetworkInterfaces Configuration For EFA and EKS" \
+    #  --delete-on-termination \
+    #  --query 'NetworkInterface.NetworkInterfaceId' \
+    #  --output text
+    #)
+    #aws ec2 attach-network-interface \
+    #  --network-interface-id $INTERFACE_ID \
+    #  --instance-id $INSTANCE_ID \
+    #  --device-index 0 \
+    #  --network-card-index 0
 
     # Create network interfaces with device_index = 1 and network_card_index from 1 to 7
     for ((network_card_index=1; network_card_index<8; network_card_index++))
     do
       INTERFACE_ID=$(aws ec2 create-network-interface \
         --description "NetworkInterfaces Configuration For EFA and EKS" \
-        --delete-on-termination \
+        --subnet-id $SUBNET_ID \
         --query 'NetworkInterface.NetworkInterfaceId' \
         --output text
       )
       aws ec2 attach-network-interface \
         --network-interface-id $INTERFACE_ID \
         --instance-id $INSTANCE_ID \
-        --device-index 1 \
+        --device-index $network_card_index \
         --network-card-index $network_card_index
+
+      echo Attached interface ${INTERFACE_ID} to device-index $network_card_index and network-card-index $network_card_index in instance $INSTANCE_ID
     done
 
     # EFA Setup for Trainium and Inferentia
