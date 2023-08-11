@@ -6,7 +6,7 @@ variable "name" {
 
 variable "region" {
   description = "Region"
-  default     = "us-west-2"
+  default     = "eu-west-1"
   type        = string
 }
 
@@ -74,5 +74,5 @@ variable "enable_airflow" {
 variable "enable_airflow_spark_example" {
   description = "Enable Apache Airflow and Spark Operator example"
   type        = bool
-  default     = false
+  default     = true
 }
