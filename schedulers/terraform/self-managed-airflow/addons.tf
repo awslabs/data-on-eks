@@ -18,10 +18,9 @@ module "ebs_csi_driver_irsa" {
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
-  source = "/Users/vabonthu/Documents/GITHUB/terraform-aws-eks-blueprints-addons"
   # Short commit hash from 8th May using git rev-parse --short HEAD
-  # source  = "aws-ia/eks-blueprints-addons/aws"
-  # version = "~> 1.2"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -166,9 +165,8 @@ module "eks_blueprints_addons" {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  source = "/Users/vabonthu/Documents/GITHUB/terraform-aws-eks-data-addons"
-  # source  = "aws-ia/eks-data-addons/aws"
-  # version = "~> 1.0" # ensure to update this to the latest/desired version
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 

@@ -154,10 +154,10 @@ module "airflow_irsa_scheduler" {
   count = var.enable_airflow ? 1 : 0
   # IAM role for service account (IRSA)
   create_release = false
-  create_policy = false # Policy is created in the next resource
-  
-  create_role    = var.enable_airflow
-  role_name      = local.airflow_scheduler_service_account
+  create_policy  = false # Policy is created in the next resource
+
+  create_role = var.enable_airflow
+  role_name   = local.airflow_scheduler_service_account
 
   role_policies = { AirflowScheduler = aws_iam_policy.airflow_scheduler[0].arn }
 
