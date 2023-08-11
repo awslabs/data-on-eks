@@ -63,28 +63,6 @@ cloudWatchLogs:
   extraOutputs: |
     log_key               log
 
-#----------------------------------------------------------#
-# OUTPUT logs to S3
-#----------------------------------------------------------#
-
-# This is an example for writing logs to S3 bucket.
-# This example writes system pod logs and spark logs into dedicated prefix.
-# This second output is using the rewrite_tag filter commented above
-
-additionalOutputs: |
-  [OUTPUT]
-      Name                            s3
-      Match                           systempods.*
-      region                          ${region}
-      bucket                          ${s3_bucket_name}
-      total_file_size                 100M
-      s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
-      s3_key_format_tag_delimiters    ..
-      store_dir                       /home/ec2-user/buffer
-      upload_timeout                  10m
-      log_key                         log
-
-
 # Resource config for large clusters
 resources:
   limits:

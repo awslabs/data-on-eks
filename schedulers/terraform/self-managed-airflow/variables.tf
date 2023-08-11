@@ -74,5 +74,5 @@ variable "enable_airflow" {
 variable "enable_airflow_spark_example" {
   description = "Enable Apache Airflow and Spark Operator example"
   type        = bool
-  default     = true
+  default     = false
 }
