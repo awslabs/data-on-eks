@@ -7,7 +7,7 @@ spec:
   restartPolicy: Never
   # schedulerName: default-scheduler
   nodeSelector:
-    beta.kubernetes.io/instance-type: trn1.32xlarge
+    node.kubernetes.io/instance-type: trn1.32xlarge
     provisioner: trainium-trn1
     NodeGroupType: trainium-karpenter
   tolerations:

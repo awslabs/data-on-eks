@@ -79,6 +79,11 @@ spec:
 
     # Install required packages
     yum install -y jq aws-cli
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    sudo ./aws/install
+
+    sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
     # Get instance metadata token
     TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 3600")
@@ -98,21 +103,20 @@ spec:
     echo "SUBNET_ID=$SUBNET_ID"
 
     # Create network interfaces with device_index=1 and network_card_index from 1 to 7
-
     for network_card_index in {1..7}
     do
-      INTERFACE_ID=$(aws ec2 create-network-interface \
+      INTERFACE_ID=$(/usr/local/bin/aws ec2 create-network-interface \
         --description "NetworkInterfaces Configuration For EFA and EKS" \
         --subnet-id $SUBNET_ID \
         --query 'NetworkInterface.NetworkInterfaceId' \
         --output text --region $REGION
       )
 
-      aws ec2 attach-network-interface \
+      /usr/local/bin/aws ec2 attach-network-interface \
         --network-interface-id $INTERFACE_ID \
         --instance-id $INSTANCE_ID \
         --device-index 1 \
-        --network-card-index $network_card_index --region $REGION
+        --network-card-index 1 --region $REGION
     done
 
     # EFA Setup for Trainium and Inferentia
