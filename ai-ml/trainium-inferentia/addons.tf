@@ -121,6 +121,18 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
+  # NOTE: Karpenter Upgrade
+  # This Helm Chart addon will only install the CRD during the first installation of the helm chart.
+  #  Subsequent Helm Chart chart upgrades will not add or remove CRDs, even if the CRDs have changed.
+  #  If you need to upgrade the CRDs, you will need to manually run the following commands and ensure that the CRDs are updated before upgrading the Helm Chart.
+  #  READ the guide before applying the CRDs: https://karpenter.sh/preview/upgrade-guide/
+  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.sh_provisioners.yaml
+  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.sh_machines.yaml
+  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.k8s.aws_awsnodetemplates.yaml
+  #---------------------------------------
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
   karpenter = {

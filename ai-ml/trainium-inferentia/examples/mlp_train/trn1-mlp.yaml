@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: trn1-mlp
+spec:
+  restartPolicy: Never
+  # schedulerName: default-scheduler
+  nodeSelector:
+    beta.kubernetes.io/instance-type: trn1.32xlarge
+  tolerations:
+    - key: "trn1-karpenter"
+      value: "true"
+      effect: "NoSchedule"
+  containers:
+    - name: trn1-mlp
+      command: ['torchrun']
+      args:
+        - '--nnodes=1'
+        - '--nproc_per_node=32'
+        - 'train_torchrun.py'
+      image: ${ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/eks_mlperf_training:mlp
+      imagePullPolicy: IfNotPresent
+      resources:
+        limits: 
+          aws.amazon.com/neuron: 16

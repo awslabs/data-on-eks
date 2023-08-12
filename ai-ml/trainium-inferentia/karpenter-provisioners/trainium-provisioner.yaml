@@ -1,7 +1,7 @@
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
-  name: trainium
+  name: trainium-trn1
   namespace: karpenter # Same namespace as Karpenter add-on installed
 spec:
   kubeletConfiguration:
@@ -15,25 +15,22 @@ spec:
     - key: "karpenter.sh/capacity-type"
       operator: In
       values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-family" #If not included, all instance types are considered
+    - key: "karpenter.k8s.aws/instance-family" #If not included, all instance types are considered
       operator: In
-      values: ["trn1n"] # trn1.2xlarge, trn1n.32xlarge
+      values: ["trn1"] # trn1.2xlarge, trn1n.32xlarge
     - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
       operator: In
       values: ["trn1.32xlarge"] # trn1.2xlarge, trn1n.32xlarge
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["amd64"]
   limits:
   providerRef:
-    name: trainium
+    name: trainium-trn1
   labels:
     type: karpenter
-    provisioner: trainium
+    provisioner: trainium-trn1
     WorkerType: trn1-32xl
     NodeGroupType: trainium-karpenter
   taints:
-    - key: trainium-karpenter
+    - key: trn1-karpenter
       value: 'true'
       effect: NoSchedule
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
@@ -43,7 +40,7 @@ spec:
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
 metadata:
-  name: trainium
+  name: trainium-trn1
   namespace: karpenter
 spec:
   blockDeviceMappings:
@@ -73,37 +70,38 @@ spec:
 
     #!/bin/bash
     echo "Running a custom user data script"
-    # Configure NVMe volumes in RAID0 configuration
-    # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
-    # Mount will be: /mnt/k8s-disks
+
+    # Configure NVMe volumes in RAID0 configuration. Mount will be: /mnt/k8s-disks
     export LOCAL_DISKS='raid0'
 
     # Install Neuron monitoring tools
     yum install aws-neuronx-tools-2.* -y
     export PATH=/opt/aws/neuron/bin:$PATH
 
-    # Create 8 network interfaces similar to Terraform configuration
-    INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+    # Install required packages
+    yum install -y jq aws-cli
 
-    # Create network interface with device_index = 0
-    INTERFACE_ID=$(aws ec2 create-network-interface \
-      --description "NetworkInterfaces Configuration For EFA and EKS" \
-      --delete-on-termination \
-      --query 'NetworkInterface.NetworkInterfaceId' \
-      --output text
-    )
-    aws ec2 attach-network-interface \
-      --network-interface-id $INTERFACE_ID \
-      --instance-id $INSTANCE_ID \
-      --device-index 0 \
-      --network-card-index 0
+    # Get instance metadata token
+    TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 3600")
+
+    # Get instance info
+    INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+    echo "INSTANCE_ID=$${INSTANCE_ID}"
+
+    # Get instance's MAC address
+    INSTANCE_MACS=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/mac)
+    echo "INSTANCE_MACS=$${INSTANCE_MACS}"
+
+    # Get SUBNET_ID using INSTANCE_MACS
+    SUBNET_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/network/interfaces/macs/$${INSTANCE_MACS}/subnet-id)
+    echo "SUBNET_ID=$${SUBNET_ID}"
 
     # Create network interfaces with device_index = 1 and network_card_index from 1 to 7
-    for ((network_card_index=1; network_card_index<8; network_card_index++))
+    for network_card_index in {1..7}
     do
       INTERFACE_ID=$(aws ec2 create-network-interface \
         --description "NetworkInterfaces Configuration For EFA and EKS" \
-        --delete-on-termination \
+        --subnet-id $SUBNET_ID \
         --query 'NetworkInterface.NetworkInterfaceId' \
         --output text
       )
@@ -119,12 +117,12 @@ spec:
     export FI_PROVIDER=efa
     export FI_EFA_FORK_SAFE=1
 
+    # Download and install EFA software
     curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
     tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
     ./efa_installer.sh -y -g
     /opt/amazon/efa/bin/fi_info -p efa
 
     --BOUNDARY--
-
   tags:
     InstanceType: "trainium"   # optional, add tags for your own use
