@@ -8,6 +8,8 @@ spec:
   # schedulerName: default-scheduler
   nodeSelector:
     beta.kubernetes.io/instance-type: trn1.32xlarge
+    provisioner: trainium-trn1
+    NodeGroupType: trainium-karpenter
   tolerations:
     - key: "trn1-karpenter"
       value: "true"
@@ -19,8 +21,8 @@ spec:
         - '--nnodes=1'
         - '--nproc_per_node=32'
         - 'train_torchrun.py'
-      image: ${ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/eks_mlperf_training:mlp
+      image: 464566837657.dkr.ecr.us-west-2.amazonaws.com/eks_mlperf_training:mlp
       imagePullPolicy: IfNotPresent
       resources:
-        limits: 
+        limits:
           aws.amazon.com/neuron: 16

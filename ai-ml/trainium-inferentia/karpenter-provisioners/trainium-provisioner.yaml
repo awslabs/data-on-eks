@@ -35,7 +35,6 @@ spec:
       effect: NoSchedule
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
 
-# TODO: Network interface configuraiton for 8 network interfaces
 ---
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
@@ -84,32 +83,36 @@ spec:
     # Get instance metadata token
     TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 3600")
 
+    REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/[a-z]$//')
+
     # Get instance info
     INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
-    echo "INSTANCE_ID=$${INSTANCE_ID}"
+    echo "INSTANCE_ID=$INSTANCE_ID"
 
     # Get instance's MAC address
     INSTANCE_MACS=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/mac)
-    echo "INSTANCE_MACS=$${INSTANCE_MACS}"
+    echo "INSTANCE_MACS=$INSTANCE_MACS"
 
     # Get SUBNET_ID using INSTANCE_MACS
     SUBNET_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/network/interfaces/macs/$${INSTANCE_MACS}/subnet-id)
-    echo "SUBNET_ID=$${SUBNET_ID}"
+    echo "SUBNET_ID=$SUBNET_ID"
 
-    # Create network interfaces with device_index = 1 and network_card_index from 1 to 7
+    # Create network interfaces with device_index=1 and network_card_index from 1 to 7
+
     for network_card_index in {1..7}
     do
       INTERFACE_ID=$(aws ec2 create-network-interface \
         --description "NetworkInterfaces Configuration For EFA and EKS" \
         --subnet-id $SUBNET_ID \
         --query 'NetworkInterface.NetworkInterfaceId' \
-        --output text
+        --output text --region $REGION
       )
+
       aws ec2 attach-network-interface \
         --network-interface-id $INTERFACE_ID \
         --instance-id $INSTANCE_ID \
         --device-index 1 \
-        --network-card-index $network_card_index
+        --network-card-index $network_card_index --region $REGION
     done
 
     # EFA Setup for Trainium and Inferentia
