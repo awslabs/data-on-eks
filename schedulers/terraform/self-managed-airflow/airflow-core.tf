@@ -154,9 +154,10 @@ module "airflow_irsa_scheduler" {
   count = var.enable_airflow ? 1 : 0
   # IAM role for service account (IRSA)
   create_release = false
-  create_policy  = false
-  create_role    = var.enable_airflow
-  role_name      = local.airflow_scheduler_service_account
+  create_policy  = false # Policy is created in the next resource
+
+  create_role = var.enable_airflow
+  role_name   = local.airflow_scheduler_service_account
 
   role_policies = { AirflowScheduler = aws_iam_policy.airflow_scheduler[0].arn }
 
@@ -217,6 +218,8 @@ module "airflow_irsa_webserver" {
 
   # IAM role for service account (IRSA)
   create_role   = var.enable_airflow
+  create_policy = false # Policy is created in the next resource
+
   role_name     = local.airflow_webserver_service_account
   role_policies = merge({ AirflowWebserver = aws_iam_policy.airflow_webserver[0].arn })
 
@@ -315,6 +318,7 @@ resource "kubernetes_secret_v1" "airflow_worker" {
   type = "kubernetes.io/service-account-token"
 }
 
+# Create IAM Role for Service Account (IRSA) Only if Airflow is enabled
 module "airflow_irsa_worker" {
   count = var.enable_airflow ? 1 : 0
 
@@ -325,7 +329,9 @@ module "airflow_irsa_worker" {
   create_release = false
 
   # IAM role for service account (IRSA)
-  create_role   = var.enable_airflow
+  create_role   = true
+  create_policy = false # Policy is created in the next resource
+
   role_name     = local.airflow_workers_service_account
   role_policies = merge({ AirflowWorker = aws_iam_policy.airflow_worker[0].arn })
 

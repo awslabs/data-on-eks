@@ -20,7 +20,7 @@ module "ebs_csi_driver_irsa" {
 module "eks_blueprints_addons" {
   # Short commit hash from 8th May using git rev-parse --short HEAD
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "~> 1.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -49,17 +49,11 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_efs_csi_driver = true
 
-  #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_cluster_proportional_autoscaler = true
-  cluster_proportional_autoscaler = {
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      target = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
+  #---------------------------------------
+  # CAUTION: This blueprint creates a PUBIC facing load balancer to show the Airflow Web UI for demos.
+  # Please change this to a private load balancer if you are using this in production.
+  #---------------------------------------
+  enable_aws_load_balancer_controller = true
 
   #---------------------------------------
   # Metrics Server
@@ -74,7 +68,6 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    timeout = "300"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -96,7 +89,21 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+    values = [
+      <<-EOT
+        resources:
+          limits:
+            cpu: 500m
+            memory: 2Gi
+          requests:
+            cpu: 200m
+            memory: 1Gi
+
+        # This toleration allows Daemonset pod to be scheduled on any node, regardless of their Taints.
+        tolerations:
+          - operator: Exists
+      EOT
+    ]
   }
 
   #---------------------------------------
@@ -108,6 +115,7 @@ module "eks_blueprints_addons" {
     name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
     retention_in_days = 30
   }
+  # Additional IRSA policies for FluentBit add-on to access AWS services(e.g., CW Logs, S3 etc.)
   aws_for_fluentbit = {
     s3_bucket_arns = [
       module.fluentbit_s3_bucket.s3_bucket_arn,
@@ -120,8 +128,6 @@ module "eks_blueprints_addons" {
       cluster_name         = module.eks.cluster_name
     })]
   }
-
-  enable_aws_load_balancer_controller = true
 
   #---------------------------------------
   # Prommetheus and Grafana stack
@@ -163,16 +169,6 @@ module "eks_data_addons" {
   version = "~> 1.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------------------------------
-  # Kubecost Add-on
-  #---------------------------------------------------------------
-  enable_kubecost = true
-  kubecost_helm_config = {
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
 
   #---------------------------------------------------------------
   # Airflow Add-on
@@ -225,7 +221,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Spark Operator Add-on
   #---------------------------------------------------------------
-  enable_spark_operator = true
+  enable_spark_operator = var.enable_airflow_spark_example
   spark_operator_helm_config = {
     values = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
   }
@@ -233,14 +229,12 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Spark History Server Add-on
   #---------------------------------------------------------------
-  enable_spark_history_server = true
+  enable_spark_history_server = var.enable_airflow_spark_example
   spark_history_server_helm_config = {
-    create_irsa = false
     values = [
-      templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
-        s3_bucket_name   = try(module.spark_logs_s3_bucket[0].s3_bucket_id, "")
-        s3_bucket_prefix = try(aws_s3_object.this[0].key, "")
-      })
+      <<-EOT
+      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${try(module.spark_logs_s3_bucket[0].s3_bucket_id, "")}/${try(aws_s3_object.this[0].key, "")}"
+      EOT
     ]
   }
 }
