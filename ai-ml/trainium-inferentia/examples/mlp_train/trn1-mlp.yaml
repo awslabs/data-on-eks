@@ -1,3 +1,8 @@
+# The purpose of this configuration is to run a machine learning training job using the specified image.
+# Before deploying this configuration, you need to replace the "image" field below with the URL of the Docker image you want to use for your machine learning training job.
+# The image is a Docker image that contains the training code and the required libraries.
+# The node selector and tolerations are required because the Trainium nodes are tainted to prevent other workloads from running on them.
+
 ---
 apiVersion: v1
 kind: Pod
@@ -21,7 +26,7 @@ spec:
         - '--nnodes=1'
         - '--nproc_per_node=32'
         - 'train_torchrun.py'
-      image: 464566837657.dkr.ecr.us-west-2.amazonaws.com/eks_mlperf_training:mlp
+      image: <ACCOUNTID>.dkr.ecr.<REGION>.amazonaws.com/eks_mlperf_training:mlp
       imagePullPolicy: IfNotPresent
       resources:
         limits:
