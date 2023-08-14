@@ -87,7 +87,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
-  enable_cluster_autoscaler = var.enable_cluster_autoscaler
+  enable_cluster_autoscaler = true
   cluster_autoscaler = {
     timeout     = "300"
     create_role = var.enable_cluster_autoscaler
@@ -100,8 +100,8 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_karpenter                  = var.enable_karpenter
-  karpenter_enable_spot_termination = var.enable_karpenter
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
   karpenter = {
     timeout             = "300"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name

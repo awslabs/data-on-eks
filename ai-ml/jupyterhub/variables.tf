@@ -31,18 +31,6 @@ variable "secondary_cidr_blocks" {
   type        = list(string)
 }
 
-# Scaling mechanism
-variable "enable_cluster_autoscaler" {
-  type        = bool
-  description = "Enable Cluster Autoscaler in your EKS cluster"
-  default     = false
-}
-
-variable "enable_karpenter" {
-  type        = bool
-  description = "Enable Karpenter in your EKS cluster"
-  default     = true
-}
 
 # NOTE: You need to use private domain or public domain name with ACM certificate
 # This website doc will show you how to create free public domain name with ACM certificate for testing purpose only
@@ -77,3 +65,17 @@ variable "jupyterhub_domain" {
   description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito"
   default     = ""
 }
+
+
+# # Scaling mechanism
+# variable "enable_cluster_autoscaler" {
+#   type        = bool
+#   description = "Enable Cluster Autoscaler in your EKS cluster"
+#   default     = true
+# }
+
+# variable "enable_karpenter" {
+#   type        = bool
+#   description = "Enable Karpenter in your EKS cluster"
+#   default     = true
+# }
