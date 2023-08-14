@@ -63,4 +63,4 @@ spec:
     Name: ${cluster_name}-node*     # name of the SecurityGroup to be used with Nodes
   tags:
     InstanceType: "gpu"
-    Name: "gpu-karpenter-mig"  # optional, add tags for your own use
+    Name: "gpu-karpenter-ts"  # optional, add tags for your own use
