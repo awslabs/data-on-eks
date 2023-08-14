@@ -228,7 +228,7 @@ data "kubectl_path_documents" "test_pods" {
 }
 
 resource "kubectl_manifest" "test_pods" {
-  for_each  = try(toset(data.kubectl_path_documents.test_pods[0].documents), null)
+  for_each  = try(toset(data.kubectl_path_documents.test_pods[0].documents), toset([]))
   yaml_body = each.value
 
   depends_on = [module.eks_blueprints_addons]
@@ -256,6 +256,7 @@ resource "random_string" "random" {
   length  = 8
   special = false
   lower   = true
+  upper   = false
 }
 
 resource "aws_cognito_user_pool_domain" "domain" {

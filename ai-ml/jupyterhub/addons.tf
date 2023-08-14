@@ -90,7 +90,7 @@ module "eks_blueprints_addons" {
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
     timeout     = "300"
-    create_role = var.enable_cluster_autoscaler
+    create_role = true
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
