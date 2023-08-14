@@ -13,6 +13,10 @@ prometheus:
           maxSamplesPerSend: 1000
           maxShards: 200
           capacity: 2500
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
     retention: 5h
     scrapeInterval: 30s
     evaluationInterval: 30s
@@ -33,7 +37,7 @@ alertmanager:
 
 grafana:
   enabled: true
-  defaultDashboardsEnabled: true
+  defaultDashboardsEnabled: false
 # Adding AMP datasource to Grafana config
   serviceAccount:
     create: false

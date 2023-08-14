@@ -220,15 +220,13 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Spark History Server Add-on
   #---------------------------------------------------------------
-  # Spark hsitory server is required only when EMR Spark Operator is enabled
+  # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = var.enable_emr_spark_operator
   spark_history_server_helm_config = {
-    create_irsa = true
     values = [
-      templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
-        s3_bucket_name   = module.s3_bucket.s3_bucket_id
-        s3_bucket_prefix = aws_s3_object.this.key
-      })
+      <<-EOT
+      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
+      EOT
     ]
   }
 }
