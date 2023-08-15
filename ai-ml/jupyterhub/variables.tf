@@ -65,17 +65,3 @@ variable "jupyterhub_domain" {
   description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito"
   default     = ""
 }
-
-
-# # Scaling mechanism
-# variable "enable_cluster_autoscaler" {
-#   type        = bool
-#   description = "Enable Cluster Autoscaler in your EKS cluster"
-#   default     = true
-# }
-
-# variable "enable_karpenter" {
-#   type        = bool
-#   description = "Enable Karpenter in your EKS cluster"
-#   default     = true
-# }

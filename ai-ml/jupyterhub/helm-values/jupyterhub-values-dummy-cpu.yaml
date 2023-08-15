@@ -45,20 +45,3 @@ singleuser:
   uid: 0
   fsGid: 0
   cmd: "start-singleuser.sh"
-# hub:
-#   config:
-#     GenericOAuthenticator:
-#       oauth_callback_url: ${jupyterdomain}
-#       client_id: ${client_id}
-#       client_secret: ${client_secret}
-#       authorize_url: ${authorize_url}
-#       token_url: ${token_url}
-#       userdata_url: ${userdata_url}
-#       scope:
-#         - openid
-#         - email
-#       username_key: "username"
-#       login_service : "AWS Cognito"
-#       userdata_method: "POST"
-#     JupyterHub:
-#       authenticator_class: generic-oauth

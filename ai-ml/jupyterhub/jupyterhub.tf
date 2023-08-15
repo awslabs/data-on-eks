@@ -16,7 +16,6 @@ module "jupyterhub_single_user_irsa" {
     policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
   }
 
-
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
@@ -47,7 +46,6 @@ resource "kubernetes_secret_v1" "jupyterhub_single_user" {
 
   type = "kubernetes.io/service-account-token"
 }
-
 
 resource "kubectl_manifest" "storage_class_gp2" {
   force_new = true
