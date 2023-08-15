@@ -102,9 +102,9 @@ module "eks" {
       name        = "kafka-node-group"
       description = "EKS managed node group example launch template"
 
-      min_size     = 1
+      min_size     = 3
       max_size     = 12
-      desired_size = 3
+      desired_size = 5
 
       instance_types = ["r6i.2xlarge"]
       ebs_optimized  = true
