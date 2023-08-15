@@ -87,7 +87,9 @@ cd data-on-eks/ai-ml/jupyterhub && chmod +x install.sh
 Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region or other variables.
 
 :::info
-Please note that during the execution of this script, you will be prompted to provide input values for 'Certificate Domain'(`acm_certificate_domain`) and 'Sub-domain(`jupyterhub_domain`) for JupyterHub'.
+Please note that during the execution of this script, you will be prompted to provide input values for 'JupyterHub Auth Mechanisms'(`jupyter_hub_auth_mechanism`), 'Certificate Domain'(`acm_certificate_domain`) and 'Sub-domain(`jupyterhub_domain`) for JupyterHub'.
+
+For 'JupyterHub Auth Mechanisms', please provide `cognito` as your desired value.
 
 For 'Certificate Domain', please provide the wildcard root domain for which the SSL certificate has been imported into AWS Certificate Manager (ACM). An example of this could be `*.jupyterhubeks.dynamic-dns.net`.
 
@@ -95,7 +97,6 @@ Regarding the 'Sub-domain for JupyterHub', please provide the fully qualified do
 
 Make sure to provide the appropriate values for these inputs when prompted.
 :::
-
 
 ```bash
 ./install.sh
