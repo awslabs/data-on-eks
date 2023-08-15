@@ -254,8 +254,8 @@ module "eks" {
       # }
 
       labels = {
-        WorkerType    = "trn1-32xl"
-        NodeGroupType = "trainium-ca"
+        instance-type = "trn1-32xl"
+        provisioner   = "cluster-autoscaler"
       }
 
       taints = [
@@ -464,8 +464,8 @@ module "eks" {
       # }
 
       labels = {
-        WorkerType    = "trn1n-32xl"
-        NodeGroupType = "trainium-ca"
+        instance-type = "trn1n-32xl"
+        provisioner   = "cluster-autoscaler"
       }
 
       taints = [

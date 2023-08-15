@@ -1,13 +1,3 @@
-autoDiscovery:
-  clusterName: ${eks_cluster_id}
-
-awsRegion: ${aws_region}
-
-cloudProvider: aws
-
-extraArgs:
-  aws-use-static-instance-list: true
-
 # Best practice to update the resource requests and limits for each add-on
 resources:
    limits:

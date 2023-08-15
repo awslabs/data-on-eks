@@ -112,10 +112,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = var.region,
-      eks_cluster_id = module.eks.cluster_name
-    })]
+    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {})]
   }
 
   #---------------------------------------
