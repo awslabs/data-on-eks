@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tensorboard-ext-loadbalancer
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: tensorboard-app
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: tensorboard-app
+  name: tensorboard-service
+spec:
+  ports:
+  - name: nginx-proxy
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  - name: tensorboard-server
+    port: 6006
+    protocol: TCP
+    targetPort: 6006
+  selector:
+    app: tensorboard-app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: tensorboard-app
+  name: tensorboard-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tensorboard-app
+  template:
+    metadata:
+      labels:
+        app: tensorboard-app
+    spec:
+      containers:
+      - args:
+        - /usr/local/bin/tensorboard --logdir /data/output --bind_all & /usr/sbin/nginx
+          -g "daemon off;"
+        command:
+        - /bin/sh
+        - -c
+        image: :tensorboard
+        imagePullPolicy: Always
+        name: app
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 6006
+          name: tensorboard
+        volumeMounts:
+        - mountPath: /data
+          name: persistent-storage
+      restartPolicy: Always
+      volumes:
+      - name: persistent-storage
+        persistentVolumeClaim:
+          claimName: fsx-claim

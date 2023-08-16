@@ -1,27 +1,27 @@
-# This Python script is designed to train a neural network model using the MNIST dataset on an AWS Trainium 32x large instance, 
-  # utilizing its computational power. The script defined in Dickerfile imports essential libraries, including Torch, and defines constants for the number of epochs, warm-up steps, and batch size. 
+# This Python script is designed to train a neural network model using the MNIST dataset on an AWS Trainium 32x large instance,
+  # utilizing its computational power. The script defined in Dickerfile imports essential libraries, including Torch, and defines constants for the number of epochs, warm-up steps, and batch size.
   # It then loads the MNIST training dataset, initializes the model architecture (MLP), the optimizer, and the loss function.
 
-# The training loop iterates over the specified number of epochs and batches. 
-  # For each batch, the script computes the model's output, calculates the loss, 
-  # performs backpropagation, and optimizes the model's parameters using the defined optimizer. 
+# The training loop iterates over the specified number of epochs and batches.
+  # For each batch, the script computes the model's output, calculates the loss,
+  # performs backpropagation, and optimizes the model's parameters using the defined optimizer.
   # During training, statistics like training throughput and loss are computed and printed.
 
-# After training, the script saves a checkpoint of the model's state for evaluation. 
+# After training, the script saves a checkpoint of the model's state for evaluation.
   # It creates a directory for checkpoints and stores the model's state dictionary in a checkpoint file.
 
-# In summary, this script demonstrates how to utilize the computational capabilities of an 
-  # AWS Trainium 32x large instance to efficiently train a machine learning model on the MNIST dataset. 
+# In summary, this script demonstrates how to utilize the computational capabilities of an
+  # AWS Trainium 32x large instance to efficiently train a machine learning model on the MNIST dataset.
 
 # MNIST Dataset:
-# The MNIST dataset is a widely used benchmark dataset in the field of machine learning and computer vision. 
-#   It consists of a collection of handwritten digit images, each labeled with the corresponding digit (0 to 9). 
-#   The dataset contains 60,000 training images and 10,000 test images, making it a standard dataset for evaluating image classification algorithms. 
+# The MNIST dataset is a widely used benchmark dataset in the field of machine learning and computer vision.
+#   It consists of a collection of handwritten digit images, each labeled with the corresponding digit (0 to 9).
+#   The dataset contains 60,000 training images and 10,000 test images, making it a standard dataset for evaluating image classification algorithms.
 #   MNIST is often used to develop and test algorithms for digit recognition, image processing, and machine learning model training.
 
 # Multi-Layer Perceptron (MLP):
-# An MLP is a type of artificial neural network that consists of multiple layers of interconnected nodes, also known as neurons. 
-#   It is a feedforward neural network architecture, meaning the data flows in one direction from input to output through the hidden layers. 
+# An MLP is a type of artificial neural network that consists of multiple layers of interconnected nodes, also known as neurons.
+#   It is a feedforward neural network architecture, meaning the data flows in one direction from input to output through the hidden layers.
 #   Each neuron in one layer is connected to every neuron in the adjacent layers.
 
 ---
@@ -50,7 +50,7 @@ spec:
   schedulerName: volcano
   queue: ml-team-a-vq
   tasks:
-    - replicas: 1 
+    - replicas: 1
       template:
         metadata:
           labels:
