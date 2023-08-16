@@ -61,4 +61,4 @@ torchx run \
     --precompile True \
     --instance_type "trn1.32xlarge" \
     --node_selectors "provisioner=karpenter,instance-type=trn1-32xl,node.kubernetes.io/instance-type=trn1.32xlarge" \
-    # --tolerations "aws.amazon.com/neuron=true:NoSchedule"
+    # --tolerations "aws.amazon.com/neuron=true:NoSchedule" # feature is not ready yet. Workingon a PR with TorchX repo check this issue https://github.com/pytorch/torchx/issues/753

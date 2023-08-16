@@ -1,3 +1,4 @@
+#--------------------------------------------------------------------------------
 # This Python script is designed to train a neural network model using the MNIST dataset on an AWS Trainium 32x large instance,
   # utilizing its computational power. The script defined in Dickerfile imports essential libraries, including Torch, and defines constants for the number of epochs, warm-up steps, and batch size.
   # It then loads the MNIST training dataset, initializes the model architecture (MLP), the optimizer, and the loss function.
@@ -23,6 +24,16 @@
 # An MLP is a type of artificial neural network that consists of multiple layers of interconnected nodes, also known as neurons.
 #   It is a feedforward neural network architecture, meaning the data flows in one direction from input to output through the hidden layers.
 #   Each neuron in one layer is connected to every neuron in the adjacent layers.
+#--------------------------------------------------------------------------------
+
+#--------------------------------------------------------------------------------
+# Step 1: Execute the 1-build-image.sh shell script to create a new ECR repository, build the Docker image, and push it to ECR. Refer to the Dockerfile and the shell script for additional details.
+# Step 2: Prior to running the command, make sure to perform the following updates in the snippet below:
+#     Replace <ACCOUNT_ID> with your actual AWS account ID and <REGION> with the AWS region in which you intend to deploy the job.
+#     Alternatively, you can update the entire Image URI with the appropriate tag.
+# Step3: Apply(`kubectl apply -f trn1-mlp-karpenter.yaml`) the following YAML file.
+#   It might be necessary to apply it twice since queue creation could take some time. Wait for the queue to be created before proceeding to job submission.
+#--------------------------------------------------------------------------------
 
 ---
 apiVersion: v1
@@ -64,7 +75,7 @@ spec:
                 - '--nnodes=1'
                 - '--nproc_per_node=32'
                 - 'train_torchrun.py'
-              image: 464566837657.dkr.ecr.us-west-2.amazonaws.com/eks_mlperf_training:mlp
+              image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/eks_mlperf_training:mlp
               imagePullPolicy: IfNotPresent
               resources:
                 limits:
@@ -79,7 +90,7 @@ spec:
               value: "true"
               effect: "NoSchedule"
 
-# Use the below script withuut Volcano scheduler and Karpenter provisioner
+# Use the below script without Volcano scheduler and Karpenter provisioner
 # ---
 # apiVersion: v1
 # kind: Pod
@@ -87,15 +98,15 @@ spec:
 #   name: trn1-mlp
 # spec:
 #   restartPolicy: Never
-#   # schedulerName: default-scheduler
-    # nodeSelector:
-    #   # provisioner: cluster-autoscaler # To be sued with Managed nodegroups with Cluster Autoscaler
-    #   provisioner: karpenter
-    #   instance-type: trn1-32xl
+#   schedulerName: default-scheduler
+#   nodeSelector:
+#     # provisioner: cluster-autoscaler # To be used with Managed nodegroups with Cluster Autoscaler
+#     provisioner: karpenter
+#     instance-type: trn1-32xl
 #   tolerations:
-      # - key: "aws.amazon.com/neuron"
-      #   value: "true"
-      #   effect: "NoSchedule"
+#     - key: "aws.amazon.com/neuron"
+#       value: "true"
+#       effect: "NoSchedule"
 #   containers:
 #     - name: trn1-mlp
 #       command: ['torchrun']

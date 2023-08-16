@@ -388,7 +388,6 @@ data "cloudinit_config" "trn1_lt" {
 
     EOT
   }
-
 }
 
 #---------------------------------------------------------------
@@ -412,7 +411,6 @@ resource "aws_launch_template" "trn1_lt" {
   name        = local.karpenter_trn1_32xl_lt_name
   description = "Karpenter Trn1.32xlarge Launch Template"
 
-  # vpc_security_group_ids = [module.eks.node_security_group_id]
   user_data = data.cloudinit_config.trn1_lt.rendered
 
   ebs_optimized = true
