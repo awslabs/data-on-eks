@@ -34,6 +34,42 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
+#---------------------------------------------------------------
+# Data on EKS Kubernetes Addons
+#---------------------------------------------------------------
+module "eks_data_addons" {
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # CloudNative PG Add-on
+  #---------------------------------------------------------------
+  enable_cnpg_operator = true
+  cnpg_operator_helm_config = {
+    namespace   = "cnpg-system"
+    description = "CloudNativePG Operator Helm chart deployment configuration"
+    set = [
+      {
+        name  = "resources.limits.memory"
+        value = "200Mi"
+      },
+      {
+        name  = "resources.limits.cpu"
+        value = "100m"
+      },
+      {
+        name  = "resources.requests.cpu"
+        value = "100m"
+      },
+      {
+        name  = "resources.memory.memory"
+        value = "100Mi"
+      }
+    ]
+  }
+}
 resource "kubectl_manifest" "cnpg_prometheus_rule" {
   yaml_body = file("${path.module}/monitoring/cnpg-prometheusrule.yaml")
 
@@ -48,35 +84,4 @@ resource "kubectl_manifest" "cnpg_grafana_cm" {
   depends_on = [
     module.eks_blueprints_addons.kube_prometheus_stack
   ]
-}
-
-resource "helm_release" "cloudnative_pg" {
-  name             = local.name
-  chart            = "cloudnative-pg"
-  repository       = "https://cloudnative-pg.github.io/charts"
-  version          = "0.17.0"
-  namespace        = "cnpg-system"
-  create_namespace = true
-  description      = "CloudNativePG Operator Helm chart deployment configuration"
-
-  set {
-    name  = "resources.limits.cpu"
-    value = "100m"
-  }
-
-  set {
-    name  = "resources.limits.memory"
-    value = "200Mi"
-  }
-
-  set {
-    name  = "resources.requests.cpu"
-    value = "100m"
-  }
-
-  set {
-    name  = "resources.memory.memory"
-    value = "100Mi"
-  }
-
 }
