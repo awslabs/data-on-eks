@@ -85,25 +85,24 @@ def generateAppDef(script_args: str, nnodes: int, nproc_per_node: int,
         env_mapping["XLA_DOWNCAST_BF16"] = "1"
 
     #----------------------------------------------------------------------
-    # Uncommented section that checks the instance type and determines the number of EFAs
-    # Currently not in use due to compatibility issues with Karepenter
+    # Karpenter does not work with this option enabled "vpc.amazonaws.com/efa": num_efas
     #----------------------------------------------------------------------
-    # instance_type = instance_type.lower()
-    # if instance_type == "trn1n.32xlarge":
-    #     num_efas = 16
-    # elif instance_type == "trn1.32xlarge":
-    #     num_efas = 8
-    # else:
-    #     raise Exception(f"Instance type {instance_type} is not supported.\n"
-    #                     + "Please try trn1.32xlarge or trn1n.32xlarge.")
-
-    # resourcedef = specs.Resource(cpu=0, gpu=0, memMB=0,
-    #         capabilities={"node.kubernetes.io/instance-type": instance_type},
-    #         devices={"aws.amazon.com/neuron": 16, "vpc.amazonaws.com/efa": num_efas})
+    instance_type = instance_type.lower()
+    if instance_type == "trn1n.32xlarge":
+        num_efas = 16
+    elif instance_type == "trn1.32xlarge":
+        num_efas = 8
+    else:
+        raise Exception(f"Instance type {instance_type} is not supported.\n"
+                        + "Please try trn1.32xlarge or trn1n.32xlarge.")
 
     resourcedef = specs.Resource(cpu=0, gpu=0, memMB=0,
-            capabilities=node_selector_dict,
-            devices={"aws.amazon.com/neuron": 16})
+            capabilities={"node.kubernetes.io/instance-type": instance_type},
+            devices={"aws.amazon.com/neuron": 16, "vpc.amazonaws.com/efa": num_efas})
+
+    # resourcedef = specs.Resource(cpu=0, gpu=0, memMB=0,
+    #         capabilities=node_selector_dict,
+    #         devices={"aws.amazon.com/neuron": 16})
 
     print(f"resourcedef: {resourcedef}")
 
