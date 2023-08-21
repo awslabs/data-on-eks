@@ -116,7 +116,7 @@ module "eks_blueprints_kubernetes_addons" {
 }
 
 data "kubectl_path_documents" "spark_monitor" {
-  pattern = "${path.module}/helm-values/spark-podmonitor.yaml"
+  pattern = "${path.module}/helm-values/spark-monitor.yaml"
 }
 
 resource "kubectl_manifest" "spark_monitor" {
