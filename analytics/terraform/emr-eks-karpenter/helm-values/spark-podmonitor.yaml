@@ -2,68 +2,35 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   labels:
-    spark-monitoring: spark-exposed-metrics
-  name: spark-exposed-metrics
-  namespace: kube-prometheus-stack
+    prometheus: "true"
+  name: spark-driver-monitoring
 spec:
-  jobLabel: spark-monitoring
+  jobLabel: spark-driver-monitoring
   namespaceSelector:
     matchNames: [emr-data-team-a,emr-data-team-b]
   podMetricsEndpoints:
-  - honorLabels: true
-    metricRelabelings:
-      - sourceLabels: [__name__]
-        regex: 'metrics_executor_(.*)'
-        targetLabel: __name__
-        replacement: $1
-      - sourceLabels: [__name__]
-        regex: 'metrics_executor_(.*)'
-        targetLabel: resource_type
-        replacement: executor
-      - sourceLabels: [__name__]
-        regex: metrics_spark_(.+)_driver_(.*)
-        targetLabel: resource_type
-        replacement: driver
-      - sourceLabels: [__name__]
-        regex: metrics_spark_(.+)_driver_(.*)
-        targetLabel: __name__
-        replacement: $2
-    relabelings:
-    - action: replace
-      regex: (.*)
-      replacement: $1
-      sourceLabels:
-      - __meta_kubernetes_pod_node_name
-      targetLabel: instance
-    - action: replace
-      regex: (.*)
-      replacement: $1
-      sourceLabels:
-      - __meta_kubernetes_namespace
-      targetLabel: namespace
-    targetPort: 4040
-    path: /metrics/driver/prometheus/
+    - port: "web-ui"
+      path: /metrics/executors/prometheus/
   selector:
     matchLabels:
-      emr-containers.amazonaws.com/component: driver
       spark-role: driver
+      emr-containers.amazonaws.com/resource.type: job.run
 
-# ---
 
-# apiVersion: monitoring.coreos.com/v1
-# kind: PodMonitor
-# metadata:
-#   name: spark-executor-podmonitor
-#   namespace: kube-prometheus-stack
-#   labels:
-#     app: spark-executor-podmonitor
-# spec:
-#   jobLabel: spark-executor-podmonitor
-#   selector:
-#     matchLabels:
-#       emr-containers.amazonaws.com/component: executor
-#       spark-role: executor
-#   podMetricsEndpoints:
-#   - interval: 10s
-#     port: blockmanager
-#     scheme: http
+----
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: "true"
+  name: spark-service-monitoring
+spec:
+  namespaceSelector:
+    matchNames: [emr-data-team-a,emr-data-team-b]
+  endpoints:
+    - port: "web-ui"
+      path: /metrics/driver/prometheus/
+  selector:
+    matchLabels:
+      spark_role: driver
+      emr-containers.amazonaws.com/resource.type: job.run
