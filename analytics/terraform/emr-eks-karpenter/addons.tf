@@ -174,6 +174,16 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
+data "kubectl_path_documents" "spark_monitor" {
+  pattern = "${path.module}/helm-values/spark-monitor.yaml"
+}
+
+resource "kubectl_manifest" "spark_monitor" {
+  for_each  = toset(data.kubectl_path_documents.spark_monitor.documents)
+  yaml_body = each.value
+
+  depends_on = [module.eks_blueprints_kubernetes_addons]
+}
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------

@@ -74,6 +74,7 @@ aws emr-containers start-job-run \
             "spark.local.dir":"/data1",
 
             "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
+            "spark.metrics.appStatusSource.enabled":"true",
             "spark.ui.prometheus.enabled":"true",
             "spark.executor.processTreeMetrics.enabled":"true",
             "spark.kubernetes.driver.annotation.prometheus.io/scrape":"true",

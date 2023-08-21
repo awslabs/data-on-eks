@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    prometheus: "true"
+  name: spark-driver-monitoring
+spec:
+  jobLabel: spark-driver-monitoring
+  namespaceSelector:
+    matchNames: [emr-data-team-a,emr-data-team-b]
+  podMetricsEndpoints:
+    - port: "web-ui"
+      path: /metrics/executors/prometheus/
+  selector:
+    matchLabels:
+      spark-role: driver
+      emr-containers.amazonaws.com/resource.type: job.run
+
+
+----
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: "true"
+  name: spark-service-monitoring
+spec:
+  namespaceSelector:
+    matchNames: [emr-data-team-a,emr-data-team-b]
+  endpoints:
+    - port: "web-ui"
+      path: /metrics/driver/prometheus/
+  selector:
+    matchLabels:
+      spark_role: driver
+      emr-containers.amazonaws.com/resource.type: job.run

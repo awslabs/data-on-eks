@@ -5,6 +5,8 @@ prometheus:
     annotations:
       eks.amazonaws.com/role-arn: ${amp_irsa}
   prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
     remoteWrite:
       - url: ${amp_remotewrite_url}
         sigv4:
@@ -39,10 +41,6 @@ prometheus:
           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
             action: keep
             regex: true
-          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
-            action: replace
-            target_label: __scheme__
-            regex: (https?)
           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
             action: replace
             target_label: __metrics_path__
@@ -59,10 +57,7 @@ prometheus:
             target_label: kubernetes_namespace
           - source_labels: [__meta_kubernetes_service_name]
             action: replace
-            target_label: kubernetes_name
-          - source_labels: [__meta_kubernetes_service_name]
-            action: drop
-            regex: 'node-exporter'
+            target_label: service
       - job_name: 'kubernetes-pods'
         kubernetes_sd_configs:
           - role: pod
@@ -86,33 +81,18 @@ prometheus:
             target_label: kubernetes_namespace
           - source_labels: [__meta_kubernetes_pod_name]
             action: replace
-            target_label: kubernetes_pod_name
-      - job_name: kubecost
-        honor_labels: true
-        scrape_interval: 1m
-        scrape_timeout: 10s
-        metrics_path: /metrics
-        scheme: http
-        dns_sd_configs:
-          - names:
-              - kubecost-cost-analyzer.kubecost.svc
-            type: 'A'
-            port: 9003
-      - job_name: yunikorn
-        honor_labels: true
-        scrape_interval: 1m
-        scrape_timeout: 10s
-        metrics_path: /ws/v1//metrics
-        scheme: http
-        dns_sd_configs:
-          - names:
-              - yunikorn-service.yunikorn.svc
-            type: 'A'
-            port: 9080
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_ip]
+            action: replace
+            target_label: pod_ip
+          - source_labels: [__meta_kubernetes_pod_host_ip]
+            action: replace
+            target_label: instance  
 alertmanager:
   enabled: false
 
 grafana:
+  enabled: true
   additionalDataSources:
     - name: amazon-managed-prometheus
       type: prometheus
@@ -122,8 +102,8 @@ grafana:
       jsonData:
         sigV4Auth: true
         sigV4Region: ${region}
-  enabled: true
-  defaultDashboardsEnabled: true
+        sigV4AuthType: "default"
+  # defaultDashboardsEnabled: true
   # Adding Amazon Managed Prometheus datasource to Grafana config
   serviceAccount:
     create: false
