@@ -116,7 +116,7 @@ module "eks_blueprints_kubernetes_addons" {
 }
 
 data "kubectl_path_documents" "spark_monitor" {
-  pattern = "${path.module}/helm-values/spark-monitor.yaml"
+  pattern = "${path.module}/emr-grafana-dashboard/spark-monitor.yaml"
 }
 
 resource "kubectl_manifest" "spark_monitor" {

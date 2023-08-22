@@ -103,7 +103,7 @@ grafana:
         sigV4Auth: true
         sigV4Region: ${region}
         sigV4AuthType: "default"
-  # defaultDashboardsEnabled: true
+  defaultDashboardsEnabled: true
   # Adding Amazon Managed Prometheus datasource to Grafana config
   serviceAccount:
     create: false
