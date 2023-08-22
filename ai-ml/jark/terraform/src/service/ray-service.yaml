@@ -14,8 +14,8 @@ spec:
   deploymentUnhealthySecondThreshold: 600
   serveConfig:
     importPath: dogbooth:entrypoint
-    #runtimeEnv: |
-    #  pip: ["git+https://github.com/huggingface/transformers", "diffusers"]
+    runtimeEnv: |
+      env_vars: {"MODEL_ID": "askulkarni2/dogbooth"}
   rayClusterConfig:
     rayVersion: '2.6.0'
     headGroupSpec:
@@ -25,7 +25,7 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: 829527579886.dkr.ecr.us-west-2.amazonaws.com/gen-ai-demo/dogbooth:0.0.1-gpu
+              image: public.ecr.aws/h3o5n2r0/dogbooth:0.0.1-gpu
               resources:
                 limits:
                   cpu: 2
@@ -54,7 +54,7 @@ spec:
           spec:
             containers:
               - name: ray-worker
-                image: 829527579886.dkr.ecr.us-west-2.amazonaws.com/gen-ai-demo/dogbooth:0.0.1-gpu
+                image: public.ecr.aws/h3o5n2r0/dogbooth:0.0.1-gpu
                 lifecycle:
                   preStop:
                     exec:

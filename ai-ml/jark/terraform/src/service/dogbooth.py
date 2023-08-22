@@ -2,6 +2,7 @@ from io import BytesIO
 from fastapi import FastAPI
 from fastapi.responses import Response
 import torch
+import os
 from ray import serve
 
 
@@ -37,7 +38,7 @@ class StableDiffusionV2:
     def __init__(self):
         from diffusers import EulerDiscreteScheduler, StableDiffusionPipeline
 
-        model_id = "askulkarni2/dogbooth"
+        model_id = os.getenv('MODEL_ID')
 
         scheduler = EulerDiscreteScheduler.from_pretrained(
             model_id, subfolder="scheduler"
