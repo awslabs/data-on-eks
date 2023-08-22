@@ -88,6 +88,28 @@ prometheus:
           - source_labels: [__meta_kubernetes_pod_host_ip]
             action: replace
             target_label: instance  
+      - job_name: kubecost
+        honor_labels: true
+        scrape_interval: 1m
+        scrape_timeout: 10s
+        metrics_path: /metrics
+        scheme: http
+        dns_sd_configs:
+          - names:
+              - kubecost-cost-analyzer.kubecost.svc
+            type: 'A'
+            port: 9003
+      - job_name: yunikorn
+        honor_labels: true
+        scrape_interval: 1m
+        scrape_timeout: 10s
+        metrics_path: /ws/v1//metrics
+        scheme: http
+        dns_sd_configs:
+          - names:
+              - yunikorn-service.yunikorn.svc
+            type: 'A'
+            port: 9080        
 alertmanager:
   enabled: false
 
@@ -103,7 +125,7 @@ grafana:
         sigV4Auth: true
         sigV4Region: ${region}
         sigV4AuthType: "default"
-  # defaultDashboardsEnabled: true
+  defaultDashboardsEnabled: true
   # Adding Amazon Managed Prometheus datasource to Grafana config
   serviceAccount:
     create: false

@@ -175,14 +175,14 @@ module "eks_blueprints_addons" {
 }
 
 data "kubectl_path_documents" "spark_monitor" {
-  pattern = "${path.module}/helm-values/spark-monitor.yaml"
+  pattern = "${path.module}/emr-grafana-dashboard/spark-monitor.yaml"
 }
 
 resource "kubectl_manifest" "spark_monitor" {
   for_each  = toset(data.kubectl_path_documents.spark_monitor.documents)
   yaml_body = each.value
 
-  depends_on = [module.eks_blueprints_kubernetes_addons]
+  depends_on = [module.eks_blueprints_addons]
 }
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
