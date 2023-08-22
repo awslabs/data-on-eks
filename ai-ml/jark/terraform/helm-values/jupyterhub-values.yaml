@@ -20,7 +20,7 @@ proxy:
       service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
 singleuser:
   image:
-    name: ${repo}
+    name: public.ecr.aws/h3o5n2r0/gpu-jupyter
     tag: v1.5_cuda-11.6_ubuntu-20.04_python-only
     pullPolicy: Always
   cmd: null
@@ -42,17 +42,12 @@ singleuser:
       - name: shm-volume
         emptyDir:
           medium: Memory
-      #- name: hf-token
-      #  secret:
-      #    secretName: hf-token
       - name: notebook
         configMap:
           name: notebook
     extraVolumeMounts:
       - name: shm-volume
         mountPath: /dev/shm
-      #- name: hf-token
-      #  mountPath: /home/jovyan/.cache/huggingface/
       - name: notebook
         mountPath: /home/jovyan/dogbooth
   extraTolerations:

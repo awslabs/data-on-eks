@@ -127,12 +127,7 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    values = [templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
-      repo = format("%s.dkr.ecr.%s.amazonaws.com/gen-ai-demo/gpu-jupyter",
-        data.aws_caller_identity.current.account_id,
-        local.region
-      )
-    })]
+    values = [file("${path.module}/helm-values/jupyterhub-values.yaml")]
   }
 
   #---------------------------------------------------------------
