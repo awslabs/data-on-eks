@@ -127,7 +127,9 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    values = [file("${path.module}/helm-values/jupyterhub-values.yaml")]
+    namespace        = kubernetes_namespace_v1.jupyterhub.id
+    create_namespace = false
+    values           = [file("${path.module}/helm-values/jupyterhub-values.yaml")]
   }
 
   #---------------------------------------------------------------
@@ -145,10 +147,18 @@ module "data_addons" {
 #---------------------------------------------------------------
 # Additional Resources
 #---------------------------------------------------------------
+
+resource "kubernetes_namespace_v1" "jupyterhub" {
+  metadata {
+    name = "jupyterhub"
+  }
+}
+
+
 resource "kubernetes_secret_v1" "huggingface_token" {
   metadata {
     name      = "hf-token"
-    namespace = "jupyterhub"
+    namespace = kubernetes_namespace_v1.jupyterhub.id
   }
 
   data = {
@@ -159,7 +169,7 @@ resource "kubernetes_secret_v1" "huggingface_token" {
 resource "kubernetes_config_map_v1" "notebook" {
   metadata {
     name      = "notebook"
-    namespace = "jupyterhub"
+    namespace = kubernetes_namespace_v1.jupyterhub.id
   }
 
   data = {
