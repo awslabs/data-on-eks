@@ -87,7 +87,7 @@ prometheus:
             target_label: pod_ip
           - source_labels: [__meta_kubernetes_pod_host_ip]
             action: replace
-            target_label: instance  
+            target_label: instance
       - job_name: kubecost
         honor_labels: true
         scrape_interval: 1m
@@ -109,7 +109,7 @@ prometheus:
           - names:
               - yunikorn-service.yunikorn.svc
             type: 'A'
-            port: 9080        
+            port: 9080
 alertmanager:
   enabled: false
 
