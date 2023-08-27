@@ -24,7 +24,7 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
-  enable_kube_prometheus_stack = true
+
   helm_releases = {
     kube_prometheus_stack = {
       namespace        = "monitoring"
@@ -54,7 +54,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # CloudNative PG Add-on
   #---------------------------------------------------------------
-  enable_cnpg_operator = false
+  enable_cnpg_operator = true
   cnpg_operator_helm_config = {
     namespace   = "cnpg-system"
     description = "CloudNativePG Operator Helm chart deployment configuration"
@@ -78,18 +78,18 @@ module "eks_data_addons" {
     ]
   }
 }
-# resource "kubectl_manifest" "cnpg_prometheus_rule" {
-#   yaml_body = file("${path.module}/monitoring/cnpg-prometheusrule.yaml")
+resource "kubectl_manifest" "cnpg_prometheus_rule" {
+  yaml_body = file("${path.module}/monitoring/cnpg-prometheusrule.yaml")
 
-#   depends_on = [
-#     module.eks_blueprints_addons.kube_prometheus_stack
-#   ]
-# }
+  depends_on = [
+    module.eks_blueprints_addons.kube_prometheus_stack
+  ]
+}
 
-# resource "kubectl_manifest" "cnpg_grafana_cm" {
-#   yaml_body = file("${path.module}/monitoring/grafana-configmap.yaml")
+resource "kubectl_manifest" "cnpg_grafana_cm" {
+  yaml_body = file("${path.module}/monitoring/grafana-configmap.yaml")
 
-#   depends_on = [
-#     module.eks_blueprints_addons.kube_prometheus_stack
-#   ]
-# }
+  depends_on = [
+    module.eks_blueprints_addons.kube_prometheus_stack
+  ]
+}
