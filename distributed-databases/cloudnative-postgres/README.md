@@ -18,7 +18,6 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
-| <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | >= 1.14 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.4.3 |
 
 ## Modules
@@ -26,32 +25,31 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_barman_backup_irsa"></a> [barman\_backup\_irsa](#module\_barman\_backup\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | ed27abc//modules/irsa |
-| <a name="module_barman_s3_bucket"></a> [barman\_s3\_bucket](#module\_barman\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
+| <a name="module_barman_s3_bucket"></a> [barman\_s3\_bucket](#module\_barman\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.8 |
 | <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.14 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.15 |
-| <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | 08650f |
-| <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | aws-ia/eks-data-addons/aws | ~> 1.0 |
+| <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.0 |
+| <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | /Users/mselj/terraform-aws-eks-data-addons | n/a |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 5.0 |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [aws_iam_policy.cnpg_buckup_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
-| [kubectl_manifest.cnpg_grafana_cm](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
-| [kubectl_manifest.cnpg_prometheus_rule](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
+| [aws_iam_policy.irsa_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [random_string.random](https://registry.terraform.io/providers/hashicorp/random/3.4.3/docs/resources/string) | resource |
 | [aws_ami.eks](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
+| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_eks_cluster_auth.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/eks_cluster_auth) | data source |
-| [aws_iam_policy_document.cnpg_backup](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.irsa_backup_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.25"` | no |
-| <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"cnpg-on-eks"` | no |
+| <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"cnpg"` | no |
 | <a name="input_region"></a> [region](#input\_region) | Region | `string` | `"us-west-2"` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR | `string` | `"10.1.0.0/16"` | no |
 
