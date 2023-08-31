@@ -44,10 +44,9 @@ module "eks_blueprints_addons" {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  #source  = "aws-ia/eks-data-addons/aws"
-  source = "/Users/mselj/terraform-aws-eks-data-addons"
-
-  #version = "~> 1.0" # ensure to update this to the latest/desired version
+  #source = "aws-ia/eks-data-addons/aws"
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.2.0"
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
