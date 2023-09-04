@@ -1,3 +1,41 @@
+#---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_annotations" "gp2_default" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks]
+}
+
+resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+  volume_binding_mode    = "WaitForFirstConsumer"
+  parameters = {
+    fsType    = "xfs"
+    encrypted = true
+    type      = "gp3"
+  }
+
+  depends_on = [kubernetes_annotations.gp2_default]
+}
+
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.0" #ensure to update this to the latest/desired version
@@ -25,26 +63,31 @@ module "eks_blueprints_addons" {
     }
   }
 
-  helm_releases = {
-    kube_prometheus_stack = {
-      namespace        = "monitoring"
-      name             = "prometheus"
-      create_namespace = true
-      chart            = "kube-prometheus-stack"
-      repository       = "https://prometheus-community.github.io/helm-charts"
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    namespace     = "monitoring"
+    name          = "prometheus"
+    chart_version = "48.1.1"
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+    }]
 
-      values = [
-        file("${path.module}/monitoring/kube-stack-config.yaml")
-      ]
-    }
+    values = [
+      templatefile("${path.module}/monitoring/kube-stack-config.yaml", {
+        storage_class_type = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id,
+      })
+    ]
   }
   tags = local.tags
 }
+
+
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  #source = "aws-ia/eks-data-addons/aws"
   source  = "aws-ia/eks-data-addons/aws"
   version = "~> 1.2.0"
 

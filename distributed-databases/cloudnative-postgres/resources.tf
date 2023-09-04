@@ -78,3 +78,28 @@ resource "aws_iam_policy" "irsa_policy" {
   name        = "${local.name}-barman-irsa"
   policy      = data.aws_iam_policy_document.irsa_backup_policy.json
 }
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+#---------------------------------------------------------------
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "${local.name}-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
+}
