@@ -27,7 +27,7 @@ spec:
       volumeMounts:
         - name: spark-local-dir-1
           mountPath: /dynamic # FSx Scratch 1 filesystem for executors scratch space
-      command: ["sh", "-c", "chmod 777 /dynamic", "chown -hR +999:+1000 /dynamic"]
+      command: ["sh", "-c", "chmod 744 /dynamic", "chown -hR +999:+1000 /dynamic"]
 
   tolerations:
     - key: "spark-compute-optimized"

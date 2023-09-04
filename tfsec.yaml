@@ -1,3 +1,4 @@
+---
 exclude:
   - aws-iam-no-policy-wildcards # Wildcards required in addon IAM policies
   - aws-vpc-no-excessive-port-access # VPC settings left up to user implementation for recommended practices
@@ -6,3 +7,18 @@ exclude:
   - aws-eks-no-public-cluster-access # Public access enabled for better example usability, users are recommended to disable if possible
   - aws-eks-encrypt-secrets # Module defaults to encrypting secrets with CMK, but this is not hardcoded and therefore a spurious error
   - aws-vpc-no-public-egress-sgr # Added in v1.22
+  - aws-eks-enable-control-plane-logging # Control plane logging is not required for these blueprints
+  - aws-eks-enable-control-plane-audit # Control plane audit is not required for these blueprints
+  - aws-eks-no-public-cluster-endpoint-access # Public access enabled for better example usability, users are recommended to disable if possible
+  - aws-eks-no-public-cluster-endpoint-access-to-cidr # Public access enabled for better example usability, users are recommended to disable if possible
+  - aws-ec2-no-excessive-port-access # VPC settings left up to user implementation for recommended practices
+  - aws-ec2-no-public-ingress-acl # VPC settings left up to user implementation for recommended practices
+  - aws-ec2-no-public-egress-sgr # VPC settings left up to user implementation for recommended practices
+  - aws-s3-enable-bucket-logging # S3 Bucket Logging is not required for these blueprints
+  - aws-s3-no-public-buckets # Default behavior for S3 buckets, this exclusion acknowledges the intentional behavior
+  - aws-s3-ignore-public-acls # Default behavior for S3 buckets, this exclusion acknowledges the intentional behavior
+  - aws-s3-block-public-policy # Default behavior for S3 buckets, this exclusion acknowledges the intentional behavior
+  - aws-s3-block-public-acls # Default behavior for S3 buckets, this exclusion acknowledges the intentional behavior
+  - aws-s3-enable-versioning # Versioning is not required for these blueprints
+  - aws-s3-specify-public-access-block # Default behavior for S3 buckets, this exclusion acknowledges the intentional behavior
+  - aws-ec2-no-public-ip-subnet # Public IPs are required for some examples
