@@ -4,13 +4,22 @@ data "aws_eks_cluster_auth" "this" {
 
 data "aws_availability_zones" "available" {}
 
-data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id = aws_secretsmanager_secret.grafana.id
+data "aws_partition" "current" {}
 
-  depends_on = [aws_secretsmanager_secret_version.grafana]
-}
+# data "aws_iam_policy_document" "fluent_bit" {
+#   statement {
+#     sid       = ""
+#     effect    = "Allow"
+#     resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.s3_bucket.s3_bucket_id}/*"]
 
-data "aws_acm_certificate" "issued" {
-  domain   = var.acm_certificate_domain
-  statuses = ["ISSUED"]
-}
+#     actions = [
+#       "s3:ListBucket",
+#       "s3:PutObject",
+#       "s3:PutObjectAcl",
+#       "s3:GetObject",
+#       "s3:GetObjectAcl",
+#       "s3:DeleteObject",
+#       "s3:DeleteObjectVersion"
+#     ]
+#   }
+# }

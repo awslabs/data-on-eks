@@ -1,72 +1,169 @@
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for VPC CNI
+#---------------------------------------------------------------
+module "vpc_cni_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.14"
+  role_name             = format("%s-%s", local.name, "vpc-cni")
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# EKS Blueprints Kubernetes Addons
+#---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints//modules/kubernetes-addons?ref=v4.25.0"
+  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
 
-  eks_cluster_id       = module.eks.cluster_name
-  eks_cluster_endpoint = module.eks.cluster_endpoint
-  eks_oidc_provider    = module.eks.oidc_provider
-  eks_cluster_version  = module.eks.cluster_version
-  eks_cluster_domain   = var.eks_cluster_domain
-
-  # Wait on the node group(s) before provisioning addons
-  data_plane_wait_arn = join(",", [for group in module.eks.eks_managed_node_groups : group.node_group_arn])
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider     = module.eks.oidc_provider
+  oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
   # Amazon EKS Managed Add-ons
   #---------------------------------------------------------------
-  enable_amazon_eks_vpc_cni            = true
-  enable_amazon_eks_coredns            = true
-  enable_amazon_eks_kube_proxy         = true
-  enable_amazon_eks_aws_ebs_csi_driver = true
-
-  #---------------------------------------------------------------
-  # Additional Add-ons
-  #---------------------------------------------------------------
-  enable_aws_load_balancer_controller = true
-
-  enable_external_dns = true
-  external_dns_helm_config = {
-    values = [templatefile("${path.module}/helm-values/external-dns-values.yaml", {
-      txtOwnerId   = local.name
-      domainFilter = var.eks_cluster_domain
-    })]
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      preserve                 = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
   }
+  #---------------------------------------
+  # Kubernetes Add-ons
+  #---------------------------------------
 
-  enable_cert_manager = true
+  #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = false
+  # metrics_server_helm_config = {
+  #   version = "3.8.4"
+  #   timeout = "300"
+  #   values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  # }
 
-  enable_metrics_server = true
-  metrics_server_helm_config = {
-    set = [
-      {
-        name  = "image.repository"
-        value = "registry.k8s.io/metrics-server/metrics-server"
-      }
-    ]
-  }
+  #---------------------------------------
+  # Cluster Autoscaler
+  #---------------------------------------
+  enable_cluster_autoscaler = false
+  # cluster_autoscaler_helm_config = {
+  #   version = "9.27.0"
+  #   timeout = "300"
+  #   values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
+  #     aws_region     = var.region,
+  #     eks_cluster_id = module.eks.cluster_name
+  #   })]
+  # }
 
-  enable_cluster_autoscaler = true
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_cloudwatch_metrics = false
+  # cloudwatch_metrics = {
+  #   version = "0.0.8"
+  #   timeout = "300"
+  #   values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
+  # }
 
-  enable_aws_for_fluentbit                 = true
-  aws_for_fluentbit_cw_log_group_retention = 30
-
-  enable_prometheus = true
-  prometheus_helm_config = {
-    values = [file("${path.module}/helm-values/prometheus-values.yaml")]
-  }
-
-  enable_aws_cloudwatch_metrics = true
-
-  enable_grafana = true
-  grafana_helm_config = {
-    set_sensitive = [
-      {
-        name  = "adminPassword"
-        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
-      }
-    ]
-  }
+  #---------------------------------------
+  # AWS for FluentBit - DaemonSet
+  #---------------------------------------
+  enable_aws_for_fluentbit = false
+  # aws_for_fluentbit_cw_log_group_name = "/${var.name}/fluentbit-logs" # Add-on creates this log group
+  # aws_for_fluentbit_irsa_policies     = [aws_iam_policy.fluentbit.arn]
+  # aws_for_fluentbit_helm_config = {
+  #   version = "0.1.22"
+  #   values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+  #     region               = var.region,
+  #     cloudwatch_log_group = "/${var.name}/fluentbit-logs"
+  #     s3_bucket_name       = module.s3_bucket.s3_bucket_id
+  #     cluster_name         = module.eks.cluster_name
+  #   })]
+  # }
+  #---------------------------------------
+  # AWS Load Balancer Controller
+  #---------------------------------------
+  enable_aws_load_balancer_controller = false
+  # aws_load_balancer_controller_helm_config = {
+  #   version = "1.4.7"
+  #   timeout = "300"
+  # }
 
   tags = local.tags
 }
+
+#---------------------------------------------------------------
+# IAM Policy for FluentBit Add-on
+#---------------------------------------------------------------
+# resource "aws_iam_policy" "fluentbit" {
+#   description = "IAM policy policy for FluentBit"
+#   name        = "${local.name}-fluentbit-additional"
+#   policy      = data.aws_iam_policy_document.fluent_bit.json
+# }
+
+# module "s3_bucket" {
+#   source  = "terraform-aws-modules/s3-bucket/aws"
+#   version = "~> 3.0"
+
+#   bucket_prefix = "${local.name}-pinot-logs-"
+#   acl           = "private"
+
+#   # For example only - please evaluate for your environment
+#   force_destroy = true
+
+#   attach_deny_insecure_transport_policy = true
+#   attach_require_latest_tls_policy      = true
+
+#   block_public_acls       = true
+#   block_public_policy     = true
+#   ignore_public_acls      = true
+#   restrict_public_buckets = true
+
+#   server_side_encryption_configuration = {
+#     rule = {
+#       apply_server_side_encryption_by_default = {
+#         sse_algorithm = "AES256"
+#       }
+#     }
+#   }
+
+#   tags = local.tags
+# }
 
 resource "kubernetes_storage_class_v1" "gp3" {
   metadata {
@@ -83,27 +180,6 @@ resource "kubernetes_storage_class_v1" "gp3" {
     type      = "gp3"
   }
   depends_on = [module.eks_blueprints_kubernetes_addons]
-}
-
-#---------------------------------------------------------------
-# Grafana Admin credentials resources
-# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
-#---------------------------------------------------------------
-resource "random_password" "grafana" {
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-#tfsec:ignore:aws-ssm-secret-use-customer-key
-resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "grafana-${random_string.random_suffix.result}"
-  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
-}
-
-resource "aws_secretsmanager_secret_version" "grafana" {
-  secret_id     = aws_secretsmanager_secret.grafana.id
-  secret_string = random_password.grafana.result
 }
 
 #---------------------------------------------------------------
@@ -125,19 +201,10 @@ resource "helm_release" "pinot" {
   name             = "pinot"
   repository       = "https://raw.githubusercontent.com/apache/pinot/master/kubernetes/helm"
   chart            = "pinot"
-  version          = "0.12.0"
-  namespace        = "pinot"
+  namespace        = "pinot-quickstart"
   create_namespace = true
 
-  values = [templatefile("${path.module}/helm-values/pinot-values.yaml", {
-    hostname            = join(".", [var.pinot_sub_domain, var.eks_cluster_domain])
-    ssl_cert_arn        = data.aws_acm_certificate.issued.arn
-    pinot_username       = var.pinot_username
-    pinot_password       = data.aws_secretsmanager_secret_version.pinot_login_password_version.secret_string
-    keystore_password   = data.aws_secretsmanager_secret_version.pinot_keystore_password_version.secret_string
-    truststore_password = data.aws_secretsmanager_secret_version.pinot_truststore_password_version.secret_string
-    sensitive_key       = data.aws_secretsmanager_secret_version.sensitive_key_version.secret_string
-  })]
+  # values = [templatefile("${path.module}/helm-values/pinot-values.yaml", {})]
 
   depends_on = [kubernetes_storage_class_v1.gp3]
 }
