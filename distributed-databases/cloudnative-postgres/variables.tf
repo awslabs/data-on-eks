@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "cnpg-on-eks"
+  default     = "cnpg"
   type        = string
 }
 
