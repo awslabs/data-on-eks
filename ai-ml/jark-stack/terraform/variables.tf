@@ -35,5 +35,6 @@ variable "secondary_cidr_blocks" {
 variable "huggingface_token" {
   description = "Hugging Face Secret Token"
   type        = string
+  default     = "DUMMY_TOKEN_REPLACE_ME"
   sensitive   = true
 }
