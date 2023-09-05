@@ -42,9 +42,7 @@ TorchX can seamlessly integrate with Airflow and Kubeflow Pipelines. In this blu
 
 ### Solution Architecture
 
-:::info
-COMING SOON
-:::
+![Alt text](img/trainium-on-eks-arch.png)
 
 
 <CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>

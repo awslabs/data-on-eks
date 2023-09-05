@@ -4,6 +4,7 @@ data "aws_eks_cluster_auth" "this" {
 
 # Use this data source to get the ARN of a certificate in AWS Certificate Manager (ACM)
 data "aws_acm_certificate" "issued" {
+  count    = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   domain   = var.acm_certificate_domain
   statuses = ["ISSUED"]
 }
@@ -129,206 +130,28 @@ module "eks_data_addons" {
   version = "~> 1.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # Enable GPU operator
+  #---------------------------------------------------------------
+  enable_nvidia_gpu_operator = var.jupyter_notebook_support == "gpu" ? true : false
+  nvidia_gpu_operator_helm_config = {
+    values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
+  }
   #---------------------------------------------------------------
   # JupyterHub Add-on
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    values = [templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
-      ssl_cert_arn  = data.aws_acm_certificate.issued.arn
-      jupyterdomain = "https://${var.jupyterhub_domain}/hub/oauth_callback"
-      authorize_url = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize"
-      token_url     = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token"
-      userdata_url  = "https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo"
-      client_id     = aws_cognito_user_pool_client.user_pool_client.id
-      client_secret = aws_cognito_user_pool_client.user_pool_client.client_secret
+    values = [templatefile("${path.module}/helm-values/jupyterhub-values-${var.jupyter_hub_auth_mechanism}-${var.jupyter_notebook_support}.yaml", {
+      ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
+      jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")
+      authorize_url               = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")
+      token_url                   = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token", "")
+      userdata_url                = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
+      client_id                   = try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
+      client_secret               = try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
+      jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
     })]
   }
-}
-
-
-resource "kubectl_manifest" "storage_class_gp2" {
-  force_new = true
-  yaml_body = <<YAML
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: gp2
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
-provisioner: kubernetes.io/aws-ebs
-volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Delete
-parameters:
-  type: gp2
-  fsType: ext4
-YAML
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-resource "kubectl_manifest" "storage_class_gp3" {
-  yaml_body = <<YAML
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: gp3
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "true"
-provisioner: ebs.csi.aws.com
-parameters:
-  type: gp3
-  csi.storage.k8s.io/fstype: ext4
-  encrypted: "true"
-YAML
-
-  depends_on = [module.eks_blueprints_addons]
-}
-#---------------------------------------------------------------
-# EFS Filesystem for private volumes per user
-# This will be repalced with Dynamic EFS provision using EFS CSI Driver
-#---------------------------------------------------------------
-resource "aws_efs_file_system" "efs" {
-  creation_token = "efs"
-  encrypted      = true
-
-  tags = local.tags
-}
-
-resource "aws_efs_mount_target" "efs_mt" {
-  count = length(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]))
-
-  file_system_id  = aws_efs_file_system.efs.id
-  subnet_id       = element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), count.index)
-  security_groups = [aws_security_group.efs.id]
-}
-
-resource "aws_security_group" "efs" {
-  name        = "${local.name}-efs"
-  description = "Allow inbound NFS traffic from private subnets of the VPC"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    description = "Allow NFS 2049/tcp"
-    cidr_blocks = module.vpc.vpc_secondary_cidr_blocks
-    from_port   = 2049
-    to_port     = 2049
-    protocol    = "tcp"
-  }
-
-  tags = local.tags
-}
-
-resource "kubectl_manifest" "pv" {
-  yaml_body = <<YAML
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: efs-persist
-  namespace: jupyterhub
-spec:
-  capacity:
-    storage: 123Gi
-  accessModes:
-    - ReadWriteMany
-  nfs:
-    server: ${aws_efs_file_system.efs.dns_name}
-    path: "/"
-YAML
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-resource "kubectl_manifest" "pvc" {
-  yaml_body = <<YAML
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: efs-persist
-  namespace: jupyterhub
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: ""
-  resources:
-    requests:
-      storage: 1Gi
-YAML
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-resource "kubectl_manifest" "pv_shared" {
-  yaml_body = <<YAML
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: efs-persist-shared
-  namespace: jupyterhub
-spec:
-  capacity:
-    storage: 123Gi
-  accessModes:
-    - ReadWriteMany
-  nfs:
-    server: ${aws_efs_file_system.efs.dns_name}
-    path: "/"
-YAML
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-resource "kubectl_manifest" "pvc_shared" {
-  yaml_body = <<YAML
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: efs-persist-shared
-  namespace: jupyterhub
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: ""
-  resources:
-    requests:
-      storage: 1Gi
-YAML
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-#---------------------------------------------------------------
-# Cognito pool, domain and client creation.
-# This can be used
-# Auth integration later.
-# ---------------------------------------------------------------
-resource "aws_cognito_user_pool" "pool" {
-  name = "jupyterhub-userpool"
-
-  username_attributes      = ["email"]
-  auto_verified_attributes = ["email"]
-
-  password_policy {
-    minimum_length = 6
-  }
-}
-
-resource "aws_cognito_user_pool_domain" "domain" {
-  domain       = local.cognito_custom_domain
-  user_pool_id = aws_cognito_user_pool.pool.id
-}
-
-resource "aws_cognito_user_pool_client" "user_pool_client" {
-  name                                 = "jupyter-client"
-  callback_urls                        = ["https://${var.jupyterhub_domain}/hub/oauth_callback"]
-  user_pool_id                         = aws_cognito_user_pool.pool.id
-  allowed_oauth_flows_user_pool_client = true
-  allowed_oauth_flows                  = ["code"]
-  allowed_oauth_scopes                 = ["openid", "email"]
-  generate_secret                      = true
-  supported_identity_providers = [
-    "COGNITO"
-  ]
-
-  depends_on = [aws_cognito_user_pool_domain.domain]
 }

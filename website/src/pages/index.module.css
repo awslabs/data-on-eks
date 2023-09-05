@@ -1,8 +1,4 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
+/* Update the heroBanner class */
 .heroBanner {
   padding: 4rem 0;
   text-align: center;
@@ -11,6 +7,18 @@
   height: 500px;
 }
 
+/* Add styles for logo image */
+.logoImage {
+  width: 60%;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Apply zoom effect on hovering the logo image */
+.logoImage:hover {
+  transform: scale(1.1); /* Increase size on hover */
+}
+
+/* Rest of your existing CSS remains unchanged */
 @media screen and (max-width: 996px) {
   .heroBanner {
     padding: 4rem;

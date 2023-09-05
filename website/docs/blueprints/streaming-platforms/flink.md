@@ -124,7 +124,7 @@ On top of the deployment types the Flink Kubernetes Operator also supports two m
 - Flink cluster communicates directly with Kubernetes and allows it to manage Kubernetes resources, e.g. dynamically allocate and de-allocate TaskManager pods.
 - Flink Native can be useful for advanced users who want to build their own cluster management system or integrate with existing management systems.
 - Flink Native allows for more flexibility in terms of job scheduling and execution.
-- For standard Operator use running your own Flink Jobs Native mode is recommended
+- For standard Operator use, running your own Flink Jobs in Native mode is recommended.
 
 ```yaml
 apiVersion: flink.apache.org/v1beta1
@@ -187,10 +187,10 @@ This example deploys an EKS Cluster running the Flink Operator into a new VPC.
 
 - Creates a new sample VPC, 2 Private Subnets and 2 Public Subnets
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
-- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with core managed node group, on-demand node group and Spot node group for Flink workloads.
-- Deploys Metrics server, Cluster Autoscaler, Apache YuniKorn, Karpenter, Grafana, AMP and Prometheus server.
+- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with core managed node group, on-demand node group and Spot node group for Flink workloads
+- Deploys Metrics server, Cluster Autoscaler, Apache YuniKorn, Karpenter, Grafana, AMP and Prometheus server
 - Deploys Cert Manager and Flink Operator add-ons. Flink Operator has dependency on Cert Manager
-- Creates a new Flink Data team resources that includes namespace, service account, IRSA, Role and Role binding.
+- Creates a new Flink Data team resources that includes namespace, service account, IRSA, Role and Role binding
 - Deploys three Karpenter provisioners for different compute types
 
 ### Prerequisites
@@ -203,13 +203,13 @@ Ensure that you have installed the following tools on your machine.
 
 ### Deploy
 
-Clone the repository
+Clone the repository.
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate into one of the example directories and run `install.sh` script
+Navigate into Flink's Terraform template directory and run `install.sh` script.
 
 ```bash
 cd data-on-eks/streaming/flink

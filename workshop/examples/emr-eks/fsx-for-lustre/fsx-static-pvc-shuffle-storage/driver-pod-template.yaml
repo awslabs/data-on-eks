@@ -25,7 +25,7 @@ spec:
       volumeMounts:
         - name: spark-local-dir-1
           mountPath: /static
-      command: ["sh", "-c", "chmod -R 777 /static", "chown -hR +999:+1000 /static/data"]
+      command: ["sh", "-c", "chmod -R 744 /static", "chown -hR +999:+1000 /static/data"]
 
   tolerations:
     - key: "spark-compute-optimized"
