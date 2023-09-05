@@ -50,6 +50,7 @@ elasticsearchSetupJob:
   enabled: true
   image:
     repository: linkedin/datahub-elasticsearch-setup
+    # tag: v0.8.44
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -110,6 +111,12 @@ datahubUpgrade:
     # - name: my-image-name
     #   image: my-image
     #   imagePullPolicy: Always
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-2"
+    helm.sh/hook-delete-policy: before-hook-creation
   cleanupJob:
     # Add extra sidecar containers to job pod
     extraSidecars: []
@@ -153,6 +160,12 @@ datahubSystemUpdate:
     # - name: my-image-name
     #   image: my-image
     #   imagePullPolicy: Always
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-4"
+    helm.sh/hook-delete-policy: before-hook-creation
 
 # prometheus-kafka-exporter:
 #   enabled: false
@@ -238,13 +251,10 @@ global:
       #   secretKey: postgres-password
 
   datahub:
+    version: v0.10.4
 
-    # force older version until the OpenSearch issue with latest version is resolved
-    version: v0.8.45
-
-    # disable systemUpdate due to bug in creating auth-secrets
     systemUpdate:
-      enabled: false
+      enabled: true
 
     gms:
       port: "8080"
@@ -267,14 +277,14 @@ global:
 
     managed_ingestion:
       enabled: true
-      defaultCliVersion: "0.10.3"
+      defaultCliVersion: "0.10.4"
 
     metadata_service_authentication:
       enabled: true
       systemClientId: "__datahub_system"
       systemClientSecret:
         secretRef: "datahub-auth-secrets"
-        secretKey: "token_service_signing_key"
+        secretKey: "system_client_secret"
       tokenService:
         signingKey:
           secretRef: "datahub-auth-secrets"
@@ -282,10 +292,14 @@ global:
         salt:
           secretRef: "datahub-auth-secrets"
           secretKey: "token_service_salt"
-      # Set to false if you'd like to provide your own auth secrets
+      # Set to false to use existing auth secrets
       provisionSecrets:
-        enabled: true
-        autoGenerate: true
+        enabled: false
+        autoGenerate: false
+        annotations:
+          # added to force secret generation before system update
+          helm.sh/hook: "pre-install,pre-upgrade"
+          helm.sh/hook-weight: "-6"
       # Only specify if autoGenerate set to false
       #  secretValues:
       #    secret: <secret value>
