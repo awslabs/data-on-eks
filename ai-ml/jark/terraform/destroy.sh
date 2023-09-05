@@ -1,6 +1,30 @@
 #!/bin/bash
 
-echo "Destroying ..."
+read -p "Enter the region: " region
+export AWS_DEFAULT_REGION=$region
+
+echo "Destroying RayService..."
+
+kubectl delete -f src/service/ray-service.yaml
+
+echo "Destroying Load Balancers..."
+
+for arn in $(aws resourcegroupstaggingapi get-resources \
+  --resource-type-filters elasticloadbalancing:loadbalancer \
+  --tag-filters "Key=elbv2.k8s.aws/cluster,Values=jark-stack" \
+  --query 'ResourceTagMappingList[].ResourceARN' \
+  --output text); do \
+    aws elbv2 delete-load-balancer --load-balancer-arn "$arn"; \
+  done
+
+echo "Destroying Target Groups..."
+for arn in $(aws resourcegroupstaggingapi get-resources \
+  --resource-type-filters elasticloadbalancing:targetgroup \
+  --tag-filters "Key=elbv2.k8s.aws/cluster,Values=jark-stack" \
+  --query 'ResourceTagMappingList[].ResourceARN' \
+  --output text); do \
+    aws elbv2 delete-target-group --target-group-arn "$arn"; \
+  done
 
 # List of Terraform modules to apply in sequence
 targets=(
