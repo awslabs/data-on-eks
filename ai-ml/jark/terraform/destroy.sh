@@ -3,7 +3,7 @@
 echo "Destroying ..."
 
 # List of Terraform modules to apply in sequence
-targets=(  
+targets=(
   "module.data_addons"
   "module.eks_blueprints_addons"
   "module.eks"
