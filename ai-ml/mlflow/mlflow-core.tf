@@ -117,7 +117,7 @@ module "mlflow_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket_prefix = "${local.name}-logs-"
+  bucket_prefix = "${local.name}-artifacts-"
 
   # For example only - please evaluate for your environment
   force_destroy = true
@@ -236,7 +236,7 @@ data "aws_iam_policy_document" "mlflow" {
   statement {
     sid       = ""
     effect    = "Allow"
-    resources = ["arn:${local.partition}:rds-db:${local.region}:${local.account_id}:dbuser:${module.db[0].db_instance_name}/${local.mlflow_name}"]
+    resources = ["arn:${local.partition}:rds-db:${local.region}:${local.account_id}:dbuser:${module.db[0].db_instance_endpoint}/${local.mlflow_name}"]
     
     actions = [
       "rds-db:connect",
