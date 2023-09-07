@@ -36,7 +36,7 @@ variable "secondary_cidr_blocks" {
 
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
-  type        = string
+  type        = bool
   default     = false
 }
 

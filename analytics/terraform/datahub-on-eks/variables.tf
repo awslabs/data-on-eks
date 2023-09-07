@@ -31,7 +31,7 @@ variable "vpc_cidr" {
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
   default     = false
-  type        = string
+  type        = bool
 }
 
 # Only two Subnets for with low IP range for internet access
