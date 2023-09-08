@@ -7,6 +7,25 @@ echo "Destroying RayService..."
 
 kubectl delete -f src/service/ray-service.yaml
 
+# List of Terraform modules to apply in sequence
+targets=(
+  "module.data_addons"
+  "module.eks_blueprints_addons"
+)
+
+# Destroy modules in sequence
+for target in "${targets[@]}"
+do
+  echo "Destroying module $target..."
+  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1 | tee /dev/tty)
+  if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
+    echo "SUCCESS: Terraform destroy of $target completed successfully"
+  else
+    echo "FAILED: Terraform destroy of $target failed"
+    exit 1
+  fi
+done
+
 echo "Destroying Load Balancers..."
 
 for arn in $(aws resourcegroupstaggingapi get-resources \
@@ -26,26 +45,12 @@ for arn in $(aws resourcegroupstaggingapi get-resources \
     aws elbv2 delete-target-group --target-group-arn "$arn"; \
   done
 
-# List of Terraform modules to apply in sequence
-targets=(
-  "module.data_addons"
-  "module.eks_blueprints_addons"
-  "module.eks"
-  "module.vpc"
-)
-
-# Destroy modules in sequence
-for target in "${targets[@]}"
-do
-  echo "Destroying module $target..."
-  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1 | tee /dev/tty)
-  if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
-    echo "SUCCESS: Terraform destroy of $target completed successfully"
-  else
-    echo "FAILED: Terraform destroy of $target failed"
-    exit 1
-  fi
-done
+echo "Destroying Security Groups..."
+for sg in $(aws ec2 describe-security-groups \
+  --filters "Name=tag:elbv2.k8s.aws/cluster,Values=jark-stack" \
+  --query 'SecurityGroups[].GroupId' --output text); do \
+    aws ec2 delete-security-group --group-id "$sg"; \
+  done
 
 ## Final destroy to catch any remaining resources
 echo "Destroying remaining resources..."

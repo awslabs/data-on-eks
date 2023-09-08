@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: streamlit
-          image: 829527579886.dkr.ecr.us-west-2.amazonaws.com/gen-ai-demo/dogbooth-app:0.0.1
+          image: public.ecr.aws/h3o5n2r0/gen-ai-demo/dogbooth-app:0.0.2
           imagePullPolicy: Always
           ports:
             - containerPort: 8501
