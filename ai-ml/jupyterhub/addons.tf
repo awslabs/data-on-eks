@@ -109,15 +109,61 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # CloudWatch metrics for EKS
+  # AWS Load Balancer Controller
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+  enable_aws_load_balancer_controller = true
+
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install Montoring Stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  #---------------------------------------
+  # Kube Prometheus Stack
+  #---------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [
+      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-stack.yaml", {
+        region              = local.region
+        amp_sa              = local.amp_ingest_service_account
+        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
+        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
+    ]
+    chart_version = "48.1.1"
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
   }
 
-  enable_aws_load_balancer_controller = true
+  #---------------------------------------
+  # AWS for FluentBit
+  #---------------------------------------
+  #---------------------------------------
+  # AWS for FluentBit - DaemonSet
+  #---------------------------------------
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  aws_for_fluentbit = {
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit.yaml", {
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+      cluster_name         = module.eks.cluster_name
+    })]
+  }
 
   tags = local.tags
 }
@@ -138,6 +184,7 @@ module "eks_data_addons" {
   nvidia_gpu_operator_helm_config = {
     values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
   }
+
   #---------------------------------------------------------------
   # JupyterHub Add-on
   #---------------------------------------------------------------
@@ -154,4 +201,39 @@ module "eks_data_addons" {
       jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
     })]
   }
+
+  #---------------------------------------------------------------
+  # Kubecost Add-on
+  #---------------------------------------------------------------
+  enable_kubecost = true
+  kubecost_helm_config = {
+    values              = [templatefile("${path.module}/helm-values/kubecost.yaml", {})]
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+#---------------------------------------------------------------
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "${local.name}-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
 }

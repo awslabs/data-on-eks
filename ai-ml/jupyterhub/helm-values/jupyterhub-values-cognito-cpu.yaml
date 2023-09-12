@@ -62,3 +62,4 @@ hub:
       userdata_method: "POST"
     JupyterHub:
       authenticator_class: generic-oauth
+  authenticatePrometheus: false

@@ -58,10 +58,16 @@ variable "cognito_custom_domain" {
 variable "acm_certificate_domain" {
   type        = string
   description = "Enter domain name with wildcard and ensure ACM certificate is created for this domain name, e.g. *.example.com"
-  default     = ""
+  default     = "*.kuapoorv.people.aws.dev"
 }
 variable "jupyterhub_domain" {
   type        = string
   description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito"
-  default     = ""
+  default     = "jupyterhub"
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = true
 }

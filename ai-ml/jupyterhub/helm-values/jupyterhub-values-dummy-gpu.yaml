@@ -83,3 +83,6 @@ prePuller:
 
 global:
   safeToShowValues: false
+
+hub:
+  authenticatePrometheus: false

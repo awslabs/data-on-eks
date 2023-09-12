@@ -45,3 +45,6 @@ singleuser:
   uid: 0
   fsGid: 0
   cmd: "start-singleuser.sh"
+
+hub:
+  authenticatePrometheus: false
