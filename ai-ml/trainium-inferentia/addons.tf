@@ -239,11 +239,13 @@ data "http" "torchx_etcd_yaml" {
   url = "https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml"
 }
 
-resource "kubectl_manifest" "torchx_etcd" {
-  yaml_body = <<-YAML
-    ${data.http.torchx_etcd_yaml.response_body}
-  YAML
+data "kubectl_file_documents" "torchx_etcd_yaml" {
+  content = data.http.torchx_etcd_yaml.response_body
+}
 
+resource "kubectl_manifest" "torchx_etcd" {
+  for_each  = data.kubectl_file_documents.torchx_etcd_yaml.manifests
+  yaml_body = each.value
   depends_on = [module.eks.eks_cluster_id]
 }
 
@@ -251,15 +253,19 @@ resource "kubectl_manifest" "torchx_etcd" {
 # Volcano Schduler for TorchX
 # NOTE: This will be replaced with Helm Chart deployment with eks_data_addons
 #---------------------------------------------------------------
+
 data "http" "volcano_development_yaml" {
   url = "https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml"
 }
 
-resource "kubectl_manifest" "volcano" {
-  yaml_body = <<-YAML
-    ${data.http.volcano_development_yaml.response_body}
-  YAML
+data "kubectl_file_documents" "volcano_development_yaml" {
+  content = data.http.volcano_development_yaml.response_body
+}
 
+resource "kubectl_manifest" "volcano" {
+  for_each  = data.kubectl_file_documents.volcano_development_yaml.manifests
+  yaml_body = each.value
+  server_side_apply = true
   depends_on = [module.eks.eks_cluster_id]
 }
 
