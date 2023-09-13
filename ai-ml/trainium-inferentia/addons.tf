@@ -230,7 +230,12 @@ module "eks_data_addons" {
 
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
+  #---------------------------------------
+  # Volcano Scheduler for TorchX
+  #---------------------------------------
+  enable_volcano = true
 }
+
 
 #---------------------------------------------------------------
 # ETCD for TorchX
@@ -244,28 +249,8 @@ data "kubectl_file_documents" "torchx_etcd_yaml" {
 }
 
 resource "kubectl_manifest" "torchx_etcd" {
-  for_each  = data.kubectl_file_documents.torchx_etcd_yaml.manifests
-  yaml_body = each.value
-  depends_on = [module.eks.eks_cluster_id]
-}
-
-#---------------------------------------------------------------
-# Volcano Schduler for TorchX
-# NOTE: This will be replaced with Helm Chart deployment with eks_data_addons
-#---------------------------------------------------------------
-
-data "http" "volcano_development_yaml" {
-  url = "https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml"
-}
-
-data "kubectl_file_documents" "volcano_development_yaml" {
-  content = data.http.volcano_development_yaml.response_body
-}
-
-resource "kubectl_manifest" "volcano" {
-  for_each  = data.kubectl_file_documents.volcano_development_yaml.manifests
-  yaml_body = each.value
-  server_side_apply = true
+  for_each   = data.kubectl_file_documents.torchx_etcd_yaml.manifests
+  yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }
 
@@ -285,7 +270,7 @@ spec:
     cpu: 2
 YAML
 
-  depends_on = [resource.kubectl_manifest.volcano]
+  depends_on = [module.eks_data_addons]
 }
 
 #---------------------------------------------------------------
