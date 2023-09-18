@@ -1,3 +1,9 @@
+hub:
+  extraConfig:
+    jupyterhub_config.py: |-
+      c.KubeSpawner.start_timeout = 1200
+      c.KubeSpawner.http_timeout = 120
+
 proxy:
   https:
     enabled: false
@@ -12,26 +18,170 @@ proxy:
       service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: 'true'
       service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
 singleuser:
-  profileList: # Enable GPU accelerator for every user
-    - display_name: "GPU Server"
-      description: "Spawns a notebook server with access to a GPU"
+  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU inlcuding the image pull
+  profileList:
+    - display_name: Data Engineering (CPU)
+      description: "PySpark Notebooks with 2vCPU and 8GB | Karpenter AutoScaling"
+      profile_options:
+        image:
+          display_name: "Image"
+          choices:
+            pyspark350:
+              display_name: "PySpark 3.5.0 + Python 3.11"
+              default: true
+              kubespawner_override:
+                image: jupyter/pyspark-notebook:spark-3.5.0
+            pyspark341:
+              display_name: "PySpark 3.4.1 + Python 3.11"
+              kubespawner_override:
+                image: jupyter/pyspark-notebook:spark-3.4.1
       kubespawner_override:
+        node_selector:
+          karpenter.sh/provisioner-name: default
+        cpu_guarantee: 2
+        mem_guarantee: 8G
+        cpu_limit: 4
+        mem_limit: 8G
+      cmd: null
+    - display_name: Trainium (trn1)
+      description: "Trainium | Karpenter AutoScaling"
+      profile_options:
+        image:
+          display_name: "Image"
+          choices:
+            pytorch1131:
+              display_name: "PyTorch 1.13.1 + torch-neuronx"
+              default: true
+              kubespawner_override:
+                image: 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training-neuronx:1.13.1-neuronx-py310-sdk2.13.2-ubuntu20.04
+            tflow2101:
+              display_name: "Tensorflow 2.10.1 + tensorflow-neuronx"
+              kubespawner_override:
+                image: 763104351884.dkr.ecr.us-west-2.amazonaws.com/tensorflow-inference-neuronx:2.10.1-neuronx-py310-sdk2.13.2-ubuntu20.04
+      kubespawner_override:
+        node_selector:
+          karpenter.sh/provisioner-name: trainium
+        tolerations:
+          - key: aws.amazon.com/neuroncore
+            operator: Exists
+            effect: NoSchedule
+          - key: aws.amazon.com/neuron
+            operator: Exists
+            effect: NoSchedule
+          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+        cpu_guarantee: 2
+        mem_guarantee: 10G
+        cpu_limit: 2
+        mem_limit: 10G
+        extra_resource_limits:
+          aws.amazon.com/neuron: "1"
+        cmd: "start-singleuser.sh"
+    - display_name: Inferentia (inf2)
+      description: "Inferentia | Karpenter AutoScaling"
+      profile_options:
+        image:
+          display_name: "Image"
+          choices:
+            pytorch1131:
+              display_name: "PyTorch 1.13.1 + torch-neuronx"
+              default: true
+              kubespawner_override:
+                image: 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-inference-neuronx:1.13.1-neuronx-py310-sdk2.13.2-ubuntu20.04
+            tflow2101:
+              display_name: "Tensorflow 2.10.1 + tensorflow-neuronx"
+              kubespawner_override:
+                image: 763104351884.dkr.ecr.us-west-2.amazonaws.com/tensorflow-inference-neuronx:2.10.1-neuronx-py310-sdk2.13.2-ubuntu20.04
+      kubeSpawner_override:
+        node_selector:
+          karpenter.sh/provisioner-name: inferentia
+        tolerations:
+          - key: aws.amazon.com/neuron
+            operator: Exists
+            effect: NoSchedule
+          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+        cpu_guarantee: 2
+        mem_guarantee: 10G
+        cpu_limit: 2
+        mem_limit: 10G
+        extra_resource_limits:
+          aws.amazon.com/neuron: "1"
+        cmd: "start-singleuser.sh"
+    - display_name: Data Science (GPU + Time-Slicing - G5)
+      default: true
+      description: "GPU Time-Slicing with Single GPU VMs (G5 2x, 4x, 8x, 16x) | nvidia.com/gpu: 1 | Karpenter AutoScaling"
+      kubespawner_override:
+        # namespace: data-team-a
+        image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+        node_selector:
+          provisioner: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
+        tolerations:
+          - key: "nvidia.com/gpu"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
         extra_resource_limits:
           nvidia.com/gpu: "1" # TIME-SLICING: Use a slice of GPU using time-slicing mode
-          # nvidia.com/mig-1g.5gb: 1 # NVIDIA MIG: Use this config with MIG instead
-  image:
-    name: cschranz/gpu-jupyter # Base image with GPU drivers available
-    tag: v1.5_cuda-11.6_ubuntu-20.04_python-only
-  extraTolerations:
-    - key: "nvidia.com/gpu"
-      operator: "Exists"
-      effect: "NoSchedule"
-  cpu: # Amount of CPU and memory assgined to each notebook pod
-    limit: 2
-    guarantee: 2
-  memory:
-    limit: 4G
-    guarantee: 4G
+        cpu_limit: 2
+        mem_limit: 4G
+        cpu_guarantee: 2
+        mem_guarantee: 4G
+        cmd: "start-singleuser.sh"
+    # Karpenter doesn't support for requesting resources with with MIG slices e.g., nvidia.com/mig-1g.5gb: 1,  or nvidia.com/mig-2g.20gb: 1 etc.
+    # Hence, this profile is relies on Managed node groups with GPU MIG enabled
+    - display_name: Data Science (GPU + MIG on P4d.24xlarge)
+      description: "GPU MIG with P4d instances | nvidia.com/mig-1g.5gb: 1 | Cluster Autoscaler"
+      kubespawner_override:
+        image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+        node_selector:
+          node.kubernetes.io/instance-type: p4d.24xlarge
+        tolerations:
+          - key: "nvidia.com/gpu"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+        extra_resource_guarantees:
+          nvidia.com/mig-1g.5gb: 1 # or nvidia.com/mig-2g.10gb OR nvidia.com/mig-3g.20gb
+        # extra_resource_limits:
+        #   nvidia.com/gpu: "8" # TIME-SLICING: Use a slice of GPU using time-slicing mode
+        cpu_guarantee: 2
+        mem_guarantee: 10G
+        cpu_limit: 2
+        mem_limit: 10G
+        cmd: "start-singleuser.sh"
+    - display_name: Data Science (GPU - P4d.24xlarge)
+      description: "GPU with P4d instances | Karpenter Autoscaler"
+      kubespawner_override:
+        image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+        node_selector:
+          node.kubernetes.io/instance-type: p4d.24xlarge
+          karpenter.sh/provisioner-name: gpu-p4d
+        tolerations:
+          - key: "nvidia.com/gpu"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+        extra_resource_limits:
+          nvidia.com/gpu: "8"
+        cpu_guarantee: 2
+        mem_guarantee: 10G
+        cpu_limit: 2
+        mem_limit: 10G
+        cmd: "start-singleuser.sh"
   storage:
     type: "static"
     static:
@@ -58,7 +208,7 @@ singleuser:
     CHOWN_EXTRA: "/home/shared"
   uid: 0
   fsGid: 0
-  cmd: "start-singleuser.sh"
+  cmd: null
 
 # Optimizations configured according to this doc https://z2jh.jupyter.org/en/latest/administrator/optimization.html
 scheduling:
@@ -72,7 +222,6 @@ scheduling:
   userPods:
     nodeAffinity:
       matchNodePurpose: require # This will force single-user pods to use an specific karpenter provisioner
-
 
 prePuller:
   hook:

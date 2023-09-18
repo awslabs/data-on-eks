@@ -1,10 +1,10 @@
 
-# NOTE: Using Ubuntu to use latest version of gpu-ts Operator, this is for time slicing enable
+# NOTE: Using Ubuntu to use latest version of GPU Operator, this is for time slicing enable
 ---
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
-  name: gpu-ts
+  name: trainium
   namespace: karpenter
 spec:
   kubeletConfiguration:
@@ -12,24 +12,22 @@ spec:
   requirements:
     - key: "karpenter.sh/capacity-type"
       operator: In
-      values: [ "spot", "on-demand" ]
-    - key: "karpenter.k8s.aws/instance-family" # G5 instance types only supports time slicing
+      values: ["spot", "on-demand" ]
+    - key: "node.kubernetes.io/instance-type" # For P4d we can use MIG since it uses A100
       operator: In
-      values: ["g5"]
-    - key: "karpenter.k8s.aws/instance-size"
-      operator: In
-      values: [ "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge" ]
+      values: ["trn1.2xlarge", "trn1.32xlarge"]
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
   providerRef:
-    name: gpu-ts
+    name: trainium
   labels:
-    provisioner: gpu-ts
-    hub.jupyter.org/node-purpose: user # This will ensure ony Jupyterhub sessions are scheduled on these nodes
-    nvidia.com/device-plugin.config: nvidia-a10g # Time slicing only supports A10 GPU defined in NVIDIA Operator values file
+    provisioner: trainium
+    hub.jupyter.org/node-purpose: user
   taints:
-    - key: nvidia.com/gpu
+    - key: aws.amazon.com/neuroncore
+      effect: "NoSchedule"
+    - key: aws.amazon.com/neuron
       effect: "NoSchedule"
     - key: hub.jupyter.org/dedicated # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
       operator: "Equal"
@@ -41,7 +39,7 @@ spec:
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
 metadata:
-  name: gpu-ts
+  name: trainium
   namespace: karpenter
 spec:
   amiFamily: Ubuntu
@@ -61,5 +59,4 @@ spec:
   securityGroupSelector:                      # required, when not using launchTemplate
     Name: ${cluster_name}-node*     # name of the SecurityGroup to be used with Nodes
   tags:
-    InstanceType: "gpu-ts"
-    Name: "gpu-ts-karpenter-ts"  # optional, add tags for your own use
+    InstanceType: "trainium"

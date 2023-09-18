@@ -138,6 +138,7 @@ module "eks_data_addons" {
   nvidia_gpu_operator_helm_config = {
     values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
   }
+
   #---------------------------------------------------------------
   # JupyterHub Add-on
   #---------------------------------------------------------------

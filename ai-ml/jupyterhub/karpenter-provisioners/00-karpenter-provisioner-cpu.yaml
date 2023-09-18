@@ -3,54 +3,59 @@ apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
   name: default
+  namespace: karpenter
 spec:
-  # Wich AWS Node Template to pick
   providerRef:
     name: default
-
-  # ttlSecondsAfterEmpty: 30
-
-  # Requirements that constrain the parameters of provisioned nodes.
-  # These requirements are combined with pod.spec.affinity.nodeAffinity rules.
-  # Operators { In, NotIn } are supported to enable including or excluding values
   requirements:
     - key: "karpenter.k8s.aws/instance-category"
       operator: In
       values: ["c", "m", "r"]
     - key: "karpenter.k8s.aws/instance-cpu"
       operator: In
-      values: ["4", "8", "16", "32"]
+      values: ["2", "4", "8", "16", "32"]
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
     - key: "karpenter.sh/capacity-type" # If not included, the webhook for the AWS cloud provider will default to on-demand
       operator: In
-      values: ["on-demand", "spot"]
+      values: ["spot", "on-demand"]
   limits:
     resources:
       cpu: 20 # CPU Cores across all instances
       memory: 2000Gi
+  labels:
+    provisioner: cpu
+    hub.jupyter.org/node-purpose: user
+  ttlSecondsAfterEmpty: 180 # optional, but never scales down if not set
 
-  # Enables consolidation which attempts to reduce cluster cost by both removing un-needed nodes and down-sizing those
-  # that can't be removed.  Mutually exclusive with the ttlSecondsAfterEmpty parameter.
-  consolidation:
-    enabled: true
+  # # Enables consolidation which attempts to reduce cluster cost by both removing un-needed nodes and down-sizing those
+  # # that can't be removed.  Mutually exclusive with the ttlSecondsAfterEmpty parameter.
+  # consolidation:
+  #   enabled: true
 ---
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
 metadata:
   name: default
+  namespace: karpenter
 spec:
-  subnetSelector:
-    Name: ${cluster_name}-private*     # Name of the Subnets to spin up the nodes
-  securityGroupSelector:                      # required, when not using launchTemplate
-    Name: ${cluster_name}-node*     # name of the SecurityGroup to be used with Nodes
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
         volumeSize: 100Gi
         volumeType: gp3
         encrypted: true
+        deleteOnTermination: true
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
+  subnetSelector:
+    Name: ${cluster_name}-private*     # Name of the Subnets to spin up the nodes
+  securityGroupSelector:                      # required, when not using launchTemplate
+    Name: ${cluster_name}-node*     # name of the SecurityGroup to be used with Nodes
   tags:
     managed-by: "karpenter"
     intent: "apps"

@@ -12,8 +12,8 @@ spec:
   requirements:
     - key: "karpenter.sh/capacity-type"
       operator: In
-      values: [ "spot", "on-demand" ]
-    - key: node.kubernetes.io/instance-type # For P4d we can use MIG since it uses A100
+      values: ["spot", "on-demand" ]
+    - key: "node.kubernetes.io/instance-type" # For P4d we can use MIG since it uses A100
       operator: In
       values: [p4d.24xlarge]
     - key: "kubernetes.io/arch"
@@ -22,10 +22,10 @@ spec:
   providerRef:
     name: gpu-mig
   labels:
-    type: karpenter
     provisioner: gpu-mig
-    NodeGroupType: gpu-mig
     hub.jupyter.org/node-purpose: user
+    nvidia.com/mig.config: all-1g.5gb  # Create MIG devices with single strategy
+    # nvidia.com/mig.config: all-balanced # Create MIG devices with mixed strategy
   taints:
     - key: nvidia.com/gpu
       effect: "NoSchedule"
