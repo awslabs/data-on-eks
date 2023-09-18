@@ -22,8 +22,14 @@ spec:
   providerRef:
     name: inferentia
   labels:
+<<<<<<<< HEAD:ai-ml/jupyterhub/karpenter-provisioners/03-karpenter-provisioner-inferentia.yaml
     provisioner: inferentia
+========
+    provisioner: gpu-mig
+>>>>>>>> 8dde6ae6 (Jupyterhub updates with multiple profiles):ai-ml/jupyterhub/karpenter-provisioners/02-karpenter-provisioner-gpu-mig.yaml
     hub.jupyter.org/node-purpose: user
+    nvidia.com/mig.config: all-1g.5gb  # Create MIG devices with single strategy
+    # nvidia.com/mig.config: all-balanced # Create MIG devices with mixed strategy
   taints:
     - key: aws.amazon.com/neuron
       effect: "NoSchedule"
