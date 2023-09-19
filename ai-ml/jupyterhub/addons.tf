@@ -132,6 +132,11 @@ module "eks_data_addons" {
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
+  # Enable Neuron Device Plugin
+  #---------------------------------------------------------------
+  enable_aws_neuron_device_plugin = true
+
+  #---------------------------------------------------------------
   # Enable GPU operator
   #---------------------------------------------------------------
   enable_nvidia_gpu_operator = var.jupyter_notebook_support == "gpu" ? true : false

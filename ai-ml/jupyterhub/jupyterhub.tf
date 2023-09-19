@@ -213,24 +213,24 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 
   depends_on = [module.eks_blueprints_addons]
 }
-#----------------------------------------------------------------------------------------
-# "Test" pods, to forcefully scale karpenter,
-# this is needed because GPU Operator needs to configure instance before running notebook
-#----------------------------------------------------------------------------------------
-data "kubectl_path_documents" "test_pods" {
-  count   = var.jupyter_notebook_support == "gpu" ? 1 : 0
-  pattern = "${path.module}/examples/test-pods/*-test-pod.yaml"
-  vars = {
-    cluster_name = module.eks.cluster_name
-  }
-}
+# #----------------------------------------------------------------------------------------
+# # "Test" pods, to forcefully scale karpenter,
+# # this is needed because GPU Operator needs to configure instance before running notebook
+# #----------------------------------------------------------------------------------------
+# data "kubectl_path_documents" "test_pods" {
+#   count   = var.jupyter_notebook_support == "gpu" ? 1 : 0
+#   pattern = "${path.module}/examples/test-pods/*-test-pod.yaml"
+#   vars = {
+#     cluster_name = module.eks.cluster_name
+#   }
+# }
 
-resource "kubectl_manifest" "test_pods" {
-  for_each  = try(toset(data.kubectl_path_documents.test_pods[0].documents), toset([]))
-  yaml_body = each.value
+# resource "kubectl_manifest" "test_pods" {
+#   for_each  = try(toset(data.kubectl_path_documents.test_pods[0].documents), toset([]))
+#   yaml_body = each.value
 
-  depends_on = [module.eks_blueprints_addons]
-}
+#   depends_on = [module.eks_blueprints_addons]
+# }
 
 #---------------------------------------------------------------
 # Cognito pool, domain and client creation.
