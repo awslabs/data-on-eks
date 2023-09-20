@@ -18,7 +18,7 @@ spec:
       values: ["g5"]
     - key: "karpenter.k8s.aws/instance-size"
       operator: In
-      values: [ "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge" ]
+      values: [ "4xlarge", "8xlarge", "16xlarge", "24xlarge" ]
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
@@ -46,7 +46,7 @@ metadata:
 spec:
   amiFamily: Ubuntu
   blockDeviceMappings:
-    - deviceName: /dev/sda1
+    - deviceName: /dev/sda1 # root volume for Ubuntu
       ebs:
         volumeSize: 100Gi # Big disk for Notebook instances
         volumeType: gp3

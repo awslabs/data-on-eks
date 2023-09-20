@@ -44,7 +44,7 @@ metadata:
 spec:
   amiFamily: AL2
   blockDeviceMappings:
-    - deviceName: /dev/sda1
+    - deviceName: /dev/xvda
       ebs:
         volumeSize: 100Gi # Big disk for Notebook instances
         volumeType: gp3

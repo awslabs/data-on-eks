@@ -2,7 +2,7 @@ hub:
   extraConfig:
     jupyterhub_config.py: |-
       c.KubeSpawner.start_timeout = 1200
-      c.KubeSpawner.http_timeout = 120
+      c.KubeSpawner.http_timeout = 180
 
 proxy:
   https:
@@ -43,6 +43,7 @@ singleuser:
         cpu_limit: 4
         mem_limit: 8G
       cmd: null
+    # NOTE:
     - display_name: Trainium (trn1)
       description: "Trainium | Karpenter AutoScaling"
       profile_options:
@@ -94,10 +95,14 @@ singleuser:
               display_name: "Tensorflow 2.10.1 + tensorflow-neuronx"
               kubespawner_override:
                 image: 763104351884.dkr.ecr.us-west-2.amazonaws.com/tensorflow-inference-neuronx:2.10.1-neuronx-py310-sdk2.13.2-ubuntu20.04
-      kubeSpawner_override:
+      kubespawner_override:
         node_selector:
           karpenter.sh/provisioner-name: inferentia
+          hub.jupyter.org/node-purpose: user
         tolerations:
+          - key: aws.amazon.com/neuroncore
+            operator: Exists
+            effect: NoSchedule
           - key: aws.amazon.com/neuron
             operator: Exists
             effect: NoSchedule
@@ -105,13 +110,13 @@ singleuser:
             operator: "Equal"
             value: "user"
             effect: "NoSchedule"
-        cpu_guarantee: 2
-        mem_guarantee: 10G
-        cpu_limit: 2
-        mem_limit: 10G
+        cpu_guarantee: 20
+        mem_guarantee: 100G
+        cpu_limit: 20
+        mem_limit: 100G
         extra_resource_limits:
           aws.amazon.com/neuron: "1"
-        cmd: "start-singleuser.sh"
+        cmd: null
     - display_name: Data Science (GPU + Time-Slicing - G5)
       default: true
       description: "GPU Time-Slicing with Single GPU VMs (G5 2x, 4x, 8x, 16x) | nvidia.com/gpu: 1 | Karpenter AutoScaling"
@@ -119,7 +124,7 @@ singleuser:
         # namespace: data-team-a
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
-          provisioner: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
+          karpenter.sh/provisioner-name: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
@@ -142,6 +147,7 @@ singleuser:
       kubespawner_override:
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
+          provisioner: cluster-autoscaler
           node.kubernetes.io/instance-type: p4d.24xlarge
         tolerations:
           - key: "nvidia.com/gpu"
