@@ -1,10 +1,16 @@
 #!/bin/bash
 
 # Set the AWS region and the name of the ECR repository
+<<<<<<< HEAD
 
 REGION=us-west-2
 ECR_REPO_NAME=jupyterhub-inferentia-pytorch
 DOCKER_FILE=docker/jupyterhub-inferentia-pytorch.Dockerfile
+=======
+REGION=us-east-1
+ECR_REPO_NAME=jupyterhub-inferentia-tensorflow
+DOCKER_FILE=docker/jupyterhub-inferentia-tensorflow.Dockerfile
+>>>>>>> fce4eb45 (Jupyterhub blog (#321))
 
 # Check if the ECR repository exists
 if aws ecr describe-repositories --repository-names "$ECR_REPO_NAME" --region "$REGION" >/dev/null 2>&1; then
