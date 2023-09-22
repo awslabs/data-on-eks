@@ -139,7 +139,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Enable GPU operator
   #---------------------------------------------------------------
-  enable_nvidia_gpu_operator = var.jupyter_notebook_support == "gpu" ? true : false
+  enable_nvidia_gpu_operator = true
   nvidia_gpu_operator_helm_config = {
     values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
   }
@@ -149,7 +149,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    values = [templatefile("${path.module}/helm-values/jupyterhub-values-${var.jupyter_hub_auth_mechanism}-${var.jupyter_notebook_support}.yaml", {
+    values = [templatefile("${path.module}/helm-values/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
       ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
       jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")
       authorize_url               = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")

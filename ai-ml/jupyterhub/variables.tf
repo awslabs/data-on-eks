@@ -41,12 +41,6 @@ variable "jupyter_hub_auth_mechanism" {
   default     = "cognito"
 }
 
-variable "jupyter_notebook_support" {
-  type        = string
-  description = "Allowed values: cpu, gpu"
-  default     = "cpu"
-}
-
 #  Domain name is public so make sure you use a unique while deploying, Only needed if auth mechanism is set to cognito
 variable "cognito_custom_domain" {
   description = "Cognito domain prefix for Hosted UI authentication endpoints"
