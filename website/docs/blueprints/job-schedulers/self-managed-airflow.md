@@ -150,7 +150,7 @@ Amazon Postgres RDS database password can be fetched from the Secrets manager
 
 ### Login to Airflow Web UI
 
-This deployment creates an Ingress object with public LoadBalancer(internet-facing) for demo purpose
+This deployment creates an Ingress object with public LoadBalancer(internal # Private Load Balancer can only be accessed within the VPC) for demo purpose
 For production workloads, you can modify `airflow-values.yaml` to choose `internal` LB. In addition, it's also recommended to use Route53 for Airflow domain and ACM for generating certificates to access Airflow on HTTPS port.
 
 Execute the following command to get the ALB DNS name
