@@ -1,15 +1,11 @@
-hub:
-  extraConfig:
-    jupyterhub_config.py: |-
-      c.KubeSpawner.start_timeout = 1200
-      c.KubeSpawner.http_timeout = 180
-
 proxy:
   https:
-    enabled: false
+    enabled: true
     type: offload
   service:
     annotations:
+      service.beta.kubernetes.io/aws-load-balancer-ssl-cert: ${ssl_cert_arn}
+      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
       service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
       service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
       service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
@@ -17,6 +13,7 @@ proxy:
       service.beta.kubernetes.io/aws-load-balancer-type: external
       service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: 'true'
       service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
+
 singleuser:
   startTimeout: 1200 # 20 mins to spin up a notebook server for GPU inlcuding the image pull
   profileList:
@@ -229,12 +226,27 @@ scheduling:
     nodeAffinity:
       matchNodePurpose: require # This will force single-user pods to use an specific karpenter provisioner
 
-prePuller:
+prePuller: # Pre pulling disable since Notebook image is large
   hook:
     enabled: false
   continuous:
     # NOTE: if used with Karpenter, also add user-placeholders
     enabled: false
 
-global:
-  safeToShowValues: false
+hub:
+  config:
+    GenericOAuthenticator:
+      oauth_callback_url: ${jupyterdomain}
+      client_id: ${client_id}
+      client_secret: ${client_secret}
+      authorize_url: ${authorize_url}
+      token_url: ${token_url}
+      userdata_url: ${userdata_url}
+      scope:
+        - openid
+        - email
+      username_key: "username"
+      login_service : "AWS Cognito"
+      userdata_method: "POST"
+    JupyterHub:
+      authenticator_class: generic-oauth
