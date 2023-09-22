@@ -61,10 +61,10 @@ spec:
     spark.kubernetes.driver.requestTimeout: "60000000"
     # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
     # -----------------------------------------------------
-
+  
   restartPolicy:
     type: Never
-  volumes:
+  volumes:    
     - name: spark-local-dir-1
       hostPath:
         path: /local1
@@ -73,7 +73,7 @@ spec:
       - name: spark-local-dir-1
         mountPath: /ossdata1
         readOnly: false
-    initContainers:
+    initContainers:  
     - name: volume-permission
       image: public.ecr.aws/y4g4v0z7/busybox
       command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
@@ -92,7 +92,7 @@ spec:
       - name: spark-local-dir-1
         mountPath: /ossdata1
         readOnly: false
-    initContainers:
+    initContainers:  
     - name: volume-permission
       image: public.ecr.aws/y4g4v0z7/busybox
       command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
@@ -107,3 +107,5 @@ spec:
     serviceAccount: spark-team-a
     nodeSelector:
       provisioner: spark-compute-optimized
+
+

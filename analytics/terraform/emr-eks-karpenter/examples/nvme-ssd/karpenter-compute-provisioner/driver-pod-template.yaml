@@ -11,8 +11,7 @@ spec:
         type: Directory
 
   nodeSelector:
-    NodeGroupType: "SparkComputeOptimized"
-#    topology.kubernetes.io/zone: "us-west-2a"
+    provisioner: spark-compute-optimized
 
   containers:
     - name: spark-kubernetes-driver # Don't change this name. EMR on EKS looking for this name
@@ -21,7 +20,7 @@ spec:
           mountPath: /data1
           readOnly: false
 
-  tolerations:
-    - key: "spark-compute-optimized"
-      operator: "Exists"
-      effect: "NoSchedule"
+  # tolerations:
+  #   - key: "spark-compute-optimized"
+  #     operator: "Exists"
+  #     effect: "NoSchedule"
