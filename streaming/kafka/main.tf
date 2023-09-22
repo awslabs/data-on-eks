@@ -33,8 +33,9 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.15"
 
-  cluster_name                   = local.name
-  cluster_version                = local.cluster_version
+  cluster_name    = local.name
+  cluster_version = local.cluster_version
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
 
   vpc_id     = module.vpc.vpc_id
