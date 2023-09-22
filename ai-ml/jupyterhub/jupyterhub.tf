@@ -84,6 +84,7 @@ YAML
 
   depends_on = [module.eks_blueprints_addons]
 }
+
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
 # This will be repalced with Dynamic EFS provision using EFS CSI Driver
@@ -213,6 +214,7 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 
   depends_on = [module.eks_blueprints_addons]
 }
+
 #----------------------------------------------------------------------------------------
 # "Test" pods, to forcefully scale karpenter,
 # this is needed because GPU Operator needs to configure instance before running notebook

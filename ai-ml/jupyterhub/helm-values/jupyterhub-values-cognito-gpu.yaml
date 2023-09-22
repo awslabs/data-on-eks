@@ -101,4 +101,3 @@ hub:
     JupyterHub:
       authenticator_class: generic-oauth
   authenticatePrometheus: false
- 
