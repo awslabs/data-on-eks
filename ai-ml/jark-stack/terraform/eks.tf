@@ -10,6 +10,7 @@ module "eks" {
 
   # if true, Your cluster API server is accessible from the internet.
   # You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
 
   vpc_id = module.vpc.vpc_id

@@ -1,16 +1,22 @@
 #!/bin/bash
 
 read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
-read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
-read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
-read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
+# read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
+# read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
+# read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
 read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: " S3_BUCKET
+
+cp ../../../terraform.tfstate .
+EMR_VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '."data-team-a".virtual_cluster_id')
+EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '."data-team-a".job_execution_role_arn')
+CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '."data-team-a".cloudwatch_log_group_name')
+rm terraform.tfstate
 
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
 JOB_NAME='taxidata'
-EMR_EKS_RELEASE_LABEL="emr-6.8.0-latest" # Spark 3.2.1
+EMR_EKS_RELEASE_LABEL="emr-6.10.0-latest" # Spark 3.3.1
 
 SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
 SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
@@ -20,6 +26,7 @@ OUTPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/output"
 #--------------------------------------------
 # Copy PySpark Scripts, Pod Templates and Input data to S3 bucket
 #--------------------------------------------
+echo ${SCRIPTS_S3_PATH}
 aws s3 sync "./" ${SCRIPTS_S3_PATH}
 
 #--------------------------------------------
@@ -32,7 +39,7 @@ mkdir -p "../input"
 wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
 
 # Making duplicate copies to increase the size of the data.
-max=10
+max=100
 for (( i=1; i <= $max; ++i ))
 do
     cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
@@ -57,7 +64,7 @@ aws emr-containers start-job-run \
       "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'",
         "'"$OUTPUT_DATA_S3_PATH"'"
       ],
-      "sparkSubmitParameters": "--conf spark.executor.instances=2"
+      "sparkSubmitParameters": "--conf spark.executor.instances=10"
     }
   }' \
   --configuration-overrides '{
@@ -72,7 +79,10 @@ aws emr-containers start-job-run \
             "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
             "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
             "spark.local.dir":"/data1",
-
+            "spark.kubernetes.submission.connectionTimeout": "60000000",
+            "spark.kubernetes.submission.requestTimeout": "60000000",
+            "spark.kubernetes.driver.connectionTimeout": "60000000",
+            "spark.kubernetes.driver.requestTimeout": "60000000",
             "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
             "spark.metrics.appStatusSource.enabled":"true",
             "spark.ui.prometheus.enabled":"true",

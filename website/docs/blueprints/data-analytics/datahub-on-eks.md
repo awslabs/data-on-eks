@@ -78,7 +78,7 @@ chmod +x install.sh
 
 ### Verify Deployment
 
-After the deployment completes, we can access the DataHub UI and test importing metadata from sample datasources.  For demo purpose, this blueprint creates the Ingress object for the datahub FrontEnd UI with public LoadBalancer(internet-facing).  For production workloads, you can modify datahub_values.yaml to use internal LB:
+After the deployment completes, we can access the DataHub UI and test importing metadata from sample datasources.  For demo purpose, this blueprint creates the Ingress object for the datahub FrontEnd UI with public LoadBalancer(internal # Private Load Balancer can only be accessed within the VPC).  For production workloads, you can modify datahub_values.yaml to use internal LB:
 
 ```
 datahub-frontend:
@@ -90,7 +90,7 @@ datahub-frontend:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: alb
-      alb.ingress.kubernetes.io/scheme: **internet-facing**
+      alb.ingress.kubernetes.io/scheme: **internal # Private Load Balancer can only be accessed within the VPC**
       alb.ingress.kubernetes.io/target-type: instance
 ```
 
