@@ -1,4 +1,4 @@
-# Base image with Python 3.10
+# Base image with Python 3.10 - https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/setup/neuron-setup/tensorflow/neuronx/ubuntu/tensorflow-neuronx-ubuntu22.html#setup-tensorflow-neuronx-u22
 FROM jupyter/datascience-notebook:python-3.10.10
 
 USER root
