@@ -1,6 +1,6 @@
 # NOTE: This example requires the following prerequisites before executing the jobs
 # 1. Ensure spark-team-a name space exists
-# 2. replace emr-spark-benchmark with your bucket name
+# 2. replace <REPLACE-WITH-YOUR-S3BUCKET-NAME> with your bucket name
 # 3. Ensure you run "analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml"  which generates 3 TB input data
 
 ---
@@ -21,7 +21,7 @@ spec:
     # TPC-DS data location
     - "s3://blogpost-sparkoneks-us-east-1/blog/BLOG_TPCDS-TEST-3T-partitioned"
     # results location
-    - "s3://emr-spark-benchmark/TPCDS-TEST-3T-RESULT"
+    - "s3://<REPLACE-WITH-YOUR-S3BUCKET-NAME>/TPCDS-TEST-3T-RESULT"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
@@ -65,7 +65,7 @@ spec:
     spark.kubernetes.driver.requestTimeout: "120000"
     # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
     # -----------------------------------------------------
-  volumes:    
+  volumes:
     - name: spark-local-dir-1
       hostPath:
         path: /local1
@@ -74,7 +74,7 @@ spec:
       - name: spark-local-dir-1
         mountPath: /ossdata1
         readOnly: false
-    initContainers:  
+    initContainers:
     - name: volume-permission
       image: public.ecr.aws/y4g4v0z7/busybox
       command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
@@ -93,7 +93,7 @@ spec:
       - name: spark-local-dir-1
         mountPath: /ossdata1
         readOnly: false
-    initContainers:  
+    initContainers:
     - name: volume-permission
       image: public.ecr.aws/y4g4v0z7/busybox
       command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
