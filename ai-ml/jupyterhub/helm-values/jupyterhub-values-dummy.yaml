@@ -83,7 +83,7 @@ singleuser:
               display_name: "PyTorch 1.13.1 + torch-neuronx"
               default: true
               kubespawner_override:
-                image: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/jupyterhub-inferentia-pytorch:1
+                image: 054678736585.dkr.ecr.us-east-1.amazonaws.com/jupyterhub-inferentia-pytorch:latest
             tflow2101:
               display_name: "Tensorflow 2.10.1 + tensorflow-neuronx"
               kubespawner_override:
