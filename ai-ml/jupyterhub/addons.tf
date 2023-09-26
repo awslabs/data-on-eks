@@ -204,6 +204,7 @@ module "eks_blueprints_addons" {
               value: "user"
               effect: "NoSchedule"
             - key: nvidia.com/gpu
+              effect: "NoSchedule"
           amiFamily: Ubuntu
         EOT
       ]
