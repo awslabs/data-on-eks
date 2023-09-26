@@ -47,11 +47,11 @@ singleuser:
               display_name: "PyTorch 1.13.1 + torch-neuronx"
               default: true
               kubespawner_override:
-                image: 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training-neuronx:1.13.1-neuronx-py310-sdk2.13.2-ubuntu20.04
+                image: public.ecr.aws/data-on-eks/pytorch-neuronx:latest
             tflow2101:
               display_name: "Tensorflow 2.10.1 + tensorflow-neuronx"
               kubespawner_override:
-                image: 763104351884.dkr.ecr.us-west-2.amazonaws.com/tensorflow-inference-neuronx:2.10.1-neuronx-py310-sdk2.13.2-ubuntu20.04
+                image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
           karpenter.sh/provisioner-name: trainium
@@ -80,14 +80,14 @@ singleuser:
           display_name: "Image"
           choices:
             pytorch1131:
-              display_name: "PyTorch 1.13.1 + torch-neuronx"
+              display_name: "PyTorch + torch-neuronx"
               default: true
               kubespawner_override:
-                image: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/jupyterhub-inferentia-pytorch:1
+                image: public.ecr.aws/data-on-eks/pytorch-neuronx:latest
             tflow2101:
-              display_name: "Tensorflow 2.10.1 + tensorflow-neuronx"
+              display_name: "Tensorflow + tensorflow-neuronx"
               kubespawner_override:
-                image: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/jupyterhub-inferentia-tensorflow:latest
+                image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
           karpenter.sh/provisioner-name: inferentia
