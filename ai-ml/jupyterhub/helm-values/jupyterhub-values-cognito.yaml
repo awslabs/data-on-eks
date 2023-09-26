@@ -87,19 +87,11 @@ singleuser:
               display_name: "PyTorch + torch-neuronx"
               default: true
               kubespawner_override:
-<<<<<<<< HEAD:ai-ml/jupyterhub/helm/jupyterhub/jupyterhub-values-cognito.yaml
                 image: public.ecr.aws/data-on-eks/pytorch-neuronx:latest
-========
-                image: 054678736585.dkr.ecr.us-east-1.amazonaws.com/jupyterhub-inferentia-pytorch:1
->>>>>>>> f64485be (Jupyterhub blog (#321)):ai-ml/jupyterhub/helm-values/jupyterhub-values-cognito.yaml
             tflow2101:
               display_name: "Tensorflow + tensorflow-neuronx"
               kubespawner_override:
-<<<<<<<< HEAD:ai-ml/jupyterhub/helm/jupyterhub/jupyterhub-values-cognito.yaml
                 image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
-========
-                image: 054678736585.dkr.ecr.us-east-1.amazonaws.com/jupyterhub-inferentia-tensorflow:latest
->>>>>>>> f64485be (Jupyterhub blog (#321)):ai-ml/jupyterhub/helm-values/jupyterhub-values-cognito.yaml
       kubespawner_override:
         node_selector:
           karpenter.sh/provisioner-name: inferentia
@@ -258,14 +250,3 @@ hub:
       userdata_method: "POST"
     JupyterHub:
       authenticator_class: generic-oauth
-<<<<<<<< HEAD:ai-ml/jupyterhub/helm/jupyterhub/jupyterhub-values-cognito.yaml
-  extraConfig:
-    jupyterhub_config.py: |-
-      c.KubeSpawner.start_timeout = 1200
-  db:
-    pvc:
-      storage: 50Gi
-      storageClassName: gp3
-  authenticatePrometheus: false
-========
->>>>>>>> f64485be (Jupyterhub blog (#321)):ai-ml/jupyterhub/helm-values/jupyterhub-values-cognito.yaml
