@@ -41,12 +41,6 @@ variable "jupyter_hub_auth_mechanism" {
   default     = "cognito"
 }
 
-variable "jupyter_notebook_support" {
-  type        = string
-  description = "Allowed values: cpu, gpu"
-  default     = "cpu"
-}
-
 #  Domain name is public so make sure you use a unique while deploying, Only needed if auth mechanism is set to cognito
 variable "cognito_custom_domain" {
   description = "Cognito domain prefix for Hosted UI authentication endpoints"
@@ -64,10 +58,4 @@ variable "jupyterhub_domain" {
   type        = string
   description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito"
   default     = "jupyterhub"
-}
-
-variable "enable_amazon_prometheus" {
-  description = "Enable AWS Managed Prometheus service"
-  type        = bool
-  default     = true
 }

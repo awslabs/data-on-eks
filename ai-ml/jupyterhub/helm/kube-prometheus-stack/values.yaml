@@ -9,7 +9,7 @@ prometheus:
         metadata:
           name: data
         spec:
-          storageClassName: gp2
+          storageClassName: gp3
           accessModes:
             - ReadWriteOnce
           resources:
@@ -59,3 +59,7 @@ alertmanager:
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: 1

@@ -1,7 +1,3 @@
-data "aws_eks_cluster_auth" "this" {
-  name = module.eks.cluster_name
-}
-
 # Use this data source to get the ARN of a certificate in AWS Certificate Manager (ACM)
 data "aws_acm_certificate" "issued" {
   count    = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
@@ -16,6 +12,7 @@ data "aws_ecrpublic_authorization_token" "token" {
 locals {
   cognito_custom_domain = var.cognito_custom_domain
 }
+
 #---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
@@ -41,6 +38,7 @@ module "eks_blueprints_addons" {
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
+
   #---------------------------------------
   # Amazon EKS Managed Add-ons
   #---------------------------------------
@@ -69,7 +67,7 @@ module "eks_blueprints_addons" {
   enable_cluster_proportional_autoscaler = true
   cluster_proportional_autoscaler = {
     timeout = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
+    values = [templatefile("${path.module}/helm/coredns-autoscaler/values.yaml", {
       target = "deployment/coredns"
     })]
     description = "Cluster Proportional Autoscaler for CoreDNS Service"
@@ -81,7 +79,7 @@ module "eks_blueprints_addons" {
   enable_metrics_server = true
   metrics_server = {
     timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    values  = [templatefile("${path.module}/helm/metrics-server/values.yaml", {})]
   }
 
   #---------------------------------------
@@ -91,7 +89,7 @@ module "eks_blueprints_addons" {
   cluster_autoscaler = {
     timeout     = "300"
     create_role = true
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
+    values = [templatefile("${path.module}/helm/cluster-autoscaler/values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
     })]
@@ -122,20 +120,9 @@ module "eks_blueprints_addons" {
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
   #---------------------------------------------------------------
-  #---------------------------------------
-  # Kube Prometheus Stack
-  #---------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
-    values = [
-      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-stack.yaml", {
-        region              = local.region
-        amp_sa              = local.amp_ingest_service_account
-        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
-        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
-      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
-    ]
+    values        = [templatefile("${path.module}/helm/kube-prometheus-stack/values.yaml", {})]
     chart_version = "48.1.1"
     set_sensitive = [
       {
@@ -148,9 +135,6 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # AWS for FluentBit
   #---------------------------------------
-  #---------------------------------------
-  # AWS for FluentBit - DaemonSet
-  #---------------------------------------
   enable_aws_for_fluentbit = true
   aws_for_fluentbit_cw_log_group = {
     use_name_prefix   = false
@@ -158,11 +142,72 @@ module "eks_blueprints_addons" {
     retention_in_days = 30
   }
   aws_for_fluentbit = {
-    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit.yaml", {
+    values = [templatefile("${path.module}/helm/aws-for-fluentbit/values.yaml", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
       cluster_name         = module.eks.cluster_name
     })]
+  }
+
+
+  #---------------------------------------
+  # Additional Helm Charts
+  #---------------------------------------
+  helm_releases = {
+    storageclass = {
+      name        = "storageclass"
+      description = "A Helm chart for storage configurations"
+      chart       = "${path.module}/helm/storageclass"
+    }
+    karpenter-resources-cpu = {
+      name        = "karpenter-resources-cpu"
+      description = "A Helm chart for karpenter CPU based resources"
+      chart       = "${path.module}/helm/karpenter-resources"
+      values = [
+        <<-EOT
+          clusterName: ${module.eks.cluster_name}
+        EOT
+      ]
+    }
+    karpenter-resources-ts = {
+      name        = "karpenter-resources-ts"
+      description = "A Helm chart for karpenter GPU based resources - compatible with GPU time slicing"
+      chart       = "${path.module}/helm/karpenter-resources"
+      values = [
+        <<-EOT
+          name: gpu
+          clusterName: ${module.eks.cluster_name}
+          instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+          instanceFamilies: ["g5"]
+          taints:
+            - key: hub.jupyter.org/dedicated
+              value: "user"
+              effect: "NoSchedule"
+            - key: nvidia.com/gpu
+              effect: "NoSchedule"
+          amiFamily: Ubuntu
+        EOT
+      ]
+    }
+    karpenter-resources-mig = {
+      name        = "karpenter-resources-mig"
+      description = "A Helm chart for karpenter GPU based resources - compatible with GPU MIG"
+      chart       = "${path.module}/helm/karpenter-resources"
+      values = [
+        <<-EOT
+          name: gpu-mig
+          clusterName: ${module.eks.cluster_name}
+          instanceSizes: ["24xlarge"]
+          instanceFamilies: ["p4d"]
+          taints:
+            - key: hub.jupyter.org/dedicated
+              value: "user"
+              effect: "NoSchedule"
+            - key: nvidia.com/gpu
+          amiFamily: Ubuntu
+        EOT
+      ]
+    }
   }
 
   tags = local.tags
@@ -180,9 +225,9 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Enable GPU operator
   #---------------------------------------------------------------
-  enable_nvidia_gpu_operator = var.jupyter_notebook_support == "gpu" ? true : false
+  enable_nvidia_gpu_operator = true
   nvidia_gpu_operator_helm_config = {
-    values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
+    values = [templatefile("${path.module}/helm/nvidia-gpu-operator/values.yaml", {})]
   }
 
   #---------------------------------------------------------------
@@ -190,14 +235,8 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    values = [templatefile("${path.module}/helm-values/jupyterhub-values-${var.jupyter_hub_auth_mechanism}-${var.jupyter_notebook_support}.yaml", {
-      ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
-      jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")
-      authorize_url               = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")
-      token_url                   = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token", "")
-      userdata_url                = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
-      client_id                   = try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
-      client_secret               = try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
+    version = "3.0.3"
+    values = [templatefile("${path.module}/helm/jupyterhub/values.yaml", {
       jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
     })]
   }
@@ -207,7 +246,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    values              = [templatefile("${path.module}/helm-values/kubecost.yaml", {})]
+    values              = [templatefile("${path.module}/helm/kubecost/values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -229,7 +268,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-grafana"
+  name_prefix             = "${local.name}-grafana-"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 

@@ -1,0 +1,21 @@
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: {{ .Values.name }}
+spec:
+  amiFamily: {{ .Values.amiFamily }}
+  blockDeviceMappings:
+    - deviceName: /dev/sda1
+      ebs:
+        volumeSize: 100Gi # Big disk for Notebook instances
+        volumeType: gp3
+        encrypted: true
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
+  subnetSelector:
+    Name: {{ .Values.clusterName }}-private*  # Name of the Subnets to spin up the nodes
+  securityGroupSelector:                      # required, when not using launchTemplate
+    Name: {{ .Values.clusterName }}-node*     # Name of the SecurityGroup to be used with Nodes
