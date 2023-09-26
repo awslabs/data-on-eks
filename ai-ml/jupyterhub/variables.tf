@@ -52,7 +52,7 @@ variable "cognito_custom_domain" {
 variable "acm_certificate_domain" {
   type        = string
   description = "Enter domain name with wildcard and ensure ACM certificate is created for this domain name, e.g. *.example.com"
-  default     = "*.kuapoorv.people.aws.dev"
+  default     = ""
 }
 variable "jupyterhub_domain" {
   type        = string
