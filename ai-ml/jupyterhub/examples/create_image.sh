@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Set the AWS region and the name of the ECR repository
+
 REGION=us-west-2
 ECR_REPO_NAME=jupyterhub-inferentia-pytorch
 DOCKER_FILE=docker/jupyterhub-inferentia-pytorch.Dockerfile
