@@ -63,6 +63,9 @@ grafana:
     requests:
       memory: 2Gi
       cpu: 1
+  datasources:
+    alertmanager:
+      enabled: false
 
 kube-state-metrics:
   metricLabelsAllowlist:
