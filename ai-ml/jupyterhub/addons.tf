@@ -286,10 +286,15 @@ module "eks_data_addons" {
   enable_jupyterhub = true
   jupyterhub_helm_config = {
 <<<<<<< HEAD
+<<<<<<< HEAD
     values = [templatefile("${path.module}/helm/jupyterhub/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
 =======
     values = [templatefile("${path.module}/helm-values/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
 >>>>>>> fce4eb45 (Jupyterhub blog (#321))
+=======
+    version = "3.0.3"
+    values = [templatefile("${path.module}/helm/jupyterhub/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
+>>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))
       ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
       jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")
       authorize_url               = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")

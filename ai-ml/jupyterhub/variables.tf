@@ -38,10 +38,14 @@ variable "jupyter_hub_auth_mechanism" {
   type        = string
   description = "Allowed values: cognito, dummy"
 <<<<<<< HEAD
+<<<<<<< HEAD
   default     = "dummy"
 =======
   default     = "cognito"
 >>>>>>> fce4eb45 (Jupyterhub blog (#321))
+=======
+  default     = "dummy"
+>>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))
 }
 
 #  Domain name is public so make sure you use a unique while deploying, Only needed if auth mechanism is set to cognito

@@ -34,5 +34,8 @@ spec:
   taints:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+<<<<<<< HEAD
   # optional, but never scales down if not set
   ttlSecondsAfterEmpty: 120
+=======
+>>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))

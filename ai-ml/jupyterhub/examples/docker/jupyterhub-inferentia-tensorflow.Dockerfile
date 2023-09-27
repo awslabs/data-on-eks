@@ -15,6 +15,7 @@ USER root
 # Install gnupg and other required packages
 RUN apt-get update -y && \
     apt-get install -y gnupg git g++
+<<<<<<< HEAD
 
 RUN \
   . /etc/os-release && \
@@ -52,6 +53,8 @@ USER root
 # Install gnupg and other required packages
 RUN apt-get update -y && \
     apt-get install -y gnupg git g++ 
+=======
+>>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))
 
 RUN \
   . /etc/os-release && \
