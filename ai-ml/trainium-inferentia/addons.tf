@@ -233,9 +233,25 @@ module "eks_data_addons" {
   #---------------------------------------
   # Volcano Scheduler for TorchX
   #---------------------------------------
-  enable_volcano = true
-}
+  enable_volcano = false
 
+  #---------------------------------------
+  # Kuberay Oeprator
+  #---------------------------------------
+  enable_kuberay_operator = true
+  kuberay_operator_helm_config = {
+    version = "1.0.0-rc.0"
+  }
+
+  enable_jupyterhub = true
+  jupyterhub_helm_config = {
+    values = [
+      templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
+        jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      })
+    ]
+  }
+}
 
 #---------------------------------------------------------------
 # ETCD for TorchX
