@@ -91,7 +91,7 @@ devicePlugin:
 
 # dcgm is a daemonset that runs on each node and collects GPU metrics.
 dcgm:
-  enabled: false
+  enabled: true
 
 # dcgm-exporter is a deployment that runs on the cluster and exposes GPU metrics to Prometheus.
 dcgmExporter:
