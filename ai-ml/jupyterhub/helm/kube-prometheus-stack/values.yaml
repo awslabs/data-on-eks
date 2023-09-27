@@ -14,7 +14,7 @@ prometheus:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 50Gi
+              storage: 100Gi
     # Scrape Cost metrics for Kubecost and JupyterHub add-ons
     additionalScrapeConfigs:
       - job_name: kubecost
@@ -61,8 +61,8 @@ grafana:
   defaultDashboardsEnabled: true
   resources:
     requests:
-      memory: 2Gi
-      cpu: 1
+      memory: 4Gi
+      cpu: 2
   datasources:
     alertmanager:
       enabled: false
