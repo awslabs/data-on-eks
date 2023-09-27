@@ -253,7 +253,6 @@ hub:
   extraConfig:
     jupyterhub_config.py: |-
       c.KubeSpawner.start_timeout = 1200
-      c.KubeSpawner.http_timeout = 180
   db:
     pvc:
       storage: 50Gi
