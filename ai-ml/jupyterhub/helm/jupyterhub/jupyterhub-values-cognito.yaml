@@ -87,6 +87,7 @@ singleuser:
               display_name: "PyTorch + torch-neuronx"
               default: true
               kubespawner_override:
+<<<<<<< HEAD
 <<<<<<<< HEAD:ai-ml/jupyterhub/helm/jupyterhub/jupyterhub-values-cognito.yaml
                 image: public.ecr.aws/data-on-eks/pytorch-neuronx:latest
 ========
@@ -100,6 +101,13 @@ singleuser:
 ========
                 image: 054678736585.dkr.ecr.us-east-1.amazonaws.com/jupyterhub-inferentia-tensorflow:latest
 >>>>>>>> f64485be (Jupyterhub blog (#321)):ai-ml/jupyterhub/helm-values/jupyterhub-values-cognito.yaml
+=======
+                image: public.ecr.aws/data-on-eks/pytorch-neuronx:latest
+            tflow2101:
+              display_name: "Tensorflow + tensorflow-neuronx"
+              kubespawner_override:
+                image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
+>>>>>>> 484587f9 (feat: Updates for jupyterhub blueprint for observability (#327))
       kubespawner_override:
         node_selector:
           karpenter.sh/provisioner-name: inferentia
@@ -258,7 +266,10 @@ hub:
       userdata_method: "POST"
     JupyterHub:
       authenticator_class: generic-oauth
+<<<<<<< HEAD
 <<<<<<<< HEAD:ai-ml/jupyterhub/helm/jupyterhub/jupyterhub-values-cognito.yaml
+=======
+>>>>>>> 484587f9 (feat: Updates for jupyterhub blueprint for observability (#327))
   extraConfig:
     jupyterhub_config.py: |-
       c.KubeSpawner.start_timeout = 1200
@@ -267,5 +278,8 @@ hub:
       storage: 50Gi
       storageClassName: gp3
   authenticatePrometheus: false
+<<<<<<< HEAD
 ========
 >>>>>>>> f64485be (Jupyterhub blog (#321)):ai-ml/jupyterhub/helm-values/jupyterhub-values-cognito.yaml
+=======
+>>>>>>> 484587f9 (feat: Updates for jupyterhub blueprint for observability (#327))
