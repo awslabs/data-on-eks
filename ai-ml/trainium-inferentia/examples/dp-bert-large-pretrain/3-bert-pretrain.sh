@@ -23,8 +23,6 @@ sudo yum install -y amazon-ecr-credential-helper
 # pip3 install torchx[kubernetes]
 #--------------------------------------------------------------------------------
 
-INSTANCE_TYPE="trn1.32xlarge"
-
 # Notice --steps_this_run 10 is used to run a small number of steps for testing purposes
 torchx run \
     -s kubernetes --workspace="file:///$PWD/docker" \
@@ -39,4 +37,6 @@ torchx run \
     --script dp_bert_large_hf_pretrain_hdf5.py \
     --bf16 True \
     --cacheset bert-large \
-    --instance_type $INSTANCE_TYPE
+    --instance_type "trn1.32xlarge" \
+    --node_selectors "provisioner=karpenter,instance-type=trn1-32xl,node.kubernetes.io/instance-type=trn1.32xlarge" \
+    # --tolerations "aws.amazon.com/neuron=true:NoSchedule" # feature is not ready yet. Workingon a PR with TorchX repo check this issue https://github.com/pytorch/torchx/issues/753

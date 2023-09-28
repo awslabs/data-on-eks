@@ -57,7 +57,7 @@ variable "eks_data_plane_subnet_secondary_cidr" {
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
   default     = false
-  type        = string
+  type        = bool
 }
 
 variable "enable_amazon_prometheus" {

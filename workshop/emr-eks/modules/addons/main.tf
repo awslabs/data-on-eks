@@ -104,6 +104,8 @@ module "eks_blueprints_kubernetes_addons" {
     namespace  = "aws-for-fluent-bit"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
+      s3_bucket_name       = module.fluentbit_s3_bucket.s3_bucket_id,
+      cluster_name         = local.name,
       cloudwatch_log_group = "/${local.name}/fluentbit-logs"
     })]
   }
@@ -210,5 +212,27 @@ module "ebs_csi_driver_irsa" {
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
     }
   }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# S3 log bucket for FluentBit
+#---------------------------------------------------------------
+#tfsec:ignore:*
+module "fluentbit_s3_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 3.0"
+
+  bucket_prefix = "${local.name}-emr-logs-"
+  # For example only - please evaluate for your environment
+  force_destroy = true
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
   tags = local.tags
 }

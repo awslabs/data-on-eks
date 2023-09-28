@@ -36,8 +36,6 @@ sudo yum install -y amazon-ecr-credential-helper
 pip3 install torchx[kubernetes]
 #--------------------------------------------------------------------------------
 
-INSTANCE_TYPE="trn1.32xlarge"
-
 # Login to ECR
 # aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
 
@@ -61,4 +59,6 @@ torchx run \
     --bf16 True \
     --cacheset bert-large \
     --precompile True \
-    --instance_type $INSTANCE_TYPE
+    --instance_type "trn1.32xlarge" \
+    --node_selectors "provisioner=karpenter,instance-type=trn1-32xl,node.kubernetes.io/instance-type=trn1.32xlarge" \
+    # --tolerations "aws.amazon.com/neuron=true:NoSchedule" # feature is not ready yet. Workingon a PR with TorchX repo check this issue https://github.com/pytorch/torchx/issues/753

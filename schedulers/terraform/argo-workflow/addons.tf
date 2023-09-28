@@ -229,7 +229,7 @@ module "fluentbit_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket_prefix = "${local.name}-spark-logs-"
+  bucket_prefix = "${local.name}-argo-workflow-logs-"
   # For example only - please evaluate for your environment
   force_destroy = true
   server_side_encryption_configuration = {

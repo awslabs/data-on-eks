@@ -27,6 +27,7 @@ input:
     multiline.parser  docker, cri
     Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
 
+
 # NOTE: extraFilters config for using Kubelet to get the Metadata instead of talking to API server for large clusters
 filter:
   name: "kubernetes"
@@ -48,12 +49,16 @@ filter:
     Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
 
-cloudWatch:
+# CATION: Donot use `cloudwatch` plugin. This Golang Plugin is not recommnded by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
+# cloudWatch:
+#   enabled: false
+
+# This is a new high performance C Plugin for CloudWatchLogs. See docs here https://docs.fluentbit.io/manual/pipeline/outputs/cloudwatch
+cloudWatchLogs:
   enabled: true
   match: "systempods.*"
   region: ${region}
   logGroupName: ${cloudwatch_log_group}
-  logStreamPrefix: "fluentbit-"
   autoCreateGroup: false
   extraOutputs: |
     log_key               log
@@ -61,6 +66,11 @@ cloudWatch:
 #----------------------------------------------------------#
 # OUTPUT logs to S3
 #----------------------------------------------------------#
+
+# This is an example for writing logs to S3 bucket.
+# This example writes system pod logs and spark logs into dedicated prefix.
+# This second output is using the rewrite_tag filter commented above
+
 additionalOutputs: |
   [OUTPUT]
       Name                            s3
@@ -74,17 +84,6 @@ additionalOutputs: |
       upload_timeout                  10m
       log_key                         log
 
-firehose:
-  enabled: false
-
-kinesis:
-  enabled: false
-
-elasticsearch:
-  enabled: false
-
-serviceAccount:
-  create: true
 
 # Resource config for large clusters
 resources:
@@ -97,9 +96,6 @@ resources:
 
 ## Assign a PriorityClassName to pods if set
 priorityClassName: system-node-critical
-
-updateStrategy:
-  type: RollingUpdate
 
 # This toleration allows Daemonset pod to be scheduled on any node, regardless of their Taints.
 tolerations:

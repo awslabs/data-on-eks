@@ -26,6 +26,10 @@ terraform {
       source  = "hashicorp/http"
       version = ">= 3.3"
     }
+    cloudinit = {
+      source  = "hashicorp/cloudinit"
+      version = ">= 2.0"
+    }
   }
 
   # ##  Used for end-to-end testing on project; update to suit your needs
