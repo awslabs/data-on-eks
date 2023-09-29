@@ -285,7 +285,6 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    version = "3.0.3"
     values = [templatefile("${path.module}/helm/jupyterhub/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
       ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
       jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")

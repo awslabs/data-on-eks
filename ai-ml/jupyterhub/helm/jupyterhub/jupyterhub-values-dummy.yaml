@@ -1,7 +1,4 @@
 hub:
-  extraConfig:
-    jupyterhub_config.py: |-
-      c.KubeSpawner.start_timeout = 1200
   db:
     pvc:
       storage: 50Gi

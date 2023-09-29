@@ -34,3 +34,5 @@ spec:
   taints:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+  # optional, but never scales down if not set
+  ttlSecondsAfterEmpty: 120

@@ -1,5 +1,9 @@
 prometheus:
   prometheusSpec:
+    resources:
+      requests:
+        memory: 4Gi
+        cpu: 2
     retention: 5h
     scrapeInterval: 30s
     evaluationInterval: 30s
@@ -63,9 +67,10 @@ grafana:
     requests:
       memory: 4Gi
       cpu: 2
-  datasources:
-    alertmanager:
-      enabled: false
+  sidecar:
+    datasources:
+      alertmanager:
+        enabled: false
 
 kube-state-metrics:
   metricLabelsAllowlist:
