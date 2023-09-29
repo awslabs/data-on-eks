@@ -287,12 +287,15 @@ module "eks_data_addons" {
   jupyterhub_helm_config = {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     values = [templatefile("${path.module}/helm/jupyterhub/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
 =======
     values = [templatefile("${path.module}/helm-values/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
 >>>>>>> fce4eb45 (Jupyterhub blog (#321))
 =======
     version = "3.0.3"
+=======
+>>>>>>> c88d03a4 (add fixes for slowness in grafana)
     values = [templatefile("${path.module}/helm/jupyterhub/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
 >>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))
       ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
