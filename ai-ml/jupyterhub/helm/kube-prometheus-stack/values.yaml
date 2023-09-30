@@ -1,18 +1,9 @@
 prometheus:
   prometheusSpec:
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> c88d03a4 (add fixes for slowness in grafana)
     resources:
       requests:
         memory: 4Gi
         cpu: 2
-<<<<<<< HEAD
-=======
->>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))
-=======
->>>>>>> c88d03a4 (add fixes for slowness in grafana)
     retention: 5h
     scrapeInterval: 30s
     evaluationInterval: 30s
@@ -76,22 +67,10 @@ grafana:
     requests:
       memory: 4Gi
       cpu: 2
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> c88d03a4 (add fixes for slowness in grafana)
   sidecar:
     datasources:
       alertmanager:
         enabled: false
-<<<<<<< HEAD
-=======
-  datasources:
-    alertmanager:
-      enabled: false
->>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))
-=======
->>>>>>> c88d03a4 (add fixes for slowness in grafana)
 
 kube-state-metrics:
   metricLabelsAllowlist:

@@ -31,21 +31,13 @@ variable "secondary_cidr_blocks" {
   type        = list(string)
 }
 
-# NOTE: You need to use private domain or public domain name with ACM certificate
+# NOTE: You need to use private domain or public domain name with ACM certificate
 # This website doc will show you how to create free public domain name with ACM certificate for testing purpose only
 # Example of public domain name(<subdomain-name>.<domain-name>.com): eks.jupyter-doeks.dynamic-dns.com
 variable "jupyter_hub_auth_mechanism" {
   type        = string
   description = "Allowed values: cognito, dummy"
-<<<<<<< HEAD
-<<<<<<< HEAD
   default     = "dummy"
-=======
-  default     = "cognito"
->>>>>>> fce4eb45 (Jupyterhub blog (#321))
-=======
-  default     = "dummy"
->>>>>>> e6f3535e (feat: Updates for jupyterhub blueprint for observability (#327))
 }
 
 #  Domain name is public so make sure you use a unique while deploying, Only needed if auth mechanism is set to cognito

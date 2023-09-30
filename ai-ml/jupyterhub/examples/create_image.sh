@@ -1,22 +1,10 @@
 #!/bin/bash
 
 # Set the AWS region and the name of the ECR repository
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 42ea3177 (fix: JupyterHub Images (#326))
 
 REGION=us-west-2
-ECR_REPO_NAME=jupyterhub-inferentia-pytorch
-DOCKER_FILE=docker/jupyterhub-inferentia-pytorch.Dockerfile
-<<<<<<< HEAD
-=======
-REGION=us-east-1
-ECR_REPO_NAME=jupyterhub-inferentia-tensorflow
-DOCKER_FILE=docker/jupyterhub-inferentia-tensorflow.Dockerfile
->>>>>>> fce4eb45 (Jupyterhub blog (#321))
-=======
->>>>>>> 42ea3177 (fix: JupyterHub Images (#326))
+ECR_REPO_NAME=jupyterhub-pytorch-neuron-pytorch
+DOCKER_FILE=docker/jupyterhub-pytorch-neuron-pytorch.Dockerfile
 
 # Check if the ECR repository exists
 if aws ecr describe-repositories --repository-names "$ECR_REPO_NAME" --region "$REGION" >/dev/null 2>&1; then
@@ -38,9 +26,9 @@ fi
 echo -e "Logging in to Amazon ECR..."
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
 
-# Build the docker image using the provided Dockerfile and tag it with the ECR repository URI
+# Build the docker image using the provided jupyterhub-pytorch-neuron.Dockerfile and tag it with the ECR repository URI
 echo -e "Building, tagging and pushing docker image... $ECR_REPO_URI:latest"
-# docker build -f docker/Dockerfile-jupterhub-inferentia-pytorch -t "$ECR_REPO_URI:latest" .
+# docker build -f docker/jupyterhub-pytorch-neuron.Dockerfile-jupterhub-inferentia-pytorch -t "$ECR_REPO_URI:latest" .
 docker buildx build --push --tag "$ECR_REPO_URI:latest" -o type=image --platform=linux/amd64 -f $DOCKER_FILE .
 
 # Wait for 5 seconds

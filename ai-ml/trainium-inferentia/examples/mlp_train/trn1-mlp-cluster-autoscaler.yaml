@@ -27,7 +27,7 @@
 #--------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------
-# Step 1: Execute the 1-build-image.sh shell script to create a new ECR repository, build the Docker image, and push it to ECR. Refer to the Dockerfile and the shell script for additional details.
+# Step 1: Execute the 1-build-image.sh shell script to create a new ECR repository, build the Docker image, and push it to ECR. Refer to the jupyterhub-pytorch-neuron.Dockerfile and the shell script for additional details.
 # Step 2: Prior to running the command, make sure to perform the following updates in the snippet below:
 #     Replace <ACCOUNT_ID> with your actual AWS account ID and <REGION> with the AWS region in which you intend to deploy the job.
 #     Alternatively, you can update the entire Image URI with the appropriate tag.

@@ -143,7 +143,7 @@ Please note that the build process may take some time, depending on your network
 
 ```bash
 cd ~/data-on-eks/ai-ml/emr-spark-rapids/examples/xgboost
-docker build -t emr-6.10.0-spark-rapids-custom:0.10 -f Dockerfile .
+docker build -t emr-6.10.0-spark-rapids-custom:0.10 -f jupyterhub-pytorch-neuron.Dockerfile .
 ```
 
 - Replace `<ACCOUNTID>` with your AWS account ID. Log in to your ECR repository with the following command:

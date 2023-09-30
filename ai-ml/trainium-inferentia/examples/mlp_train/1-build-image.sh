@@ -21,7 +21,7 @@ else
 fi
 
 
-# Build the docker image using the provided Dockerfile and tag it with the ECR repository URI
+# Build the docker image using the provided jupyterhub-pytorch-neuron.Dockerfile and tag it with the ECR repository URI
 echo -e "Building and tagging docker image... $ECR_REPO_URI:mlp"
 docker build -f Dockerfile -t "$ECR_REPO_URI:mlp" .
 

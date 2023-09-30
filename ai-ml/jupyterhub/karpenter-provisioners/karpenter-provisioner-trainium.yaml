@@ -1,14 +1,10 @@
 
-# NOTE: Using Ubuntu to use latest version of gpu-ts Operator, this is for time slicing enable
+
 ---
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
-<<<<<<<< HEAD:ai-ml/jupyterhub/karpenter-provisioners/03-karpenter-provisioner-trainium.yaml
   name: trainium
-========
-  name: gpu-ts
->>>>>>>> 8dde6ae6 (Jupyterhub updates with multiple profiles):ai-ml/jupyterhub/karpenter-provisioners/01-karpenter-provisioner-gpu-ts.yaml
   namespace: karpenter
 spec:
   kubeletConfiguration:
@@ -24,18 +20,10 @@ spec:
       operator: In
       values: ["amd64"]
   providerRef:
-<<<<<<<< HEAD:ai-ml/jupyterhub/karpenter-provisioners/03-karpenter-provisioner-trainium.yaml
     name: trainium
   labels:
     provisioner: trainium
     hub.jupyter.org/node-purpose: user
-========
-    name: gpu-ts
-  labels:
-    provisioner: gpu-ts
-    hub.jupyter.org/node-purpose: user # This will ensure ony Jupyterhub sessions are scheduled on these nodes
-    nvidia.com/device-plugin.config: nvidia-a10g # Time slicing only supports A10 GPU defined in NVIDIA Operator values file
->>>>>>>> 8dde6ae6 (Jupyterhub updates with multiple profiles):ai-ml/jupyterhub/karpenter-provisioners/01-karpenter-provisioner-gpu-ts.yaml
   taints:
     - key: aws.amazon.com/neuroncore
       effect: "NoSchedule"
@@ -51,11 +39,7 @@ spec:
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
 metadata:
-<<<<<<<< HEAD:ai-ml/jupyterhub/karpenter-provisioners/03-karpenter-provisioner-trainium.yaml
   name: trainium
-========
-  name: gpu-ts
->>>>>>>> 8dde6ae6 (Jupyterhub updates with multiple profiles):ai-ml/jupyterhub/karpenter-provisioners/01-karpenter-provisioner-gpu-ts.yaml
   namespace: karpenter
 spec:
   amiFamily: Ubuntu
@@ -75,9 +59,4 @@ spec:
   securityGroupSelector:                      # required, when not using launchTemplate
     Name: ${cluster_name}-node*     # name of the SecurityGroup to be used with Nodes
   tags:
-<<<<<<<< HEAD:ai-ml/jupyterhub/karpenter-provisioners/03-karpenter-provisioner-trainium.yaml
     InstanceType: "trainium"
-========
-    InstanceType: "gpu-ts"
-    Name: "gpu-ts-karpenter-ts"  # optional, add tags for your own use
->>>>>>>> 8dde6ae6 (Jupyterhub updates with multiple profiles):ai-ml/jupyterhub/karpenter-provisioners/01-karpenter-provisioner-gpu-ts.yaml
