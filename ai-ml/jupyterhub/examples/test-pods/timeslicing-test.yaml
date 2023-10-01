@@ -32,5 +32,5 @@ spec:
           args:
             - while true; do /cuda-samples/vectorAdd; done
           resources:
-           limits:
-             nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
