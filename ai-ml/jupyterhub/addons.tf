@@ -235,7 +235,7 @@ module "eks_blueprints_addons" {
       chart       = "${path.module}/helm/karpenter-resources"
       values = [
         <<-EOT
-          name: tranium
+          name: trainium
           clusterName: ${module.eks.cluster_name}
           instanceSizes: ["2xlarge", "32xlarge"]
           instanceFamilies: ["inf2"]
