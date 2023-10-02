@@ -31,8 +31,12 @@ operator:
       cpu: 200m
       memory: 100Mi
 
+# mig.strategy should be set to mixed when MIG mode is not enabled on all GPUs on a node.
+# Sets the Multi-Instance GPU (MIG) strategy to “mixed.” This means that the GPU can be partitioned into multiple instances with varying sizes,
+#  allowing different workloads to run concurrently on the same GPU.
 mig:
-  strategy: single
+  strategy: mixed
+
 
 # https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/install-precompiled-signed-drivers.html
 # Currently NVIDIA Operator takes more than 5 mins to make the node GPU ready with all the required drivers.
@@ -53,11 +57,11 @@ toolkit:
 devicePlugin:
   enabled: true
   config:
-    name: time-slicing-config-all
-    default: any
+    name: time-slicing-config-fine
+    default: nvidia-a10g
     create: true
     data:
-      any: |-
+      nvidia-a10g: |-
         version: v1
         flags:
           migStrategy: none
@@ -66,37 +70,67 @@ devicePlugin:
             resources:
             - name: nvidia.com/gpu
               replicas: 4
+      nvidia-a100g: |-
+        version: v1
+        flags:
+          migStrategy: mixed
+        sharing:
+          timeSlicing:
+            resources:
+            - name: nvidia.com/gpu
+              replicas: 8
+            - name: nvidia.com/mig-1g.5gb
+              replicas: 2
+            - name: nvidia.com/mig-2g.10gb
+              replicas: 2
+            - name: nvidia.com/mig-3g.20gb
+              replicas: 3
+            - name: nvidia.com/mig-7g.40gb
+              replicas: 7
 
+
+# dcgm is a daemonset that runs on each node and collects GPU metrics.
 dcgm:
-  enabled: false
+  enabled: true
 
+# dcgm-exporter is a deployment that runs on the cluster and exposes GPU metrics to Prometheus.
 dcgmExporter:
   enabled: true
 
+# gfd is a daemonset that runs on each node and watches for changes to the GPU topology.
 gfd:
   enabled: true
 
+# mig-manager is a deployment that runs on the cluster and manages MIG devices.
 migManager:
   enabled: true
-
+  env:
+  - name: WITH_REBOOT
+    value: "true"       # Indicates that the MIG manager can reboot the node if required. This is sometimes necessary when changing MIG configurations.
 nodeStatusExporter:
   enabled: false
 
+# gds is a daemonset that runs on each node and exposes GPU metrics to Prometheus.
 gds:
   enabled: false
 
+# vpuManager is a deployment that runs on the cluster and manages VPU devices.
 vgpuManager:
   enabled: false
 
+# vgpuDevicePlugin is a daemonset that runs on each node and exposes VPU devices to the cluster.
 vgpuDeviceManager:
   enabled: true
 
+# vfioManager is a deployment that runs on the cluster and manages VFIO devices.
 vfioManager:
   enabled: true
 
+#sandboxDevicePlugin is a daemonset that runs on each node and exposes sandbox devices to the cluster.
 sandboxDevicePlugin:
   enabled: true
 
+# nodeFeatureDiscovery is a daemonset that runs on each node and exposes node features to the cluster.
 node-feature-discovery:
   enableNodeFeatureApi: true
   worker:
