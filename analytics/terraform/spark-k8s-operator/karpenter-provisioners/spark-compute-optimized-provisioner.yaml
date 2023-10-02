@@ -29,6 +29,11 @@ spec:
   labels:
     type: karpenter
     provisioner: spark-compute-optimized
+    NodeGroupType: SparkComputeOptimized
+  taints:
+    - key: spark-compute-optimized
+      value: 'true'
+      effect: NoSchedule
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
 
 ---
