@@ -31,8 +31,13 @@ resource "random_password" "master_password" {
   min_special = 1
 }
 
-resource "aws_opensearch_domain" "es" {
+resource "time_sleep" "wait_10_seconds" {
   depends_on     = [aws_iam_service_linked_role.es]
+  create_duration = "10s"
+}
+
+resource "aws_opensearch_domain" "es" {
+  depends_on     = [time_sleep.wait_10_seconds]
   domain_name    = "${var.prefix}-es-domain"
   engine_version = "OpenSearch_1.1"
   cluster_config {
