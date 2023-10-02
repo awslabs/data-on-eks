@@ -1,125 +1,48 @@
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
-  name: trainium
+  name: trainium-trn1
   namespace: karpenter # Same namespace as Karpenter add-on installed
 spec:
-  kubeletConfiguration:
-    containerRuntime: containerd
-    #    podsPerCore: 2
-    #    maxPods: 20
   requirements:
     - key: "topology.kubernetes.io/zone"
       operator: In
-      values: [${azs}d] # Update the correct region and zones
+      values: [${azs}d]
     - key: "karpenter.sh/capacity-type"
       operator: In
       values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-family" #If not included, all instance types are considered
+    - key: "karpenter.k8s.aws/instance-family" #If not included, all instance types are considered
       operator: In
-      values: ["trn1n"] # trn1.2xlarge, trn1n.32xlarge
+      values: ["trn1"] # trn1.2xlarge, trn1n.32xlarge
     - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
       operator: In
       values: ["trn1.32xlarge"] # trn1.2xlarge, trn1n.32xlarge
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["amd64"]
   limits:
+    resources:
+      cpu: "1000"
   providerRef:
-    name: trainium
+    name: trainium-trn1
   labels:
-    type: karpenter
-    provisioner: trainium
-    NodeGroupType: trainium-karpenter
+    provisioner: karpenter
+    instance-type: trn1-32xl
   taints:
-    - key: trainium-karpenter
-      value: 'true'
-      effect: NoSchedule
+    - key: "aws.amazon.com/neuron"
+      value: "true"
+      effect: "NoSchedule"
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
 
-# TODO: Network interface configuraiton for 8 network interfaces
+# Note: As of version v0.29.0, the Karpernter AWSNodeTemplate lacks the ability to configure multipleNetwork interfaces for EFA.
+# To work around this limitation, we are utilizing Terraform to generate launch templates that include EFA configurations.
+# These launch templates are then used as input for the AWS Node template, enabling us to achieve the desired network interface setups.
 ---
 apiVersion: karpenter.k8s.aws/v1alpha1
 kind: AWSNodeTemplate
 metadata:
-  name: trainium
+  name: trainium-trn1
   namespace: karpenter
 spec:
-  blockDeviceMappings:
-    - deviceName: /dev/xvda
-      ebs:
-        volumeSize: 100Gi
-        volumeType: gp3
-        encrypted: true
-        deleteOnTermination: true
-  metadataOptions:
-    httpEndpoint: enabled
-    httpProtocolIPv6: disabled
-    httpPutResponseHopLimit: 2
-    httpTokens: required
   subnetSelector:
-    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
-  securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
-  #  instanceProfile: ""      # optional, if already set in controller args
-  #RAID0 config example
-  userData: |
-    MIME-Version: 1.0
-    Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-    --BOUNDARY
-    Content-Type: text/x-shellscript; charset="us-ascii"
-
-    #!/bin/bash
-    echo "Running a custom user data script"
-    # Configure NVMe volumes in RAID0 configuration
-    # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
-    # Mount will be: /mnt/k8s-disks
-    export LOCAL_DISKS='raid0'
-
-    # Create 8 network interfaces similar to Terraform configuration
-    INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-
-    # Create network interface with device_index = 0
-    INTERFACE_ID=$(aws ec2 create-network-interface \
-      --description "NetworkInterfaces Configuration For EFA and EKS" \
-      --delete-on-termination \
-      --query 'NetworkInterface.NetworkInterfaceId' \
-      --output text
-    )
-    aws ec2 attach-network-interface \
-      --network-interface-id $INTERFACE_ID \
-      --instance-id $INSTANCE_ID \
-      --device-index 0 \
-      --network-card-index 0
-
-    # Create network interfaces with device_index = 1 and network_card_index from 1 to 7
-    for ((network_card_index=1; network_card_index<8; network_card_index++))
-    do
-      INTERFACE_ID=$(aws ec2 create-network-interface \
-        --description "NetworkInterfaces Configuration For EFA and EKS" \
-        --delete-on-termination \
-        --query 'NetworkInterface.NetworkInterfaceId' \
-        --output text
-      )
-      aws ec2 attach-network-interface \
-        --network-interface-id $INTERFACE_ID \
-        --instance-id $INSTANCE_ID \
-        --device-index 1 \
-        --network-card-index $network_card_index
-    done
-
-    # EFA Setup for Trainium and Inferentia
-    export FI_EFA_USE_DEVICE_RDMA=1
-    export FI_PROVIDER=efa
-    export FI_EFA_FORK_SAFE=1
-
-    curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
-    tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
-    ./efa_installer.sh -y -g
-    /opt/amazon/efa/bin/fi_info -p efa
-
-    --BOUNDARY--
-
+    Name: "${eks_cluster_id}-private*"
+  launchTemplate: "${launch_template_name}"
   tags:
-    InstanceType: "trainium"   # optional, add tags for your own use
+    InstanceType: "trainium"

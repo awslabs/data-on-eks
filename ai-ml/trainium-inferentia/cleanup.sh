@@ -3,7 +3,7 @@ set -o errexit
 set -o pipefail
 
 targets=(
-  "module.kubernetes_data_addons"
+  "module.eks_data_addons"
   "module.eks_blueprints_addons"
 )
 

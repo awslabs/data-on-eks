@@ -17,13 +17,13 @@ spec:
       values: ["spot", "on-demand"]
     - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
       operator: In
-      values: ["c5d.large","c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
+      values: ["c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
   limits:
     resources:
-      cpu: 1000
+      cpu: 2000
   providerRef:
     name: spark-compute-optimized
   labels:
@@ -68,17 +68,40 @@ spec:
     --BOUNDARY
     Content-Type: text/x-shellscript; charset="us-ascii"
 
-    cat <<-EOF > /etc/profile.d/bootstrap.sh
-    #!/bin/sh
+    #!/bin/bash
+    echo "Running a custom user data script"
+    set -ex
+    yum install mdadm -y
 
-    # Configure NVMe volumes in RAID0 configuration
-    # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
-    # Mount will be: /mnt/k8s-disks
-    export LOCAL_DISKS='raid0'
-    EOF
+    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
 
-    # Source extra environment variables in bootstrap script
-    sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+    DISK_ARRAY=()
+
+    for DEV in $DEVICES
+    do
+      DISK_ARRAY+=("/dev/$${DEV}")
+    done
+
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      # NOTE: Update permissions on folder according to your needs and specific user group. This is just an example.
+      chmod 777 -R /local*
+    fi
 
     --BOUNDARY--
 

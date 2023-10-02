@@ -28,9 +28,19 @@ html[data-theme="dark"] {
   --ifm-background-color: #141520;
 }
 
+.hero__subtitle::after {
+  content: '🚀';
+  margin-left: 8px; /* Adjust the spacing between the tagline and the rocket */
+}
+
+/* Highlight navbar items on hover */
+.navbar__link:hover {
+  color: var(--ifm-color-primary); /* Change to your desired color */
+}
+
 .boldTagline {
   font-weight: bold;
-  /*font-family: 'Roboto Mono for Powerline', sans-serif;*/
+  /* font-family: 'Roboto Mono for Powerline', sans-serif; */
 }
 
 .button-3d {

@@ -165,11 +165,10 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
-module "kubernetes_data_addons" {
-  # Please note that local source will be replaced once the below repo is public
-  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
-  source            = "../../../workshop/modules/terraform-aws-eks-data-addons"
+module "eks_data_addons" {
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
+
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
@@ -193,14 +192,13 @@ module "kubernetes_data_addons" {
   #---------------------------------------------------------------
   # Spark History Server Add-on
   #---------------------------------------------------------------
+  # Spark hsitory server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = true
   spark_history_server_helm_config = {
-    create_irsa = true
     values = [
-      templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
-        s3_bucket_name   = module.s3_bucket.s3_bucket_id
-        s3_bucket_prefix = aws_s3_object.this.key
-      })
+      <<-EOT
+      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
+      EOT
     ]
   }
 

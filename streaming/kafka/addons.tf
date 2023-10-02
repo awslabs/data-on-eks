@@ -1,4 +1,42 @@
 #---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_annotations" "gp2_default" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks]
+}
+
+resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+  volume_binding_mode    = "WaitForFirstConsumer"
+  parameters = {
+    fsType    = "xfs"
+    encrypted = true
+    type      = "gp3"
+  }
+
+  depends_on = [kubernetes_annotations.gp2_default]
+}
+
+#---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 
@@ -107,6 +145,7 @@ module "eks_blueprints_addons" {
         amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
         amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+        storage_class_type  = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
     chart_version = "48.1.1"
@@ -150,11 +189,9 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-# NOTE: This module will be moved to a dedicated repo and the source will be changed accordingly.
-module "kubernetes_data_addons" {
-  # Please note that local source will be replaced once the below repo is public
-  # source = "https://github.com/aws-ia/terraform-aws-kubernetes-data-addons"
-  source = "../../workshop/modules/terraform-aws-eks-data-addons"
+module "eks_data_addons" {
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------------------------------
@@ -190,7 +227,7 @@ resource "kubectl_manifest" "kafka_cluster" {
   for_each  = toset(data.kubectl_path_documents.kafka_cluster.documents)
   yaml_body = each.value
 
-  depends_on = [module.kubernetes_data_addons]
+  depends_on = [module.eks_data_addons]
 }
 
 #---------------------------------------------------------------

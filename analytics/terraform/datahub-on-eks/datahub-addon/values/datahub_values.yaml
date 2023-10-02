@@ -14,7 +14,7 @@ datahub-frontend:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: alb
-      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/scheme: internal # Private Load Balancer can only be accessed within the VPC
       alb.ingress.kubernetes.io/target-type: instance
       alb.ingress.kubernetes.io/inbound-cidrs: 0.0.0.0/0
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'

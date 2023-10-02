@@ -150,6 +150,7 @@ module "eks_blueprints_addons" {
         amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
         amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+        storage_class_type  = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
     chart_version = "48.1.1"
@@ -228,7 +229,7 @@ module "fluentbit_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket_prefix = "${local.name}-spark-logs-"
+  bucket_prefix = "${local.name}-argo-workflow-logs-"
   # For example only - please evaluate for your environment
   force_destroy = true
   server_side_encryption_configuration = {

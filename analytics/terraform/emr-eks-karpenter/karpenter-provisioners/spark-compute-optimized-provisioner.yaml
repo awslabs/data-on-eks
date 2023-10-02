@@ -17,23 +17,18 @@ spec:
       values: ["spot", "on-demand"]
     - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
       operator: In
-      values: ["c5d.large","c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
+      values: ["c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
     - key: "kubernetes.io/arch"
       operator: In
       values: ["amd64"]
   limits:
     resources:
-      cpu: 1000
+      cpu: 2000
   providerRef:
     name: spark-compute-optimized
   labels:
     type: karpenter
     provisioner: spark-compute-optimized
-    NodeGroupType: SparkComputeOptimized
-  taints:
-    - key: spark-compute-optimized
-      value: 'true'
-      effect: NoSchedule
   ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
 
 ---
@@ -99,7 +94,8 @@ spec:
       mkdir -p /local1
       echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
       mount -a
-      /usr/bin/chown -hR +999:+1000 /local1
+      # NOTE: Update permissions on folder according to your needs and specific user group. This is just an example.
+      chmod 777 -R /local*
     fi
 
     --BOUNDARY--

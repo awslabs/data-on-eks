@@ -58,13 +58,22 @@ prometheus:
     ruleSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false
+    storageSpec:
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          storageClassName: ${storage_class_type}
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
 grafana:
   enabled: true
-  # -- the grafana admin password
-  adminPassword: prom-operator
-  defaultDashboardsEnabled: false
+  defaultDashboardsEnabled: true
   sidecar:
-      dashboards:
-        enabled: true
+    dashboards:
+      enabled: true
 alertmanager:
   enabled: true

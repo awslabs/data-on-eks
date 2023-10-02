@@ -36,7 +36,7 @@ variable "secondary_cidr_blocks" {
 
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
-  type        = string
+  type        = bool
   default     = false
 }
 
@@ -49,7 +49,7 @@ variable "enable_yunikorn" {
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_fsx_for_lustre" {

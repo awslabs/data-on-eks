@@ -1,5 +1,9 @@
 prometheus:
   prometheusSpec:
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
     retention: 5h
     scrapeInterval: 30s
     evaluationInterval: 30s
@@ -9,7 +13,7 @@ prometheus:
         metadata:
           name: data
         spec:
-          storageClassName: gp3
+          storageClassName: ${storage_class_type}
           accessModes:
             - ReadWriteOnce
           resources:
@@ -20,4 +24,4 @@ alertmanager:
 
 grafana:
   enabled: true
-  defaultDashboardsEnabled: true
+  defaultDashboardsEnabled: false

@@ -111,6 +111,7 @@ module "eks_blueprints_addons" {
         amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
         amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+        storage_class_type  = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
     chart_version = "48.1.1"
@@ -125,21 +126,43 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
-resource "kubernetes_storage_class_v1" "gp3" {
+#---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+
+resource "kubernetes_annotations" "gp2_default" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks]
+}
+
+resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   metadata {
     name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
   }
 
   storage_provisioner    = "ebs.csi.aws.com"
-  allow_volume_expansion = true
   reclaim_policy         = "Delete"
+  allow_volume_expansion = true
   volume_binding_mode    = "WaitForFirstConsumer"
   parameters = {
+    fsType    = "xfs"
     encrypted = true
-    fsType    = "ext4"
     type      = "gp3"
   }
-  depends_on = [module.eks_blueprints_addons]
+
+  depends_on = [kubernetes_annotations.gp2_default]
 }
 
 #---------------------------------------------------------------
@@ -253,7 +276,7 @@ resource "helm_release" "nifi" {
     sensitive_key       = data.aws_secretsmanager_secret_version.sensitive_key_version.secret_string
   })]
 
-  depends_on = [kubernetes_storage_class_v1.gp3]
+  depends_on = [kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class]
 }
 
 #---------------------------------------------------------------

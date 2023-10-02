@@ -10,24 +10,32 @@
     padding: 1rem;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     font-size: 1.5rem;
     font-weight: bold;
 }
 
 .icon {
-    margin-left: auto;
-    width: 2rem;
-    height: 2rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11.999 18.674l-7.406-7.406 1.413-1.414 5.993 5.993 5.993-5.993 1.413 1.414-7.406 7.406z'/%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-size: contain;
+    font-size: 2.0rem; /* Increase the font size for a larger emoji */
     transition: transform 0.3s ease-in-out;
+    line-height: 1;
+    animation: blinkAnimation 1s infinite;
+}
+
+@keyframes blinkAnimation {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
 }
 
 .content {
     padding: 1rem;
 }
 
-.icon.expanded {
-    transform: rotate(180deg);
+.expanded .icon {
+    transform: scale(1.0);
+    animation: none;
 }

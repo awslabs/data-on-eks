@@ -14,7 +14,6 @@ service:
         Format  regex
         Regex   ^(?<namespace_name>[^_]+)\.(?<container_name>.+)\.(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)\.(?<docker_id>[a-z0-9]{64})-$
 
-
 input:
   name: "tail"
   enabled: true
@@ -27,20 +26,6 @@ input:
   extraInputs: |
     multiline.parser  docker, cri
     Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
-
-
-# Use additional inputs for filtering the Spark logs using namespace or multiple namesapces in the Path field wht comma separated
-# additionalInputs: |
-#   [INPUT]
-#       Name                tail
-#       Tag                 spark.<namespace_name>.<container_name>.<pod_name>.<docker_id>-
-#       Path                /var/log/containers/*<ENTER_YOUR_NAMESPACE>*.log
-#       DB                  /var/log/flb_spark.db
-#       multiline.parser    docker, cri
-#       Mem_Buf_Limit       5MB
-#       Skip_Long_Lines     On
-#       Refresh_Interval    10
-#       Tag_Regex           (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
 
 
 # NOTE: extraFilters config for using Kubelet to get the Metadata instead of talking to API server for large clusters
@@ -64,104 +49,41 @@ filter:
     Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
 
-# Use additional filters for filtering the Spark logs. This is the example filter for the above commented INPUT
-# rewrite_tag for writing the Spark logs in S3 bucket or Cloudwatch under Spark Applciation ID prefix
-# additionalFilters: |
-#   [FILTER]
-#       Name                kubernetes
-#       Match               spark.*
-#       Kube_URL            https://kubernetes.default.svc.cluster.local:443
-#       Merge_Log           On
-#       Merge_Log_Key       log_processed
-#       Keep_Log            On
-#       K8S-Logging.Parser  On
-#       K8S-Logging.Exclude On
-#       Labels              On
-#       Buffer_Size         0
-#       Kube_Tag_Prefix     spark.
-#       Regex_Parser        kubernetes
-#       Use_Kubelet         true
-#       Kubelet_Port        10250
-#       Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-#       Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
-#   [FILTER]
-#       Name                 rewrite_tag
-#       Match                spark.*
-#       Rule                 $kubernetes['labels']['spark-app-selector'] ^(.*?)$ from.$kubernetes['labels']['spark-app-selector'].$TAG[1].$TAG[2].$TAG[3] false
+# CATION: Donot use `cloudwatch` plugin. This Golang Plugin is not recommnded by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
+# cloudWatch:
+#   enabled: false
 
-# At this point log output will look like a JSON. We are filtering only log_key from the below json log line
-# {
-#     "_p": "F",
-#     "kubernetes": {
-#         "container_hash": "public.ecr.aws/karpenter/controller@sha256:fefae2739efa1c4d9561069d1683a0ed201e41771351da1ef504c805941f0bf2",
-#         "container_image": "sha256:9f36518b254b77c984058cd7f76b10eb20594cfc8",
-#         "container_name": "controller",
-#         "docker_id": "681b9d4654e04b9c84afb20090ae26ada688912a4ad126fad407ddb6dfebb39c",
-#         "host": "ip-10-1-111-11.us-west-2.compute.internal",
-#         "labels": {
-#             "app.kubernetes.io/instance": "karpenter",
-#             "app.kubernetes.io/name": "karpenter",
-#             "pod-template-hash": "6f576db6fd"
-#         },
-#         "namespace_name": "karpenter",
-#         "pod_id": "307be28b-beb9-42c9-9361-eaa4e1545f55",
-#         "pod_name": "karpenter-6f576db6fd-4x65l"
-#     },
-#     "log": "2023-03-15T14:32:51.536Z\tINFO\tcontroller\tAll workers finished\t{\"commit\": \"beb0a64-dirty\", \"controller\": \"node-state\", \"controllerGroup\": \"\", \"controllerKind\": \"Node\"}",
-#     "stream": "stdout",
-#     "time": "2023-03-15T14:32:51.537116726Z"
-# }
-
-cloudWatch:
+# This is a new high performance C Plugin for CloudWatchLogs. See docs here https://docs.fluentbit.io/manual/pipeline/outputs/cloudwatch
+cloudWatchLogs:
   enabled: true
   match: "systempods.*"
   region: ${region}
   logGroupName: ${cloudwatch_log_group}
-  logStreamPrefix: "fluentbit-"
   autoCreateGroup: false
   extraOutputs: |
     log_key               log
+
+#----------------------------------------------------------#
+# OUTPUT logs to S3
+#----------------------------------------------------------#
 
 # This is an example for writing logs to S3 bucket.
 # This example writes system pod logs and spark logs into dedicated prefix.
 # This second output is using the rewrite_tag filter commented above
 
-# additionalOutputs: |
-#   [OUTPUT]
-#       Name                            s3
-#       Match                           systempods.*
-#       region                          ${region}
-#       bucket                          "<ENTER_YOUR_S3_BUCKET_NAME>""
-#       total_file_size                 50M
-#       s3_key_format                   /"<ENTER_YOUR_CLUSTER_NAME>"/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
-#       s3_key_format_tag_delimiters    ..
-#       store_dir                       /home/ec2-user/buffer
-#       upload_timeout                  10m
-#       log_key                         log
+additionalOutputs: |
+  [OUTPUT]
+      Name                            s3
+      Match                           systempods.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 100M
+      s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  10m
+      log_key                         log
 
-#   [OUTPUT]
-#       Name                            s3
-#       Match                           from.*
-#       region                          ${region}
-#       bucket                          "<ENTER_YOUR_S3_BUCKET_NAME>""
-#       total_file_size                 5M
-#       s3_key_format                   /"<ENTER_YOUR_CLUSTER_NAME>"/spark-application-logs/$TAG[2]/$TAG[1]/$TAG[4]/$TAG[4]_%H%M%S_$UUID.log
-#       s3_key_format_tag_delimiters    ..
-#       store_dir                       /home/ec2-user/buffer
-#       upload_timeout                  10m
-#       log_key                         log
-
-firehose:
-  enabled: false
-
-kinesis:
-  enabled: false
-
-elasticsearch:
-  enabled: false
-
-serviceAccount:
-  create: true
 
 # Resource config for large clusters
 resources:
@@ -175,5 +97,6 @@ resources:
 ## Assign a PriorityClassName to pods if set
 priorityClassName: system-node-critical
 
-updateStrategy:
-  type: RollingUpdate
+# This toleration allows Daemonset pod to be scheduled on any node, regardless of their Taints.
+tolerations:
+  - operator: Exists

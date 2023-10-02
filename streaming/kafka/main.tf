@@ -33,8 +33,9 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.15"
 
-  cluster_name                   = local.name
-  cluster_version                = local.cluster_version
+  cluster_name    = local.name
+  cluster_version = local.cluster_version
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
 
   vpc_id     = module.vpc.vpc_id
@@ -102,9 +103,9 @@ module "eks" {
       name        = "kafka-node-group"
       description = "EKS managed node group example launch template"
 
-      min_size     = 1
+      min_size     = 3
       max_size     = 12
-      desired_size = 3
+      desired_size = 5
 
       instance_types = ["r6i.2xlarge"]
       ebs_optimized  = true
@@ -136,44 +137,4 @@ module "eks" {
   }
 
   tags = local.tags
-}
-
-
-#---------------------------------------------------------------
-# GP3 Encrypted Storage Class
-#---------------------------------------------------------------
-
-resource "kubernetes_annotations" "gp2_default" {
-  annotations = {
-    "storageclass.kubernetes.io/is-default-class" : "false"
-  }
-  api_version = "storage.k8s.io/v1"
-  kind        = "StorageClass"
-  metadata {
-    name = "gp2"
-  }
-  force = true
-
-  depends_on = [module.eks]
-}
-
-resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
-  metadata {
-    name = "gp3"
-    annotations = {
-      "storageclass.kubernetes.io/is-default-class" : "true"
-    }
-  }
-
-  storage_provisioner    = "ebs.csi.aws.com"
-  reclaim_policy         = "Delete"
-  allow_volume_expansion = true
-  volume_binding_mode    = "WaitForFirstConsumer"
-  parameters = {
-    fsType    = "xfs"
-    encrypted = true
-    type      = "gp3"
-  }
-
-  depends_on = [kubernetes_annotations.gp2_default]
 }
