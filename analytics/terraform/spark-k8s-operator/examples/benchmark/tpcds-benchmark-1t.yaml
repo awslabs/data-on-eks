@@ -88,6 +88,10 @@ spec:
     serviceAccount: spark-team-a
     nodeSelector:
       provisioner: spark-compute-optimized
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
   executor:
     volumeMounts:
       - name: spark-local-dir-1
@@ -109,6 +113,9 @@ spec:
     serviceAccount: spark-team-a
     nodeSelector:
       provisioner: spark-compute-optimized
-
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
   restartPolicy:
     type: Never
