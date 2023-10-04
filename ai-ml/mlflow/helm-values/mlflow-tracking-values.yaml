@@ -18,7 +18,7 @@ podAnnotations: {}
 replicaCount: 1
 
 service:
-  type: ClusterIP 
+  type: ClusterIP
   port: 5000
 
 serviceAccount:
@@ -34,7 +34,7 @@ serviceAccount:
 
 ingress:
   enabled: true
-  className: nginx 
+  className: nginx
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/use-regex: "true"
