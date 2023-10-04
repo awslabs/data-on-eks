@@ -114,45 +114,33 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.6.0" # min version required to use SG for NLB feature
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
   }
 
   #---------------------------------------
-  # Ingress Nginx external
+  # Ingress Nginx Add-on
   #---------------------------------------
   enable_ingress_nginx = true
   ingress_nginx = {
-    name = "ingress-nginx-external"
-    values = [
-      <<-EOT
-          controller:
-            replicaCount: 3
-            service:
-              annotations:
-                service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
-                service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-                service.beta.kubernetes.io/aws-load-balancer-security-groups: ${aws_security_group.ingress_nginx_external.id}
-                service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules: true
-              loadBalancerClass: service.k8s.aws/nlb
-            topologySpreadConstraints:
-              - maxSkew: 1
-                topologyKey: topology.kubernetes.io/zone
-                whenUnsatisfiable: ScheduleAnyway
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/instance: ingress-nginx-external
-              - maxSkew: 1
-                topologyKey: kubernetes.io/hostname
-                whenUnsatisfiable: ScheduleAnyway
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/instance: ingress-nginx-external
-            minAvailable: 2
-            ingressClassResource:
-              name: ingress-nginx-external
-              default: false
-        EOT
-    ]
+    values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
+  }
+
+  helm_releases = {
+    #---------------------------------------
+    # NVIDIA Device Plugin Add-on
+    #---------------------------------------
+    nvidia-device-plugin = {
+      description      = "A Helm chart for NVIDIA Device Plugin"
+      namespace        = "nvidia-device-plugin"
+      create_namespace = true
+      chart            = "nvidia-device-plugin"
+      chart_version    = "0.14.0"
+      repository       = "https://nvidia.github.io/k8s-device-plugin"
+      values           = [file("${path.module}/helm-values/nvidia-values.yaml")]
+    }
   }
 
   #---------------------------------------
@@ -164,7 +152,7 @@ module "eks_blueprints_addons" {
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
   #---------------------------------------------------------------
-  enable_kube_prometheus_stack = false
+  enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
     values = [
       var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
@@ -195,9 +183,30 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "~> 1.2.3" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # MLflow Tracking Add-on
+  #---------------------------------------------------------------
+
+  enable_mlflow_tracking = true
+  mlflow_tracking_helm_config = {
+    mlflow_namespace = try(kubernetes_namespace_v1.mlflow[0].metadata[0].name, local.mlflow_namespace)
+
+    values = [templatefile("${path.module}/helm-values/mlflow-tracking-values.yaml", {
+      mlflow_sa   = local.mlflow_service_account
+      mlflow_irsa = module.mlflow_irsa[0].iam_role_arn
+      # MLflow Postgres RDS Config
+      mlflow_db_username = local.mlflow_name
+      mlflow_db_password = try(sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string), "")
+      mlflow_db_name     = try(module.db[0].db_instance_name, "")
+      mlflow_db_host     = try(element(split(":", module.db[0].db_instance_endpoint), 0), "")
+      # S3 bucket config for artifacts
+      s3_bucket_name = try(module.mlflow_s3_bucket[0].s3_bucket_id, "")
+    })]
+  }
 
 }
 
@@ -266,7 +275,7 @@ module "fluentbit_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket_prefix = "${local.name}-argo-workflow-logs-"
+  bucket_prefix = "${local.name}-fluentbit-logs-"
   # For example only - please evaluate for your environment
   force_destroy = true
   server_side_encryption_configuration = {

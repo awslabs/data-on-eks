@@ -4,7 +4,7 @@ provider "aws" {
 
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate  = base64decode(module.eks.cluster_certificate_authority_data)
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
   token                  = data.aws_eks_cluster_auth.this.token
 }
 
@@ -18,7 +18,7 @@ provider "aws" {
 provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate  = base64decode(module.eks.cluster_certificate_authority_data)
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
     token                  = data.aws_eks_cluster_auth.this.token
   }
 }
@@ -26,13 +26,13 @@ provider "helm" {
 provider "kubectl" {
   apply_retry_count      = 10
   host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate  = base64decode(module.eks.cluster_certificate_authority_data)
-  load_config_file         = false
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  load_config_file       = false
   token                  = data.aws_eks_cluster_auth.this.token
 }
 
 data "aws_availability_zones" "available" {}
-data "aws_region" "current" {}
+# data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
@@ -51,12 +51,12 @@ locals {
   name       = var.name
   region     = var.region
   vpc_cidr   = var.vpc_cidr
-  azs        = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs        = slice(data.aws_availability_zones.available.names, 0, 2)
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
 
-  mlflow_name      = "mlflow"
-  mlflow_namespace = "mlflow"
+  mlflow_name            = "mlflow"
+  mlflow_namespace       = "mlflow"
   mlflow_service_account = "mlflow"
 
   tags = {

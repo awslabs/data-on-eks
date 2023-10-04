@@ -15,10 +15,10 @@ output "grafana_secret_name" {
 
 output "mlflow_s3_artifacts" {
   description = "S3 bucket for MLflow artifacts"
-  value = module.mlflow_s3_bucket[0].s3_bucket_id
+  value       = module.mlflow_s3_bucket[0].s3_bucket_id
 }
 
 output "mlflow_db_backend" {
   description = "Amazon RDS Postgres database for MLflow backend"
-  value = module.db[0].db_instance_endpoint
+  value       = module.db[0].db_instance_endpoint
 }

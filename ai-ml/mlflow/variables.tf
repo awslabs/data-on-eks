@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "mlflow-eks"
+  default     = "mlflow-on-eks"
   type        = string
 }
 
@@ -16,15 +16,18 @@ variable "eks_cluster_version" {
   type        = string
 }
 
+# VPC with 2046 IPs (10.1.0.0/21) and 2 AZs
 variable "vpc_cidr" {
   description = "VPC CIDR"
-  default     = "10.1.0.0/16"
+  default     = "10.1.0.0/21"
   type        = string
 }
 
-variable "db_private_subnets" {
-  description = "Private Subnets CIDRs. 254 IPs per Subnet/AZ for Airflow DB."
-  default     = ["10.0.20.0/26", "10.0.21.0/26"]
+# RFC6598 range 100.64.0.0/10
+# Note you can only /16 range to VPC. You can add multiples of /16 if required
+variable "secondary_cidr_blocks" {
+  description = "Secondary CIDR blocks to be attached to VPC"
+  default     = ["100.64.0.0/16"]
   type        = list(string)
 }
 
@@ -34,8 +37,8 @@ variable "enable_amazon_prometheus" {
   default     = true
 }
 
-variable "enable_mlflow" {
-  description = "Enable MMLflow"
+variable "enable_mlflow_tracking" {
+  description = "Enable MLflow Tracking"
   type        = bool
   default     = true
 }

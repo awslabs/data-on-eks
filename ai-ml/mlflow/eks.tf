@@ -79,7 +79,11 @@ module "eks" {
     core_node_group = {
       name        = "core-node-group"
       description = "EKS Core node group for hosting critical add-ons"
-      subnet_ids  = module.vpc.private_subnets
+      # Filtering only Secondary CIDR private subnets starting with "100.".
+      # Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+      )
 
       min_size     = 3
       max_size     = 9
@@ -107,6 +111,41 @@ module "eks" {
 
       tags = merge(local.tags, {
         Name                     = "core-node-grp",
+        "karpenter.sh/discovery" = local.name
+      })
+    }
+
+    gpu1 = {
+      name        = "gpu-node-grp"
+      description = "EKS Node Group to run GPU workloads"
+      # Filtering only Secondary CIDR private subnets starting with "100.".
+      # Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+      )
+
+      ami_type     = "AL2_x86_64_GPU"
+      min_size     = 0
+      max_size     = 1
+      desired_size = 0
+
+      instance_types = ["g5.12xlarge"]
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "gpu"
+      }
+
+      taints = {
+        gpu = {
+          key      = "nvidia.com/gpu"
+          effect   = "NO_SCHEDULE"
+          operator = "EXISTS"
+        }
+      }
+
+      tags = merge(local.tags, {
+        Name                     = "gpu-node-grp",
         "karpenter.sh/discovery" = local.name
       })
     }

@@ -2,7 +2,7 @@
 # RDS Postgres Database for MLflow Backend
 #---------------------------------------------------------------
 module "db" {
-  count   = var.enable_mlflow ? 1 : 0
+  count   = var.enable_mlflow_tracking ? 1 : 0
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 5.0"
 
@@ -42,7 +42,7 @@ module "db" {
   create_monitoring_role                = true
   monitoring_interval                   = 60
   monitoring_role_name                  = "mlflow-backend"
-  monitoring_role_use_name_prefix        = true
+  monitoring_role_use_name_prefix       = true
   monitoring_role_description           = "MLflow Postgres Backend for monitoring role"
 
   parameters = [
@@ -63,19 +63,19 @@ module "db" {
 # MLflow Postgres Backend DB Master password
 #---------------------------------------------------------------
 resource "random_password" "postgres" {
-  count   = var.enable_mlflow ? 1 : 0
+  count   = var.enable_mlflow_tracking ? 1 : 0
   length  = 16
   special = false
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "postgres" {
-  count                   = var.enable_mlflow ? 1 : 0
-  name                    = "postgres-2"
+  count                   = var.enable_mlflow_tracking ? 1 : 0
+  name                    = "postgres-mlflow"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
 resource "aws_secretsmanager_secret_version" "postgres" {
-  count         = var.enable_mlflow ? 1 : 0
+  count         = var.enable_mlflow_tracking ? 1 : 0
   secret_id     = aws_secretsmanager_secret.postgres[0].id
   secret_string = random_password.postgres[0].result
 }
@@ -84,7 +84,7 @@ resource "aws_secretsmanager_secret_version" "postgres" {
 # PostgreSQL RDS security group
 #---------------------------------------------------------------
 module "security_group" {
-  count   = var.enable_mlflow ? 1 : 0
+  count   = var.enable_mlflow_tracking ? 1 : 0
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 5.0"
 
@@ -99,7 +99,7 @@ module "security_group" {
       to_port     = 5432
       protocol    = "tcp"
       description = "PostgreSQL access from within VPC"
-      cidr_blocks = "${module.vpc.vpc_cidr_block}"
+      cidr_blocks = "${module.vpc.vpc_cidr_block},${module.vpc.vpc_secondary_cidr_blocks[0]}"
     },
   ]
 
@@ -113,7 +113,7 @@ module "security_group" {
 
 #tfsec:ignore:*
 module "mlflow_s3_bucket" {
-  count   = var.enable_mlflow ? 1 : 0
+  count   = var.enable_mlflow_tracking ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
@@ -137,7 +137,7 @@ module "mlflow_s3_bucket" {
 # MLflow Namespace
 #---------------------------------------------------------------
 resource "kubernetes_namespace_v1" "mlflow" {
-  count = var.enable_mlflow ? 1 : 0
+  count = var.enable_mlflow_tracking ? 1 : 0
   metadata {
     name = local.mlflow_namespace
   }
@@ -147,7 +147,7 @@ resource "kubernetes_namespace_v1" "mlflow" {
 }
 
 resource "kubernetes_service_account_v1" "mlflow" {
-  count = var.enable_mlflow ? 1 : 0
+  count = var.enable_mlflow_tracking ? 1 : 0
   metadata {
     name        = local.mlflow_service_account
     namespace   = kubernetes_namespace_v1.mlflow[0].metadata[0].name
@@ -158,7 +158,7 @@ resource "kubernetes_service_account_v1" "mlflow" {
 }
 
 resource "kubernetes_secret_v1" "mlflow" {
-  count = var.enable_mlflow ? 1 : 0
+  count = var.enable_mlflow_tracking ? 1 : 0
   metadata {
     name      = "${local.mlflow_service_account}-secret"
     namespace = kubernetes_namespace_v1.mlflow[0].metadata[0].name
@@ -171,9 +171,9 @@ resource "kubernetes_secret_v1" "mlflow" {
   type = "kubernetes.io/service-account-token"
 }
 
-# Create IAM Role for Service Account (IRSA) Only if Airflow is enabled
+# Create IAM Role for Service Account (IRSA) Only if MLflow is enabled
 module "mlflow_irsa" {
-  count = var.enable_mlflow ? 1 : 0
+  count = var.enable_mlflow_tracking ? 1 : 0
 
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0" #ensure to update this to the latest/desired version
@@ -203,7 +203,7 @@ module "mlflow_irsa" {
 # IAM policy for MLflow for accesing S3 artifacts and RDS Postgres backend
 #---------------------------------------------------------------
 resource "aws_iam_policy" "mlflow" {
-  count = var.enable_mlflow ? 1 : 0
+  count = var.enable_mlflow_tracking ? 1 : 0
 
   description = "IAM policy for MLflow"
   name_prefix = format("%s-%s-", local.name, "mlflow")
@@ -212,7 +212,7 @@ resource "aws_iam_policy" "mlflow" {
 }
 
 data "aws_iam_policy_document" "mlflow" {
-  count = var.enable_mlflow ? 1 : 0
+  count = var.enable_mlflow_tracking ? 1 : 0
   statement {
     sid       = ""
     effect    = "Allow"
@@ -237,7 +237,7 @@ data "aws_iam_policy_document" "mlflow" {
     sid       = ""
     effect    = "Allow"
     resources = ["arn:${local.partition}:rds-db:${local.region}:${local.account_id}:dbuser:${module.db[0].db_instance_name}/${local.mlflow_name}"]
-    
+
     actions = [
       "rds-db:connect",
     ]
