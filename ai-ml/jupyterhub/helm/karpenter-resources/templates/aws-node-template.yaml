@@ -5,7 +5,11 @@ metadata:
 spec:
   amiFamily: {{ .Values.amiFamily }}
   blockDeviceMappings:
-    - deviceName: /dev/sda1
+    - {{ if eq .Values.amiFamily "Ubuntu" }}
+      deviceName: /dev/sda1
+      {{ else }}
+      deviceName: /dev/xvda
+      {{ end }}
       ebs:
         volumeSize: 200Gi # Big disk for Notebook instances
         volumeType: gp3
