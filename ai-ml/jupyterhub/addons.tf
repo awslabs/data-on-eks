@@ -237,8 +237,8 @@ module "eks_blueprints_addons" {
         <<-EOT
           name: trainium
           clusterName: ${module.eks.cluster_name}
-          instanceSizes: ["2xlarge", "32xlarge"]
-          instanceFamilies: ["inf2"]
+          instanceSizes: ["32xlarge"]
+          instanceFamilies: ["trn1"]
           taints:
             - key: aws.amazon.com/neuroncore
               value: "true"
