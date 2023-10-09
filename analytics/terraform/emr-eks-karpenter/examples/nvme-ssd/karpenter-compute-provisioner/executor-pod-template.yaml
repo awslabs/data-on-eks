@@ -12,7 +12,7 @@ spec:
         type: Directory
 
   nodeSelector:
-    NodeGroupType: "SparkComputeOptimized"
+    provisioner: spark-compute-optimized
 #    topology.kubernetes.io/zone: "us-west-2a"
 
   containers:
@@ -22,7 +22,7 @@ spec:
           mountPath: /data1
           readOnly: false
 
-  tolerations:
-    - key: "spark-compute-optimized"
-      operator: "Exists"
-      effect: "NoSchedule"
+  # tolerations:
+  #   - key: "spark-compute-optimized"
+  #     operator: "Exists"
+  #     effect: "NoSchedule"

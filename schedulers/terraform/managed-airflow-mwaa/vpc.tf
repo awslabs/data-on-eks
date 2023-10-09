@@ -1,20 +1,22 @@
 #---------------------------------------------------------------
 # Supporting Resources
 #---------------------------------------------------------------
+# WARNING: This VPC module includes the creation of an Internet Gateway and NAT Gateway, which simplifies cluster deployment and testing, primarily intended for sandbox accounts.
+# IMPORTANT: For preprod and prod use cases, it is crucial to consult with your security team and AWS architects to design a private infrastructure solution that aligns with your security requirements
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
   name = local.name
   cidr = local.vpc_cidr
+  azs  = local.azs
 
-  azs             = local.azs
   private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
   public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
 
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
+  enable_nat_gateway = true
+  single_nat_gateway = true
 
   # Manage so we can name
   manage_default_network_acl    = true
@@ -37,39 +39,35 @@ module "vpc" {
   tags = local.tags
 }
 
-module "vpc_endpoints_sg" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 4.0"
-
+resource "aws_security_group" "vpc_endpoints_sg" {
   name        = "${local.name}-vpc-endpoints"
   description = "Security group for VPC endpoint access"
   vpc_id      = module.vpc.vpc_id
 
-  ingress_with_cidr_blocks = [
-    {
-      rule        = "https-443-tcp"
-      description = "VPC CIDR HTTPS"
-      cidr_blocks = join(",", module.vpc.private_subnets_cidr_blocks)
-    },
-  ]
+  ingress {
+    description = "VPC CIDR HTTPS"
+    cidr_blocks = [module.vpc.vpc_cidr_block]
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+  }
 
-  egress_with_cidr_blocks = [
-    {
-      rule        = "https-443-tcp"
-      description = "All egress HTTPS"
-      cidr_blocks = "0.0.0.0/0"
-    },
-  ]
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   tags = local.tags
 }
 
 module "vpc_endpoints" {
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
+  security_group_ids = [aws_security_group.vpc_endpoints_sg.id]
 
   endpoints = merge({
     s3 = {

@@ -1,0 +1,10 @@
+replicaCount: 1
+
+webhook:
+  # -- Enable webhook server
+  enable: true
+  # -- Webhook service port
+  port: 8080
+
+emrContainers:
+  awsRegion: ${aws_region}

@@ -1,31 +1,31 @@
 #---------------------------------------------------------------
 # Supporting Network Resources
 #---------------------------------------------------------------
+# WARNING: This VPC module includes the creation of an Internet Gateway and NAT Gateway, which simplifies cluster deployment and testing, primarily intended for sandbox accounts.
+# IMPORTANT: For preprod and prod use cases, it is crucial to consult with your security team and AWS architects to design a private infrastructure solution that aligns with your security requirements
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
-  name           = local.name
-  cidr           = local.vpc_cidr
-  azs            = local.azs
-  public_subnets = var.public_subnets
+  name = local.name
+  cidr = var.vpc_cidr
+  azs  = local.azs
 
-  #  Use This to leverage Secondary CIDR block
-  #  secondary_cidr_blocks = "100.64.0.0/16"
-  #  private_subnets = concat(var.private_subnets, [var.secondary_cidr_blocks])
-  private_subnets = var.private_subnets
+  # Secondary CIDR block attached to VPC for EKS Control Plane ENI + Nodes + Pods
+  secondary_cidr_blocks = var.secondary_cidr_blocks
 
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
+  # 1/ EKS Data Plane secondary CIDR blocks for two subnets across two AZs for EKS Control Plane ENI + Nodes + Pods
+  # 2/ Two private Subnets with RFC1918 private IPv4 address range for Private NAT + NLB + Airflow + EC2 Jumphost etc.
+  private_subnets = concat(var.private_subnets, var.eks_data_plane_subnet_secondary_cidr)
 
-  # Manage so we can name
-  manage_default_network_acl    = true
-  default_network_acl_tags      = { Name = "${local.name}-default" }
-  manage_default_route_table    = true
-  default_route_table_tags      = { Name = "${local.name}-default" }
-  manage_default_security_group = true
-  default_security_group_tags   = { Name = "${local.name}-default" }
+  # ------------------------------
+  # Optional Public Subnets for NAT and IGW for PoC/Dev/Test environments
+  # Public Subnets can be disabled while deploying to Production and use Private NAT + TGW
+  public_subnets     = var.public_subnets
+  enable_nat_gateway = true
+  single_nat_gateway = true
+  #-------------------------------
 
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1
@@ -41,10 +41,10 @@ module "vpc" {
 }
 
 module "vpc_endpoints_sg" {
-  count = var.enable_vpc_endpoints ? 1 : 0
-
   source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
+
+  create = var.enable_vpc_endpoints
 
   name        = "${local.name}-vpc-endpoints"
   description = "Security group for VPC endpoint access"
@@ -70,13 +70,13 @@ module "vpc_endpoints_sg" {
 }
 
 module "vpc_endpoints" {
-  count = var.enable_vpc_endpoints ? 1 : 0
-
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 3.0"
+  version = "~> 5.0"
+
+  create = var.enable_vpc_endpoints
 
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoints_sg[0].security_group_id]
+  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
 
   endpoints = merge({
     s3 = {

@@ -4,15 +4,15 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 4.40"
+      version = ">= 4.9"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = ">= 2.10"
+      version = ">= 2.20"
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.4.1"
+      version = ">= 2.8"
     }
     kubectl = {
       source  = "gavinbunney/kubectl"
@@ -23,11 +23,4 @@ terraform {
       version = ">= 3.1"
     }
   }
-
-  # ##  Used for end-to-end testing on project; update to suit your needs
-  # backend "s3" {
-  #   bucket = "doeks-github-actions-e2e-test-state"
-  #   region = "us-west-2"
-  #   key    = "e2e/kafka/terraform.tfstate"
-  # }
 }

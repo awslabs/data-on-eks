@@ -7,7 +7,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {{onBrokenLinks: string, organizationName: string, plugins: string[], title: string, url: string, onBrokenMarkdownLinks: string, i18n: {defaultLocale: string, locales: string[]}, trailingSlash: boolean, baseUrl: string, presets: [string,Options][], githubHost: string, tagline: string, themeConfig: ThemeConfig & UserThemeConfig & AlgoliaThemeConfig, projectName: string}} */
 const config = {
   title: 'Data on EKS',
-  tagline: 'Accelerate your Data Journey with Amazon EKS 🚀',
+  tagline: 'Supercharge your Data and AI/ML Journey with Amazon EKS',
   url: 'https://awslabs.github.io',
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
@@ -38,15 +38,6 @@ const config = {
           editUrl:
             'https://github.com/awslabs/data-on-eks/blob/main/website/',
         },
-        blog: {
-          blogSidebarTitle: 'All posts',
-          blogSidebarCount: 'ALL',
-          showReadingTime: true,
-          readingTime: ({content, frontMatter, defaultReadingTime}) =>
-              defaultReadingTime({content, options: {wordsPerMinute: 300}}),
-          editUrl:
-              'https://github.com/awslabs/data-on-eks/blob/main/website/',
-        },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
@@ -66,47 +57,40 @@ const config = {
         items: [
           {
             type: 'doc',
-            docId: 'intro',
+            docId: 'introduction/intro',
             position: 'left',
-            label: 'Welcome',
+            label: 'Introduction',
           },
           {
             type: 'doc',
-            docId: 'amazon-emr-on-eks/index',
+            docId: 'blueprints/amazon-emr-on-eks/index',
             position: 'left',
-            label: 'EMR on EKS'
+            label: 'Blueprints'
           },
           {
             type: 'doc',
-            docId: 'data-analytics/index',
+            docId: 'bestpractices/intro',
             position: 'left',
-            label: 'Data Analytics',
+            label: 'Best Practices'
           },
           {
             type: 'doc',
-            docId: 'ai-ml/index',
+            docId: 'benchmarks/emr-on-eks',
             position: 'left',
-            label: 'AI/ML',
+            label: 'Benchmarks'
           },
           {
             type: 'doc',
-            docId: 'job-schedulers/index',
+            docId: 'workshop/intro',
             position: 'left',
-            label: 'Job Schedulers',
+            label: 'Workshop'
           },
           {
             type: 'doc',
-            docId: 'streaming-platforms/index',
+            docId: 'resources/intro',
             position: 'left',
-            label: 'Streaming Platforms',
+            label: 'Resources'
           },
-          {
-            type: 'doc',
-            docId: 'distributed-databases/index',
-            position: 'left',
-            label: 'Distributed Databases',
-          },
-          {to: '/blog', label: 'Blog', position: 'left'},
           {
             href: 'https://github.com/awslabs/data-on-eks',
             label: 'GitHub',
@@ -133,7 +117,7 @@ const config = {
             items: [
               {
                 label: 'Docs',
-                to: '/docs/intro',
+                to: '/docs/introduction/intro',
               },
             ],
           },
@@ -143,15 +127,6 @@ const config = {
               {
                 label: 'Github',
                 href: 'https://github.com/awslabs/data-on-eks',
-              }
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
               }
             ],
           },

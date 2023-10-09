@@ -1,17 +1,64 @@
 locals {
   spark_team = "spark-team-a"
 }
+
+resource "kubernetes_namespace_v1" "spark_team_a" {
+  metadata {
+    name = local.spark_team
+  }
+  timeouts {
+    delete = "15m"
+  }
+}
+
+resource "kubernetes_service_account_v1" "spark_team_a" {
+  metadata {
+    name        = local.spark_team
+    namespace   = kubernetes_namespace_v1.spark_team_a.metadata[0].name
+    annotations = { "eks.amazonaws.com/role-arn" : module.spark_team_a_irsa.iam_role_arn }
+  }
+
+  automount_service_account_token = true
+}
+
+resource "kubernetes_secret_v1" "spark_team_a" {
+  metadata {
+    name      = "${local.spark_team}-secret"
+    namespace = kubernetes_namespace_v1.spark_team_a.metadata[0].name
+    annotations = {
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.spark_team_a.metadata[0].name
+      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.spark_team_a.metadata[0].name
+    }
+  }
+
+  type = "kubernetes.io/service-account-token"
+}
+
 #---------------------------------------------------------------
 # IRSA for Spark driver/executor pods for "spark-team-a"
 #---------------------------------------------------------------
-module "irsa" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa?ref=ac7fd74d9df282ce6f8d068c4fd17ccd5638ae3a"
+module "spark_team_a_irsa" {
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0"
 
-  eks_cluster_id             = local.name
-  eks_oidc_provider_arn      = module.eks.oidc_provider_arn
-  irsa_iam_policies          = [aws_iam_policy.spark.arn]
-  kubernetes_namespace       = local.spark_team
-  kubernetes_service_account = local.spark_team
+  # Disable helm release
+  create_release = false
+
+  # IAM role for service account (IRSA)
+  create_role   = true
+  role_name     = "${local.name}-${local.spark_team}"
+  create_policy = false
+  role_policies = {
+    spark_team_a_policy = aws_iam_policy.spark.arn
+  }
+
+  oidc_providers = {
+    this = {
+      provider_arn    = module.eks.oidc_provider_arn
+      namespace       = local.spark_team
+      service_account = local.spark_team
+    }
+  }
 }
 
 #---------------------------------------------------------------
@@ -78,7 +125,7 @@ resource "kubernetes_cluster_role" "spark_role" {
     resources  = ["roles", "rolebindings"]
   }
 
-  depends_on = [module.irsa]
+  depends_on = [module.spark_team_a_irsa]
 }
 #---------------------------------------------------------------
 # Kubernetes Cluster Role binding role for service Account analytics-k8s-data-team-a
@@ -100,5 +147,5 @@ resource "kubernetes_cluster_role_binding" "spark_role_binding" {
     name      = kubernetes_cluster_role.spark_role.id
   }
 
-  depends_on = [module.irsa]
+  depends_on = [module.spark_team_a_irsa]
 }

@@ -22,11 +22,12 @@ resource "aws_fsx_lustre_file_system" "this" {
   tags = merge({ "Name" : "${local.name}-static" }, var.tags)
 }
 
+# This process can take upto 7 mins
 resource "aws_fsx_data_repository_association" "this" {
   count = var.enable_fsx_for_lustre ? 1 : 0
 
   file_system_id       = aws_fsx_lustre_file_system.this[0].id
-  data_repository_path = "s3://${module.s3_bucket[0].s3_bucket_id}"
+  data_repository_path = "s3://${module.fsx_s3_bucket.s3_bucket_id}"
   file_system_path     = "/data" # This directory will be used in Spark podTemplates under volumeMounts as subPath
 
   s3 {
@@ -71,25 +72,15 @@ resource "aws_security_group" "fsx" {
 # S3 bucket for DataSync between FSx for Lustre and S3 Bucket
 #---------------------------------------------------------------
 #tfsec:ignore:aws-s3-enable-bucket-logging tfsec:ignore:aws-s3-enable-versioning
-module "s3_bucket" {
-  count = var.enable_fsx_for_lustre ? 1 : 0
-
+module "fsx_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "v3.3.0"
+  version = "~> 3.0"
 
-  bucket_prefix = format("%s-%s", "fsx", data.aws_caller_identity.current.account_id)
-  acl           = "private"
+  create_bucket = var.enable_fsx_for_lustre
 
+  bucket_prefix = "${local.name}-fsx-"
   # For example only - please evaluate for your environment
   force_destroy = true
-
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
 
   server_side_encryption_configuration = {
     rule = {
@@ -112,7 +103,7 @@ resource "kubectl_manifest" "storage_class" {
   })
 
   depends_on = [
-    module.eks_blueprints_kubernetes_addons
+    module.eks_blueprints_addons
   ]
 }
 
@@ -129,7 +120,7 @@ resource "kubectl_manifest" "static_pv" {
   })
 
   depends_on = [
-    module.eks_blueprints_kubernetes_addons,
+    module.eks_blueprints_addons,
     kubectl_manifest.storage_class,
     aws_fsx_lustre_file_system.this
   ]

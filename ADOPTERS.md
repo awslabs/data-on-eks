@@ -1,5 +1,5 @@
 # Who is using Data on EKS templates?
-Data on EKS has several templates that fit customer use cases. These templates are best practices from AWS and make reasonable choices on behalf of offering simple on-boarding without compromising on fleixbility. They are used in multiple PoCs as well as to build out production-grade implementation
+Data on EKS has several templates that fit customer use cases. These templates are best practices from AWS and make reasonable choices on behalf of offering simple on-boarding without compromising on flexibility. They are used in multiple PoCs as well as to build out production-grade implementation
 
 The following is a self-reported list of users to help identify adoption and points of contact.
 

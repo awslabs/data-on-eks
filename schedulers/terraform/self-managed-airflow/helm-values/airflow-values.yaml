@@ -1,0 +1,572 @@
+########################################
+## CONFIG | Airflow Configs
+########################################
+
+# Default security context for airflow (deprecated, use `securityContexts` instead)
+securityContext:
+  fsGroup: 65534
+
+# Airflow home directory
+# Used for mount paths
+airflowHome: /opt/airflow
+
+# Default airflow repository -- overridden by all the specific images below
+defaultAirflowRepository: apache/airflow
+
+# Default airflow tag to deploy
+defaultAirflowTag: ${airflow_version}
+
+# Airflow version (Used to make some decisions based on Airflow Version being deployed)
+airflowVersion: ${airflow_version}
+
+###################################
+# Images
+###################################
+images:
+  migrationsWaitTimeout: 300
+
+###################################
+# Ingress configuration
+###################################
+ingress:
+  # Configs for the Ingress of the web Service
+  web:
+    # Enable web ingress resource
+    enabled: true
+
+    # Annotations for the web Ingress
+    annotations:
+      alb.ingress.kubernetes.io/group.name: dataengineering
+      alb.ingress.kubernetes.io/target-type: instance
+      alb.ingress.kubernetes.io/scheme: internal # Private Load Balancer can only be accessed within the VPC
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+      alb.ingress.kubernetes.io/healthcheck-path: '/health'
+      # Enable the following if you have public/internal domain e.g., https://mycompany.com/
+      # alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+      # alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:....................."
+
+    # The path for the web Ingress
+    path: "/"
+
+    # The pathType for the above path (used only with Kubernetes v1.19 and above)
+    pathType: "Prefix"
+
+    # The Ingress Class for the web Ingress (used only with Kubernetes v1.19 and above)
+    ingressClassName: "alb"
+
+###################################
+# `airflow_local_settings` file as a string (can be templated).
+###################################
+airflowLocalSettings: |-
+  {{- if semverCompare ">=2.2.0" .Values.airflowVersion }}
+  {{- if not (or .Values.webserverSecretKey .Values.webserverSecretKeySecretName) }}
+  from airflow.www.utils import UIAlert
+
+  DASHBOARD_UIALERTS = [
+    UIAlert(
+      'Usage of a dynamic webserver secret key detected. We recommend a static webserver secret key instead.'
+      ' See the <a href='
+      '"https://airflow.apache.org/docs/helm-chart/stable/production-guide.html#webserver-secret-key">'
+      'Helm Chart Production Guide</a> for more details.',
+      category="warning",
+      roles=["Admin"],
+      html=True,
+    )
+  ]
+  {{- end }}
+  {{- end }}
+
+###################################
+# Enable RBAC (default on most clusters these days)
+###################################
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+  createSCCRoleBinding: false
+
+###################################
+# Airflow executor
+###################################
+# One of: LocalExecutor, LocalKubernetesExecutor, CeleryExecutor, KubernetesExecutor, CeleryKubernetesExecutor
+executor: "KubernetesExecutor"
+
+###################################
+# Airflow database
+###################################
+data:
+  # Otherwise pass connection values in
+  metadataConnection:
+    user: ${airflow_db_user}
+    pass: ${airflow_db_pass}
+    protocol: postgresql
+    host: ${airflow_db_host}
+    port: 5432
+    db: ${airflow_db_name}
+    sslmode: disable
+
+###################################
+# Flask secret key for Airflow Webserver: `[webserver] secret_key` in airflow.cfg
+###################################
+#webserverSecretKey: ~
+webserverSecretKeySecretName: ${webserver_secret_name}
+
+###################################
+# Airflow Worker Config
+###################################
+workers:
+  # Number of airflow celery workers in StatefulSet
+  replicas: 1
+  # Max number of old replicasets to retain
+  revisionHistoryLimit: ~
+
+  # Command to use when running Airflow workers (templated).
+  command: ~
+  # Args to use when running Airflow workers (templated).
+  args:
+    - "bash"
+    - "-c"
+
+  # If the worker stops responding for 5 minutes (5*60s) kill the
+  # worker and let Kubernetes restart it
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    timeoutSeconds: 20
+    failureThreshold: 5
+    periodSeconds: 60
+
+  # Update Strategy when worker is deployed as a Deployment
+  strategy:
+    rollingUpdate:
+      maxSurge: "100%"
+      maxUnavailable: "50%"
+
+  # Allow KEDA autoscaling.
+  # Persistence.enabled must be set to false to use KEDA.
+  #keda:
+  #  enabled: false
+  #  namespaceLabels: {}
+
+    # How often KEDA polls the airflow DB to report new scale requests to the HPA
+  #  pollingInterval: 5
+
+    # How many seconds KEDA will wait before scaling to zero.
+    # Note that HPA has a separate cooldown period for scale-downs
+  #  cooldownPeriod: 30
+
+    # Minimum number of workers created by keda
+  #  minReplicaCount: 0
+
+    # Maximum number of workers created by keda
+  #  maxReplicaCount: 10
+
+  # Specify HPA related options
+  #  advanced: {}
+    # horizontalPodAutoscalerConfig:
+    #   behavior:
+    #     scaleDown:
+    #       stabilizationWindowSeconds: 300
+    #       policies:
+    #         - type: Percent
+    #           value: 100
+    #           periodSeconds: 15
+
+  persistence:
+    # Enable persistent volumes
+    enabled: false
+
+  #resources: {}
+  #  limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  #  requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+  # Grace period for tasks to finish after SIGTERM is sent from kubernetes
+  terminationGracePeriodSeconds: 600
+
+  # This setting tells kubernetes that its ok to evict
+  # when it wants to scale a node down.
+  safeToEvict: true
+
+  # Select certain nodes for airflow worker pods.
+#  nodeSelector: {}
+#  priorityClassName: ~
+#  affinity: {}
+  # default worker affinity is:
+  #  podAntiAffinity:
+  #    preferredDuringSchedulingIgnoredDuringExecution:
+  #    - podAffinityTerm:
+  #        labelSelector:
+  #          matchLabels:
+  #            component: worker
+  #        topologyKey: kubernetes.io/hostname
+  #      weight: 100
+#  tolerations: []
+#  topologySpreadConstraints: []
+
+###################################
+# Airflow scheduler settings
+###################################
+scheduler:
+
+  # If the scheduler stops heartbeating for 5 minutes (5*60s) kill the
+  # scheduler and let Kubernetes restart it
+  livenessProbe:
+    initialDelaySeconds: 10
+    timeoutSeconds: 20
+    failureThreshold: 5
+    periodSeconds: 60
+
+  # Airflow 2.0 allows users to run multiple schedulers,
+  # However this feature is only recommended for MySQL 8+ and Postgres
+  replicas: 2
+
+  # Scheduler pod disruption budget
+  podDisruptionBudget:
+    enabled: true
+
+    # PDB configuration
+    config:
+      # minAvailable and maxUnavailable are mutually exclusive
+      maxUnavailable: 1
+      #minAvailable: 1
+
+  resources:
+    limits:
+     cpu: 500m
+     memory: 1024Mi
+    requests:
+     cpu: 500m
+     memory: 1024Mi
+
+  # This setting tells kubernetes that its ok to evict
+  # when it wants to scale a node down.
+  safeToEvict: false
+
+
+  # Select certain nodes for airflow scheduler pods.
+#  nodeSelector: {}
+#  affinity: {}
+  # default scheduler affinity is:
+  #  podAntiAffinity:
+  #    preferredDuringSchedulingIgnoredDuringExecution:
+  #    - podAffinityTerm:
+  #        labelSelector:
+  #          matchLabels:
+  #            component: scheduler
+  #        topologyKey: kubernetes.io/hostname
+  #      weight: 100
+#  tolerations: []
+#  topologySpreadConstraints: []
+
+#extraVolumes is required for DAG GitSync #https://github.com/apache/airflow/issues/27476
+  extraVolumes:
+    - name: git-sync-ssh-key
+      secret:
+        secretName: airflow-ssh-secret
+
+###################################
+# Airflow create user job settings
+###################################
+createUserJob:
+  # Limit the lifetime of the job object after it finished execution.
+  ttlSecondsAfterFinished: 300
+  # Command to use when running the create user job (templated).
+  args:
+    - "bash"
+    - "-c"
+    # The format below is necessary to get `helm lint` happy
+    - |-
+      exec \
+      airflow {{ semverCompare ">=2.0.0" .Values.airflowVersion | ternary "users create" "create_user" }} "$@"
+    - --
+    - "-r"
+    - "{{ .Values.webserver.defaultUser.role }}"
+    - "-u"
+    - "{{ .Values.webserver.defaultUser.username }}"
+    - "-e"
+    - "{{ .Values.webserver.defaultUser.email }}"
+    - "-f"
+    - "{{ .Values.webserver.defaultUser.firstName }}"
+    - "-l"
+    - "{{ .Values.webserver.defaultUser.lastName }}"
+    - "-p"
+    - "{{ .Values.webserver.defaultUser.password }}"
+
+
+###################################
+# Airflow database migration job settings
+###################################
+migrateDatabaseJob:
+  enabled: true
+  # Limit the lifetime of the job object after it finished execution.
+  ttlSecondsAfterFinished: 300
+  # Command to use when running the migrate database job (templated).
+  command: ~
+  # Args to use when running the migrate database job (templated).
+  args:
+    - "bash"
+    - "-c"
+    # The format below is necessary to get `helm lint` happy
+    - |-
+      exec \
+      airflow {{ semverCompare ">=2.0.0" .Values.airflowVersion | ternary "db upgrade" "upgradedb" }}
+
+
+###################################
+# Airflow webserver settings
+###################################
+webserver:
+  allowPodLogReading: true
+  livenessProbe:
+    initialDelaySeconds: 15
+    timeoutSeconds: 30
+    failureThreshold: 20
+    periodSeconds: 10
+    scheme: HTTP
+
+  readinessProbe:
+    initialDelaySeconds: 15
+    timeoutSeconds: 30
+    failureThreshold: 20
+    periodSeconds: 10
+    scheme: HTTP
+
+  # Number of webservers
+  replicas: 2
+
+  # Webserver pod disruption budget
+  podDisruptionBudget:
+    enabled: true
+
+    # PDB configuration
+    config:
+      # minAvailable and maxUnavailable are mutually exclusive
+      maxUnavailable: 1
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 4Gi
+
+  # Create initial user.
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin
+    email: admin@example.com
+    firstName: admin
+    lastName: user
+    password: admin
+
+  service:
+    #type: ClusterIP
+    type: NodePort
+    ## service annotations
+    #annotations: {}
+    ports:
+      - name: airflow-ui
+        port: "{{ .Values.ports.airflowUI }}"
+
+  # Select certain nodes for airflow webserver pods.
+  #nodeSelector: {}
+  #priorityClassName: ~
+  #affinity: {}
+  # default webserver affinity is:
+  #  podAntiAffinity:
+  #    preferredDuringSchedulingIgnoredDuringExecution:
+  #    - podAffinityTerm:
+  #        labelSelector:
+  #          matchLabels:
+  #            component: webserver
+  #        topologyKey: kubernetes.io/hostname
+  #      weight: 100
+  #tolerations: []
+  #topologySpreadConstraints: []
+
+###################################
+# Airflow Triggerer Config
+###################################
+triggerer:
+  enabled: true
+
+###################################
+# Airflow Dag Processor Config
+###################################
+dagProcessor:
+  enabled: false
+
+###################################
+# StatsD settings
+###################################
+statsd:
+  enabled: true
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+
+###################################
+# PgBouncer settings
+###################################
+pgbouncer:
+  # Enable PgBouncer
+  enabled: true
+  # Number of PgBouncer replicas to run in Deployment
+  replicas: 1
+  auth_type: scram-sha-256
+
+###################################
+# All ports used by chart
+###################################
+ports:
+  airflowUI: 8080
+  workerLogs: 8793
+  triggererLogs: 8794
+  statsdIngest: 9125
+  statsdScrape: 9102
+  pgbouncer: 6543
+  pgbouncerScrape: 9127
+
+###################################
+# Config settings to go into the mounted airflow.cfg
+###################################
+#
+# Please note that these values are passed through the `tpl` function, so are
+# all subject to being rendered as go templates. If you need to include a
+# literal `{{` in a value, it must be expressed like this:
+#
+#    a: '{{ "{{ not a template }}" }}'
+#
+# Do not set config containing secrets via plain text values, use Env Var or k8s secret object
+# yamllint disable rule:line-length
+config:
+  core:
+    dags_folder: '{{ include "airflow_dags" . }}'
+    # This is ignored when used with the official Docker image
+    load_examples: 'True'
+    executor: '{{ .Values.executor }}'
+    remote_logging: 'True'
+  logging:
+    remote_logging: 'True'
+    logging_level: 'INFO'
+    colored_console_log: 'True'
+    remote_base_log_folder: "s3://${s3_bucket_name}/airflow-logs"
+    # aws_s3_conn is the name of the connection that needs to be created using Airflow admin UI once the deployment is complete
+    # Steps can be seen in the docs link here -> https://github.com/apache/airflow/issues/25322
+    remote_log_conn_id: 'aws_s3_conn'
+    delete_worker_pods: 'False'
+    encrypt_s3_logs: 'True'
+  metrics:
+    statsd_on: '{{ ternary "True" "False" .Values.statsd.enabled }}'
+    statsd_port: 9125
+    statsd_prefix: airflow
+    statsd_host: '{{ printf "%s-statsd" .Release.Name }}'
+  webserver:
+    enable_proxy_fix: 'True'
+    # For Airflow 1.10
+    rbac: 'True'
+  scheduler:
+    standalone_dag_processor: '{{ ternary "True" "False" .Values.dagProcessor.enabled }}'
+    # statsd params included for Airflow 1.10 backward compatibility; moved to [metrics] in 2.0
+    statsd_on: '{{ ternary "True" "False" .Values.statsd.enabled }}'
+    statsd_port: 9125
+    statsd_prefix: airflow
+    statsd_host: '{{ printf "%s-statsd" .Release.Name }}'
+    # `run_duration` included for Airflow 1.10 backward compatibility; removed in 2.0.
+    run_duration: 41460
+  kubernetes:
+    namespace: '{{ .Release.Namespace }}'
+    # The following `airflow_` entries are for Airflow 1, and can be removed when it is no longer supported.
+    airflow_configmap: '{{ include "airflow_config" . }}'
+    airflow_local_settings_configmap: '{{ include "airflow_config" . }}'
+    pod_template_file: '{{ include "airflow_pod_template_file" . }}/pod_template_file.yaml'
+    worker_container_repository: '{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}'
+    worker_container_tag: '{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}'
+    multi_namespace_mode: '{{ ternary "True" "False" .Values.multiNamespaceMode }}'
+  # The `kubernetes_executor` section duplicates the `kubernetes` section in Airflow >= 2.5.0 due to an airflow.cfg schema change.
+  kubernetes_executor:
+    namespace: '{{ .Release.Namespace }}'
+    pod_template_file: '{{ include "airflow_pod_template_file" . }}/pod_template_file.yaml'
+    worker_container_repository: '{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}'
+    worker_container_tag: '{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}'
+    multi_namespace_mode: '{{ ternary "True" "False" .Values.multiNamespaceMode }}'
+# yamllint enable rule:line-length
+
+
+###################################
+# Git sync
+###################################
+dags:
+  persistence:
+    # Enable persistent volume for storing dags
+    enabled: true
+    # Volume size for dags
+    size: 10Gi
+    # If using a custom storageClass, pass name here
+    storageClassName: efs-sc
+    # access mode of the persistent volume
+    accessMode: ReadWriteOnce
+    ## the name of an existing PVC to use
+    existingClaim: ${efs_pvc}
+
+  gitSync:
+    enabled: true
+
+    # git repo clone url
+    #repo: git@github.com:Hyper-Mesh/airflow-dags.git
+    repo: git@github.com:jagpk/sample-airflow-dags.git
+    branch: main
+    rev: HEAD
+    depth: 1
+
+    # the number of consecutive failures allowed before aborting
+    maxFailures: 5
+    # subpath wihin the repo where dags are located
+    # should be "" if dags are at repo root
+    subPath: "dags"
+
+    # If you are using an ssh clone url, you can specify the name of the secret below
+    sshKeySecret: airflow-ssh-secret
+
+    # If you are using an ssh private key, you can additionally
+    # specify the content of your known_hosts file, example:
+    #https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
+    #https://airflow.apache.org/docs/helm-chart/stable/production-guide.html#knownhosts
+
+    knownHosts: |
+      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+      github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+      github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+
+    # interval between git sync attempts in seconds
+    # high values are more likely to cause DAGs to become out of sync between different components
+    # low values cause more traffic to the remote git repository
+    wait: 5
+    containerName: git-sync
+    resources:
+      limits:
+        cpu: 100m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 512Mi
+
+###################################
+# Airflow Extra Secrets
+###################################
+# https://airflow.apache.org/docs/helm-chart/stable/manage-dags-files.html#mounting-dags-from-a-private-github-repo-using-git-sync-sidecar
+
+extraSecrets:
+  airflow-ssh-secret:
+    data: |
+      gitSshKey: 'LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUNGd0FBQUFkemMyZ3RjbgpOaEFBQUFBd0VBQVFBQUFnRUF1NGdNMW1VQkhoSSt5a0xLMGM0c0hxUTVtVUpqYVY4QVAwSktDTTk5MFRzNG9nWWJiQW8yClBzNE8ram1NMVhESXNUUDNXcmZPNHZkSEhUUG96QUpPOTI4S1BLMTBsQ3lybVBUUVZmVGpxaHR4Z2dldWs2djFjVURNNHkKVFlsb3ZTWERxQTZvTFN2TlMwS2lhRjhKQmtrUkdlRzc0MERhUTF0Y2svRGVyT0N4YWVsQ1NWbWJsYjc1RXhQektkYmRjdQpWMEJwcVJWZHh4UGp2ZGtNbUpmZmtKT0lpS2FmUVVLc3lkUjNpVFNEUjkxUVlIS2dJbUNzcm1oVjBwY25GRGFubnFDQUh3CloraTZubFlRbmdyZGRHUVg1NTZDakpBRXl3QXg0cDJyQ0NBdlJyV1V2SEJiZVNIU2lQVGdKelFpNlhyRlFsdlhrRjZBMmsKSzBsdDJkNXVhMGhKRi95dnlLeHBTczQzeWVTK2tZZGkxOUhFMVBXdEZaNDFkMjZoYkZlZWY3bmw1MGpwT3IreG5oMjZmagp2OERROEs4RFV0RmhUTk1vVmhERWM2UDBFaTNiQ2R6VHFaYjZVdFY0KzU0UitCRCtQQURHSXpra3RmV0IwbG1pQjZ3MVpvCksxNndEUjZ5cWpFYklUeVR6UXZnbkZOcG9pNndraWhPeXAzVjc1cmZmUkx6QTZQd2pvQWxNTGN3VXIzVHhqM29ORTN0eVMKYVFvcGJNMVBHU3dqQTFtRW4rdTFSU3NyOHhmT1dJTk41TDJNc2Fwa3VlYUlBZlgzZEZTaW5STlFNS2FwWjdrUU9WMjRYYgpPeHBlRm94aVo1ZTFQQjA0UG5Oc1dMS0htaGJJRHVFeGNyTU4vMUhqRERYODF5bXp2UnEyNkNLZjBvcGh1d0NnMVE0Yi96CkVBQUFkUWRhc25sSFdySjVRQUFBQUhjM05vTFhKellRQUFBZ0VBdTRnTTFtVUJIaEkreWtMSzBjNHNIcVE1bVVKamFWOEEKUDBKS0NNOTkwVHM0b2dZYmJBbzJQczRPK2ptTTFYRElzVFAzV3JmTzR2ZEhIVFBvekFKTzkyOEtQSzEwbEN5cm1QVFFWZgpUanFodHhnZ2V1azZ2MWNVRE00eVRZbG92U1hEcUE2b0xTdk5TMEtpYUY4SkJra1JHZUc3NDBEYVExdGNrL0Rlck9DeGFlCmxDU1ZtYmxiNzVFeFB6S2RiZGN1VjBCcHFSVmR4eFBqdmRrTW1KZmZrSk9JaUthZlFVS3N5ZFIzaVRTRFI5MVFZSEtnSW0KQ3NybWhWMHBjbkZEYW5ucUNBSHdaK2k2bmxZUW5ncmRkR1FYNTU2Q2pKQUV5d0F4NHAyckNDQXZScldVdkhCYmVTSFNpUApUZ0p6UWk2WHJGUWx2WGtGNkEya0swbHQyZDV1YTBoSkYveXZ5S3hwU3M0M3llUytrWWRpMTlIRTFQV3RGWjQxZDI2aGJGCmVlZjdubDUwanBPcit4bmgyNmZqdjhEUThLOERVdEZoVE5Nb1ZoREVjNlAwRWkzYkNkelRxWmI2VXRWNCs1NFIrQkQrUEEKREdJemtrdGZXQjBsbWlCNncxWm9LMTZ3RFI2eXFqRWJJVHlUelF2Z25GTnBvaTZ3a2loT3lwM1Y3NXJmZlJMekE2UHdqbwpBbE1MY3dVcjNUeGozb05FM3R5U2FRb3BiTTFQR1N3akExbUVuK3UxUlNzcjh4Zk9XSU5ONUwyTXNhcGt1ZWFJQWZYM2RGClNpblJOUU1LYXBaN2tRT1YyNFhiT3hwZUZveGlaNWUxUEIwNFBuTnNXTEtIbWhiSUR1RXhjck1OLzFIakREWDgxeW16dlIKcTI2Q0tmMG9waHV3Q2cxUTRiL3pFQUFBQURBUUFCQUFBQ0FIUWtFaTlGWnFmRkRQWWUzNVdJWm5LanFyaHNFVDFWQk1Zbwp1OGt4Ris3WkNuM3Q0bFhMRFVWZ1FJNWZ6Z1R5VUpqT1lrYmd4MVJ4YUsyQlZJL2tiaHQzdlpOT3FZQ0xHY3NrODFJSTFHCmFwa0diRGN5OHB0Rnhya1hpcmZTZmZlR3grSHhFZDdIM2VEYVo5TFQ2TGJuMFp1QjNlY2tad2lJTUpHKy8ybDV6dWFVKysKU0pobjM3UkM2NGtFUTlPZkRLZ2swRXRUWER6SzZLVFBJNm50aFJ2NUF2bitsMnJIYkZPakxsVGZITjhKQlpwMTR3N25hSQpxck8xdXRHUnEvcnBmak52WUFBNmRqbFJmQUVsSVhuUDg2NFMwUzlVa21OV3Y0NWxyMkxjNitxUzBvYlIzeFRxQ1lXZ2dxCkpFKzhvMXFxMHFUQnF4TElRQUErL2JXTXVEelFRS0lpRWVsa0VwYWIvSHJPQThJcUFaZXlwNG5ES3doOUtaL3lqU2NOY2gKV2NPUTdJUXptck1kbm5pb1dsZmNHYURSU2x0K3FIcHNxN29SSHEyb1pDMllLTldjMWlpckM2clhsR2hHU3BBaUhkT1F6QQpnYnlsWklxQVlwM3ExUEdNbGVlOHVmUC93S05GbWdWb1VVNW03ZEF0RjBmdTVtWHAxOWcrN3FtQ0E4WloxdFpaQzZsWWxmClFVNHFQWWEvbFV3Sm9ndjVDL1Z1QmZwcGJjeTlCaXgyWnU1QzliRmd4SmVSVE8ySUJvcGRjeGY5dlBYTCtUZFZyRkRmOGwKVDlFMXNTTFNFd3ZnSmZ1dURiZlRNb1pQdEVRY3hnUjN2MjJCb2dxbnkwbmlOOTVHeHZKVUNpS3RWL2twaHdwUGxUcFc5RgpwTDhlOGtLZ3AzRCtJQ3lWTUJBQUFCQUJldVhhRUF2U3BUL3F4Q01uVkRhUVFXbjhvYzI5TVFpTkxKS1g3cTVDaGlxR2w1CjZHNjN1SzdNTXg1QStERmlWRHlFOU1EYWorejU0TkVId1A1WXZOcWt0a0RjMlpkbjVnNWdScVFNYUFlOUJQRldQdkZ6RzkKN1NxM2lDbk1COTRhbjNVTzR0VzlVUTVIM1AxWCs3RWtvanV3djlCTlpjd3k1SFVDV1pDS3dsR2dXUjl0MFY0dVNva0psTQpyb3Q2dy84eWN3emlVQmxnMDB0VWc4UUZKODhwU2VPdWxyc3k5QWNEY2FHb2txUDRLMGR4ZkZpWXRzQkNlNzd0ZHMxbUQ5CjYrRXBDVk0wNEZzNlQ4NlZOcWtQYzNCcm9TbW1EQWEzeTZYZGw1bjZ1Y0VmTFRZVTVhYmJZRlRkWUs4Q1NIVTdEdzYrT2oKVncxR1F0Qm84ZGIwVWRzQUFBRUJBUEorbk0vL1lUNDRHbWxPZ3FraFBvRG5IRi90WDM0Mk1zMms0OXozSFIvWjVOYmduRwptY2lLSHhNU1BsWU05QUl5QXp3OTRsRWt2NENlRExuOUFEa2FOSmg1eE5hd3B1WUhjaDUwWmZ6TjU2d1dEbllGZEk3SmxMCkJlWVNUeFBnZ0VNWlJaSERLWEljeHhrRUlkNGhxUnhNVTdEdlhQUDg3UEFaMUV3OUVlZVh6MEJRNXlvMDNNd0c5TVZqd1gKRldxUG9rdy8remZkVXpaM2FRb3VSNldKYUs1Z0JoYTNkaVFmbXZDY2RVZmFzMDJPakErM3BIWDJyVWJYRDRTTGFlK1VGUApmNmd0eHREYTZkWFFlZ0ZEaG5STEZRdlJVOUpCdG9xa2oxa2Mza0U2WlhTOTlCT3VoSFRRbFc2RWJtSExhbVVpcFo4eGJYCmhmclV6RGNDamp4VmtBQUFFQkFNWDV5OE84VU1tU2V4dE1Zc3JtWEkwQnNDcHNPMytPMUtKN3A0eWpRcW1lc1F4MGp5akIKRU1rdng3ZGdVbUZ2WmtuZ0kwUGFobXgxNE9hMTRrTFBWU2VUaExYQXd4ZFJLTzRnR2dEQjA1VTR6QnNWOTJScDhqaVg5NgpsMUNxRlBiaFRad2J0QkdZQ2JheDJPY0VFcHR6SmlkanNLcG5sT1JRVDBsdWp0cUluTGt4aFBBVnJkZ3Vib3BLMlA5bXhOCnhmNFg5cDN3NnlCRlNsSzVwT1hseTUvUzlGa2puaURmVnRCVEFTaVFIQUlIdktjWHo1dFNKZEZldkhramxBS24xZktjQWoKOWc1clpRVFRmK05CeWxjSkdnK1VkN0RCdG9JVGhVcWdkQ05JVld3cFhyalpiK2RQQWc3Z0NwM0FMU0NKdzA5aVNYN1g4SwpkcVlab25BSTFaa0FBQUFWZG1GeVlTNWliMjUwYUhWQVoyMWhhV3d1WTI5dEFRSURCQVVHCi0tLS0tRU5EIE9QRU5TU0ggUFJJVkFURSBLRVktLS0tLQo='

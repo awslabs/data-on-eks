@@ -1,35 +1,47 @@
 # Pre-requisite before running this job
-# 1/ Open taxi-trip-execute.sh and update <S3_BUCKET> , <JOB_NAME>  and <REGION>
-# 2/ Replace <S3_BUCKET>  and <JOB_NAME> with your S3 bucket in this yaml
+# 1/ Open taxi-trip-execute.sh and update <S3_BUCKET> and <REGION>
+# 2/ Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
 # 3/ execute taxi-trip-execute.sh
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: "<JOB_NAME>"
+  name: "taxi-trip"
   namespace: spark-team-a
   labels:
-    app: "<JOB_NAME>"
-    applicationId: "<JOB_NAME>-yunikorn"
+    app: "taxi-trip"
+    applicationId: "taxi-trip-nvme"
     queue: root.test
 spec:
+#  To create Ingress object for Spark driver.
+#  Ensure Spark Operator Helm Chart deployed with Ingress enabled to use this feature
+#  sparkUIOptions:
+#    servicePort: 4040
+#    servicePortName: taxi-trip-ui-svc
+#    serviceType: ClusterIP
+#    ingressAnnotations:
+#      kubernetes.io/ingress.class: nginx
+#      nginx.ingress.kubernetes.io/use-regex: "true"
   type: Python
   sparkVersion: "3.2.1"
   pythonVersion: "3"
   mode: cluster
-  # Public docker image used from datamechanics/spark:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest and pushed to ECR repo
   image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://<S3_BUCKET>/<JOB_NAME>/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<S3_BUCKET>/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
-    - "s3a://<S3_BUCKET>/<JOB_NAME>/input/"
-    - "s3a://<S3_BUCKET>/<JOB_NAME>/output/"
+    - "s3a://<S3_BUCKET>/taxi-trip/input/"
+    - "s3a://<S3_BUCKET>/taxi-trip/output/"
   hadoopConf:
     "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "mapreduce.fileoutputcommitter.algorithm.version": "2"
   sparkConf:
+    "spark.app.name": "taxi-trip"
+    "spark.kubernetes.driver.pod.name": "taxi-trip"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
+    "spark.local.dir": "/data1"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
@@ -40,10 +52,12 @@ spec:
     "spark.hadoop.fs.s3a.input.fadvise": "random"
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
 
-    #Event logs
-    "spark.local.dir": "/data1"
+    # Spark Event logs
     "spark.eventLog.enabled": "true"
     "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+#    "spark.history.fs.eventLog.rolling.maxFilesToRetain": 100
 
     # Expose Spark metrics for Prometheus
     "spark.ui.prometheus.enabled": "true"
@@ -65,10 +79,10 @@ spec:
     onFailureRetryInterval: 10
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
-  volumes:  # using NVMe instance storage mounted on /local1
+  volumes:  # using NVMe instance storage mounted on /mnt/k8s-disks
     - name: spark-local-dir-1
       hostPath:
-        path: /local1
+        path: /mnt/k8s-disks
         type: Directory
 
   driver:
@@ -79,12 +93,14 @@ spec:
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
+        command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
         volumeMounts:
-          - mountPath: "/local1"
+          - mountPath: "/mnt/k8s-disks"
             name: "spark-local-dir-1"
     cores: 1
+    coreLimit: "1200m"
     memory: "4g"
+    memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
       version: 3.2.1
@@ -104,13 +120,15 @@ spec:
     initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
+        command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
         volumeMounts:
-          - mountPath: "/local1"
+          - mountPath: "/mnt/k8s-disks"
             name: "spark-local-dir-1"
     cores: 1
+    coreLimit: "1200m"
     instances: 4
     memory: "4g"
+    memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
       version: 3.2.1

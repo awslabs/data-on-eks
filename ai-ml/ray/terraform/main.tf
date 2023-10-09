@@ -90,10 +90,11 @@ locals {
 #tfsec:ignore:aws-eks-enable-control-plane-logging
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.10"
+  version = "~> 19.15"
 
-  cluster_name                   = local.name
-  cluster_version                = local.cluster_version
+  cluster_name    = local.name
+  cluster_version = local.cluster_version
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
 
   vpc_id = module.vpc.vpc_id
@@ -190,7 +191,7 @@ resource "kubectl_manifest" "eni_config" {
 
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
+  version = "~> 19.15"
 
   cluster_name                 = module.eks.cluster_name
   irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
@@ -206,7 +207,7 @@ module "karpenter" {
 # https://github.com/ray-project/kuberay/issues/746
 module "karpenter_policy" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
-  version = "~> 5.11.1"
+  version = "~> 5.20"
 
   name        = "KarpenterS3ReadOnlyPolicy"
   description = "IAM Policy to allow read from an S3 bucket for karpenter nodes"

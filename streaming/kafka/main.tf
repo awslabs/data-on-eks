@@ -1,23 +1,49 @@
-#---------------------------------------------------------------
-# EKS Blueprints
-#---------------------------------------------------------------
-module "eks_blueprints" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints?ref=v4.15.0"
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}
+data "aws_availability_zones" "available" {}
+data "aws_caller_identity" "current" {}
+data "aws_partition" "current" {}
 
-  cluster_name    = local.name
+locals {
+  name   = var.name
+  region = var.region
+
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
-  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  kafka_namespace = "kafka"
 
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
+  vpc_cidr = var.vpc_cidr
+  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
-  #---------------------------------------
-  # Note: This can further restricted to specific required for each Add-on and your application
-  #---------------------------------------
+  account_id = data.aws_caller_identity.current.account_id
+  partition  = data.aws_partition.current.partition
+
+  tags = {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  }
+}
+
+################################################################################
+# Cluster
+################################################################################
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.15"
+
+  cluster_name    = local.name
+  cluster_version = local.cluster_version
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
+  cluster_endpoint_public_access = true
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
+  manage_aws_auth_configmap = true
+
   node_security_group_additional_rules = {
-    # Extend node-to-node security group rules. Recommended and required for the Add-ons
     ingress_self_all = {
       description = "Node to node all ports/protocols"
       protocol    = "-1"
@@ -26,7 +52,6 @@ module "eks_blueprints" {
       type        = "ingress"
       self        = true
     }
-    # Recommended outbound traffic for Node groups
     egress_all = {
       description      = "Node all egress"
       protocol         = "-1"
@@ -36,102 +61,77 @@ module "eks_blueprints" {
       cidr_blocks      = ["0.0.0.0/0"]
       ipv6_cidr_blocks = ["::/0"]
     }
-    # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
-    # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
-    # Change this according to your security requirements if needed
-    ingress_cluster_to_node_all_traffic = {
-      description                   = "Cluster API to Nodegroup all traffic"
-      protocol                      = "-1"
-      from_port                     = 0
-      to_port                       = 0
-      type                          = "ingress"
-      source_cluster_security_group = true
+  }
+
+  eks_managed_node_group_defaults = {
+    iam_role_additional_policies = {
+      # Not required, but used in the example to access the nodes to inspect mounted volumes
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
 
-  managed_node_groups = {
-    # Core node group for deploying all the critical add-ons
-    mng1 = {
-      node_group_name = "core-node-grp"
-      subnet_ids      = module.vpc.private_subnets
+  eks_managed_node_groups = {
+    core_node_group = {
+      name        = "core-node-group"
+      description = "EKS managed node group example launch template"
+
+      min_size     = 1
+      max_size     = 9
+      desired_size = 3
 
       instance_types = ["m5.xlarge"]
-      ami_type       = "AL2_x86_64"
-      capacity_type  = "ON_DEMAND"
 
-      disk_size = 100
-      disk_type = "gp3"
-
-      max_size               = 9
-      min_size               = 3
-      desired_size           = 3
-      create_launch_template = true
-      launch_template_os     = "amazonlinux2eks"
-
-      update_config = [{
-        max_unavailable_percentage = 50
-      }]
-
-      k8s_labels = {
-        Environment   = "preprod"
-        Zone          = "test"
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
+      labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
       }
-
-      # See this doc node-template tags https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
-      additional_tags = {
-        Name                                                             = "core-node-grp"
-        subnet_type                                                      = "private"
-        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "core"
-        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-        "k8s.io/cluster-autoscaler/${local.name}"                        = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                              = "true"
+      tags = {
+        Name = "core-node-grp"
       }
     }
-    # Kafka workload node group for deploying Kafka Brokers
-    mng2 = {
-      node_group_name = "kafka-node-grp"
-      subnet_ids      = module.vpc.private_subnets
+    kafka_node_group = {
+      name        = "kafka-node-group"
+      description = "EKS managed node group example launch template"
 
-      instance_types = ["r6i.2xlarge"] #Im4gn.4xlarge, m5.8xlarge, r6i.2xlarge
-      ami_type       = "AL2_x86_64"
-      capacity_type  = "ON_DEMAND"
+      min_size     = 3
+      max_size     = 12
+      desired_size = 5
 
-      disk_size = 100
-      disk_type = "gp3"
-
-      max_size               = 12
-      min_size               = 3
-      desired_size           = 3
-      create_launch_template = true
-      launch_template_os     = "amazonlinux2eks"
-
-      update_config = [{
-        max_unavailable_percentage = 50
-      }]
-
-      k8s_labels = {
-        Environment   = "preprod"
-        Zone          = "test"
+      instance_types = ["r6i.2xlarge"]
+      ebs_optimized  = true
+      # This is the root filesystem Not used by the brokers
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
+      labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "kafka"
       }
-
-      k8s_taints = [{ key = "dedicated", value = "kafka", effect = "NO_SCHEDULE" }]
-
-      # See this doc node-template tags https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-scale-a-node-group-to-0
-      additional_tags = {
-        Name                                                             = "kafka-node-grp"
-        subnet_type                                                      = "private"
-        "k8s.io/cluster-autoscaler/node-template/label/arch"             = "x86"
-        "k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os" = "linux"
-        "k8s.io/cluster-autoscaler/node-template/label/noderole"         = "kafka"
-        "k8s.io/cluster-autoscaler/node-template/label/node-lifecycle"   = "on-demand"
-        "k8s.io/cluster-autoscaler/${local.name}"                        = "owned"
-        "k8s.io/cluster-autoscaler/enabled"                              = "true"
+      taints = [
+        {
+          key    = "dedicated"
+          value  = "kafka"
+          effect = "NO_SCHEDULE"
+        }
+      ]
+      tags = {
+        Name = "kafka-node-grp"
       }
     }
   }

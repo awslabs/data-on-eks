@@ -1,9 +1,12 @@
 #---------------------------------------------------------------
 # Supporting Network Resources
 #---------------------------------------------------------------
+# WARNING: This VPC module includes the creation of an Internet Gateway and NAT Gateway, which simplifies cluster deployment and testing, primarily intended for sandbox accounts.
+# IMPORTANT: For preprod and prod use cases, it is crucial to consult with your security team and AWS architects to design a private infrastructure solution that aligns with your security requirements
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   name           = local.name
   cidr           = local.vpc_cidr
@@ -32,10 +35,10 @@ module "vpc" {
 }
 
 module "vpc_endpoints_sg" {
-  count = var.enable_vpc_endpoints ? 1 : 0
-
   source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
+
+  create = var.enable_vpc_endpoints
 
   name        = "${local.name}-vpc-endpoints"
   description = "Security group for VPC endpoint access"
@@ -61,13 +64,13 @@ module "vpc_endpoints_sg" {
 }
 
 module "vpc_endpoints" {
-  count = var.enable_vpc_endpoints ? 1 : 0
-
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 3.0"
+  version = "~> 5.0"
+
+  create = var.enable_vpc_endpoints
 
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoints_sg[0].security_group_id]
+  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
 
   endpoints = merge({
     s3 = {

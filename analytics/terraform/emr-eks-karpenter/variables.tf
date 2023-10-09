@@ -1,72 +1,71 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
+  type        = string
   default     = "emr-eks-karpenter"
-  type        = string
 }
-
 variable "region" {
-  description = "region"
-  type        = string
+  description = "Region"
   default     = "us-west-2"
+  type        = string
 }
-
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.24"
   type        = string
+  default     = "1.27"
 }
-
 variable "tags" {
   description = "Default tags"
-  default     = {}
   type        = map(string)
+  default     = {}
 }
 
+# VPC with 2046 IPs (10.1.0.0/21) and 2 AZs
 variable "vpc_cidr" {
-  description = "VPC CIDR"
-  default     = "10.1.0.0/16"
+  description = "VPC CIDR. This should be a valid private (RFC 1918) CIDR range"
   type        = string
+  default     = "10.1.0.0/21"
+}
+
+# RFC6598 range 100.64.0.0/10
+# Note you can only /16 range to VPC. You can add multiples of /16 if required
+variable "secondary_cidr_blocks" {
+  description = "Secondary CIDR blocks to be attached to VPC"
+  type        = list(string)
+  default     = ["100.64.0.0/16"]
 }
 
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
+  type        = bool
   default     = false
-  type        = string
-}
-
-# Only two Subnets for with low IP range for internet access
-variable "public_subnets" {
-  description = "Public Subnets CIDRs. 62 IPs per Subnet"
-  default     = ["10.1.255.128/26", "10.1.255.192/26"]
-  type        = list(string)
-}
-
-variable "private_subnets" {
-  description = "Private Subnets CIDRs. 32766 Subnet1 and 16382 Subnet2 IPs per Subnet"
-  default     = ["10.1.0.0/17", "10.1.128.0/18"]
-  type        = list(string)
 }
 
 variable "enable_yunikorn" {
-  default     = false
   description = "Enable Apache YuniKorn Scheduler"
   type        = bool
+  default     = false
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = true
 }
 
 variable "enable_fsx_for_lustre" {
-  default     = false
   description = "Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR"
   type        = bool
+  default     = false
 }
 
-variable "enable_cloudwatch_metrics" {
-  default     = true
-  description = "Enable Cloudwatch metrics"
+variable "enable_emr_spark_operator" {
+  description = "Enable the Spark Operator to submit jobs with EMR Runtime"
   type        = bool
+  default     = false
 }
 
-variable "enable_aws_for_fluentbit" {
-  default     = true
-  description = "Enable Fluentbit addon"
+variable "enable_kubecost" {
+  description = "Enable Kubecost add-on"
   type        = bool
+  default     = true
 }

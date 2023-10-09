@@ -1,8 +1,10 @@
 locals {
-  name     = var.name
-  region   = var.region
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
+  name   = var.name
+  region = var.region
+  azs    = slice(data.aws_availability_zones.available.names, 0, 2)
+
+  account_id = data.aws_caller_identity.current.account_id
+  partition  = data.aws_partition.current.partition
 
   tags = {
     Blueprint  = local.name
@@ -15,22 +17,25 @@ locals {
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.9"
+  version = "~> 19.15"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_private_access = true # if true, Kubernetes API requests within your cluster's VPC (such as node to control plane communication) use the private VPC endpoint
-  cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
+  cluster_endpoint_public_access = true
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  vpc_id = module.vpc.vpc_id
+  # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
+  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+    substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+  )
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      rolearn  = module.karpenter.role_arn
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -64,15 +69,6 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
     # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
     # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
     # Change this according to your security requirements if needed
@@ -91,6 +87,34 @@ module "eks" {
       # Not required, but used in the example to access the nodes to inspect mounted volumes
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
+
+    # NVMe instance store volumes are automatically enumerated and assigned a device
+    pre_bootstrap_user_data = <<-EOT
+      cat <<-EOF > /etc/profile.d/bootstrap.sh
+      #!/bin/sh
+
+      # Configure NVMe volumes in RAID0 configuration
+      # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
+      # Mount will be: /mnt/k8s-disks
+      export LOCAL_DISKS='raid0'
+      EOF
+
+      # Source extra environment variables in bootstrap script
+      sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+    EOT
+
+    ebs_optimized = true
+    # This bloc device is used only for root volume. Adjust volume according to your size.
+    # NOTE: Don't use this volume for Spark workloads
+    block_device_mappings = {
+      xvda = {
+        device_name = "/dev/xvda"
+        ebs = {
+          volume_size = 100
+          volume_type = "gp3"
+        }
+      }
+    }
   }
 
   eks_managed_node_groups = {
@@ -100,47 +124,16 @@ module "eks" {
     core_node_group = {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
-
-      ami_id = data.aws_ami.x86.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = module.vpc.private_subnets
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+      )
 
       min_size     = 3
       max_size     = 9
       desired_size = 3
 
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
-
-      ebs_optimized = true
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 100
-            volume_type = "gp3"
-          }
-        }
-      }
-
-      update_config = {
-        max_unavailable_percentage = 50
-      }
+      instance_types = ["m5.xlarge"]
 
       labels = {
         WorkerType    = "ON_DEMAND"
@@ -156,89 +149,27 @@ module "eks" {
     spark_ondemand_r5d = {
       name        = "spark-ondemand-r5d"
       description = "Spark managed node group for Driver pods"
-
-      ami_type = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
-
-      # Current default AMI used by managed node groups - pseudo "custom"
-      ami_id = data.aws_ami.x86.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # NVMe instance store volumes are automatically enumerated and assigned a device
-      pre_bootstrap_user_data = <<-EOT
-        echo "Running a custom user data script"
-        set -ex
-        yum install mdadm -y
-
-        DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-        DISK_ARRAY=()
-
-        for DEV in $DEVICES
-        do
-          DISK_ARRAY+=("/dev/$${DEV}")
-        done
-
-        DISK_COUNT=$${#DISK_ARRAY[@]}
-
-        if [ $${DISK_COUNT} -eq 0 ]; then
-          echo "No SSD disks available. No further action needed."
-        else
-          if [ $${DISK_COUNT} -eq 1 ]; then
-            TARGET_DEV=$${DISK_ARRAY[0]}
-            mkfs.xfs $${TARGET_DEV}
-          else
-            mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-            mkfs.xfs /dev/md0
-            TARGET_DEV=/dev/md0
-          fi
-
-          mkdir -p /local1
-          echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-          mount -a
-          /usr/bin/chown -hR +999:+1000 /local1
-        fi
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = [element(module.vpc.private_subnets, 0)] # Single AZ node group for Spark workloads
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
 
       min_size     = 1
-      max_size     = 12
+      max_size     = 20
       desired_size = 1
 
-      force_update_version = true
-      instance_types       = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
-
-      ebs_optimized = true
-      # This bloc device is used only for root volume. Adjust volume according to your size.
-      # NOTE: Dont use this volume for Spark workloads
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 100
-            volume_type = "gp3"
-          }
-        }
-      }
-
-      update_config = {
-        max_unavailable_percentage = 50
-      }
+      instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
 
       labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "spark-on-demand-ca"
       }
 
-      taints = [{ key = "spark-on-demand-ca", value = true, effect = "NO_SCHEDULE" }]
+      taints = [{
+        key    = "spark-on-demand-ca",
+        value  = true
+        effect = "NO_SCHEDULE"
+      }]
 
       tags = {
         Name          = "spark-ondemand-r5d"
@@ -252,83 +183,27 @@ module "eks" {
     spark_spot_x86_48cpu = {
       name        = "spark-spot-48cpu"
       description = "Spark Spot node group for executor workloads"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
 
-      ami_type = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
-      # Current default AMI used by managed node groups - pseudo "custom"
-      ami_id = data.aws_ami.x86.image_id
-
-      enable_bootstrap_user_data = true
-
-      # NVMe instance store volumes are automatically enumerated and assigned a device
-      pre_bootstrap_user_data = <<-EOT
-        echo "Running a custom user data script"
-        set -ex
-        yum install mdadm -y
-
-        DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
-        DISK_ARRAY=()
-
-        for DEV in $DEVICES
-        do
-          DISK_ARRAY+=("/dev/$${DEV}")
-        done
-
-        DISK_COUNT=$${#DISK_ARRAY[@]}
-
-        if [ $${DISK_COUNT} -eq 0 ]; then
-          echo "No SSD disks available. No further action needed."
-        else
-          if [ $${DISK_COUNT} -eq 1 ]; then
-            TARGET_DEV=$${DISK_ARRAY[0]}
-            mkfs.xfs $${TARGET_DEV}
-          else
-            mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-            mkfs.xfs /dev/md0
-            TARGET_DEV=/dev/md0
-          fi
-
-          mkdir -p /local1
-          echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-          mount -a
-          /usr/bin/chown -hR +999:+1000 /local1
-        fi
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-
-      subnet_ids = [element(module.vpc.private_subnets, 0)] # Single AZ node group for Spark workloads
-
-      min_size     = 0
+      min_size     = 1
       max_size     = 12
-      desired_size = 0
+      desired_size = 1
 
-      force_update_version = true
-      instance_types       = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
-
-      ebs_optimized = true
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 100
-            volume_type = "gp3"
-          }
-        }
-      }
-
-      update_config = {
-        max_unavailable_percentage = 50
-      }
+      instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
 
       labels = {
         WorkerType    = "SPOT"
         NodeGroupType = "spark-spot-ca"
       }
 
-      taints = [{ key = "spark-spot-ca", value = true, effect = "NO_SCHEDULE" }]
+      taints = [{
+        key    = "spark-spot-ca"
+        value  = true
+        effect = "NO_SCHEDULE"
+      }]
 
       tags = {
         Name          = "spark-node-grp"
@@ -337,20 +212,4 @@ module "eks" {
       }
     }
   }
-}
-
-#---------------------------------------
-# Karpenter IAM instance profile
-#---------------------------------------
-
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 19.9"
-
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  create_irsa                  = false # EKS Blueprints add-on module creates IRSA
-  enable_spot_termination      = false # EKS Blueprints add-on module adds this feature
-  tags                         = local.tags
-  iam_role_additional_policies = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
 }

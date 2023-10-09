@@ -1,11 +1,11 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "cnpg-on-eks"
+  default     = "cnpg"
   type        = string
 }
 
 variable "region" {
-  description = "region"
+  description = "Region"
   type        = string
   default     = "us-west-2"
 }

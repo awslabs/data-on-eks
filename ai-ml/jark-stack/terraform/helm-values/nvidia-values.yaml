@@ -1,0 +1,10 @@
+gfd:
+  enabled: true
+nfd:
+  enabled: true
+  worker:
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - operator: "Exists"

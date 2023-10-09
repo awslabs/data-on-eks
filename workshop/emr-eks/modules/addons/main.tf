@@ -28,8 +28,7 @@ module "eks_blueprints_kubernetes_addons" {
       preserve = true
     }
     vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
+      preserve = true
     }
     kube-proxy = {
       preserve = true
@@ -105,6 +104,8 @@ module "eks_blueprints_kubernetes_addons" {
     namespace  = "aws-for-fluent-bit"
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
+      s3_bucket_name       = module.fluentbit_s3_bucket.s3_bucket_id,
+      cluster_name         = local.name,
       cloudwatch_log_group = "/${local.name}/fluentbit-logs"
     })]
   }
@@ -215,19 +216,23 @@ module "ebs_csi_driver_irsa" {
 }
 
 #---------------------------------------------------------------
-# IRSA for VPC CNI
+# S3 log bucket for FluentBit
 #---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = var.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
+#tfsec:ignore:*
+module "fluentbit_s3_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 3.0"
+
+  bucket_prefix = "${local.name}-emr-logs-"
+  # For example only - please evaluate for your environment
+  force_destroy = true
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
     }
   }
+
   tags = local.tags
 }

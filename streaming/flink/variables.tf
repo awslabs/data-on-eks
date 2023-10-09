@@ -5,14 +5,14 @@ variable "name" {
 }
 
 variable "region" {
-  description = "region"
+  description = "Region"
   type        = string
   default     = "us-west-2"
 }
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.25"
+  default     = "1.27"
   type        = string
 }
 
@@ -25,7 +25,7 @@ variable "vpc_cidr" {
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
   default     = false
-  type        = string
+  type        = bool
 }
 
 # Only two Subnets for with low IP range for internet access
