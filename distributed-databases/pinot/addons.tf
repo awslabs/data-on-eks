@@ -165,22 +165,22 @@ module "eks_blueprints_kubernetes_addons" {
 #   tags = local.tags
 # }
 
-resource "kubernetes_storage_class_v1" "gp3" {
-  metadata {
-    name = "gp3"
-  }
+# resource "kubernetes_storage_class_v1" "gp2" {
+#   metadata {
+#     name = "gp2"
+#   }
 
-  storage_provisioner    = "ebs.csi.aws.com"
-  allow_volume_expansion = true
-  reclaim_policy         = "Delete"
-  volume_binding_mode    = "WaitForFirstConsumer"
-  parameters = {
-    encrypted = true
-    fsType    = "ext4"
-    type      = "gp3"
-  }
-  depends_on = [module.eks_blueprints_kubernetes_addons]
-}
+#   storage_provisioner    = "ebs.csi.aws.com"
+#   allow_volume_expansion = true
+#   reclaim_policy         = "Delete"
+#   volume_binding_mode    = "WaitForFirstConsumer"
+#   parameters = {
+#     encrypted = true
+#     fsType    = "ext4"
+#     type      = "gp3"
+#   }
+#   depends_on = [module.eks_blueprints_kubernetes_addons]
+# }
 
 #---------------------------------------------------------------
 # Apache Pinot
@@ -197,14 +197,70 @@ resource "random_password" "sensitive_key" {
   special = false
 }
 
-resource "helm_release" "pinot" {
-  name             = "pinot"
-  repository       = "https://raw.githubusercontent.com/apache/pinot/master/kubernetes/helm"
-  chart            = "pinot"
-  namespace        = "pinot-quickstart"
-  create_namespace = true
+# resource "helm_release" "pinot" {
+#   name             = "pinot"
+#   repository       = "https://raw.githubusercontent.com/apache/pinot/master/kubernetes/helm"
+#   chart            = "pinot"
+#   namespace        = "pinot-quickstart"
+#   create_namespace = true
+#   values = [templatefile("${path.module}/helm-values/values.yaml", {})]
 
-  # values = [templatefile("${path.module}/helm-values/pinot-values.yaml", {})]
+#   depends_on = [kubernetes_storage_class_v1.gp3]
+# }
 
-  depends_on = [kubernetes_storage_class_v1.gp3]
+module "eks_data_addons" {
+  source = "../../../terraform-aws-eks-data-addons"
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # Apache Pinot Add-on
+  #---------------------------------------------------------------
+  enable_pinot = true
+  pinot_helm_config = {
+    namespace = "pinot"
+    values    = [templatefile("${path.module}/helm/values.yaml", {})]
+    set = [
+      {
+        name  = "cluster.name"
+        value = local.cluster_name
+      },
+      {
+        name  = "controller.replicaCount"
+        value = 3
+      },
+      {
+        name  = "controller.persistence.storageClass"
+        value = "gp2"
+      },
+      {
+        name  = "broker.replicaCount"
+        value = 3
+      },
+      {
+        name  = "server.replicaCount"
+        value = 3
+      },
+      {
+        name  = "server.persistence.storageClass"
+        value = "gp2"
+      },
+      {
+        name  = "minionStateless.replicaCount"
+        value = 3
+      },
+      {
+        name  = "minionStateless.persistence.storageClass"
+        value = "gp2"
+      },
+      {
+        name  = "zookeeper.replicaCount"
+        value = 3
+      },
+      {
+        name  = "zookeeper.persistence.storageClass"
+        value = "gp2"
+      }
+    ]
+  }
 }

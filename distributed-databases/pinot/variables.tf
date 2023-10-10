@@ -39,3 +39,9 @@ variable "acm_certificate_domain" {
   default     = ""
   type        = string
 }
+
+variable "pinot_helm_config" {
+  description = "Apache Pinot Helm Chart config"
+  type        = any
+  default     = {}
+}
