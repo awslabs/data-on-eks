@@ -13,7 +13,7 @@ targets=(
 for target in "${targets[@]}"
 do
   terraform destroy -target="$target" -auto-approve
-  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
+  destroy_output=$(terraform destroy -target="$target" -var=region=$(aws configure get region)  -auto-approve 2>&1)
   if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else
@@ -23,7 +23,7 @@ do
 done
 
 terraform destroy -auto-approve
-destroy_output=$(terraform destroy -auto-approve 2>&1)
+destroy_output=$(terraform destroy -var=region=$(aws configure get region) -auto-approve 2>&1)
 if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
   echo "SUCCESS: Terraform destroy of all targets completed successfully"
 else
