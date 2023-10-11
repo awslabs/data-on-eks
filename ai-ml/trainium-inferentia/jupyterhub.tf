@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------------------
-# JupyterHub Sinlgle User IRSA, maybe that block could be incorporated in add-on registry
+# JupyterHub Single User IRSA, maybe that block could be incorporated in add-on registry
 #-----------------------------------------------------------------------------------------
 resource "kubernetes_namespace" "jupyterhub" {
   metadata {
@@ -49,7 +49,7 @@ resource "kubernetes_secret_v1" "jupyterhub_single_user" {
 
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
-# This will be repalced with Dynamic EFS provision using EFS CSI Driver
+# This will be replaced with Dynamic EFS provision using EFS CSI Driver
 #---------------------------------------------------------------
 resource "aws_efs_file_system" "efs" {
   creation_token = "efs-jupyter-single-user"
@@ -159,4 +159,3 @@ YAML
 
   depends_on = [module.eks_blueprints_addons]
 }
-

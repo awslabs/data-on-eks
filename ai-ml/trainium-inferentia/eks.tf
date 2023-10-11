@@ -99,7 +99,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     #  It's recommended to have a Managed Node group for hosting critical add-ons
-    #  It's recommeded to use Karpenter to place your workloads instead of using Managed Node groups
+    #  It's recommended to use Karpenter to place your workloads instead of using Managed Node groups
     #  You can leverage nodeSelector and Taints/tolerations to distribute workloads across Managed Node group or Karpenter nodes.
     core_node_group = {
       name        = "core-node-group"
@@ -326,7 +326,7 @@ module "eks" {
       max_size     = 1
       desired_size = 0
 
-      # EFA Network Interfaces configuration for Trn1.32xlarge
+      # EFA Network Interfaces configuration for Trn1.32xlarge
       network_interfaces = [
         {
           description                 = "NetworkInterfaces Configuration For EFA and EKS"
@@ -484,11 +484,11 @@ module "eks" {
     }
 
     #--------------------------------------------------
-    # Inferentia2 node group for Inf2.1xlarge
+    # Inferentia2 Spot node group
     #--------------------------------------------------
     inf2-24xl-ng = {
       name        = "inf2-24xl-ng"
-      description = "inf2 node group for ML inference workloads"
+      description = "inf2 24xl node group for ML inference workloads"
       # The code filters the private subnets based on their CIDR blocks and selects the subnet ID if the CIDR block starts with "100." Otherwise, it assigns a null value.
       # The element(compact([...]), 0) expression ensures that only the first non-null value is included in the resulting list of subnet IDs.
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
@@ -498,6 +498,7 @@ module "eks" {
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU"
+      capacity_type  = "SPOT"
       instance_types = ["inf2.24xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
@@ -511,20 +512,14 @@ module "eks" {
       desired_size = 0
 
       labels = {
-        instance-type                  = "inf2"
-        provisioner                    = "cluster-autoscaler"
-        "hub.jupyter.org/node-purpose" = "user"
+        instance-type = "inf2"
+        provisioner   = "cluster-autoscaler"
       }
 
       taints = [
         {
           key    = "aws.amazon.com/neuron",
           value  = true,
-          effect = "NO_SCHEDULE"
-        },
-        {
-          key    = "hub.jupyter.org/dedicated",
-          value  = "user",
           effect = "NO_SCHEDULE"
         },
         {
@@ -536,6 +531,54 @@ module "eks" {
 
       tags = merge(local.tags, {
         Name                     = "inf2-ng1",
+        "karpenter.sh/discovery" = local.name
+      })
+    }
+    inf2-48xl-ng = {
+      name        = "inf2-48xl-ng"
+      description = "inf2 48x large node group for ML inference workloads"
+      # The code filters the private subnets based on their CIDR blocks and selects the subnet ID if the CIDR block starts with "100." Otherwise, it assigns a null value.
+      # The element(compact([...]), 0) expression ensures that only the first non-null value is included in the resulting list of subnet IDs.
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
+
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+      # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
+      ami_type       = "AL2_x86_64_GPU"
+      capacity_type  = "SPOT"
+      instance_types = ["inf2.48xlarge"]
+
+      pre_bootstrap_user_data = <<-EOT
+        # Install Neuron monitoring tools
+        yum install aws-neuronx-tools-2.* -y
+        export PATH=/opt/aws/neuron/bin:$PATH
+      EOT
+
+      min_size     = 0
+      max_size     = 2
+      desired_size = 0
+
+      labels = {
+        instance-type = "inf2-48xl"
+        provisioner   = "cluster-autoscaler"
+      }
+
+      taints = [
+        {
+          key    = "aws.amazon.com/neuron",
+          value  = true,
+          effect = "NO_SCHEDULE"
+        },
+        {
+          key    = "aws.amazon.com/neuroncore",
+          value  = true,
+          effect = "NO_SCHEDULE"
+        },
+      ]
+
+      tags = merge(local.tags, {
+        Name                     = "inf2-48xl-ng",
         "karpenter.sh/discovery" = local.name
       })
     }

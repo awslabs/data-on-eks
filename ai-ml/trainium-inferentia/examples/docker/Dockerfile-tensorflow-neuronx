@@ -12,7 +12,7 @@ USER root
 
 # Install gnupg and other required packages
 RUN apt-get update -y && \
-    apt-get install -y gnupg git g++ 
+    apt-get install -y gnupg git g++
 
 RUN \
   . /etc/os-release && \
