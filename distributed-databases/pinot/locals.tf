@@ -6,8 +6,7 @@ locals {
   region       = var.region
   cluster_name = format("%s-%s", local.name, "cluster")
 
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs = slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
     Blueprint  = local.name

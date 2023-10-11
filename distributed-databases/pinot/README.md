@@ -1,1 +1,0 @@
-# Apache Pinot(🍷) on EKS

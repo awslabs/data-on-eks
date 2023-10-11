@@ -33,15 +33,3 @@ variable "private_subnets" {
   default     = ["10.1.0.0/18", "10.1.64.0/18", "10.1.128.0/18"]
   type        = list(string)
 }
-
-variable "acm_certificate_domain" {
-  description = "ACM Certificate Domain"
-  default     = ""
-  type        = string
-}
-
-variable "pinot_helm_config" {
-  description = "Apache Pinot Helm Chart config"
-  type        = any
-  default     = {}
-}

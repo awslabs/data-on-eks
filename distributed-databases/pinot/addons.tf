@@ -197,19 +197,8 @@ resource "random_password" "sensitive_key" {
   special = false
 }
 
-# resource "helm_release" "pinot" {
-#   name             = "pinot"
-#   repository       = "https://raw.githubusercontent.com/apache/pinot/master/kubernetes/helm"
-#   chart            = "pinot"
-#   namespace        = "pinot-quickstart"
-#   create_namespace = true
-#   values = [templatefile("${path.module}/helm-values/values.yaml", {})]
-
-#   depends_on = [kubernetes_storage_class_v1.gp3]
-# }
-
 module "eks_data_addons" {
-  source = "../../../terraform-aws-eks-data-addons"
+  source = "github.com/wahab-io/terraform-aws-eks-data-addons?ref=v1.2.6"
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
