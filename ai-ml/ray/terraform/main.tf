@@ -196,7 +196,9 @@ module "karpenter" {
   cluster_name                 = module.eks.cluster_name
   irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
   create_irsa                  = false # IRSA will be created by the kubernetes-addons module
-  iam_role_additional_policies = [module.karpenter_policy.arn]
+  iam_role_additional_policies = {
+    additional_policy = module.karpenter_policy.arn
+  }
 
   tags = local.tags
 }
