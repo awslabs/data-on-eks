@@ -12,7 +12,7 @@ image:
 replicas: 1
 
 emrContainers:
-  awsRegion: ""
+  awsRegion: ${aws_region}
   operatorExecutionRoleArn: ""
 
 operatorPod:

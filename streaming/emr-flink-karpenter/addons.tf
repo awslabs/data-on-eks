@@ -193,7 +193,9 @@ module "eks_data_addons" {
   enable_emr_flink_operator = true
   flink_operator_helm_config = {
     version = "6.13.0"
-    values  = [templatefile("${path.module}/helm-values/emr-flink-operator-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/emr-flink-operator-values.yaml", {
+      aws_region = var.region
+    })]
   }
 
   #---------------------------------------------------------------
