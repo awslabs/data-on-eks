@@ -177,7 +177,7 @@ singleuser:
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
           node.kubernetes.io/instance-type: p4d.24xlarge
-          karpenter.sh/provisioner-name: gpu-p4d
+          karpenter.sh/provisioner-name: gpu
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"

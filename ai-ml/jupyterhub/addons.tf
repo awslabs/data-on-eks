@@ -187,12 +187,12 @@ module "eks_blueprints_addons" {
       ]
     }
     karpenter-resources-mig = {
-      name        = "karpenter-resources-mig"
-      description = "A Helm chart for karpenter GPU based resources - compatible with GPU MIG"
+      name        = "karpenter-resources-gpu"
+      description = "A Helm chart for karpenter GPU based resources - compatible with P4d instances"
       chart       = "${path.module}/helm/karpenter-resources"
       values = [
         <<-EOT
-          name: gpu-mig
+          name: gpu
           clusterName: ${module.eks.cluster_name}
           instanceSizes: ["24xlarge"]
           instanceFamilies: ["p4d"]
