@@ -181,7 +181,6 @@ resource "aws_cognito_user_pool_client" "user_pool_client" {
 }
 
 resource "aws_cognito_identity_pool" "identity_pool" {
-
   count = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   identity_pool_name = "jupyterhub-identity-pool"
   allow_unauthenticated_identities = false  
@@ -192,4 +191,42 @@ resource "aws_cognito_identity_pool" "identity_pool" {
   }
 
   depends_on = [aws_cognito_user_pool_client.user_pool_client]
+}
+
+resource "aws_iam_role" "cognito_authenticated_role" {
+  name = "CognitoAuthenticatedRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Effect = "Allow",
+        Principal = {
+          Federated = "cognito-identity.amazonaws.com"
+        },
+        Condition = {
+          StringEquals = {
+            "cognito-identity.amazonaws.com:aud" = aws_cognito_identity_pool.identity_pool[0].id
+          },
+          "ForAnyValue:StringLike": {
+            "cognito-identity.amazonaws.com:amr": "authenticated"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy_attachment" "s3_readonly_policy_attachment" {
+  name       = "S3ReadOnlyAccessAttachment"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+  roles      = [aws_iam_role.cognito_authenticated_role.name]
+}
+
+resource "aws_cognito_identity_pool_roles_attachment" "identity_pool_roles" {
+  identity_pool_id = aws_cognito_identity_pool.identity_pool[0].id
+  roles = {
+    authenticated = aws_iam_role.cognito_authenticated_role.arn
+  }
 }
