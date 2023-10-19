@@ -37,12 +37,12 @@ module "vpc_cni_irsa" {
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_blueprints_kubernetes_addons" {
-  source = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=3e64d809ac9dbc89aee872fe0f366f0b757d3137"
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
-  oidc_provider     = module.eks.oidc_provider
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
@@ -67,6 +67,18 @@ module "eks_blueprints_kubernetes_addons" {
   # Kubernetes Add-ons
   #---------------------------------------
 
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    namespace     = "monitoring"
+    name          = "prometheus"
+    chart_version = "48.1.1"
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+    }]
+  }
+
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -88,16 +100,6 @@ module "eks_blueprints_kubernetes_addons" {
   #     aws_region     = var.region,
   #     eks_cluster_id = module.eks.cluster_name
   #   })]
-  # }
-
-  #---------------------------------------
-  # CloudWatch metrics for EKS
-  #---------------------------------------
-  enable_cloudwatch_metrics = false
-  # cloudwatch_metrics = {
-  #   version = "0.0.8"
-  #   timeout = "300"
-  #   values  = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
   # }
 
   #---------------------------------------

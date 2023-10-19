@@ -31,7 +31,8 @@ imagePullSecrets: []
 
 terminationGracePeriodSeconds: 30
 
-securityContext: {}
+securityContext:
+  {}
   # capabilities:
   #   drop:
   #   - ALL
@@ -54,7 +55,6 @@ serviceAccount:
 
 additionalMatchLabels: {}
 
-
 pinotAuth:
   enabled: false
   controllerFactoryClass: org.apache.pinot.controller.api.access.BasicAuthAccessControlFactory
@@ -73,7 +73,8 @@ controller:
   name: controller
   replicaCount: 1
   podManagementPolicy: Parallel
-  podSecurityContext: {}
+  podSecurityContext:
+    {}
     # fsGroup: 2000
   securityContext: {}
   startCommand: "StartController"
@@ -100,13 +101,16 @@ controller:
     host: pinot-controller
     port: 9000
 
-  jvmOpts: "-XX:ActiveProcessorCount=2 -Xms256M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-controller.log"
+  #jvmOpts: "-XX:ActiveProcessorCount=2 -Xms256M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-controller.log"
+  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms256M -Xmx1G"
 
   log4j2ConfFile: /opt/pinot/conf/log4j2.xml
   pluginsDir: /opt/pinot/plugins
 
   service:
-    annotations: {}
+    annotations:
+      "prometheus.io/scrape": "true"
+      "prometheus.io/port": "8008"
     clusterIP: "None"
     externalIPs: []
     loadBalancerIP: ""
@@ -126,10 +130,10 @@ controller:
   ingress:
     v1beta1:
       enabled: false
-      annotations: { }
-      tls: { }
+      annotations: {}
+      tls: {}
       path: /
-      hosts: [ ]
+      hosts: []
     v1:
       enabled: false
       ingressClassName: ""
@@ -148,7 +152,9 @@ controller:
 
   affinity: {}
 
-  podAnnotations: {}
+  podAnnotations:
+    "prometheus.io/scrape": "true"
+    "prometheus.io/port": "8008"
 
   updateStrategy:
     type: RollingUpdate
@@ -183,12 +189,14 @@ broker:
   name: broker
   replicaCount: 1
   podManagementPolicy: Parallel
-  podSecurityContext: {}
+  podSecurityContext:
+    {}
     # fsGroup: 2000
   securityContext: {}
   startCommand: "StartBroker"
 
-  jvmOpts: "-XX:ActiveProcessorCount=2 -Xms256M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-broker.log"
+  #jvmOpts: "-XX:ActiveProcessorCount=2 -Xms256M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-broker.log"
+  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms256M -Xmx1G"
 
   log4j2ConfFile: /opt/pinot/conf/log4j2.xml
   pluginsDir: /opt/pinot/plugins
@@ -206,7 +214,9 @@ broker:
     extraVolumeMounts: []
 
   service:
-    annotations: {}
+    annotations:
+      "prometheus.io/scrape": "true"
+      "prometheus.io/port": "8008"
     clusterIP: "None"
     externalIPs: []
     loadBalancerIP: ""
@@ -249,7 +259,9 @@ broker:
 
   tolerations: []
 
-  podAnnotations: {}
+  podAnnotations:
+    "prometheus.io/scrape": "true"
+    "prometheus.io/port": "8008"
 
   updateStrategy:
     type: RollingUpdate
@@ -283,7 +295,8 @@ server:
   name: server
   replicaCount: 1
   podManagementPolicy: Parallel
-  podSecurityContext: {}
+  podSecurityContext:
+    {}
     # fsGroup: 2000
   securityContext: {}
   startCommand: "StartServer"
@@ -306,13 +319,16 @@ server:
     extraVolumes: []
     extraVolumeMounts: []
 
-  jvmOpts: "-Xms512M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-server.log"
+  #jvmOpts: "-Xms512M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-server.log"
+  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms256M -Xmx1G"
 
   log4j2ConfFile: /opt/pinot/conf/log4j2.xml
   pluginsDir: /opt/pinot/plugins
 
   service:
-    annotations: {}
+    annotations:
+      "prometheus.io/scrape": "true"
+      "prometheus.io/port": "8008"
     clusterIP: ""
     externalIPs: []
     loadBalancerIP: ""
@@ -336,7 +352,9 @@ server:
 
   tolerations: []
 
-  podAnnotations: {}
+  podAnnotations:
+    "prometheus.io/scrape": "true"
+    "prometheus.io/port": "8008"
 
   updateStrategy:
     type: RollingUpdate
@@ -372,7 +390,8 @@ minion:
   name: minion
   replicaCount: 0
   podManagementPolicy: Parallel
-  podSecurityContext: {}
+  podSecurityContext:
+    {}
     # fsGroup: 2000
   securityContext: {}
   startCommand: "StartMinion"
@@ -447,7 +466,6 @@ minion:
     configs: |-
       pinot.set.instance.id.to.hostname=true
 
-
 # ------------------------------------------------------------------------------
 # Pinot Minion Stateless:
 # ------------------------------------------------------------------------------
@@ -455,7 +473,8 @@ minionStateless:
   enabled: true
   name: minion-stateless
   replicaCount: 1
-  podSecurityContext: {}
+  podSecurityContext:
+    {}
     # fsGroup: 2000
   securityContext: {}
   startCommand: "StartMinion"
@@ -549,7 +568,6 @@ zookeeper:
 
   ## Ongoing data directory cleanup configuration
   autopurge:
-
     ## The time interval (in hours) for which the purge task has to be triggered
     ## Set to a positive integer to enable the auto purging
     purgeInterval: 1
@@ -574,7 +592,7 @@ zookeeper:
   ## Pod scheduling preferences (by default keep pods within a release on separate nodes).
   ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   ## By default we don't set affinity:
-  affinity: {}  # Criteria by which pod label-values influence scheduling for zookeeper pods.
+  affinity: {} # Criteria by which pod label-values influence scheduling for zookeeper pods.
   # podAntiAffinity:
   #   requiredDuringSchedulingIgnoredDuringExecution:
   #     - topologyKey: "kubernetes.io/hostname"
