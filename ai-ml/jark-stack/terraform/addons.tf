@@ -28,7 +28,7 @@ resource "kubernetes_storage_class" "default_gp3" {
   allow_volume_expansion = true
   volume_binding_mode    = "WaitForFirstConsumer"
   parameters = {
-    fsType    = "xfs"
+    fsType    = "ext4"
     encrypted = true
     type      = "gp3"
   }
