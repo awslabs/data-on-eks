@@ -11,23 +11,24 @@ metadata:
   name: llama2-service
   namespace: llama2
 spec:
-  serviceUnhealthySecondThreshold: 900 # Config for the health check threshold for Ray Serve applications. Default value is 900.
-  deploymentUnhealthySecondThreshold: 300 # Config for the health check threshold for Ray dashboard agent. Default value is 300.
-#  serveConfig:
-#    importPath: ????
-#    runtimeEnv: |
-#      env_vars: {"MODEL_ID": "????"}
+  serviceUnhealthySecondThreshold: 900
+  deploymentUnhealthySecondThreshold: 300
+  serveConfig:
+    importPath: ray_serve_llama2:entrypoint  # Specify the correct path to your Python script
+    runtimeEnv: |
+      env_vars: {"MODEL_ID": "NousResearch/Llama-2-13b-chat-hf"}  # Replace with the appropriate model ID
+
   rayClusterConfig:
-    rayVersion: '2.7.1' # Should match the Ray version in the image of the containers
+    rayVersion: '2.7.1'
     headGroupSpec:
-      serviceType: ClusterIP  # Options are ClusterIP, NodePort, and LoadBalancer
+      serviceType: ClusterIP
       rayStartParams:
         dashboard-host: '0.0.0.0'
       template:
         spec:
           containers:
             - name: ray-head
-              image: rayproject/ray-ml:2.7.1 # Replace with Neuron docker image
+              image: rayproject/ray-ml:2.7.1
               lifecycle:
                 preStop:
                   exec:
@@ -51,13 +52,13 @@ spec:
                 requests:
                   cpu: 2
                   memory: 8Gi
-
           nodeSelector:
             provisioner: default
             workload: rayhead
           volumes:
             - name: ray-logs
               emptyDir: {}
+
     workerGroupSpecs:
       - groupName: inf2-worker-group
         replicas: 1
@@ -68,7 +69,7 @@ spec:
           spec:
             containers:
               - name: ray-worker
-                image: rayproject/ray-ml:2.7.1  # replace with llama2 image
+                image: rayproject/ray-ml:2.7.1
                 lifecycle:
                   preStop:
                     exec:
@@ -96,25 +97,3 @@ spec:
                 operator: "Equal"
                 value: "user"
                 effect: "NoSchedule"
-
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: llama2
-  namespace: llama2
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: "/$1"
-spec:
-  ingressClassName: nginx
-  rules:
-    - http:
-        paths:
-          # Ray Dashboard
-          - path: /llama2/(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: llama2-head-svc
-                port:
-                  number: 8265
