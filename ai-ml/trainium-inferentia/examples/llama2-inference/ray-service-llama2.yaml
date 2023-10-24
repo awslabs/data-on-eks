@@ -28,7 +28,7 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: rayproject/ray-ml:2.7.1
+              image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama2:latest
               lifecycle:
                 preStop:
                   exec:
@@ -69,7 +69,7 @@ spec:
           spec:
             containers:
               - name: ray-worker
-                image: rayproject/ray-ml:2.7.1
+                image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama2:latest
                 lifecycle:
                   preStop:
                     exec:
