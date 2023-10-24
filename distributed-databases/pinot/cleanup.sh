@@ -6,6 +6,7 @@ read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
 targets=(
+  "module.eks_data_addons"
   "module.eks_blueprints_kubernetes_addons"
   "module.vpc_cni_irsa"
   "module.ebs_csi_driver_irsa"
@@ -33,7 +34,7 @@ done
 #-------------------------------------------
 # Terraform destroy per module target
 #-------------------------------------------
-for target in "${targets[@]}"2
+for target in "${targets[@]}"
 do
   destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
   if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
