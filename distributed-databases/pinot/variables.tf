@@ -12,7 +12,7 @@ variable "region" {
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   type        = string
-  default     = "1.24"
+  default     = "1.25"
 }
 
 variable "vpc_cidr" {
