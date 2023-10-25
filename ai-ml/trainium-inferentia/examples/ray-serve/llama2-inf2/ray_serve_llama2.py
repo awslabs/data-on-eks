@@ -2,14 +2,21 @@ from fastapi import FastAPI
 from ray import serve
 import torch
 import os
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 app = FastAPI()
 
 # Define the Llama model and related parameters
 llm_model = "NousResearch/Llama-2-13b-chat-hf"
 llm_model_split = "llama-2-13b-chat-hf-split"
-neuron_cores=12 # inf2.24xlarge 6 Neurons (12 Neuron cores)
+neuron_cores = 12  # inf2.24xlarge 6 Neurons (12 Neuron cores)
+# tp_degree = min(num_neuron_cores, 24)  # Set a maximum value of 24 if you want to limit it
+#
+# # Set environment variable for neuron
+# os.environ['NEURON_CC_FLAGS'] = f'-O{tp_degree}'
+
+# Set the NEURON_CC_FLAGS environment variable
+os.environ["NEURON_CC_FLAGS"] = "-O1"
 
 # Define the APIIngress class responsible for handling inference requests
 @serve.deployment(num_replicas=1)
@@ -29,8 +36,10 @@ class APIIngress:
 
 # Define the LlamaModel class responsible for managing the Llama language model
 @serve.deployment(
-    ray_actor_options={"resources": {"neuron_cores": neuron_cores},
-                       "runtime_env": {"env_vars": {"NEURON_CC_FLAGS": "--model-type=transformer-inference"}}},
+    ray_actor_options={
+        "resources": {"neuron_cores": neuron_cores},
+        "runtime_env": {"env_vars": {"NEURON_CC_FLAGS": "--model-type=transformer-inference"}},
+    },
     autoscaling_config={"min_replicas": 1, "max_replicas": 1},
 )
 class LlamaModel:
@@ -41,7 +50,7 @@ class LlamaModel:
         # Check if the model split exists locally, and if not, download it
         if not os.path.exists(llm_model_split):
             print(f"Saving model split for {llm_model} to local path {llm_model_split}")
-            self.model = LlamaForSampling.from_pretrained(llm_model)
+            self.model = AutoModelForCausalLM.from_pretrained(llm_model)
             save_pretrained_split(self.model, llm_model_split)
         else:
             print(f"Using existing model split {llm_model_split}")
