@@ -22,11 +22,11 @@ In this blueprint, we will deploy Apache Pinot on Kubernetes cluster managed by 
 - No single point of failure
 - Auto recovery
 
-All Apache Pinot components run on `StatefulSet` as well as `Zookeeper`.
+> Note: All Apache Pinot components run on `StatefulSet` including **Zookeeper**
 
 > Note: This blueprint doesn't leverage [DeepStore](#link) currently and uses EBS volumes to store table segments.
 
-> Future: Currently all Apache Pinot components run on m5.xlarge nodes that are provisioned as part of node groups. In future, we would leverage separate node groups for each components so that we can leverage
+> Future: Currently all Apache Pinot components run on m5.xlarge nodes that are provisioned as part of node groups. In future, we would leverage separate node groups for each components so that we can provide each Apache Pinot component specialized underlying hardware that improves overall performance of Apache Pinot.
 
 ## Prerequisites 📝
 
@@ -46,12 +46,20 @@ First, clone the repository.
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate to apache pinot folder and run `install.sh` script. Update `variables.tf` to change the value to desired region. This is also the time to update any other input variables or make any other changes to the terraform template.
+
+Navigate to apache pinot folder and create `terraform.tfvars` to provide desired values for all the variables. This is also the time to update any other input variables or make any other changes to the terraform template.
 
 ```bash
 cd data-on-eks/distributed-databases/pinot
+touch terraform.tfvars
+```
 
-./install.sh
+#### Sample `terraform.tfvars`
+```terraform
+name                = "pinot-on-eks"
+region              = "us-west-2"
+eks_cluster_version = "1.25"
+...
 ```
 
 ### Verify Deployment
@@ -250,7 +258,7 @@ kubectl port-forward service/pinot-controller 9000:9000 -n pinot
 
 ## Cleanup 🧹
 
-To delete all the components provisioned as part of this blueprint, using the following command to
+To delete all the components provisioned as part of this blueprint, using the following command to destroy all the resources.
 
 ```bash
 ./cleanup.sh
