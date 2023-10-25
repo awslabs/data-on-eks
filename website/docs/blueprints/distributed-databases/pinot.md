@@ -263,3 +263,10 @@ To delete all the components provisioned as part of this blueprint, using the fo
 ```bash
 ./cleanup.sh
 ```
+
+:::caution
+
+To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
+
+ex. Delete kafka-on-eks EBS volumes
+:::
