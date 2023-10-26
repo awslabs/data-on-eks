@@ -21,14 +21,19 @@ spec:
   rayClusterConfig:
     rayVersion: '2.7.1'
     headGroupSpec:
-      serviceType: ClusterIP
+      serviceType: NodePort
+      headService:
+        metadata:
+          name: llama2-service
+          namespace: llama2
       rayStartParams:
         dashboard-host: '0.0.0.0'
       template:
         spec:
           containers:
             - name: ray-head
-              image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama2:latest
+              image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama2:latest # Image created using the Dockerfile attached in the folder
+              imagePullPolicy: Always # Ensure the image is always pulled when updated
               lifecycle:
                 preStop:
                   exec:
@@ -47,11 +52,11 @@ spec:
                   name: ray-logs
               resources:
                 limits:
-                  cpu: 2
-                  memory: 8Gi
+                  cpu: 4
+                  memory: 20Gi
                 requests:
-                  cpu: 2
-                  memory: 8Gi
+                  cpu: 4
+                  memory: 20Gi
           nodeSelector:
             provisioner: default
             workload: rayhead
@@ -70,22 +75,22 @@ spec:
             containers:
               - name: ray-worker
                 image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama2:latest
+                imagePullPolicy: Always # Ensure the image is always pulled when updated
                 lifecycle:
                   preStop:
                     exec:
                       command: [ "/bin/sh","-c","ray stop" ]
                 resources:
                   limits:
-                    cpu: "90"
-                    memory: "300G"
-                    aws.amazon.com/neuron: "6"
+                    cpu: "180"
+                    memory: "700G"
+                    aws.amazon.com/neuron: "12"
                   requests:
-                    cpu: "90"
-                    memory: "300G"
-                    aws.amazon.com/neuron: "6"
+                    cpu: "180"
+                    memory: "700G"
+                    aws.amazon.com/neuron: "12"
             nodeSelector:
               karpenter.sh/provisioner-name: inferentia-inf2
-              hub.jupyter.org/node-purpose: user
             tolerations:
               - key: aws.amazon.com/neuroncore
                 operator: Exists
@@ -97,3 +102,34 @@ spec:
                 operator: "Equal"
                 value: "user"
                 effect: "NoSchedule"
+
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gradio-ingress
+  namespace: llama2
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: "/$1"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # Ray Dashboard
+          - path: /dashboard/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: llama2-service
+                port:
+                  number: 8265
+          # Ray Serve
+          - path: /serve/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: llama2-service
+                port:
+                  number: 8000

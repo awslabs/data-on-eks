@@ -1,23 +1,69 @@
 # How to deploy Llama2 on Inference2 and EKS
 
-## Step1:
+## Pre-requisites
+Deploy the `trainium-inferentia` blueprint using this [link](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium)
 
-## Step2:
+## Step 1: Deploy RayServe Cluster
 
-## Step3:
+To deploy the RayServe cluster with `Llama2-13B` LLM on `Inf2.48xlarge` instance, run the following command:
 
-To port forward the Ray Serve service and test the Llama2 model using Curl command, you can follow these steps:
+**IMPORTANT NOTE: RAY MODEL DEPLOYMENT CAN TAKE UPTO 8 TO 10 MINS**
 
-Get the external IP address of the Ray Serve head pod. You can do this using the following command:
+```bash
+cd data-on-eks/ai-ml/trainium-inferentia/examples/ray-serve/llama2-inf2
+kubectl apply -f ray-service-llama2.yaml
+```
 
-    kubectl get pods -n llama2 -l app.kubernetes.io/name=kuberay,ray.io/cluster=llama2-service-raycluster-2bx6m,ray.io/identifier=llama2-service-raycluster-2bx6m-head,ray.io/node-type=head -o jsonpath='{.items[0].status.podIP}'
+This will deploy a RayServe cluster with two `inf2.48xlarge` instances. The `Llama2-13B` LLM will be loaded on both instances and will be available to serve inference requests.
 
-Port forward the Ray Serve service to your local machine using the following command:
+Once the RayServe cluster is deployed, you can start sending inference requests to it. To do this, you can use the following steps:
 
-    kubectl port-forward -n llama2 service/llama2-service-raycluster-2bx6m-head-svc 8000:8000
+Get the NLB DNS Name address of the RayServe cluster. You can do this by running the following command:
 
-Test the Llama2 model using the following Curl command:
+```bash
+kubectl get ingress llama2-ingress -n llama2 
+```
 
-    curl -X POST http://localhost:8000/infer -d '{"sentence": "Hello, world!"}'
+Now, you can access the Ray Dashboard from the URL Below
 
-This will return a JSON response containing the generated text.
+    http://<NLB_DNS_NAME>/dashboard/#/serve
+
+## Step 2: To Test the Llama2 Model
+
+To test the Llama2 model, you can use the following command with a query added at the end of the URL. 
+This uses the GET method to get the response:
+
+    http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the diffrences
+
+
+You will see an output like this in your browser:
+
+```text
+[
+"what is data parallelism and tensor parallelisma and the diffrences between them?
+
+Data parallelism and tensor parallelism are both techniques used to speed up machine learning training on large datasets using multiple GPUs or other parallel processing units. However, there are some key differences between them:
+
+Data parallelism:
+
+* In data parallelism, the same model is split across multiple devices (e.g., GPUs or Machines), and each device processes a portion of the input data.
+* Each device computes the gradients for its own portion of the data and sends them back to the host, which aggregates them to update the model parameters.
+* Data parallelism is useful for training large models on large datasets, as it allows the model to be partitioned across multiple devices and processed in parallel.
+* Popular deep learning frameworks such as TensorFlow, PyTorch, and Keras support data parallelism.
+
+Tensor parallelism:
+
+* In tensor parallelism, multiple devices (e.g., GPUs or TPUs) are used to compute multiple tensors (i.e., matrices) in parallel.
+* Each device computes a subset of the tensor operations, and the results are combined to form the final output.
+* Tensor parallelism is useful for training large models on large datasets, as it allows the model to be computed in parallel across multiple devices.
+* Popular deep learning frameworks such as TensorFlow and PyTorch support tensor parallelism.
+
+Key differences:
+
+* Data parallelism is focused on dividing the input data across multiple devices, while tensor parallelism is focused on dividing the computational operations across multiple devices.
+* In data parallelism, each device processes a portion of the input data, while in tensor parallelism, each device computes a subset of the tensor operations.
+* Data parallelism is typically used for training large models on large datasets, while tensor parallelism is typically used for training large models on large datasets with a large number of parameters.
+
+In summary, data parallelism is a technique for speeding up machine learning training by dividing the input data across multiple devices, while tensor parallelism is a technique for speeding up machine learning training by dividing the computational operations across multiple devices. Both techniques are useful for training large models on large datasets, but they have different focuses and are used in different situations."
+]
+```

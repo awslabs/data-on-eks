@@ -9,14 +9,8 @@ app = FastAPI()
 # Define the Llama model and related parameters
 llm_model = "NousResearch/Llama-2-13b-chat-hf"
 llm_model_split = "llama-2-13b-chat-hf-split"
-neuron_cores = 12  # inf2.24xlarge 6 Neurons (12 Neuron cores)
-# tp_degree = min(num_neuron_cores, 24)  # Set a maximum value of 24 if you want to limit it
-#
-# # Set environment variable for neuron
-# os.environ['NEURON_CC_FLAGS'] = f'-O{tp_degree}'
+neuron_cores = 24  # inf2.24xlarge 6 Neurons (12 Neuron cores) and inf2.48xlarge 12 Neurons (24 Neuron cores)
 
-# Set the NEURON_CC_FLAGS environment variable
-os.environ["NEURON_CC_FLAGS"] = "-O1"
 
 # Define the APIIngress class responsible for handling inference requests
 @serve.deployment(num_replicas=1)
@@ -34,13 +28,16 @@ class APIIngress:
         result = await ref
         return result
 
+
 # Define the LlamaModel class responsible for managing the Llama language model
+# Increase the number of replicas for the LlamaModel deployment.
+# This will allow Ray Serve to handle more concurrent requests.
 @serve.deployment(
     ray_actor_options={
         "resources": {"neuron_cores": neuron_cores},
-        "runtime_env": {"env_vars": {"NEURON_CC_FLAGS": "--model-type=transformer-inference"}},
+        "runtime_env": {"env_vars": {"NEURON_CC_FLAGS": "-O1"}},
     },
-    autoscaling_config={"min_replicas": 1, "max_replicas": 1},
+    autoscaling_config={"min_replicas": 1, "max_replicas": 2},
 )
 class LlamaModel:
     def __init__(self):
@@ -57,7 +54,10 @@ class LlamaModel:
 
         print(f"Loading and compiling model {llm_model_split} for Neuron")
         # Load and compile the Neuron-optimized Llama model
-        self.neuron_model = LlamaForSampling.from_pretrained(llm_model_split, batch_size=1, tp_degree=neuron_cores, amp='f16')
+        self.neuron_model = LlamaForSampling.from_pretrained(llm_model_split,
+                                                             batch_size=1,
+                                                             tp_degree=neuron_cores,
+                                                             amp='f16')
         self.neuron_model.to_neuron()
         self.tokenizer = AutoTokenizer.from_pretrained(llm_model)
 
@@ -67,9 +67,12 @@ class LlamaModel:
         input_ids = self.tokenizer.encode(sentence, return_tensors="pt")
         # Perform inference with Neuron-optimized model
         with torch.inference_mode():
-            generated_sequences = self.neuron_model.sample(input_ids, sequence_length=2048, top_k=50)
+            generated_sequences = self.neuron_model.sample(input_ids,
+                                                           sequence_length=2048,
+                                                           top_k=50)
         # Decode the generated sequences and return the results
         return [self.tokenizer.decode(seq, skip_special_tokens=True) for seq in generated_sequences]
+
 
 # Create an entry point for the FastAPI application
 entrypoint = APIIngress.bind(LlamaModel.bind())
