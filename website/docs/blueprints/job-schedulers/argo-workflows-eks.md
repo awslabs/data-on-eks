@@ -77,8 +77,8 @@ kubectl get ns
 # Output should look like below
 NAME                    STATUS   AGE
 argo-events             Active   7m45s
-argo-workflows          Active   8m25s
-data-team-a             Active   5m51s
+argo-workflows           Active   8m25s
+spark-team-a            Active   5m51s
 default                 Active   25m
 karpenter               Active   21m
 kube-node-lease         Active   25m
@@ -111,7 +111,7 @@ Bearer k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZX
 
 ### Submit Spark Job with Argo Workflow
 
-Export EKS API from `terrafrorm output`
+Export EKS API from `terraform output`
 
 ```bash
 eks_api_url=https://ABCDEFG1234567890.yl4.eu-west-2.eks.amazonaws.com
@@ -272,10 +272,10 @@ NAMESPACE        NAME                           STATUS    AGE   MESSAGE
 argo-workflows   aws-sqs-spark-workflow-hh79p   Running   11s  
 ```
 
-Run the command below to check spark application driver pods and executor pods under data-team-a namespace.
+Run the command below to check spark application driver pods and executor pods under spark-team-a namespace.
 
 ```bash
-kubectl get po -n data-team-a
+kubectl get po -n spark-team-a
 
 # Output should look like below
 NAME                               READY   STATUS    RESTARTS   AGE
