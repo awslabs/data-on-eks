@@ -1,41 +1,38 @@
 import gradio as gr
 import requests
-from collections import LRUCache
 
 # Constants for model endpoint and service name
 model_endpoint = "/infer"
 # service_name = "http://<REPLACE_ME_WITH_ELB_DNS_NAME>/serve"
 service_name = "http://localhost:8000"  # Replace with your actual service name
 
-# Create a cache to store the results of previous inference requests
-cache = LRUCache(maxsize=1000)
 
-
-# Define a function to perform inference with the Llama model
+# Function to generate text
 def text_generation(message, history):
     prompt = message
 
-    if prompt in cache:
-        return cache[prompt]
+    # Create the URL for the inference
+    url = f"{service_name}{model_endpoint}"
 
-    # Send the request to the model service
-    response = requests.get(f"{service_name}{model_endpoint}", params={"sentence": prompt}, timeout=180)
-    response.raise_for_status()  # Raise an exception for HTTP errors
+    try:
+        # Send the request to the model service
+        response = requests.get(url, params={"sentence": prompt}, timeout=180)
+        response.raise_for_status()  # Raise an exception for HTTP errors
 
-    full_output = response.text
-    # Removing the original question from the output
-    answer_only = full_output.replace(prompt, "", 1).strip()
+        full_output = response.text
+        # Removing the original question from the output
+        answer_only = full_output.replace(prompt, "", 1).strip()
 
-    # Remove any leading/trailing square brackets and double quotes
-    answer_only = answer_only.strip('["]')
+        # Remove any leading/trailing square brackets and double quotes
+        answer_only = answer_only.strip('["]')
 
-    # Safety filter to remove harmful or inappropriate content
-    answer_only = filter_harmful_content(answer_only)
+        # Safety filter to remove harmful or inappropriate content
+        answer_only = filter_harmful_content(answer_only)
 
-    # Store the results of the inference in the cache
-    cache[prompt] = answer_only
-
-    return f"<p>{answer_only}</p>"  # Return text with preserved newlines
+        return f"<p>{answer_only}</p>"  # Return text with preserved newlines
+    except requests.exceptions.RequestException as e:
+        # Handle any request exceptions (e.g., connection errors)
+        return f"AI: Error: {str(e)}"
 
 
 # Define the safety filter function (you can implement this as needed)

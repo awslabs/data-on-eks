@@ -51,4 +51,6 @@ Open your web browser and access the Gradio WebUI by navigating to the following
 
 http://127.0.0.1:7860
 
+![gradio-app-llama2-chat.png](Llama2.png)
+
 You should now be able to interact with the Gradio application from your local machine.

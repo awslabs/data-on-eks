@@ -21,7 +21,7 @@ Once the RayServe cluster is deployed, you can start sending inference requests 
 Get the NLB DNS Name address of the RayServe cluster. You can do this by running the following command:
 
 ```bash
-kubectl get ingress llama2-ingress -n llama2 
+kubectl get ingress llama2-ingress -n llama2
 ```
 
 Now, you can access the Ray Dashboard from the URL Below
@@ -30,7 +30,7 @@ Now, you can access the Ray Dashboard from the URL Below
 
 ## Step 2: To Test the Llama2 Model
 
-To test the Llama2 model, you can use the following command with a query added at the end of the URL. 
+To test the Llama2 model, you can use the following command with a query added at the end of the URL.
 This uses the GET method to get the response:
 
     http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the diffrences
