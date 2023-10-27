@@ -8,6 +8,10 @@ kind: SparkApplication
 metadata:
   name: tpcds-data-generation-3t
   namespace: spark-team-a
+  labels:
+    app: "tpcds-data-generation"
+    applicationId: "tpcds-data-generation-3t"
+    queue: root.prod
 spec:
   type: Scala
   mode: cluster
@@ -64,22 +68,7 @@ spec:
 
   restartPolicy:
     type: Never
-  volumes:
-    - name: spark-local-dir-1
-      hostPath:
-        path: /local1
   driver:
-    volumeMounts:
-      - name: spark-local-dir-1
-        mountPath: /ossdata1
-        readOnly: false
-    initContainers:
-    - name: volume-permission
-      image: public.ecr.aws/y4g4v0z7/busybox
-      command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
-      volumeMounts:
-        - name: spark-local-dir-1
-          mountPath: /ossdata1
     cores: 10
     coreLimit: "10.1"
     memory: "10g"
@@ -91,17 +80,6 @@ spec:
         operator: "Exists"
         effect: "NoSchedule"
   executor:
-    volumeMounts:
-      - name: spark-local-dir-1
-        mountPath: /ossdata1
-        readOnly: false
-    initContainers:
-    - name: volume-permission
-      image: public.ecr.aws/y4g4v0z7/busybox
-      command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
-      volumeMounts:
-        - name: spark-local-dir-1
-          mountPath: /ossdata1
     cores: 11
     coreLimit: "11.1"
     memory: "15g"
