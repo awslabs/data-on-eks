@@ -21,15 +21,11 @@ def text_generation(message, history):
 
         full_output = response.text
         # Removing the original question from the output
-        answer_only = full_output.replace(prompt, "", 1).strip()
-
-        # Remove any leading/trailing square brackets and double quotes
-        answer_only = answer_only.strip('["]')
+        answer_only = full_output.replace(prompt, "", 1).strip('["]?\n')
 
         # Safety filter to remove harmful or inappropriate content
         answer_only = filter_harmful_content(answer_only)
-
-        return f"<p>{answer_only}</p>"  # Return text with preserved newlines
+        return answer_only
     except requests.exceptions.RequestException as e:
         # Handle any request exceptions (e.g., connection errors)
         return f"AI: Error: {str(e)}"
@@ -46,7 +42,7 @@ def filter_harmful_content(text):
 # Define the Gradio ChatInterface
 chat_interface = gr.ChatInterface(
     text_generation,
-    chatbot=gr.Chatbot(height=400, line_breaks=True),
+    chatbot=gr.Chatbot(line_breaks=True),
     textbox=gr.Textbox(placeholder="Ask me a question", container=False, scale=7),
     title="Llama2 AI Chat",
     description="Ask me any question",

@@ -108,7 +108,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: gradio-ingress
+  name: llama2-ingress
   namespace: llama2
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: "/$1"
