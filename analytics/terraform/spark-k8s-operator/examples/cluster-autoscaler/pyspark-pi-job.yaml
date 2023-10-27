@@ -7,6 +7,10 @@ kind: SparkApplication
 metadata:
   name: pyspark-pi
   namespace: spark-team-a
+  labels:
+    app: "pyspark-pi"
+    applicationId: "pyspark-pi-ca"
+    queue: root.test 
 spec:
   type: Python
   pythonVersion: "3"
