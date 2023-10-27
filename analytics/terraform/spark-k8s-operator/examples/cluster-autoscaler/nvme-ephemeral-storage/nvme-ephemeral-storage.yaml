@@ -79,24 +79,7 @@ spec:
     onFailureRetryInterval: 10
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
-  volumes:  # using NVMe instance storage mounted on /local1
-    - name: spark-local-dir-1
-      hostPath:
-        path: /local1
-        type: Directory
-
   driver:
-    volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
-      - name: spark-local-dir-1
-        mountPath: /data1
-        readOnly: false
-    initContainers:
-      - name: volume-permissions
-        image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
-        volumeMounts:
-          - mountPath: "/local1"
-            name: "spark-local-dir-1"
     cores: 1
     coreLimit: "1200m"
     memory: "4g"
@@ -111,19 +94,6 @@ spec:
         operator: "Exists"
         effect: "NoSchedule"
   executor:
-    podSecurityContext:
-      fsGroup: 185
-    volumeMounts:
-      - name: spark-local-dir-1
-        mountPath: /data1
-        readOnly: false
-    initContainers:
-      - name: volume-permissions
-        image: public.ecr.aws/y4g4v0z7/busybox
-        command: [ 'sh', '-c', 'chown -R 185 /local1' ]
-        volumeMounts:
-          - mountPath: "/local1"
-            name: "spark-local-dir-1"
     cores: 1
     coreLimit: "1200m"
     instances: 4
