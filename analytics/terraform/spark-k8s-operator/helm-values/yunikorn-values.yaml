@@ -107,6 +107,8 @@ yunikornDefaults:
   queues.yaml: |
     partitions:
       - name: default
+        nodesortpolicy:
+          type: binpacking
         queues:
           - name: root
             submitacl: '*'
