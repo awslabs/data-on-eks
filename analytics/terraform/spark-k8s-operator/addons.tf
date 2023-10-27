@@ -94,7 +94,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
