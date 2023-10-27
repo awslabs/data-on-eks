@@ -63,6 +63,12 @@ const config = {
           },
           {
             type: 'doc',
+            docId: 'gen-ai/index',
+            position: 'left',
+            label: 'Gen AI'
+          },
+          {
+            type: 'doc',
             docId: 'blueprints/amazon-emr-on-eks/index',
             position: 'left',
             label: 'Blueprints'
@@ -78,12 +84,6 @@ const config = {
             docId: 'benchmarks/emr-on-eks',
             position: 'left',
             label: 'Benchmarks'
-          },
-          {
-            type: 'doc',
-            docId: 'workshop/intro',
-            position: 'left',
-            label: 'Workshop'
           },
           {
             type: 'doc',
