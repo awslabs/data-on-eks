@@ -1,5 +1,5 @@
 ---
-title: Llama-2 on EKS
+title: Llama-2 on Inferentia
 sidebar_position: 1
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
@@ -8,7 +8,7 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 :::danger
 
 Note: Use of this Llama-2 model is governed by the Meta license.
-In order to download the model weights and tokenizer, please visit the [website](https://ai.meta.com/) and accept our License before requesting access here.
+In order to download the model weights and tokenizer, please visit the [website](https://ai.meta.com/) and accept the license before requesting access.
 
 :::
 
@@ -19,9 +19,10 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 :::
 
 
-# Llama-2-Chat on EKS: Deploying Llama-2-13b Chat Model with Ray Serve and Gradio
+# Deploying Llama-2-13b Chat Model with Inferentia, Ray Serve and Gradio
 Welcome to the comprehensive guide on deploying the [Meta Llama-2-13b chat](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using [Ray Serve](https://docs.ray.io/en/latest/serve/index.html).
-In this tutorial, you will not only learn how to harness the power of Llama-2, but also gain insights into the intricacies of deploying large language models (LLMs) efficiently, particularly on [AWS Neuron](https://aws.amazon.com/machine-learning/neuron/) instances, such as `inf2.24xlarge` and `inf2.48xlarge`, which are optimized for deploying and scaling large language models.
+In this tutorial, you will not only learn how to harness the power of Llama-2, but also gain insights into the intricacies of deploying large language models (LLMs) efficiently, particularly on [trn1/inf2](https://aws.amazon.com/machine-learning/neuron/) (powered by AWS Trainium and Inferentia) instances, such as `inf2.24xlarge` and `inf2.48xlarge`,
+which are optimized for deploying and scaling large language models.
 
 ### What is Llama-2?
 Llama-2 is a pretrained large language model (LLM) trained on 2 trillion tokens of text and code. It is one of the largest and most powerful LLMs available today. Llama-2 can be used for a variety of tasks, including natural language processing, text generation, and translation.
@@ -40,20 +41,20 @@ Llama-2 is available in three different model sizes:
 ### **Which Llama-2 model size should I use?**
 The best Llama-2 model size for you will depend on your specific needs. and it may not always be the largest model for achieving the highest performance. It's advisable to evaluate your needs and consider factors such as computational resources, response time, and cost-efficiency when selecting the appropriate Llama-2 model size. The decision should be based on a comprehensive assessment of your application's goals and constraints.
 
-## Inference on AWS Neuron Instances: Unlocking the Full Potential of Llama-2
-**Llama-2** can be deployed on a variety of hardware platforms, each with its own set of advantages. However, when it comes to maximizing the efficiency, scalability, and cost-effectiveness of Llama-2, [AWS Neuron instances](https://aws.amazon.com/ec2/instance-types/inf2/) shine as the optimal choice.
+## Inference on Trn1/Inf2 Instances: Unlocking the Full Potential of Llama-2
+**Llama-2** can be deployed on a variety of hardware platforms, each with its own set of advantages. However, when it comes to maximizing the efficiency, scalability, and cost-effectiveness of Llama-2, [AWS Trn1/Inf2 instances](https://aws.amazon.com/ec2/instance-types/inf2/) shine as the optimal choice.
 
 **Scalability and Availability**
 One of the key challenges in deploying large language models (`LLMs`) like Llama-2 is the scalability and availability of suitable hardware. Traditional `GPU` instances often face scarcity due to high demand, making it challenging to provision and scale resources effectively.
-In contrast, AWS Neuron instances, such as `trn1.32xlarge`, `trn1n.32xlarge`, `inf2.24xlarge` and `inf2.48xlarge`, are tailor-made for LLM workloads. They offer both scalability and availability, ensuring that you can deploy and scale your `Llama-2` models as needed, without resource bottlenecks or delays.
+In contrast, `Trn1/Inf2` instances, such as `trn1.32xlarge`, `trn1n.32xlarge`, `inf2.24xlarge` and `inf2.48xlarge`, are purpose built for high-performance deep learning (DL) training and inference of generative AI models, including LLMs. They offer both scalability and availability, ensuring that you can deploy and scale your `Llama-2` models as needed, without resource bottlenecks or delays.
 
 **Cost Optimization:**
 Running LLMs on traditional GPU instances can be cost-prohibitive, especially given the scarcity of GPUs and their competitive pricing.
-AWS Neuron instances provide a cost-effective alternative. By offering dedicated hardware optimized for AI and machine learning tasks, Neuron instances allow you to achieve top-notch performance at a fraction of the cost.
+**Trn1/Inf2** instances provide a cost-effective alternative. By offering dedicated hardware optimized for AI and machine learning tasks, Trn1/Inf2 instances allow you to achieve top-notch performance at a fraction of the cost.
 This cost optimization enables you to allocate your budget efficiently, making LLM deployment accessible and sustainable.
 
 **Performance Boost**
-While Llama-2 can achieve high-performance inference on GPUs, Neuron accelerators take performance to the next level. Neuron accelerators are purpose-built for machine learning workloads, providing hardware acceleration that significantly enhances Llama-2's inference speeds. This translates to faster response times and improved user experiences when deploying Llama-2 on Neuron instances.
+While Llama-2 can achieve high-performance inference on GPUs, Neuron accelerators take performance to the next level. Neuron accelerators are purpose-built for machine learning workloads, providing hardware acceleration that significantly enhances Llama-2's inference speeds. This translates to faster response times and improved user experiences when deploying Llama-2 on Trn1/Inf2 instances.
 
 ### Model Specification
 The table provides information about the different sizes of Llama-2 models, their weights, and the hardware requirements for deploying them. This information can be used to design the infrastructure required to deploy any size of Llama-2 model. For example, if you want to deploy the `Llama-2-13b-chat` model, you will need to use an instance type with at least `26 GB` of total accelerator memory.
@@ -76,12 +77,7 @@ To scale its Llama-2 chatbot, the company can deploy multiple Inferentia2 instan
 ## Solution Architecture
 In this section, we will delve into the architecture of our solution, which combines Llama-2 model, [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) and [Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) on Amazon EKS.
 
-:::info
-
-COMING SOON
-
-:::
-
+![Llama-2-inf2](img/llama2-inf2.png)
 
 ## Deploying the Solution
 To get started with deploying `Llama-2-13b chat` on [Amazon EKS](https://aws.amazon.com/eks/), we will cover the necessary prerequisites and guide you through the deployment process step by step.
@@ -284,9 +280,9 @@ You should now be able to interact with the Gradio application from your local m
 In conclusion, you will have successfully deployed the **Llama-2-13b chat** model on EKS with Ray Serve and created a chatGPT-style chat web UI using Gradio.
 This opens up exciting possibilities for natural language processing and chatbot development.
 
-In summary, when it comes to deploying and scaling Llama-2, AWS Neuron instances offer a compelling advantage.
+In summary, when it comes to deploying and scaling Llama-2, AWS Trn1/Inf2 instances offer a compelling advantage.
 They provide the scalability, cost optimization, and performance boost needed to make running large language models efficient and accessible, all while overcoming the challenges associated with the scarcity of GPUs.
-Whether you're building chatbots, natural language processing applications, or any other LLM-driven solution, Neuron instances empower you to harness the full potential of Llama-2 on the AWS cloud.
+Whether you're building chatbots, natural language processing applications, or any other LLM-driven solution, Trn1/Inf2 instances empower you to harness the full potential of Llama-2 on the AWS cloud.
 
 ## Cleanup
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.

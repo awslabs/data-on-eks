@@ -1,5 +1,5 @@
 ---
-title: Stable Diffusion on EKS
+title: Stable Diffusion on GPUs
 sidebar_position: 2
 ---
 

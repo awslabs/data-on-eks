@@ -1,5 +1,5 @@
 ---
-title: BERT-Large on EKS
+title: BERT-Large on Trainium
 sidebar_position: 1
 ---
 
