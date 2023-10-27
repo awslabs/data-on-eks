@@ -193,9 +193,9 @@ module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "~> 19.15"
 
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  create_irsa                  = false # IRSA will be created by the kubernetes-addons module
+  cluster_name           = module.eks.cluster_name
+  irsa_oidc_provider_arn = module.eks.oidc_provider_arn
+  create_irsa            = false # IRSA will be created by the kubernetes-addons module
   iam_role_additional_policies = {
     additional_policy = module.karpenter_policy.arn
   }
