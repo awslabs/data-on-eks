@@ -2,9 +2,6 @@
 set -o errexit
 set -o pipefail
 
-read -p "Enter domain name with wildcard and ensure ACM certificate is created for this domain name, e.g. *.example.com :" acm_certificate_domain
-read -p "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com : " jupyterhub_domain
-
 targets=(
   "module.eks_data_addons"
   "module.eks_blueprints_addons"
@@ -32,7 +29,7 @@ done
 #-------------------------------------------
 for target in "${targets[@]}"
 do
-  destroy_output=$(terraform destroy -target="$target" -var="acm_certificate_domain=$acm_certificate_domain" -var="jupyterhub_domain=$jupyterhub_domain" -auto-approve | tee /dev/tty)
+  destroy_output=$(terraform destroy -target="$target" -auto-approve | tee /dev/tty)
   if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else
@@ -44,7 +41,7 @@ done
 #-------------------------------------------
 # Terraform destroy full
 #-------------------------------------------
-destroy_output=$(terraform destroy -target="$target" -var="acm_certificate_domain=$acm_certificate_domain" -var="jupyterhub_domain=$jupyterhub_domain" -auto-approve | tee /dev/tty)
+destroy_output=$(terraform destroy -target="$target" -auto-approve | tee /dev/tty)
 if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
   echo "SUCCESS: Terraform destroy of all targets completed successfully"
 else

@@ -1,0 +1,38 @@
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: {{ .Values.name }}
+spec:
+  kubeletConfiguration:
+    containerRuntime: containerd
+  requirements:
+    - key: "karpenter.sh/capacity-type"
+      operator: In
+      values: [ "spot", "on-demand" ]
+    - key: "karpenter.k8s.aws/instance-family"
+      operator: In
+      {{- with .Values.instanceFamilies }}
+      values:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    - key: "karpenter.k8s.aws/instance-size"
+      operator: In
+      {{- with .Values.instanceSizes }}
+      values:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    - key: "kubernetes.io/arch"
+      operator: In
+      values: ["amd64"]
+  providerRef:
+    name: {{ .Values.name }}
+  labels:
+    provisioner: {{ .Values.name }}
+    NodeGroupType: {{ .Values.name }}
+    hub.jupyter.org/node-purpose: user
+  {{- with .Values.taints }}
+  taints:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  # optional, but never scales down if not set
+  ttlSecondsAfterEmpty: 120

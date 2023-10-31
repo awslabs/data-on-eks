@@ -1,19 +1,3 @@
-#------------------------------------------
-# Amazon Prometheus
-#------------------------------------------
-locals {
-  amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
-  amp_namespace              = "kube-prometheus-stack"
-  account_id                 = data.aws_caller_identity.current.account_id
-  partition                  = data.aws_partition.current.partition
-}
-
-resource "aws_prometheus_workspace" "amp" {
-  count = var.enable_amazon_prometheus ? 1 : 0
-
-  alias = format("%s-%s", "amp-ws", local.name)
-  tags  = local.tags
-}
 #IAM Policy for Amazon Prometheus & Grafana
 resource "aws_iam_policy" "grafana" {
   count = var.enable_amazon_prometheus ? 1 : 0
@@ -113,6 +97,21 @@ data "aws_iam_policy_document" "grafana" {
       "aps:GetLabels"
     ]
   }
+}
+
+#------------------------------------------
+# Amazon Prometheus
+#------------------------------------------
+locals {
+  amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
+  amp_namespace              = "kube-prometheus-stack"
+}
+
+resource "aws_prometheus_workspace" "amp" {
+  count = var.enable_amazon_prometheus ? 1 : 0
+
+  alias = format("%s-%s", "amp-ws", local.name)
+  tags  = local.tags
 }
 
 module "amp_ingest_irsa" {

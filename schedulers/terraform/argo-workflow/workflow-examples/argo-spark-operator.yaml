@@ -1,0 +1,68 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: spark-operator
+  namespace: argo-workflows
+spec:
+  arguments: {}
+  entrypoint: sparkapp-operator
+  nodeSelector:
+    NodeGroupType: SparkComputeOptimized
+    karpenter.sh/capacity-type: "on-demand"
+  tolerations:
+    - key: "spark-compute-optimized"
+      operator: "Exists"
+      effect: "NoSchedule"
+  templates:
+  - name: sparkapp-operator
+    resource:
+      action: create
+      manifest: |
+        apiVersion: "sparkoperator.k8s.io/v1beta2"
+        kind: SparkApplication
+        metadata:
+          name: pyspark-pi-karpenter-compute
+          namespace: spark-team-a
+        spec:
+          type: Python
+          pythonVersion: "3"
+          mode: cluster
+          image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
+          imagePullPolicy: Always
+          mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
+          sparkVersion: "3.1.1"
+          restartPolicy:
+            type: OnFailure
+            onFailureRetries: 1
+            onFailureRetryInterval: 10
+            onSubmissionFailureRetries: 5
+            onSubmissionFailureRetryInterval: 20
+          driver:
+            cores: 1
+            coreLimit: "1200m"
+            memory: "4g"
+            labels:
+              version: 3.1.1
+            serviceAccount: spark-team-a
+            # Using Karpenter provisioner nodeSelectors and tolerations
+            nodeSelector:
+              NodeGroupType: SparkComputeOptimized
+              karpenter.sh/capacity-type: "on-demand"
+            tolerations:
+              - key: "spark-compute-optimized"
+                operator: "Exists"
+                effect: "NoSchedule"
+          executor:
+            cores: 1
+            instances: 4
+            memory: "4g"
+            serviceAccount: spark-team-a
+            labels:
+              version: 3.1.1
+            # Using Karpenter provisioner nodeSelectors and tolerations
+            nodeSelector:
+              provisioner: spark-compute-optimized
+            tolerations:
+              - key: "spark-compute-optimized"
+                operator: "Exists"
+                effect: "NoSchedule"
