@@ -499,3 +499,20 @@ resource "aws_launch_template" "trn1_lt" {
     }
   }
 }
+
+#---------------------------------------------------------------
+# MPI Operator for distributed training on Trainium
+#---------------------------------------------------------------
+data "http" "mpi_operator_yaml" {
+  url = "https://raw.githubusercontent.com/kubeflow/mpi-operator/${var.mpi_operator_version}/deploy/v2beta1/mpi-operator.yaml"
+}
+
+data "kubectl_file_documents" "mpi_operator_yaml" {
+  content = data.http.mpi_operator_yaml.response_body
+}
+
+resource "kubectl_manifest" "mpi_operator" {
+  for_each   = data.kubectl_file_documents.mpi_operator_yaml.manifests
+  yaml_body  = each.value
+  depends_on = [module.eks.eks_cluster_id]
+}

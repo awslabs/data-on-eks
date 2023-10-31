@@ -37,3 +37,8 @@ variable "enable_amazon_prometheus" {
   type        = bool
   default     = true
 }
+
+variable "mpi_operator_version" {
+  description = "The version of the MPI Operator to install"
+  default     = "v0.4.0"
+}
