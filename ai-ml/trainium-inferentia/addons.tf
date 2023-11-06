@@ -512,7 +512,8 @@ data "kubectl_file_documents" "mpi_operator_yaml" {
 }
 
 resource "kubectl_manifest" "mpi_operator" {
-  for_each   = data.kubectl_file_documents.mpi_operator_yaml.manifests
+  for_each   = var.enable_mpi_operator ? data.kubectl_file_documents.mpi_operator_yaml.manifests : {}
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }
+
