@@ -59,7 +59,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "1.9.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -145,12 +145,6 @@ module "eks_blueprints_addons" {
   # Argo Workflows & Argo Events
   #---------------------------------------
   enable_argo_workflows = true
-  argo_workflows = {
-    name       = "argo-workflows"
-    namespace  = "argo-workflows"
-    repository = "https://argoproj.github.io/argo-helm"
-    values     = [templatefile("${path.module}/helm-values/argo-workflows-values.yaml", {})]
-  }
 
   enable_argo_events = true
   argo_events = {

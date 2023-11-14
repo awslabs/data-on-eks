@@ -22,7 +22,7 @@ spec:
   dependencies:
     - name: test-dep
       eventSourceName: aws-sqs
-      eventName: example
+      eventName: sqs-spark-workflow
   triggers:
     - template:
         name: sqs-spark-workflow
@@ -58,7 +58,7 @@ spec:
                       template: whalesay
                       arguments:
                         parameters: [{name: message, value: "spark-done!"}]
-                    - name: spark-operator-taxi-job
+                  - - name: spark-operator-taxi-job
                       template: sparkapp-operator-taxi
                 - name: whalesay
                   inputs:
@@ -132,7 +132,8 @@ spec:
                                     "memory": "14Gi"
                                   },
                                   "nodeSelector": {
-                                    "NodeGroupType": "SparkComputeOptimized"
+                                    "NodeGroupType": "SparkComputeOptimized",
+                                    "karpenter.sh/capacity-type": "spot"
                                   },
                                   "tolerations": [{"key": "spark-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
                               }]
@@ -148,6 +149,7 @@ spec:
                           serviceAccount: spark-team-a
                           nodeSelector:
                             NodeGroupType: "SparkComputeOptimized"
+                            karpenter.sh/capacity-type: "spot"
                           tolerations:
                             - key: "spark-compute-optimized"
                               operator: "Exists"
@@ -169,10 +171,6 @@ spec:
                       metadata:
                         generateName: event-wf-sparkapp-taxi-yunikorn-
                         namespace: spark-team-a
-                        labels:
-                          app: "taxi-trip-yunikorn"
-                          applicationId: "taxi-trip-yunikorn"
-                          queue: root.test
                       spec:
                         type: Python
                         sparkVersion: "3.2.1"
@@ -189,9 +187,6 @@ spec:
                           "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
                           "mapreduce.fileoutputcommitter.algorithm.version": "2"
                         sparkConf:
-                          "spark.app.name": "taxi-trip"
-                          "spark.kubernetes.driver.pod.name": "taxi-trip"
-                          "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
                           "spark.local.dir": "/data1"
                           "spark.speculation": "false"
                           "spark.network.timeout": "2400"
@@ -285,7 +280,8 @@ spec:
                                     "memory": "14Gi"
                                   },
                                   "nodeSelector": {
-                                    "NodeGroupType": "SparkComputeOptimized"
+                                    "NodeGroupType": "SparkComputeOptimized",
+                                    "karpenter.sh/capacity-type": "spot"
                                   },
                                   "tolerations": [{"key": "spark-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
                               }]
@@ -315,6 +311,7 @@ spec:
                             yunikorn.apache.org/task-group-name: "spark-executor"
                           nodeSelector:
                             NodeGroupType: "SparkComputeOptimized"
+                            karpenter.sh/capacity-type: "spot"
                           tolerations:
                             - key: "spark-compute-optimized"
                               operator: "Exists"
