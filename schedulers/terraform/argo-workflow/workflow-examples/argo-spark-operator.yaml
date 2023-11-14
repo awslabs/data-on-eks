@@ -62,7 +62,7 @@ spec:
             # Using Karpenter provisioner nodeSelectors and tolerations
             nodeSelector:
               NodeGroupType: SparkComputeOptimized
-              karpenter.sh/capacity-type: "spot" 
+              karpenter.sh/capacity-type: "spot"
             tolerations:
               - key: "spark-compute-optimized"
                 operator: "Exists"

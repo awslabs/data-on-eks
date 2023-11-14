@@ -110,7 +110,7 @@ module "eks" {
       }
 
       tags = {
-        Name = "core-node-group"
+        Name          = "core-node-group"
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core-nodes"
       }
