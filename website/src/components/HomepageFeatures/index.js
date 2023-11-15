@@ -3,15 +3,15 @@ import clsx from 'clsx';
 import styles from './styles.module.css';
 
 const FeatureList = [
-    {
-        title: 'Amazon EMR on EKS',
-        Svg: require('@site/static/img/green-emr.svg').default,
-        description: (
-            <>
-                Optimized Multi-Tenant Deployment of Amazon EMR on EKS Cluster with Best Practices using Karpenter Autoscaler and Apache YuniKorn Templates<br/>
-            </>
-        ),
-    },
+  {
+    title: 'AI/ML',
+    Svg: require('@site/static/img/green-ai.svg').default,
+    description: (
+      <>
+          Unlocking Best Practices for AI/ML Deployment on EKS with KubeFlow, JupyterHub, and More
+      </>
+    ),
+  },
   {
     title: 'Data Analytics',
     Svg: require('@site/static/img/green-da.svg').default,
@@ -22,15 +22,15 @@ const FeatureList = [
     ),
   },
   {
-    title: 'AI/ML',
-    Svg: require('@site/static/img/green-ai.svg').default,
+    title: 'Amazon EMR on EKS',
+    Svg: require('@site/static/img/green-emr.svg').default,
     description: (
-      <>
-          Unlocking Best Practices for AI/ML Deployment on EKS with KubeFlow, JupyterHub, and More
-      </>
+        <>
+            Optimized Multi-Tenant Deployment of Amazon EMR on EKS Cluster with Best Practices using Karpenter Autoscaler and Apache YuniKorn Templates<br/>
+        </>
     ),
   },
-    {
+  {
         title: 'Streaming Data Platforms',
         Svg: require('@site/static/img/green-stream.svg').default,
         description: (
@@ -38,8 +38,8 @@ const FeatureList = [
                 Building High-Scalability Streaming Data Platforms with Kafka, Flink, Spark Streaming, and More
             </>
         ),
-    },
-    {
+  },
+  {
         title: 'Schedulers',
         Svg: require('@site/static/img/green-schd.svg').default,
         description: (
@@ -47,8 +47,8 @@ const FeatureList = [
                 Optimizing Job Scheduling on EKS with Apache Airflow, Amazon MWAA, Argo Workflow, and More
             </>
         ),
-    },
-    {
+  },
+  {
         title: 'Distributed Databases & Query Engines',
         Svg: require('@site/static/img/green-dd.svg').default,
         description: (

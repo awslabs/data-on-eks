@@ -7,7 +7,6 @@ terraform init || echo "\"terraform init\" failed"
 targets=(
   "module.vpc"
   "module.eks"
-  "module.eks_blueprints_addons"
 )
 
 # Apply modules in sequence

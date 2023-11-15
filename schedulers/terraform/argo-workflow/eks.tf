@@ -8,11 +8,14 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
+  cluster_endpoint_public_access = true
 
   vpc_id = module.vpc.vpc_id
-
-  subnet_ids = module.vpc.private_subnets
+  # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
+  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+    substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+  )
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
@@ -70,45 +73,47 @@ module "eks" {
       # Not required, but used in the example to access the nodes to inspect mounted volumes
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
+
+    ebs_optimized = true
+    # This bloc device is used only for root volume. Adjust volume according to your size.
+    # NOTE: Don't use this volume for Spark workloads
+    block_device_mappings = {
+      xvda = {
+        device_name = "/dev/xvda"
+        ebs = {
+          volume_size = 100
+          volume_type = "gp3"
+        }
+      }
+    }
   }
 
   eks_managed_node_groups = {
     #  We recommend to have a MNG to place your critical workloads and add-ons
-    #  Then rely on Karpenter to scale your workloads
-    #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
     core_node_group = {
       name        = "core-node-group"
-      description = "EKS Core node group for hosting critical add-ons"
-      subnet_ids  = module.vpc.private_subnets
+      description = "EKS managed node group example launch template"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+      )
 
       min_size     = 3
-      max_size     = 8
+      max_size     = 9
       desired_size = 3
 
       instance_types = ["m5.xlarge"]
 
-      ebs_optimized = true
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 100
-            volume_type = "gp3"
-          }
-        }
-      }
-
       labels = {
-        Environment   = "preprod"
-        Zone          = "test"
         WorkerType    = "ON_DEMAND"
-        NodeGroupType = "core"
+        NodeGroupType = "core-nodes"
       }
 
-      tags = merge(local.tags, {
-        Name                     = "core-node-grp",
-        "karpenter.sh/discovery" = local.name
-      })
+      tags = {
+        Name          = "core-node-group"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core-nodes"
+      }
     }
   }
 }

@@ -112,17 +112,31 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = var.region,
-      eks_cluster_id = module.eks.cluster_name
-    })]
+    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {})]
   }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
+  # NOTE: Karpenter Upgrade
+  # This Helm Chart addon will only install the CRD during the first installation of the helm chart.
+  #  Subsequent Helm Chart chart upgrades will not add or remove CRDs, even if the CRDs have changed.
+  #  If you need to upgrade the CRDs, you will need to manually run the following commands and ensure that the CRDs are updated before upgrading the Helm Chart.
+  #  READ the guide before applying the CRDs: https://karpenter.sh/preview/upgrade-guide/
+  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.sh_provisioners.yaml
+  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.sh_machines.yaml
+  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.k8s.aws_awsnodetemplates.yaml
+  #---------------------------------------
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   karpenter = {
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -202,6 +216,27 @@ module "eks_blueprints_addons" {
     ],
   }
 
+  #---------------------------------------
+  # AWS Load Balancer Controller Add-on
+  #---------------------------------------
+  enable_aws_load_balancer_controller = true
+  # turn off the mutating webhook for services because we are using
+  # service.beta.kubernetes.io/aws-load-balancer-type: external
+  aws_load_balancer_controller = {
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
+
+  #---------------------------------------
+  # Ingress Nginx Add-on
+  #---------------------------------------
+  enable_ingress_nginx = true
+  ingress_nginx = {
+    values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
+  }
+
   tags = local.tags
 }
 
@@ -210,12 +245,40 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "~> 1.2" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
+  #---------------------------------------
+  # Volcano Scheduler for TorchX
+  #---------------------------------------
+  enable_volcano = true
+
+  #---------------------------------------
+  # Kuberay Operator
+  #---------------------------------------
+  enable_kuberay_operator = true
+  kuberay_operator_helm_config = {
+    version = "1.0.0-rc.0"
+    # Enabling Volcano as Batch scheduler for KubeRay Operator
+    values = [
+      <<-EOT
+      batchScheduler:
+        enabled: true
+    EOT
+    ]
+  }
+
+  enable_jupyterhub = true
+  jupyterhub_helm_config = {
+    values = [
+      templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
+        jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      })
+    ]
+  }
 }
 
 #---------------------------------------------------------------
@@ -225,47 +288,14 @@ data "http" "torchx_etcd_yaml" {
   url = "https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml"
 }
 
+data "kubectl_file_documents" "torchx_etcd_yaml" {
+  content = data.http.torchx_etcd_yaml.response_body
+}
+
 resource "kubectl_manifest" "torchx_etcd" {
-  yaml_body = <<-YAML
-    ${data.http.torchx_etcd_yaml.response_body}
-  YAML
-
+  for_each   = data.kubectl_file_documents.torchx_etcd_yaml.manifests
+  yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
-}
-
-#---------------------------------------------------------------
-# Volcano Schduler for TorchX
-# NOTE: This will be replaced with Helm Chart deployment with eks_data_addons
-#---------------------------------------------------------------
-data "http" "volcano_development_yaml" {
-  url = "https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml"
-}
-
-resource "kubectl_manifest" "volcano" {
-  yaml_body = <<-YAML
-    ${data.http.volcano_development_yaml.response_body}
-  YAML
-
-  depends_on = [module.eks.eks_cluster_id]
-}
-
-#---------------------------------------------------------------
-# Create Volcano Queue once the Volcano add-on is installed
-#---------------------------------------------------------------
-resource "kubectl_manifest" "volcano_queue" {
-  yaml_body = <<YAML
-apiVersion: scheduling.volcano.sh/v1beta1
-kind: Queue
-metadata:
-  name: test
-spec:
-  weight: 1
-  reclaimable: false
-  capability:
-    cpu: 2
-YAML
-
-  depends_on = [resource.kubectl_manifest.volcano]
 }
 
 #---------------------------------------------------------------
@@ -285,7 +315,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-grafana"
+  name                    = "${local.name}-oss-grafana"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
@@ -294,14 +324,19 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_string = random_password.grafana.result
 }
 
+locals {
+  karpenter_trn1_32xl_lt_name = format("%s-trn132xl-lt", local.name)
+}
+
 #---------------------------------------
 # Karpenter Provisioners
 #---------------------------------------
 data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/trainium-*.yaml"
+  pattern = "${path.module}/karpenter-provisioners/karpenter-*.yaml"
   vars = {
-    azs            = local.region
-    eks_cluster_id = module.eks.cluster_name
+    azs                  = local.region
+    eks_cluster_id       = local.name
+    launch_template_name = local.karpenter_trn1_32xl_lt_name
   }
 }
 
@@ -323,3 +358,162 @@ module "s3_bucket" {
 
   tags = local.tags
 }
+
+#---------------------------------------------------------------
+# Create a Launch Template Userdata for Trainium
+# Note: As of version v0.29.0, the Karpenter AWSNodeTemplate lacks the ability to configure multipleNetwork interfaces for EFA.
+# To work around this limitation, we are utilizing Terraform to generate launch templates that include EFA configurations.
+# These launch templates are then used as input for the AWS Node template, enabling us to achieve the desired network interface setups.
+#---------------------------------------------------------------
+data "cloudinit_config" "trn1_lt" {
+  base64_encode = true
+  gzip          = false
+  boundary      = "//"
+
+  # Prepend to existing user data supplied by AWS EKS
+  part {
+    content_type = "text/x-shellscript"
+    content      = <<-EOT
+      cat <<-EOF > /etc/profile.d/bootstrap.sh
+      #!/bin/sh
+
+      # Configure NVMe volumes in RAID0 configuration
+      # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
+      # Mount will be: /mnt/k8s-disks
+      export LOCAL_DISKS='raid0'
+
+      # Install Neuron monitoring tools
+      yum install aws-neuronx-tools-2.* -y
+      export PATH=/opt/aws/neuron/bin:$PATH
+
+      # EFA Setup for Trainium and Inferentia
+      export FI_EFA_USE_DEVICE_RDMA=1
+      export FI_PROVIDER=efa
+      export FI_EFA_FORK_SAFE=1
+
+      curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
+      tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
+      ./efa_installer.sh -y -g
+      /opt/amazon/efa/bin/fi_info -p efa
+      EOF
+
+      # Source extra environment variables in bootstrap script
+      sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+
+      # Bootstrap the node
+      B64_CLUSTER_CA=${module.eks.cluster_certificate_authority_data}
+      API_SERVER_URL=${module.eks.cluster_endpoint}
+      /etc/eks/bootstrap.sh ${local.name} --kubelet-extra-args "--node-labels=eks.amazonaws.com/nodegroup-image=${data.aws_ami.eks_gpu.id}" --b64-cluster-ca $B64_CLUSTER_CA --apiserver-endpoint $API_SERVER_URL
+
+    EOT
+  }
+}
+
+#---------------------------------------------------------------
+# This Terraform code defines a data block to fetch the most recent Amazon Machine Image (AMI)
+# for an Amazon Elastic Kubernetes Service (EKS) cluster with GPU support.
+#---------------------------------------------------------------
+data "aws_ami" "eks_gpu" {
+  owners      = ["amazon"]
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["amazon-eks-gpu-node-${var.eks_cluster_version}-*"]
+  }
+}
+
+#---------------------------------------------------------------
+# AWS Launch Template Configuration for Karpenter Trn1.32xlarge Instances
+#---------------------------------------------------------------
+resource "aws_launch_template" "trn1_lt" {
+  name        = local.karpenter_trn1_32xl_lt_name
+  description = "Karpenter Trn1.32xlarge Launch Template"
+
+  user_data = data.cloudinit_config.trn1_lt.rendered
+
+  ebs_optimized = true
+
+  image_id = data.aws_ami.eks_gpu.id
+
+  iam_instance_profile {
+    name = module.eks_blueprints_addons.karpenter.node_instance_profile_name
+  }
+
+  # Commented for visiblity to implement this feature in the future
+  #  placement {
+  #   tenancy = "default"
+  #   availability_zone = "${local.region}d"
+  #   group_name        = local.karpenter_trn1_32xl_lt_name
+  # }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = 100
+      delete_on_termination = true
+      volume_type           = "gp3"
+    }
+  }
+
+  monitoring {
+    enabled = true
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = merge(local.tags, {
+      "karpenter.sh/discovery" = local.name
+    })
+  }
+
+  # First network interface with device_index=0 and network_card_index=0
+  network_interfaces {
+    device_index                = 0
+    network_card_index          = 0
+    associate_public_ip_address = false
+    interface_type              = "efa"
+    delete_on_termination       = true
+    security_groups             = [module.eks.node_security_group_id]
+    description                 = "Karpenter EFA config for Trainium"
+  }
+
+  # Additional network interfaces with device_index=1 and network_card_index ranging from 1 to 7
+  dynamic "network_interfaces" {
+    for_each = range(1, 8) # Create 7 additional network interfaces
+    content {
+      device_index                = 1
+      network_card_index          = network_interfaces.value
+      associate_public_ip_address = false
+      interface_type              = "efa"
+      delete_on_termination       = true
+      security_groups             = [module.eks.node_security_group_id]
+      description                 = "Karpenter EFA config for Trainium"
+    }
+  }
+}
+
+#---------------------------------------------------------------
+# MPI Operator for distributed training on Trainium
+#---------------------------------------------------------------
+data "http" "mpi_operator_yaml" {
+  url = "https://raw.githubusercontent.com/kubeflow/mpi-operator/${var.mpi_operator_version}/deploy/v2beta1/mpi-operator.yaml"
+}
+
+data "kubectl_file_documents" "mpi_operator_yaml" {
+  content = data.http.mpi_operator_yaml.response_body
+}
+
+resource "kubectl_manifest" "mpi_operator" {
+  for_each   = var.enable_mpi_operator ? data.kubectl_file_documents.mpi_operator_yaml.manifests : {}
+  yaml_body  = each.value
+  depends_on = [module.eks.eks_cluster_id]
+}
+

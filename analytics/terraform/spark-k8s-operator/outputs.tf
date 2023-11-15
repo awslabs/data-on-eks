@@ -36,7 +36,6 @@ output "s3_bucket_region_spark_history_server" {
   value       = module.s3_bucket.s3_bucket_region
 }
 
-
 output "grafana_secret_name" {
   description = "Grafana password secret name"
   value       = aws_secretsmanager_secret.grafana.name

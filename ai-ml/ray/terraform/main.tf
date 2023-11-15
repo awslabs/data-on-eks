@@ -92,8 +92,9 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.15"
 
-  cluster_name                   = local.name
-  cluster_version                = local.cluster_version
+  cluster_name    = local.name
+  cluster_version = local.cluster_version
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
 
   vpc_id = module.vpc.vpc_id
@@ -192,10 +193,12 @@ module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "~> 19.15"
 
-  cluster_name                 = module.eks.cluster_name
-  irsa_oidc_provider_arn       = module.eks.oidc_provider_arn
-  create_irsa                  = false # IRSA will be created by the kubernetes-addons module
-  iam_role_additional_policies = [module.karpenter_policy.arn]
+  cluster_name           = module.eks.cluster_name
+  irsa_oidc_provider_arn = module.eks.oidc_provider_arn
+  create_irsa            = false # IRSA will be created by the kubernetes-addons module
+  iam_role_additional_policies = {
+    additional_policy = module.karpenter_policy.arn
+  }
 
   tags = local.tags
 }

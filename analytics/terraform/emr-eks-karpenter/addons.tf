@@ -86,6 +86,11 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   karpenter = {
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -174,6 +179,16 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
+data "kubectl_path_documents" "spark_monitor" {
+  pattern = "${path.module}/emr-grafana-dashboard/spark-monitor.yaml"
+}
+
+resource "kubectl_manifest" "spark_monitor" {
+  for_each  = toset(data.kubectl_path_documents.spark_monitor.documents)
+  yaml_body = each.value
+
+  depends_on = [module.eks_blueprints_addons]
+}
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
@@ -220,15 +235,13 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Spark History Server Add-on
   #---------------------------------------------------------------
-  # Spark hsitory server is required only when EMR Spark Operator is enabled
+  # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = var.enable_emr_spark_operator
   spark_history_server_helm_config = {
-    create_irsa = true
     values = [
-      templatefile("${path.module}/helm-values/spark-history-server-values.yaml", {
-        s3_bucket_name   = module.s3_bucket.s3_bucket_id
-        s3_bucket_prefix = aws_s3_object.this.key
-      })
+      <<-EOT
+      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
+      EOT
     ]
   }
 }

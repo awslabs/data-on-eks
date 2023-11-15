@@ -1,0 +1,109 @@
+# NOTE: This example requires the following prerequisites before executing the jobs
+# 1. Ensure spark-team-a name space exists
+# 2. replace <REPLACE-WITH-YOUR-S3BUCKET-NAME> with your bucket name
+
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-data-generation-3t
+  namespace: spark-team-a
+spec:
+  type: Scala
+  mode: cluster
+  image: public.ecr.aws/data-on-eks/emr-on-eks-benchmark:3.1.2
+  imagePullPolicy: IfNotPresent
+  sparkVersion: 3.1.2
+  mainClass: com.amazonaws.eks.tpcds.DataGeneration
+  mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
+  arguments:
+    # TPC-DS data location
+    - "s3a://<REPLACE-WITH-YOUR-S3BUCKET-NAME>/TPCDS-TEST-3T"
+    # Path to kit in the docker image
+    - "/opt/tpcds-kit/tools"
+    # Data Format
+    - "parquet"
+    # Scale factor (in GB)
+    - "3000"
+    # Generate data num partitions
+    - "200"
+    # Create the partitioned fact tables
+    - "true"
+    # Shuffle to get partitions coalesced into single files.
+    - "true"
+    # Logging set to WARN
+    - "true"
+  sparkConf:
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    "spark.kubernetes.memoryOverheadFactor": "0.3"
+    "spark.sql.files.maxRecordsPerFile": "30000000"
+    "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
+    # "spark.local.dir": "/data1"
+
+    # S3 settings
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+    "spark.kubernetes.executor.podNamePrefix": "oss-data-gen"
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseG1GC"
+    "spark.driver.defaultJavaOptions": "-XX:+UseG1GC"
+    # -----------------------------------------------------
+    # This block is very critical when you get errors like
+    #     Exception in thread \"main\" io.fabric8.kubernetes.client.KubernetesClientException: An error has occurred
+    #     Caused by: java.net.SocketTimeoutException: timeout
+    # spark.kubernetes.local.dirs.tmpfs: "true"
+    spark.kubernetes.submission.connectionTimeout: "60000000"
+    spark.kubernetes.submission.requestTimeout: "60000000"
+    spark.kubernetes.driver.connectionTimeout: "60000000"
+    spark.kubernetes.driver.requestTimeout: "60000000"
+    # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
+    # -----------------------------------------------------
+
+  restartPolicy:
+    type: Never
+  volumes:
+    - name: spark-local-dir-1
+      hostPath:
+        path: /local1
+  driver:
+    volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /ossdata1
+        readOnly: false
+    initContainers:
+    - name: volume-permission
+      image: public.ecr.aws/y4g4v0z7/busybox
+      command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
+      volumeMounts:
+        - name: spark-local-dir-1
+          mountPath: /ossdata1
+    cores: 10
+    coreLimit: "10.1"
+    memory: "10g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      provisioner: spark-compute-optimized
+
+  executor:
+    volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /ossdata1
+        readOnly: false
+    initContainers:
+    - name: volume-permission
+      image: public.ecr.aws/y4g4v0z7/busybox
+      command: ['sh', '-c', 'mkdir /ossdata1; chown -R 1000:1000 /ossdata1']
+      volumeMounts:
+        - name: spark-local-dir-1
+          mountPath: /ossdata1
+    cores: 11
+    coreLimit: "11.1"
+    memory: "15g"
+    # 3 executors per node 9 nodes
+    instances: 26
+    serviceAccount: spark-team-a
+    nodeSelector:
+      provisioner: spark-compute-optimized
