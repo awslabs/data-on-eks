@@ -1,5 +1,7 @@
 ![Data on EKS](website/static/img/doeks-logo-green.png)
-# [Data on Amazon EKS (DoEKS)](https://awslabs.github.io/data-on-eks/)
+# [Data on Amazon EKS (DoEKS)](https://awslabs.github.io/data-on-eks/) 
+(pronounce Do.eks)
+
 
 [![plan-examples](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml/badge.svg?branch=main)](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml)
 
