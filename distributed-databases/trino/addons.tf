@@ -151,24 +151,24 @@ resource "kubectl_manifest" "karpenter_provisioner" {
 # Trino Helm Add-on
 #---------------------------------------
 module "trino_hive_addon" {
-  source = "aws-ia/eks-blueprints-addon/aws"
+  source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.1.1" #ensure to update this to the latest/desired version
 
   chart            = "trino"
   chart_version    = "0.13.0"
   repository       = "https://trinodb.github.io/charts"
   description      = "Trino Helm Chart deployment"
-  namespace        = "${local.trino_namespace}"
+  namespace        = local.trino_namespace
   create_namespace = true
 
   values = [
-    templatefile("${path.module}/trino-values/trino-${local.catalog_type}.yaml", 
-    {
-      sa                 = local.trino_sa
-      region             = local.region
-      bucket_id          = module.trino_s3_bucket.s3_bucket_id
-      exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
-      irsa_arn           = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.trino_sa}-role"
+    templatefile("${path.module}/trino-values/trino-${local.catalog_type}.yaml",
+      {
+        sa                 = local.trino_sa
+        region             = local.region
+        bucket_id          = module.trino_s3_bucket.s3_bucket_id
+        exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
+        irsa_arn           = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.trino_sa}-role"
     })
   ]
 
@@ -179,7 +179,7 @@ module "trino_hive_addon" {
   create_role            = true
   role_name              = "${local.trino_sa}-role"
   role_name_use_prefix   = false
-  role_policies          = {
+  role_policies = {
     data_bucket_policy     = aws_iam_policy.trino_s3_bucket_policy.arn
     exchange_bucket_policy = aws_iam_policy.trino_exchange_bucket_policy.arn
     glue_policy            = data.aws_iam_policy.glue_full_access.arn,
@@ -192,30 +192,6 @@ module "trino_hive_addon" {
     }
   }
 }
-
-#---------------------------------------
-# Trino Helm Add-on with Iceberg
-#---------------------------------------
-# resource "helm_release" "trino_iceberg" {
-#   name             = "${local.name}-iceberg"
-#   chart            = "trino"
-#   repository       = "https://trinodb.github.io/charts"
-#   version          = "0.13.0"
-#   namespace        = "${local.trino_namespace}-iceberg"
-#   create_namespace = true
-#   description      = "Trino Helm Chart deployment to use Iceberg"
-
-#   values = [
-#     templatefile("${path.module}/trino-values/trino-iceberg.yaml", 
-#     {
-#       sa                 = local.trino_sa
-#       region             = local.region
-#       bucket_id          = module.trino_s3_bucket.s3_bucket_id
-#       exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
-#       irsa_arn           = module.trino_s3_irsa.irsa_iam_role_arn
-#     })
-#   ]
-# }
 
 #---------------------------------------------------------------
 # Grafana Admin credentials resources

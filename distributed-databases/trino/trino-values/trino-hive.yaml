@@ -1,5 +1,5 @@
 image:
-  tag: "427" 
+  tag: "427"
 server:
   workers: 3
   exchangeManager:
@@ -54,7 +54,7 @@ additionalCatalogs:
     hive.metastore.glue.region=${region}
     hive.metastore.glue.default-warehouse-dir=s3://${bucket_id}/
     hive.metastore.glue.iam-role=${irsa_arn}
-    hive.s3.iam-role=${irsa_arn} 
+    hive.s3.iam-role=${irsa_arn}
     hive.security=allow-all
 serviceAccount:
   create: true

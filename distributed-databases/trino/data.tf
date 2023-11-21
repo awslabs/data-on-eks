@@ -24,36 +24,36 @@ data "aws_ami" "eks" {
 
 data "aws_iam_policy_document" "trino_exchange_access" {
   statement {
-    sid       = ""
-    effect    = "Allow"
+    sid    = ""
+    effect = "Allow"
     resources = [
       "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}",
       "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}/*"
     ]
     actions = ["s3:Get*",
-                "s3:List*",
-                "s3:*Object*"]
+      "s3:List*",
+    "s3:*Object*"]
   }
 }
 
 data "aws_iam_policy_document" "trino_s3_access" {
   statement {
-    sid       = ""
-    effect    = "Allow"
+    sid    = ""
+    effect = "Allow"
     resources = [
       "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}",
       "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*"
     ]
     actions = ["s3:Get*",
-                "s3:List*",
-                "s3:*Object*"]
+      "s3:List*",
+    "s3:*Object*"]
   }
 
   statement {
     sid       = ""
     effect    = "Allow"
     resources = ["*"]
-    actions   = [
+    actions = [
       "s3:ListStorageLensConfigurations",
       "s3:ListAccessPointsForObjectLambda",
       "s3:GetAccessPoint",

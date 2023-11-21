@@ -5,7 +5,7 @@ locals {
   trino_namespace = var.namespace
   trino_sa        = var.trino_sa
 
-  catalog_type    = var.catalog_type
+  catalog_type = var.catalog_type
 
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
 
