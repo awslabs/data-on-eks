@@ -55,7 +55,7 @@ Navigate into cloudnative-postgres folder and run `install.sh` script. By defaul
 ```bash
 cd data-on-eks/distributed-databases/cloudnative-postgres
 
-./install .sh
+./install.sh
 ```
 
 ### Verify Deployment
