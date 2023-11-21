@@ -28,13 +28,10 @@ module "trino_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket = "${random_string.random.result}-trino-bucket"
+  bucket = "trino-data-bucket-${random_string.random.result}"
 
   # For example only - please evaluate for your environment
   force_destroy = true
-
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
 
   block_public_acls       = true
   block_public_policy     = true
@@ -53,24 +50,6 @@ module "trino_s3_bucket" {
 }
 
 #---------------------------------------------------------------
-# IRSA for S3 Bucket
-#---------------------------------------------------------------
-module "trino_s3_irsa" {
-  source                            = "github.com/aws-ia/terraform-aws-eks-blueprints-addons?ref=ed27abc//modules/irsa"
-  eks_cluster_id                    = module.eks.cluster_name
-  eks_oidc_provider_arn             = module.eks.oidc_provider_arn
-  irsa_iam_policies                 = [
-                                        aws_iam_policy.trino_s3_bucket_policy.arn, 
-                                        data.aws_iam_policy.glue_full_access.arn,
-                                        aws_iam_policy.trino_glue_s3_bucket_policy.arn
-                                      ]
-  kubernetes_namespace              = local.trino_namespace
-  kubernetes_service_account        = local.trino_sa
-  create_kubernetes_service_account = true
-  create_kubernetes_namespace       = false
-}
-
-#---------------------------------------------------------------
 # Creates IAM policy for accessing s3 bucket
 #---------------------------------------------------------------
 resource "aws_iam_policy" "trino_s3_bucket_policy" {
@@ -80,10 +59,38 @@ resource "aws_iam_policy" "trino_s3_bucket_policy" {
 }
 
 #---------------------------------------------------------------
-# Creates IAM policy for Trino to access the S3 bucket with Glue
+# Trino Exchange Manager S3 Bucket
 #---------------------------------------------------------------
-resource "aws_iam_policy" "trino_glue_s3_bucket_policy" {
-  description = "IAM role policy for Trino to use Glue to access the S3 Bucket"
-  name        = "${local.name}-s3-glue-irsa-policy"
-  policy      = data.aws_iam_policy_document.trino_glue_s3_access.json
+module "trino_exchange_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 3.0"
+
+  bucket = "trino-exchange-bucket-${random_string.random.result}"
+
+  # For example only - please evaluate for your environment
+  force_destroy = true
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# Creates IAM policy for accessing exchange bucket
+#---------------------------------------------------------------
+resource "aws_iam_policy" "trino_exchange_bucket_policy" {
+  description = "IAM role policy for Trino to access the S3 Bucket"
+  name        = "${local.name}-exchange-bucket-policy"
+  policy      = data.aws_iam_policy_document.trino_exchange_access.json
 }

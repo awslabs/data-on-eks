@@ -3,6 +3,27 @@
 read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
+echo -e "\n"
+
+PS3='Please select your catalog type: '
+options=("hive" "iceberg")
+select opt in "${options[@]}"
+do
+  case $opt in
+    "hive")
+      echo "You selected $opt as your catalog type."
+      export CATALOG_TYPE="hive"
+      break
+      ;;
+    "iceberg")
+      echo "You selected $opt as your catalog type."
+      export CATALOG_TYPE="iceberg"
+      break
+      ;;
+    *) echo "invalid option $REPLY" ;;
+  esac
+done
+
 echo "Initializing ..."
 terraform init || echo "\"terraform init\" failed"
 
@@ -29,7 +50,7 @@ done
 
 # Final apply to catch any remaining resources
 echo "Applying remaining resources..."
-apply_output=$(terraform apply -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
+apply_output=$(terraform apply -var="region=$region" -var="catalog_type=$CATALOG_TYPE" -auto-approve 2>&1 | tee /dev/tty)
 if [[ ${PIPESTATUS[0]} -eq 0 && $apply_output == *"Apply complete"* ]]; then
   echo "SUCCESS: Terraform apply of all modules completed successfully"
 else

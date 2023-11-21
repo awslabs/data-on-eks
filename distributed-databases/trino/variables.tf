@@ -19,7 +19,13 @@ variable "namespace" {
 variable "trino_sa" {
   description = "Service Account name for Trino"
   type        = string
-  default     = "trino-on-eks-sa"
+  default     = "trino-sa"
+}
+
+variable "catalog_type" {
+  description = "Trino catalog type"
+  type        = string
+  default     = "hive"
 }
 
 variable "eks_cluster_version" {
@@ -32,4 +38,10 @@ variable "vpc_cidr" {
   description = "VPC CIDR"
   default     = "10.1.0.0/16"
   type        = string
+}
+
+variable "enable_amazon_prometheus" {
+  description = "Enable AWS Managed Prometheus service"
+  type        = bool
+  default     = false
 }

@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+data "aws_partition" "current" {}
 
 data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
@@ -20,12 +22,31 @@ data "aws_ami" "eks" {
   }
 }
 
+data "aws_iam_policy_document" "trino_exchange_access" {
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = [
+      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}",
+      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}/*"
+    ]
+    actions = ["s3:Get*",
+                "s3:List*",
+                "s3:*Object*"]
+  }
+}
+
 data "aws_iam_policy_document" "trino_s3_access" {
   statement {
     sid       = ""
     effect    = "Allow"
-    resources = ["arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*"]
-    actions = ["s3:*"]
+    resources = [
+      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}",
+      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*"
+    ]
+    actions = ["s3:Get*",
+                "s3:List*",
+                "s3:*Object*"]
   }
 
   statement {
@@ -49,22 +70,6 @@ data "aws_iam_policy_document" "trino_s3_access" {
 
 data "aws_iam_policy" "glue_full_access" {
   arn = "arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess"
-}
-
-data "aws_iam_policy_document" "trino_glue_s3_access" {
-  statement {
-    sid       = ""
-    effect    = "Allow"
-    resources = [
-      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*",
-      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}"
-    ]
-    actions   = [
-      "s3:Get*",
-      "s3:List*",
-      "s3:*Object*"
-    ]
-  }
 }
 
 #---------------------------------------
