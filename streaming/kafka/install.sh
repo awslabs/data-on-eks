@@ -12,6 +12,9 @@ targets=(
   "module.eks_data_addons"
 )
 
+# Initialize Terraform
+terraform init -upgrade
+
 # Apply modules in sequence
 for target in "${targets[@]}"
 do
