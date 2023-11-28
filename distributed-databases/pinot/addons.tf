@@ -165,7 +165,8 @@ resource "random_password" "sensitive_key" {
 }
 
 module "eks_data_addons" {
-  source = "github.com/wahab-io/terraform-aws-eks-data-addons?ref=v1.2.6"
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.2.6"
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
