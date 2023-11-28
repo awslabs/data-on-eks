@@ -1,4 +1,20 @@
 #---------------------------------------------------------------
+# Local variables
+#---------------------------------------------------------------
+locals {
+  name         = var.name
+  region       = var.region
+  cluster_name = format("%s-%s", local.name, "cluster")
+
+  azs = slice(data.aws_availability_zones.available.names, 0, 3)
+
+  tags = {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  }
+}
+
+#---------------------------------------------------------------
 # Grafana Admin credentials resources
 #---------------------------------------------------------------
 data "aws_secretsmanager_secret_version" "admin_password_version" {
@@ -26,6 +42,11 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 # EKS Cluster
 #---------------------------------------------------------------
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}
+
+data "aws_availability_zones" "available" {}
 
 #tfsec:ignore:aws-eks-enable-control-plane-logging
 module "eks" {
