@@ -4,10 +4,9 @@ metadata:
   name: cluster
   namespace: kafka
 spec:
-  cruiseControl: {}
   kafka:
-    version: 3.4.0
-    replicas: 3
+    version: 3.6.0
+    replicas: 4
     listeners:
       - name: plain
         port: 9092
@@ -17,13 +16,15 @@ spec:
         port: 9093
         type: internal
         tls: true
+        authentication:
+          type: tls
     config:
       offsets.topic.replication.factor: 3
       transaction.state.log.replication.factor: 3
       transaction.state.log.min.isr: 2
       default.replication.factor: 3
       min.insync.replicas: 2
-      inter.broker.protocol.version: "3.4"
+      inter.broker.protocol.version: "3.6"
     resources:
       requests:
         memory: 58Gi
@@ -37,11 +38,11 @@ spec:
     storage:
       type: jbod
       volumes:
-      - id: 0
-        type: persistent-claim
-        size: 1000Gi
-        class: gp3
-        deleteClaim: false
+        - id: 0
+          type: persistent-claim
+          size: 1000Gi
+          class: gp3
+          deleteClaim: false
     template:
       pod:
         tolerations:
@@ -54,10 +55,10 @@ spec:
             requiredDuringSchedulingIgnoredDuringExecution:
               nodeSelectorTerms:
                 - matchExpressions:
-                  - key: NodeGroupType
-                    operator: In
-                    values:
-                    - kafka
+                    - key: NodeGroupType
+                      operator: In
+                      values:
+                        - kafka
     metricsConfig:
       type: jmxPrometheusExporter
       valueFrom:
@@ -66,7 +67,6 @@ spec:
           key: kafka-metrics-config.yml
     rack:
       topologyKey: topology.kubernetes.io/zone
-  kafkaExporter: {}
   zookeeper:
     replicas: 3
     storage:
@@ -83,6 +83,10 @@ spec:
   entityOperator:
     topicOperator: {}
     userOperator: {}
+  cruiseControl: {}
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
 
 ---
 kind: ConfigMap
@@ -248,3 +252,10 @@ data:
       labels:
         replicaId: "$2"
         memberType: "$3"
+  cruise-control-config.yml: |
+    # See https://github.com/prometheus/jmx_exporter for more info about JMX Prometheus Exporter metrics
+    lowercaseOutputName: true
+    rules:
+    - pattern: kafka.cruisecontrol<name=(.+)><>(\w+)
+      name: kafka_cruisecontrol_$1_$2
+      type: GAUGE
