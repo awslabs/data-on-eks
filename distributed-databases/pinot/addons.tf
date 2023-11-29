@@ -188,7 +188,7 @@ module "eks_data_addons" {
       },
       {
         name  = "controller.persistence.storageClass"
-        value = "gp2"
+        value = "gp3"
       },
       {
         name  = "broker.replicaCount"
@@ -200,7 +200,7 @@ module "eks_data_addons" {
       },
       {
         name  = "server.persistence.storageClass"
-        value = "gp2"
+        value = "gp3"
       },
       {
         name  = "minionStateless.replicaCount"
@@ -208,7 +208,7 @@ module "eks_data_addons" {
       },
       {
         name  = "minionStateless.persistence.storageClass"
-        value = "gp2"
+        value = "gp3"
       },
       {
         name  = "zookeeper.replicaCount"
@@ -216,7 +216,7 @@ module "eks_data_addons" {
       },
       {
         name  = "zookeeper.persistence.storageClass"
-        value = "gp2"
+        value = "gp3"
       }
     ]
   }
