@@ -516,4 +516,3 @@ resource "kubectl_manifest" "mpi_operator" {
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }
-
