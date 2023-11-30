@@ -10,6 +10,7 @@ metadata:
   labels:
     app: "pyspark-pi"
     applicationId: "pyspark-pi-ca"
+    # Assign the job to a Yunikorn Queue via label.
     queue: root.test 
 spec:
   type: Python
@@ -32,6 +33,9 @@ spec:
     labels:
       version: 3.1.1
     serviceAccount: spark-team-a
+    # the r5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization              
     nodeSelector:
       NodeGroupType: "spark-on-demand-ca"
     tolerations:
@@ -45,6 +49,9 @@ spec:
     serviceAccount: spark-team-a
     labels:
       version: 3.1.1
+    # the r5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization                
     nodeSelector:
       NodeGroupType: "spark-spot-ca"
     tolerations:

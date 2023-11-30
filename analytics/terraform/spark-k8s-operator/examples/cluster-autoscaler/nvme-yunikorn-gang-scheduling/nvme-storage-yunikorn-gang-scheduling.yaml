@@ -12,6 +12,7 @@ metadata:
   labels:
     app: "taxi-trip"
     applicationId: "taxi-trip-yunikorn"
+    # Assign the job to a Yunikorn Queue via label.    
     queue: root.test
 spec:
 #  To create Ingress object for Spark driver.
@@ -117,6 +118,9 @@ spec:
             },
             "tolerations": [{"key": "spark-spot-ca", "operator": "Exists", "effect": "NoSchedule"}]
         }]
+    # the r5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization              
     nodeSelector:
       NodeGroupType: "spark-on-demand-ca"
     tolerations:
@@ -134,6 +138,9 @@ spec:
       version: 3.2.1
     annotations:
       yunikorn.apache.org/task-group-name: "spark-executor"
+    # the r5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization          
     nodeSelector:
       NodeGroupType: "spark-spot-ca"
     tolerations:

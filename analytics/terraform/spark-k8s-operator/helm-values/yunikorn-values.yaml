@@ -104,6 +104,7 @@ yunikornDefaults:
   service.operatorPlugins: "general,spark-k8s-operator"
   admissionController.filtering.bypassNamespaces: "^kube-system$"
   # Use this configuration to configure absolute capacities for yunikorn queues
+  # The Default partition uses BinPacking on Nodes by default https://yunikorn.apache.org/docs/next/user_guide/sorting_policies/#node-sorting
   queues.yaml: |
     partitions:
       - name: default
