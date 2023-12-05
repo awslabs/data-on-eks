@@ -23,7 +23,7 @@ resource "aws_iam_role" "iam_for_lambda" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
-  role = aws_iam_role.iam_for_lambda.name
+  role       = aws_iam_role.iam_for_lambda.name
   policy_arn = data.aws_iam_policy.lambda_execution_policy.arn
 }
 
@@ -32,7 +32,7 @@ data "archive_file" "lambda" {
   output_path = "/tmp/lambda.zip"
   source {
     filename = "index.mjs"
-    content = <<-EOF
+    content  = <<-EOF
     export const handler = async (event) => {
         event.response = {
           claimsOverrideDetails: {
@@ -49,7 +49,7 @@ data "archive_file" "lambda" {
   }
 }
 
-resource "aws_lambda_function" "pretoken-trigger" {
+resource "aws_lambda_function" "pretoken_trigger" {
   function_name    = "pretoken-trigger-function"
   filename         = data.archive_file.lambda.output_path
   source_code_hash = data.archive_file.lambda.output_base64sha256
@@ -77,7 +77,7 @@ resource "aws_cognito_user_pool" "pool" {
   }
 
   lambda_config {
-    pre_token_generation = aws_lambda_function.pretoken-trigger.arn
+    pre_token_generation = aws_lambda_function.pretoken_trigger.arn
   }
 }
 
@@ -88,9 +88,9 @@ resource "aws_cognito_user_pool_domain" "domain" {
 }
 
 resource "aws_cognito_user_pool_client" "user_pool_client" {
-  count                                = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
-  name                                 = "jupyter-client"
-  access_token_validity                = 1
+  count                 = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
+  name                  = "jupyter-client"
+  access_token_validity = 1
   token_validity_units {
     access_token = "days"
   }
@@ -111,12 +111,12 @@ resource "aws_cognito_user_pool_client" "user_pool_client" {
 # Cognito identity pool creation.
 #----------------------------------------------------------------
 resource "aws_cognito_identity_pool" "identity_pool" {
-  count = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
-  identity_pool_name = "jupyterhub-identity-pool"
-  allow_unauthenticated_identities = false  
+  count                            = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
+  identity_pool_name               = "jupyterhub-identity-pool"
+  allow_unauthenticated_identities = false
   cognito_identity_providers {
-    client_id = aws_cognito_user_pool_client.user_pool_client[0].id
-    provider_name = aws_cognito_user_pool.pool[0].endpoint
+    client_id               = aws_cognito_user_pool_client.user_pool_client[0].id
+    provider_name           = aws_cognito_user_pool.pool[0].endpoint
     server_side_token_check = true
   }
 
@@ -133,8 +133,8 @@ resource "aws_s3_object" "engineering_object" {
 }
 
 resource "aws_s3_object" "legal_object" {
-    bucket = aws_s3_bucket.jupyterhub_bucket.id
-    key= "legal/"
+  bucket = aws_s3_bucket.jupyterhub_bucket.id
+  key    = "legal/"
 }
 
 #---------------------------------------------------------------
@@ -159,8 +159,8 @@ resource "aws_iam_role" "cognito_authenticated_engineering_role" {
           StringEquals = {
             "cognito-identity.amazonaws.com:aud" = aws_cognito_identity_pool.identity_pool[0].id
           },
-          "ForAnyValue:StringLike": {
-            "cognito-identity.amazonaws.com:amr": "authenticated"
+          "ForAnyValue:StringLike" : {
+            "cognito-identity.amazonaws.com:amr" : "authenticated"
           }
         }
       }
@@ -194,7 +194,7 @@ EOF
 resource "aws_cognito_identity_pool_provider_principal_tag" "example" {
   identity_pool_id       = aws_cognito_identity_pool.identity_pool[0].id
   identity_provider_name = aws_cognito_user_pool.pool[0].endpoint
-  use_defaults = false
+  use_defaults           = false
   principal_tags = {
     department = "department"
   }

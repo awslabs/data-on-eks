@@ -59,7 +59,7 @@ hub:
         spawner.environment['AWS_ACCESS_KEY_ID'] = key
         spawner.environment['AWS_SECRET_ACCESS_KEY'] = secret
         spawner.environment['AWS_SESSION_TOKEN'] = token
-      
+
       c.Spawner.auth_state_hook = auth_state_hook
 
 proxy:
