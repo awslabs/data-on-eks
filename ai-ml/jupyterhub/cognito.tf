@@ -18,11 +18,13 @@ data "aws_iam_policy" "lambda_execution_policy" {
 }
 
 resource "aws_iam_role" "iam_for_lambda" {
+  count              = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   name               = "iam_for_lambda"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
+  count      = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   role       = aws_iam_role.iam_for_lambda.name
   policy_arn = data.aws_iam_policy.lambda_execution_policy.arn
 }
@@ -50,6 +52,7 @@ data "archive_file" "lambda" {
 }
 
 resource "aws_lambda_function" "pretoken_trigger" {
+  count            = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   function_name    = "pretoken-trigger-function"
   filename         = data.archive_file.lambda.output_path
   source_code_hash = data.archive_file.lambda.output_base64sha256
@@ -124,15 +127,18 @@ resource "aws_cognito_identity_pool" "identity_pool" {
 }
 
 resource "aws_s3_bucket" "jupyterhub_bucket" {
+  count         = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   bucket_prefix = "jupyterhub-test-bucket-"
 }
 
 resource "aws_s3_object" "engineering_object" {
+  count  = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   bucket = aws_s3_bucket.jupyterhub_bucket.id
   key    = "engineering/"
 }
 
 resource "aws_s3_object" "legal_object" {
+  count  = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   bucket = aws_s3_bucket.jupyterhub_bucket.id
   key    = "legal/"
 }
@@ -169,8 +175,9 @@ resource "aws_iam_role" "cognito_authenticated_engineering_role" {
 }
 
 resource "aws_iam_role_policy" "s3_cognito_engineering_policy" {
-  name = "s3_cognito_engineering_policy"
-  role = aws_iam_role.cognito_authenticated_engineering_role[0].id
+  count = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
+  name  = "s3_cognito_engineering_policy"
+  role  = aws_iam_role.cognito_authenticated_engineering_role[0].id
 
   policy = <<-EOF
 {
@@ -192,6 +199,7 @@ EOF
 }
 
 resource "aws_cognito_identity_pool_provider_principal_tag" "example" {
+  count                  = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   identity_pool_id       = aws_cognito_identity_pool.identity_pool[0].id
   identity_provider_name = aws_cognito_user_pool.pool[0].endpoint
   use_defaults           = false
@@ -201,12 +209,14 @@ resource "aws_cognito_identity_pool_provider_principal_tag" "example" {
 }
 
 resource "aws_iam_policy_attachment" "s3_readonly_policy_attachment" {
+  count      = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   name       = "S3ReadOnlyAccessAttachment"
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
   roles      = [aws_iam_role.cognito_authenticated_engineering_role[0].name]
 }
 
 resource "aws_cognito_identity_pool_roles_attachment" "identity_pool_roles" {
+  count            = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
   identity_pool_id = aws_cognito_identity_pool.identity_pool[0].id
   roles = {
     authenticated = aws_iam_role.cognito_authenticated_engineering_role[0].arn
