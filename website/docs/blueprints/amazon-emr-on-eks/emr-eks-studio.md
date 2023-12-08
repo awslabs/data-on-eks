@@ -11,7 +11,7 @@ In this document we will show you how you can use AWS CDK and the [Analytics Ref
 
 ## [Analytics Reference Architecture](https://aws.amazon.com/blogs/opensource/adding-cdk-constructs-to-the-aws-analytics-reference-architecture/)
 
-AWS Analytics Reference Architecture (ARA) exposes set fo reusable core components in an AWS CDK library, currently available in Typescript and Python. This library contains AWS CDK constructs (L3) that can be used to quickly provision analytics solutions in demos, prototypes, proofs of concept, and end-to-end reference architectures. The API of ARA Library is defined [here](https://constructs.dev/packages/aws-analytics-reference-architecture/v/2.4.11?lang=typescript).
+AWS Analytics Reference Architecture (ARA) exposes set of reusable core components in an AWS CDK library, currently available in Typescript and Python. This library contains AWS CDK constructs (L3) that can be used to quickly provision analytics solutions in demos, prototypes, proofs of concept, and end-to-end reference architectures. The API of ARA Library is defined [here](https://constructs.dev/packages/aws-analytics-reference-architecture/v/2.4.11?lang=typescript).
 
 In our case the library help you deploy an infrastructure optimised for Apache Spark running on EKS leveraging EMR on EKS. The infrastructure will out of the box provide you with pod collocation to reduce network traffic, deploy nodegroup in a single AZ to reduce cross AZ traffic during shuffle, use dedicated instances for EMR on EKS, use optimized instances for memory intensive jobs, use spot and on-demand instances for non-critical job and for critical jobs.
 
@@ -84,7 +84,7 @@ managedEndpointName: 'myendpoint'
 }]);
 ```
 
-Last you shold also update the IAM policies passed to the `createExecutionRole`, if you want to process data that is in S3 buckets that you own.
+Last you should also update the IAM policies passed to the `createExecutionRole`, if you want to process data that is in S3 buckets that you own.
 
 Navigate into one of the example directories and run `cdk synth --profile YOUR-AWS-PROFILE`
 
