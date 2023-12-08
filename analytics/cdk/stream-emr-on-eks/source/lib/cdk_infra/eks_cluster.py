@@ -54,7 +54,7 @@ class EksConst(Construct):
         )
 
 
-        # 3. Add Spot managed NodeGroup to EKS (Run Spark exectutor on spot)
+        # 3. Add Spot managed NodeGroup to EKS (Run Spark executor on spot)
         self._my_cluster.add_nodegroup_capacity('spot-mn',
             nodegroup_name = 'etl-spot',
             node_role = noderole,

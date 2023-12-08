@@ -173,7 +173,7 @@ This dataset is sourced from [Fannie Mae’s Single-Family Loan Performance Data
 3. Select [HP](https://datadynamics.fanniemae.com/data-dynamics/#/reportMenu;category=HP)
 4. Click on  `Download Data` and choose `Single-Family Loan Performance Data`
 5. You will find a tabular list of Acquisition and Performance` files sorted based on year and quarter. Click on the file to download. You can download three years(2020, 2021 and 2022 - 4 files for each year and one for each quarter) worth of data that will be used in our example job.  e.g.,: 2017Q1.zip
-6. Unzip the downlad file to extract the csv file to your local machine. e.g.,: 2017Q1.csv
+6. Unzip the download file to extract the csv file to your local machine. e.g.,: 2017Q1.csv
 7. Copy only the CSV files to an S3 bucket under ${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/spark-rapids-emr/input/fannie-mae-single-family-loan-performance/. The example below uses three years of data (one file for each quarter, 12 files in total). Note: `${S3_BUCKET}` and `${EMR_VIRTUAL_CLUSTER_ID}` values can be extracted from Terraform outputs.
 
 ```

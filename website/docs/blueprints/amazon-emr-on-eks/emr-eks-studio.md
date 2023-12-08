@@ -48,7 +48,7 @@ This solution will deploy the following:
 - EMR Virtual Cluster called `emrvcplatform`, used to submitted jobs
 - EMR Studio called `platform`
 - A `managed endpoint`, called `platform-myendpoint` , to use with Jupyter notebooks you will create in the EMR Studio
-- [Execution role](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/iam-execution-role.html) to use when submiting jobs with EMR on EKS `start-job-run`
+- [Execution role](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/iam-execution-role.html) to use when submitting jobs with EMR on EKS `start-job-run`
 - Execution role to use with managed endpoint.
 - pod templates stored in an S3 bucket called "EKS-CLUSTER-NAME-emr-eks-assets-ACCOUNT-ID-REGION"
 
@@ -58,7 +58,7 @@ The infrastructure described above is defined in `emr-eks-app/lib/emr-eks-app-st
 
 You can also create your own execution role through the `createExecutionRole` [method](https://constructs.dev/packages/aws-analytics-reference-architecture/v/2.4.11/api/EmrEksCluster?lang=typescript#createExecutionRole) or create a managed endpoint to attach it to an EMR Studio you deployed outside of the ARA library.
 
-In order to simplify this example we use IAM authentication with IAM user for `EMR Studio`. If you would like to use a user in the `AWS IAM Identity Center` you can change `studioAuthMode` in the `NotebookPlatform` construct. Below you will can see the code snipet that you need to change.
+In order to simplify this example we use IAM authentication with IAM user for `EMR Studio`. If you would like to use a user in the `AWS IAM Identity Center` you can change `studioAuthMode` in the `NotebookPlatform` construct. Below you will can see the code snippet that you need to change.
 
 ```ts
 const notebookPlatform = new ara.NotebookPlatform(this, 'platform-notebook', {
@@ -71,7 +71,7 @@ studioAuthMode: ara.StudioAuthMode.IAM,
 
 ### Deploy
 
-Before you run the solution, you **MUST** change the `eksAdminRoleArn` of the `props` object of `EmrEksCluster` in `lib/emr-eks-app-stack.ts`. This role allows you to interact manage EKS cluster and should have be allowed at least the IAM action `eks:AccessKubernetesApi`. You need to also change the `identityName` in the `addUser` method of the `NotebookPlatform` construct. The identityName **MUST BE** a valid IAM username that you use. Below you will can see the code snipet that you need to change.
+Before you run the solution, you **MUST** change the `eksAdminRoleArn` of the `props` object of `EmrEksCluster` in `lib/emr-eks-app-stack.ts`. This role allows you to interact manage EKS cluster and should have be allowed at least the IAM action `eks:AccessKubernetesApi`. You need to also change the `identityName` in the `addUser` method of the `NotebookPlatform` construct. The identityName **MUST BE** a valid IAM username that you use. Below you will can see the code snippet that you need to change.
 
 ```ts
 notebookPlatform.addUser([{

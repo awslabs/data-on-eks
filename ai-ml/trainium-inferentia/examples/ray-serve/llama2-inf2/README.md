@@ -33,14 +33,14 @@ Now, you can access the Ray Dashboard from the URL Below
 To test the Llama2 model, you can use the following command with a query added at the end of the URL.
 This uses the GET method to get the response:
 
-    http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the diffrences
+    http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
 
 
 You will see an output like this in your browser:
 
 ```text
 [
-"what is data parallelism and tensor parallelisma and the diffrences between them?
+"what is data parallelism and tensor parallelisma and the differences between them?
 
 Data parallelism and tensor parallelism are both techniques used to speed up machine learning training on large datasets using multiple GPUs or other parallel processing units. However, there are some key differences between them:
 

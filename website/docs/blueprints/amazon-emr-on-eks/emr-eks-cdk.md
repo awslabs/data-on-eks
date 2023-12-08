@@ -42,11 +42,11 @@ Ensure that you have installed the following tools on your machine.
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_install)
 
-**NOTE:** You need to have an AWS account and region that are [bootstraped](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap) by AWS CDK.
+**NOTE:** You need to have an AWS account and region that are [bootstrapped](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap) by AWS CDK.
 
 ### Customize
 
-The the entry point for this cdk blueprint is `/bin/emr-eks.ts` which instantiate a stack defined in `lib/emr-eks-blueprint-stack.ts`. This stack must be provided with a VPC and a list of EMR on EKS team defition and the role that will be admin of the EKS cluster. It can also take as options an EKS cluster defined through `cdk-blueprints-library` and the EKS cluster name.
+The the entry point for this cdk blueprint is `/bin/emr-eks.ts` which instantiate a stack defined in `lib/emr-eks-blueprint-stack.ts`. This stack must be provided with a VPC and a list of EMR on EKS team definition and the role that will be admin of the EKS cluster. It can also take as options an EKS cluster defined through `cdk-blueprints-library` and the EKS cluster name.
 
 The properties that are passed to the emr on eks blueprint stack are defined as such:
 

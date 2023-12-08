@@ -49,7 +49,7 @@ filter:
     Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
 
-# CATION: Donot use `cloudwatch` plugin. This Golang Plugin is not recommnded by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
+# CATION: Donot use `cloudwatch` plugin. This Golang Plugin is not recommended by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
 # cloudWatch:
 #   enabled: false
 
