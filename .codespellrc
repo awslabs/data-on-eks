@@ -1,5 +1,6 @@
 [codespell]
-skip = .git,*.pdf,*.svg,go.sum,package-lock.json,*.css,.codespellrc
+skip = .git,*.pdf,*.svg,go.sum,package-lock.json,*.css,.codespellrc,*.sql,website/package-lock.json
 check-hidden = true
-ignore-regex = ^\s*"image/\S+": ".*
-# ignore-words-list =
+# some embedded images and known typoed outputs
+ignore-regex = ^\s*"image/\S+": ".*|.*loopback adddress.*
+# ignore-words-list = 
