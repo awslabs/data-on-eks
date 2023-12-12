@@ -42,7 +42,7 @@ singleuser:
                 image: jupyter/pyspark-notebook:spark-3.4.1
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: default
+          NodePool: default
         cpu_guarantee: 2
         mem_guarantee: 8G
         cpu_limit: 4
@@ -66,7 +66,7 @@ singleuser:
                 image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: trainium
+          NodePool: trainium
         tolerations:
           - key: aws.amazon.com/neuroncore
             operator: Exists
@@ -102,7 +102,7 @@ singleuser:
                 image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: inferentia
+          NodePool: inferentia
           hub.jupyter.org/node-purpose: user
         tolerations:
           - key: aws.amazon.com/neuroncore
@@ -129,7 +129,7 @@ singleuser:
         # namespace: data-team-a
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
-          karpenter.sh/provisioner-name: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
+          NodePool: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
@@ -177,7 +177,7 @@ singleuser:
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
           node.kubernetes.io/instance-type: p4d.24xlarge
-          karpenter.sh/provisioner-name: gpu
+          NodePool: gpu
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"

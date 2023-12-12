@@ -75,7 +75,7 @@ module "eks" {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
 
-      min_size     = 1
+      min_size     = 3
       max_size     = 9
       desired_size = 3
 
@@ -86,7 +86,7 @@ module "eks" {
         xvda = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 100
+            volume_size = 1000
             volume_type = "gp3"
           }
         }
@@ -99,6 +99,7 @@ module "eks" {
         Name = "core-node-grp"
       }
     }
+
     kafka_node_group = {
       name        = "kafka-node-group"
       description = "EKS managed node group example launch template"
@@ -108,13 +109,14 @@ module "eks" {
       desired_size = 5
 
       instance_types = ["r6i.2xlarge"]
-      ebs_optimized  = true
+
+      ebs_optimized = true
       # This is the root filesystem Not used by the brokers
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 100
+            volume_size = 1000
             volume_type = "gp3"
           }
         }

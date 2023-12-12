@@ -28,7 +28,7 @@ resource "kubernetes_storage_class" "default_gp3" {
   allow_volume_expansion = true
   volume_binding_mode    = "WaitForFirstConsumer"
   parameters = {
-    fsType    = "xfs"
+    fsType    = "ext4"
     encrypted = true
     type      = "gp3"
   }
@@ -135,7 +135,6 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_jupyterhub = true
   jupyterhub_helm_config = {
-    version          = "3.0.3"
     namespace        = kubernetes_namespace_v1.jupyterhub.id
     create_namespace = false
     values           = [file("${path.module}/helm-values/jupyterhub-values.yaml")]
