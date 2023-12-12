@@ -12,15 +12,16 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.4.1"
-    }
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = ">= 1.14"
+      version = ">= 2.12.1"
     }
     random = {
       source  = "hashicorp/random"
       version = "3.1.0" # Replace with the appropriate version of the random provider
+    }
+
+    archive = {
+      source  = "hashicorp/archive"
+      version = "2.4.0"
     }
   }
 }

@@ -1,6 +1,6 @@
 # Scaling EMR on EKS Spark Jobs with Karpenter Autoscaler
 
-Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-karpenter) to deploy this pattern and run sample tests.
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-karpenter) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
@@ -55,6 +55,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | [aws_secretsmanager_secret_version.grafana](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [aws_security_group.fsx](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [kubectl_manifest.karpenter_provisioner](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
+| [kubectl_manifest.spark_monitor](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubectl_manifest.static_pv](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubectl_manifest.storage_class](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [kubernetes_cluster_role.spark_role](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/cluster_role) | resource |
@@ -74,6 +75,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_secretsmanager_secret_version.admin_password_version](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_secret_version) | data source |
 | [kubectl_path_documents.karpenter_provisioners](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/data-sources/path_documents) | data source |
+| [kubectl_path_documents.spark_monitor](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/data-sources/path_documents) | data source |
 
 ## Inputs
 
@@ -84,7 +86,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="input_enable_emr_spark_operator"></a> [enable\_emr\_spark\_operator](#input\_enable\_emr\_spark\_operator) | Enable the Spark Operator to submit jobs with EMR Runtime | `bool` | `false` | no |
 | <a name="input_enable_fsx_for_lustre"></a> [enable\_fsx\_for\_lustre](#input\_enable\_fsx\_for\_lustre) | Deploys fsx for lustre addon, storage class and static FSx for Lustre filesystem for EMR | `bool` | `false` | no |
 | <a name="input_enable_kubecost"></a> [enable\_kubecost](#input\_enable\_kubecost) | Enable Kubecost add-on | `bool` | `true` | no |
-| <a name="input_enable_vpc_endpoints"></a> [enable\_vpc\_endpoints](#input\_enable\_vpc\_endpoints) | Enable VPC Endpoints | `string` | `false` | no |
+| <a name="input_enable_vpc_endpoints"></a> [enable\_vpc\_endpoints](#input\_enable\_vpc\_endpoints) | Enable VPC Endpoints | `bool` | `false` | no |
 | <a name="input_enable_yunikorn"></a> [enable\_yunikorn](#input\_enable\_yunikorn) | Enable Apache YuniKorn Scheduler | `bool` | `false` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"emr-eks-karpenter"` | no |
 | <a name="input_region"></a> [region](#input\_region) | Region | `string` | `"us-west-2"` | no |

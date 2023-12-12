@@ -80,6 +80,45 @@ resource "kubernetes_secret" "datahub_rds_secret" {
   }
 }
 
+resource "random_password" "auth_secrets" {
+  length      = 32
+  special     = false
+  min_upper   = 0
+  min_lower   = 1
+  min_numeric = 1
+}
+
+resource "random_password" "auth_secrets_key" {
+  length      = 32
+  special     = false
+  min_upper   = 0
+  min_lower   = 1
+  min_numeric = 1
+}
+
+resource "random_password" "auth_secrets_salt" {
+  length      = 32
+  special     = false
+  min_upper   = 0
+  min_lower   = 1
+  min_numeric = 1
+}
+
+resource "kubernetes_secret" "datahub_auth_secrets" {
+  depends_on = [kubernetes_namespace.datahub]
+  metadata {
+    name      = "datahub-auth-secrets"
+    namespace = local.datahub_namespace
+  }
+
+  data = {
+    system_client_secret      = random_password.auth_secrets.result
+    token_service_signing_key = random_password.auth_secrets_key.result
+    token_service_salt        = random_password.auth_secrets_salt.result
+  }
+
+}
+
 resource "helm_release" "prereq" {
   depends_on = [module.prereq]
 
@@ -133,7 +172,7 @@ resource "helm_release" "prereq" {
 }
 
 resource "helm_release" "datahub" {
-  depends_on = [kubernetes_secret.datahub_es_secret, kubernetes_secret.datahub_rds_secret, helm_release.prereq]
+  depends_on = [kubernetes_secret.datahub_es_secret, kubernetes_secret.datahub_rds_secret, kubernetes_secret.datahub_auth_secrets, helm_release.prereq]
 
   name                       = try(var.datahub_helm_config["name"], local.datahub_name)
   repository                 = try(var.datahub_helm_config["repository"], local.datahub_repository)

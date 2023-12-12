@@ -216,6 +216,27 @@ module "eks_blueprints_addons" {
     ],
   }
 
+  #---------------------------------------
+  # AWS Load Balancer Controller Add-on
+  #---------------------------------------
+  enable_aws_load_balancer_controller = true
+  # turn off the mutating webhook for services because we are using
+  # service.beta.kubernetes.io/aws-load-balancer-type: external
+  aws_load_balancer_controller = {
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
+
+  #---------------------------------------
+  # Ingress Nginx Add-on
+  #---------------------------------------
+  enable_ingress_nginx = true
+  ingress_nginx = {
+    values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
+  }
+
   tags = local.tags
 }
 
@@ -224,12 +245,40 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "~> 1.2" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
+  #---------------------------------------
+  # Volcano Scheduler for TorchX
+  #---------------------------------------
+  enable_volcano = true
+
+  #---------------------------------------
+  # Kuberay Operator
+  #---------------------------------------
+  enable_kuberay_operator = true
+  kuberay_operator_helm_config = {
+    version = "1.0.0-rc.0"
+    # Enabling Volcano as Batch scheduler for KubeRay Operator
+    values = [
+      <<-EOT
+      batchScheduler:
+        enabled: true
+    EOT
+    ]
+  }
+
+  enable_jupyterhub = true
+  jupyterhub_helm_config = {
+    values = [
+      templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
+        jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      })
+    ]
+  }
 }
 
 #---------------------------------------------------------------
@@ -239,47 +288,14 @@ data "http" "torchx_etcd_yaml" {
   url = "https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml"
 }
 
+data "kubectl_file_documents" "torchx_etcd_yaml" {
+  content = data.http.torchx_etcd_yaml.response_body
+}
+
 resource "kubectl_manifest" "torchx_etcd" {
-  yaml_body = <<-YAML
-    ${data.http.torchx_etcd_yaml.response_body}
-  YAML
-
+  for_each   = data.kubectl_file_documents.torchx_etcd_yaml.manifests
+  yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
-}
-
-#---------------------------------------------------------------
-# Volcano Schduler for TorchX
-# NOTE: This will be replaced with Helm Chart deployment with eks_data_addons
-#---------------------------------------------------------------
-data "http" "volcano_development_yaml" {
-  url = "https://raw.githubusercontent.com/volcano-sh/volcano/master/installer/volcano-development.yaml"
-}
-
-resource "kubectl_manifest" "volcano" {
-  yaml_body = <<-YAML
-    ${data.http.volcano_development_yaml.response_body}
-  YAML
-
-  depends_on = [module.eks.eks_cluster_id]
-}
-
-#---------------------------------------------------------------
-# Create Volcano Queue once the Volcano add-on is installed
-#---------------------------------------------------------------
-resource "kubectl_manifest" "volcano_queue" {
-  yaml_body = <<YAML
-apiVersion: scheduling.volcano.sh/v1beta1
-kind: Queue
-metadata:
-  name: test
-spec:
-  weight: 1
-  reclaimable: false
-  capability:
-    cpu: 2
-YAML
-
-  depends_on = [resource.kubectl_manifest.volcano]
 }
 
 #---------------------------------------------------------------
@@ -299,7 +315,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-grafana"
+  name                    = "${local.name}-oss-grafana"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
@@ -316,7 +332,7 @@ locals {
 # Karpenter Provisioners
 #---------------------------------------
 data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/trainium-*.yaml"
+  pattern = "${path.module}/karpenter-provisioners/karpenter-*.yaml"
   vars = {
     azs                  = local.region
     eks_cluster_id       = local.name
@@ -345,6 +361,9 @@ module "s3_bucket" {
 
 #---------------------------------------------------------------
 # Create a Launch Template Userdata for Trainium
+# Note: As of version v0.29.0, the Karpenter AWSNodeTemplate lacks the ability to configure multipleNetwork interfaces for EFA.
+# To work around this limitation, we are utilizing Terraform to generate launch templates that include EFA configurations.
+# These launch templates are then used as input for the AWS Node template, enabling us to achieve the desired network interface setups.
 #---------------------------------------------------------------
 data "cloudinit_config" "trn1_lt" {
   base64_encode = true
@@ -479,4 +498,21 @@ resource "aws_launch_template" "trn1_lt" {
       description                 = "Karpenter EFA config for Trainium"
     }
   }
+}
+
+#---------------------------------------------------------------
+# MPI Operator for distributed training on Trainium
+#---------------------------------------------------------------
+data "http" "mpi_operator_yaml" {
+  url = "https://raw.githubusercontent.com/kubeflow/mpi-operator/${var.mpi_operator_version}/deploy/v2beta1/mpi-operator.yaml"
+}
+
+data "kubectl_file_documents" "mpi_operator_yaml" {
+  content = data.http.mpi_operator_yaml.response_body
+}
+
+resource "kubectl_manifest" "mpi_operator" {
+  for_each   = var.enable_mpi_operator ? data.kubectl_file_documents.mpi_operator_yaml.manifests : {}
+  yaml_body  = each.value
+  depends_on = [module.eks.eks_cluster_id]
 }
