@@ -128,21 +128,6 @@ module "eks_blueprints_addons" {
     values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
   }
 
-  helm_releases = {
-    #---------------------------------------
-    # NVIDIA Device Plugin Add-on
-    #---------------------------------------
-    nvidia-device-plugin = {
-      description      = "A Helm chart for NVIDIA Device Plugin"
-      namespace        = "nvidia-device-plugin"
-      create_namespace = true
-      chart            = "nvidia-device-plugin"
-      chart_version    = "0.14.0"
-      repository       = "https://nvidia.github.io/k8s-device-plugin"
-      values           = [file("${path.module}/helm-values/nvidia-values.yaml")]
-    }
-  }
-
   #---------------------------------------
   # Prommetheus and Grafana stack
   #---------------------------------------
@@ -206,6 +191,14 @@ module "eks_data_addons" {
       # S3 bucket config for artifacts
       s3_bucket_name = try(module.mlflow_s3_bucket[0].s3_bucket_id, "")
     })]
+  }
+
+  #---------------------------------------------------------------
+  # NVIDIA GPU Operator Add-on
+  #---------------------------------------------------------------
+  enable_nvidia_gpu_operator = true
+  nvidia_gpu_operator_helm_config = {
+    values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
   }
 
 }
