@@ -292,7 +292,7 @@ aws dynamodb create-table --cli-input-json  JSONSchemaDynamoDBTABLE.json
 
 ![Apache NiFi Canvas](img/nifi-screenshot-2.png)
 
-7. Double-click on the Nifi-on-EKS-process-group and enter the process to create the data flow. Drag the processer icon from the top left, type Kinesis into the search window, and select the ConsumeKinesisStream processor. To create a Kinesis Consumer, click ADD. 
+7. Double-click on the Nifi-on-EKS-process-group and enter the process to create the data flow. Drag the processor icon from the top left, type Kinesis into the search window, and select the ConsumeKinesisStream processor. To create a Kinesis Consumer, click ADD. 
 
 ![Apache NiFi Canvas](img/nifi-screenshot-3.png)
 
@@ -313,7 +313,7 @@ aws dynamodb create-table --cli-input-json  JSONSchemaDynamoDBTABLE.json
 
 ![Apache NiFi Canvas](img/nifi-screenshot-6.png)
 
-10. Drag the processer icon from the top left, type "dynamoDB" into the search window, and select the "PutDynamoDBRecord processor. Click on ADD to create an Amazon DynamoDB writer. Configure the processor using the fields below.
+10. Drag the processor icon from the top left, type "dynamoDB" into the search window, and select the "PutDynamoDBRecord processor. Click on ADD to create an Amazon DynamoDB writer. Configure the processor using the fields below.
 
 a. Record Reader - Change it to JSONTreeReader
 b. AWS Credentials Provider Service - select the previously created configuration

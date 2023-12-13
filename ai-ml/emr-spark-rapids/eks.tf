@@ -141,7 +141,7 @@ module "eks" {
       instance_types       = ["m5.xlarge"] # 4 vCPU and 16GB
 
       ebs_optimized = true
-      # This bloc device is used only for root volume. Adjust volume according to your size.
+      # This block device is used only for root volume. Adjust volume according to your size.
       # NOTE: Dont use this volume for Spark workloads
       block_device_mappings = {
         xvda = {

@@ -297,7 +297,10 @@ module "eks_data_addons" {
       userdata_url                = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
       client_id                   = try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
       client_secret               = try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
+      user_pool_id                = try(aws_cognito_user_pool.pool[0].id, "")
+      identity_pool_id            = try(aws_cognito_identity_pool.identity_pool[0].id, "")
       jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      region                      = var.region
     })]
   }
 

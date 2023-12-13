@@ -43,7 +43,7 @@ output "cluster_name" {
 }
 
 output "cluster_endpoint" {
-  description = "EKS Clusetr endpoint"
+  description = "EKS Cluster endpoint"
   value       = try(module.eks_workshop[0].cluster_endpoint, var.cluster_endpoint)
 }
 
