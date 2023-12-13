@@ -5,16 +5,16 @@ metadata:
   name: {{ .Values.name }}
 spec:
   amiFamily: {{ .Values.amiFamily }}
-  subnetSelectorTerms:          
+  subnetSelectorTerms:
     - tags:
         karpenter.sh/discovery: {{ .Values.clusterName }}
         kubernetes.io/role/internal-elb: "1" # Make sure that it will be scheduled on private subs
-  securityGroupSelectorTerms:   
+  securityGroupSelectorTerms:
     - tags:
         Name: {{ .Values.clusterName }}-node
   role: {{ .Values.karpenterRole }}
   # Optional, propagates tags to underlying EC2 resources
-  tags:                  
+  tags:
     Name: {{ .Values.name }}
   metadataOptions:
     httpEndpoint: enabled
@@ -33,7 +33,7 @@ spec:
         encrypted: true
         deleteOnTermination: true
   detailedMonitoring: true
-  userData: |                   
+  userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"
 
