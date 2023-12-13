@@ -206,7 +206,7 @@ Once you see the status of the model deployment is in `running` state then you c
 
 You can use the following URL with a query added at the end of the URL.
 
-    http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the diffrences
+    http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
 
 You will see an output like this in your browser:
 

@@ -140,7 +140,7 @@ module "eks_blueprints_kubernetes_addons" {
     repository = "https://kubernetes-sigs.github.io/aws-fsx-csi-driver/"
     version    = "1.5.1"
     namespace  = "kube-system"
-    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
     values = [
       <<-EOT
         node:

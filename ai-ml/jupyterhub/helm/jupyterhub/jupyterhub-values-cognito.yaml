@@ -79,7 +79,7 @@ proxy:
       service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
 
 singleuser:
-  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU inlcuding the image pull
+  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU including the image pull
   profileList:
     - display_name: Data Engineering (CPU)
       description: "PySpark Notebooks | Karpenter AutoScaling"

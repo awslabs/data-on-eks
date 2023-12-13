@@ -10,7 +10,7 @@ proxy:
   service:
     type: ClusterIP
 singleuser:
-  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU inlcuding the image pull
+  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU including the image pull
   profileList:
     - display_name: Trainium (trn1)
       description: "Trainium | Karpenter AutoScaling"

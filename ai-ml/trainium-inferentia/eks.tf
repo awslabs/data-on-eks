@@ -45,7 +45,7 @@ module "eks" {
 
   # security group rule from all ipv4 to nodes for port 22
   node_security_group_additional_rules = {
-    # Critical Secruity group rule for EFA enabled nodes
+    # Critical Security group rule for EFA enabled nodes
     ingress_efa_self_enabled = {
       description = "EFA-enabled self-referencing security group Ingress"
       protocol    = "-1"
@@ -55,7 +55,7 @@ module "eks" {
       self        = true
     }
 
-    # Critical Secruity group rule for EFA enabled nodes
+    # Critical Security group rule for EFA enabled nodes
     egress_efa_self_enabled = {
       description = "EFA-enabled self-referencing security group Egress"
       protocol    = "-1"
@@ -248,7 +248,7 @@ module "eks" {
         }
       ]
 
-      # Commented to investigate further as the node group creation is failing with palcement group
+      # Commented to investigate further as the node group creation is failing with placement group
       # placement = {
       #   spread_domain = "cluster"
       #   groupName     = "trn1-32xl-ng1"
@@ -458,7 +458,7 @@ module "eks" {
         },
       ]
 
-      # Commented to investigate further as the node group creation is failing with palcement group
+      # Commented to investigate further as the node group creation is failing with placement group
       # placement = {
       #   spread_domain = "cluster"
       #   groupName     = "trn1-32xl-ng1"

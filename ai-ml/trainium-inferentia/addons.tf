@@ -155,7 +155,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_fsx_csi_driver = true
   aws_fsx_csi_driver = {
-    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
     values = [
       <<-EOT
         node:
@@ -440,7 +440,7 @@ resource "aws_launch_template" "trn1_lt" {
     name = module.eks_blueprints_addons.karpenter.node_instance_profile_name
   }
 
-  # Commented for visiblity to implement this feature in the future
+  # Commented for visibility to implement this feature in the future
   #  placement {
   #   tenancy = "default"
   #   availability_zone = "${local.region}d"
