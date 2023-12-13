@@ -22,7 +22,7 @@ For example, your VPC may be limited to small subnets like below. In this VPC we
 
 ![Init VPC](init-vpc.png)
 
-You can add additional VPC CIDRs from a range that is not routable across VPCs (such as the RFC 6598 range, `100.64.0.0/10`). In this case we added `100.64.0.0/16`, `100.65.0.0/16`, and `100.65.0.0/16` to the VPC (as this is the maximum CIDR size), then created new subnets with those CIDRs.
+You can add additional VPC CIDRs from a range that is not routable across VPCs (such as the RFC 6598 range, `100.64.0.0/10`). In this case we added `100.64.0.0/16`, `100.65.0.0/16`, and `100.66.0.0/16` to the VPC (as this is the maximum CIDR size), then created new subnets with those CIDRs.
 Finally we recreated the node groups in the new subnets, leaving the existing EKS cluster control plane in place.
 
 ![expanded VPC](expanded-vpc.png)

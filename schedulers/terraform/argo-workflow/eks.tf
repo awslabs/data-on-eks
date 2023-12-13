@@ -106,11 +106,13 @@ module "eks" {
 
       labels = {
         WorkerType    = "ON_DEMAND"
-        NodeGroupType = "core"
+        NodeGroupType = "core-nodes"
       }
 
       tags = {
-        Name = "core-node-grp"
+        Name          = "core-node-group"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core-nodes"
       }
     }
   }
