@@ -61,7 +61,7 @@ YAML
 
 #---------------------------------------------------------------
 # Static PV for FSx for Lustre
-# Don't change the metdata.name `fsx-claim` as this is referenced in lib/trn1_dist_ddp.py script
+# Don't change the metadata.name `fsx-claim` as this is referenced in lib/trn1_dist_ddp.py script
 #---------------------------------------------------------------
 resource "kubectl_manifest" "static_pv" {
   yaml_body = <<YAML

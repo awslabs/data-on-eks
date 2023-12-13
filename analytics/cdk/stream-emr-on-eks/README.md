@@ -72,7 +72,7 @@ echo -e "\nIn web browser, paste the URL to launch the template: https://console
 ### CDK Deployment
 
 #### Prerequisites
-Install the folowing tools:
+Install the following tools:
 1. [Python 3.6 +](https://www.python.org/downloads/).
 2. [Node.js 10.3.0 +](https://nodejs.org/en/)
 3. [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-macos.html#install-macosos-bundled). Configure the CLI by `aws configure`.
@@ -113,12 +113,12 @@ rm -vf ${HOME}/.aws/credentials
 curl https://raw.githubusercontent.com/aws-samples/stream-emr-on-eks/main/deployment/app_code/post-deployment.sh | bash
 ```
 5. Wait for 5 mins, then check the [MSK cluster](https://console.aws.amazon.com/msk/) status. Make sure it is `active` before sending data to the cluster.
-6. Launching a new termnial window in Cloud9, send the sample data to MSK:
+6. Launching a new terminal window in Cloud9, send the sample data to MSK:
 ```bash
 wget https://github.com/xuite627/workshop_flink1015-1/raw/master/dataset/nycTaxiRides.gz
 zcat nycTaxiRides.gz | split -l 10000 --filter="kafka_2.12-2.8.1/bin/kafka-console-producer.sh --broker-list ${MSK_SERVER} --topic taxirides ; sleep 0.2"  > /dev/null
 ```
-6. Launching the 3rd termnial window and monitor the source MSK topic:
+6. Launching the 3rd terminal window and monitor the source MSK topic:
 ```bash
 kafka_2.12-2.8.1/bin/kafka-console-consumer.sh \
 --bootstrap-server ${MSK_SERVER} \
@@ -172,7 +172,7 @@ aws emr-containers cancel-job-run --virtual-cluster-id $VIRTUAL_CLUSTER_ID  --id
 ### 2. EMR on EKS with Fargate
 Run the [same job](deployment/app_code/job/msk_consumer.py) on the same EKS cluster, but with the serverless option - Fargate compute choice.
 
-To ensure it is picked up by Fargate not by the managed nodegroup on EC2, we will tag the Spark job by a `serverless` label, which has setup in a Fargate profile prevously:
+To ensure it is picked up by Fargate not by the managed nodegroup on EC2, we will tag the Spark job by a `serverless` label, which has setup in a Fargate profile previously:
 ```yaml
 --conf spark.kubernetes.driver.label.type=serverless
 --conf spark.kubernetes.executor.label.type=serverless

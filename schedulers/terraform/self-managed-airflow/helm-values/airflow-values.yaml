@@ -531,7 +531,7 @@ dags:
 
     # the number of consecutive failures allowed before aborting
     maxFailures: 5
-    # subpath wihin the repo where dags are located
+    # subpath within the repo where dags are located
     # should be "" if dags are at repo root
     subPath: "dags"
 
