@@ -13,13 +13,9 @@ print(get_region())
 EOF
 }
 
-# Prompt user to enter region or press enter to detect automatically
-read -p "Enter AWS region or press enter to detect automatically: " user_region
-
-# Determine region either from user input, EC2 metadata, or Python script
-if [ -n "$user_region" ]; then
-    REGION_CODE=$user_region
-elif REGION_CODE=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region 2>/dev/null); [ -z "$REGION_CODE" ]; then
+# Attempt to determine region from EC2 metadata, then fall back to Python script
+REGION_CODE=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region 2>/dev/null)
+if [ -z "$REGION_CODE" ]; then
     REGION_CODE=$(get_region_with_python)
 fi
 
@@ -50,20 +46,10 @@ EKSAZ1=$(aws ec2 describe-availability-zones \
     --query "AvailabilityZones[].ZoneName" \
     --output text)
 
-if [ -z "$EKSAZ1" ]; then
-    echo "Failed to fetch the name for availability zone $AZ1 in region $REGION_CODE."
-    exit 1
-fi
-
 EKSAZ2=$(aws ec2 describe-availability-zones \
     --region $REGION_CODE \
     --filters "Name=zone-id,Values=$AZ2" \
     --query "AvailabilityZones[].ZoneName" \
     --output text)
-
-if [ -z "$EKSAZ2" ]; then
-    echo "Failed to fetch the name for availability zone $AZ2 in region $REGION_CODE."
-    exit 1
-fi
 
 echo "Your EKS availability zones are $EKSAZ1 and $EKSAZ2"
