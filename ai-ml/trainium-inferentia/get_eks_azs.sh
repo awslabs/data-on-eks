@@ -27,4 +27,4 @@ EKSAZ2=$(aws ec2 describe-availability-zones \
     --query "AvailabilityZones[].ZoneName" \
     --output text)
 
-echo "Your EKS availability zones are $EKSAZ1 and $EKSAZ2"
+echo "{\"EKSAZ1\": \"$EKSAZ1\", \"EKSAZ2\": \"$EKSAZ2\"}"
