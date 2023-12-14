@@ -50,10 +50,20 @@ EKSAZ1=$(aws ec2 describe-availability-zones \
     --query "AvailabilityZones[].ZoneName" \
     --output text)
 
+if [ -z "$EKSAZ1" ]; then
+    echo "Failed to fetch the name for availability zone $AZ1 in region $REGION_CODE."
+    exit 1
+fi
+
 EKSAZ2=$(aws ec2 describe-availability-zones \
     --region $REGION_CODE \
     --filters "Name=zone-id,Values=$AZ2" \
     --query "AvailabilityZones[].ZoneName" \
     --output text)
+
+if [ -z "$EKSAZ2" ]; then
+    echo "Failed to fetch the name for availability zone $AZ2 in region $REGION_CODE."
+    exit 1
+fi
 
 echo "Your EKS availability zones are $EKSAZ1 and $EKSAZ2"

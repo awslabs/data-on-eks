@@ -24,11 +24,12 @@ install_package() {
 # Install Docker
 install_docker
 
-# Install Git, Python3, unzip, and pip
+# Install Git, Python3, unzip, pip, and jq
 install_package git
 install_package python3
 install_package unzip
 install_package python3-pip
+install_package jq
 
 # Check for Kubectl
 if ! command -v kubectl &> /dev/null; then
