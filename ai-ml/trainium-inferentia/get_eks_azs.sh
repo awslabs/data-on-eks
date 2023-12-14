@@ -1,37 +1,12 @@
 #!/bin/bash
 
-# Function to get AWS region using Python and Boto3
-get_region_with_python() {
-    python3 - <<EOF
-import boto3
-
-def get_region():
-    session = boto3.session.Session()
-    return session.region_name
-
-print(get_region())
-EOF
-}
-
-# Attempt to determine region from EC2 metadata, then fall back to Python script
-REGION_CODE=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region 2>/dev/null)
-if [ -z "$REGION_CODE" ]; then
-    REGION_CODE=$(get_region_with_python)
-fi
-
-# Validate if REGION_CODE is set
-if [ -z "$REGION_CODE" ]; then
-    echo "Unable to determine AWS region."
-    exit 1
-fi
+# Hardcoded AWS region
+REGION_CODE="us-west-2"
 
 echo "Using AWS region: $REGION_CODE"
 
-# Determine appropriate EKS AZs based on the region
-if [[ $REGION_CODE == "us-east-1" ]]; then
-    AZ1="use1-az6"
-    AZ2="use1-az5"
-elif [[ $REGION_CODE == "us-west-2" ]]; then
+# Determine appropriate EKS AZs based on the hardcoded region
+if [[ $REGION_CODE == "us-west-2" ]]; then
     AZ1="usw2-az4"
     AZ2="usw2-az3"
 else
