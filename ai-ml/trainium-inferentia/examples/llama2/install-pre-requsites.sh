@@ -9,13 +9,25 @@ install_docker() {
     newgrp docker
 }
 
-# Check for Git
-if ! command -v git &> /dev/null; then
-    echo "Git is not installed. Installing..."
-    sudo yum install git -y
-else
-    echo "Git is already installed."
-fi
+# Install a package if it is not already installed
+install_package() {
+    PACKAGE=$1
+    echo "Checking for $PACKAGE..."
+    if ! command -v $PACKAGE &> /dev/null; then
+        echo "$PACKAGE is not installed. Installing..."
+        sudo yum install $PACKAGE -y
+    else
+        echo "$PACKAGE is already installed."
+    fi
+}
+
+# Install Docker
+install_docker
+
+# Install Git, Python3, and unzip (required for AWS CLI v2 installation)
+install_package git
+install_package python3
+install_package unzip
 
 # Check for Kubectl
 if ! command -v kubectl &> /dev/null; then
@@ -46,22 +58,10 @@ else
     echo "AWS CLI v2 is already installed."
 fi
 
-# Check for Docker
-if ! command -v docker &> /dev/null; then
-    install_docker
-else
-    echo "Docker is already installed."
-fi
-
 # Check for Terraform
-if ! command -v terraform &> /dev/null; then
-    echo "Terraform is not installed. Installing..."
-    sudo yum install -y yum-utils
-    sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-    sudo yum -y install terraform
-else
-    echo "Terraform is already installed."
-fi
+install_package yum-utils
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+install_package terraform
 terraform -help
 
 # Check for Helm
@@ -72,6 +72,14 @@ if ! command -v helm &> /dev/null; then
     ./get_helm.sh
 else
     echo "Helm is already installed."
+fi
+
+# Check for Boto3
+if ! python3 -c "import boto3" &> /dev/null; then
+    echo "Boto3 is not installed. Installing..."
+    pip3 install boto3
+else
+    echo "Boto3 is already installed."
 fi
 
 echo "Installation check complete."
