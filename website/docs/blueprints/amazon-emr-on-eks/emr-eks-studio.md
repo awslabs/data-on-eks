@@ -113,13 +113,13 @@ To submit a job we will use Below you use `start-job-run` command with AWS CLI.
 
 Before you run the command below, make sure to change update the following parameters with the on created by your own deployment.
 
-    - <CLUSTER-ID> – The EMR virtual cluster ID, which you get from the AWS CDK output
-    - <SPARK-JOB-NAME> – The name of your Spark job
-    - <ROLE-ARN> – The execution role you created, which you get from the AWS CDK output
-    - <S3URI-CRITICAL-DRIVER> – The Amazon S3 URI of the driver pod template, which you get from the AWS CDK output
-    - <S3URI-CRITICAL-EXECUTOR> – The Amazon S3 URI of the executor pod template, which you get from the AWS CDK output
-    - <Log_Group_Name> – Your CloudWatch log group name
-    - <Log_Stream_Prefix> – Your CloudWatch log stream prefix
+    - \<CLUSTER-ID\> – The EMR virtual cluster ID, which you get from the AWS CDK output
+    - \<SPARK-JOB-NAME\> – The name of your Spark job
+    - \<ROLE-ARN\> – The execution role you created, which you get from the AWS CDK output
+    - \<S3URI-CRITICAL-DRIVER\> – The Amazon S3 URI of the driver pod template, which you get from the AWS CDK output
+    - \<S3URI-CRITICAL-EXECUTOR\> – The Amazon S3 URI of the executor pod template, which you get from the AWS CDK output
+    - \<Log_Group_Name\> – Your CloudWatch log group name
+    - \<Log_Stream_Prefix\> – Your CloudWatch log stream prefix
 
 <details>
     <summary>AWS CLI for start-job-run command</summary>
