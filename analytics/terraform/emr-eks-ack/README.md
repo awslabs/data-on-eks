@@ -1,7 +1,7 @@
 # EMR on EKS with ACK Controller and Crossplane
 
 This pattern is used to deploy the EKS Cluster with EMR on EKS ACK Controllers and Crossplane.
-Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/amazon-emr-on-eks/emr-eks-ack) to deploy this pattern and run sample tests.
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-ack) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements

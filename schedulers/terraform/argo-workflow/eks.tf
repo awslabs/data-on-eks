@@ -75,7 +75,7 @@ module "eks" {
     }
 
     ebs_optimized = true
-    # This bloc device is used only for root volume. Adjust volume according to your size.
+    # This block device is used only for root volume. Adjust volume according to your size.
     # NOTE: Don't use this volume for Spark workloads
     block_device_mappings = {
       xvda = {
@@ -106,11 +106,13 @@ module "eks" {
 
       labels = {
         WorkerType    = "ON_DEMAND"
-        NodeGroupType = "core"
+        NodeGroupType = "core-nodes"
       }
 
       tags = {
-        Name = "core-node-grp"
+        Name          = "core-node-group"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core-nodes"
       }
     }
   }

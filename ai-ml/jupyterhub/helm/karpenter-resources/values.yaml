@@ -1,5 +1,6 @@
 name: default
 clusterName:
+karpenterRole:
 instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
 instanceFamilies: ["c5", "m5", "r5"]
 taints:

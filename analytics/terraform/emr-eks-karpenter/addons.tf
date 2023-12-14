@@ -114,7 +114,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
   aws_fsx_csi_driver = {
-    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
     values = [
       <<-EOT
         node:
@@ -201,7 +201,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Kubecost Add-on
   #---------------------------------------------------------------
-  # Note: Kubecost add-on depdends on Kube Prometheus Stack add-on for storing the metrics
+  # Note: Kubecost add-on depends on Kube Prometheus Stack add-on for storing the metrics
   enable_kubecost = var.enable_kubecost
   kubecost_helm_config = {
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]

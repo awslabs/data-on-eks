@@ -155,7 +155,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_fsx_csi_driver = true
   aws_fsx_csi_driver = {
-    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
     values = [
       <<-EOT
         node:
@@ -440,7 +440,7 @@ resource "aws_launch_template" "trn1_lt" {
     name = module.eks_blueprints_addons.karpenter.node_instance_profile_name
   }
 
-  # Commented for visiblity to implement this feature in the future
+  # Commented for visibility to implement this feature in the future
   #  placement {
   #   tenancy = "default"
   #   availability_zone = "${local.region}d"
@@ -498,4 +498,21 @@ resource "aws_launch_template" "trn1_lt" {
       description                 = "Karpenter EFA config for Trainium"
     }
   }
+}
+
+#---------------------------------------------------------------
+# MPI Operator for distributed training on Trainium
+#---------------------------------------------------------------
+data "http" "mpi_operator_yaml" {
+  url = "https://raw.githubusercontent.com/kubeflow/mpi-operator/${var.mpi_operator_version}/deploy/v2beta1/mpi-operator.yaml"
+}
+
+data "kubectl_file_documents" "mpi_operator_yaml" {
+  content = data.http.mpi_operator_yaml.response_body
+}
+
+resource "kubectl_manifest" "mpi_operator" {
+  for_each   = var.enable_mpi_operator ? data.kubectl_file_documents.mpi_operator_yaml.manifests : {}
+  yaml_body  = each.value
+  depends_on = [module.eks.eks_cluster_id]
 }

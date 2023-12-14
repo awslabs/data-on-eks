@@ -22,7 +22,7 @@ For example, your VPC may be limited to small subnets like below. In this VPC we
 
 ![Init VPC](init-vpc.png)
 
-You can add additional VPC CIDRs from a range that is not routable across VPCs (such as the RFC 6598 range, `100.64.0.0/10`). In this case we added `100.64.0.0/16`, `100.65.0.0/16`, and `100.65.0.0/16` to the VPC (as this is the maximum CIDR size), then created new subnets with those CIDRs.
+You can add additional VPC CIDRs from a range that is not routable across VPCs (such as the RFC 6598 range, `100.64.0.0/10`). In this case we added `100.64.0.0/16`, `100.65.0.0/16`, and `100.66.0.0/16` to the VPC (as this is the maximum CIDR size), then created new subnets with those CIDRs.
 Finally we recreated the node groups in the new subnets, leaving the existing EKS cluster control plane in place.
 
 ![expanded VPC](expanded-vpc.png)
@@ -126,7 +126,7 @@ To configure the --max-pods option you can update the userdata for your worker n
 
 One problem is the number of IPs per ENI is different based on the Instance type ([for example a `m5d.2xlarge` can have 15 IPs per ENI, where a `m5d.4xlarge` can hold 30 IPs per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI)). This means hard-coding a value for `max-pods` may cause problems if you change instance types or in mixed-instance environments.
 
-In the EKS Optimized AMI releases there is [a script included that can be used to help calculate the AWS Recommended max-pods value](https://github.com/awslabs/amazon-eks-ami/blob/master/files/max-pods-calculator.sh). If you’d like to automate this calculation for mixed isntances you will also need to update the userdata for your instances to use the `--instance-type-from-imds` flag to autodiscover the instance type from instance metadata.
+In the EKS Optimized AMI releases there is [a script included that can be used to help calculate the AWS Recommended max-pods value](https://github.com/awslabs/amazon-eks-ami/blob/master/files/max-pods-calculator.sh). If you’d like to automate this calculation for mixed instances you will also need to update the userdata for your instances to use the `--instance-type-from-imds` flag to autodiscover the instance type from instance metadata.
 
 ```hcl
   eks_managed_node_groups = {

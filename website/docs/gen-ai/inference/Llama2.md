@@ -106,7 +106,7 @@ Additionally, confirm that your local region setting matches the specified regio
 For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
 
 ```bash
-cd data-on-eks/ai-ml/trainium/ && chmod +x install.sh
+cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x install.sh
 ./install.sh
 ```
 
@@ -115,12 +115,12 @@ cd data-on-eks/ai-ml/trainium/ && chmod +x install.sh
 Verify the Amazon EKS Cluster
 
 ```bash
-aws eks describe-cluster --name trainium
+aws eks --region us-west-2 describe-cluster --name trainium-inferentia
 ```
 
 ```bash
 # Creates k8s config file to authenticate with EKS
-aws eks --region us-west-2 update-kubeconfig --name trainium
+aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 ```
@@ -148,14 +148,14 @@ Users can also modify the Dockerfile to suit their specific requirements and pus
 
 **Ensure the cluster is configured locally**
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name trainium
+aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 ```
 
 **Deploy RayServe Cluster**
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/ray-serve/Llama-2-inf2
-kubectl apply -f ray-service-Llama-2.yaml
+cd ai-ml/trainium-inferentia/examples/ray-serve/llama2-inf2
+kubectl apply -f ray-service-llama2.yaml
 ```
 
 Verify the deployment by running the following commands
@@ -167,30 +167,30 @@ The deployment process may take up to 10 minutes. The Head Pod is expected to be
 :::
 
 ```text
-$ kubectl get all -n Llama-2
+$ kubectl get all -n llama2
 
 NAME                                                          READY   STATUS              RESTARTS   AGE
-pod/Llama-2-service-raycluster-bt7bs-head-nhdct                0/1     ContainerCreating   0          68s
-pod/service-raycluster-bt7bs-worker-inf2-worker-group-wtv47   0/1     Pending             0          68s
+pod/llama2-service-raycluster-smqrl-head-4wlbb                0/1     ContainerCreating   0          77s
+pod/service-raycluster-smqrl-worker-inf2-worker-group-wjxqq   0/1     Init:0/1            0          77s
 
-NAME                     TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                                                       AGE
-service/Llama-2-service   NodePort   172.20.123.199   <none>        6379:31306/TCP,8265:30765/TCP,10001:32101/TCP,8000:30807/TCP,52365:31237/TCP,8080:31221/TCP   69s
+NAME                     TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                                                       AGE
+service/llama2-service   NodePort   172.20.246.48   <none>        8000:32138/TCP,52365:32653/TCP,8080:32604/TCP,6379:32739/TCP,8265:32288/TCP,10001:32419/TCP   78s
 
-$ kubectl get ingress -n Llama-2
+$ kubectl get ingress -n llama2
 
 NAME             CLASS   HOSTS   ADDRESS                                                                         PORTS   AGE
-Llama-2-ingress   nginx   *       k8s-ingressn-ingressn-randomid-randomid.elb.us-west-2.amazonaws.com   80      2m4s
+llama2-ingress   nginx   *       k8s-ingressn-ingressn-randomid-randomid.elb.us-west-2.amazonaws.com   80      2m4s
 
 ```
 
 Now, you can access the Ray Dashboard from the Load balancer URL below.
 
-    http://<NLB_DNS_NAME>/dashboard/#/serve
+    http://\<NLB_DNS_NAME\>/dashboard/#/serve
 
 If you don't have access to a public Load Balancer, you can use port-forwarding and browse the Ray Dashboard using localhost with the following command:
 
 ```bash
-kubectl port-forward svc/Llama-2-service 8265:8265 -n Llama-2
+kubectl port-forward svc/llama2-service 8265:8265 -n llama2
 
 # Open the link in the browser
 http://localhost:8265/
@@ -206,7 +206,7 @@ Once you see the status of the model deployment is in `running` state then you c
 
 You can use the following URL with a query added at the end of the URL.
 
-    http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the diffrences
+    http://\<NLB_DNS_NAME\>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
 
 You will see an output like this in your browser:
 
@@ -223,11 +223,11 @@ The Gradio app interacts with the locally exposed service created solely for the
 
 :::
 
-### Execute Port Forward to the Llama-2 Ray Service
+### Execute Port Forward to the llama2 Ray Service
 First, execute a port forward to the Llama-2 Ray Service using kubectl:
 
 ```bash
-kubectl port-forward svc/Llama-2-service 8000:8000 -n Llama-2
+kubectl port-forward svc/llama2-service 8000:8000 -n llama2
 ```
 
 ### Deploy Gradio WebUI Locally
@@ -292,8 +292,8 @@ Finally, we'll provide instructions for cleaning up and deprovisioning the resou
 **Step2:** Delete Ray Cluster
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/ray-serve/Llama-2-inf2
-kubectl delete -f ray-service-Llama-2.yaml
+cd ai-ml/trainium-inferentia/examples/ray-serve/llama2-inf2
+kubectl delete -f ray-service-llama2.yaml
 ```
 
 **Step3:** Cleanup the EKS Cluster
@@ -301,6 +301,6 @@ This script will cleanup the environment using `-target` option to ensure all th
 
 ```bash
 export AWS_DEAFULT_REGION="DEPLOYED_EKS_CLUSTER_REGION>"
-cd data-on-eks/ai-ml/trainium/ && chmod +x cleanup.sh
+cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x cleanup.sh
 ./cleanup.sh
 ```
