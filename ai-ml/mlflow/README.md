@@ -1,6 +1,6 @@
 # MLflow on EKS
 
-Docs comming soon ...
+Docs coming soon ...
 
 ## Requirements
 

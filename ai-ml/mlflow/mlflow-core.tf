@@ -199,9 +199,9 @@ module "mlflow_irsa" {
   tags = local.tags
 }
 
-#---------------------------------------------------------------
-# IAM policy for MLflow for accesing S3 artifacts and RDS Postgres backend
-#---------------------------------------------------------------
+#--------------------------------------------------------------------------
+# IAM policy for MLflow for accessing S3 artifacts and RDS Postgres backend
+#--------------------------------------------------------------------------
 resource "aws_iam_policy" "mlflow" {
   count = var.enable_mlflow_tracking ? 1 : 0
 

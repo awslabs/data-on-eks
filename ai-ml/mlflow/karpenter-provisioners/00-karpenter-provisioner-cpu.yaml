@@ -4,7 +4,7 @@ kind: Provisioner
 metadata:
   name: default
 spec:
-  # Wich AWS Node Template to pick
+  # Which AWS Node Template to pick
   providerRef:
     name: default
 
