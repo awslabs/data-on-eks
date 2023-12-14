@@ -1,4 +1,4 @@
-# Tensorboard container for use in the EKS/Trn1 BERT pretraining tutorial
+# Tensorboard container for use in the EKS/Trn1 Llama2 pretraining tutorial
 FROM public.ecr.aws/lts/ubuntu:22.04_stable
 ARG DEBIAN_FRONTEND=noninteractive
 
