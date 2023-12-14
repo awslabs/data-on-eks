@@ -53,4 +53,25 @@ else
     echo "Docker is already installed."
 fi
 
+# Check for Terraform
+if ! command -v terraform &> /dev/null; then
+    echo "Terraform is not installed. Installing..."
+    sudo yum install -y yum-utils
+    sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+    sudo yum -y install terraform
+else
+    echo "Terraform is already installed."
+fi
+terraform -help
+
+# Check for Helm
+if ! command -v helm &> /dev/null; then
+    echo "Helm is not installed. Installing..."
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    chmod 700 get_helm.sh
+    ./get_helm.sh
+else
+    echo "Helm is already installed."
+fi
+
 echo "Installation check complete."
