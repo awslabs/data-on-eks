@@ -16,7 +16,7 @@ let's navigate to one example folder under spark-k8s-operator and run the shell 
 ```bash
 cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
 
-# replace <S3_BUCKET> with your S3 bucket and <REGION> with your region, then run
+# replace \<S3_BUCKET\> with your S3 bucket and \<REGION\> with your region, then run
 ./taxi-trip-execute.sh
 ```
 
@@ -30,7 +30,7 @@ When you submit a Spark application, Spark context is created which ideally give
 
 When your application is done with the processing, Spark context will be terminated so your Web UI as well. and if you wanted to see the monitoring for already finished application, we cannot do it.
 
-To try Spark web UI, let's update <S3_BUCKET> with your bucket name and <JOB_NAME> with "nvme-taxi-trip" in nvme-ephemeral-storage.yaml
+To try Spark web UI, let's update \<S3_BUCKET\> with your bucket name and \<JOB_NAME\> with "nvme-taxi-trip" in nvme-ephemeral-storage.yaml
 
 ```bash
   kubectl apply -f nvme-ephemeral-storage.yaml
@@ -51,11 +51,13 @@ As mentioned above, spark web UI will be terminated once the spark job is done. 
 
 In this example, we installed Spark history Server to read logs from S3 bucket. In your spark application yaml file, make sure you have the following setting:
 
+```yaml
     sparkConf:
         "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.InstanceProfileCredentialsProvider"
         "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
         "spark.eventLog.enabled": "true"
         "spark.eventLog.dir": "s3a://<your bucket>/logs/"
+```
 
 Run port forward command to expose spark-history-server service.
 ```bash

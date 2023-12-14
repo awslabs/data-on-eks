@@ -185,7 +185,7 @@ llama2-ingress   nginx   *       k8s-ingressn-ingressn-randomid-randomid.elb.us-
 
 Now, you can access the Ray Dashboard from the Load balancer URL below.
 
-    http://<NLB_DNS_NAME>/dashboard/#/serve
+    http://\<NLB_DNS_NAME\>/dashboard/#/serve
 
 If you don't have access to a public Load Balancer, you can use port-forwarding and browse the Ray Dashboard using localhost with the following command:
 
@@ -206,7 +206,7 @@ Once you see the status of the model deployment is in `running` state then you c
 
 You can use the following URL with a query added at the end of the URL.
 
-    http://<NLB_DNS_NAME>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
+    http://\<NLB_DNS_NAME\>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
 
 You will see an output like this in your browser:
 
