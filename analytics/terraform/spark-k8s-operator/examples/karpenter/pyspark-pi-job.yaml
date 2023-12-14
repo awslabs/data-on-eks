@@ -11,7 +11,7 @@ metadata:
     app: "pyspark-pi"
     applicationId: "pyspark-pi-karpenter"
     # Assign the job to a Yunikorn Queue via label.
-    queue: root.test  
+    queue: root.test
 spec:
   type: Python
   pythonVersion: "3"

@@ -108,7 +108,7 @@ spec:
       version: 3.2.1
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
-    # ephemeral-storage requests and limits can be used to manage the storage utilization          
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
     tolerations:
