@@ -24,10 +24,11 @@ install_package() {
 # Install Docker
 install_docker
 
-# Install Git, Python3, and unzip (required for AWS CLI v2 installation)
+# Install Git, Python3, unzip, and pip
 install_package git
 install_package python3
 install_package unzip
+install_package python3-pip
 
 # Check for Kubectl
 if ! command -v kubectl &> /dev/null; then
