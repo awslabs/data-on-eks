@@ -80,7 +80,7 @@ Ensure that you have installed the following tools on your EC2 or Cloud9 instanc
 To install all the pre-reqs on EC2, you can run this [script](https://github.com/sanjeevrg89/data-on-eks/blob/main/ai-ml/trainium-inferentia/examples/llama2/install-pre-requsites-for-ec2.sh) which is compatible with Amazon Linux 2023.
 
 
-**Step1:** Clone the Data on EKS repository
+Clone the Data on EKS repository
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
@@ -139,7 +139,7 @@ When prompted for a region, enter the region in which you launched your EKS clus
 
 Note: The image building and pushing to ECR will take ~10 minutes
 
-Step 5: In this step we need access to the shared FSx storage. To copy files to this storage, we’ll first launch and connect to a CLI pod running the neuronx-nemo-megatron docker image that you created above. 
+In this step we need access to the shared FSx storage. To copy files to this storage, we’ll first launch and connect to a CLI pod running the neuronx-nemo-megatron docker image that you created above. 
 
 Run the following script to launch the CLI pod:
 
@@ -232,14 +232,16 @@ After changes:
 : ${DATASET_PATH=/shared/data/redpajama_sample_text_document}
 ```
 
-You can save your changes in nano by pressing `CTRL-X`, then 'y', then 'ENTER'.
+You can save your changes in nano by pressing `CTRL-X`, then `y`, then `ENTER`.
 
 When you are finished, type `exit` or press `CTRL-d` to exit the CLI pod.
 
 
-Step 11: When you are finished with the CLI pod you can remove it by running:
+When you are finished with the CLI pod you can remove it by running:
 
+```bash
 kubectl delete pod cli-cmd-shell
+```
 
 We are finally ready to launch our pre-compilation and training jobs!
 
@@ -299,6 +301,6 @@ Create a Tensorboard deployment to visualize these logs by running the following
 ./5-deploy-tensorboard.sh
 ```
 
- Tensorboard logs are also available in the /shared/nemo_experiments/ directory on the FSx for Lustre filesystem.  Once the deployment is ready the script will output a password-protected URL for your new Tensorboard deployment. 
+Tensorboard logs are also available in the /shared/nemo_experiments/ directory on the FSx for Lustre filesystem.  Once the deployment is ready the script will output a password-protected URL for your new Tensorboard deployment. 
 
 Launch the URL to view your training progress.
