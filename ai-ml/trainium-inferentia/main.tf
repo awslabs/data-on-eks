@@ -63,7 +63,7 @@ data "external" "eks_azs" {
 }
 
 locals {
-  name   = var.name
+  name   = "${var.name}-${random_string.this.result}"
   region = var.region
   azs    = [data.external.eks_azs.result["EKSAZ1"], data.external.eks_azs.result["EKSAZ2"]]
   tags = {

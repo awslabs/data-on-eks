@@ -176,9 +176,9 @@ module "eks" {
         echo "Bootstrap complete. Ready to Go!"
       EOT
 
-      min_size     = 2
-      max_size     = 2
-      desired_size = 2
+      min_size     = 4
+      max_size     = 4
+      desired_size = 4
 
       # EFA Network Interfaces configuration for Trn1.32xlarge
       network_interfaces = [
