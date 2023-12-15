@@ -123,6 +123,8 @@ kubectl get nodes # Output shows the EKS Managed Node group nodes
 ## Distributed training
 Once the EKS Cluster is deployed, you can proceed with the next steps of building neuronx-nemo-megatron container image and pushing the image to ECR.
 
+### Build the neuronx-nemo-megatron container image
+
 Navigate to examples/llama2 directory
 
 ```bash
@@ -138,6 +140,8 @@ When prompted for a region, enter the region in which you launched your EKS clus
 ```
 
 Note: The image building and pushing to ECR will take ~10 minutes
+
+### Download the Llama tokenizer and RedPajama dataset
 
 In this step we need access to the shared FSx storage. To copy files to this storage, we’ll first launch and connect to a CLI pod running the neuronx-nemo-megatron docker image that you created above. 
 
@@ -164,9 +168,9 @@ From within the CLI pod, we’ll download the Llama tokenizer files. These files
 ```bash
 huggingface-cli login
 ```
-Paste the access token and hit enter.
+When prompted for your token, paste-in the access token and hit `ENTER`.
 
-Next, you download the llama7-7b tokenizer files to /shared/llama7b_tokenizer by running the python code
+Next, you download the llama7-7b tokenizer files to /shared/llama7b_tokenizer by running the following python code:
 
 ```bash
 python3 <<EOF
@@ -180,10 +184,13 @@ Download and tokenize the RedPajama-Data-1T-Sample dataset (a small subset of th
 
 While still connected to the CLI pod, use git to download the dataset
 
-```cd /shared
+```
+cd /shared
 git clone https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T-Sample \
     data/RedPajama-Data-1T-Sample
 ```
+
+### Tokenize the dataset
 
 Tokenize the dataset using the preprocessing script included with neuronx-nemo-megatron. This preprocessing step will take ~60 minutes to run on a trn1.32xl instance.
 
@@ -207,6 +214,8 @@ python3 neuronx-nemo-megatron/nemo/scripts/nlp_language_modeling/preprocess_data
     --need-pad-id \
     --workers=32
 ```
+
+### Modify dataset and tokenizer paths in the training script
 
 Note: When we later launch our training jobs in EKS, the training pods will run the training script from within neuronx-nemo-megatron/nemo/examples directory on FSx. This is convenient, because it will let you modify your training script directly on FSx without requiring that you rebuild the neuronx-nemo-megatron container for every change.
 
@@ -236,8 +245,7 @@ You can save your changes in nano by pressing `CTRL-X`, then `y`, then `ENTER`.
 
 When you are finished, type `exit` or press `CTRL-d` to exit the CLI pod.
 
-
-When you are finished with the CLI pod you can remove it by running:
+If you no longer need the CLI pod you can remove it by running:
 
 ```bash
 kubectl delete pod cli-cmd-shell
@@ -245,13 +253,17 @@ kubectl delete pod cli-cmd-shell
 
 We are finally ready to launch our pre-compilation and training jobs!
 
-Before we can run the training job, we first need to run a pre-compilation job in order to prepare the model artifacts. This step extracts and compiles the underlying compute graphs for the Llama-2-7b model and generates Neuron executable files (NEFFs) that can run on the Trainium accelerators. These NEFFs are stored in a persistent Neuron cache on FSx so that the training job can later access them.
-
-Before you run the compilation job make sure MPI operator is functional by running this command:
+First, let's check to make sure the MPI operator is functional by running this command:
 
 ```bash
 kubectl get all -n mpi-operator
 ```
+
+If the MPI Operator is not installed, please follow the [MPI Operator installation instructions](https://github.com/kubeflow/mpi-operator#installation) before proceeding.
+
+Before we can run the training job, we first run a pre-compilation job in order to prepare the model artifacts. This step extracts and compiles the underlying compute graphs for the Llama-2-7b model and generates Neuron executable files (NEFFs) that can run on the Trainium accelerators. These NEFFs are stored in a persistent Neuron cache on FSx so that the training job can later access them.
+
+### Run pre-compilation job
 
 Run the pre-compilation script
 
@@ -265,9 +277,13 @@ Periodically run `kubectl get pods | grep compile` and wait until you see that t
 
 When pre-compilation is complete, you can then launch the pre-training job on 4 trn1.32xl nodes by running the following script:
 
+### Run training job
+
 ```bash
 ./4-llama2-neuronx-mpi-train.sh
 ```
+
+### View training job output
 
 To monitor the training job output - first, find the name of the launcher pod associated with your training job:
 
@@ -281,19 +297,23 @@ Once you have identified the name of the launcher pod and see that it is ‘Runn
 kubectl get pod test-mpi-train-launcher-xxx -o json | jq -r ".metadata.uid"
 ```
 
-Use the UID to determine the log path so you can tail the training logs. Replace UID with the above value.
+Use the UID to determine the log path so you can tail the training logs. Replace `UID` in the following command with the above value.
 
 ```bash
-kubectl exec -it test-mpi-train-worker-0 -- tail -f /shared/nemo_experiments/<UID>/0/log
+kubectl exec -it test-mpi-train-worker-0 -- tail -f /shared/nemo_experiments/UID/0/log
 ```
 
-When you are done viewing the logs, you can press CTRL-C to quit the tail command.
+When you are done viewing the logs, you can press `CTRL-C` to quit the tail command.
+
+### Monitor Trainium accelerator utilization
 
 To monitor Trainium accelerator utilization you can use the neuron-top command. Neuron-top is a console-based tool for monitoring Neuron and system-related performance metrics on trn1/inf2/inf1 instances. You can launch neuron-top on one of the worker pods as follows:
 
 ```bash
 kubectl exec -it test-mpi-train-worker-0 -- /bin/bash -l neuron-top
 ```
+
+### View training job metrics in Tensorboard
 
 Create a Tensorboard deployment to visualize these logs by running the following command:
 
