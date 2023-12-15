@@ -141,7 +141,7 @@ When prompted for a region, enter the region in which you launched your EKS clus
 
 Note: The image building and pushing to ECR will take ~10 minutes
 
-### Download the Llama tokenizer and RedPajama dataset
+### Launch and connect to a CLI pod
 
 In this step we need access to the shared FSx storage. To copy files to this storage, we’ll first launch and connect to a CLI pod running the neuronx-nemo-megatron docker image that you created above. 
 
@@ -163,6 +163,8 @@ Once the CLI pod is ‘Running’, connect to it using the following command:
 kubectl exec -it cli-cmd-shell -- /bin/bash
 ```
 
+### Download the Llama tokenizer and Redpajama dataset to FSx
+
 From within the CLI pod, we’ll download the Llama tokenizer files. These files are protected by Meta's Llama license, so you will need to run the `huggingface-cli login` command to login to Hugging Face using your access token. The access token is found under Settings → Access Tokens on the Hugging Face website.
 
 ```bash
@@ -180,7 +182,7 @@ tok.save_pretrained("/shared/llama7b_tokenizer")
 EOF
 ```
 
-Download and tokenize the RedPajama-Data-1T-Sample dataset (a small subset of the full RedPajama dataset that contains 1B tokens).
+Next, download the RedPajama-Data-1T-Sample dataset (a small subset of the full RedPajama dataset that contains 1B tokens).
 
 While still connected to the CLI pod, use git to download the dataset
 
@@ -313,14 +315,30 @@ To monitor Trainium accelerator utilization you can use the neuron-top command. 
 kubectl exec -it test-mpi-train-worker-0 -- /bin/bash -l neuron-top
 ```
 
-### View training job metrics in Tensorboard
+### View training job metrics in TensorBoard
 
-Create a Tensorboard deployment to visualize these logs by running the following command:
+[TensorBoard](https://www.tensorflow.org/tensorboard) is a web-based visualization tool that is commonly used to monitor and explore training jobs. It allows you to quickly monitor training metrics, and you can also easily compare metrics across different training runs.
+
+TensorBoard logs available in the /shared/nemo_experiments/ directory on the FSx for Lustre filesystem.
+
+Run the following script to create a TensorBoard deployment so you can visualize your Llama-2 training job progress:
 
 ```bash
 ./5-deploy-tensorboard.sh
 ```
 
-Tensorboard logs are also available in the /shared/nemo_experiments/ directory on the FSx for Lustre filesystem.  Once the deployment is ready the script will output a password-protected URL for your new Tensorboard deployment. 
+Once the deployment is ready the script will output a password-protected URL for your new TensorBoard deployment. 
 
 Launch the URL to view your training progress.
+
+When you have opened the TensorBoard interface, choose your training job UID from the left-hand menu, and then explore the various training metrics (ex: reduced-train-loss, throughput, and grad-norm) from the main application window.
+
+### Stopping the training job
+
+To stop your training job and remove the launcher/worker pods, run the following command:
+
+```bash
+kubectl delete mpijob test-mpi-train
+```
+
+You can then run `kubectl get pods` to confirm that the launcher/worker pods have been removed.
