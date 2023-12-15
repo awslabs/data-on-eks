@@ -1,5 +1,5 @@
 ---
-title: Llama2 on Trainium
+title: Llama-2 on Trainium
 sidebar_position: 1
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
@@ -19,14 +19,15 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 :::
 
 
-# Training Llama2 Model using Trainium, Neuronx-Nemo-Megatron and MPI operator
-Welcome to the comprehensive guide on training the [Meta Llama-2-7b ](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using AWS Trainium, Neuronx-Nemo-megratron and MPI Operator. (https://github.com/kubeflow/mpi-operator).
+# Training Llama-2 Model using Trainium, Neuronx-Nemo-Megatron and MPI operator
+Welcome to the comprehensive guide on training the [Meta Llama-2-7b ](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using AWS Trainium, Neuronx-Nemo-Megatron and the MPI Operator. (https://github.com/kubeflow/mpi-operator).
 
-In this tutorial, you will learn how to harness the power of Llama-2, but also gain insights into the intricacies of deploying large language models (LLMs) efficiently, particularly on [trn1/inf2](https://aws.amazon.com/machine-learning/neuron/) (powered by AWS Trainium and Inferentia) instances, such as `inf2.24xlarge` and `inf2.48xlarge`,
-which are optimized for deploying and scaling large language models.
+In this tutorial you will learn how to run multi-node training jobs using [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/) accelerators in Amazon EKS. Specifically, you will pretrain Llama-2-7b on 4 AWS EC2 trn1.32xlarge instances using a [subset of the RedPajama dataset](https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T-Sample).
 
 ### What is Llama-2?
-Llama-2 is a pretrained large language model (LLM) trained on 2 trillion tokens of text and code. It is one of the largest and most powerful LLMs available today. Llama-2 can be used for a variety of tasks, including natural language processing, text generation, and translation.
+Llama-2 is a large language model (LLM) trained on 2 trillion tokens of text and code. It is one of the largest and most powerful LLMs available today. Llama-2 can be used for a variety of tasks, including natural language processing, text generation, and translation.
+
+Although Llama-2 is available as a pretrained model, in this tutorial we will show how to pretrain the model from scratch.
 
 #### Llama-2-chat
 Llama-2 is a remarkable language model that has undergone a rigorous training process. It starts with pretraining using publicly available online data.
@@ -40,28 +41,25 @@ Llama-2 is available in three different model sizes:
 ### **Which Llama-2 model size should I use?**
 The best Llama-2 model size for you will depend on your specific needs. and it may not always be the largest model for achieving the highest performance. It's advisable to evaluate your needs and consider factors such as computational resources, response time, and cost-efficiency when selecting the appropriate Llama-2 model size. The decision should be based on a comprehensive assessment of your application's goals and constraints.
 
-
-
 **Performance Boost**
 While Llama-2 can achieve high-performance inference on GPUs, Neuron accelerators take performance to the next level. Neuron accelerators are purpose-built for machine learning workloads, providing hardware acceleration that significantly enhances Llama-2's inference speeds. This translates to faster response times and improved user experiences when deploying Llama-2 on Trn1/Inf2 instances.
-
-
 
 ## Solution Architecture
 In this section, we will delve into the architecture of our solution.
 
-**MPI Worker Pod:** These are Kubernetes pods configured for running MPI (Message Passing Interface) tasks. MPI is a standard for distributed memory parallel computing. Each pod is equipped with: 8 EFAs (Elastic Fabric Adapter) on Trn1.32xl Instances. EFAs are network devices that support high-performance computing applications running on Amazon EC2 instances.
-Trn1.32xl Instance: This is an EC2 instance type that is part of the EC2 Trn1 (Trainium) instance family, optimized for machine learning training workloads and has 16 EFAs
+**Trn1.32xl Instance:** This is an EC2 accelerated instance type that is part of the EC2 Trn1 (Trainium) instance family, optimized for machine learning training workloads
 
-**MPI Launcher:** A component that is likely responsible for initiating and managing the MPI jobs within the cluster.
+**MPI Worker Pods:** These are Kubernetes pods configured for running MPI (Message Passing Interface) tasks. MPI is a standard for distributed memory parallel computing. Each worker pod runs on a trn1.32xlarge instance which is equipped with 16 Trainium accelerators and 8 Elastic Fabric Adapters (EFAs). EFAs are network devices that support high-performance computing applications running on Amazon EC2 instances.
+
+**MPI Launcher Pod:** This pod is responsible for coordinating the MPI job across the worker pods. When a training job is first submitted to the cluster, an MPI launcher pod is created which waits for the workers to come online, connects to each worker, and invokes the training script.
 
 **MPI Operator:** An operator in Kubernetes is a method of packaging, deploying, and managing a Kubernetes application. The MPI Operator automates the deployment and management of MPI workloads.
 
-![Llama-2-inf2](img/llama2-trainium.png)
+![Llama-2-trn1](img/llama2-trainium.png)
 
 ## Deploying the Solution
 
-**Steps to train Llama2 using AWS Trainium on Amazon EKS**
+**Steps to train Llama-2 using AWS Trainium on Amazon EKS**
 
 Note: This post makes use of Meta’s Llama tokenizer, which is protected by a user license that must be accepted before the tokenizer files can be downloaded. Please ensure that you have access to the Llama files by requesting access here.
 
@@ -224,7 +222,7 @@ kubectl delete pod cli-cmd-shell
 
 We are finally ready to launch our pre-compilation and training jobs!
 
-Before we can run the training job, we first need to run a pre-compilation job in order to prepare the model artifacts. This step extracts and compiles the underlying compute graphs for the llama2-7B model and generates Neuron executable files (NEFFs) that can run on the Trainium accelerators. These NEFFs are stored in a persistent Neuron cache on FSx so that the training job can later access them.
+Before we can run the training job, we first need to run a pre-compilation job in order to prepare the model artifacts. This step extracts and compiles the underlying compute graphs for the Llama-2-7b model and generates Neuron executable files (NEFFs) that can run on the Trainium accelerators. These NEFFs are stored in a persistent Neuron cache on FSx so that the training job can later access them.
 
 Before you run the compilation job make sure MPI operator is functional by running this command:
 
