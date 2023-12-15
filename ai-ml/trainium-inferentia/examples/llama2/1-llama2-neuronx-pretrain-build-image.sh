@@ -39,7 +39,6 @@ if aws ecr describe-repositories --repository-names "$ECR_REPO_NAME" --region "$
   # Get the ECR_REPO_URI for the existing repository
   ECR_REPO_URI=$(aws ecr describe-repositories --repository-name "$ECR_REPO_NAME" --query 'repositories[0].repositoryUri' --region "$region" --output text)
   echo "Repository URL: $ECR_REPO_URI"
-  echo $ECR_REPO_URI > .ecr_repo_uri
 else
   # Create the ECR repository
   aws ecr create-repository --repository-name "$ECR_REPO_NAME" --region "$region"
@@ -49,6 +48,9 @@ else
   echo "ECR repository '$ECR_REPO_NAME' created successfully."
   echo "Repository URL: $ECR_REPO_URI"
 fi
+
+# Store ECR REPO URI for later use
+echo $ECR_REPO_URI > .ecr_repo_uri
 
 # Login to ECR
 echo -e "\nLogging in to ECR"
