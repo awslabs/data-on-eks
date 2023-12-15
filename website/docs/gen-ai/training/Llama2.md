@@ -20,7 +20,7 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 
 
 # Training a Llama-2 Model using Trainium, Neuronx-Nemo-Megatron and MPI operator
-Welcome to the comprehensive guide on training the [Meta Llama-2-7b ](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using AWS Trainium, Neuronx-Nemo-Megatron and the MPI Operator. (https://github.com/kubeflow/mpi-operator).
+Welcome to the comprehensive guide on training the [Meta Llama-2-7b ](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using AWS Trainium, Neuronx-Nemo-Megatron, and the MPI Operator.
 
 In this tutorial you will learn how to run multi-node training jobs using [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/) accelerators in Amazon EKS. Specifically, you will pretrain Llama-2-7b on 4 AWS EC2 trn1.32xlarge instances using a [subset of the RedPajama dataset](https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T-Sample).
 
