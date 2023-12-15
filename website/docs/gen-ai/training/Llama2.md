@@ -19,7 +19,7 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 :::
 
 
-# Training Llama-2 Model using Trainium, Neuronx-Nemo-Megatron and MPI operator
+# Training a Llama-2 Model using Trainium, Neuronx-Nemo-Megatron and MPI operator
 Welcome to the comprehensive guide on training the [Meta Llama-2-7b ](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using AWS Trainium, Neuronx-Nemo-Megatron and the MPI Operator. (https://github.com/kubeflow/mpi-operator).
 
 In this tutorial you will learn how to run multi-node training jobs using [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/) accelerators in Amazon EKS. Specifically, you will pretrain Llama-2-7b on 4 AWS EC2 trn1.32xlarge instances using a [subset of the RedPajama dataset](https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T-Sample).
@@ -210,20 +210,32 @@ python3 neuronx-nemo-megatron/nemo/scripts/nlp_language_modeling/preprocess_data
 
 Note: When we later launch our training jobs in EKS, the training pods will run the training script from within neuronx-nemo-megatron/nemo/examples directory on FSx. This is convenient, because it will let you modify your training script directly on FSx without requiring that you rebuild the neuronx-nemo-megatron container for every change.
 
-Modify the test_llama script /shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh to update the following two lines. These lines tell the training pod workers where to find the Llama tokenizer and the dataset on the FSx filesystem. 
+Modify the test_llama.sh script `/shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh` to update the following two lines. These lines tell the training pod workers where to find the Llama tokenizer and the dataset on the FSx filesystem. 
 
 You can use any common text editor such as nano or vim to make these changes. 
 
 Run:
+```bash
 nano /shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh
+```
 
+Before changes:
+
+```
+: ${TOKENIZER_PATH=$HOME/llamav2_weights/7b-hf}
+: ${DATASET_PATH=$HOME/examples_datasets/llama_7b/book.jsonl-processed_text_document}
+```
+
+After changes:
+```
 : ${TOKENIZER_PATH=/shared/llama7b_tokenizer}
 : ${DATASET_PATH=/shared/data/redpajama_sample_text_document}
+```
 
-Before:
+You can save your changes in nano by pressing `CTRL-X`, then 'y', then 'ENTER'.
 
-After:
-Type exit or enter ctrl+x
+When you are finished, type `exit` or press `CTRL-d` to exit the CLI pod.
+
 
 Step 11: When you are finished with the CLI pod you can remove it by running:
 
