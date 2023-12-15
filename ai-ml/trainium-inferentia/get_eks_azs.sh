@@ -3,14 +3,12 @@
 # Hardcoded AWS region
 REGION_CODE="us-west-2"
 
-echo "Using AWS region: $REGION_CODE"
-
 # Determine appropriate EKS AZs based on the hardcoded region
 if [[ $REGION_CODE == "us-west-2" ]]; then
     AZ1="usw2-az4"
     AZ2="usw2-az3"
 else
-    echo "Unsupported region: $REGION_CODE"
+    echo "{\"error\": \"Unsupported region: $REGION_CODE\"}"
     exit 1
 fi
 
@@ -27,10 +25,11 @@ EKSAZ2=$(aws ec2 describe-availability-zones \
     --query "AvailabilityZones[].ZoneName" \
     --output text)
 
-# Example of correctly formatted JSON output
-if [ ! -z "$EKSAZ1" ] && [ ! -z "$EKSAZ2" ]; then
+# Check if EKSAZ1 and EKSAZ2 are not empty and output as JSON
+if [ -n "$EKSAZ1" ] && [ -n "$EKSAZ2" ]; then
     echo "{\"EKSAZ1\": \"$EKSAZ1\", \"EKSAZ2\": \"$EKSAZ2\"}"
 else
-    # Even errors must be output as JSON
+    # Output errors as JSON
     echo "{\"error\": \"Unable to determine EKS availability zones\"}"
+    exit 1
 fi
