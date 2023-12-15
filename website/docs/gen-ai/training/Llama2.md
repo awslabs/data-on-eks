@@ -55,6 +55,8 @@ In this section, we will delve into the architecture of our solution.
 
 **MPI Operator:** An operator in Kubernetes is a method of packaging, deploying, and managing a Kubernetes application. The MPI Operator automates the deployment and management of MPI workloads.
 
+**FSx for Lustre:** A shared, high-performance filesystem which is well suited for workloads such as machine learning, high performance computing (HPC), video processing, and financial modeling. The FSx for Lustre filesystem will be shared across worker pods in the training job, providing a central repository to access the training data and to store model artifacts and logs.
+
 ![Llama-2-trn1](img/llama2-trainium.png)
 
 ## Deploying the Solution
@@ -65,17 +67,17 @@ Note: This post makes use of Meta’s Llama tokenizer, which is protected by a u
 
 <CollapsibleContent header={<h2><span>Prerequisites</span></h2>}>
 Before we begin, ensure you have all the prerequisites in place to make the deployment process smooth and hassle-free.
-Ensure that you have installed the following tools on your macEC2 or Cloud9 instance.
+Ensure that you have installed the following tools on your EC2 or Cloud9 instance.
 
 * [EC2 Instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html) or [Cloud9 instance](https://docs.aws.amazon.com/cloud9/latest/user-guide/tutorial-create-environment.html) → for both, please ensure you have 100GB+ of storage
-* [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+* [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 * [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 * Git(Only for EC2 instance); Cloud9 comes with git installed by default
 * Docker
 * [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 * Python, pip, jq, unzip
 
-To install all the pre-reqs on EC2, you can run this [script](https://github.com/sanjeevrg89/data-on-eks/blob/main/ai-ml/trainium-inferentia/examples/llama2/install-pre-requsites-for-ec2.sh)
+To install all the pre-reqs on EC2, you can run this [script](https://github.com/sanjeevrg89/data-on-eks/blob/main/ai-ml/trainium-inferentia/examples/llama2/install-pre-requsites-for-ec2.sh) which is compatible with Amazon Linux 2023.
 
 
 **Step1:** Clone the Data on EKS repository
@@ -84,9 +86,9 @@ To install all the pre-reqs on EC2, you can run this [script](https://github.com
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate to trainium-inferentia directory.
+Navigate to the trainium-inferentia directory.
 
-``` bash
+```bash
 cd data-on-eks/ai-ml/trainium-inferentia
 ```
 
@@ -119,29 +121,37 @@ kubectl get nodes # Output shows the EKS Managed Node group nodes
 </CollapsibleContent>
 
 ## Distributed training
-Once the EKS Cluster is deployed, you can proceed with the next steps of building neuronx-nemo-megatron container image and push the image to ECR.
+Once the EKS Cluster is deployed, you can proceed with the next steps of building neuronx-nemo-megatron container image and pushing the image to ECR.
 
 Navigate to examples/llama2 directory
 
+```bash
 cd examples/llama2/
+```
 
-Run the 1-llama2-neuronx-pretrain-build-image.sh script to build the neuronx-nemo-megatron container image and push the image into ECR. 
+Run the `1-llama2-neuronx-pretrain-build-image.sh` script to build the neuronx-nemo-megatron container image and push the image into ECR. 
 
 When prompted for a region, enter the region in which you launched your EKS cluster, above.
 
+```bash
 ./1-llama2-neuronx-pretrain-build-image.sh
+```
 
-Note: The image building and pushing to ECR will approximately take ~10 minutes
+Note: The image building and pushing to ECR will take ~10 minutes
+
 Step 5: In this step we need access to the shared FSx storage. To copy files to this storage, we’ll first launch and connect to a CLI pod running the neuronx-nemo-megatron docker image that you created above. 
 
 Run the following script to launch the CLI pod:
 
+```bash
 ./2-launch-cmd-shell-pod.sh
+```
 
 Next, periodically run the following command until you see the CLI pod go into ‘Running’ state:
 
+```bash
 kubectl get pod
-
+```
 
 Once the CLI pod is ‘Running’, connect to it using the following command:
 
@@ -149,15 +159,14 @@ Once the CLI pod is ‘Running’, connect to it using the following command:
 kubectl exec -it cli-cmd-shell -- /bin/bash
 ```
 
-From the CLI pod, we’ll download the Llama tokenizer files: First, run the huggingface-cli login command to login to Hugging Face using your access token. The access token is found under Settings → Access Tokens on the Hugging Face website.
+From within the CLI pod, we’ll download the Llama tokenizer files. These files are protected by Meta's Llama license, so you will need to run the `huggingface-cli login` command to login to Hugging Face using your access token. The access token is found under Settings → Access Tokens on the Hugging Face website.
 
-
-```
+```bash
 huggingface-cli login
 ```
 Paste the access token and hit enter.
 
-Download the llama7-7b tokenizer files to /shared/llama7b_tokenizer by running the python code
+Next, you download the llama7-7b tokenizer files to /shared/llama7b_tokenizer by running the python code
 
 ```bash
 python3 <<EOF
@@ -178,7 +187,7 @@ git clone https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T-Sam
 
 Tokenize the dataset using the preprocessing script included with neuronx-nemo-megatron. This preprocessing step will take ~60 minutes to run on a trn1.32xl instance.
 
-```
+```bash
 cd /shared
 # Clone the neuronx-nemo-megatron repo, which includes the required scripts
 git clone https://github.com/aws-neuron/neuronx-nemo-megatron.git
@@ -226,44 +235,58 @@ Before we can run the training job, we first need to run a pre-compilation job i
 
 Before you run the compilation job make sure MPI operator is functional by running this command:
 
+```bash
 kubectl get all -n mpi-operator
+```
 
 Run the pre-compilation script
 
+```bash
 ./3-llama2-neuronx-mpi-compile.sh
+```
 
 Pre-compilation will take ~10 minutes when using 4 trn1.32xlarge nodes. 
 
-Periodically run kubectl get pods | grep compile and wait until you see that the compile job shows ‘Completed’.
+Periodically run `kubectl get pods | grep compile` and wait until you see that the compile job shows ‘Completed’.
 
 When pre-compilation is complete, you can then launch the pre-training job on 4 trn1.32xl nodes by running the following script:
 
+```bash
 ./4-llama2-neuronx-mpi-train.sh
+```
 
 To monitor the training job output - first, find the name of the launcher pod associated with your training job:
 
+```bash
 kubectl get pods | grep launcher
-
-
+```
 
 Once you have identified the name of the launcher pod and see that it is ‘Running’, the next step is to determine its UID. Replace test-mpi-train-launcher-xxx with your launcher pod name in the following command and it will output the UID:
 
-kubectl get pod test-mpi-train-launcher-g52f4 -o json | jq -r ".metadata.uid"
+```bash
+kubectl get pod test-mpi-train-launcher-xxx -o json | jq -r ".metadata.uid"
+```
 
 Use the UID to determine the log path so you can tail the training logs. Replace UID with the above value.
 
+```bash
 kubectl exec -it test-mpi-train-worker-0 -- tail -f /shared/nemo_experiments/<UID>/0/log
+```
 
- When you are done viewing the logs, you can press CTRL-C to quit the tail command.
+When you are done viewing the logs, you can press CTRL-C to quit the tail command.
 
 To monitor Trainium accelerator utilization you can use the neuron-top command. Neuron-top is a console-based tool for monitoring Neuron and system-related performance metrics on trn1/inf2/inf1 instances. You can launch neuron-top on one of the worker pods as follows:
 
+```bash
 kubectl exec -it test-mpi-train-worker-0 -- /bin/bash -l neuron-top
+```
 
 Create a Tensorboard deployment to visualize these logs by running the following command:
 
+```bash
 ./5-deploy-tensorboard.sh
+```
 
  Tensorboard logs are also available in the /shared/nemo_experiments/ directory on the FSx for Lustre filesystem.  Once the deployment is ready the script will output a password-protected URL for your new Tensorboard deployment. 
 
-Launch the URL to view your training progress
+Launch the URL to view your training progress.
