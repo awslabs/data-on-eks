@@ -27,4 +27,10 @@ EKSAZ2=$(aws ec2 describe-availability-zones \
     --query "AvailabilityZones[].ZoneName" \
     --output text)
 
-echo "{\"EKSAZ1\": \"$EKSAZ1\", \"EKSAZ2\": \"$EKSAZ2\"}"
+# Example of correctly formatted JSON output
+if [ ! -z "$EKSAZ1" ] && [ ! -z "$EKSAZ2" ]; then
+    echo "{\"EKSAZ1\": \"$EKSAZ1\", \"EKSAZ2\": \"$EKSAZ2\"}"
+else
+    # Even errors must be output as JSON
+    echo "{\"error\": \"Unable to determine EKS availability zones\"}"
+fi
