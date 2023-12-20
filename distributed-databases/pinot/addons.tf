@@ -18,7 +18,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 # GP3 Encrypted Storage Class
 #---------------------------------------------------------------
-resource "kubernetes_annotations" "gp2_default" {
+resource "kubernetes_annotations" "disable_gp2" {
   annotations = {
     "storageclass.kubernetes.io/is-default-class" : "false"
   }
@@ -50,7 +50,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
     type      = "gp3"
   }
 
-  depends_on = [kubernetes_annotations.gp2_default]
+  depends_on = [kubernetes_annotations.disable_gp2]
 }
 
 
