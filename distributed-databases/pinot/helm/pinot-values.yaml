@@ -78,9 +78,14 @@ controller:
     requests:
       memory: "1.25Gi"
 
-  nodeSelector: {}
+  nodeSelector:
+    NodeGroupType: controller
 
-  tolerations: []
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "pinot"
+      effect: "NoSchedule"
 
   affinity: {}
 
@@ -185,11 +190,16 @@ broker:
     requests:
       memory: "1.25Gi"
 
-  nodeSelector: {}
+  nodeSelector:
+    NodeGroupType: broker
 
   affinity: {}
 
-  tolerations: []
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "pinot"
+      effect: "NoSchedule"
 
   podAnnotations:
     "prometheus.io/scrape": "true"
@@ -278,11 +288,16 @@ server:
     requests:
       memory: "1.25Gi"
 
-  nodeSelector: {}
+  nodeSelector:
+    NodeGroupType: server
 
   affinity: {}
 
-  tolerations: []
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "pinot"
+      effect: "NoSchedule"
 
   podAnnotations:
     "prometheus.io/scrape": "true"
@@ -365,11 +380,16 @@ minion:
     requests:
       memory: "1.25Gi"
 
-  nodeSelector: {}
+  nodeSelector:
+    NodeGroupType: minion
 
   affinity: {}
 
-  tolerations: []
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "pinot"
+      effect: "NoSchedule"
 
   podAnnotations: {}
 
@@ -442,11 +462,16 @@ minionStateless:
     requests:
       memory: "1.25Gi"
 
-  nodeSelector: {}
+  nodeSelector:
+    NodeGroupType: minion
 
   affinity: {}
 
-  tolerations: []
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "pinot"
+      effect: "NoSchedule"
 
   podAnnotations: {}
 
@@ -531,3 +556,5 @@ zookeeper:
   #       labelSelector:
   #         matchLabels:
   #           release: zookeeper
+  nodeSelector:
+    NodeGroupType: zookeeper

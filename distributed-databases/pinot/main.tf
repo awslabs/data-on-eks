@@ -63,14 +63,149 @@ module "eks" {
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
 
   eks_managed_node_groups = {
-    pinot_node_group = {
+
+    core_node_group = {
+      name        = "core-node-group"
+      description = "EKS Core node group for hosting system add-ons"
+      subnet_ids  = module.vpc.private_subnets
+
+      min_size     = 3
+      max_size     = 8
+      desired_size = 3
+
+      instance_types = ["m5.xlarge"]
+
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core"
+      }
+    }
+
+    # cluster configuration based on
+    # https://startree.ai/blog/capacity-planning-in-apache-pinot-part-1
+    # https://startree.ai/blog/capacity-planning-in-apache-pinot-part-2
+
+    controller_node_group = {
       instance_types = ["m5.xlarge"]
       capacity_type  = "ON_DEMAND"
       max_size       = 5
       min_size       = 3
       desired_size   = 3
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "controller"
+      }
+      taints = [
+        {
+          key    = "dedicated"
+          value  = "pinot"
+          effect = "NO_SCHEDULE"
+        }
+      ]
+    }
+
+    zookeeper_node_group = {
+      instance_types = ["m5.xlarge"]
+      capacity_type  = "ON_DEMAND"
+      max_size       = 5
+      min_size       = 3
+      desired_size   = 3
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "zookeeper"
+      }
+      taints = [
+        {
+          key    = "dedicated"
+          value  = "pinot"
+          effect = "NO_SCHEDULE"
+        }
+      ]
+    }
+
+    broker_node_group = {
+      instance_types = ["m5.xlarge"]
+      capacity_type  = "ON_DEMAND"
+      max_size       = 5
+      min_size       = 3
+      desired_size   = 3
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "broker"
+      }
+      taints = [
+        {
+          key    = "dedicated"
+          value  = "pinot"
+          effect = "NO_SCHEDULE"
+        }
+      ]
+    }
+
+    server_node_group = {
+      instance_types = ["r5.xlarge"]
+      capacity_type  = "ON_DEMAND"
+      max_size       = 9
+      min_size       = 6
+      desired_size   = 6
+
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 100
+            volume_type = "gp3"
+          }
+        }
+      }
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "server"
+      }
+      taints = [
+        {
+          key    = "dedicated"
+          value  = "pinot"
+          effect = "NO_SCHEDULE"
+        }
+      ]
+    }
+
+    minion_node_group = {
+      instance_types = ["m5.xlarge"]
+      capacity_type  = "ON_DEMAND"
+      max_size       = 3
+      min_size       = 1
+      desired_size   = 1
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "minion"
+      }
+      taints = [
+        {
+          key    = "dedicated"
+          value  = "pinot"
+          effect = "NO_SCHEDULE"
+        }
+      ]
     }
   }
-
   tags = local.tags
 }
