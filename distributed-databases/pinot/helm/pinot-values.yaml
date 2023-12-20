@@ -558,3 +558,9 @@ zookeeper:
   #           release: zookeeper
   nodeSelector:
     NodeGroupType: zookeeper
+
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "pinot"
+      effect: "NoSchedule"

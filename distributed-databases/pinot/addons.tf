@@ -53,25 +53,6 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   depends_on = [kubernetes_annotations.disable_gp2]
 }
 
-
-#---------------------------------------------------------------
-# IRSA for VPC CNI
-#---------------------------------------------------------------
-module "vpc_cni_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "vpc-cni")
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-  tags = local.tags
-}
-
 #---------------------------------------------------------------
 # EKS Blueprints Kubernetes Addons
 #---------------------------------------------------------------
@@ -95,8 +76,7 @@ module "eks_blueprints_kubernetes_addons" {
       preserve = true
     }
     vpc-cni = {
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
-      preserve                 = true
+      preserve = true
     }
     kube-proxy = {
       preserve = true
