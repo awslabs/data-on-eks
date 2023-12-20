@@ -27,7 +27,6 @@ input:
     multiline.parser  docker, cri
     Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
 
-
 # NOTE: extraFilters config for using Kubelet to get the Metadata instead of talking to API server for large clusters
 filter:
   name: "kubernetes"
@@ -49,7 +48,7 @@ filter:
     Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
 
-# CATION: Donot use `cloudwatch` plugin. This Golang Plugin is not recommnded by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
+# CATION: Do not use `cloudwatch` plugin. This Golang Plugin is not recommended by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
 # cloudWatch:
 #   enabled: false
 

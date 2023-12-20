@@ -3,7 +3,7 @@ set -o errexit
 set -o pipefail
 
 # Make sure you have `terraform.tfvars` file with the desired region.
-# Otherwise script will ask you to input your region each time it runs `terraform destory`
+# Otherwise script will ask you to input your region each time it runs `terraform destroy`
 
 targets=(
   "module.eks_data_addons"
