@@ -114,13 +114,15 @@ cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x install.sh
 
 Verify the Amazon EKS Cluster
 
+**NOTE:** Replace [cluster-name] with your actual EKS cluster name
+
 ```bash
-aws eks --region us-west-2 describe-cluster --name trainium-inferentia
+aws eks --region us-west-2 describe-cluster --name [cluster-name]
 ```
 
 ```bash
 # Creates k8s config file to authenticate with EKS
-aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
+aws eks --region us-west-2 update-kubeconfig --name [cluster-name]
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 ```
@@ -148,7 +150,7 @@ Users can also modify the Dockerfile to suit their specific requirements and pus
 
 **Ensure the cluster is configured locally**
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
+aws eks --region us-west-2 update-kubeconfig --name [cluster-name]
 ```
 
 **Deploy RayServe Cluster**

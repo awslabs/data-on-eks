@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "tr-inf"
+  default     = "trn1-inf2"
   type        = string
 }
 
@@ -13,7 +13,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.27"
+  default     = "1.28"
   type        = string
 }
 
@@ -48,4 +48,22 @@ variable "enable_mpi_operator" {
   description = "Flag to enable the MPI Operator deployment"
   type        = bool
   default     = false
+}
+
+variable "min_size" {
+  description = "Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "max_size" {
+  description = "Worker node max size"
+  type = number
+  default = 0
+}
+
+variable "desired_size" {
+  description = "Worker node desired size"
+  type = number
+  default = 0
 }

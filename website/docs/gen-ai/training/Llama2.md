@@ -107,13 +107,15 @@ Run the install script to provision an EKS cluster with all the add-ons needed f
 
 Verify the Amazon EKS Cluster
 
+**NOTE:** Replace [cluster-name] with your actual EKS cluster name
+
 ```bash
-aws eks --region us-west-2 describe-cluster --name <cluster-name>
+aws eks --region us-west-2 describe-cluster --name [cluster-name]
 ```
 
 ```bash
 # Creates k8s config file to authenticate with EKS
-aws eks --region us-west-2 update-kubeconfig --name <cluster-name>
+aws eks --region us-west-2 update-kubeconfig --name [cluster-name]
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 ```

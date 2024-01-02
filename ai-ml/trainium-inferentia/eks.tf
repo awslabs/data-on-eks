@@ -176,9 +176,9 @@ module "eks" {
         echo "Bootstrap complete. Ready to Go!"
       EOT
 
-      min_size     = 4
-      max_size     = 4
-      desired_size = 4
+      min_size     = var.min_size
+      max_size     = var.max_size
+      desired_size = var.desired_size
 
       # EFA Network Interfaces configuration for Trn1.32xlarge
       network_interfaces = [
@@ -322,9 +322,9 @@ module "eks" {
         echo "Bootstrap complete. Ready to Go!"
       EOT
 
-      min_size     = 0
-      max_size     = 1
-      desired_size = 0
+      min_size     = var.min_size
+      max_size     = var.max_size
+      desired_size = var.desired_size
 
       # EFA Network Interfaces configuration for Trn1.32xlarge
       network_interfaces = [
@@ -507,9 +507,9 @@ module "eks" {
         export PATH=/opt/aws/neuron/bin:$PATH
       EOT
 
-      min_size     = 0
-      max_size     = 2
-      desired_size = 0
+      min_size     = var.min_size
+      max_size     = var.max_size
+      desired_size = var.desired_size
 
       labels = {
         instance-type = "inf2"
@@ -555,9 +555,9 @@ module "eks" {
         export PATH=/opt/aws/neuron/bin:$PATH
       EOT
 
-      min_size     = 0
-      max_size     = 2
-      desired_size = 0
+      min_size     = var.min_size
+      max_size     = var.max_size
+      desired_size = var.desired_size
 
       labels = {
         instance-type = "inf2-48xl"
