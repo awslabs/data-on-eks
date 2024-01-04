@@ -92,16 +92,23 @@ Navigate to the trainium-inferentia directory.
 cd data-on-eks/ai-ml/trainium-inferentia
 ```
 
-Modify the **“trn1-32xl-ng1”** node group size in eks.tf file. Go to line 179 and change the min_size to 4, max_size to 4 and desired_size to 4.
+By default **MPI operator** is not installed and its set to false. We will run the below export commands to set environment variables.
 
-In addition, also update **variables.tf** for MPI operator to be installed. By default its not installed and for this post its important to change the default value from **false** to **true**
+**NOTE:** As of 2024/01/04 Trainium instances only available in us-west-2, us-east-1, and us-east-2 regions.
+
+```bash
+export TF_VAR_enable_mpi_operator=true
+export TF_VAR_region=us-west-2
+export TF_VAR_trn1_min_size=4
+export TF_VAR_trn1_desired_size=4
+export TF_VAR_trn1_max_size=4
+```
 
 Run the install script to provision an EKS cluster with all the add-ons needed for the solution.
 
 ```bash
 ./install.sh
 ```
-
 
 ### Verify the resources
 
