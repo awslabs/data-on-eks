@@ -51,20 +51,75 @@ variable "enable_mpi_operator" {
   default     = false
 }
 
-variable "min_size" {
+variable "trn1_32xl_min_size" {
   description = "Worker node minimum size"
   type = number
   default = 0
 }
 
-variable "max_size" {
+variable "trn1_32xl_max_size" {
   description = "Worker node max size"
   type = number
   default = 0
 }
 
-variable "desired_size" {
+variable "trn1_32xl_desired_size" {
   description = "Worker node desired size"
   type = number
   default = 0
 }
+
+variable "trn1n_32xl_min_size" {
+  description = "Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "trn1n_32xl_max_size" {
+  description = "Worker node max size"
+  type = number
+  default = 0
+}
+
+variable "trn1n_32xl_desired_size" {
+  description = "Worker node desired size"
+  type = number
+  default = 0
+}
+
+variable "inf2-24xl_min_size" {
+  description = "Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "inf2-24xl_max_size" {
+  description = "Worker node max size"
+  type = number
+  default = 2
+}
+
+variable "inf2-24xl_desired_size" {
+  description = "Worker node desired size"
+  type = number
+  default = 0
+}
+
+variable "inf2-48xl_min_size" {
+  description = "Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "inf2-48xl_max_size" {
+  description = "Worker node max size"
+  type = number
+  default = 2
+}
+
+variable "inf2-48xl_desired_size" {
+  description = "Worker node desired size"
+  type = number
+  default = 0
+}
+

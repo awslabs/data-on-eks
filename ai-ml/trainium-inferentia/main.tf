@@ -46,18 +46,6 @@ data "aws_ecrpublic_authorization_token" "token" {
   provider = aws.ecr
 }
 
-/* locals {
-  name = "${var.name}-${random_string.this.result}"
-  region = var.region
-  # Training and Inference instances are available in the following AZs us-east-1 and us-west-2
-  # You can find the list of supported AZs here: https://aws.amazon.com/ec2/instance-types/trn1/
-  azs = ["${local.region}c", "${local.region}d"]
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/awslabs/data-on-eks"
-  }
-} */
-
 data "external" "eks_azs" {
   program = ["bash", "${path.module}/get_eks_azs.sh", var.region]
 }
