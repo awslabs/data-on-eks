@@ -59,7 +59,7 @@ data "aws_ecrpublic_authorization_token" "token" {
 } */
 
 data "external" "eks_azs" {
-  program = ["bash", "${path.module}/get_eks_azs.sh"]
+  program = ["bash", "${path.module}/get_eks_azs.sh", var.region]
 }
 
 locals {

@@ -1,12 +1,20 @@
 #!/bin/bash
 
-# Hardcoded AWS region
-REGION_CODE="us-west-2"
+# Desired AWS region should be passed in as arg1, ex 'us-west-2'
+REGION_CODE=$1
 
-# Determine appropriate EKS AZs based on the hardcoded region
+# Determine appropriate EKS AZs based on the AWS region. (EKS requires that we specify 2 AZs)
+#   The AZs specified here currently support both trn1 and inf2, but inf2 is also supported
+#   in additional AZs. AZ1 should be preferred when launching nodes.
 if [[ $REGION_CODE == "us-west-2" ]]; then
     AZ1="usw2-az4"
-    AZ2="usw2-az3"
+    AZ2="usw2-az1"
+elif [[ $REGION_CODE == "us-east-1" ]]; then
+    AZ1="use1-az6"
+    AZ2="use1-az5"
+elif [[ $REGION_CODE == "us-east-2" ]]; then
+    AZ1="use2-az3"
+    AZ2="use2-az1"
 else
     echo "{\"error\": \"Unsupported region: $REGION_CODE\"}"
     exit 1
