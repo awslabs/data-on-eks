@@ -60,7 +60,7 @@ variable "trn1_32xl_min_size" {
 variable "trn1_32xl_max_size" {
   description = "trn1 Worker node max size"
   type = number
-  default = 2
+  default = 4
 }
 
 variable "trn1_32xl_desired_size" {
