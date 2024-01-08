@@ -27,7 +27,7 @@ The diagram displays the open source data tools, k8s operators and frameworks th
 
 🚀 Job Schedulers (e.g., [Apache Airflow](https://airflow.apache.org/), [Argo Workflows](https://argoproj.github.io/argo-workflows/))
 
-🚀 AI/ML on Kubernetes (e.g., KubeFlow, MLFlow, Tensorflow, PyTorch etc.)
+🚀 AI/ML on Kubernetes (e.g., [KubeFlow](https://www.kubeflow.org/), [MLFlow](https://mlflow.org/), [Tensorflow](https://www.tensorflow.org/), [PyTorch](https://pytorch.org/), etc.)
 
 🚀 Distributed Databases (e.g., [Cassandra](https://cassandra.apache.org/_/blog/Cassandra-on-Kubernetes-A-Beginners-Guide.html), [CockroachDB](https://github.com/cockroachdb/cockroach-operator), [MongoDB](https://github.com/mongodb/mongodb-kubernetes-operator) etc.)
 
