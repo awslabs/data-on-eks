@@ -124,24 +124,8 @@ kubectl get pods -n kuberay-operator
 ```
 :::info
 ```bash
-NAMESPACE            NAME                               READY   STATUS    RESTARTS        AGE
-amazon-cloudwatch    aws-cloudwatch-metrics-d4xrr       1/1     Running   1 (1h37m ago)   1h
-amazon-cloudwatch    aws-cloudwatch-metrics-tpqsz       1/1     Running   1 (1h37m ago)   1h
-amazon-cloudwatch    aws-cloudwatch-metrics-z7wbn       1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-h82w4           1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-r5kxt           1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-wgxxl           1/1     Running   1 (1h37m ago)   1h
-karpenter            karpenter-668c669897-fmxdr         1/1     Running   1 (1h37m ago)   1h
-karpenter            karpenter-668c669897-prbr6         1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-fnwp5                     1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-r45xd                     1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-vfq66                     1/1     Running   1 (1h37m ago)   1h
-kube-system          coredns-79989457d9-2jldd           1/1     Running   1 (1h37m ago)   1h
-kube-system          coredns-79989457d9-cgtkf           1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-5jrtf                   1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-fjxsk                   1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-tzr79                   1/1     Running   1 (1h37m ago)   1h
-kuberay-operator     kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
+NAME                               READY   STATUS    RESTARTS        AGE
+kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
 ```
 :::
 
