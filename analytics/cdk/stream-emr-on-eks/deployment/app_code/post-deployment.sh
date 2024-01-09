@@ -24,7 +24,7 @@ echo "export VIRTUAL_CLUSTER_ID=${VIRTUAL_CLUSTER_ID}" | tee -a ~/.bash_profile
 echo "export EMR_ROLE_ARN=${EMR_ROLE_ARN}" | tee -a ~/.bash_profile
 source ~/.bash_profile
 
-# 1. install k8s command tools
+# 1. install K8s command tools
 echo "Installing kubectl tool..."
 curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.24.10/2023-01-30/bin/linux/amd64/kubectl
 chmod +x kubectl

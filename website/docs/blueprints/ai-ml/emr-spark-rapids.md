@@ -82,7 +82,7 @@ aws eks describe-cluster --name emr-spark-rapids
 ```
 
 ```bash
-# Creates k8s config file to authenticate with EKS
+# Creates K8s config file to authenticate with EKS
 aws eks --region us-west-2 update-kubeconfig --name emr-spark-rapids Cluster
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes

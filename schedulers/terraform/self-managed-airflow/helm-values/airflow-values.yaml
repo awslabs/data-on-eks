@@ -447,7 +447,7 @@ ports:
 #
 #    a: '{{ "{{ not a template }}" }}'
 #
-# Do not set config containing secrets via plain text values, use Env Var or k8s secret object
+# Do not set config containing secrets via plain text values, use Env Var or K8s secret object
 # yamllint disable rule:line-length
 config:
   core:

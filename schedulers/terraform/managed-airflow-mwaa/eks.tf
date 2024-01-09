@@ -70,7 +70,7 @@ module "eks_blueprints" {
   #---------------------------------------
   # ENABLE EMR ON EKS
   # 1. Creates namespace
-  # 2. k8s role and role binding(emr-containers user) for the above namespace
+  # 2. K8s role and role binding(emr-containers user) for the above namespace
   # 3. IAM role for the team execution role
   # 4. Update AWS_AUTH config map with  emr-containers user and AWSServiceRoleForAmazonEMRContainers role
   # 5. Create a trust relationship between the job execution role and the identity of the EMR managed service account

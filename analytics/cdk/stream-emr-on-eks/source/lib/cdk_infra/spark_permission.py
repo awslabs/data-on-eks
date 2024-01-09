@@ -41,10 +41,10 @@ class SparkOnEksConst(Construct):
 
 # //****************************************************************************************//
 # //************************** SETUP PERMISSION FOR OSS SPARK JOBS *************************//
-# //******* create k8s namespace, service account, and IAM role for service account ********//
+# //******* create K8s namespace, service account, and IAM role for service account ********//
 # //***************************************************************************************//
 
-        # create k8s namespace
+        # create K8s namespace
         etl_ns = eks_cluster.add_manifest('SparkNamespace',{
                 "apiVersion": "v1",
                 "kind": "Namespace",
@@ -109,7 +109,7 @@ class SparkOnEksConst(Construct):
 
         ###########################################
         #######                             #######
-        #######   k8s role for EMR on EKS   #######
+        #######   K8s role for EMR on EKS   #######
         #######                             #######
         ###########################################
         _emr_rb = KubernetesManifest(self,'EMRRoleBinding',
