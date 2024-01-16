@@ -1,14 +1,15 @@
 # Compute subnet_ids based on the secondary private subnets and AZs
 locals {
   subnet_ids = compact([
-    for i in range(length(module.vpc.secondary_private_subnets)) :
-      let
-        subnet_id = module.vpc.secondary_private_subnets[i],
-        cidr_block = module.vpc.secondary_private_subnets_cidr_blocks[i]
-      in
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null
+    for i in range(length(module.vpc.private_subnets)) : 
+      substr(module.vpc.private_subnets_cidr_blocks[i], 0, 4) == "100." ? module.vpc.private_subnets[i] : null
   ])
 }
+
+
+
+
+
 
 #---------------------------------------------------------------
 # EKS Cluster
