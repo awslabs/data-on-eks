@@ -1,3 +1,15 @@
+# Compute subnet_ids based on the secondary private subnets and AZs
+locals {
+  subnet_ids = compact([
+    for i in range(length(module.vpc.secondary_private_subnets)) :
+      let
+        subnet_id = module.vpc.secondary_private_subnets[i],
+        cidr_block = module.vpc.secondary_private_subnets_cidr_blocks[i]
+      in
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null
+  ])
+}
+
 #---------------------------------------------------------------
 # EKS Cluster
 #---------------------------------------------------------------
@@ -13,8 +25,9 @@ module "eks" {
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
-  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-  substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
+  #subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+  #substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
+  subnet_ids = local.subnet_ids
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
