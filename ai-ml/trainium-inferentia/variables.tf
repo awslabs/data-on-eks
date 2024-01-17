@@ -87,37 +87,37 @@ variable "trn1n_32xl_desired_size" {
   default = 0
 }
 
-variable "inf2-24xl_min_size" {
+variable "inf2_24xl_min_size" {
   description = "Worker node minimum size"
   type = number
   default = 0
 }
 
-variable "inf2-24xl_max_size" {
+variable "inf2_24xl_max_size" {
   description = "Worker node max size"
   type = number
   default = 2
 }
 
-variable "inf2-24xl_desired_size" {
+variable "inf2_24xl_desired_size" {
   description = "Worker node desired size"
   type = number
   default = 0
 }
 
-variable "inf2-48xl_min_size" {
+variable "inf2_48xl_min_size" {
   description = "Worker node minimum size"
   type = number
   default = 0
 }
 
-variable "inf2-48xl_max_size" {
+variable "inf2_48xl_max_size" {
   description = "Worker node max size"
   type = number
   default = 2
 }
 
-variable "inf2-48xl_desired_size" {
+variable "inf2_48xl_desired_size" {
   description = "Worker node desired size"
   type = number
   default = 0
