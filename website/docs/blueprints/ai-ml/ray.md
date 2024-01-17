@@ -106,7 +106,7 @@ aws eks update-kubeconfig --name ray-cluster #or whatever you used for EKS clust
 First, lets verify that we have worker nodes running in the cluster.
 
 ```bash
-kuebctl get nodes
+kubectl get nodes
 ```
 :::info
 ```bash
