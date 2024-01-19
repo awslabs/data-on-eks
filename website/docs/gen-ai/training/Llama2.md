@@ -101,7 +101,6 @@ export TF_VAR_enable_mpi_operator=true
 export TF_VAR_region=us-west-2
 export TF_VAR_trn1_min_size=4
 export TF_VAR_trn1_desired_size=4
-export TF_VAR_trn1_max_size=4
 ```
 
 Run the install script to provision an EKS cluster with all the add-ons needed for the solution.
@@ -114,15 +113,13 @@ Run the install script to provision an EKS cluster with all the add-ons needed f
 
 Verify the Amazon EKS Cluster
 
-**NOTE:** Replace [cluster-name] with your actual EKS cluster name
-
 ```bash
-aws eks --region us-west-2 describe-cluster --name [cluster-name]
+aws eks --region us-west-2 describe-cluster --name trainium-inferentia
 ```
 
 ```bash
 # Creates k8s config file to authenticate with EKS
-aws eks --region us-west-2 update-kubeconfig --name [cluster-name]
+aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 ```

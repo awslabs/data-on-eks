@@ -30,14 +30,6 @@ provider "kubectl" {
   load_config_file       = false
 }
 
-resource "random_string" "this" {
-  length  = 5
-  special = false
-  upper   = false
-  lower   = true
-  numeric = true
-}
-
 data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
 }
@@ -47,7 +39,7 @@ data "aws_ecrpublic_authorization_token" "token" {
 }
 
 locals {
-  name   = "${var.name}-${random_string.this.result}"
+  name   = var.name
   region = var.region
   # Training and Inference instances are available in the following AZs us-east-1 and us-west-2
   # You can find the list of supported AZs here: https://aws.amazon.com/ec2/instance-types/trn1/

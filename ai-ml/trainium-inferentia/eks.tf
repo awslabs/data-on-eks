@@ -177,7 +177,7 @@ module "eks" {
       EOT
 
       min_size     = var.trn1_32xl_min_size
-      max_size     = var.trn1_32xl_max_size
+      max_size     = 4
       desired_size = var.trn1_32xl_desired_size
 
       # EFA Network Interfaces configuration for Trn1.32xlarge
@@ -323,7 +323,7 @@ module "eks" {
       EOT
 
       min_size     = var.trn1n_32xl_min_size
-      max_size     = var.trn1n_32xl_max_size
+      max_size     = 2
       desired_size = var.trn1n_32xl_desired_size
 
       # EFA Network Interfaces configuration for Trn1.32xlarge
@@ -508,7 +508,7 @@ module "eks" {
       EOT
 
       min_size     = var.inf2_24xl_min_size
-      max_size     = var.inf2_24xl_max_size
+      max_size     = 2
       desired_size = var.inf2_24xl_desired_size
 
       labels = {
@@ -556,7 +556,7 @@ module "eks" {
       EOT
 
       min_size     = var.inf2_48xl_min_size
-      max_size     = var.inf2_48xl_max_size
+      max_size     = 2
       desired_size = var.inf2_48xl_desired_size
 
       labels = {

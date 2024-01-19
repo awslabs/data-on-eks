@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "trn1-inf2"
+  default     = "trainium-inferentia"
   type        = string
 }
 
@@ -57,12 +57,6 @@ variable "trn1_32xl_min_size" {
   default = 0
 }
 
-variable "trn1_32xl_max_size" {
-  description = "trn1 Worker node max size"
-  type = number
-  default = 4
-}
-
 variable "trn1_32xl_desired_size" {
   description = "trn1 Worker node desired size"
   type = number
@@ -73,12 +67,6 @@ variable "trn1n_32xl_min_size" {
   description = "Worker node minimum size"
   type = number
   default = 0
-}
-
-variable "trn1n_32xl_max_size" {
-  description = "Worker node max size"
-  type = number
-  default = 1
 }
 
 variable "trn1n_32xl_desired_size" {
@@ -93,12 +81,6 @@ variable "inf2_24xl_min_size" {
   default = 0
 }
 
-variable "inf2_24xl_max_size" {
-  description = "Worker node max size"
-  type = number
-  default = 2
-}
-
 variable "inf2_24xl_desired_size" {
   description = "Worker node desired size"
   type = number
@@ -109,12 +91,6 @@ variable "inf2_48xl_min_size" {
   description = "Worker node minimum size"
   type = number
   default = 0
-}
-
-variable "inf2_48xl_max_size" {
-  description = "Worker node max size"
-  type = number
-  default = 2
 }
 
 variable "inf2_48xl_desired_size" {
