@@ -115,26 +115,13 @@ First, clone the repository
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate into one of the example directories and run `terraform init`
+Navigate into one of the example directories and run `install.sh` script
 
 ```bash
 cd data-on-eks/analytics/terraform/emr-eks-karpenter
-terraform init
+chmod +x install.sh
+./install.sh
 ```
-
-Set AWS_REGION and Run Terraform plan to verify the resources created by this execution.
-
-```bash
-export AWS_REGION="us-west-2"
-terraform plan
-```
-
-This command may take between 20 and 30 minutes to create all the resources.
-
-```bash
-terraform apply
-```
-Enter `yes` to apply.
 
 ### Verify the resources
 
