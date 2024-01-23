@@ -40,13 +40,14 @@ module "eks" {
       source_node_security_group = true
     }
 
+    # MWAA needs access to the EKS control plane in order to submit a job
     allow_access_from_mwaa = {
-      description = "Nodes on ephemeral ports"
+      description = "Access from MWAA"
       protocol    = "tcp"
-      from_port   = 1025
-      to_port     = 65535
+      from_port   = 443
+      to_port     = 443
       type        = "ingress"
-      cidr_blocks = [local.vpc_cidr]
+      source_security_group_id = module.mwaa.mwaa_security_group_id
     }
   }
 
