@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from airflow import DAG
 from airflow.hooks.base import BaseHook
-from airflow.providers.amazon.aws.operators.emr_containers import EMRContainerOperator
+from airflow.providers.amazon.aws.operators.emr import EmrContainerOperator
 from airflow.utils.dates import days_ago
 
 
@@ -51,7 +51,7 @@ with DAG(
     c = BaseHook.get_connection("emr_eks")
     cluster_args = c.extra_dejson
     # [START howto_operator_emr_eks_jobrun]
-    job_starter = EMRContainerOperator(
+    job_starter = EmrContainerOperator(
         task_id="start_job",
         virtual_cluster_id=cluster_args.get('virtual_cluster_id'),
         execution_role_arn=cluster_args.get('job_role_arn'),
