@@ -1,0 +1,23 @@
+name: Checkov
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkov-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Checkov GitHub Action
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          framework: terraform
+          directory: .
+          quiet: true
+          compact: true
+          soft_fail: true
+          skip_check: CKV_TF_1
