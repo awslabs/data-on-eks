@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stablediffusion
+
+---
+apiVersion: ray.io/v1alpha1
+kind: RayService
+metadata:
+  name: stablediffusion-service
+  namespace: stablediffusion
+spec:
+  serviceUnhealthySecondThreshold: 900
+  deploymentUnhealthySecondThreshold: 300
+  serveConfig:
+    importPath: ray_serve_stablediffusion:entrypoint # Specify the correct path to your Python script
+    runtimeEnv: |
+      env_vars: {"MODEL_ID": "aws-neuron/stable-diffusion-xl-base-1-0-1024x1024"}  # Replace with the appropriate model ID
+
+  rayClusterConfig:
+    rayVersion: '2.7.1'
+    headGroupSpec:
+      serviceType: NodePort
+      headService:
+        metadata:
+          name: stablediffusion-service
+          namespace: stablediffusion
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          containers:
+          - name: ray-head
+            image: public.ecr.aws/r8y1i9f8/ray-serve-stable-diffusion:latest # Image created using the Dockerfile attached in the folder
+            imagePullPolicy: Always # Ensure the image is always pulled when updated
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            ports:
+            - containerPort: 6379
+              name: gcs
+            - containerPort: 8265
+              name: dashboard
+            - containerPort: 10001
+              name: client
+            - containerPort: 8000
+              name: serve
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+            resources:
+              limits:
+                cpu: "2"
+                memory: "8G"
+              requests:
+                cpu: "2"
+                memory: "8G"
+          nodeSelector:
+            workload: "rayhead"
+          volumes:
+          - name: ray-logs
+            emptyDir: {}
+
+    workerGroupSpecs:
+    - groupName: inf2-worker-group
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 1
+      rayStartParams: {}
+      template:
+        spec:
+          containers:
+          - name: ray-worker
+            image: public.ecr.aws/r8y1i9f8/ray-serve-stable-diffusion:latest # Image created using the Dockerfile attached in the folder
+            imagePullPolicy: Always # Ensure the image is always pulled when updated
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            resources:
+              limits:
+                cpu: "90"
+                memory: "360G"
+                aws.amazon.com/neuron: "6"
+              requests:
+                cpu: "90"
+                memory: "360G"
+                aws.amazon.com/neuron: "6"
+          nodeSelector:
+            workload: "rayworker"
+          tolerations:
+          - key: "aws.amazon.com/neuroncore"
+            value: "true"
+            effect: "NoSchedule"
+          - key: "aws.amazon.com/neuron"
+            value: "true"
+            effect: "NoSchedule"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stablediffusion-ingress
+  namespace: stablediffusion
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: "/$1"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      # Ray Dashboard
+      - path: /dashboard/(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: stablediffusion-service
+            port:
+              number: 8265
+      # Ray Serve
+      - path: /serve/(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: stablediffusion-service
+            port:
+              number: 8000

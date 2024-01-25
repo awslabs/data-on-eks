@@ -121,6 +121,7 @@ module "eks" {
       labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
+        workload      = "rayhead"
       }
 
       tags = merge(local.tags, {
@@ -513,17 +514,18 @@ module "eks" {
       labels = {
         instance-type = "inf2"
         provisioner   = "cluster-autoscaler"
+        workload      = "rayworker"
       }
 
       taints = [
         {
           key    = "aws.amazon.com/neuron",
-          value  = true,
+          value  = "true",
           effect = "NO_SCHEDULE"
         },
         {
           key    = "aws.amazon.com/neuroncore",
-          value  = true,
+          value  = "true",
           effect = "NO_SCHEDULE"
         },
       ]
