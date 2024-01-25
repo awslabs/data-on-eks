@@ -66,9 +66,10 @@ spec:
     # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
     # -----------------------------------------------------
   volumes:
+    # This is using the temp storage on the node.
+    # if you are using NVMe SSD then karpenter will configure the RAID0 under /mnt/k8s-disks/0 and copies the shuffle data to this location
     - name: spark-local-dir-1
-      hostPath:
-        path: /local1
+      emptyDir: {}
   driver:
     volumeMounts:
       - name: spark-local-dir-1
