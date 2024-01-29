@@ -83,7 +83,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `install.sh` script
 
 ```bash
-cd data-on-eks/ai-ml/trainium/ && chmod +x install.sh
+cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x install.sh
 ./install.sh
 ```
 
@@ -92,12 +92,12 @@ cd data-on-eks/ai-ml/trainium/ && chmod +x install.sh
 Verify the Amazon EKS Cluster
 
 ```bash
-aws eks describe-cluster --name trainium
+aws eks describe-cluster --name trainium-inferentia
 ```
 
 ```bash
 # Creates k8s config file to authenticate with EKS
-aws eks --region us-west-2 update-kubeconfig --name trainium
+aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 
