@@ -6,6 +6,7 @@ targets=(
   "module.eks_data_addons"
   "module.eks_blueprints_addons"
   "module.eks"
+  "module.vpc"
 )
 
 #-------------------------------------------

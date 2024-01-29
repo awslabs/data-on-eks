@@ -21,7 +21,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "~> 1.2" # change this to version = 1.2.2 for oldder version of Karpenter deployment
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -87,11 +87,14 @@ module "eks_blueprints_addons" {
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
   karpenter_node = {
+    iam_role_use_name_prefix = false
+    iam_role_name            = "${local.name}-karpenter-node"
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
   karpenter = {
+    chart_version       = "v0.33.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -107,14 +110,14 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Adding AWS Load Balancer Controller
   #---------------------------------------
-  enable_aws_load_balancer_controller = true
+  enable_aws_load_balancer_controller = false
 
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
   enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
   aws_fsx_csi_driver = {
-    # INFO: fsx node daemonset wont be placed on Karpenter nodes with taints without the following toleration
+    # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
     values = [
       <<-EOT
         node:
@@ -189,6 +192,7 @@ resource "kubectl_manifest" "spark_monitor" {
 
   depends_on = [module.eks_blueprints_addons]
 }
+
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
@@ -201,7 +205,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Kubecost Add-on
   #---------------------------------------------------------------
-  # Note: Kubecost add-on depdends on Kube Prometheus Stack add-on for storing the metrics
+  # Note: Kubecost add-on depends on Kube Prometheus Stack add-on for storing the metrics
   enable_kubecost = var.enable_kubecost
   kubecost_helm_config = {
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
@@ -278,9 +282,14 @@ resource "random_password" "grafana" {
   override_special = "@_"
 }
 
+resource "random_string" "grafana" {
+  length = 4
+  lower  = true
+}
+
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-grafana"
+  name                    = "${local.name}-grafana-${random_string.grafana.result}"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 

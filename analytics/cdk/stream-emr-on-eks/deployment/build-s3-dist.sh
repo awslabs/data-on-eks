@@ -166,7 +166,7 @@ for d in `find . -mindepth 1 -maxdepth 1 -type d`; do
     mv $d $fname
     cd $staging_dist_dir/$fname
 
-    # Build the artifcats
+    # Build the artifacts
     if ls *.py 1> /dev/null 2>&1; then
         echo "===================================="
         echo "This is Python runtime"

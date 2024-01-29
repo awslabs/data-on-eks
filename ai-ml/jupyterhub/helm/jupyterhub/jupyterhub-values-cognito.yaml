@@ -4,6 +4,7 @@ hub:
       storage: 50Gi
       storageClassName: gp3
   authenticatePrometheus: false
+  command: ["sh", "-c", "pip install boto3 && jupyterhub --config /usr/local/etc/jupyterhub/jupyterhub_config.py"]
   config:
     GenericOAuthenticator:
       oauth_callback_url: ${jupyterdomain}
@@ -23,7 +24,43 @@ hub:
   extraConfig:
     jupyterhub_config.py: |-
       c.KubeSpawner.start_timeout = 1200
+      c.Authenticator.enable_auth_state = True
 
+    cognito_config.py: |-
+      import boto3
+      def auth_state_hook(spawner, auth_state):
+        client_idp = boto3.client('cognito-idp', region_name="${region}")
+        auth_response = client_idp.initiate_auth(
+          AuthFlow="REFRESH_TOKEN_AUTH",
+          AuthParameters={
+            "REFRESH_TOKEN": auth_state['refresh_token'],
+            "SECRET_HASH": "${client_secret}"
+          },
+          ClientId="${client_id}"
+        )
+        id_token = auth_response["AuthenticationResult"]["IdToken"]
+        client_identity = boto3.client("cognito-identity", region_name="${region}")
+        identity_response = client_identity.get_id(
+          IdentityPoolId="${identity_pool_id}",
+          Logins={
+            f"cognito-idp.${region}.amazonaws.com/${user_pool_id}": id_token
+          }
+        )
+        identity_id = identity_response['IdentityId']
+        credentials = client_identity.get_credentials_for_identity(
+          IdentityId=identity_id,
+          Logins={
+            f"cognito-idp.${region}.amazonaws.com/${user_pool_id}": id_token
+          }
+        )
+        key = credentials["Credentials"]["AccessKeyId"]
+        secret = credentials["Credentials"]["SecretKey"]
+        token = credentials["Credentials"]["SessionToken"]
+        spawner.environment['AWS_ACCESS_KEY_ID'] = key
+        spawner.environment['AWS_SECRET_ACCESS_KEY'] = secret
+        spawner.environment['AWS_SESSION_TOKEN'] = token
+
+      c.Spawner.auth_state_hook = auth_state_hook
 
 proxy:
   https:
@@ -42,7 +79,7 @@ proxy:
       service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
 
 singleuser:
-  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU inlcuding the image pull
+  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU including the image pull
   profileList:
     - display_name: Data Engineering (CPU)
       description: "PySpark Notebooks | Karpenter AutoScaling"
@@ -61,7 +98,7 @@ singleuser:
                 image: jupyter/pyspark-notebook:spark-3.4.1
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: default
+          NodePool: default
         cpu_guarantee: 2
         mem_guarantee: 8G
         cpu_limit: 4
@@ -85,7 +122,7 @@ singleuser:
                 image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: trainium
+          NodePool: trainium
         tolerations:
           - key: aws.amazon.com/neuroncore
             operator: Exists
@@ -121,7 +158,7 @@ singleuser:
                 image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: inferentia
+          NodePool: inferentia
           hub.jupyter.org/node-purpose: user
         tolerations:
           - key: aws.amazon.com/neuroncore
@@ -148,7 +185,7 @@ singleuser:
         # namespace: data-team-a
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
-          karpenter.sh/provisioner-name: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
+          NodePool: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
@@ -196,7 +233,7 @@ singleuser:
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
           node.kubernetes.io/instance-type: p4d.24xlarge
-          karpenter.sh/provisioner-name: gpu
+          NodePool: gpu
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"

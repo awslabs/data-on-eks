@@ -63,7 +63,7 @@ config:
   # INHERITED_LABELS: environment, workload, app
   # WATCH_NAMESPACE: namespace-a,namespace-b
 
-# -- Additinal arguments to be added to the operator's args list.
+# -- Additional arguments to be added to the operator's args list.
 additionalArgs: []
 
 serviceAccount:

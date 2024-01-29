@@ -4,7 +4,8 @@ variable "name" {
   type        = string
 }
 
-# NOTE: Trainium and Inferentia are only available in us-west-2 and us-east-1 regions
+# NOTE: As of 2024/01/04 Trainium instances only available in us-west-2, us-east-1, and us-east-2 regions
+#       Inferentia instances are available in the above regions + several others
 variable "region" {
   description = "region"
   default     = "us-west-2"
@@ -13,7 +14,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.27"
+  default     = "1.28"
   type        = string
 }
 
@@ -49,3 +50,52 @@ variable "enable_mpi_operator" {
   type        = bool
   default     = false
 }
+
+variable "trn1_32xl_min_size" {
+  description = "trn1 Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "trn1_32xl_desired_size" {
+  description = "trn1 Worker node desired size"
+  type = number
+  default = 0
+}
+
+variable "trn1n_32xl_min_size" {
+  description = "Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "trn1n_32xl_desired_size" {
+  description = "Worker node desired size"
+  type = number
+  default = 0
+}
+
+variable "inf2_24xl_min_size" {
+  description = "Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "inf2_24xl_desired_size" {
+  description = "Worker node desired size"
+  type = number
+  default = 0
+}
+
+variable "inf2_48xl_min_size" {
+  description = "Worker node minimum size"
+  type = number
+  default = 0
+}
+
+variable "inf2_48xl_desired_size" {
+  description = "Worker node desired size"
+  type = number
+  default = 0
+}
+

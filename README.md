@@ -1,5 +1,5 @@
 ![Data on EKS](website/static/img/doeks-logo-green.png)
-# [Data on Amazon EKS (DoEKS)](https://awslabs.github.io/data-on-eks/) 
+# [Data on Amazon EKS (DoEKS)](https://awslabs.github.io/data-on-eks/)
 (pronounce Do.eks)
 
 

@@ -163,6 +163,7 @@ module "eks_blueprints_addons" {
       values = [
         <<-EOT
           clusterName: ${module.eks.cluster_name}
+          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         EOT
       ]
     }
@@ -174,6 +175,7 @@ module "eks_blueprints_addons" {
         <<-EOT
           name: gpu-ts
           clusterName: ${module.eks.cluster_name}
+          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
           instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
           instanceFamilies: ["g5"]
           taints:
@@ -194,6 +196,7 @@ module "eks_blueprints_addons" {
         <<-EOT
           name: gpu
           clusterName: ${module.eks.cluster_name}
+          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
           instanceSizes: ["24xlarge"]
           instanceFamilies: ["p4d"]
           taints:
@@ -214,6 +217,7 @@ module "eks_blueprints_addons" {
         <<-EOT
           name: inferentia
           clusterName: ${module.eks.cluster_name}
+          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
           instanceSizes: ["8xlarge", "24xlarge"]
           instanceFamilies: ["inf2"]
           taints:
@@ -237,6 +241,7 @@ module "eks_blueprints_addons" {
         <<-EOT
           name: trainium
           clusterName: ${module.eks.cluster_name}
+          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
           instanceSizes: ["32xlarge"]
           instanceFamilies: ["trn1"]
           taints:
@@ -292,7 +297,10 @@ module "eks_data_addons" {
       userdata_url                = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
       client_id                   = try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
       client_secret               = try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
+      user_pool_id                = try(aws_cognito_user_pool.pool[0].id, "")
+      identity_pool_id            = try(aws_cognito_identity_pool.identity_pool[0].id, "")
       jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      region                      = var.region
     })]
   }
 

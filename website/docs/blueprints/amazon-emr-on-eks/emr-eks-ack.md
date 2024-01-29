@@ -124,7 +124,7 @@ You will get the output like below <br/>
  ![](img/ack-virtualcluster.png)
 
 
-Excute the following shell script to run the Spark Job. This will ask for two inputs which can be extrcated from terraform outputs.
+Execute the following shell script to run the Spark Job. This will ask for two inputs which can be extrcated from terraform outputs.
 
 ```bash
 ./analytics/terraform/emr-eks-ack/examples/sample-pyspark-job.sh

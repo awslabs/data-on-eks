@@ -7,6 +7,11 @@ kind: SparkApplication
 metadata:
   name: pyspark-pi-karpenter
   namespace: spark-team-a
+  labels:
+    app: "pyspark-pi"
+    applicationId: "pyspark-pi-karpenter"
+    # Assign the job to a Yunikorn Queue via label.
+    queue: root.test
 spec:
   type: Python
   pythonVersion: "3"
@@ -28,7 +33,9 @@ spec:
     labels:
       version: 3.1.1
     serviceAccount: spark-team-a
-    # Using Karpenter provisioner nodeSelectors and tolerations
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
     tolerations:
@@ -42,7 +49,9 @@ spec:
     serviceAccount: spark-team-a
     labels:
       version: 3.1.1
-    # Using Karpenter provisioner nodeSelectors and tolerations
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
     tolerations:

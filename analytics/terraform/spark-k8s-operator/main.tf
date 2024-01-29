@@ -93,9 +93,11 @@ module "eks" {
       cat <<-EOF > /etc/profile.d/bootstrap.sh
       #!/bin/sh
 
-      # Configure NVMe volumes in RAID0 configuration
-      # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
-      # Mount will be: /mnt/k8s-disks
+      # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
+      # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
+      # This will create a RAID volume and mount it at /mnt/k8s-disks/0
+      #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
+      #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
       export LOCAL_DISKS='raid0'
       EOF
 
@@ -104,7 +106,7 @@ module "eks" {
     EOT
 
     ebs_optimized = true
-    # This bloc device is used only for root volume. Adjust volume according to your size.
+    # This block device is used only for root volume. Adjust volume according to your size.
     # NOTE: Don't use this volume for Spark workloads
     block_device_mappings = {
       xvda = {
