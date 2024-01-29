@@ -20,7 +20,7 @@ spec:
   role: {{ .Values.karpenterRole }}
   # Optional, propagates tags to underlying EC2 resources
   tags:
-    Name: {{ .Values.name }}
+    Name: karpenter-{{ .Values.name }}
   metadataOptions:
     httpEndpoint: enabled
     httpProtocolIPv6: disabled
