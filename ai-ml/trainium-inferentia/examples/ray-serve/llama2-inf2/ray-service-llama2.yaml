@@ -90,7 +90,7 @@ spec:
                     memory: "700G"
                     aws.amazon.com/neuron: "12"
             nodeSelector:
-              karpenter.sh/provisioner-name: inferentia-inf2
+              provisioner: inferentia-inf2
             tolerations:
               - key: aws.amazon.com/neuroncore
                 operator: Exists

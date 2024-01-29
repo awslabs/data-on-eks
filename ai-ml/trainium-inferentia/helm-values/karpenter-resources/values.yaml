@@ -1,0 +1,21 @@
+name: default
+clusterName:
+karpenterRole:
+instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+instanceFamilies: ["c5", "m5", "r5"]
+labels:
+taints: # Taints added here because its being used across all the templates but default
+  - key: aws.amazon.com/neuroncore
+    value: "true"
+    effect: "NoSchedule"
+  - key: aws.amazon.com/neuron
+    value: "true"
+    effect: "NoSchedule"
+  - key: hub.jupyter.org/dedicated # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+    operator: "Equal"
+    value: "user"
+    effect: "NoSchedule"
+amiFamily: AL2
+amiSelectorTerms:
+azs: [""]
+userData:
