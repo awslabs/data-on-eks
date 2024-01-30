@@ -430,3 +430,167 @@ resource "kubectl_manifest" "mpi_operator" {
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }
+
+#---------------------------------------------------------------
+# Create a Launch Template Userdata for Trainium, and use it in Karpenter, deprecated
+# This commented section of the pattern is commented due to lack of support in utilizing LaunchTemplates in newer Karpenter versions.
+# See full change list https://github.com/aws/karpenter-provider-aws/blob/d1d1371ae2e1552b8fdded7d343bf24ea18bee31/designs/v1beta1-full-changelist.md#remove-speclaunchtemplate
+#---------------------------------------------------------------
+# data "cloudinit_config" "trn1_lt" {
+#   base64_encode = true
+#   gzip          = false
+#   boundary      = "//"
+
+#   # Prepend to existing user data supplied by AWS EKS
+#   part {
+#     content_type = "text/x-shellscript"
+#     content      = <<-EOT
+#       cat <<-EOF > /etc/profile.d/bootstrap.sh
+#       #!/bin/sh
+
+#       # Configure NVMe volumes in RAID0 configuration
+#       # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
+#       # Mount will be: /mnt/k8s-disks
+#       export LOCAL_DISKS='raid0'
+
+#       # Install Neuron monitoring tools
+#       yum install aws-neuronx-tools-2.* -y
+#       export PATH=/opt/aws/neuron/bin:$PATH
+
+#       # EFA Setup for Trainium and Inferentia
+#       export FI_EFA_USE_DEVICE_RDMA=1
+#       export FI_PROVIDER=efa
+#       export FI_EFA_FORK_SAFE=1
+
+#       curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
+#       tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
+#       ./efa_installer.sh -y -g
+#       /opt/amazon/efa/bin/fi_info -p efa
+#       EOF
+
+#       # Source extra environment variables in bootstrap script
+#       sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+
+#       # Bootstrap the node
+#       B64_CLUSTER_CA=${module.eks.cluster_certificate_authority_data}
+#       API_SERVER_URL=${module.eks.cluster_endpoint}
+#       /etc/eks/bootstrap.sh ${local.name} --kubelet-extra-args "--node-labels=eks.amazonaws.com/nodegroup-image=${data.aws_ami.eks_gpu.id}" --b64-cluster-ca $B64_CLUSTER_CA --apiserver-endpoint $API_SERVER_URL
+
+#     EOT
+#   }
+# }
+
+#---------------------------------------------------------------
+# This Terraform code defines a data block to fetch the most recent Amazon Machine Image (AMI)
+# for an Amazon Elastic Kubernetes Service (EKS) cluster with GPU support.
+#---------------------------------------------------------------
+# data "aws_ami" "eks_gpu" {
+#   owners      = ["amazon"]
+#   most_recent = true
+
+#   filter {
+#     name   = "name"
+#     values = ["amazon-eks-gpu-node-${var.eks_cluster_version}-*"]
+#   }
+# }
+
+
+# locals {
+#   karpenter_trn1_32xl_lt_name = format("%s-trn132xl-lt", local.name)
+# }
+
+#---------------------------------------------------------------
+# AWS Launch Template Configuration for Karpenter Trn1.32xlarge Instances
+#---------------------------------------------------------------
+# resource "aws_launch_template" "trn1_lt" {
+#   name        = local.karpenter_trn1_32xl_lt_name
+#   description = "Karpenter Trn1.32xlarge Launch Template"
+
+#   user_data = data.cloudinit_config.trn1_lt.rendered
+
+#   ebs_optimized = true
+
+#   image_id = data.aws_ami.eks_gpu.id
+
+#   iam_instance_profile {
+#     name = module.eks_blueprints_addons.karpenter.node_instance_profile_name
+#   }
+
+#   # Commented for visibility to implement this feature in the future
+#   #  placement {
+#   #   tenancy = "default"
+#   #   availability_zone = "${local.region}d"
+#   #   group_name        = local.karpenter_trn1_32xl_lt_name
+#   # }
+
+#   metadata_options {
+#     http_endpoint               = "enabled"
+#     http_tokens                 = "required"
+#     http_put_response_hop_limit = 2
+#   }
+
+#   block_device_mappings {
+#     device_name = "/dev/xvda"
+#     ebs {
+#       volume_size           = 100
+#       delete_on_termination = true
+#       volume_type           = "gp3"
+#     }
+#   }
+
+#   monitoring {
+#     enabled = true
+#   }
+
+#   tag_specifications {
+#     resource_type = "instance"
+
+#     tags = merge(local.tags, {
+#       "karpenter.sh/discovery" = local.name
+#     })
+#   }
+
+#   # First network interface with device_index=0 and network_card_index=0
+#   network_interfaces {
+#     device_index                = 0
+#     network_card_index          = 0
+#     associate_public_ip_address = false
+#     interface_type              = "efa"
+#     delete_on_termination       = true
+#     security_groups             = [module.eks.node_security_group_id]
+#     description                 = "Karpenter EFA config for Trainium"
+#   }
+
+#   # Additional network interfaces with device_index=1 and network_card_index ranging from 1 to 7
+#   dynamic "network_interfaces" {
+#     for_each = range(1, 8) # Create 7 additional network interfaces
+#     content {
+#       device_index                = 1
+#       network_card_index          = network_interfaces.value
+#       associate_public_ip_address = false
+#       interface_type              = "efa"
+#       delete_on_termination       = true
+#       security_groups             = [module.eks.node_security_group_id]
+#       description                 = "Karpenter EFA config for Trainium"
+#     }
+#   }
+# }
+
+# #---------------------------------------
+# # Karpenter Provisioners
+# #---------------------------------------
+# data "kubectl_path_documents" "karpenter_provisioners" {
+#   pattern = "${path.module}/karpenter-provisioners/karpenter-*.yaml"
+#   vars = {
+#     azs                  = local.region
+#     eks_cluster_id       = local.name
+#     launch_template_name = local.karpenter_trn1_32xl_lt_name
+#   }
+# }
+
+# resource "kubectl_manifest" "karpenter_provisioner" {
+#   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
+#   yaml_body = each.value
+
+#   depends_on = [module.eks_blueprints_addons]
+# }
