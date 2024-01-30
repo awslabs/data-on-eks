@@ -117,7 +117,7 @@ STATUS=$(curl -sI $LB_HOST|head -1)
 while [[ ! $STATUS =~ Unauthorized ]]
 do
 	echo -n "."
-	sleep 10 
+	sleep 10
 	STATUS=$(curl -sI $LB_HOST|head -1)
 done
 

@@ -18,7 +18,7 @@ fi
 ECR_REPO_URI=$(cat .ecr_repo_uri)
 echo -e "Using container image $ECR_REPO_URI:latest"
 
-# Launch the llama2-7B training pod using the container image created by 1-llama2-neuronx-pretrain-build-image.sh 
+# Launch the llama2-7B training pod using the container image created by 1-llama2-neuronx-pretrain-build-image.sh
 sed "s|IMG_PLACEHOLDER|$ECR_REPO_URI:latest|" ./example_manifests/llama_train.yaml | kubectl apply -f -
 
 if [[ "$?" -eq 0 ]]; then

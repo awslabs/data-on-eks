@@ -15,7 +15,7 @@ module "eks" {
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
   substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
-  
+
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
@@ -136,7 +136,7 @@ module "eks" {
       # The code filters the private subnets based on their CIDR blocks and selects the subnet ID if the CIDR block starts with "100." Otherwise, it assigns a null value.
       # The element(compact([...]), 0) expression ensures that only the first non-null value is included in the resulting list of subnet IDs.
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
+      substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type

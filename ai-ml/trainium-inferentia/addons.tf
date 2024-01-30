@@ -364,10 +364,6 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_string = random_password.grafana.result
 }
 
-locals {
-  karpenter_trn1_32xl_lt_name = format("%s-trn132xl-lt", local.name) // Name for Launch Template used in Karpenter EC2Class
-}
-
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -402,6 +398,9 @@ resource "kubectl_manifest" "mpi_operator" {
 # This commented section of the pattern is commented due to lack of support in utilizing LaunchTemplates in newer Karpenter versions.
 # See full change list https://github.com/aws/karpenter-provider-aws/blob/d1d1371ae2e1552b8fdded7d343bf24ea18bee31/designs/v1beta1-full-changelist.md#remove-speclaunchtemplate
 #---------------------------------------------------------------
+# locals {
+#   karpenter_trn1_32xl_lt_name = format("%s-trn132xl-lt", local.name) // Name for Launch Template used in Karpenter EC2Class
+# }
 # data "cloudinit_config" "trn1_lt" {
 #   base64_encode = true
 #   gzip          = false

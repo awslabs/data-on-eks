@@ -18,7 +18,7 @@ fi
 ECR_REPO_URI=$(cat .ecr_repo_uri)
 echo -e "Using container image $ECR_REPO_URI:latest"
 
-# Launch the cmd-shell pod using the container image created by 1-llama2-neuronx-pretrain-build-image.sh 
+# Launch the cmd-shell pod using the container image created by 1-llama2-neuronx-pretrain-build-image.sh
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Pod

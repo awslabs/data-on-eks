@@ -54,4 +54,3 @@ spec:
     cpu: {{ .Values.limits.cpu }}
     memory: {{ .Values.limits.memory }}
   weight: {{ .Values.weight }}
-
