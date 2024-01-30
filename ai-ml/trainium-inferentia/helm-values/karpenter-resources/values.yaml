@@ -29,21 +29,19 @@ nodePool:
   enabled: true
   labels:
   taints:
-  - key: aws.amazon.com/neuroncore
-    value: "true"
-    effect: "NoSchedule"
-  - key: aws.amazon.com/neuron
-    value: "true"
-    effect: "NoSchedule"
-  - key: hub.jupyter.org/dedicated # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
-    operator: "Equal"
-    value: "user"
-    effect: "NoSchedule"
-  instanceFamilies: ["c5", "m5", "r5"]
-  instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
-  architecture: ["amd64"]
-  azs: [""]
-  capacityTypes: ["spot", "on-demand"]
+  requirements:
+    - key: "karpenter.k8s.aws/instance-family"
+      operator: In
+      values: ["c5", "m5", "r5"]
+    - key: "karpenter.k8s.aws/instance-size"
+      operator: In
+      values: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+    - key: "kubernetes.io/arch"
+      operator: In
+      values: ["amd64"]
+    - key: "karpenter.sh/capacity-type"
+      operator: In
+      values: ["spot", "on-demand"]
   disruption:
     consolidationPolicy: WhenEmpty
     consolidateAfter: 30s

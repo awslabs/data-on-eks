@@ -239,7 +239,7 @@ module "eks_blueprints_addons" {
 
   tags = local.tags
 
-  # We are installing Karpenter resources with Helm Chart, seee helm-values/
+  # We are installing Karpenter resources with Helm Chart, see helm-values/
   helm_releases = {
     karpenter-resources-default = {
       name        = "default"
@@ -247,15 +247,13 @@ module "eks_blueprints_addons" {
       chart       = "${path.module}/helm-values/karpenter-resources"
       values = [
         <<-EOT
-        clusterName: ${module.eks.cluster_name}
-        ec2NodeClass:
-          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-          azs: ["${local.region}d"]
-        nodePool:
-          labels:
-            - provisioner: default
-            - workload: rayhead
-          taints: []
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+      nodePool:
+        labels:
+          - provisioner: default
+          - workload: rayhead
       EOT
       ]
     }
@@ -265,23 +263,46 @@ module "eks_blueprints_addons" {
       chart       = "${path.module}/helm-values/karpenter-resources"
       values = [
         <<-EOT
-        name: inferentia-inf2
-        clusterName: ${module.eks.cluster_name}
-        ec2NodeClass:
-          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-          azs: ["${local.region}d"]
-        nodePool:
-          instanceSizes: ["24xlarge", "48xlarge"]
-          instanceFamilies: ["inf2"]
-          labels:
-            - provisioner: inferentia-inf2
-            - hub.jupyter.org/node-purpose: user
+      name: inferentia-inf2
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+      nodePool:
+        labels:
+          - provisioner: inferentia-inf2
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: aws.amazon.com/neuroncore
+            value: "true"
+            effect: "NoSchedule"
+          - key: aws.amazon.com/neuron
+            value: "true"
+            effect: "NoSchedule"
+          - key: hub.jupyter.org/dedicated # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["inf2"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["24xlarge", "48xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "topology.kubernetes.io/zone"
+            operator: In
+            values: ["${local.region}d"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
       EOT
       ]
     }
-    # Tranium is using Managed NodeGroups due to lack of support for LaunchTemplates in karpenter
-    # See following doc for details if you want to use an older karpenter version INSERT URL TO DOCUMENTATION
   }
+
 }
 
 #---------------------------------------------------------------

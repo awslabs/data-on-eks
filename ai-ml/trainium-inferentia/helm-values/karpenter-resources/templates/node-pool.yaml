@@ -21,22 +21,10 @@ spec:
       taints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.nodePool.requirements }}
       requirements:
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: {{ toYaml .Values.nodePool.instanceFamilies | nindent 12 }}
-        - key: "karpenter.k8s.aws/instance-size"
-          operator: In
-          values: {{ toYaml .Values.nodePool.instanceSizes | nindent 12 }}
-        - key: "kubernetes.io/arch"
-          operator: In
-          values: {{ toYaml .Values.nodePool.architecture | nindent 12 }}
-        - key: "topology.kubernetes.io/zone"
-          operator: In
-          values: {{ toYaml .Values.nodePool.azs | nindent 12 }}
-        - key: "karpenter.sh/capacity-type"
-          operator: In
-          values: {{ toYaml .Values.nodePool.capacityTypes | nindent 12 }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
   disruption:
     consolidationPolicy: {{ .Values.nodePool.disruption.consolidationPolicy }}
     consolidateAfter: {{ .Values.nodePool.disruption.consolidateAfter }}

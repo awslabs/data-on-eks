@@ -19,21 +19,20 @@ module "eks_blueprints_addons" {
     # ... other configurations ...
     helm_releases = {
     karpenter-resources-default = {
-        name        = "default"
-        description = "A Helm chart for default node pool"
-        chart       = "${path.module}/helm-values/karpenter-resources"
-        values = [
+      name        = "default"
+      description = "A Helm chart for default node pool"
+      chart       = "${path.module}/helm-values/karpenter-resources"
+      values = [
         <<-EOT
-            clusterName: ${module.eks.cluster_name}
-            karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-            azs: ["${local.region}d"]
-            labels:
-            - provisioner: default
-            - workload: rayhead
-            taints: []
-        EOT
-        ]
-        # ... other configurations ...
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+      nodePool:
+        labels:
+          - provisioner: default
+          - workload: rayhead
+      EOT
+      ]
     }
     }
 }
