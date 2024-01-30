@@ -1,3 +1,4 @@
+# NodePool configuration
 name: default
 clusterName:
 karpenterRole:
@@ -15,7 +16,33 @@ taints: # Taints added here because its being used across all the templates but 
     operator: "Equal"
     value: "user"
     effect: "NoSchedule"
+architecture: ["amd64"]
+capacityTypes: ["spot", "on-demand"]
+disruption:
+  consolidationPolicy: WhenEmpty
+  consolidateAfter: 30s
+  expireAfter: 720h
+limits:
+  cpu: "1000"
+  memory: 1000Gi
+weight: 10
+
+# EC2NodeClass configuration
 amiFamily: AL2
 amiSelectorTerms:
 azs: [""]
+subnetSelectorTags:
+  kubernetes.io/role/internal-elb: "1"  # Added here to make sure that will be scheduled in private subnets
+blockDevice:
+  deviceName: /dev/xvda # Default value, can be overridden
+  volumeSize: 100Gi
+  volumeType: gp3
+  encrypted: true
+  deleteOnTermination: true
+metadataOptions:
+  httpEndpoint: enabled
+  httpProtocolIPv6: disabled
+  httpPutResponseHopLimit: 2
+  httpTokens: required
+detailedMonitoring: true
 userData:

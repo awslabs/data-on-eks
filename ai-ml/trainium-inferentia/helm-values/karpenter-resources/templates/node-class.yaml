@@ -12,8 +12,10 @@ spec:
   {{- end }}
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: {{ .Values.clusterName }}
-        kubernetes.io/role/internal-elb: "1" # Make sure that it will be scheduled on private subs
+      {{- range $key, $value := .Values.subnetSelectorTags }}
+        {{ $key }}: {{ $value | quote }}
+      {{- end }}
+      karpenter.sh/discovery: {{ .Values.clusterName }}
   securityGroupSelectorTerms:
     - tags:
         Name: {{ .Values.clusterName }}-node
@@ -22,22 +24,18 @@ spec:
   tags:
     Name: karpenter-{{ .Values.name }}
   metadataOptions:
-    httpEndpoint: enabled
-    httpProtocolIPv6: disabled
-    httpPutResponseHopLimit: 2
-    httpTokens: required
+    httpEndpoint: {{ .Values.metadataOptions.httpEndpoint }}
+    httpProtocolIPv6: {{ .Values.metadataOptions.httpProtocolIPv6 }}
+    httpPutResponseHopLimit: {{ .Values.metadataOptions.httpPutResponseHopLimit }}
+    httpTokens: {{ .Values.metadataOptions.httpTokens }}
   blockDeviceMappings:
-    {{ if eq .Values.amiFamily "Ubuntu" }}
-    - deviceName: /dev/sda1
-    {{ else }}
-    - deviceName: /dev/xvda
-    {{ end }}
+    - deviceName: {{ default "/dev/xvda" .Values.blockDevice.deviceName }}
       ebs:
-        volumeSize: 200Gi
-        volumeType: gp3
-        encrypted: true
-        deleteOnTermination: true
-  detailedMonitoring: true
+        volumeSize: {{ .Values.blockDevice.volumeSize }}
+        volumeType: {{ .Values.blockDevice.volumeType }}
+        encrypted: {{ .Values.blockDevice.encrypted }}
+        deleteOnTermination: {{ .Values.blockDevice.deleteOnTermination }}
+  detailedMonitoring: {{ .Values.detailedMonitoring }}
   {{- if .Values.userData }}
   userData: |
     {{- .Values.userData | nindent 4 }}

@@ -239,6 +239,7 @@ module "eks_blueprints_addons" {
 
   tags = local.tags
 
+  # We are installing Karpenter resources with Helm Chart, seee helm-values/
   helm_releases = {
     karpenter-resources-default = {
       name        = "default"

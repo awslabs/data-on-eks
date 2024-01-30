@@ -36,7 +36,7 @@ spec:
           {{- end }}
         - key: "kubernetes.io/arch"
           operator: In
-          values: ["amd64"]
+          values: {{ toYaml .Values.architecture | nindent 12 }}
         - key: "topology.kubernetes.io/zone"
           operator: In
           {{- with .Values.azs }}
@@ -45,12 +45,13 @@ spec:
           {{- end }}
         - key: "karpenter.sh/capacity-type"
           operator: In
-          values: ["spot", "on-demand"]
+          values: {{ toYaml .Values.capacityTypes | nindent 12 }}
   disruption:
-    consolidationPolicy: WhenEmpty
-    consolidateAfter: 30s
-    expireAfter: 720h
+    consolidationPolicy: {{ .Values.disruption.consolidationPolicy }}
+    consolidateAfter: {{ .Values.disruption.consolidateAfter }}
+    expireAfter: {{ .Values.disruption.expireAfter }}
   limits:
-    cpu: "1000"
-    memory: 1000Gi
-  weight: 10
+    cpu: {{ .Values.limits.cpu }}
+    memory: {{ .Values.limits.memory }}
+  weight: {{ .Values.weight }}
+
