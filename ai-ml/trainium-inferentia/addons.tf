@@ -247,35 +247,39 @@ module "eks_blueprints_addons" {
       chart       = "${path.module}/helm-values/karpenter-resources"
       values = [
         <<-EOT
-          clusterName: ${module.eks.cluster_name}
+        clusterName: ${module.eks.cluster_name}
+        ec2NodeClass:
           karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
           azs: ["${local.region}d"]
+        nodePool:
           labels:
             - provisioner: default
             - workload: rayhead
           taints: []
-        EOT
+      EOT
       ]
     }
     karpenter-resources-inferentia = {
       name        = "inferentia-inf2"
-      description = "A Helm chart for karpenter trainium-trn1"
+      description = "A Helm chart for karpenter inferentia-inf2"
       chart       = "${path.module}/helm-values/karpenter-resources"
       values = [
         <<-EOT
-          name: inferentia-inf2
-          clusterName: ${module.eks.cluster_name}
+        name: inferentia-inf2
+        clusterName: ${module.eks.cluster_name}
+        ec2NodeClass:
           karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
           azs: ["${local.region}d"]
+        nodePool:
           instanceSizes: ["24xlarge", "48xlarge"]
           instanceFamilies: ["inf2"]
           labels:
             - provisioner: inferentia-inf2
             - hub.jupyter.org/node-purpose: user
-        EOT
+      EOT
       ]
     }
-    # Tranium is using Manage NodeGroups due to lack of support for LaunchTemplates in karpenter
+    # Tranium is using Managed NodeGroups due to lack of support for LaunchTemplates in karpenter
     # See following doc for details if you want to use an older karpenter version INSERT URL TO DOCUMENTATION
   }
 }

@@ -1,4 +1,4 @@
----
+{{- if .Values.nodePool.enabled }}
 apiVersion: karpenter.sh/v1beta1
 kind: NodePool
 metadata:
@@ -9,7 +9,7 @@ spec:
       labels:
         NodePool: {{ .Values.name }}
         NodeGroupType: {{ .Values.name }}
-        {{- with .Values.labels }}
+        {{- with .Values.nodePool.labels }}
         {{- range . }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -17,40 +17,32 @@ spec:
     spec:
       nodeClassRef:
         name: {{ .Values.name }}
-      {{- with .Values.taints }}
+      {{- with .Values.nodePool.taints }}
       taints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       requirements:
         - key: "karpenter.k8s.aws/instance-family"
           operator: In
-          {{- with .Values.instanceFamilies }}
-          values:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          values: {{ toYaml .Values.nodePool.instanceFamilies | nindent 12 }}
         - key: "karpenter.k8s.aws/instance-size"
           operator: In
-          {{- with .Values.instanceSizes }}
-          values:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          values: {{ toYaml .Values.nodePool.instanceSizes | nindent 12 }}
         - key: "kubernetes.io/arch"
           operator: In
-          values: {{ toYaml .Values.architecture | nindent 12 }}
+          values: {{ toYaml .Values.nodePool.architecture | nindent 12 }}
         - key: "topology.kubernetes.io/zone"
           operator: In
-          {{- with .Values.azs }}
-          values:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          values: {{ toYaml .Values.nodePool.azs | nindent 12 }}
         - key: "karpenter.sh/capacity-type"
           operator: In
-          values: {{ toYaml .Values.capacityTypes | nindent 12 }}
+          values: {{ toYaml .Values.nodePool.capacityTypes | nindent 12 }}
   disruption:
-    consolidationPolicy: {{ .Values.disruption.consolidationPolicy }}
-    consolidateAfter: {{ .Values.disruption.consolidateAfter }}
-    expireAfter: {{ .Values.disruption.expireAfter }}
+    consolidationPolicy: {{ .Values.nodePool.disruption.consolidationPolicy }}
+    consolidateAfter: {{ .Values.nodePool.disruption.consolidateAfter }}
+    expireAfter: {{ .Values.nodePool.disruption.expireAfter }}
   limits:
-    cpu: {{ .Values.limits.cpu }}
-    memory: {{ .Values.limits.memory }}
-  weight: {{ .Values.weight }}
+    cpu: {{ .Values.nodePool.limits.cpu }}
+    memory: {{ .Values.nodePool.limits.memory }}
+  weight: {{ .Values.nodePool.weight }}
+{{- end }}

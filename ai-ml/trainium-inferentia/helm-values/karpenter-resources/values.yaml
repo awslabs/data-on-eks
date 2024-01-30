@@ -1,11 +1,34 @@
-# NodePool configuration
+# Shared values
 name: default
 clusterName:
-karpenterRole:
-instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
-instanceFamilies: ["c5", "m5", "r5"]
-labels:
-taints: # Taints added here because its being used across all the templates but default
+
+# EC2NodeClass specific values
+ec2NodeClass:
+  enabled: true
+  amiFamily: AL2
+  amiSelectorTerms:
+  subnetSelectorTags:
+    kubernetes.io/role/internal-elb: "1"  # Added here to make sure that will be scheduled in private subnets
+  karpenterRole:
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
+  blockDevice:
+    deviceName: /dev/xvda
+    volumeSize: 100Gi
+    volumeType: gp3
+    encrypted: true
+    deleteOnTermination: true
+  detailedMonitoring: true
+  userData:
+
+# NodePool specific values
+nodePool:
+  enabled: true
+  labels:
+  taints:
   - key: aws.amazon.com/neuroncore
     value: "true"
     effect: "NoSchedule"
@@ -16,33 +39,16 @@ taints: # Taints added here because its being used across all the templates but 
     operator: "Equal"
     value: "user"
     effect: "NoSchedule"
-architecture: ["amd64"]
-capacityTypes: ["spot", "on-demand"]
-disruption:
-  consolidationPolicy: WhenEmpty
-  consolidateAfter: 30s
-  expireAfter: 720h
-limits:
-  cpu: "1000"
-  memory: 1000Gi
-weight: 10
-
-# EC2NodeClass configuration
-amiFamily: AL2
-amiSelectorTerms:
-azs: [""]
-subnetSelectorTags:
-  kubernetes.io/role/internal-elb: "1"  # Added here to make sure that will be scheduled in private subnets
-blockDevice:
-  deviceName: /dev/xvda # Default value, can be overridden
-  volumeSize: 100Gi
-  volumeType: gp3
-  encrypted: true
-  deleteOnTermination: true
-metadataOptions:
-  httpEndpoint: enabled
-  httpProtocolIPv6: disabled
-  httpPutResponseHopLimit: 2
-  httpTokens: required
-detailedMonitoring: true
-userData:
+  instanceFamilies: ["c5", "m5", "r5"]
+  instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+  architecture: ["amd64"]
+  azs: [""]
+  capacityTypes: ["spot", "on-demand"]
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 30s
+    expireAfter: 720h
+  limits:
+    cpu: "1000"
+    memory: 1000Gi
+  weight: 10
