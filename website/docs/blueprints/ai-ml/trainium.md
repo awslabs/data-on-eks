@@ -64,6 +64,10 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/trainiu
  - Prepare the necessary etcd setup as a prerequisite for TorchX.
  - Create a test queue within Volcano to enable TorchX job submission to this specific queue.
 
+:::info
+**Important**: In this setup, Karpenter is utilized exclusively for `inferentia-inf2` instances, due to its current limitations in custom networking interfaces configuration. For Trainium instances, managed node groups and the Cluster Autoscaler are employed for scaling purposes. For users working with an older version of Karpenter (specifically, the `v1alpha5` APIs), please note that the configuration for Trainium with `LaunchTemplates` is still accessible. It can be found in the `data-on-eks/ai-ml/trainium-inferentia/addons.tf` file, although it is commented out at the file's end.
+:::
+
 ### Prerequisites
 
 Ensure that you have installed the following tools on your machine.
