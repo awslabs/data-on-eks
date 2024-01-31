@@ -239,46 +239,50 @@ module "eks_blueprints_addons" {
 
   tags = local.tags
 
-  # We are installing Karpenter resources with Helm Chart, see helm-values/
-  helm_releases = {
-    karpenter-resources-default = {
-      name        = "default"
-      description = "A Helm chart for default node pool"
-      chart       = "${path.module}/helm-values/karpenter-resources"
-      values = [
-        <<-EOT
-      clusterName: ${module.eks.cluster_name}
-      ec2NodeClass:
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-        subnetSelectorTerms:
-          id: ${module.vpc.private_subnets[3]}
-        securityGroupSelectorTerms:
-          tags:
-            Name: ${module.eks.cluster_name}-node
-      nodePool:
-        labels:
-          - provisioner: default
-          - workload: rayhead
-        requirements:
-          - key: "karpenter.k8s.aws/instance-family"
-            operator: In
-            values: ["c5", "m5", "r5"]
-          - key: "karpenter.k8s.aws/instance-size"
-            operator: In
-            values: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
-          - key: "kubernetes.io/arch"
-            operator: In
-            values: ["amd64"]
-          - key: "karpenter.sh/capacity-type"
-            operator: In
-            values: ["spot", "on-demand"]
-      EOT
-      ]
-    }
-    karpenter-resources-inferentia = {
-      name        = "inferentia-inf2"
-      description = "A Helm chart for karpenter inferentia-inf2"
-      chart       = "${path.module}/helm-values/karpenter-resources"
+}
+
+#---------------------------------------------------------------
+# Data on EKS Kubernetes Addons
+#---------------------------------------------------------------
+module "eks_data_addons" {
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.2.9" # ensure to update this to the latest/desired version
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  enable_aws_neuron_device_plugin  = true
+  enable_aws_efa_k8s_device_plugin = true
+  #---------------------------------------
+  # Volcano Scheduler for TorchX
+  #---------------------------------------
+  enable_volcano = true
+
+  #---------------------------------------
+  # Kuberay Operator
+  #---------------------------------------
+  enable_kuberay_operator = true
+  kuberay_operator_helm_config = {
+    version = "1.0.0-rc.0"
+    # Enabling Volcano as Batch scheduler for KubeRay Operator
+    values = [
+      <<-EOT
+      batchScheduler:
+        enabled: true
+    EOT
+    ]
+  }
+
+  enable_jupyterhub = true
+  jupyterhub_helm_config = {
+    values = [
+      templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
+        jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      })
+    ]
+  }
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    inferentia-inf2 = {
       values = [
         <<-EOT
       name: inferentia-inf2
@@ -321,48 +325,37 @@ module "eks_blueprints_addons" {
       EOT
       ]
     }
-  }
-
-}
-
-#---------------------------------------------------------------
-# Data on EKS Kubernetes Addons
-#---------------------------------------------------------------
-module "eks_data_addons" {
-  source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.2" # ensure to update this to the latest/desired version
-
-  oidc_provider_arn = module.eks.oidc_provider_arn
-
-  enable_aws_neuron_device_plugin  = true
-  enable_aws_efa_k8s_device_plugin = true
-  #---------------------------------------
-  # Volcano Scheduler for TorchX
-  #---------------------------------------
-  enable_volcano = true
-
-  #---------------------------------------
-  # Kuberay Operator
-  #---------------------------------------
-  enable_kuberay_operator = true
-  kuberay_operator_helm_config = {
-    version = "1.0.0-rc.0"
-    # Enabling Volcano as Batch scheduler for KubeRay Operator
-    values = [
-      <<-EOT
-      batchScheduler:
-        enabled: true
-    EOT
-    ]
-  }
-
-  enable_jupyterhub = true
-  jupyterhub_helm_config = {
-    values = [
-      templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
-        jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
-      })
-    ]
+    default = {
+      values = [
+        <<-EOT
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[3]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+      nodePool:
+        labels:
+          - provisioner: default
+          - workload: rayhead
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5", "m5", "r5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+      EOT
+      ]
+    }
   }
 }
 
