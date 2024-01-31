@@ -254,6 +254,19 @@ module "eks_blueprints_addons" {
         labels:
           - provisioner: default
           - workload: rayhead
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5", "m5", "r5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
       EOT
       ]
     }
