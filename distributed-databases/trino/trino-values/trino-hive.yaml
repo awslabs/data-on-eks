@@ -21,8 +21,7 @@ coordinator:
     query:
       maxMemoryPerNode: "4GB"
   nodeSelector:
-    intent: apps
-    karpenter.sh/provisioner-name: default
+    NodePool: trino-karpenter
     karpenter.sh/capacity-type: on-demand
 worker:
   jvm:
@@ -35,8 +34,7 @@ worker:
       cpu: 2000m
       memory: 10Gi
   nodeSelector:
-    intent: apps
-    karpenter.sh/provisioner-name: default
+    NodePool: trino-karpenter
     karpenter.sh/capacity-type: spot
 additionalConfigProperties:
   - "retry-policy=TASK"
@@ -59,3 +57,18 @@ additionalCatalogs:
 serviceAccount:
   create: true
   name: ${sa}
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/scheme: internet-facing
+  hosts:
+  - paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: trino
+            port:
+              number: 8080

@@ -30,7 +30,7 @@ variable "catalog_type" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.27"
+  default     = "1.28"
   type        = string
 }
 

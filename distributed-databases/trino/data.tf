@@ -12,16 +12,6 @@ data "aws_availability_zones" "available" {
   }
 }
 
-data "aws_ami" "eks" {
-  owners      = ["amazon"]
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-${module.eks.cluster_version}-*"]
-  }
-}
-
 data "aws_iam_policy_document" "trino_exchange_access" {
   statement {
     sid    = ""

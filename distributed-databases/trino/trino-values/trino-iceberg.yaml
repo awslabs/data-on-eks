@@ -21,8 +21,7 @@ coordinator:
     query:
       maxMemoryPerNode: "4GB"
   nodeSelector:
-    intent: apps
-    karpenter.sh/provisioner-name: default
+    NodePool: trino-karpenter
     karpenter.sh/capacity-type: on-demand
 worker:
   jvm:
@@ -35,9 +34,8 @@ worker:
       cpu: 2000m
       memory: 10Gi
   nodeSelector:
-    intent: apps
-    karpenter.sh/provisioner-name: default
-    karpenter.sh/capacity-type: spot
+    NodePool: trino-karpenter
+    karpenter.sh/capacity-type: on-demand
 additionalConfigProperties:
   - "retry-policy=TASK"
   - "exchange.compression-enabled=true"
