@@ -88,13 +88,17 @@ module "eks_blueprints_addons" {
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
-
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-valyes.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -192,7 +196,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Spark History Server Add-on
   #---------------------------------------------------------------
-  # Spark hsitory server is required only when EMR Spark Operator is enabled
+  # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = true
   spark_history_server_helm_config = {
     values = [

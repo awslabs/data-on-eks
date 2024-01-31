@@ -115,26 +115,13 @@ First, clone the repository
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate into one of the example directories and run `terraform init`
+Navigate into one of the example directories and run `install.sh` script
 
 ```bash
 cd data-on-eks/analytics/terraform/emr-eks-karpenter
-terraform init
+chmod +x install.sh
+./install.sh
 ```
-
-Set AWS_REGION and Run Terraform plan to verify the resources created by this execution.
-
-```bash
-export AWS_REGION="us-west-2"
-terraform plan
-```
-
-This command may take between 20 and 30 minutes to create all the resources.
-
-```bash
-terraform apply
-```
-Enter `yes` to apply.
 
 ### Verify the resources
 
@@ -344,7 +331,7 @@ This pattern uses EBS volumes for data processing and compute optimized provisio
 ```
 You can also update [EC2 instances](https://aws.amazon.com/ec2/instance-types/#Compute_Optimized) that doesn't include instance store volumes (for example c5.xlarge) and remove c5d's if needed for this exercise
 
-We will create Storageclass that will be used by drivers and executors. We'll create static Persistant Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors.
+We will create Storageclass that will be used by drivers and executors. We'll create static Persistent Volume Claim (PVC) for the driver pod but we'll use dynamically created ebs volumes for executors.
 
 Create StorageClass and PVC using example provided
 ```bash
@@ -479,7 +466,7 @@ variable "enable_yunikorn" {
 }
 ```
 
-2. Execute `terrafrom apply` again. This will deploy FSx for Lustre add-on and all the necessary reosurces.
+2. Execute `terrafrom apply` again. This will deploy FSx for Lustre add-on and all the necessary resources.
 
 ```terraform
 terraform apply -auto-approve
@@ -526,7 +513,7 @@ In this example we will load a csv file into a delta lake table format by runnin
 
 ### Prerequisites:
 
-The necessary EMR on EKS cluster has been provisioned as per instructions in the begining of this page.
+The necessary EMR on EKS cluster has been provisioned as per instructions in the beginning of this page.
 This script requires input parameters which can be extracted from `terraform apply` output values.
 Execute the Spark job using the below shell script.
 
@@ -551,7 +538,7 @@ cd analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/deltalake
 ![](img/deltalake-s3.png)
 
   - The data folder contains two csv files.(initial_emp.csv and update_emp.csv)
-  - The scripts folder contains two pyspark scripts.(delta-create.py and delta-merge.py) for intial load and subsequent merge.
+  - The scripts folder contains two pyspark scripts.(delta-create.py and delta-merge.py) for initial load and subsequent merge.
   - The delta lake table is created in the delta\delta_emp folder.
   - There is also a symlink manifest file created in the delta\delta_emp\_symlink_format_manifest and registered to glue catalog for athena to query the initial table.
 

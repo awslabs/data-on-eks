@@ -1,4 +1,4 @@
-# Argo Worklfows on EKS
+# Argo Workflows on EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/job-schedulers/argo-workflows-eks) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->

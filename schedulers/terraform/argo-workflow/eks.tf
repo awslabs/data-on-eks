@@ -75,7 +75,7 @@ module "eks" {
     }
 
     ebs_optimized = true
-    # This bloc device is used only for root volume. Adjust volume according to your size.
+    # This block device is used only for root volume. Adjust volume according to your size.
     # NOTE: Don't use this volume for Spark workloads
     block_device_mappings = {
       xvda = {

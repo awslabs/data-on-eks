@@ -106,7 +106,7 @@ aws eks update-kubeconfig --name ray-cluster #or whatever you used for EKS clust
 First, lets verify that we have worker nodes running in the cluster.
 
 ```bash
-kuebctl get nodes
+kubectl get nodes
 ```
 :::info
 ```bash
@@ -124,24 +124,8 @@ kubectl get pods -n kuberay-operator
 ```
 :::info
 ```bash
-NAMESPACE            NAME                               READY   STATUS    RESTARTS        AGE
-amazon-cloudwatch    aws-cloudwatch-metrics-d4xrr       1/1     Running   1 (1h37m ago)   1h
-amazon-cloudwatch    aws-cloudwatch-metrics-tpqsz       1/1     Running   1 (1h37m ago)   1h
-amazon-cloudwatch    aws-cloudwatch-metrics-z7wbn       1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-h82w4           1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-r5kxt           1/1     Running   1 (1h37m ago)   1h
-aws-for-fluent-bit   aws-for-fluent-bit-wgxxl           1/1     Running   1 (1h37m ago)   1h
-karpenter            karpenter-668c669897-fmxdr         1/1     Running   1 (1h37m ago)   1h
-karpenter            karpenter-668c669897-prbr6         1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-fnwp5                     1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-r45xd                     1/1     Running   1 (1h37m ago)   1h
-kube-system          aws-node-vfq66                     1/1     Running   1 (1h37m ago)   1h
-kube-system          coredns-79989457d9-2jldd           1/1     Running   1 (1h37m ago)   1h
-kube-system          coredns-79989457d9-cgtkf           1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-5jrtf                   1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-fjxsk                   1/1     Running   1 (1h37m ago)   1h
-kube-system          kube-proxy-tzr79                   1/1     Running   1 (1h37m ago)   1h
-kuberay-operator     kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
+NAME                               READY   STATUS    RESTARTS        AGE
+kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
 ```
 :::
 
@@ -286,7 +270,7 @@ pytorch-kuberay-head-9tx56   0/2     Pending   0          43s
 ```
 :::
 
-Once running, we can forward the port for server, taking care that we foward it to another local port as 8265 may be occupied by the xgboost connection.
+Once running, we can forward the port for server, taking care that we forward it to another local port as 8265 may be occupied by the xgboost connection.
 
 ```bash
 kubectl port-forward service/pytorch-kuberay-head-svc -n pytorch 8266:8265

@@ -222,7 +222,7 @@ module "eks" {
       instance_types       = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
 
       ebs_optimized = true
-      # This bloc device is used only for root volume. Adjust volume according to your size.
+      # This block device is used only for root volume. Adjust volume according to your size.
       # NOTE: Dont use this volume for flink workloads
       block_device_mappings = {
         xvda = {

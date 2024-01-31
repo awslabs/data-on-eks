@@ -39,10 +39,10 @@ mkdir -p "../input"
 wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "../input/yellow_tripdata_2022-0.parquet"
 
 # Making duplicate copies to increase the size of the data.
-max=100
+max=20
 for (( i=1; i <= $max; ++i ))
 do
-    cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
+cp -rf "../input/yellow_tripdata_2022-0.parquet" "../input/yellow_tripdata_2022-${i}.parquet"
 done
 
 aws s3 sync "../input" ${INPUT_DATA_S3_PATH} # Sync from local folder to S3 path
@@ -64,7 +64,7 @@ aws emr-containers start-job-run \
       "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'",
         "'"$OUTPUT_DATA_S3_PATH"'"
       ],
-      "sparkSubmitParameters": "--conf spark.executor.instances=10"
+      "sparkSubmitParameters": "--conf spark.executor.instances=2"
     }
   }' \
   --configuration-overrides '{

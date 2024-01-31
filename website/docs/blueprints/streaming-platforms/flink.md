@@ -219,6 +219,7 @@ chmod +x install.sh
 
 Verify the cluster status
 
+```bash
     ➜ kubectl get nodes -A
     NAME                                         STATUS   ROLES    AGE   VERSION
     ip-10-1-160-150.us-west-2.compute.internal   Ready    <none>   24h   v1.24.11-eks-a59e1f0
@@ -234,9 +235,11 @@ Verify the cluster status
     cert-manager-77fc7548dc-dzdms             1/1     Running   0          24h
     cert-manager-cainjector-8869b7ff7-4w754   1/1     Running   0          24h
     cert-manager-webhook-586ddf8589-g6s87     1/1     Running   0          24h
+```
 
 To list all the resources created for Flink team to run Flink jobs using this namespace
 
+```bash
     ➜  ~ kubectl get all,role,rolebinding,serviceaccount --namespace flink-team-a-ns
     NAME                                               CREATED AT
     role.rbac.authorization.k8s.io/flink-team-a-role   2023-04-06T13:17:05Z
@@ -247,7 +250,7 @@ To list all the resources created for Flink team to run Flink jobs using this na
     NAME                             SECRETS   AGE
     serviceaccount/default           0         22h
     serviceaccount/flink-team-a-sa   0         22h
-
+```
 
 </CollapsibleContent>
 

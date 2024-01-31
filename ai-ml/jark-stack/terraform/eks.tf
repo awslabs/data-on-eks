@@ -84,7 +84,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     #  It's recommended to have a Managed Node group for hosting critical add-ons
-    #  It's recommeded to use Karpenter to place your workloads instead of using Managed Node groups
+    #  It's recommended to use Karpenter to place your workloads instead of using Managed Node groups
     #  You can leverage nodeSelector and Taints/tolerations to distribute workloads across Managed Node group or Karpenter nodes.
     core_node_group = {
       name        = "core-node-group"
