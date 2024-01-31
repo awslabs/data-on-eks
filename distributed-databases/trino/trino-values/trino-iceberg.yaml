@@ -60,3 +60,18 @@ additionalCatalogs:
 serviceAccount:
   create: true
   name: ${sa}
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/scheme: internet-facing
+  hosts:
+  - paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: trino
+            port:
+              number: 8080
