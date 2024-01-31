@@ -250,6 +250,11 @@ module "eks_blueprints_addons" {
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[3]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
       nodePool:
         labels:
           - provisioner: default
@@ -280,6 +285,11 @@ module "eks_blueprints_addons" {
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[3]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
       nodePool:
         labels:
           - provisioner: inferentia-inf2
@@ -305,9 +315,6 @@ module "eks_blueprints_addons" {
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
-          - key: "topology.kubernetes.io/zone"
-            operator: In
-            values: ["${local.region}d"]
           - key: "karpenter.sh/capacity-type"
             operator: In
             values: ["spot", "on-demand"]
@@ -393,7 +400,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-oss-grafana"
+  name                    = "${local.name}-oss-grafana-remove"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 

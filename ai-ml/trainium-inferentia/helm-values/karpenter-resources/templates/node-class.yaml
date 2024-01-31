@@ -11,14 +11,28 @@ spec:
     {{- toYaml .Values.ec2NodeClass.amiSelectorTerms | nindent 4 }}
   {{- end }}
   subnetSelectorTerms:
+    {{- if .Values.ec2NodeClass.subnetSelectorTerms.tags }}
     - tags:
-      {{- range $key, $value := .Values.ec2NodeClass.subnetSelectorTags }}
+      {{- range $key, $value := .Values.ec2NodeClass.subnetSelectorTerms.tags }}
         {{ $key }}: {{ $value | quote }}
       {{- end }}
-      karpenter.sh/discovery: {{ .Values.clusterName }}
+    {{- end }}
+    {{- if .Values.ec2NodeClass.subnetSelectorTerms.id }}
+    - id: {{ .Values.ec2NodeClass.subnetSelectorTerms.id }}
+    {{- end }}
   securityGroupSelectorTerms:
+    {{- if .Values.ec2NodeClass.securityGroupSelectorTerms.name }}
+    - name: {{ .Values.ec2NodeClass.securityGroupSelectorTerms.name }}
+    {{- end }}
+    {{- if .Values.ec2NodeClass.securityGroupSelectorTerms.id }}
+    - id: {{ .Values.ec2NodeClass.securityGroupSelectorTerms.id }}
+    {{- end }}
+    {{- if .Values.ec2NodeClass.securityGroupSelectorTerms.tags }}
     - tags:
-        Name: {{ .Values.clusterName }}-node
+      {{- range $key, $value := .Values.ec2NodeClass.securityGroupSelectorTerms.tags }}
+        {{ $key }}: {{ $value | quote }}
+      {{- end }}
+    {{- end }}
   role: {{ .Values.ec2NodeClass.karpenterRole }}
   tags:
     Name: karpenter-{{ .Values.name }}

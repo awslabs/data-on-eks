@@ -1,14 +1,14 @@
 # Shared values
 name: default
-clusterName:
+clusterName: test-cluster
 
 # EC2NodeClass specific values
 ec2NodeClass:
   enabled: true
   amiFamily: AL2
   amiSelectorTerms:
-  subnetSelectorTags:
-    kubernetes.io/role/internal-elb: "1"  # Added here to make sure that will be scheduled in private subnets
+  subnetSelectorTerms: # tag or id see documentation, https://karpenter.sh/docs/concepts/nodeclasses/
+  securityGroupSelectorTerms: # tag, name, id see documentation, https://karpenter.sh/docs/concepts/nodeclasses/
   karpenterRole:
   metadataOptions:
     httpEndpoint: enabled
