@@ -4,7 +4,7 @@
 install_docker() {
     echo "Checking and installing Docker..."
     sudo yum install docker -y
-    sudo systemctl start docker
+    sudo service docker start
     sudo usermod -aG docker $(whoami)
     newgrp docker
 }
