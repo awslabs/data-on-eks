@@ -6,7 +6,7 @@ install_docker() {
     sudo yum install docker -y
     sudo service docker start
     sudo usermod -aG docker $(whoami)
-    newgrp docker
+    # newgrp docker removed to prevent script interruption
 }
 
 # Function to install a package using yum
