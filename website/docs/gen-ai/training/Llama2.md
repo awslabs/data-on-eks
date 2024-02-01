@@ -137,7 +137,7 @@ Navigate to examples/llama2 directory
 cd examples/llama2/
 ```
 
-Run the `1-llama2-neuronx-pretrain-build-image.sh` script to build the neuronx-nemo-megatron container image and push the image into ECR. 
+Run the `1-llama2-neuronx-pretrain-build-image.sh` script to build the neuronx-nemo-megatron container image and push the image into ECR.
 
 When prompted for a region, enter the region in which you launched your EKS cluster, above.
 
@@ -149,7 +149,7 @@ Note: The image building and pushing to ECR will take ~10 minutes
 
 ### Launch and connect to a CLI pod
 
-In this step we need access to the shared FSx storage. To copy files to this storage, we’ll first launch and connect to a CLI pod running the neuronx-nemo-megatron docker image that you created above. 
+In this step we need access to the shared FSx storage. To copy files to this storage, we’ll first launch and connect to a CLI pod running the neuronx-nemo-megatron docker image that you created above.
 
 Run the following script to launch the CLI pod:
 
@@ -227,9 +227,9 @@ python3 neuronx-nemo-megatron/nemo/scripts/nlp_language_modeling/preprocess_data
 
 Note: When we later launch our training jobs in EKS, the training pods will run the training script from within neuronx-nemo-megatron/nemo/examples directory on FSx. This is convenient, because it will let you modify your training script directly on FSx without requiring that you rebuild the neuronx-nemo-megatron container for every change.
 
-Modify the test_llama.sh script `/shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh` to update the following two lines. These lines tell the training pod workers where to find the Llama tokenizer and the dataset on the FSx filesystem. 
+Modify the test_llama.sh script `/shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh` to update the following two lines. These lines tell the training pod workers where to find the Llama tokenizer and the dataset on the FSx filesystem.
 
-You can use any common text editor such as nano or vim to make these changes. 
+You can use any common text editor such as nano or vim to make these changes.
 
 Run:
 ```bash
@@ -279,7 +279,7 @@ Run the pre-compilation script
 ./3-llama2-neuronx-mpi-compile.sh
 ```
 
-Pre-compilation will take ~10 minutes when using 4 trn1.32xlarge nodes. 
+Pre-compilation will take ~10 minutes when using 4 trn1.32xlarge nodes.
 
 Periodically run `kubectl get pods | grep compile` and wait until you see that the compile job shows ‘Completed’.
 
@@ -333,7 +333,7 @@ Run the following script to create a TensorBoard deployment so you can visualize
 ./5-deploy-tensorboard.sh
 ```
 
-Once the deployment is ready the script will output a password-protected URL for your new TensorBoard deployment. 
+Once the deployment is ready the script will output a password-protected URL for your new TensorBoard deployment.
 
 Launch the URL to view your training progress.
 

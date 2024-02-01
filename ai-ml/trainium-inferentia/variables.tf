@@ -53,49 +53,48 @@ variable "enable_mpi_operator" {
 
 variable "trn1_32xl_min_size" {
   description = "trn1 Worker node minimum size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
 
 variable "trn1_32xl_desired_size" {
   description = "trn1 Worker node desired size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
 
 variable "trn1n_32xl_min_size" {
   description = "Worker node minimum size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
 
 variable "trn1n_32xl_desired_size" {
   description = "Worker node desired size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
 
 variable "inf2_24xl_min_size" {
   description = "Worker node minimum size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
 
 variable "inf2_24xl_desired_size" {
   description = "Worker node desired size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
 
 variable "inf2_48xl_min_size" {
   description = "Worker node minimum size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
 
 variable "inf2_48xl_desired_size" {
   description = "Worker node desired size"
-  type = number
-  default = 0
+  type        = number
+  default     = 0
 }
-
