@@ -42,11 +42,11 @@ module "eks" {
 
     # MWAA needs access to the EKS control plane in order to submit a job
     allow_access_from_mwaa = {
-      description = "Access from MWAA"
-      protocol    = "tcp"
-      from_port   = 443
-      to_port     = 443
-      type        = "ingress"
+      description              = "Access from MWAA"
+      protocol                 = "tcp"
+      from_port                = 443
+      to_port                  = 443
+      type                     = "ingress"
       source_security_group_id = module.mwaa.mwaa_security_group_id
     }
   }

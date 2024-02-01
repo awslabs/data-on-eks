@@ -7,15 +7,15 @@ import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 import CodeBlock from '@theme/CodeBlock';
-import SparkComputeOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-compute-optimized-provisioner.yaml';
-import SparkMemoryOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-memory-optimized-provisioner.yaml';
-import SparkGravitonMemoryOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-graviton-memory-optimized-provisioner.yaml';
+import SparkComputeOptimizedNodepool from '!!raw-loader!../../../../analytics/terraform/emr-eks-karpenter/karpenter-provisioners/spark-compute-optimized-provisioner.yaml';
+import SparkMemoryOptimizedNodepool from '!!raw-loader!../../../../analytics/terraform/emr-eks-karpenter/karpenter-provisioners/spark-memory-optimized-provisioner.yaml';
+import SparkGravitonMemoryOptimizedNodepool from '!!raw-loader!../../../../analytics/terraform/emr-eks-karpenter/karpenter-provisioners/spark-graviton-memory-optimized-provisioner.yaml';
 
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
 ## Introduction
 
-In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) provisioners for scaling Spark jobs.
+In this [pattern](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter), you will deploy an EMR on EKS cluster and use [Karpenter](https://karpenter.sh/) Nodepools for scaling Spark jobs.
 
 **Architecture**
 ![emr-eks-karpenter](img/emr-eks-karpenter.png)
@@ -155,24 +155,24 @@ kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output sho
 
 ## Run Sample Spark job
 
-The pattern shows how to run spark jobs in a multi-tenant EKS cluster. The examples showcases two data teams using namespaces `emr-data-team-a` and `emr-data-team-b` mapped to their EMR virtual clusters. You can use different Karpenter provisioners for each team so that they can submit jobs that are unique to their workload. Teams can also use different storage requirements to run their Spark jobs. For example, you can use compute optimized provisioner that has `taints` and specify `tolerations` using pod templates so that you can run spark on compute optimized EC2 instances. In terms of storage, you can decide whether to use [EC2 instance-store](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html) or [EBS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html) or [FSx for lustre](https://docs.aws.amazon.com/fsx/latest/LustreGuide/what-is.html) volumes for data processing. The default storage that is used in these examples is EC2 instance store because of performance benefit
+The pattern shows how to run spark jobs in a multi-tenant EKS cluster. The examples showcases two data teams using namespaces `emr-data-team-a` and `emr-data-team-b` mapped to their EMR virtual clusters. You can use different Karpenter Nodepools for each team so that they can submit jobs that are unique to their workload. Teams can also use different storage requirements to run their Spark jobs. For example, you can use compute optimized Nodepool that has `taints` and specify `tolerations` using pod templates so that you can run spark on compute optimized EC2 instances. In terms of storage, you can decide whether to use [EC2 instance-store](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html) or [EBS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html) or [FSx for lustre](https://docs.aws.amazon.com/fsx/latest/LustreGuide/what-is.html) volumes for data processing. The default storage that is used in these examples is EC2 instance store because of performance benefit
 
-- `spark-compute-optimized` provisioner to run spark jobs on `c5d` instances.
-- `spark-memory-optimized` provisioner to run spark jobs on `r5d` instances.
-- `spark-graviton-memory-optimized` provisioner to run spark jobs on `r6gd` Graviton instances(`ARM64`).
+- `spark-compute-optimized` Nodepool to run spark jobs on `c5d` instances.
+- `spark-memory-optimized` Nodepool to run spark jobs on `r5d` instances.
+- `spark-graviton-memory-optimized` Nodepool to run spark jobs on `r6gd` Graviton instances(`ARM64`).
 
 <Tabs>
 <TabItem value="spark-compute-optimized" lebal="spark-compute-optimized"default>
 
-In this tutorial, you will use Karpenter provisioner that uses compute optimized instances. This template leverages the Karpenter AWSNodeTemplates.
+In this tutorial, you will use Karpenter Nodepool that uses compute optimized instances. This template leverages the Karpenter AWSNodeTemplates.
 
 <details>
-<summary> To view Karpenter provisioner for compute optimized instances, Click to toggle content!</summary>
+<summary> To view Karpenter Nodepool for compute optimized instances, Click to toggle content!</summary>
 
-<CodeBlock language="yaml">{SparkComputeOptimizedProvisioner}</CodeBlock>
+<CodeBlock language="yaml">{SparkComputeOptimizedNodepool}</CodeBlock>
 </details>
 
-To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
+To run Spark Jobs that can use this Nodepool, you need to submit your jobs by adding `tolerations` to your pod templates
 
 For example,
 
@@ -184,7 +184,7 @@ spec:
       effect: "NoSchedule"
 ```
 
-**Execute the sample PySpark Job to trigger compute optimized Karpenter provisioner**
+**Execute the sample PySpark Job to trigger compute optimized Karpenter Nodepool**
 
 The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
 
@@ -205,7 +205,7 @@ Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data
 Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
 ```
 
-Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the Nodepool templates before running the Spark Jobs.
 Nodes will be drained with once the job is completed
 
 **Verify the job execution**
@@ -218,15 +218,15 @@ kubectl get pods --namespace=emr-data-team-a -w
 
 <TabItem value="spark-memory-optimized" label="spark-memory-optimized">
 
-In this tutorial, you will use Karpenter provisioner that uses memory optimized instances. This template uses the AWS Node template with Userdata.
+In this tutorial, you will use Karpenter Nodepool that uses memory optimized instances. This template uses the AWS Node template with Userdata.
 
 <details>
-<summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary>
+<summary> To view Karpenter Nodepool for memory optimized instances, Click to toggle content!</summary>
 
-<CodeBlock language="yaml">{SparkMemoryOptimizedProvisioner}</CodeBlock>
+<CodeBlock language="yaml">{SparkMemoryOptimizedNodepool}</CodeBlock>
 </details>
 
-To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
+To run Spark Jobs that can use this Nodepool, you need to submit your jobs by adding `tolerations` to your pod templates
 
 For example,
 
@@ -237,7 +237,7 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
 ```
-**Execute the sample PySpark Job to trigger memory optimized Karpenter provisioner**
+**Execute the sample PySpark Job to trigger memory optimized Karpenter Nodepool**
 
 The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
 
@@ -258,7 +258,7 @@ Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data
 Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
 ```
 
-Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the Nodepool templates before running the Spark Jobs.
 Nodes will be drained with once the job is completed
 
 **Verify the job execution**
@@ -270,15 +270,15 @@ kubectl get pods --namespace=emr-data-team-a -w
 
 <TabItem value="spark-graviton-memory-optimized" label="spark-graviton-memory-optimized">
 
-In this tutorial, you will use Karpenter provisioner that uses Graviton memory optimized instances. This template uses the AWS Node template with Userdata.
+In this tutorial, you will use Karpenter Nodepool that uses Graviton memory optimized instances. This template uses the AWS Node template with Userdata.
 
 <details>
-<summary> To view Karpenter provisioner for Graviton memory optimized instances, Click to toggle content!</summary>
+<summary> To view Karpenter Nodepool for Graviton memory optimized instances, Click to toggle content!</summary>
 
-<CodeBlock language="yaml">{SparkGravitonMemoryOptimizedProvisioner}</CodeBlock>
+<CodeBlock language="yaml">{SparkGravitonMemoryOptimizedNodepool}</CodeBlock>
 </details>
 
-To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
+To run Spark Jobs that can use this Nodepool, you need to submit your jobs by adding `tolerations` to your pod templates
 
 For example,
 
@@ -289,7 +289,7 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
 ```
-**Execute the sample PySpark Job to trigger Graviton memory optimized Karpenter provisioner**
+**Execute the sample PySpark Job to trigger Graviton memory optimized Karpenter Nodepool**
 
 The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
 
@@ -310,7 +310,7 @@ Enter the CloudWatch Log Group name: /emr-on-eks-logs/emr-eks-karpenter/emr-data
 Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: s3://example-bucket
 ```
 
-Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the Nodepool templates before running the Spark Jobs.
 Nodes will be drained with once the job is completed
 
 **Verify the job execution**
@@ -322,9 +322,9 @@ kubectl get pods --namespace=emr-data-team-a -w
 
 </Tabs>
 
-### Execute the sample PySpark job that uses EBS volumes and compute optimized Karpenter provisioner
+### Execute the sample PySpark job that uses EBS volumes and compute optimized Karpenter Nodepool
 
-This pattern uses EBS volumes for data processing and compute optimized provisioner. You can modify the provisioner by changing nodeselector in driver and executor pod templates. In order to change provisioners, simply update your pod templates to desired provisioner
+This pattern uses EBS volumes for data processing and compute optimized Nodepool. You can modify the Nodepool by changing nodeselector in driver and executor pod templates. In order to change Nodepools, simply update your pod templates to desired Nodepool
 ```yaml
   nodeSelector:
     NodeGroupType: "SparkComputeOptimized"
@@ -362,7 +362,7 @@ In this example, you will learn how to deploy, configure and use FSx for Lustre 
 <Tabs>
 <TabItem value="fsx-static" lebal="fsx-static"default>
 
-**Execute Spark Job by using `FSx for Lustre` with statically provisioned volume and compute optimized Karpenter provisioner.**
+**Execute Spark Job by using `FSx for Lustre` with statically provisioned volume and compute optimized Karpenter Nodepool.**
 
 Fsx for Lustre Terraform module is disabled by default. Follow the [customizing add-ons](#customizing-add-ons) steps before running Spark jobs.
 
@@ -381,7 +381,7 @@ cd analytics/terraform/emr-eks-karpenter/examples/fsx-for-lustre/fsx-static-pvc-
 
 ./fsx-static-spark.sh
 ```
-Karpetner may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Karpetner may take between 1 and 2 minutes to spin up a new compute node as specified in the Nodepool templates before running the Spark Jobs.
 Nodes will be drained with once the job is completed
 
 **Verify the job execution events**
@@ -400,7 +400,7 @@ kubectl exec -ti taxidata-exec-1 -c spark-kubernetes-executor -n emr-data-team-a
 
 <TabItem value="fsx-dynamic" lebal="fsx-dynamic"default>
 
-**Execute Spark Job by using `FSx for Lustre` with dynamically provisioned volume and compute optimized Karpenter provisioner.**
+**Execute Spark Job by using `FSx for Lustre` with dynamically provisioned volume and compute optimized Karpenter Nodepool.**
 
 Fsx for Lustre Terraform module is disabled by default. Follow the [customizing add-ons](#customizing-add-ons) steps before running Spark jobs.
 
@@ -420,7 +420,7 @@ cd analytics/terraform/emr-eks-karpenter/examples/fsx-for-lustre/fsx-dynamic-pvc
 
 ./fsx-dynamic-spark.sh
 ```
-Karpetner may take between 1 and 2 minutes to spin up a new compute node as specified in the provisioner templates before running the Spark Jobs.
+Karpetner may take between 1 and 2 minutes to spin up a new compute node as specified in the Nodepool templates before running the Spark Jobs.
 Nodes will be drained with once the job is completed
 
 **Verify the job execution events**
