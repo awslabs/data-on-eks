@@ -448,7 +448,7 @@ Step2: Execute Benchmark test
 
 <CollapsibleContent header={<h2><span>Karpenter Nodepool weights with Graviton and Intel</span></h2>}>
 
-### Using Karpenter Nodepool weights for runing Spark Jobs on both AWS Graviton and Intel EC2 Instances
+### Using Karpenter Nodepool weights for running Spark Jobs on both AWS Graviton and Intel EC2 Instances
 
 Customers often seek to leverage AWS Graviton instances for running Spark jobs due to their cost savings and performance improvements over traditional Intel instances. However, a common challenge is the availability of Graviton instances in specific regions or availability zones, especially during times of high demand. To address this, a fallback strategy to equivalent Intel instances is desirable.
 
