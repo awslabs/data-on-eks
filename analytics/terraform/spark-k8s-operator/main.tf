@@ -156,9 +156,9 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      min_size     = 1
+      min_size     = 0
       max_size     = 20
-      desired_size = 1
+      desired_size = 0
 
       instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
 
@@ -190,9 +190,9 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      min_size     = 1
+      min_size     = 0
       max_size     = 12
-      desired_size = 1
+      desired_size = 0
 
       instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
 
