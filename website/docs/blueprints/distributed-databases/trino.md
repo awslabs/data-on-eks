@@ -60,27 +60,59 @@ Update local kubeconfig so we can access kubernetes cluster (you can also get th
 aws eks update-kubeconfig --name trino-on-eks --region us-west-2
 ```
 
-First, lets verify that we have worker nodes running in the cluster.
+First, lets verify that we have worker nodes provisioned by Karpenter in the cluster. Lets also show their availability zone and capacity type
 
 ```bash
-kubectl get nodes
-NAME                                        STATUS   ROLES    AGE     VERSION
-ip-10-1-10-192.us-west-2.compute.internal   Ready    <none>   4d17h   v1.27.6-eks-a5df82a
-ip-10-1-10-249.us-west-2.compute.internal   Ready    <none>   4d17h   v1.27.6-eks-a5df82a
-ip-10-1-11-38.us-west-2.compute.internal    Ready    <none>   4d17h   v1.27.6-eks-a5df82a
-ip-10-1-12-195.us-west-2.compute.internal   Ready    <none>   4d17h   v1.27.6-eks-a5df82a
+kubectl get nodes --selector=NodePool=trino-karpenter -L topology.kubernetes.io/zone -L karpenter.sh/capacity-type
 ```
+#### Output
+```bash
+NAME                                        STATUS   ROLES    AGE     VERSION               ZONE         CAPACITY-TYPE
+ip-10-1-11-104.us-west-2.compute.internal   Ready    <none>   2d23h   v1.28.5-eks-5e0fdde   us-west-2b   spot
+ip-10-1-11-235.us-west-2.compute.internal   Ready    <none>   2d23h   v1.28.5-eks-5e0fdde   us-west-2b   spot
+ip-10-1-11-240.us-west-2.compute.internal   Ready    <none>   2d23h   v1.28.5-eks-5e0fdde   us-west-2b   spot
+ip-10-1-11-60.us-west-2.compute.internal    Ready    <none>   3d      v1.28.5-eks-5e0fdde   us-west-2b   on-demand
+```
+We can see above that Karpenter launched 3 Spot nodes and 1 On-demand node in the same Availability Zone.
+:::info
 
-Next, lets verify all the pods are running.
+For Big Data query engine like Trino which runs on a massively parallel processing cluster of coordinator and workers, it is recommended to deploy and run the cluster in same AZ to avoid incurring high Inter-AZ Data Transfer costs. That's why Karpenter NodePool has been configured to launch EKS nodes in same AZ
+
+:::
+
+Now, lets verify all the pods (Trino coordinator and workers) that are running in `trino` namespace
 
 ```bash
 kubectl get pods --namespace=trino
+```
+#### Output
+```bash
 NAME                                 READY   STATUS    RESTARTS      AGE
 trino-coordinator-7c644cd9f5-j65ch   1/1     Running   0             24d
 trino-worker-7f8565698-ctjr4         1/1     Running   0             13d
 trino-worker-7f8565698-hhcwb         1/1     Running   0             24d
 trino-worker-7f8565698-q4bvd         1/1     Running   1             24d
 ```
+Next, lets retrieve the Application Load Balancer DNS created by blueprint using the following command:
+
+```bash
+export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
+echo $TRINO_UI_DNS
+```
+#### Output
+```bash
+http://k8s-trino-trinocoo-f64c9587b5-1356222439.us-west-2.elb.amazonaws.com
+```
+
+Now, lets access the Trino UI by pasting above Load Balancer DNS in a web browser. Login with username `admin` in the login window as shown below:
+
+![Trino UI Login](./img/trino-ui-login.png)
+
+We can see Trino Web UI showing 3 active workers
+
+![Trino UI](./img/trino-ui.png)
+
+
 
 ## Using Trino for database querying executions
 
@@ -181,7 +213,195 @@ Using Trino on EKS with the Iceberg connector, we will use Trino CLI to create t
 
 #### Running the queries
 
+- Let's first find out the S3 data bucket created by blueprint. We will use this bucket to store data in Iceberg tables in PARQUET format. 
+```bash
+cd data-on-eks/distributed-databases/trino
+terraform output --state="./terraform.tfstate" --raw data_bucket
+```
+#### Output
+```bash
+trino-data-bucket-4mnn
+```
+
+- Let’s now create an Iceberg schema with tables populated using sf10000 schema tables of [TPCDS](https://trino.io/docs/current/connector/tpcds.html) with CREATE TABLE AS SELECT (CTAS) statements. For that, let’s create a SQL file `trino_sf10000_tpcds_to_iceberg.sql` by copying below SQL statements 
+##### (Also don't forget to replace S3 bucket name with your bucket from above command):
+```bash
+use tpcds.sf10000;
+select * from tpcds.sf10000.item limit 10;
+select * from tpcds.sf10000.warehouse limit 10;
+
+/* Drop tables & schema */
+
+drop schema iceberg.iceberg_schema;
+drop table iceberg.iceberg_schema.warehouse;
+drop table iceberg.iceberg_schema.item;
+drop table iceberg.iceberg_schema.inventory;
+drop table iceberg.iceberg_schema.date_dim;
+
+/* Iceberg schema creation */
+
+create schema if not exists iceberg.iceberg_schema
+with (LOCATION = 's3://trino-data-bucket-4mnn/iceberg/');
+
+/* Iceberg Table Creation with CTAS from tpcds tables */
+
+create table if not exists iceberg.iceberg_schema.inventory
+with (FORMAT = 'PARQUET')
+as select *
+from tpcds.sf10000.inventory;
+
+create table if not exists iceberg.iceberg_schema.date_dim
+with (FORMAT = 'PARQUET')
+as select d_date_sk,
+cast(d_date_id as varchar(16)) as d_date_id,
+d_date,
+d_month_seq,
+d_week_seq,
+d_quarter_seq,
+d_year,
+d_dow,
+d_moy,
+d_dom,
+d_qoy,
+d_fy_year,
+d_fy_quarter_seq,
+d_fy_week_seq,
+cast(d_day_name as varchar(9)) as d_day_name,
+cast(d_quarter_name as varchar(6)) as d_quarter_name,
+cast(d_holiday as varchar(1)) as d_holiday,
+cast(d_weekend as varchar(1)) as d_weekend,
+cast(d_following_holiday as varchar(1)) as d_following_holiday,
+d_first_dom,
+d_last_dom,
+d_same_day_ly,
+d_same_day_lq,
+cast(d_current_day as varchar(1)) as d_current_day,
+cast(d_current_week as varchar(1)) as d_current_week,
+cast(d_current_month as varchar(1)) as d_current_month,
+cast(d_current_quarter as varchar(1)) as d_current_quarter
+from tpcds.sf10000.date_dim;
+
+create table if not exists iceberg.iceberg_schema.warehouse
+with (FORMAT = 'PARQUET')
+as select
+w_warehouse_sk,
+cast(w_warehouse_id as varchar(16)) as w_warehouse_id,
+w_warehouse_name,
+w_warehouse_sq_ft,
+cast(w_street_number as varchar(10)) as w_street_number,
+w_street_name,
+cast(w_street_type as varchar(15)) as w_street_type,
+cast(w_suite_number as varchar(10)) as w_suite_number,
+w_city,
+w_county,
+cast(w_state as varchar(2)) as w_state,
+cast(w_zip as varchar(10)) as w_zip,
+w_country,
+w_gmt_offset
+from tpcds.sf10000.warehouse;
+
+create table if not exists iceberg.iceberg_schema.item
+with (FORMAT = 'PARQUET')
+as select
+i_item_sk,
+cast(i_item_id as varchar(16)) as i_item_id,
+i_rec_start_date,
+i_rec_end_date,
+i_item_desc,
+i_current_price,
+i_wholesale_cost,
+i_brand_id,
+cast(i_brand as varchar(50)) as i_brand,
+i_class_id,
+cast(i_class as varchar(50)) as i_class,
+i_category_id,
+cast(i_category as varchar(50)) as i_category,
+i_manufact_id,
+cast(i_manufact as varchar(50)) as i_manufact,
+cast(i_size as varchar(50)) as i_size,
+cast(i_formulation as varchar(20)) as i_formulation,
+cast(i_color as varchar(20)) as i_color,
+cast(i_units as varchar(10)) as i_units,
+cast(i_container as varchar(10)) as i_container,
+i_manager_id,
+cast(i_product_name as varchar(50)) as i_product_name
+from tpcds.sf10000.item;
+
+
+/* Select from Iceberg table */
+
+select * from iceberg.iceberg_schema.date_dim limit 10;
+select * from iceberg.iceberg_schema.item limit 10;
+select * from iceberg.iceberg_schema.inventory limit 10;
+
+/* Running query from Iceberg table */
+
+with inv as
+(select w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy
+,stdev,mean, case mean when 0 then null else stdev/mean end cov
+from(select w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy
+,stddev_samp(inv_quantity_on_hand) stdev,avg(inv_quantity_on_hand) mean
+from iceberg.iceberg_schema.inventory
+,iceberg.iceberg_schema.item
+,iceberg.iceberg_schema.warehouse
+,iceberg.iceberg_schema.date_dim
+where inv_item_sk = i_item_sk
+and inv_warehouse_sk = w_warehouse_sk
+and inv_date_sk = d_date_sk
+and d_year =1999
+group by w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy) foo
+where case mean when 0 then 0 else stdev/mean end > 1)
+select inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean, inv1.cov
+,inv2.w_warehouse_sk,inv2.i_item_sk,inv2.d_moy,inv2.mean, inv2.cov
+from inv inv1,inv inv2
+where inv1.i_item_sk = inv2.i_item_sk
+and inv1.w_warehouse_sk = inv2.w_warehouse_sk
+and inv1.d_moy=4
+and inv2.d_moy=4+1
+and inv1.cov > 1.5
+order by inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean,inv1.cov,inv2.d_moy,inv2.mean, inv2.cov;
+```
+
+- Above SQL commands will execute following actions:
+    - Create an Iceberg schema named `iceberg_schema` 
+    - Create 4 Iceberg tables - `warehouse`, `item`, `inventory` and `date_dim` with data from same tables of tpcds 
+    - Query data from above Iceberg tables
+
+- Let's now execute above SQL commands using Trino CLI:
+```bash
+export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
+./trino --file 'trino_sf10000_tpcds_to_iceberg.sql' --server ${TRINO_UI_DNS} --user admin --ignore-errors
+```
+
+- You can see completed and running SQL queries in Trino UI web monitor as below:
+
+![Trino Queries](./img/trino-queries.png)
+
+- Let’s also see how Horizontal Pod Autoscaler (HPA) is scaling Trino worker pods, when above SQL commands are running:
+```bash
+kubectl get hpa -n trino -w
+```
+#### Output
+```bash
+NAME           REFERENCE                 TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+trino-worker   Deployment/trino-worker   0%/70%    3         20        3          3d2h
+trino-worker   Deployment/trino-worker   0%/70%    3         20        3          3d2h
+trino-worker   Deployment/trino-worker   170%/70%   3         20        3          3d2h
+trino-worker   Deployment/trino-worker   196%/70%   3         20        6          3d2h
+trino-worker   Deployment/trino-worker   197%/70%   3         20        9          3d2h
+trino-worker   Deployment/trino-worker   197%/70%   3         20        9          3d2h
+trino-worker   Deployment/trino-worker   197%/70%   3         20        9          3d2h
+trino-worker   Deployment/trino-worker   125%/70%   3         20        9          3d2h
+trino-worker   Deployment/trino-worker   43%/70%    3         20        9          3d2h
+trino-worker   Deployment/trino-worker   152%/70%   3         20        9          3d2h
+trino-worker   Deployment/trino-worker   179%/70%   3         20        9          3d2h
+```
+Initially 3 workers were running but now see 9 workers running in Trino UI, as HPA scaled worker pods with increasing query load:
+
+![Trino Scaling](./img/trino-workers-scaling.png)
+
+
 ## Conclusion
 
 Trino provides a tool for efficiently querying vast amounts of data from your data sources.
-In this example, we share a blueprint that deploy Trino on Amazon EKS, with addons necessary to build a complete EKS cluster (i.e. Karpenter for autoscaling, monitoring with Prometheus/Grafana stack). Among many features, we highlighted a couple of examples on creating an Iceberg or Hive data store using Amazon S3 as storage, and using simple queries for results. 
+In this example, we share a blueprint that deploys Trino on Amazon EKS, with add-ons necessary to build a complete EKS cluster (i.e. Karpenter for node autoscaling, Metrics server and HPA for Trino worker pods autoscaling, monitoring with Prometheus/Grafana stack). Among many features, we highlighted a couple of examples on creating an Iceberg or Hive data store using Amazon S3 as storage, and using simple Trino queries for results. 
