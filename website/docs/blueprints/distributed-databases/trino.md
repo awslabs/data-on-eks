@@ -106,11 +106,11 @@ http://k8s-trino-trinocoo-f64c9587b5-1356222439.us-west-2.elb.amazonaws.com
 
 Now, lets access the Trino UI by pasting above Load Balancer DNS in a web browser. Login with username `admin` in the login window as shown below:
 
-![Trino UI Login](./img/trino-ui-login.png)
+![Trino UI Login](./img/trino-ui-login.PNG)
 
 We can see Trino Web UI showing 3 active workers
 
-![Trino UI](./img/trino-ui.png)
+![Trino UI](./img/trino-ui.PNG)
 
 
 
@@ -375,7 +375,7 @@ export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address:
 
 - You can see completed and running SQL queries in Trino UI web monitor as below:
 
-![Trino Queries](./img/trino-queries.png)
+![Trino Queries](./img/trino-queries.PNG)
 
 - Let’s also see how Horizontal Pod Autoscaler (HPA) is scaling Trino worker pods, when above SQL commands are running:
 ```bash
@@ -398,7 +398,7 @@ trino-worker   Deployment/trino-worker   179%/70%   3         20        9       
 ```
 Initially 3 workers were running but now see 9 workers running in Trino UI, as HPA scaled worker pods with increasing query load:
 
-![Trino Scaling](./img/trino-workers-scaling.png)
+![Trino Scaling](./img/trino-workers-scaling.PNG)
 
 
 ## Conclusion
