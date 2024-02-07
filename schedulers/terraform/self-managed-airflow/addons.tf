@@ -20,7 +20,7 @@ module "ebs_csi_driver_irsa" {
 module "eks_blueprints_addons" {
   # Short commit hash from 8th May using git rev-parse --short HEAD
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -368,21 +368,3 @@ module "fluentbit_s3_bucket" {
 
   tags = local.tags
 }
-
-#---------------------------------------
-# Karpenter Provisioners for workloads
-# #---------------------------------------
-# data "kubectl_path_documents" "karpenter_provisioners" {
-#   pattern = "${path.module}/karpenter-provisioners/*.yaml"
-#   vars = {
-#     azs            = local.region
-#     eks_cluster_id = module.eks.cluster_name
-#   }
-# }
-
-# resource "kubectl_manifest" "karpenter_provisioner" {
-#   for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-#   yaml_body = each.value
-
-#   depends_on = [module.eks_blueprints_addons]
-# }

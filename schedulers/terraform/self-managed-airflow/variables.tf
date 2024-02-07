@@ -6,7 +6,7 @@ variable "name" {
 
 variable "region" {
   description = "Region"
-  default     = "eu-west-1"
+  default     = "us-west-2"
   type        = string
 }
 
