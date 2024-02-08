@@ -173,6 +173,7 @@ module "eks_data_addons" {
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
 
       nodePool:
         labels:
@@ -210,6 +211,7 @@ module "eks_data_addons" {
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
 
       nodePool:
         labels:
