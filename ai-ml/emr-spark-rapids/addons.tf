@@ -169,7 +169,7 @@ module "eks_data_addons" {
       ec2NodeClass:
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
-          id: ${module.vpc.private_subnets[3]}
+          id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -189,13 +189,20 @@ module "eks_data_addons" {
             values: ["g5"]
           - key: "karpenter.k8s.aws/instance-size"
             operator: In
-            values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge" ]
+            values: [ "2xlarge" ]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
             values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
       EOT
       ]
     }
@@ -230,6 +237,13 @@ module "eks_data_addons" {
           - key: "karpenter.sh/capacity-type"
             operator: In
             values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
       EOT
       ]
     }

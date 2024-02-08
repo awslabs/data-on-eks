@@ -19,7 +19,7 @@ module "eks" {
   manage_aws_auth_configmap = true
   aws_auth_roles = [
     {
-      rolearn  = module.eks_blueprints_addons.karpenter.iam_role_arn
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
       username = "system:node:{{EC2PrivateDNSName}}"
       groups = [
         "system:bootstrappers",
@@ -199,11 +199,12 @@ module "eks" {
         sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
       EOT
 
-      min_size     = 1
+      # Change min_size, max_size and desired_size to 8 before running xgboost example
+      min_size     = 0
       max_size     = 1
-      desired_size = 1
+      desired_size = 0
 
-      capacity_type  = "SPOT"
+      capacity_type  = "ON_DEMAND"
       instance_types = ["g5.2xlarge"]
 
       ebs_optimized = true
