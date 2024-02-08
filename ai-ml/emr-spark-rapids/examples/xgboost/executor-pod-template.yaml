@@ -28,6 +28,7 @@ spec:
           readOnly: false
 
   tolerations:
-    - key: "spark-ubuntu-gpu-ca"
-      operator: "Exists"
+    - key: "nvidia.com/gpu"
+      operator: "Equal"
+      value: "present"
       effect: "NoSchedule"

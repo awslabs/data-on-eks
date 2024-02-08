@@ -16,7 +16,7 @@ read -p "Enter the number of executor instances (e.g., 8): " NUM_WORKERS
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
 JOB_NAME='spark-rapids-emr'
-EMR_EKS_RELEASE_LABEL="emr-6.10.0-spark-rapids-latest"
+EMR_EKS_RELEASE_LABEL="emr-7.0.0-spark-rapids-latest"
 #XGBOOST_IMAGE="public.ecr.aws/h3o5n2r0/emr-6.10.0-spark-rapids-xgboost-custom:v0.10"
 
 S3_BUCKET="s3://${S3_BUCKET}"

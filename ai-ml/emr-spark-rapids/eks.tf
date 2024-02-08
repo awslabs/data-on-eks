@@ -4,7 +4,7 @@
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.15"
+  version = "~> 19.21"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -124,14 +124,15 @@ module "eks" {
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
-      # Ubuntu image for EKs Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
-      ami_id = data.aws_ami.ubuntu.image_id
-
+      # Ubuntu image for EKs Cluster https://cloud-images.ubuntu.com/aws-eks/
+      # ami_id = data.aws_ami.ubuntu.image_id
       # This will ensure the bootstrap user data is used to join the node
       # By default, EKS managed node groups will not append bootstrap script;
       # this adds it back in using the default template provided by the module
       # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
+      # enable_bootstrap_user_data = true
+
+      ami_type = "AL2_x86_64"
 
       min_size     = 1
       max_size     = 8
@@ -141,11 +142,10 @@ module "eks" {
       instance_types       = ["m5.xlarge"] # 4 vCPU and 16GB
 
       ebs_optimized = true
-      # This block device is used only for root volume. Adjust volume according to your size.
-      # NOTE: Dont use this volume for Spark workloads
+
       block_device_mappings = {
         xvda = {
-          device_name = "/dev/sda1"
+          device_name = "/dev/xvda"
           ebs = {
             volume_size = 100
             volume_type = "gp3"
@@ -176,73 +176,40 @@ module "eks" {
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
       # Ubuntu image for EKS Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
-      ami_id = data.aws_ami.ubuntu.image_id
+      # ami_id = data.aws_ami.ubuntu.image_id
 
       # This will ensure the bootstrap user data is used to join the node
       # By default, EKS managed node groups will not append bootstrap script;
       # this adds it back in using the default template provided by the module
       # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
+      # enable_bootstrap_user_data = true
+      ami_type = "AL2_x86_64_GPU"
 
       # NVMe instance store volumes are automatically enumerated and assigned a device
       pre_bootstrap_user_data = <<-EOT
-        echo "Running a custom user data script"
-        set -ex
-        apt-get update
-        apt-get install -y nvme-cli mdadm xfsprogs
+        cat <<-EOF > /etc/profile.d/bootstrap.sh
+        #!/bin/sh
 
-        # Fetch the list of NVMe devices
-        DEVICES=$(lsblk -d -o NAME | grep nvme)
+        # Configure NVMe volumes in RAID0 configuration
+        # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
+        # Mount will be: /mnt/k8s-disks
+        export LOCAL_DISKS='raid0'
 
-        DISK_ARRAY=()
-
-        for DEV in $DEVICES
-        do
-          # Exclude the root disk, /dev/nvme0n1, from the list of devices
-          if [[ $${DEV} != "nvme0n1" ]]; then
-            NVME_INFO=$(nvme id-ctrl --raw-binary "/dev/$${DEV}" | cut -c3073-3104 | tr -s ' ' | sed 's/ $//g')
-            # Check if the device is Amazon EC2 NVMe Instance Storage
-            if [[ $${NVME_INFO} == *"ephemeral"* ]]; then
-              DISK_ARRAY+=("/dev/$${DEV}")
-            fi
-          fi
-        done
-
-        DISK_COUNT=$${#DISK_ARRAY[@]}
-
-        if [ $${DISK_COUNT} -eq 0 ]; then
-          echo "No NVMe SSD disks available. No further action needed."
-        else
-          if [ $${DISK_COUNT} -eq 1 ]; then
-            TARGET_DEV=$${DISK_ARRAY[0]}
-            mkfs.xfs $${TARGET_DEV}
-          else
-            mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-            mkfs.xfs /dev/md0
-            TARGET_DEV=/dev/md0
-          fi
-
-          mkdir -p /local1
-          echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-          mount -a
-          /usr/bin/chown -hR +999:+1000 /local1
-        fi
+        # Source extra environment variables in bootstrap script
+        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
       EOT
 
-      min_size     = 8
-      max_size     = 8
-      desired_size = 8
+      min_size     = 1
+      max_size     = 1
+      desired_size = 1
 
       capacity_type  = "SPOT"
       instance_types = ["g5.2xlarge"]
 
       ebs_optimized = true
-      # This block device is used only for root volume. Adjust volume according to your size.
-      # NOTE: Don't use this volume for Spark workloads
-      # Ubuntu uses /dev/sda1 as root volume
       block_device_mappings = {
         xvda = {
-          device_name = "/dev/sda1"
+          device_name = "/dev/xvda"
           ebs = {
             volume_size = 100
             volume_type = "gp3"
@@ -255,7 +222,11 @@ module "eks" {
         NodeGroupType = "spark-ubuntu-gpu-ca"
       }
 
-      taints = [{ key = "spark-ubuntu-gpu-ca", value = true, effect = "NO_SCHEDULE" }]
+      taints = [{
+        key    = "nvidia.com/gpu",
+        value  = "EXISTS",
+        effect = "NO_SCHEDULE"
+      }]
 
       tags = {
         Name = "spark-ubuntu-gpu",

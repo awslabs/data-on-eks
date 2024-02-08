@@ -9,7 +9,7 @@ metadata:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nvidia-smi-ubuntu-ca
+  name: nvidia-smi-al2-ca
   namespace: nvidia-smi-ns
 spec:
   restartPolicy: OnFailure
@@ -24,6 +24,6 @@ spec:
   nodeSelector:
     NodeGroupType: "spark-ubuntu-gpu-ca"
   tolerations:
-    - key: "spark-ubuntu-gpu-ca"
-      operator: "Exists"
-      effect: "NoSchedule"
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule

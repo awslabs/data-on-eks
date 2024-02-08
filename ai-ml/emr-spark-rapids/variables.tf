@@ -13,7 +13,7 @@ variable "region" {
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   type        = string
-  default     = "1.26"
+  default     = "1.29"
 }
 
 variable "tags" {
@@ -39,12 +39,6 @@ variable "secondary_cidr_blocks" {
 
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
-  default     = true
-  type        = bool
-}
-
-variable "enable_kubecost" {
-  description = "Enable Kubecost"
   default     = true
   type        = bool
 }
