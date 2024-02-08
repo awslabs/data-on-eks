@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.20"
+  version               = "~> 5.34"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
@@ -42,6 +42,9 @@ module "eks_blueprints_addons" {
     }
     kube-proxy = {
       preserve = true
+    }
+    aws-mountpoint-s3-csi-driver = {
+      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
     }
   }
 
@@ -90,7 +93,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.33.1"
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -173,7 +176,7 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.2.9" # ensure to update this to the latest/desired version
+  version = "~> 1.30" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -193,29 +196,7 @@ module "eks_data_addons" {
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
-        userData: |
-          MIME-Version: 1.0
-          Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-          --BOUNDARY
-          Content-Type: text/x-shellscript; charset="us-ascii"
-
-          cat <<-EOF > /etc/profile.d/bootstrap.sh
-          #!/bin/sh
-
-
-          # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-          # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-          # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-          #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-          #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-          export LOCAL_DISKS='raid0'
-          EOF
-
-          # Source extra environment variables in bootstrap script
-          sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-          --BOUNDARY--
+        instanceStorePolicy: RAID0
 
       nodePool:
         labels:
@@ -245,7 +226,7 @@ module "eks_data_addons" {
             operator: Gt
             values: ["2"]
         limits:
-          cpu: 20 # Change this to 1000 or more for production according to your needs
+          cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
           consolidateAfter: 30s
@@ -267,31 +248,7 @@ module "eks_data_addons" {
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
-        userData: |
-          MIME-Version: 1.0
-          Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-          --BOUNDARY
-          Content-Type: text/x-shellscript; charset="us-ascii"
-
-          cat <<-EOF > /etc/profile.d/bootstrap.sh
-          #!/bin/sh
-
-
-          # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-          # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-          # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-          #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-          #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-          export LOCAL_DISKS='raid0'
-          EOF
-
-          # Source extra environment variables in bootstrap script
-          sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-          --BOUNDARY--
-
-
+        instanceStorePolicy: RAID0
       nodePool:
         labels:
           - type: karpenter
@@ -342,35 +299,12 @@ module "eks_data_addons" {
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
-        userData: |
-          MIME-Version: 1.0
-          Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-          --BOUNDARY
-          Content-Type: text/x-shellscript; charset="us-ascii"
-
-          cat <<-EOF > /etc/profile.d/bootstrap.sh
-          #!/bin/sh
-
-
-          # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-          # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-          # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-          #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-          #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-          export LOCAL_DISKS='raid0'
-          EOF
-
-          # Source extra environment variables in bootstrap script
-          sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-          --BOUNDARY--
+        instanceStorePolicy: RAID0
 
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: SparkComputeOptimized
-          - multiArch: Spark
+          - NodeGroupType: SparkMemoryOptimized
         requirements:
           - key: "karpenter.sh/capacity-type"
             operator: In
