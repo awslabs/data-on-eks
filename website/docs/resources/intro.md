@@ -3,13 +3,9 @@ sidebar_position: 1
 sidebar_label: Introduction
 ---
 
-# Introduction
+# Introduction to Resources
 
-:::info
 
-COMING SOON
+Welcome to the Resources section. This area is dedicated to providing you with a wealth of information, insights, and learning materials to enhance your understanding and skills in Data and AI workloads running on EKS.
 
-Please note that this section is currently a work in progress and will serve as a comprehensive collection of resources for running data and ML workloads on EKS.
-It will include useful links and videos to assist you in your journey.
-
-:::
+This area is a hub of valuable information, offering a range of materials from insightful mini blogs and AWS workshop links to engaging video content and reInvent talks.
