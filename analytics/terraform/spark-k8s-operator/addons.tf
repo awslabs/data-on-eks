@@ -43,9 +43,6 @@ module "eks_blueprints_addons" {
     kube-proxy = {
       preserve = true
     }
-    aws-mountpoint-s3-csi-driver = {
-      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
-    }
   }
 
   #---------------------------------------

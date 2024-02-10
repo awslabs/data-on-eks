@@ -39,7 +39,7 @@ module "s3_csi_driver_irsa" {
   role_name_prefix      = format("%s-%s-", local.name, "s3-csi-driver")
   role_policy_arns = {
     # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
-    s3_csi_driver = "arn:aws:iam::aws:policy/AmazonS3FullAccess" 
+    s3_csi_driver = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
   }
   oidc_providers = {
     main = {
@@ -54,7 +54,7 @@ module "s3_csi_driver_irsa" {
 
 ### Step 2: Configure EKS Blueprints Addons
 
-Configure EKS Blueprints Addons Terraform module to utilize this role for the Amazon EKS Add-on of S3 CSI driver. 
+Configure EKS Blueprints Addons Terraform module to utilize this role for the Amazon EKS Add-on of S3 CSI driver.
 
 ```terraform
 #---------------------------------------------------------------
@@ -188,7 +188,7 @@ spec:
 
 :::warning
 
-Mountpoint S3, when used with Amazon S3 or S3 express, may not be suitable as a shuffle storage for Spark workloads. This limitation arises due to the nature of shuffle operations in Spark, which often involve multiple clients reading and writing to the same location simultaneously. 
+Mountpoint S3, when used with Amazon S3 or S3 express, may not be suitable as a shuffle storage for Spark workloads. This limitation arises due to the nature of shuffle operations in Spark, which often involve multiple clients reading and writing to the same location simultaneously.
 
 Additionally, Mountpoint S3 does not support file renaming, a critical feature required for efficient shuffle operations in Spark. This lack of renaming capability can lead to operational challenges and potential performance bottlenecks in data processing tasks.
 
