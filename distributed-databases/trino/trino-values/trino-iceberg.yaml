@@ -35,7 +35,7 @@ worker:
       memory: 10Gi
   nodeSelector:
     NodePool: trino-karpenter
-    karpenter.sh/capacity-type: on-demand
+    karpenter.sh/capacity-type: spot 
 additionalConfigProperties:
   - "retry-policy=TASK"
   - "exchange.compression-enabled=true"
