@@ -47,7 +47,7 @@ class StableDiffusionV2:
         self.pipe = NeuronStableDiffusionXLPipeline.from_pretrained(compiled_model_id, device_ids=[0, 1])
 
     async def generate(self, prompt: str):
-        
+
         assert len(prompt), "prompt parameter cannot be empty"
         image = self.pipe(prompt).images[0]
         return image

@@ -357,4 +357,3 @@ To remove the resources created using this solution, run the cleanup script:
 cd data-on-eks/ai-ml/trainium-inferentia
 ./cleanup.sh
 ```
-

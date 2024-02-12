@@ -12,7 +12,7 @@ service_name = "http://localhost:8000"  # Replace with your actual service name
 
 # Function to generate image based on prompt
 def generate_image(prompt):
-   
+
     # Create the URL for the inference
     url = f"{service_name}{model_endpoint}"
 
