@@ -31,7 +31,7 @@ spec:
         spec:
           containers:
           - name: ray-head
-            image: public.ecr.aws/r8y1i9f8/ray-serve-stable-diffusion:latest # Image created using the Dockerfile attached in the folder
+            image: public.ecr.aws/data-on-eks/ray2.7.1-py310-stablediffusion-neuron:latest # Image created using the Dockerfile attached in the folder
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -72,7 +72,7 @@ spec:
         spec:
           containers:
           - name: ray-worker
-            image: public.ecr.aws/r8y1i9f8/ray-serve-stable-diffusion:latest # Image created using the Dockerfile attached in the folder
+            image: public.ecr.aws/data-on-eks/ray2.7.1-py310-stablediffusion-neuron:latest # Image created using the Dockerfile attached in the folder
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:

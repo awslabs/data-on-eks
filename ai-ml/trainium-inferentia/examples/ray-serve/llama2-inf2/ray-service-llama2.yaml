@@ -59,7 +59,7 @@ spec:
                   memory: 20Gi
           nodeSelector: # This is using Karpenter Nodes with the provisioner label
             instanceType: mixed-x86
-            provisionerType: Karperter
+            provisionerType: Karpenter
             workload: rayhead
           volumes:
             - name: ray-logs
@@ -92,7 +92,7 @@ spec:
                     aws.amazon.com/neuron: "12"
             nodeSelector:
               instanceType: inferentia-inf2
-              provisionerType: Karperter
+              provisionerType: Karpenter
             tolerations:
               - key: "aws.amazon.com/neuroncore"
                 operator: "Exists"

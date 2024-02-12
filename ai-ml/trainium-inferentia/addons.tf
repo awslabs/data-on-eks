@@ -291,7 +291,7 @@ module "eks_data_addons" {
   }
 
   #---------------------------------------
-  # Deploying Karperter resources(Nodepool and NodeClass) with Helm Chart
+  # Deploying Karpenter resources(Nodepool and NodeClass) with Helm Chart
   #---------------------------------------
   enable_karpenter_resources = true
   # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
@@ -318,7 +318,7 @@ module "eks_data_addons" {
       nodePool:
         labels:
           - instanceType: inferentia-inf2
-          - provisionerType: Karperter
+          - provisionerType: Karpenter
           - hub.jupyter.org/node-purpose: user
         taints:
           - key: aws.amazon.com/neuroncore
@@ -374,7 +374,7 @@ module "eks_data_addons" {
       nodePool:
         labels:
           - instanceType: mixed-x86
-          - provisionerType: Karperter
+          - provisionerType: Karpenter
           - workload: rayhead
         requirements:
           - key: "karpenter.k8s.aws/instance-family"

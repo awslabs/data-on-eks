@@ -1,5 +1,3 @@
-# docker buildx build --platform=linux/amd64 -t ray-serve-stable-diffusion:latest .
-# https://hub.docker.com/layers/rayproject/ray-ml/2.7.1-py310-gpu/images/sha256-f84ecfc82d255ff9e23b8e40343a95655ec8e23a009633a183769edac6277186?context=explore
 FROM rayproject/ray:2.7.1-py310
 
 # Maintainer label
