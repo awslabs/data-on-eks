@@ -57,8 +57,9 @@ spec:
                 requests:
                   cpu: 4
                   memory: 20Gi
-          nodeSelector:
-            provisioner: default
+          nodeSelector: # This is using Karpenter Nodes with the provisioner label
+            instanceType: mixed-x86
+            provisionerType: Karperter
             workload: rayhead
           volumes:
             - name: ray-logs
@@ -90,14 +91,15 @@ spec:
                     memory: "700G"
                     aws.amazon.com/neuron: "12"
             nodeSelector:
-              provisioner: inferentia-inf2
+              instanceType: inferentia-inf2
+              provisionerType: Karperter
             tolerations:
-              - key: aws.amazon.com/neuroncore
-                operator: Exists
-                effect: NoSchedule
-              - key: aws.amazon.com/neuron
-                operator: Exists
-                effect: NoSchedule
+              - key: "aws.amazon.com/neuroncore"
+                operator: "Exists"
+                effect: "NoSchedule"
+              - key: "aws.amazon.com/neuron"
+                operator: "Exists"
+                effect: "NoSchedule"
               - key: "hub.jupyter.org/dedicated"
                 operator: "Equal"
                 value: "user"

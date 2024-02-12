@@ -33,18 +33,6 @@ variable "secondary_cidr_blocks" {
   default     = ["100.64.0.0/16"]
 }
 
-variable "enable_volcano" {
-  description = "Enable Volcano scheduler"
-  type        = bool
-  default     = false
-}
-
-variable "enable_aws_efa_k8s_device_plugin" {
-  description = "Enable AWS EFA k8s device plugin"
-  type        = bool
-  default     = true
-}
-
 variable "enable_jupyterhub" {
   description = "Enable JupyterHub deployment"
   type        = bool

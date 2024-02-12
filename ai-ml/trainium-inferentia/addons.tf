@@ -258,10 +258,10 @@ module "eks_data_addons" {
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
   #---------------------------------------
-  # Volcano Scheduler for TorchX
-  # Used only with BERT-Large distributed training example
+  # Volcano Scheduler for TorchX used in BERT-Large distributed training example
+  # Volcano is also a default scheduler for KubeRay Operator
   #---------------------------------------
-  enable_volcano = var.enable_volcano
+  enable_volcano = true
 
   #---------------------------------------
   # Kuberay Operator
@@ -309,9 +309,16 @@ module "eks_data_addons" {
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
+        blockDevice:
+          deviceName: /dev/xvda
+          volumeSize: 500Gi
+          volumeType: gp3
+          encrypted: true
+          deleteOnTermination: true
       nodePool:
         labels:
-          - provisioner: inferentia-inf2
+          - instanceType: inferentia-inf2
+          - provisionerType: Karperter
           - hub.jupyter.org/node-purpose: user
         taints:
           - key: aws.amazon.com/neuroncore
@@ -330,13 +337,20 @@ module "eks_data_addons" {
             values: ["inf2"]
           - key: "karpenter.k8s.aws/instance-size"
             operator: In
-            values: ["24xlarge", "48xlarge"]
+            values: ["48xlarge"]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
             values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
       EOT
       ]
     }
@@ -351,9 +365,16 @@ module "eks_data_addons" {
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
+          blockDevice:
+            deviceName: /dev/xvda
+            volumeSize: 200Gi
+            volumeType: gp3
+            encrypted: true
+            deleteOnTermination: true
       nodePool:
         labels:
-          - provisioner: default
+          - instanceType: mixed-x86
+          - provisionerType: Karperter
           - workload: rayhead
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
@@ -368,6 +389,13 @@ module "eks_data_addons" {
           - key: "karpenter.sh/capacity-type"
             operator: In
             values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
       EOT
       ]
     }

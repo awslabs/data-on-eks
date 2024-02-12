@@ -496,7 +496,7 @@ module "eks" {
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU"
-      capacity_type  = "SPOT"
+      capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
       instance_types = ["inf2.24xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
@@ -510,9 +510,18 @@ module "eks" {
       desired_size = var.inf2_24xl_desired_size
 
       labels = {
-        instance-type = "inf2"
-        provisioner   = "cluster-autoscaler"
-        workload      = "rayworker"
+        instanceType    = "inf2-24xl"
+        provisionerType = "cluster-autoscaler"
+      }
+
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 500
+            volume_type = "gp3"
+          }
+        }
       }
 
       taints = [
@@ -529,10 +538,11 @@ module "eks" {
       ]
 
       tags = merge(local.tags, {
-        Name                     = "inf2-ng1",
+        Name                     = "inf2-24xl-ng",
         "karpenter.sh/discovery" = local.name
       })
     }
+
     inf2-48xl-ng = {
       name        = "inf2-48xl-ng"
       description = "inf2 48x large node group for ML inference workloads"
@@ -543,7 +553,7 @@ module "eks" {
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU"
-      capacity_type  = "SPOT"
+      capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
       instance_types = ["inf2.48xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
@@ -552,13 +562,23 @@ module "eks" {
         export PATH=/opt/aws/neuron/bin:$PATH
       EOT
 
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 500
+            volume_type = "gp3"
+          }
+        }
+      }
+
       min_size     = var.inf2_48xl_min_size
       max_size     = 2
       desired_size = var.inf2_48xl_desired_size
 
       labels = {
-        instance-type = "inf2-48xl"
-        provisioner   = "cluster-autoscaler"
+        instanceType    = "inf2-48xl"
+        provisionerType = "cluster-autoscaler"
       }
 
       taints = [
