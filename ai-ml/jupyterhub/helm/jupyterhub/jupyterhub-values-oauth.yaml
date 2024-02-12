@@ -1,0 +1,136 @@
+hub:
+  db:
+    pvc:
+      storage: 50Gi
+      storageClassName: gp3
+  authenticatePrometheus: false
+
+proxy:
+  https:
+    enabled: false
+    type: offload
+  service:
+    type: ClusterIP
+    # Disabled LoadBalancer type
+#    annotations:
+#      service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "ssl_cert_arn"
+#      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+#      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+#      service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
+#      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+#      service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+#      service.beta.kubernetes.io/aws-load-balancer-type: external
+#      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: 'true'
+#      service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
+singleuser:
+  startTimeout: 1200 # 20 mins to spin up a notebook server for GPU including the image pull
+  profileList:
+    - display_name: "Tiny. Useful for many quick things"
+      description: "0.5 CPU / 1 GB"
+      kubespawner_override:
+        image: '{{ singleuser_image_repo }}:{{ singleuser_image_tag }}'
+        image_pull_policy: Always
+        cpu_limit: 2
+        cpu_guarantee: 0.25
+        mem_limit: 2G
+        mem_guarantee: 0.5G
+    - display_name: "Base"
+      description: "6 CPU / 16 GB upto 12C/32G. May take up to 15 mins to start."
+      default: true
+      kubespawner_override:
+        image: '{{ singleuser_image_repo }}:{{ singleuser_image_tag }}'
+        image_pull_policy: Always
+        cpu_limit: 12
+        cpu_guarantee: 6
+        mem_limit: 32G
+        mem_guarantee: 16G
+    - display_name: "Medium"
+      description: "12C/32G upto 24C/64G. May take up to 15 mins to start."
+      kubespawner_override:
+        image: '{{ singleuser_image_repo }}:{{ singleuser_image_tag }}'
+        image_pull_policy: Always
+        cpu_limit: 24
+        cpu_guarantee: 12
+        mem_limit: 64G
+        mem_guarantee: 32G
+    - display_name: "Large"
+      description: "24C/64G upto 48C/96G. May take up to 15 mins to start."
+      kubespawner_override:
+        image: '{{ singleuser_image_repo }}:{{ singleuser_image_tag }}'
+        image_pull_policy: Always
+        cpu_limit: 48
+        cpu_guarantee: 24
+        mem_limit: 96G
+        mem_guarantee: 64G
+    - display_name: "T4 GPU for inference"
+      description: "8 CPU / 30 GB / 1 T4 GPU. May take up to 15 mins to start."
+      kubespawner_override:
+        image: '{{ singleuser_image_repo }}:{{ singleuser_image_tag }}-gpu'
+        image_pull_policy: Always
+        cpu_limit: 8
+        cpu_guarantee: 6
+        mem_limit: 31G
+        mem_guarantee: 30G
+        extra_resource_limits:
+          nvidia.com/gpu: "1"
+        extra_pod_config:
+          runtimeClassName: nvidia
+    - display_name: "Base (MATLAB)"
+      description: "6 CPU / 16 GB upto 12C/32G. May take up to 15 mins to start. This requires your own license."
+      kubespawner_override:
+        image: '{{ singleuser_image_repo }}:{{ singleuser_image_tag }}-matlab'
+        image_pull_policy: Always
+        cpu_limit: 12
+        cpu_guarantee: 6
+        mem_limit: 32G
+        mem_guarantee: 16G
+  storage:
+    type: "static"
+    static:
+      pvcName: "efs-persist"
+      subPath: "home/{username}"
+    extraVolumes:
+    - name: jupyterhub-shared
+      persistentVolumeClaim:
+        claimName: efs-persist-shared
+    extraVolumeMounts:
+    - name: jupyterhub-shared
+      mountPath: /home/shared
+      readOnly: false
+  serviceAccountName: ${jupyter_single_user_sa_name}
+  allowPrivilegeEscalation: true
+  extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
+    securityContext:
+        fsGroup: 100
+  extraEnv: # Sudo needed to configure the proper permissions to start the notebook instance
+    GRANT_SUDO: "yes"
+    NOTEBOOK_ARGS: "--allow-root"
+    CHOWN_HOME: "yes"
+    CHOWN_HOME_OPTS: "-R"
+    CHOWN_EXTRA: "/home/shared"
+  uid: 0
+  fsGid: 0
+  cmd: null
+
+# Optimizations configured according to this doc https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+scheduling:
+  userScheduler:
+    enabled: true
+  podPriority:
+    enabled: true
+  userPlaceholder:
+    enabled: false
+    replicas: 1
+  userPods:
+    nodeAffinity:
+      matchNodePurpose: require # This will force single-user pods to use an specific karpenter provisioner
+
+prePuller:
+  hook:
+    enabled: false
+  continuous:
+    # NOTE: if used with Karpenter, also add user-placeholders
+    enabled: false
+
+global:
+  safeToShowValues: false
