@@ -52,12 +52,14 @@ spec:
             resources:
               limits:
                 cpu: "2"
-                memory: "8G"
+                memory: "20G"
               requests:
                 cpu: "2"
-                memory: "8G"
+                memory: "20G"
           nodeSelector:
-            workload: "rayhead"
+            instanceType: mixed-x86
+            provisionerType: Karpenter
+            workload: rayhead
           volumes:
           - name: ray-logs
             emptyDir: {}
@@ -80,23 +82,27 @@ spec:
                   command: ["/bin/sh", "-c", "ray stop"]
             resources:
               limits:
-                cpu: "90"
-                memory: "360G"
-                aws.amazon.com/neuron: "6"
+                cpu: "180"
+                memory: "700G"
+                aws.amazon.com/neuron: "12"
               requests:
-                cpu: "90"
-                memory: "360G"
-                aws.amazon.com/neuron: "6"
+                cpu: "180"
+                memory: "700G"
+                aws.amazon.com/neuron: "12"
           nodeSelector:
-            workload: "rayworker"
+            instanceType: inferentia-inf2
+            provisionerType: Karpenter
           tolerations:
-          - key: "aws.amazon.com/neuroncore"
-            value: "true"
-            effect: "NoSchedule"
-          - key: "aws.amazon.com/neuron"
-            value: "true"
-            effect: "NoSchedule"
-
+            - key: "aws.amazon.com/neuroncore"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "aws.amazon.com/neuron"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "hub.jupyter.org/dedicated"
+              operator: "Equal"
+              value: "user"
+              effect: "NoSchedule"
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
