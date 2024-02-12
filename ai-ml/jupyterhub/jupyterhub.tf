@@ -118,6 +118,7 @@ module "efs_config" {
       create_namespace = false
       chart            = "${path.module}/helm/efs"
       chart_version    = "0.0.1"
+      # values = [file("${path.module}/path/to/your/values.yaml")]
       values = [
         <<-EOT
           pv:
