@@ -80,7 +80,7 @@ spec:
               preStop:
                 exec:
                   command: ["/bin/sh", "-c", "ray stop"]
-            # We are using 2 Neuron cores per HTTP request hence this configuration handles 6 requests per second      
+            # We are using 2 Neuron cores per HTTP request hence this configuration handles 6 requests per second
             resources:
               limits:
                 cpu: "90" # All vCPUs of inf2.24xlarge; 6vCPU daemonset overhead
@@ -90,7 +90,7 @@ spec:
                 cpu: "45" # Half of vCPUs for reservation for inf2.24xlarge; leaving 3 vCPUs for daemonset overhead
                 memory: "180G" # Half of memory for reservation for inf2.24xlarge; leaving 12G for daemonset overhead
                 # Set maximum neuron core available to the instance to acocomodate multiple requests to leverage all the neuron cores
-                # You cannot run multiple pods of the model on the same instance unless you shard the model 
+                # You cannot run multiple pods of the model on the same instance unless you shard the model
                 aws.amazon.com/neuron: "6" # All Neuron cores of inf2.24xlarge
           nodeSelector:
             instanceType: inferentia-inf2
