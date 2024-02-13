@@ -2,10 +2,10 @@ controller:
   service:
     externalTrafficPolicy: "Local"
     annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: external
+      service.beta.kubernetes.io/aws-load-balancer-type: external # nlb-ip or external
       service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
       service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
-      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing # Private Load Balancer can only be accessed within the VPC
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internal # Valid values are internal, internet-facing
     targetPorts:
       http: http
       https: http

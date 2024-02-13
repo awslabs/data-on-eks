@@ -176,3 +176,47 @@ kubectl get namespace $NAMESPACE -o json | sed 's/"kubernetes"//' | kubectl repl
 This command retrieves the namespace details in JSON format, removes the "kubernetes" finalizer, and performs a replace operation to remove the finalizer from the namespace. This should allow the namespace to complete the termination process and be successfully deleted.
 
 Please ensure that you have the necessary permissions to perform this operation. If you continue to experience issues or require further assistance, please reach out to our support team for additional guidance and troubleshooting steps.
+
+## KMS Alias AlreadyExistsException
+
+During your Terraform installation or redeployment, you might encounter an error saying: `AlreadyExistsException: An alias with the name ...` already exists. This happens when the KMS alias you're trying to create already exists in your AWS account.
+
+```
+│ Error: creating KMS Alias (alias/eks/trainium-inferentia): AlreadyExistsException: An alias with the name arn:aws:kms:us-west-2:23423434:alias/eks/trainium-inferentia already exists
+│
+│   with module.eks.module.kms.aws_kms_alias.this["cluster"],
+│   on .terraform/modules/eks.kms/main.tf line 452, in resource "aws_kms_alias" "this":
+│  452: resource "aws_kms_alias" "this" {
+│
+```
+
+**Solution:**
+
+To resolve this, delete the existing KMS alias using the aws kms delete-alias command. Remember to update the alias name and region in the command before running it.
+
+
+```sh
+aws kms delete-alias --alias-name <KMS_ALIAS_NAME> --region <ENTER_REGION>
+```
+
+## Error: creating CloudWatch Logs Log Group
+
+Terraform cannot create a CloudWatch Logs log group because it already exists in your AWS account.
+
+```
+╷
+│ Error: creating CloudWatch Logs Log Group (/aws/eks/trainium-inferentia/cluster): operation error CloudWatch Logs: CreateLogGroup, https response error StatusCode: 400, RequestID: 5c34c47a-72c6-44b2-a345-925824f24d38, ResourceAlreadyExistsException: The specified log group already exists
+│
+│   with module.eks.aws_cloudwatch_log_group.this[0],
+│   on .terraform/modules/eks/main.tf line 106, in resource "aws_cloudwatch_log_group" "this":
+│  106: resource "aws_cloudwatch_log_group" "this" {
+
+```
+
+**Solution:**
+
+Delete the existing log group by updating log group name and the region.
+
+```sh
+aws logs delete-log-group --log-group-name <LOG_GROUP_NAME> --region <ENTER_REGION>
+```
