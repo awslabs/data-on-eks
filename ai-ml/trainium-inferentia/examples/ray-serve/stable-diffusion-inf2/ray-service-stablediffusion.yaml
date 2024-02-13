@@ -80,29 +80,32 @@ spec:
               preStop:
                 exec:
                   command: ["/bin/sh", "-c", "ray stop"]
+            # We are using 2 Neuron cores per HTTP request hence this configuration handles 6 requests per second      
             resources:
               limits:
-                cpu: "180"
-                memory: "700G"
-                aws.amazon.com/neuron: "12"
+                cpu: "90" # All vCPUs of inf2.24xlarge; 6vCPU daemonset overhead
+                memory: "360G" # All memory of inf2.24xlarge; 24G for daemonset overhead
+                aws.amazon.com/neuron: "6" # All Neuron cores of inf2.24xlarge
               requests:
-                cpu: "180"
-                memory: "700G"
-                aws.amazon.com/neuron: "12"
+                cpu: "45" # Half of vCPUs for reservation for inf2.24xlarge; leaving 3 vCPUs for daemonset overhead
+                memory: "180G" # Half of memory for reservation for inf2.24xlarge; leaving 12G for daemonset overhead
+                # Set maximum neuron core available to the instance to acocomodate multiple requests to leverage all the neuron cores
+                # You cannot run multiple pods of the model on the same instance unless you shard the model 
+                aws.amazon.com/neuron: "6" # All Neuron cores of inf2.24xlarge
           nodeSelector:
             instanceType: inferentia-inf2
             provisionerType: Karpenter
           tolerations:
-            - key: "aws.amazon.com/neuroncore"
-              operator: "Exists"
-              effect: "NoSchedule"
-            - key: "aws.amazon.com/neuron"
-              operator: "Exists"
-              effect: "NoSchedule"
-            - key: "hub.jupyter.org/dedicated"
-              operator: "Equal"
-              value: "user"
-              effect: "NoSchedule"
+          - key: "aws.amazon.com/neuroncore"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "aws.amazon.com/neuron"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "hub.jupyter.org/dedicated"
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
