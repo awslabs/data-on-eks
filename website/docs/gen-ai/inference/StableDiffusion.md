@@ -106,7 +106,7 @@ kubectl get nodes # Output shows the EKS Managed Node group nodes
 
 Once the `Trainium on EKS` Cluster is deployed, you can proceed to use `kubectl` to deploy the `ray-service-stablediffusion.yaml`.
 
-In this step, we will deploy the Ray Serve cluster, which comprises one `Head Pod` on `x86 CPU` instances using Karpenter autoscaling, as well as `Ray workers` on `Inf2.24xlarge` instances, autoscaled by [Karpenter](https://karpenter.sh/).
+In this step, we will deploy the Ray Serve cluster, which comprises one `Head Pod` on `x86 CPU` instances using Karpenter autoscaling, as well as `Ray workers` on `Inf2.48xlarge` instances, autoscaled by [Karpenter](https://karpenter.sh/).
 
 Let's take a closer look at the key files used in this deployment and understand their functionalities before proceeding with the deployment:
 
@@ -180,7 +180,7 @@ Now, you can access the Ray Dashboard from the Load balancer URL below.
 If you don't have access to a public Load Balancer, you can use port-forwarding and browse the Ray Dashboard using localhost with the following command:
 
 ```bash
-kubectl port-forward svc/llama2-service 8265:8265 -n llama2
+kubectl port-forward svc/stablediffusion-service 8265:8265 -n stablediffusion
 
 # Open the link in the browser
 http://localhost:8265/
@@ -214,7 +214,7 @@ The Gradio app interacts with the locally exposed service created solely for the
 :::
 
 ### Execute Port Forward to the stablediffusion Ray Service
-First, execute a port forward to the Llama-2 Ray Service using kubectl:
+First, execute a port forward to the stablediffusion Ray Service using kubectl:
 
 ```bash
 kubectl port-forward svc/stablediffusion-service 8000:8000 -n stablediffusion

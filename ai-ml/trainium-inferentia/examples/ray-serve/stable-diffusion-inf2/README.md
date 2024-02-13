@@ -5,7 +5,7 @@ Deploy the `trainium-inferentia` blueprint using this [link](https://awslabs.git
 
 ## Step 1: Deploy RayServe Cluster
 
-To deploy the RayServe cluster with `StableDiffusion` LLM on `Inf2.24xlarge` instance, run the following command:
+To deploy the RayServe cluster with `StableDiffusion` LLM on `Inf2.48xlarge` instance, run the following command:
 
 **IMPORTANT NOTE: RAY MODEL DEPLOYMENT CAN TAKE UPTO 8 TO 10 MINS**
 
@@ -14,7 +14,7 @@ cd data-on-eks/ai-ml/trainium-inferentia/examples/ray-serve/stable-diffusion-inf
 kubectl apply -f ray-service-stablediffusion.yaml
 ```
 
-This will deploy a RayServe cluster with a `inf2.24xlarge` instances. The `Stable-Diffusion-xl` LLM will be loaded on the instance and will be available to serve inference requests.
+This will deploy a RayServe cluster with a `inf2.48xlarge` instances. The `Stable-Diffusion-xl` LLM will be loaded on the instance and will be available to serve inference requests.
 
 Once the RayServe cluster is deployed, you can start sending inference requests to it. To do this, you can use the following steps:
 

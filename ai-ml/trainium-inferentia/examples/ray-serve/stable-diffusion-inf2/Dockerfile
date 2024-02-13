@@ -14,7 +14,7 @@ RUN . /etc/os-release && \
     sudo echo "deb https://apt.repos.neuron.amazonaws.com ${VERSION_CODENAME} main" > /etc/apt/sources.list.d/neuron.list && \
     sudo wget -qO - https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB | apt-key add - && \
     sudo apt-get update -y && \
-    sudo apt-get install aws-neuronx-dkms aws-neuronx-collectives=2.* aws-neuronx-runtime-lib=2.* aws-neuronx-tools=2.* -y && \
+    sudo apt-get install aws-neuronx-collectives=2.* aws-neuronx-runtime-lib=2.* aws-neuronx-tools=2.* -y && \
     sudo apt-get clean
 
 # Switch back to a non-root user for the subsequent commands
@@ -22,10 +22,10 @@ USER $USER
 
 # Set pip repository pointing to the Neuron repository and install required Python packages
 RUN pip config set global.extra-index-url https://pip.repos.neuron.amazonaws.com && \
-    pip install wget awscli regex neuronx-cc==2.11.0.34 torch-neuronx==1.13.1.1.12.0 torchvision transformers-neuronx sentencepiece transformers && \
+    pip install neuronx-cc==2.11.0.34 torch-neuronx==1.13.1.1.12.0 torchvision transformers-neuronx sentencepiece transformers && \
     pip install optimum[neuronx] && \
     pip install optimum[diffusers] && \
-    pip install optimum-neuron==0.0.13 diffusers==0.21.4 transformers==4.36.0 --upgrade && \
+    pip install optimum-neuron==0.0.13 diffusers==0.21.4 transformers==4.36.0 && \
     pip install starlette==0.34.0
 
 
