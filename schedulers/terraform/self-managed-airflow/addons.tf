@@ -20,7 +20,7 @@ module "ebs_csi_driver_irsa" {
 module "eks_blueprints_addons" {
   # Short commit hash from 8th May using git rev-parse --short HEAD
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -79,7 +79,13 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   karpenter = {
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -166,7 +172,7 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "~> 1.2.9" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -237,6 +243,89 @@ module "eks_data_addons" {
       EOT
     ]
   }
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    spark-compute-optimized = {
+      values = [
+        <<-EOT
+        name: spark-compute-optimized
+        clusterName: ${module.eks.cluster_name}
+        ec2NodeClass:
+          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+          subnetSelectorTerms:
+            tags:
+              Name: "${module.eks.cluster_name}-private*"
+          securityGroupSelectorTerms:
+            tags:
+              Name: ${module.eks.cluster_name}-node
+          userData: |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+            --BOUNDARY
+            Content-Type: text/x-shellscript; charset="us-ascii"
+
+            #!/bin/bash
+            echo "Running a custom user data script"
+            set -ex
+            yum install mdadm -y
+
+            DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+            DISK_ARRAY=()
+
+            for DEV in $DEVICES
+            do
+              DISK_ARRAY+=("/dev/$${DEV}")
+            done
+
+            DISK_COUNT=$${#DISK_ARRAY[@]}
+
+            if [ $${DISK_COUNT} -eq 0 ]; then
+              echo "No SSD disks available. No further action needed."
+            else
+              if [ $${DISK_COUNT} -eq 1 ]; then
+                TARGET_DEV=$${DISK_ARRAY[0]}
+                mkfs.xfs $${TARGET_DEV}
+              else
+                mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+                mkfs.xfs /dev/md0
+                TARGET_DEV=/dev/md0
+              fi
+
+              mkdir -p /local1
+              echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+              mount -a
+              /usr/bin/chown -hR +999:+1000 /local1
+            fi
+
+            --BOUNDARY--
+        nodePool:
+          labels:
+            - provisioner: spark-compute-optimized
+            - NodeGroupType: SparkComputeOptimized
+            - type: karpenter
+          taints:
+            - key: spark-compute-optimized
+              value: 'true'
+              effect: NoSchedule
+          requirements:
+            - key: "topology.kubernetes.io/zone"
+              operator: In
+              values: [${local.region}a]
+            - key: "node.kubernetes.io/instance-type"
+              operator: In
+              values: ["c5d.large","c5d.xlarge","c5d.2xlarge","c5d.4xlarge","c5d.9xlarge"] # 1 NVMe disk
+            - key: "kubernetes.io/arch"
+              operator: In
+              values: ["amd64"]
+            - key: "karpenter.sh/capacity-type"
+              operator: In
+              values: ["spot", "on-demand"]
+      EOT
+      ]
+    }
+  }
 }
 
 #---------------------------------------------------------------
@@ -284,22 +373,4 @@ module "fluentbit_s3_bucket" {
   }
 
   tags = local.tags
-}
-
-#---------------------------------------
-# Karpenter Provisioners for workloads
-#---------------------------------------
-data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/*.yaml"
-  vars = {
-    azs            = local.region
-    eks_cluster_id = module.eks.cluster_name
-  }
-}
-
-resource "kubectl_manifest" "karpenter_provisioner" {
-  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_addons]
 }

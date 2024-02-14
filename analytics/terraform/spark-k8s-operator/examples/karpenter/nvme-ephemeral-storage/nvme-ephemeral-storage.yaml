@@ -1,6 +1,6 @@
 # Pre-requisite before running this job
-# 1/ Open taxi-trip-execute.sh and update <S3_BUCKET> and <REGION>
-# 2/ Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
+# 1/ Open taxi-trip-execute.sh and update <ENTER_S3_BUCKET> and <REGION>
+# 2/ Replace <ENTER_S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
 # 3/ execute taxi-trip-execute.sh
 
 ---
@@ -28,12 +28,12 @@ spec:
   sparkVersion: "3.2.1"
   pythonVersion: "3"
   mode: cluster
-  image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
+  image: public.ecr.aws/data-on-eks/spark3.3.1-hadoop3.2-aws-java-sdk-bundle-1.12.647
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://<S3_BUCKET>/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<ENTER_S3_BUCKET>/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
-    - "s3a://<S3_BUCKET>/taxi-trip/input/"
-    - "s3a://<S3_BUCKET>/taxi-trip/output/"
+    - "s3a://<ENTER_S3_BUCKET>/taxi-trip/input/"
+    - "s3a://<ENTER_S3_BUCKET>/taxi-trip/output/"
   hadoopConf:
     "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
@@ -42,7 +42,6 @@ spec:
     "spark.app.name": "taxi-trip"
     "spark.kubernetes.driver.pod.name": "taxi-trip"
     "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
-    "spark.local.dir": "/data1"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
@@ -52,10 +51,11 @@ spec:
     "spark.hadoop.fs.s3a.readahead.range": "256K"
     "spark.hadoop.fs.s3a.input.fadvise": "random"
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.local.dir": "/data"
 
     # Spark Event logs
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.dir": "s3a://<ENTER_S3_BUCKET>/spark-event-logs"
     "spark.eventLog.rolling.enabled": "true"
     "spark.eventLog.rolling.maxFileSize": "64m"
 #    "spark.history.fs.eventLog.rolling.maxFilesToRetain": 100
@@ -81,37 +81,36 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
   driver:
+    podSecurityContext:
+      fsGroup: 2000  # Group ID
+      runAsUser: 1000  # User ID
     cores: 1
     coreLimit: "1200m"
     memory: "4g"
     memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
-      version: 3.2.1
+      version: 3.3.1
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: "SparkComputeOptimized"
-    tolerations:
-      - key: "spark-compute-optimized"
-        operator: "Exists"
-        effect: "NoSchedule"
+      multiArch: Spark
+
   executor:
+    podSecurityContext:
+      fsGroup: 2000  # Group ID
+      runAsUser: 1000  # User ID
     cores: 1
-    coreLimit: "1200m"
+    coreLimit: "3400m"
     instances: 4
     memory: "4g"
     memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
-      version: 3.2.1
+      version: 3.3.1
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: "SparkComputeOptimized"
-    tolerations:
-      - key: "spark-compute-optimized"
-        operator: "Exists"
-        effect: "NoSchedule"
+      multiArch: Spark

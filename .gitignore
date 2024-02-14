@@ -49,3 +49,5 @@ site
 
 # Checks
 .tfsec
+
+examples/gradio-ui/*

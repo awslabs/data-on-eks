@@ -7,8 +7,6 @@ import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 import CodeBlock from '@theme/CodeBlock';
-import SparkMemoryOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-memory-optimized-provisioner.yaml';
-import SparkGravitonMemoryOptimizedProvisioner from '!!raw-loader!../../../../analytics/terraform/spark-k8s-operator/karpenter-provisioners/spark-graviton-memory-optimized-provisioner.yaml';
 
 # Spark Operator with YuniKorn
 
@@ -19,46 +17,175 @@ The EKS Cluster design for the Data on EKS blueprint is optimized for running Sp
 
 <CollapsibleContent header={<h2><span>Spark workloads with Karpenter</span></h2>}>
 
-The first option presented leverages Karpenter as the autoscaler, eliminating the need for Managed Node Groups and Cluster Autoscaler. In this design, Karpenter and its provisioner are responsible for creating both On-Demand and Spot instances, dynamically selecting instance types based on user demands. Karpenter offers improved performance compared to Cluster Autoscaler, with more efficient node scaling and faster response times. Karpenter's key features include its ability to scale from zero, optimizing resource utilization and reducing costs when there is no demand for resources. Additionally, Karpenter supports multiple provisioners, allowing for greater flexibility in defining the required infrastructure for different workload types, such as compute, memory, and GPU-intensive tasks. Furthermore, Karpenter integrates seamlessly with Kubernetes, providing automatic, real-time adjustments to the cluster size based on observed workloads and scaling events. This enables a more efficient and cost-effective EKS cluster design that adapts to the ever-changing demands of Spark applications and other workloads.
+The first option presented leverages Karpenter as the autoscaler, eliminating the need for Managed Node Groups and Cluster Autoscaler. In this design, Karpenter and its Nodepools are responsible for creating both On-Demand and Spot instances, dynamically selecting instance types based on user demands. Karpenter offers improved performance compared to Cluster Autoscaler, with more efficient node scaling and faster response times. Karpenter's key features include its ability to scale from zero, optimizing resource utilization and reducing costs when there is no demand for resources. Additionally, Karpenter supports multiple Nodepools, allowing for greater flexibility in defining the required infrastructure for different workload types, such as compute, memory, and GPU-intensive tasks. Furthermore, Karpenter integrates seamlessly with Kubernetes, providing automatic, real-time adjustments to the cluster size based on observed workloads and scaling events. This enables a more efficient and cost-effective EKS cluster design that adapts to the ever-changing demands of Spark applications and other workloads.
 
 ![img.png](img/eks-spark-operator-karpenter.png)
 
 <Tabs>
 <TabItem value="spark-memory-optimized" label="spark-memory-optimized">
 
-In this tutorial, you will use Karpenter provisioner that uses memory optimized instances. This template uses the AWS Node template with Userdata.
+In this tutorial, you will use Karpenter Nodepools that uses memory optimized instances. This template uses the AWS Node template with Userdata.
 
 <details>
-<summary> To view Karpenter provisioner for memory optimized instances, Click to toggle content!</summary>
-
-<CodeBlock language="yaml">{SparkMemoryOptimizedProvisioner}</CodeBlock>
-</details>
-
-To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
-
-For example,
+<summary> To view Karpenter Nodepool for memory optimized instances, Click to toggle content!</summary>
 
 ```yaml
-spec:
-  tolerations:
-    - key: "spark-memory-optimized"
-      operator: "Exists"
-      effect: "NoSchedule"
+    name: spark-memory-optimized
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        userData: |
+          MIME-Version: 1.0
+          Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+          --BOUNDARY
+          Content-Type: text/x-shellscript; charset="us-ascii"
+
+          cat <<-EOF > /etc/profile.d/bootstrap.sh
+          #!/bin/sh
+
+
+          # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
+          # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
+          # This will create a RAID volume and mount it at /mnt/k8s-disks/0
+          #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
+          #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
+          export LOCAL_DISKS='raid0'
+          EOF
+
+          # Source extra environment variables in bootstrap script
+          sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+
+          --BOUNDARY--
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkComputeOptimized
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["r"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["r5d"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["4", "8", "16", "32"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
 ```
+</details>
+
 
 </TabItem>
 
 <TabItem value="spark-graviton-memory-optimized" label="spark-graviton-memory-optimized">
 
-In this yaml, you will use Karpenter provisioner that uses Graviton memory optimized instances. This template uses the AWS Node template with Userdata.
+In this yaml, you will use Karpenter Nodepool that uses Graviton memory optimized instances. This template uses the AWS Node template with Userdata.
 
 <details>
-<summary> To view Karpenter provisioner for Graviton memory optimized instances, Click to toggle content!</summary>
+<summary> To view Karpenter Nodepool for Graviton memory optimized instances, Click to toggle content!</summary>
 
-<CodeBlock language="yaml">{SparkGravitonMemoryOptimizedProvisioner}</CodeBlock>
+```yaml
+    name: spark-graviton-memory-optimized
+    clusterName: ${module.eks.cluster_name}
+    ec2NodeClass:
+      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+      subnetSelectorTerms:
+        tags:
+          Name: "${module.eks.cluster_name}-private*"
+      securityGroupSelectorTerms:
+        tags:
+          Name: ${module.eks.cluster_name}-node
+      userData: |
+        MIME-Version: 1.0
+        Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+        --BOUNDARY
+        Content-Type: text/x-shellscript; charset="us-ascii"
+
+        cat <<-EOF > /etc/profile.d/bootstrap.sh
+        #!/bin/sh
+
+
+        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
+        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
+        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
+        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
+        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
+        export LOCAL_DISKS='raid0'
+        EOF
+
+        # Source extra environment variables in bootstrap script
+        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+
+        --BOUNDARY--
+
+
+    nodePool:
+      labels:
+        - type: karpenter
+        - NodeGroupType: SparkGravitonMemoryOptimized
+        - multiArch: Spark
+      requirements:
+        - key: "karpenter.sh/capacity-type"
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: "kubernetes.io/arch"
+          operator: In
+          values: ["arm64"]
+        - key: "karpenter.k8s.aws/instance-category"
+          operator: In
+          values: ["r"]
+        - key: "karpenter.k8s.aws/instance-family"
+          operator: In
+          values: ["r6gd"]
+        - key: "karpenter.k8s.aws/instance-cpu"
+          operator: In
+          values: ["4", "8", "16", "32"]
+        - key: "karpenter.k8s.aws/instance-hypervisor"
+          operator: In
+          values: ["nitro"]
+        - key: "karpenter.k8s.aws/instance-generation"
+          operator: Gt
+          values: ["2"]
+      limits:
+        cpu: 1000
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 30s
+        expireAfter: 720h
+      weight: 50
+```
+
 </details>
 
-To run Spark Jobs that can use this provisioner, you need to submit your jobs by adding `tolerations` to your pod templates
+To run Spark Jobs that can use this Nodepool, you need to submit your jobs by adding `tolerations` to your pod templates
 
 For example,
 
@@ -161,7 +288,7 @@ You should see the new nodes triggered by the karpenter and the YuniKorn will sc
 kubectl get pods -n spark-team-a -w
 ```
 
-You can try the following examples to leverage multiple Karpenter provisioners, EBS as Dynamic PVC instead of SSD and YuniKorn Gang Scheduling.
+You can try the following examples to leverage multiple Karpenter Nodepools, EBS as Dynamic PVC instead of SSD and YuniKorn Gang Scheduling.
 
 ## NVMe Ephemeral SSD disk for Spark shuffle storage
 
@@ -318,6 +445,168 @@ Step2: Execute Benchmark test
   kubectl apply -f tpcds-benchmark-1t.yaml
 ```
 </CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Karpenter Nodepool weights with Graviton and Intel</span></h2>}>
+
+### Using Karpenter Nodepool weights for running Spark Jobs on both AWS Graviton and Intel EC2 Instances
+
+Customers often seek to leverage AWS Graviton instances for running Spark jobs due to their cost savings and performance improvements over traditional Intel instances. However, a common challenge is the availability of Graviton instances in specific regions or availability zones, especially during times of high demand. To address this, a fallback strategy to equivalent Intel instances is desirable.
+
+#### Solution
+**Step 1: Create a Multi-Architecture Spark Docker Image**
+First, ensure that your Spark job can run on both AWS Graviton (ARM architecture) and Intel (AMD architecture) instances by creating a multi-architecture Docker image. You can find a sample [Dockerfile](../../../../analytics/terraform/spark-k8s-operator/examples/docker/Dockerfile) and instructions for building and pushing this image to Amazon Elastic Container Registry (ECR) here.
+
+**Step 2: Deploy Two Karpenter Nodepools with weights**
+Deploy two separate Karpenter Nodepools: one configured for Graviton instances and the other for Intel instances.
+
+Graviton Nodepool (ARM): Set the weight of the Graviton Nodepool to `100`. This prioritizes Graviton instances for your Spark workloads.
+
+Intel Nodepool (AMD): Set the weight of the Intel Nodepool to `50`. This ensures that Karpenter will fall back to the Intel Nodepool when Graviton instances are either unavailable or reach their maximum CPU capacity.
+
+```yaml
+  # spark-compute-optimized
+    name: spark-compute-optimized
+    clusterName: ${module.eks.cluster_name}
+    ec2NodeClass:
+      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+      subnetSelectorTerms:
+        tags:
+          Name: "${module.eks.cluster_name}-private*"
+      securityGroupSelectorTerms:
+        tags:
+          Name: ${module.eks.cluster_name}-node
+      userData: |
+        MIME-Version: 1.0
+        Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+        --BOUNDARY
+        Content-Type: text/x-shellscript; charset="us-ascii"
+
+        cat <<-EOF > /etc/profile.d/bootstrap.sh
+        #!/bin/sh
+
+
+        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
+        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
+        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
+        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
+        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
+        export LOCAL_DISKS='raid0'
+        EOF
+
+        # Source extra environment variables in bootstrap script
+        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+
+        --BOUNDARY--
+
+    nodePool:
+      labels:
+        - type: karpenter
+        - NodeGroupType: SparkComputeOptimized
+        - multiArch: Spark
+      requirements:
+        - key: "karpenter.sh/capacity-type"
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: "kubernetes.io/arch"
+          operator: In
+          values: ["amd64"]
+        - key: "karpenter.k8s.aws/instance-category"
+          operator: In
+          values: ["c"]
+        - key: "karpenter.k8s.aws/instance-family"
+          operator: In
+          values: ["c5d"]
+        - key: "karpenter.k8s.aws/instance-cpu"
+          operator: In
+          values: ["4", "8", "16", "36"]
+        - key: "karpenter.k8s.aws/instance-hypervisor"
+          operator: In
+          values: ["nitro"]
+        - key: "karpenter.k8s.aws/instance-generation"
+          operator: Gt
+          values: ["2"]
+      limits:
+        cpu: 20 # Change this to 1000 or more for production according to your needs
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 30s
+        expireAfter: 720h
+      weight: 100
+
+    # spark-graviton-memory-optimized Nodepool
+
+    name: spark-graviton-memory-optimized
+    clusterName: ${module.eks.cluster_name}
+    ec2NodeClass:
+      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+      subnetSelectorTerms:
+        tags:
+          Name: "${module.eks.cluster_name}-private*"
+      securityGroupSelectorTerms:
+        tags:
+          Name: ${module.eks.cluster_name}-node
+      userData: |
+        MIME-Version: 1.0
+        Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+        --BOUNDARY
+        Content-Type: text/x-shellscript; charset="us-ascii"
+
+        cat <<-EOF > /etc/profile.d/bootstrap.sh
+        #!/bin/sh
+
+
+        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
+        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
+        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
+        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
+        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
+        export LOCAL_DISKS='raid0'
+        EOF
+
+        # Source extra environment variables in bootstrap script
+        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+
+        --BOUNDARY--
+    nodePool:
+      labels:
+        - type: karpenter
+        - NodeGroupType: SparkGravitonMemoryOptimized
+        - multiArch: Spark
+      requirements:
+        - key: "karpenter.sh/capacity-type"
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: "kubernetes.io/arch"
+          operator: In
+          values: ["arm64"]
+        - key: "karpenter.k8s.aws/instance-category"
+          operator: In
+          values: ["r"]
+        - key: "karpenter.k8s.aws/instance-family"
+          operator: In
+          values: ["r6gd"]
+        - key: "karpenter.k8s.aws/instance-cpu"
+          operator: In
+          values: ["4", "8", "16", "32"]
+        - key: "karpenter.k8s.aws/instance-hypervisor"
+          operator: In
+          values: ["nitro"]
+        - key: "karpenter.k8s.aws/instance-generation"
+          operator: Gt
+          values: ["2"]
+      limits:
+        cpu: 1000
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 30s
+        expireAfter: 720h
+      weight: 50
+```
+
+</CollapsibleContent>
+
 
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
