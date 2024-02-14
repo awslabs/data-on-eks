@@ -38,7 +38,7 @@ First, clone the repository
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate into `distributed-databases/trino` and run `install.sh` script. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region. This is also the time to update any other input variables or make any other changes to the terraform template.
+Navigate into `distributed-databases/trino` and run `install.sh` script. Enter, when prompted, the region you want to provision the resources to (i.e. `us-west-2`).
 
 ```bash
 cd data-on-eks/distributed-databases/trino
@@ -128,7 +128,7 @@ Run the hive script from the `examples` directory to set up the blueprint S3 buc
 
 ```bash
 cd examples/
-./hive.sh
+./hive-setup.sh
 ```
 
 You will see some outputs to show progress, and if successful, will see the name of the Glue table that will store the metadata as `hive`.
@@ -202,6 +202,13 @@ vendorid |  tpep_pickup_datetime   |  tpep_dropoff_datetime  | passenger_count |
 ```
 
 #### Clean Up
+
+Run the cleanup script from the `examples` directory to delete all the resources created from the hive script:
+
+```
+cd examples/
+./hive-cleanup.sh
+```
 
 ### Example #2: Using the Iceberg Connector
 

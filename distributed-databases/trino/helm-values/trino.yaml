@@ -35,7 +35,7 @@ worker:
       memory: 10Gi
   nodeSelector:
     NodePool: trino-karpenter
-    karpenter.sh/capacity-type: spot 
+    karpenter.sh/capacity-type: spot
 additionalConfigProperties:
   - "retry-policy=TASK"
   - "exchange.compression-enabled=true"
@@ -46,6 +46,14 @@ additionalExchangeManagerProperties:
   - "exchange.s3.region=${region}"
   - "exchange.s3.iam-role=${irsa_arn}"
 additionalCatalogs:
+  hive: |-
+    connector.name=hive
+    hive.metastore=glue
+    hive.metastore.glue.region=${region}
+    hive.metastore.glue.default-warehouse-dir=s3://${bucket_id}/
+    hive.metastore.glue.iam-role=${irsa_arn}
+    hive.s3.iam-role=${irsa_arn}
+    hive.security=allow-all
   iceberg: |-
     connector.name=iceberg
     iceberg.catalog.type=glue

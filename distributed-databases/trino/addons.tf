@@ -64,7 +64,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.33.1"
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -138,27 +138,9 @@ module "eks_blueprints_addons" {
 }
 
 #---------------------------------------
-# Karpenter Provisioners
-#---------------------------------------
-data "kubectl_path_documents" "karpenter_resources" {
-  pattern = "${path.module}/karpenter-resources/node-*.yaml"
-  vars = {
-    azs            = local.region
-    eks_cluster_id = module.eks.cluster_name
-  }
-}
-
-resource "kubectl_manifest" "karpenter_resources" {
-  for_each  = toset(data.kubectl_path_documents.karpenter_resources.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-#---------------------------------------
 # Trino Helm Add-on
 #---------------------------------------
-module "trino_hive_addon" {
+module "trino_addon" {
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.1.1" #ensure to update this to the latest/desired version
 
@@ -170,7 +152,7 @@ module "trino_hive_addon" {
   create_namespace = true
 
   values = [
-    templatefile("${path.module}/trino-values/trino-${local.catalog_type}.yaml",
+    templatefile("${path.module}/helm-values/trino.yaml",
       {
         sa                 = local.trino_sa
         region             = local.region
@@ -199,57 +181,4 @@ module "trino_hive_addon" {
       service_account = local.trino_sa
     }
   }
-}
-
-#---------------------------------------------------------------
-# Grafana Admin credentials resources
-#---------------------------------------------------------------
-data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id  = aws_secretsmanager_secret.grafana.id
-  depends_on = [aws_secretsmanager_secret_version.grafana]
-}
-
-resource "random_password" "grafana" {
-  length           = 16
-  special          = true
-  override_special = "@_"
-}
-
-#tfsec:ignore:aws-ssm-secret-use-customer-key
-resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-grafana"
-  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
-}
-
-resource "aws_secretsmanager_secret_version" "grafana" {
-  secret_id     = aws_secretsmanager_secret.grafana.id
-  secret_string = random_password.grafana.result
-}
-
-# Creating an s3 bucket for Spark History event logs
-module "s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
-
-  bucket_prefix = "${local.name}-trino-"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
-
-  tags = local.tags
-}
-
-# Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
-resource "aws_s3_object" "this" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  key          = "trino-event-logs/"
-  content_type = "application/x-directory"
 }

@@ -22,15 +22,9 @@ variable "trino_sa" {
   default     = "trino-sa"
 }
 
-variable "catalog_type" {
-  description = "Trino catalog type"
-  type        = string
-  default     = "hive"
-}
-
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.28"
+  default     = "1.29"
   type        = string
 }
 
