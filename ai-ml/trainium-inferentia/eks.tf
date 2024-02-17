@@ -122,8 +122,6 @@ module "eks" {
         WorkerType      = "ON_DEMAND"
         NodeGroupType   = "core"
         workload        = "rayhead"
-        instanceType    = "mixed-x86"
-        provisionerType = "Karpenter"
       }
 
       tags = merge(local.tags, {
@@ -512,8 +510,8 @@ module "eks" {
       desired_size = var.inf2_24xl_desired_size
 
       labels = {
-        instanceType    = "inferentia-inf2"
-        provisionerType = "Karpenter"
+        instanceType    = "inf2-24xl"
+        provisionerType = "cluster-autoscaler"
       }
 
       block_device_mappings = {
@@ -579,8 +577,8 @@ module "eks" {
       desired_size = var.inf2_48xl_desired_size
 
       labels = {
-        instanceType    = "inferentia-inf2"
-        provisionerType = "Karpenter"
+        instanceType    = "inf2-48xl"
+        provisionerType = "cluster-autoscaler"
       }
 
       taints = [
