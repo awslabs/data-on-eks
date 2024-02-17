@@ -500,20 +500,21 @@ kubectl scale deployment trino-worker -n trino --replicas=1
 ```
 See Trino Web UI on browser and there is only 1 active worker running now as other workers are terminated:
 
-![Terminated workers](./img/trino-ft-terminated-workers.PNG)
+![Terminated workers](./img/trino-ft-terminated-workers.png)
 
 - Go to Amazon S3 console and verify intermediate exchange data spooling in exchange manager S3 bucket with a name starting with `trino-exchange-bucket`.
 
-![Exchange manager](./img/trino-exchange-manager.PNG)
+![Exchange manager](./img/trino-exchange-manager.png)
 
 - Let's now see Trino Web UI monitor again to verify completion of the query despite of 6 failed tasks due to terminated workers (we have encircled them in RED in the screenshot below).
+
 :::info
 Please note, number of failed tasks could be different in your Trino Web UI depending upon how many tasks were running on workers that got terminated. 
 
 Also you can see different number of active workers depending upon worker pods scaled by Horizontal Pod Autoscaler(HPA) using cpu utilization metric
 :::
 
-![Trino query completion](./img/trino-ft-query-completion.PNG)
+![Trino query completion](./img/trino-ft-query-completion.png)
 
 ## Conclusion
 
