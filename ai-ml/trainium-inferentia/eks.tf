@@ -119,9 +119,9 @@ module "eks" {
       instance_types = ["m5.2xlarge"]
 
       labels = {
-        WorkerType      = "ON_DEMAND"
-        NodeGroupType   = "core"
-        workload        = "rayhead"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core"
+        workload      = "rayhead"
       }
 
       tags = merge(local.tags, {
