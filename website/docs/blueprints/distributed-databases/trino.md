@@ -7,15 +7,13 @@ sidebar_label: Trino on EKS
 
 ## Introduction
 
-**Trino** is an [open source query engine](https://trino.io/) designed to run distributed SQL query engine for data analytics.
+[Trino](https://trino.io/) is an open-source, fast, distributed query engine designed to run SQL queries for big data analytics, over a multitude of data sources including Amazon S3, relational databases, distributed data stores and data warehouses.
 
-It defines a new Kubernetes resource called `Cluster` representing a Trino cluster consisting of a coordinator and many workers (for high availability) as k8s pods. The coordinator and the workers collaborate to access connected data sources, with schemas and references stored in a catalog. To access the data sources, you can use one of the many [connectors](https://trino.io/docs/current/connector.html) provided by Trino to adapt Trino. Examples include as Hive, Iceberg, and Kafka.
-
-More details about the project will be found on this [link](https://trino.io)
+When Trino executes a query, it does so by breaking up the execution into a hierarchy of stages, which are implemented as a series of tasks distributed over a network of Trino workers. A Trino cluster consists of a coordinator and many workers for parallel processing, which can be deployed as Kubernetes pods on an EKS cluster. The coordinator and the workers collaborate to access connected data sources, with schemas and references stored in a catalog. To access the data sources, you can use one of the many [connectors](https://trino.io/docs/current/connector.html) provided by Trino to adapt Trino. Examples include as Hive, Iceberg and Kafka. More details about Trino project can be found on this [link](https://trino.io)
 
 ## Blueprint Solution
 
-This blueprint will deploy Trino on an EKS cluster with nodes provisioned using Karpenter. To optimize on cost and performance, Karpenter will provision on-demand nodes for the coordinator and spot instances for the workers. Trino is deployed using the official Helm chart, with custom values provided for users to leverage either Hive or Iceberg as the connector. The examples will use Glue or Iceberg tables on AWS as the backend data source, using S3 as the storage.
+This blueprint will deploy Trino on an EKS cluster (Kubernetes version 1.29) with nodes provisioned using Karpenter (v0.34.0). To optimize on cost and performance, Karpenter will provision On-demand nodes for the Trino coordinator and EC2 Spot instances for Trino workers. With Trino's multi-architectural container images, Karpenter [NodePool](https://karpenter.sh/v0.34/concepts/nodepools/) will allow provisioning of nodes with EC2 instances from different cpu architectures including AWS Graviton based instances. Trino is deployed using the [official Helm chart](https://trinodb.github.io/charts/charts/trino/), with custom values provided for users to leverage Hive and Iceberg connectors. The examples will use Glue and Iceberg tables on AWS as the backend data source, using S3 as the storage.
 
 ## Deploying the Solution
 
@@ -28,7 +26,15 @@ Ensure that you have installed the following tools on your machine.
 1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
-4. [trino cli client](https://trino.io/docs/current/client/cli.html)
+4. [Trino CLI client](https://trino.io/docs/current/client/cli.html)
+<details>
+<summary> Toggle to see installation steps of Trino CLI</summary>
+```bash
+wget https://repo1.maven.org/maven2/io/trino/trino-cli/427/trino-cli-427-executable.jar
+mv trino-cli-427-executable.jar trino
+chmod +x trino
+```
+</details>
 
 ### Deploy the EKS Cluster with Trino
 
@@ -38,7 +44,7 @@ First, clone the repository
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate into `distributed-databases/trino` and run `install.sh` script. Enter, when prompted, the region you want to provision the resources to (i.e. `us-west-2`).
+Navigate into `distributed-databases/trino` and run `install.sh` script. Enter, when prompted, the AWS region you want to provision the resources to (for example, `us-west-2`).
 
 ```bash
 cd data-on-eks/distributed-databases/trino
@@ -51,49 +57,48 @@ cd data-on-eks/distributed-databases/trino
 Verify the Amazon EKS Cluster
 
 ```bash
-aws eks describe-cluster --name trino-on-eks
+#Select your own region where you deployed resources
+aws eks describe-cluster --name trino-on-eks --region us-west-2
 ```
 
-Update local kubeconfig so we can access kubernetes cluster (you can also get this command from the terraform output `configure_kubectl`)
+Update local kubeconfig so we can access kubernetes cluster (you can also get this command from the terraform output `configure_kubectl` )
 
 ```bash
 aws eks update-kubeconfig --name trino-on-eks --region us-west-2
 ```
 
-First, lets verify that we have worker nodes provisioned by Karpenter in the cluster. Lets also show their availability zone and capacity type
+First, let's verify that we have worker nodes provisioned by Karpenter in the cluster. Let's also see their availability zone and capacity type (on-demand or spot)
 
 ```bash
-kubectl get nodes --selector=NodePool=trino-karpenter -L topology.kubernetes.io/zone -L karpenter.sh/capacity-type
+kubectl get nodes --selector=karpenter.sh/nodepool=trino-karpenter -L topology.kubernetes.io/zone -L karpenter.sh/capacity-type -L node.kubernetes.io/instance-type
 ```
 #### Output
 ```bash
-NAME                                        STATUS   ROLES    AGE     VERSION               ZONE         CAPACITY-TYPE
-ip-10-1-11-104.us-west-2.compute.internal   Ready    <none>   2d23h   v1.28.5-eks-5e0fdde   us-west-2b   spot
-ip-10-1-11-235.us-west-2.compute.internal   Ready    <none>   2d23h   v1.28.5-eks-5e0fdde   us-west-2b   spot
-ip-10-1-11-240.us-west-2.compute.internal   Ready    <none>   2d23h   v1.28.5-eks-5e0fdde   us-west-2b   spot
-ip-10-1-11-60.us-west-2.compute.internal    Ready    <none>   3d      v1.28.5-eks-5e0fdde   us-west-2b   on-demand
+NAME                                        STATUS   ROLES    AGE   VERSION               ZONE         CAPACITY-TYPE   INSTANCE-TYPE
+ip-10-1-11-131.us-west-2.compute.internal   Ready    <none>   23m   v1.29.0-eks-5e0fdde   us-west-2b   spot            is4gen.2xlarge
+ip-10-1-11-49.us-west-2.compute.internal    Ready    <none>   24m   v1.29.0-eks-5e0fdde   us-west-2b   on-demand       t4g.medium
 ```
-We can see above that Karpenter launched 3 Spot nodes and 1 On-demand node in the same Availability Zone.
+We can see above that Karpenter provisioned on-demand node for running Trino coordinator and spot node for running Trino workers in the same availability zone.
 :::info
 
-For Big Data query engine like Trino which runs on a massively parallel processing cluster of coordinator and workers, it is recommended to deploy and run the cluster in same AZ to avoid incurring high Inter-AZ Data Transfer costs. That's why Karpenter NodePool has been configured to launch EKS nodes in same AZ
+For a distributed Big Data query engine like Trino which runs on a massively parallel processing cluster, it is recommended to deploy the cluster in same availability zone to avoid incurring high Inter-AZ Data Transfer costs. That's why Karpenter NodePool has been configured to launch EKS nodes in same AZ
 
 :::
 
-Now, lets verify all the pods (Trino coordinator and workers) that are running in `trino` namespace
+Now, let's verify the coordinator and worker pods running in `trino` namespace
 
 ```bash
 kubectl get pods --namespace=trino
 ```
 #### Output
 ```bash
-NAME                                 READY   STATUS    RESTARTS      AGE
-trino-coordinator-7c644cd9f5-j65ch   1/1     Running   0             24d
-trino-worker-7f8565698-ctjr4         1/1     Running   0             13d
-trino-worker-7f8565698-hhcwb         1/1     Running   0             24d
-trino-worker-7f8565698-q4bvd         1/1     Running   1             24d
+NAME                                 READY   STATUS    RESTARTS   AGE
+trino-coordinator-5cfd685c8f-mchff   1/1     Running   0          37m
+trino-worker-6c896d96d6-kr895        1/1     Running   0          37m
+trino-worker-6c896d96d6-llp9j        1/1     Running   0          37m
+trino-worker-6c896d96d6-zpglv        1/1     Running   0          37m
 ```
-Next, lets retrieve the Application Load Balancer DNS created by blueprint using the following command:
+Next, we will retrieve the Application Load Balancer DNS fronting Trino service from Ingress object
 
 ```bash
 export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
@@ -101,10 +106,10 @@ echo $TRINO_UI_DNS
 ```
 #### Output
 ```bash
-http://k8s-trino-trinocoo-f64c9587b5-1356222439.us-west-2.elb.amazonaws.com
+http://k8s-trino-trinocoo-f64c9587b5-1488329710.us-west-2.elb.amazonaws.com
 ```
 
-Now, lets access the Trino UI by pasting above Load Balancer DNS in a web browser. Login with username `admin` in the login window as shown below:
+Now, lets access the Trino UI by pasting above Load Balancer DNS in a web browser and login with username `admin` in the login window as shown below:
 
 ![Trino UI Login](./img/trino-ui-login.PNG)
 
@@ -138,10 +143,11 @@ You should have the Trino CLI installed as part of the prerequisite. The bluepri
 
 First, port-forward your trino coordinator pod to access it locally:
 ```
-kubectl port-forward
+COORDINATOR_POD=$(kubectl get pods -l "app=trino,release=trino,component=coordinator" -o name -n trino)
+kubectl port-forward $COORDINATOR_POD -n trino 8080:8080
 ```
 
-In another terminal tab, while the port-forward is running, run the following command to access the coordinator:
+While the port-forward is running, open another terminal tab where you have Trino CLI and run the following command to access the coordinator:
 ```bash
 ./trino http://127.0.0.1:8080 --user admin
 ```
@@ -150,24 +156,25 @@ Once successful, you will be able to get a prompt to execute commands. You can u
 
 For example:
 
-To show a list of catalogs - `SHOW CATALOG`:
-
+To show a list of catalogs, run query - `SHOW CATALOGS;` and you can see `hive` and `iceberg` catalogs among others configured by the blueprint
+#### Output
 ```bash
-Catalog
+ Catalog 
 ---------
- hive
- system
- tpcds
- tpch
-(4 rows)
+ hive    
+ iceberg 
+ system  
+ tpcds   
+ tpch    
+(5 rows)
 
-Query 20231103_221729_00028_6dv3m, FINISHED, 1 node
+Query 20240215_200117_00003_6jdxw, FINISHED, 1 node
 Splits: 1 total, 1 done (100.00%)
-0.21 [0 rows, 0B] [0 rows/s, 0B/s]
+0.49 [0 rows, 0B] [0 rows/s, 0B/s]
 ```
 
-To show the Hive catalog schemas - `SHOW SCHEMAS FROM hive`:
-
+To see the schemas (databases) in Hive catalog, run query - `SHOW SCHEMAS FROM hive;` :
+#### Output
 ```bash
   Schema
 --------------------
@@ -176,12 +183,14 @@ To show the Hive catalog schemas - `SHOW SCHEMAS FROM hive`:
 (2 rows)
 ```
 
-To show our Taxi table -
+Let's use `taxi_hive_database` and show table in this database -
 ```
-USE hive.taxi_hive_database
+USE hive.taxi_hive_database;
+```
+```
 SHOW TABLES;
 ```
-
+#### Output
 ```
 Table
 -------
@@ -189,8 +198,8 @@ hive
 (1 row)
 ```
 
-Finally, to run a simple query to list items - `SELECT * FROM hive LIMIT 5`
-
+Finally, to run a simple query to list items - `SELECT * FROM hive LIMIT 5;`
+#### Output
 ```
 vendorid |  tpep_pickup_datetime   |  tpep_dropoff_datetime  | passenger_count | trip_distance | ratecodeid | store_and_fwd_flag | pulocationid | dolocation>
 ----------+-------------------------+-------------------------+-----------------+---------------+------------+--------------------+--------------+----------->
@@ -206,7 +215,7 @@ vendorid |  tpep_pickup_datetime   |  tpep_dropoff_datetime  | passenger_count |
 Run the cleanup script from the `examples` directory to delete all the resources created from the hive script:
 
 ```
-cd examples/
+cd data-on-eks/distributed-databases/trino/examples
 ./hive-cleanup.sh
 ```
 
@@ -216,22 +225,21 @@ In this example, we will set up using Apache Iceberg with AWS Glue as the catalo
 
 Using Trino on EKS with the Iceberg connector, we will use Trino CLI to create the above resources and run sample SQL queries to insert and retrieve data.
 
-#### Setup
-
 #### Running the queries
 
-- Let's first find out the S3 data bucket created by blueprint. We will use this bucket to store data in Iceberg tables in PARQUET format. 
+- Let's find out the S3 data bucket created by blueprint. We will use this bucket to store data in Iceberg tables in PARQUET format. 
 ```bash
 cd data-on-eks/distributed-databases/trino
-terraform output --state="./terraform.tfstate" --raw data_bucket
+export BUCKET=$(terraform output --state="./terraform.tfstate" --raw data_bucket)
+echo $BUCKET
 ```
 #### Output
 ```bash
-trino-data-bucket-4mnn
+trino-data-bucket-20240215180855515400000001
 ```
 
-- Let’s now create an Iceberg schema with tables populated using sf10000 schema tables of [TPCDS](https://trino.io/docs/current/connector/tpcds.html) with CREATE TABLE AS SELECT (CTAS) statements. For that, let’s create a SQL file `trino_sf10000_tpcds_to_iceberg.sql` by copying below SQL statements 
-##### (Also don't forget to replace S3 bucket name with your bucket from above command):
+- Let’s now create an Iceberg schema with tables populated with data from sf10000 schema tables of [TPCDS](https://trino.io/docs/current/connector/tpcds.html). We will use CREATE TABLE AS SELECT (CTAS) statements. For that, open a new terminal where you have Trino CLI installed and create a SQL file `trino_sf10000_tpcds_to_iceberg.sql` by copying below SQL statements 
+##### (Don't forget to replace S3 bucket name for LOCATION below with your bucket from above command):
 ```bash
 use tpcds.sf10000;
 select * from tpcds.sf10000.item limit 10;
@@ -248,7 +256,7 @@ drop table iceberg.iceberg_schema.date_dim;
 /* Iceberg schema creation */
 
 create schema if not exists iceberg.iceberg_schema
-with (LOCATION = 's3://trino-data-bucket-4mnn/iceberg/');
+with (LOCATION = 's3://trino-data-bucket-20240215180855515400000001/iceberg/');
 
 /* Iceberg Table Creation with CTAS from tpcds tables */
 
@@ -384,7 +392,7 @@ export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address:
 
 ![Trino Queries](./img/trino-queries.PNG)
 
-- Let’s also see how Horizontal Pod Autoscaler (HPA) is scaling Trino worker pods, when above SQL commands are running:
+- Let’s open another terminal and see how Horizontal Pod Autoscaler (HPA) is scaling Trino worker pods, when above SQL commands are running:
 ```bash
 kubectl get hpa -n trino -w
 ```
@@ -403,12 +411,138 @@ trino-worker   Deployment/trino-worker   43%/70%    3         20        9       
 trino-worker   Deployment/trino-worker   152%/70%   3         20        9          3d2h
 trino-worker   Deployment/trino-worker   179%/70%   3         20        9          3d2h
 ```
-Initially 3 workers were running but now see 9 workers running in Trino UI, as HPA scaled worker pods with increasing query load:
+You can see HPA scaling from initial 3 workers to 9 workers running in Trino UI with increasing query load and average cpu utilization of workerss:
 
 ![Trino Scaling](./img/trino-workers-scaling.PNG)
 
+### Example #3 (Optional): Fault-tolerant execution in Trino
+[Fault-tolerant execution](https://trino.io/docs/current/admin/fault-tolerant-execution.html) is an opt-in mechanism in Trino that was implemented using [Project Tardigrade](https://trino.io/blog/2022/05/05/tardigrade-launch.html#what-is-project-tardigrade). Without fault-tolerant configuration, Trino query fails whenever any of the component tasks of the query fails due to any reason (for example, a worker node failure or termination). These failed queries have to be restarted from scratch resulting in longer execution time, compute wastage, and spend, especially for long-running queries. 
+
+When fault-tolerant execution is configured in Trino with a [retry policy](https://trino.io/docs/current/admin/fault-tolerant-execution.html#retry-policy), intermediate exchange data is spooled in an external storage like Amazon S3 or HDFS using [exchange manager](https://trino.io/docs/current/admin/fault-tolerant-execution.html#exchange-manager). Trino then retries failed query (if retry policy is configured as "QUERY") or failed tasks (if retry policy is configured as "TASK").  Trino's remaining workers reuse exchange manager data to retry and complete query in the event of a worker outage or other fault during query execution.
+:::info
+A **QUERY retry policy** instructs Trino to retry whole query when an error occurs on a worker node. It is recommended to use this retry policy when the majority of the workload for the Trino cluster comprises many small queries.
+
+A **TASK retry policy** instructs Trino to retry individual tasks in the event of failure. It is recommended to use this policy when Trino executes large batch queries. The cluster can more efficiently retry smaller tasks within the query rather than retry the whole query.
+:::
+- This blueprint has deployed Trino cluster with fault-tolerant configuration with a `TASK` retry policy in **`config.properties`** file in coordinator and worker pods. Let's verify that by opening a bash command shell inside coordinator pod:
+```bash
+COORDINATOR_POD=$(kubectl get pods -l "app=trino,release=trino,component=coordinator" -o name -n trino)
+kubectl exec --stdin --tty $COORDINATOR_POD -n trino -- /bin/bash
+cat /etc/trino/config.properties
+```
+#### Output
+```bash
+coordinator=true
+node-scheduler.include-coordinator=false
+http-server.http.port=8080
+query.max-memory=40GB
+query.max-memory-per-node=4GB
+discovery.uri=http://localhost:8080
+retry-policy=TASK
+exchange.compression-enabled=true
+query.low-memory-killer.delay=0s
+query.remote-task.max-error-duration=1m
+query.hash-partition-count=50
+```
+- Blueprint has also configured exchange manager using an Amazon S3 bucket in **`exchange-manager.properties`** file in coordinator and worker pods. Let's also verify that inside coordinator pod
+```bash
+cat /etc/trino/exchange-manager.properties
+```
+#### Output
+```bash
+exchange-manager.name=filesystem
+exchange.base-directories=s3://trino-exchange-bucket-20240215180855570800000004
+exchange.s3.region=us-west-2
+exchange.s3.iam-role=arn:aws:iam::xxxxxxxxxx:role/trino-sa-role
+```
+Please not down exchange manager S3 bucket name from above. You can explore contents of above S3 bucket in AWS Console. It will be empty when no query is running.
+- Now, let's exit from bash shell of the coordinator pod 
+```bash
+exit
+```
+
+With below steps, we will now test fault-tolerant execution by running a `select` query and terminate few Trino workers when query is still running. 
+- Let's create a `trino_select_query_iceberg.sql` file in the location where Trino CLI is installed and paste below SQL commands:
+```bash
+with inv as
+(select w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy
+,stdev,mean, case mean when 0 then null else stdev/mean end cov
+from(select w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy
+,stddev_samp(inv_quantity_on_hand) stdev,avg(inv_quantity_on_hand) mean
+from iceberg.iceberg_schema.inventory
+,iceberg.iceberg_schema.item
+,iceberg.iceberg_schema.warehouse
+,iceberg.iceberg_schema.date_dim
+where inv_item_sk = i_item_sk
+and inv_warehouse_sk = w_warehouse_sk
+and inv_date_sk = d_date_sk
+and d_year =1999
+group by w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy) foo
+where case mean when 0 then 0 else stdev/mean end > 1)
+select inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean, inv1.cov
+,inv2.w_warehouse_sk,inv2.i_item_sk,inv2.d_moy,inv2.mean, inv2.cov
+from inv inv1,inv inv2
+where inv1.i_item_sk = inv2.i_item_sk
+and inv1.w_warehouse_sk = inv2.w_warehouse_sk
+and inv1.d_moy=4
+and inv2.d_moy=4+1
+and inv1.cov > 1.5
+order by inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean,inv1.cov,inv2.d_moy,inv2.mean, inv2.cov;
+```
+- Let's now run select query first
+```bash
+export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
+./trino --file 'trino_select_query_iceberg.sql' --server ${TRINO_UI_DNS} --user admin --ignore-errors
+```
+- Immediately after above command, when above query is still running, open another terminal and scale down worker pods to just 1 worker, terminating all other workers with command below:
+```bash
+kubectl scale deployment trino-worker -n trino --replicas=1
+```
+See Trino Web UI on browser and there is only 1 active worker running now as other workers are terminated:
+
+![Terminated workers](./img/trino-ft-terminated-workers.PNG)
+
+- Go to Amazon S3 console and verify intermediate exchange data spooling in exchange manager S3 bucket with a name starting with `trino-exchange-bucket`.
+
+![Exchange manager](./img/trino-exchange-manager.PNG)
+
+- Let's now see Trino Web UI monitor again to verify completion of the query despite of 6 failed tasks due to terminated workers (we have encircled them in RED in the screenshot below).
+:::info
+Please note, number of failed tasks could be different in your Trino Web UI depending upon how many tasks were running on workers that got terminated. 
+
+Also you can see different number of active workers depending upon worker pods scaled by Horizontal Pod Autoscaler(HPA) using cpu utilization metric
+:::
+
+![Trino query completion](./img/trino-ft-query-completion.PNG)
 
 ## Conclusion
 
-Trino provides a tool for efficiently querying vast amounts of data from your data sources.
-In this example, we share a blueprint that deploys Trino on Amazon EKS, with add-ons necessary to build a complete EKS cluster (i.e. Karpenter for node autoscaling, Metrics server and HPA for Trino worker pods autoscaling, monitoring with Prometheus/Grafana stack). Among many features, we highlighted a couple of examples on creating an Iceberg or Hive data store using Amazon S3 as storage, and using simple Trino queries for results. 
+Trino is a tool for fast querying vast amounts of data from your data sources.In this example, we shared a terraform based blueprint that deploys Trino with fault-tolerant configuration on Amazon EKS, with add-ons necessary to build a complete EKS cluster (i.e. Karpenter for node autoscaling, Metrics server and HPA for Trino worker pods autoscaling, monitoring with Prometheus/Grafana stack). Among many features, we highlighted a couple of examples on creating an Iceberg or Hive data store using Amazon S3 as storage, and running simple Trino queries for results. We also deployed and scaled Trino workers on Spot instances for cost optimization. We also demonstrated fault-tolerant feature of Trino, which makes it suitable for Spot instances to save costs for long-running batch queries.
+
+## Cleanup 🧹
+- Let's open Trino CLI
+```bash
+export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
+./trino --server ${TRINO_UI_DNS} --user admin
+```
+- Now, let's delete Iceberg tables and schema by running below SQL commands on Trino CLI:
+ ```bash
+drop table iceberg.iceberg_schema.warehouse;
+drop table iceberg.iceberg_schema.item;
+drop table iceberg.iceberg_schema.inventory;
+drop table iceberg.iceberg_schema.date_dim;
+drop schema iceberg.iceberg_schema;
+```
+
+- Exit from Trino CLI with `exit` command. 
+- Finally, to delete all the components provisioned as part of this blueprint, use the following command to destroy all the resources.
+
+```bash
+cd data-on-eks/distributed-databases/trino
+./cleanup.sh
+```
+
+:::caution
+
+To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
+:::
