@@ -109,10 +109,10 @@ def generateAppDef(script_args: str, nnodes: int, nproc_per_node: int,
     # Determine entrypoint and arguments based on precompile request
     if precompile:
         entrypoint = "neuron_parallel_compile"
-        args = [_args_join(cmd) + " " + script_args]
+        args = cmd + script_args.split()
     else:
-        entrypoint = "bash"
-        args = ["-c", _args_join(cmd) + " " + script_args]
+        entrypoint = "python3"
+        args = cmd[1:] + script_args.split()
 
     # Define the AppDef configuration
     appdef = specs.AppDef(
