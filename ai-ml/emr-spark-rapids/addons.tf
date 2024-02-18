@@ -178,7 +178,7 @@ module "eks_data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: spark-gpu-karpenter
+          - NodeGroupType: spark-executor-gpu-karpenter
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
@@ -251,6 +251,10 @@ module "eks_data_addons" {
 
   #---------------------------------------------------------------
   # NVIDIA GPU Operator Add-on
+  #---------------------------------------------------------------
+  # IMPORTANT:
+  # The NVIDIA operator has been commented out because the latest CUDA drivers are already included in the EKS AMI.
+  # However, the NVIDIA Operator can still be used for monitoring and managing GPU resources if needed.
   #---------------------------------------------------------------
   # enable_nvidia_gpu_operator = true
   # nvidia_gpu_operator_helm_config = {

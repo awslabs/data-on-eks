@@ -118,19 +118,12 @@ module "eks" {
         "karpenter.sh/discovery" = local.name
       }
     }
+
     spark_driver_ng = {
       name        = "spark-driver-ng"
-      description = "Spark managed node group for Driver pods with cpu and Ubuntu AMI"
+      description = "Spark managed node group for Driver pods"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
-
-      # Ubuntu image for EKs Cluster https://cloud-images.ubuntu.com/aws-eks/
-      # ami_id = data.aws_ami.ubuntu.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      # enable_bootstrap_user_data = true
 
       ami_type = "AL2_x86_64"
 
@@ -155,15 +148,9 @@ module "eks" {
 
       labels = {
         WorkerType                       = "ON_DEMAND"
-        NodeGroupType                    = "spark-driver-ca"
+        NodeGroupType                    = "spark-driver-cpu-ca"
         "nvidia.com/gpu.deploy.operands" = false
       }
-
-      taints = [{
-        key    = "spark-driver-ca"
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
 
       tags = {
         Name = "spark-driver-ca"
@@ -171,18 +158,10 @@ module "eks" {
     }
     spark_gpu_ng = {
       name        = "spark-gpu-ng"
-      description = "Spark managed Ubuntu GPU node group for executor pods with launch template"
+      description = "Spark managed GPU node group for executor pods with launch template"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)]
 
-      # Ubuntu image for EKS Cluster 1.26 https://cloud-images.ubuntu.com/aws-eks/
-      # ami_id = data.aws_ami.ubuntu.image_id
-
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      # enable_bootstrap_user_data = true
       ami_type = "AL2_x86_64_GPU"
 
       # NVMe instance store volumes are automatically enumerated and assigned a device
@@ -201,7 +180,7 @@ module "eks" {
 
       # Change min_size, max_size and desired_size to 8 before running xgboost example
       min_size     = 0
-      max_size     = 1
+      max_size     = 8
       desired_size = 0
 
       capacity_type  = "ON_DEMAND"
@@ -219,8 +198,8 @@ module "eks" {
       }
 
       labels = {
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark-ubuntu-gpu-ca"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "spark-executor-gpu-ca"
       }
 
       taints = [{
@@ -230,7 +209,7 @@ module "eks" {
       }]
 
       tags = {
-        Name = "spark-ubuntu-gpu",
+        Name = "spark-gpu",
       }
     }
   }

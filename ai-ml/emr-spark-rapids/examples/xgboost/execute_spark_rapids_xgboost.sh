@@ -28,11 +28,6 @@ INPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/input"
 OUTPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/output"
 JARS_PATH="${SCRIPTS_S3_PATH}/jars"
 
-# NVIDIA JARS xgbost4j-spark_3.0-1.4.2-0.3.0.jar and xgboost4j_3.0-1.4.2-0.3.0.jar are downloaded from https://repo1.maven.org/maven2/com/nvidia/
-mkdir jars
-curl -o ./jars/xgboost4j-spark_3.0-1.4.2-0.3.0.jar https://repo1.maven.org/maven2/com/nvidia/xgboost4j-spark_3.0/1.4.2-0.3.0/xgboost4j-spark_3.0-1.4.2-0.3.0.jar
-curl -o ./jars/xgboost4j_3.0-1.4.2-0.3.0.jar https://mvnrepository.com/artifact/com.nvidia/xgboost4j_3.0/1.4.2-0.3.0/xgboost4j_3.0-1.4.2-0.3.0.jar
-
 #--------------------------------------------
 # Copy PySpark Scripts, Pod Templates and Input data to S3 bucket
 #--------------------------------------------
@@ -63,7 +58,7 @@ aws emr-containers start-job-run \
     "sparkSubmitJobDriver": {
       "entryPoint": "'"$SCRIPTS_S3_PATH"'/etl-xgboost-train-transform.py",
       "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'","'"$OUTPUT_DATA_S3_PATH"'","'"$NUM_WORKERS"'"],
-      "sparkSubmitParameters": "--conf spark.kubernetes.container.image='"$XGBOOST_IMAGE"' --jars='"$JARS_PATH"'/xgboost4j-spark_3.0-1.4.2-0.3.0.jar,'"$JARS_PATH"'/xgboost4j_3.0-1.4.2-0.3.0.jar --conf spark.pyspark.python=/opt/venv/bin/python"
+      "sparkSubmitParameters": "--conf spark.kubernetes.container.image='"$XGBOOST_IMAGE"' --jars=local:///usr/lib/xgboost/spark-rapids-xgboost-jar-1.0.0.jar"
     }
   }' \
   --configuration-overrides '{
@@ -71,8 +66,9 @@ aws emr-containers start-job-run \
         {
           "classification": "spark-defaults",
           "properties": {
+            "spark.kubernetes.file.upload.path": "'"$SCRIPTS_S3_PATH"'/path/",
             "spark.plugins":"com.nvidia.spark.SQLPlugin",
-            "spark.shuffle.manager":"com.nvidia.spark.rapids.spark331.RapidsShuffleManager",
+            "spark.shuffle.manager":"com.nvidia.spark.rapids.spark350.RapidsShuffleManager",
             "spark.kubernetes.driver.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
             "spark.kubernetes.executor.podTemplateFile":"'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
             "spark.kubernetes.executor.podNamePrefix":"'"$JOB_NAME"'",
@@ -108,8 +104,7 @@ aws emr-containers start-job-run \
             "spark.sql.execution.arrow.maxRecordsPerBatch":"200000",
             "spark.locality.wait":"0s",
             "spark.sql.shuffle.partitions":"64",
-            "spark.dynamicAllocation.enabled":"false",
-            "spark.local.dir":"/data1"
+            "spark.dynamicAllocation.enabled":"false"
           }
         }
       ],

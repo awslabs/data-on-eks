@@ -22,8 +22,9 @@ spec:
         limits:
           nvidia.com/gpu: 1
   nodeSelector:
-    NodeGroupType: "spark-ubuntu-gpu-ca"
+    NodeGroupType: spark-executor-gpu-ca
   tolerations:
-    - key: nvidia.com/gpu
-      operator: Exists
-      effect: NoSchedule
+    - key: "nvidia.com/gpu"
+      operator: "Equal"
+      value: "present"
+      effect: "NoSchedule"
