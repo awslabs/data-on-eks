@@ -210,9 +210,11 @@ vendorid |  tpep_pickup_datetime   |  tpep_dropoff_datetime  | passenger_count |
         2 | 2022-09-01 00:47:25.000 | 2022-09-01 00:56:09.000 |             1.0 |          2.94 |        1.0 | N                  |
 ```
 
-#### Clean Up
+#### Cleaning Up Hive Resources
 
-Run the cleanup script from the `examples` directory to delete all the resources created from the hive script:
+1. Exit from Trino CLI with `exit` command. 
+
+2. Run the cleanup script from the `examples` directory to delete all the resources created from the hive script:
 
 ```
 cd data-on-eks/distributed-databases/trino/examples
@@ -455,7 +457,7 @@ exchange.base-directories=s3://trino-exchange-bucket-20240215180855570800000004
 exchange.s3.region=us-west-2
 exchange.s3.iam-role=arn:aws:iam::xxxxxxxxxx:role/trino-sa-role
 ```
-Please not down exchange manager S3 bucket name from above. You can explore contents of above S3 bucket in AWS Console. It will be empty when no query is running.
+Please note down exchange manager S3 bucket name from above. You can explore contents of above S3 bucket in AWS Console. It will be empty when no query is running.
 - Now, let's exit from bash shell of the coordinator pod 
 ```bash
 exit
@@ -516,17 +518,14 @@ Also you can see different number of active workers depending upon worker pods s
 
 ![Trino query completion](./img/trino-ft-query-completion.png)
 
-## Conclusion
+#### Cleaning Up Iceberg Resources
 
-Trino is a tool for fast querying vast amounts of data from your data sources.In this example, we shared a terraform based blueprint that deploys Trino with fault-tolerant configuration on Amazon EKS, with add-ons necessary to build a complete EKS cluster (i.e. Karpenter for node autoscaling, Metrics server and HPA for Trino worker pods autoscaling, monitoring with Prometheus/Grafana stack). Among many features, we highlighted a couple of examples on creating an Iceberg or Hive data store using Amazon S3 as storage, and running simple Trino queries for results. We also deployed and scaled Trino workers on Spot instances for cost optimization. We also demonstrated fault-tolerant feature of Trino, which makes it suitable for Spot instances to save costs for long-running batch queries.
-
-## Cleanup 🧹
-- Let's open Trino CLI
+1. Let's open Trino CLI
 ```bash
 export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
 ./trino --server ${TRINO_UI_DNS} --user admin
 ```
-- Now, let's delete Iceberg tables and schema by running below SQL commands on Trino CLI:
+2. Now, let's delete Iceberg tables and schema by running below SQL commands on Trino CLI:
  ```bash
 drop table iceberg.iceberg_schema.warehouse;
 drop table iceberg.iceberg_schema.item;
@@ -534,9 +533,11 @@ drop table iceberg.iceberg_schema.inventory;
 drop table iceberg.iceberg_schema.date_dim;
 drop schema iceberg.iceberg_schema;
 ```
+3. Exit from Trino CLI with `exit` command. 
 
-- Exit from Trino CLI with `exit` command. 
-- Finally, to delete all the components provisioned as part of this blueprint, use the following command to destroy all the resources.
+## Cleanup 🧹
+
+To delete all the components provisioned as part of this blueprint, using the following command to destroy all the resources.
 
 ```bash
 cd data-on-eks/distributed-databases/trino
@@ -546,5 +547,10 @@ cd data-on-eks/distributed-databases/trino
 :::caution
 
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
+
+ex. S3 buckets for Trino Exchange manager
 :::
 
+## Conclusion
+
+Trino is a tool for fast querying vast amounts of data from your data sources.In this example, we shared a terraform based blueprint that deploys Trino with fault-tolerant configuration on Amazon EKS, with add-ons necessary to build a complete EKS cluster (i.e. Karpenter for node autoscaling, Metrics server and HPA for Trino worker pods autoscaling, monitoring with Prometheus/Grafana stack). Among many features, we highlighted a couple of examples on creating an Iceberg or Hive data store using Amazon S3 as storage, and running simple Trino queries for results. We also deployed and scaled Trino workers on Spot instances for cost optimization. We also demonstrated fault-tolerant feature of Trino, which makes it suitable for Spot instances to save costs for long-running batch queries.
