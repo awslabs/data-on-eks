@@ -30,4 +30,4 @@ spec:
     consolidationPolicy: WhenEmpty
     consolidateAfter: 30s
     expireAfter: 720h
-  weight: 10 
+  weight: 10

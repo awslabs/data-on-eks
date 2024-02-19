@@ -159,13 +159,13 @@ For example:
 To show a list of catalogs, run query - `SHOW CATALOGS;` and you can see `hive` and `iceberg` catalogs among others configured by the blueprint
 #### Output
 ```bash
- Catalog 
+ Catalog
 ---------
- hive    
- iceberg 
+ hive  
+ iceberg
  system  
- tpcds   
- tpch    
+ tpcds  
+ tpch  
 (5 rows)
 
 Query 20240215_200117_00003_6jdxw, FINISHED, 1 node
@@ -212,7 +212,7 @@ vendorid |  tpep_pickup_datetime   |  tpep_dropoff_datetime  | passenger_count |
 
 #### Cleaning Up Hive Resources
 
-1. Exit from Trino CLI with `exit` command. 
+1. Exit from Trino CLI with `exit` command.
 
 2. Run the cleanup script from the `examples` directory to delete all the resources created from the hive script:
 
@@ -223,13 +223,13 @@ cd data-on-eks/distributed-databases/trino/examples
 
 ### Example #2: Using the Iceberg Connector
 
-In this example, we will set up using Apache Iceberg with AWS Glue as the catalog type, and will store the data in Amazon S3 with PARQUET format. 
+In this example, we will set up using Apache Iceberg with AWS Glue as the catalog type, and will store the data in Amazon S3 with PARQUET format.
 
 Using Trino on EKS with the Iceberg connector, we will use Trino CLI to create the above resources and run sample SQL queries to insert and retrieve data.
 
 #### Running the queries
 
-- Let's find out the S3 data bucket created by blueprint. We will use this bucket to store data in Iceberg tables in PARQUET format. 
+- Let's find out the S3 data bucket created by blueprint. We will use this bucket to store data in Iceberg tables in PARQUET format.
 ```bash
 cd data-on-eks/distributed-databases/trino
 export BUCKET=$(terraform output --state="./terraform.tfstate" --raw data_bucket)
@@ -240,7 +240,7 @@ echo $BUCKET
 trino-data-bucket-20240215180855515400000001
 ```
 
-- Let’s now create an Iceberg schema with tables populated with data from sf10000 schema tables of [TPCDS](https://trino.io/docs/current/connector/tpcds.html). We will use CREATE TABLE AS SELECT (CTAS) statements. For that, open a new terminal where you have Trino CLI installed and create a SQL file `trino_sf10000_tpcds_to_iceberg.sql` by copying below SQL statements 
+- Let’s now create an Iceberg schema with tables populated with data from sf10000 schema tables of [TPCDS](https://trino.io/docs/current/connector/tpcds.html). We will use CREATE TABLE AS SELECT (CTAS) statements. For that, open a new terminal where you have Trino CLI installed and create a SQL file `trino_sf10000_tpcds_to_iceberg.sql` by copying below SQL statements
 ##### (Don't forget to replace S3 bucket name for LOCATION below with your bucket from above command):
 ```bash
 use tpcds.sf10000;
@@ -380,8 +380,8 @@ order by inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean,inv1.cov,inv2.d
 ```
 
 - Above SQL commands will execute following actions:
-    - Create an Iceberg schema named `iceberg_schema` 
-    - Create 4 Iceberg tables - `warehouse`, `item`, `inventory` and `date_dim` with data from same tables of tpcds 
+    - Create an Iceberg schema named `iceberg_schema`
+    - Create 4 Iceberg tables - `warehouse`, `item`, `inventory` and `date_dim` with data from same tables of tpcds
     - Query data from above Iceberg tables
 
 - Let's now execute above SQL commands using Trino CLI:
@@ -418,7 +418,7 @@ You can see HPA scaling from initial 3 workers to 9 workers running in Trino UI 
 ![Trino Scaling](./img/trino-workers-scaling.PNG)
 
 ### Example #3 (Optional): Fault-tolerant execution in Trino
-[Fault-tolerant execution](https://trino.io/docs/current/admin/fault-tolerant-execution.html) is an opt-in mechanism in Trino that was implemented using [Project Tardigrade](https://trino.io/blog/2022/05/05/tardigrade-launch.html#what-is-project-tardigrade). Without fault-tolerant configuration, Trino query fails whenever any of the component tasks of the query fails due to any reason (for example, a worker node failure or termination). These failed queries have to be restarted from scratch resulting in longer execution time, compute wastage, and spend, especially for long-running queries. 
+[Fault-tolerant execution](https://trino.io/docs/current/admin/fault-tolerant-execution.html) is an opt-in mechanism in Trino that was implemented using [Project Tardigrade](https://trino.io/blog/2022/05/05/tardigrade-launch.html#what-is-project-tardigrade). Without fault-tolerant configuration, Trino query fails whenever any of the component tasks of the query fails due to any reason (for example, a worker node failure or termination). These failed queries have to be restarted from scratch resulting in longer execution time, compute wastage, and spend, especially for long-running queries.
 
 When fault-tolerant execution is configured in Trino with a [retry policy](https://trino.io/docs/current/admin/fault-tolerant-execution.html#retry-policy), intermediate exchange data is spooled in an external storage like Amazon S3 or HDFS using [exchange manager](https://trino.io/docs/current/admin/fault-tolerant-execution.html#exchange-manager). Trino then retries failed query (if retry policy is configured as "QUERY") or failed tasks (if retry policy is configured as "TASK").  Trino's remaining workers reuse exchange manager data to retry and complete query in the event of a worker outage or other fault during query execution.
 :::info
@@ -458,12 +458,12 @@ exchange.s3.region=us-west-2
 exchange.s3.iam-role=arn:aws:iam::xxxxxxxxxx:role/trino-sa-role
 ```
 Please note down exchange manager S3 bucket name from above. You can explore contents of above S3 bucket in AWS Console. It will be empty when no query is running.
-- Now, let's exit from bash shell of the coordinator pod 
+- Now, let's exit from bash shell of the coordinator pod
 ```bash
 exit
 ```
 
-With below steps, we will now test fault-tolerant execution by running a `select` query and terminate few Trino workers when query is still running. 
+With below steps, we will now test fault-tolerant execution by running a `select` query and terminate few Trino workers when query is still running.
 - Let's create a `trino_select_query_iceberg.sql` file in the location where Trino CLI is installed and paste below SQL commands:
 ```bash
 with inv as
@@ -511,7 +511,7 @@ See Trino Web UI on browser and there is only 1 active worker running now as oth
 - Let's now see Trino Web UI monitor again to verify completion of the query despite of 6 failed tasks due to terminated workers (we have encircled them in RED in the screenshot below).
 
 :::info
-Please note, number of failed tasks could be different in your Trino Web UI depending upon how many tasks were running on workers that got terminated. 
+Please note, number of failed tasks could be different in your Trino Web UI depending upon how many tasks were running on workers that got terminated.
 
 Also you can see different number of active workers depending upon worker pods scaled by Horizontal Pod Autoscaler(HPA) using cpu utilization metric
 :::
@@ -533,7 +533,7 @@ drop table iceberg.iceberg_schema.inventory;
 drop table iceberg.iceberg_schema.date_dim;
 drop schema iceberg.iceberg_schema;
 ```
-3. Exit from Trino CLI with `exit` command. 
+3. Exit from Trino CLI with `exit` command.
 
 ## Cleanup 🧹
 
