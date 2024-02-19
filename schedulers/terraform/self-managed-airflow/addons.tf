@@ -185,7 +185,6 @@ module "eks_data_addons" {
     version   = "1.11.0"
     values = [templatefile("${path.module}/helm-values/airflow-values.yaml", {
       # Airflow Postgres RDS Config
-      airflow_version = local.airflow_version
       airflow_db_user = local.airflow_name
       airflow_db_pass = try(sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string), "")
       airflow_db_name = try(module.db[0].db_instance_name, "")
@@ -336,6 +335,15 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 }
 
 #---------------------------------------------------------------
+# IAM Policy for FluentBit Add-on
+#---------------------------------------------------------------
+resource "aws_iam_policy" "fluentbit" {
+  description = "IAM policy policy for FluentBit"
+  name        = "${local.name}-fluentbit-additional"
+  policy      = data.aws_iam_policy_document.fluent_bit.json
+}
+
+#---------------------------------------------------------------
 # S3 log bucket for FluentBit
 #---------------------------------------------------------------
 #tfsec:ignore:*
@@ -377,4 +385,3 @@ data "aws_iam_policy_document" "fluent_bit" {
     ]
   }
 }
-
