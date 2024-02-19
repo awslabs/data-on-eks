@@ -42,3 +42,9 @@ variable "enable_amazon_prometheus" {
   default     = true
   type        = bool
 }
+
+variable "enable_nvidia_gpu_operator" {
+  description = "Enable NVIDIA GPU Operator"
+  default     = false
+  type        = bool
+}

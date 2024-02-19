@@ -55,7 +55,7 @@ under the License.
             <artifactId>xgboost4j-spark_2.13</artifactId>
             <version>${xgboost.version}</version>
         </dependency>
-        
+
         <!-- https://mvnrepository.com/artifact/ml.dmlc/xgboost4j -->
         <dependency>
             <groupId>ml.dmlc</groupId>

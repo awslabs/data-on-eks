@@ -132,21 +132,6 @@ module "eks_blueprints_addons" {
     ],
   }
 
-  helm_releases = {
-    #---------------------------------------
-    # NVIDIA Device Plugin Add-on
-    #---------------------------------------
-    nvidia-device-plugin = {
-      description      = "A Helm chart for NVIDIA Device Plugin"
-      namespace        = "nvidia-device-plugin"
-      create_namespace = true
-      chart            = "nvidia-device-plugin"
-      chart_version    = "0.14.4"
-      repository       = "https://nvidia.github.io/k8s-device-plugin"
-      values           = [file("${path.module}/helm-values/nvidia-values.yaml")]
-    }
-  }
-
   tags = local.tags
 }
 
@@ -252,14 +237,18 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # NVIDIA GPU Operator Add-on
   #---------------------------------------------------------------
-  # IMPORTANT:
-  # The NVIDIA operator has been commented out because the latest CUDA drivers are already included in the EKS AMI.
-  # However, the NVIDIA Operator can still be used for monitoring and managing GPU resources if needed.
+  enable_nvidia_gpu_operator = var.enable_nvidia_gpu_operator
+
+  nvidia_gpu_operator_helm_config = {
+    version = "v23.9.1"
+    values  = [templatefile("${path.module}/helm-values/nvidia-operator-values.yaml", {})]
+  }
+
   #---------------------------------------------------------------
-  # enable_nvidia_gpu_operator = true
-  # nvidia_gpu_operator_helm_config = {
-  #   values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
-  # }
+  # NVIDIA Device Plugin Add-on
+  #---------------------------------------------------------------
+  # Enable only when NVIDIA GPU Operator is disabled
+  enable_nvidia_device_plugin = !(var.enable_nvidia_gpu_operator)
 
 }
 
