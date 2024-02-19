@@ -7,9 +7,11 @@
 read -p "Did you copy the Fannie Mae Loan Performance data to S3 bucket (y/n): "
 read -p "Enter the customized Docker image URI: " XGBOOST_IMAGE
 read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
+
 read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
 read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
+
 read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates, Input data and Output data. e.g., test-bucket-123 : " S3_BUCKET
 read -p "Enter the number of executor instances (e.g., 8): " NUM_WORKERS
 #--------------------------------------------
@@ -17,7 +19,7 @@ read -p "Enter the number of executor instances (e.g., 8): " NUM_WORKERS
 #--------------------------------------------
 JOB_NAME='spark-rapids-emr'
 EMR_EKS_RELEASE_LABEL="emr-7.0.0-spark-rapids-latest"
-#XGBOOST_IMAGE="public.ecr.aws/h3o5n2r0/emr-6.10.0-spark-rapids-xgboost-custom:v0.10"
+#XGBOOST_IMAGE="public.ecr.aws/data-on-eks/emr-7.0.0-spark-rapids-xgboost-custom:latest"
 
 S3_BUCKET="s3://${S3_BUCKET}"
 
