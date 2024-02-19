@@ -1,0 +1,85 @@
+image:
+  tag: "427"
+server:
+  workers: 3
+  exchangeManager:
+    baseDir: "s3://${exchange_bucket_id}"
+  autoscaling:
+    enabled: true
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+  config:
+    query:
+      maxMemory: "40GB"
+service:
+  type: ClusterIP
+  port: 8080
+coordinator:
+  jvm:
+    maxHeapSize: "8G"
+  config:
+    query:
+      maxMemoryPerNode: "4GB"
+  nodeSelector:
+    NodePool: trino-karpenter
+    karpenter.sh/capacity-type: on-demand
+worker:
+  jvm:
+    maxHeapSize: "8G"
+  config:
+    query:
+      maxMemoryPerNode: "4GB"
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 10Gi
+  nodeSelector:
+    NodePool: trino-karpenter
+    karpenter.sh/capacity-type: spot
+additionalConfigProperties:
+  - "retry-policy=TASK"
+  - "exchange.compression-enabled=true"
+  - "query.low-memory-killer.delay=0s"
+  - "query.remote-task.max-error-duration=1m"
+  - "query.hash-partition-count=50"
+additionalExchangeManagerProperties:
+  - "exchange.s3.region=${region}"
+  - "exchange.s3.iam-role=${irsa_arn}"
+additionalCatalogs:
+  hive: |-
+    connector.name=hive
+    hive.metastore=glue
+    hive.metastore.glue.region=${region}
+    hive.metastore.glue.default-warehouse-dir=s3://${bucket_id}/
+    hive.metastore.glue.iam-role=${irsa_arn}
+    hive.s3.iam-role=${irsa_arn}
+    hive.security=allow-all
+  iceberg: |-
+    connector.name=iceberg
+    iceberg.catalog.type=glue
+    iceberg.file-format=PARQUET
+    iceberg.unique-table-location=true
+    iceberg.register-table-procedure.enabled=true
+    hive.metastore.glue.region=${region}
+    hive.metastore.glue.default-warehouse-dir=s3://${bucket_id}/
+    hive.s3.path-style-access=true
+    hive.metastore.glue.iam-role=${irsa_arn}
+    hive.s3.iam-role=${irsa_arn}
+serviceAccount:
+  create: true
+  name: ${sa}
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/scheme: internet-facing
+  hosts:
+  - paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: trino
+            port:
+              number: 8080
