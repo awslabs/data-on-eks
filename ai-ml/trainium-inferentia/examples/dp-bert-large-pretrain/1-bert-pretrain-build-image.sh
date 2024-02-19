@@ -48,6 +48,19 @@ aws ecr get-login-password --region "$region" | docker login --username AWS --pa
 echo -e "Pushing Docker image..."
 docker push "$ECR_REPO_URI:$IMAGE_TAG"
 
+# Create Volcano job queue
+cat <<EOF | kubectl apply -f -
+apiVersion: scheduling.volcano.sh/v1beta1
+kind: Queue
+metadata:
+  name: test
+spec:
+  weight: 1
+  reclaimable: false
+  capability:
+    cpu: 2
+EOF
+
 # Sleep for 5 seconds
 echo -e "Sleeping for 5 seconds..."
 sleep 5
