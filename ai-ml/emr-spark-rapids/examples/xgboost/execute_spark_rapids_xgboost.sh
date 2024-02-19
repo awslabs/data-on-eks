@@ -15,7 +15,7 @@ NUM_WORKERS="${NUM_WORKERS:-8}"  # Example default number of executors
 
 read -p "Did you copy the Fannie Mae Loan Performance data to S3 bucket (y/n): "
 if [[ $REPLY != "y" ]]; then
-  echo "Please copy the inut data set to S3 before proceeding."
+  echo "Please copy the input data set to S3 before proceeding."
   exit 1
 fi
 
@@ -31,9 +31,9 @@ if [[ -z "$NUM_WORKERS" ]]; then
   read -p "Enter number of Spark executors (leave blank for default): " NUM_WORKERS
 fi
 
-read -p "Enter the EMR Virtual Cluster ID: (Check Terraform ouput values): " EMR_VIRTUAL_CLUSTER_ID
-read -p "Enter the EMR Execution Role ARN: (Check Terraform ouput values) " EMR_EXECUTION_ROLE_ARN
-read -p "Enter the CloudWatch Log Group name: (Check Terraform ouput values) " CLOUDWATCH_LOG_GROUP
+read -p "Enter the EMR Virtual Cluster ID: (Check Terraform output values): " EMR_VIRTUAL_CLUSTER_ID
+read -p "Enter the EMR Execution Role ARN: (Check Terraform output values) " EMR_EXECUTION_ROLE_ARN
+read -p "Enter the CloudWatch Log Group name: (Check Terraform output values) " CLOUDWATCH_LOG_GROUP
 read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates, Input data and Output data. e.g., test-bucket-123 : " S3_BUCKET
 
 S3_BUCKET="s3://${S3_BUCKET}"
