@@ -4,7 +4,7 @@
 module "db" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/rds/aws"
-  version = "~> 6.4"
+  version = "~> 5.0"
 
   identifier = local.airflow_name
 
@@ -13,13 +13,14 @@ module "db" {
   engine_version       = "14"
   family               = "postgres14" # DB parameter group
   major_engine_version = "14"         # DB option group
-  instance_class       = "db.m6i.xlarge"
+  instance_class       = "db.t4g.large"
 
   allocated_storage     = 20
   max_allocated_storage = 100
 
   db_name                = local.airflow_name
   username               = local.airflow_name
+  create_random_password = false
   password               = sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string)
   port                   = 5432
 
