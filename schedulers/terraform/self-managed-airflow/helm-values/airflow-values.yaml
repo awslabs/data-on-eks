@@ -71,7 +71,7 @@ workers:
   serviceAccount:
     create: false
     name: ${worker_service_account}
-    
+
 ###################################
 # Airflow scheduler settings
 ###################################
