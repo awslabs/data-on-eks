@@ -10,18 +10,6 @@ variable "region" {
   default     = "us-west-2"
 }
 
-variable "namespace" {
-  description = "Namespace for Trino"
-  type        = string
-  default     = "trino"
-}
-
-variable "trino_sa" {
-  description = "Service Account name for Trino"
-  type        = string
-  default     = "trino-sa"
-}
-
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   default     = "1.29"

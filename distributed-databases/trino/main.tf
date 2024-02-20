@@ -107,8 +107,8 @@ locals {
   name   = var.name
   region = var.region
 
-  trino_namespace = var.namespace
-  trino_sa        = var.trino_sa
+  trino_namespace = "trino"
+  trino_sa        = "trino-sa"
 
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
 
