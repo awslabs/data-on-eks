@@ -1,27 +1,34 @@
-FROM 895885662937.dkr.ecr.us-west-2.amazonaws.com/spark/emr-6.10.0-spark-rapids:latest
+# Instructions to build a custom docker image with xgboost and EMR 7.0.0 Spark Rapids base image
+#--------------------------------------------------------------
+# 1. aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+# 2. docker buildx build --platform=linux/amd64 -t emr-7.0.0-spark-rapids-xgboost-custom .
+# 3. Create a new ECR repository from ECR console. e.g., <ECR_ACCOUNT_ID>/<ECR_REPO>/emr-7.0.0-spark-rapids-xgboost-custom
+# 4. docker tag emr-7.0.0-spark-rapids-xgboost-custom:latest <ECR_ACCOUNT_ID>/<ECR_REPO>/emr-7.0.0-spark-rapids-xgboost-custom:latest
+# 5. docker push <ECR_ACCOUNT_ID>/<ECR_REPO>/emr-7.0.0-spark-rapids-xgboost-custom:latest
+#--------------------------------------------------------------
+FROM public.ecr.aws/emr-on-eks/spark/emr-7.0.0-spark-rapids:latest
+
+ARG MAVEN_VERSION=3.9.6
+ARG MAVEN_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
+ARG VERSION=1.0.0
+ARG XGBOOST_VERSION=2.0.3
 
 USER root
 
-#COPY spark-rapids-benchmarks /usr/local/spark-rapids-benchmarks
+ADD pom.xml /tmp/pom.xml
 
-RUN yum -y remove openssl-devel-1.0.2k-24.amzn2.0.6.x86_64 && \
-    yum -y install gcc openssl11-devel bzip2-devel libffi-devel tar gzip wget make && \
-    wget https://www.python.org/ftp/python/3.10.11/Python-3.10.11.tgz && \
-    tar -xvvf Python-3.10.11.tgz && \
-    cd Python-3.10.11 && \
-    ./configure --enable-optimizations && \
-    make install
+RUN yum install -y wget tar \
+    && mkdir -p /usr/share/maven \
+    && curl -o /tmp/apache-maven.tar.gz ${MAVEN_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+    && tar -xzf /tmp/apache-maven.tar.gz -C /usr/share/maven --strip-components=1 \
+    && rm -f /tmp/apache-maven.tar.gz \
+    && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn \
+    && cd /tmp && mvn clean install -f pom.xml \
+    && mkdir -p /usr/lib/xgboost \
+    && cp target/spark-rapids-xgboost-jar-${VERSION}.jar /usr/lib/xgboost/spark-rapids-xgboost-jar-${VERSION}.jar
 
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv $VIRTUAL_ENV --copies
-RUN cp -r /usr/local/lib/python3.10/* $VIRTUAL_ENV/lib/python3.10/
-
-
-# install python libraries
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
-RUN pip3 install \
-      xgboost==1.7.5 \
+RUN python3 -m pip install \
+      xgboost==${XGBOOST_VERSION} \
       s3fs \
       fsspec \
       scikit-learn \

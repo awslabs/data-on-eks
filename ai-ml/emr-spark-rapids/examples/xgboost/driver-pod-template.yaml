@@ -9,10 +9,5 @@ metadata:
   namespace: emr-ml-team-a
 spec:
   nodeSelector:
-    NodeGroupType: "spark-driver-ca"
-    topology.kubernetes.io/zone: "us-west-2b"
-
-  tolerations:
-    - key: "spark-driver-ca"
-      operator: "Exists"
-      effect: "NoSchedule"
+    NodeGroupType: "spark-driver-cpu-ca" # Comment this line if you want to use Karpenter autosclaing
+    # NodeGroupType: spark-driver-cpu-karpenter # Uncomment this line if you want to use Karpenter autosclaing
