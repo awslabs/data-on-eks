@@ -1,64 +1,4 @@
 #---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# Grafana Admin credentials resources
-#---------------------------------------------------------------
-data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id  = aws_secretsmanager_secret.grafana.id
-  depends_on = [aws_secretsmanager_secret_version.grafana]
-}
-
-resource "random_password" "grafana" {
-  length           = 16
-  special          = true
-  override_special = "@_"
-}
-
-#tfsec:ignore:aws-ssm-secret-use-customer-key
-resource "aws_secretsmanager_secret" "grafana" {
-  name_prefix             = "${local.name}-grafana-"
-  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
-}
-
-resource "aws_secretsmanager_secret_version" "grafana" {
-  secret_id     = aws_secretsmanager_secret.grafana.id
-  secret_string = random_password.grafana.result
-}
-
-#---------------------------------------
-# Karpenter Provisioners
-#---------------------------------------
-data "kubectl_path_documents" "karpenter_resources" {
-  pattern = "${path.module}/karpenter-resources/node-*.yaml"
-  vars = {
-    azs            = local.region
-    eks_cluster_id = module.eks.cluster_name
-  }
-}
-
-resource "kubectl_manifest" "karpenter_resources" {
-  for_each  = toset(data.kubectl_path_documents.karpenter_resources.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-#---------------------------------------------------------------
 # Creating an s3 bucket for event logs
 #---------------------------------------------------------------
 module "s3_bucket" {
@@ -153,4 +93,50 @@ resource "aws_iam_policy" "trino_exchange_bucket_policy" {
   description = "IAM role policy for Trino to access the S3 Bucket"
   name        = "${local.name}-exchange-bucket-policy"
   policy      = data.aws_iam_policy_document.trino_exchange_access.json
+}
+
+#---------------------------------------
+# Trino Helm Add-on
+#---------------------------------------
+module "trino_addon" {
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.1.1" #ensure to update this to the latest/desired version
+
+  chart            = "trino"
+  chart_version    = "0.13.0"
+  repository       = "https://trinodb.github.io/charts"
+  description      = "Trino Helm Chart deployment"
+  namespace        = local.trino_namespace
+  create_namespace = true
+
+  values = [
+    templatefile("${path.module}/helm-values/trino.yaml",
+      {
+        sa                 = local.trino_sa
+        region             = local.region
+        bucket_id          = module.trino_s3_bucket.s3_bucket_id
+        exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
+        irsa_arn           = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.trino_sa}-role"
+    })
+  ]
+
+  set_irsa_names = ["serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"]
+
+  # IAM role for service account (IRSA)
+  allow_self_assume_role = true
+  create_role            = true
+  role_name              = "${local.trino_sa}-role"
+  role_name_use_prefix   = false
+  role_policies = {
+    data_bucket_policy     = aws_iam_policy.trino_s3_bucket_policy.arn
+    exchange_bucket_policy = aws_iam_policy.trino_exchange_bucket_policy.arn
+    glue_policy            = data.aws_iam_policy.glue_full_access.arn,
+  }
+
+  oidc_providers = {
+    this = {
+      provider_arn    = module.eks.oidc_provider_arn
+      service_account = local.trino_sa
+    }
+  }
 }
