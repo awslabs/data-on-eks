@@ -5,8 +5,8 @@ metadata:
   name: basic-example
   namespace: flink-team-a-ns
 spec:
-  image: flink:1.16
-  flinkVersion: v1_16
+  image: flink:1.17
+  flinkVersion: v1_17
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "2"
     state.savepoints.dir: file:///flink/data/checkpoint/savepoints
@@ -30,18 +30,7 @@ spec:
       name: pod-template
     spec:
       nodeSelector:
-        NodeGroupType: "flink-compute-optimized"
-      tolerations:
-        - key: "flink-compute-optimized"
-          operator: "Exists"
-          effect: "NoSchedule"
-      initContainers:
-        - name: flink-ssd-volume-permissions
-          image: public.ecr.aws/y4g4v0z7/busybox
-          command: [ 'sh', '-c', 'chown -R 9999 /local1' ]
-          volumeMounts:
-            - mountPath: /local1
-              name: flink-ssd-volume
+        NodeGroupType: "FlinkComputeOptimized"
       containers:
         # Do not change the main container name
         - name: flink-main-container
@@ -54,9 +43,7 @@ spec:
               name: flink-ssd-volume
       volumes:
         - name: flink-ssd-volume
-          hostPath:
-            path: /local1
-            type: Directory
+
   jobManager:
     resource:
       memory: "2048m"
