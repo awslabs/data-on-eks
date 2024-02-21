@@ -1,0 +1,24 @@
+---
+apiVersion: karpenter.k8s.aws/v1beta1
+kind: EC2NodeClass
+metadata:
+  name: trino-karpenter
+spec:
+  amiFamily: AL2
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 50Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+  role: "${eks_cluster_id}-karpenter-node"
+  subnetSelectorTerms:
+    - tags:
+        Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
+  securityGroupSelectorTerms:                      # required, when not using launchTemplate
+    - name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
+  instanceStorePolicy: RAID0
+  tags:
+    KarpenerNodeClassName: "trino-karpenter"
+    NodeType: "trino-eks-karpenter"
