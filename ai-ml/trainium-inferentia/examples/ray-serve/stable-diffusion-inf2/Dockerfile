@@ -1,4 +1,5 @@
-FROM rayproject/ray:2.7.1-py310
+# https://hub.docker.com/layers/rayproject/ray/2.9.0-py310/images/sha256-846cda01841c6c11610292aba8f190d49cc54844d1d578b307678cab5076ef98?context=explore
+FROM rayproject/ray:2.9.0-py310
 
 # Maintainer label
 LABEL maintainer="DoEKS"

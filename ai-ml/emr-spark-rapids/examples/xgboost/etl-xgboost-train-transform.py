@@ -574,7 +574,7 @@ params = {
     "tree_method": "gpu_hist",
     "grow_policy": "depthwise",
     "num_workers": int(num_workers),
-    "use_gpu": "true",
+    "device": "cuda",
 }
 params['features_col'] = features
 params['label_col'] = label
@@ -614,3 +614,5 @@ accuracy = with_benchmark(
     lambda: MulticlassClassificationEvaluator().setLabelCol(label).evaluate(result))
 
 print("Accuracy is " + str(accuracy))
+
+spark.stop()

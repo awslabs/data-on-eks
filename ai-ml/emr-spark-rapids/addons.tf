@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.20"
+  version               = "~> 5.34"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
@@ -90,6 +90,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -102,10 +103,6 @@ module "eks_blueprints_addons" {
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
-  #---------------------------------------
-  # AWS Load Balancer Controller
-  #---------------------------------------
-  enable_aws_load_balancer_controller = true
   #---------------------------------------
   # Prommetheus and Grafana stack
   #---------------------------------------
@@ -143,47 +140,116 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "~> 1.30" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
+
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    spark-gpu-karpenter = {
+      values = [
+        <<-EOT
+      name: spark-gpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-executor-gpu-karpenter
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "2xlarge" ]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    spark-driver-cpu-karpenter = {
+      values = [
+        <<-EOT
+      name: spark-driver-cpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[3]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-driver-cpu-karpenter
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["m5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+  }
 
   #---------------------------------------------------------------
   # NVIDIA GPU Operator Add-on
   #---------------------------------------------------------------
-  enable_nvidia_gpu_operator = true
+  enable_nvidia_gpu_operator = var.enable_nvidia_gpu_operator
+
   nvidia_gpu_operator_helm_config = {
-    values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
+    version = "v23.9.1"
+    values  = [templatefile("${path.module}/helm-values/nvidia-operator-values.yaml", {})]
   }
 
   #---------------------------------------------------------------
-  # Kubecost Add-on
+  # NVIDIA Device Plugin Add-on
   #---------------------------------------------------------------
-  # Note: Kubecost add-on depends on Kube Prometheus Stack add-on for storing the metrics
-  enable_kubecost = var.enable_kubecost
-  kubecost_helm_config = {
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-    version             = "1.104.5"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-}
+  # Enable only when NVIDIA GPU Operator is disabled
+  enable_nvidia_device_plugin = !(var.enable_nvidia_gpu_operator)
 
-#---------------------------------------
-# Karpenter Provisioners
-#---------------------------------------
-data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/ubuntu-*.yaml"
-  vars = {
-    azs            = local.region
-    eks_cluster_id = module.eks.cluster_name
-  }
-}
-
-resource "kubectl_manifest" "karpenter_provisioner" {
-  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_addons]
 }
 
 #---------------------------------------------------------------

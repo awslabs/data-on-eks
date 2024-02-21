@@ -10,7 +10,7 @@ app = FastAPI()
 
 neuron_cores = 2
 
-@serve.deployment(num_replicas=1, route_prefix="/")
+@serve.deployment(name="stable-diffusion-api", num_replicas=1, route_prefix="/")
 @serve.ingress(app)
 class APIIngress:
     def __init__(self, diffusion_model_handle) -> None:
@@ -22,20 +22,17 @@ class APIIngress:
         response_class=Response,
     )
     async def generate(self, prompt: str):
-
-        image_ref = await self.handle.generate.remote(prompt)
-        image = await image_ref
+        image = await self.handle.generate.remote(prompt)
         file_stream = BytesIO()
         image.save(file_stream, "PNG")
         return Response(content=file_stream.getvalue(), media_type="image/png")
 
-
-@serve.deployment(
+@serve.deployment(name="stable-diffusion-v2",
+    autoscaling_config={"min_replicas": 0, "max_replicas": 6},
     ray_actor_options={
         "resources": {"neuron_cores": neuron_cores},
         "runtime_env": {"env_vars": {"NEURON_CC_FLAGS": "-O1"}},
     },
-    autoscaling_config={"min_replicas": 1, "max_replicas": 1},
 )
 class StableDiffusionV2:
     def __init__(self):
@@ -47,7 +44,6 @@ class StableDiffusionV2:
         self.pipe = NeuronStableDiffusionXLPipeline.from_pretrained(compiled_model_id, device_ids=[0, 1])
 
     async def generate(self, prompt: str):
-
         assert len(prompt), "prompt parameter cannot be empty"
         image = self.pipe(prompt).images[0]
         return image

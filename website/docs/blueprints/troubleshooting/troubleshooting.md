@@ -220,3 +220,19 @@ Delete the existing log group by updating log group name and the region.
 ```sh
 aws logs delete-log-group --log-group-name <LOG_GROUP_NAME> --region <ENTER_REGION>
 ```
+
+## Karpenter Error - Missing Service Linked Role
+
+Karpenter throws below error while trying to create new instances.
+
+```
+"error":"launching nodeclaim, creating instance, with fleet error(s), AuthFailure.ServiceLinkedRoleCreationNotPermitted: The provided credentials do not have permission to create the service-linked role for EC2 Spot Instances."}
+```
+
+**Solution:**
+
+You will need to create the service linked role in the AWS account you're using to avoid `ServiceLinkedRoleCreationNotPermitted` error.
+
+```sh
+aws iam create-service-linked-role --aws-service-name spot.amazonaws.com
+```
