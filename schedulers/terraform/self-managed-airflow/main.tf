@@ -53,7 +53,6 @@ locals {
   azs    = slice(data.aws_availability_zones.available.names, 0, 2)
 
   airflow_name                      = "airflow"
-  airflow_version                   = "2.5.3"
   airflow_namespace                 = "airflow"
   airflow_scheduler_service_account = "airflow-scheduler"
   airflow_webserver_service_account = "airflow-webserver"

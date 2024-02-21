@@ -53,7 +53,7 @@ filter:
 # cloudWatch:
 #   enabled: false
 
-# This is a new high performance C Plugin for CloudWatchLogs. See docs here https://docs.fluentbit.io/manual/pipeline/outputs/cloudwatch
+# This is a new high performance C Plugin for CloudWatchLogs. See docs here https://docs.fluentbit.io/manual/pipeline/outputs/cloudwatch
 cloudWatchLogs:
   enabled: true
   match: "systempods.*"

@@ -8,15 +8,15 @@ module "db" {
 
   identifier = local.airflow_name
 
+  # All available versions: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html#PostgreSQL.Concepts
   engine               = "postgres"
-  engine_version       = "14.10"
-  family               = "postgres14"
-  major_engine_version = "14"
-  instance_class       = "db.m6i.xlarge"
+  engine_version       = "14"
+  family               = "postgres14" # DB parameter group
+  major_engine_version = "14"         # DB option group
+  instance_class       = "db.t4g.large"
 
-  storage_type      = "io1"
-  allocated_storage = 100
-  iops              = 3000
+  allocated_storage     = 20
+  max_allocated_storage = 100
 
   db_name                = local.airflow_name
   username               = local.airflow_name
@@ -33,7 +33,7 @@ module "db" {
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
   create_cloudwatch_log_group     = true
 
-  backup_retention_period = 5
+  backup_retention_period = 1
   skip_final_snapshot     = true
   deletion_protection     = false
 

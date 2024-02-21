@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.20"
+  version               = "~> 5.34"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
@@ -117,16 +117,16 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_for_fluentbit = true
   aws_for_fluentbit_cw_log_group = {
+    create            = true
     use_name_prefix   = false
     name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
     retention_in_days = 30
   }
-  # Additional IRSA policies for FluentBit add-on to access AWS services(e.g., CW Logs, S3 etc.)
   aws_for_fluentbit = {
-    s3_bucket_arns = [
-      module.fluentbit_s3_bucket.s3_bucket_arn,
-      "${module.fluentbit_s3_bucket.s3_bucket_arn}/*}"
-    ]
+    create_namespace = true
+    namespace        = "aws-for-fluentbit"
+    create_role      = true
+    role_policies    = { "policy1" = aws_iam_policy.fluentbit.arn }
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
@@ -155,7 +155,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "48.1.1"
+    chart_version = "48.2.3"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
@@ -166,6 +166,7 @@ module "eks_blueprints_addons" {
 
   tags = local.tags
 }
+
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
@@ -181,47 +182,23 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_airflow = true
   airflow_helm_config = {
-    airflow_namespace = try(kubernetes_namespace_v1.airflow[0].metadata[0].name, local.airflow_namespace)
-
+    namespace = try(kubernetes_namespace_v1.airflow[0].metadata[0].name, local.airflow_namespace)
+    version   = "1.11.0"
     values = [templatefile("${path.module}/helm-values/airflow-values.yaml", {
       # Airflow Postgres RDS Config
-      airflow_version = local.airflow_version
       airflow_db_user = local.airflow_name
       airflow_db_pass = try(sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string), "")
       airflow_db_name = try(module.db[0].db_instance_name, "")
       airflow_db_host = try(element(split(":", module.db[0].db_instance_endpoint), 0), "")
+      #Service Accounts
+      worker_service_account    = try(kubernetes_service_account_v1.airflow_worker[0].metadata[0].name, local.airflow_workers_service_account)
+      scheduler_service_account = try(kubernetes_service_account_v1.airflow_scheduler[0].metadata[0].name, local.airflow_scheduler_service_account)
+      webserver_service_account = try(kubernetes_service_account_v1.airflow_webserver[0].metadata[0].name, local.airflow_webserver_service_account)
       # S3 bucket config for Logs
       s3_bucket_name        = try(module.airflow_s3_bucket[0].s3_bucket_id, "")
       webserver_secret_name = local.airflow_webserver_secret_name
       efs_pvc               = local.efs_pvc
     })]
-    # Use only when Apache Airflow is enabled with `airflow-core.tf` resources
-    set = var.enable_amazon_prometheus ? [
-      {
-        name  = "scheduler.serviceAccount.create"
-        value = false
-      },
-      {
-        name  = "scheduler.serviceAccount.name"
-        value = try(kubernetes_service_account_v1.airflow_scheduler[0].metadata[0].name, local.airflow_scheduler_service_account)
-      },
-      {
-        name  = "webserver.serviceAccount.create"
-        value = false
-      },
-      {
-        name  = "webserver.serviceAccount.name"
-        value = try(kubernetes_service_account_v1.airflow_webserver[0].metadata[0].name, local.airflow_webserver_service_account)
-      },
-      {
-        name  = "workers.serviceAccount.create"
-        value = false
-      },
-      {
-        name  = "workers.serviceAccount.name"
-        value = try(kubernetes_service_account_v1.airflow_worker[0].metadata[0].name, local.airflow_workers_service_account)
-      }
-    ] : []
   }
 
   #---------------------------------------------------------------
@@ -243,6 +220,11 @@ module "eks_data_addons" {
       EOT
     ]
   }
+
+  #---------------------------------------------------------------
+  # Enable Karpenter Resources for Spark team A
+  #---------------------------------------------------------------
+
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
     spark-compute-optimized = {
@@ -354,6 +336,15 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 }
 
 #---------------------------------------------------------------
+# IAM Policy for FluentBit Add-on
+#---------------------------------------------------------------
+resource "aws_iam_policy" "fluentbit" {
+  description = "IAM policy policy for FluentBit"
+  name        = "${local.name}-fluentbit-additional"
+  policy      = data.aws_iam_policy_document.fluent_bit.json
+}
+
+#---------------------------------------------------------------
 # S3 log bucket for FluentBit
 #---------------------------------------------------------------
 #tfsec:ignore:*
@@ -373,4 +364,25 @@ module "fluentbit_s3_bucket" {
   }
 
   tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IAM policy for FluentBit
+#---------------------------------------------------------------
+data "aws_iam_policy_document" "fluent_bit" {
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.fluentbit_s3_bucket.s3_bucket_id}/*"]
+
+    actions = [
+      "s3:ListBucket",
+      "s3:PutObject",
+      "s3:PutObjectAcl",
+      "s3:GetObject",
+      "s3:GetObjectAcl",
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion"
+    ]
+  }
 }

@@ -4,8 +4,6 @@ locals {
   vpc_cidr = var.vpc_cidr
   azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 
-  karpenter_iam_role_name = format("%s-%s", "karpenter", local.name)
-
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
 
