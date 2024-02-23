@@ -43,6 +43,10 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
+  #---------------------------------------
+  # EFS CSI driver
+  #---------------------------------------
+  enable_aws_efs_csi_driver = true
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
