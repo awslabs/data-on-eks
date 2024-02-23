@@ -6,37 +6,27 @@ variable "name" {
 
 variable "region" {
   description = "Region"
-  default     = "us-west-2"
   type        = string
+  default     = "us-west-2"
 }
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  type        = string
   default     = "1.29"
+  type        = string
 }
 
-variable "tags" {
-  description = "Default tags"
-  type        = map(string)
-  default     = {}
-}
-
+# VPC with 2046 IPs (10.1.0.0/21) and 2 AZs
 variable "vpc_cidr" {
   description = "VPC CIDR"
+  default     = "10.1.0.0/21"
   type        = string
-  default     = "10.1.0.0/16"
 }
 
-# Only two Subnets for with low IP range for internet access
-variable "public_subnets" {
-  description = "Public Subnets CIDRs. 62 IPs per Subnet"
+# RFC6598 range 100.64.0.0/10
+# Note you can only /16 range to VPC. You can add multiples of /16 if required
+variable "secondary_cidr_blocks" {
+  description = "Secondary CIDR blocks to be attached to VPC"
+  default     = ["100.64.0.0/16"]
   type        = list(string)
-  default     = ["10.1.255.128/26", "10.1.255.192/26"]
-}
-
-variable "private_subnets" {
-  description = "Private Subnets CIDRs. 32766 Subnet1 and 16382 Subnet2 IPs per Subnet"
-  type        = list(string)
-  default     = ["10.1.0.0/17", "10.1.128.0/18"]
 }
