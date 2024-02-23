@@ -53,7 +53,13 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   karpenter = {
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -72,6 +78,55 @@ module "eks_data_addons" {
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
+  #---------------------------------------
+  # Karpenter Provisioners for workloads
+  #---------------------------------------
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    spark-gpu-karpenter = {
+      values = [
+        <<-EOT
+      name: nemo-gpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: nemo-executor-gpu-karpenter
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["p3", "p4", "g5"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+  }
+
   #---------------------------------------------------------------
   # NVIDIA GPU Operator Add-on
   #---------------------------------------------------------------
@@ -80,23 +135,6 @@ module "eks_data_addons" {
     values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
   }
 
-}
-
-#---------------------------------------
-# Karpenter Provisioners for workloads
-#---------------------------------------
-data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/*.yaml"
-  vars = {
-    cluster_name = module.eks.cluster_name
-  }
-}
-
-resource "kubectl_manifest" "karpenter_provisioner" {
-  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_addons]
 }
 
 #---------------------------------------------------------------
