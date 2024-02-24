@@ -6,7 +6,6 @@ targets=(
   "module.eks"
   "module.ebs_csi_driver_irsa"
   "module.eks_blueprints_addons"
-  "module.db"
 )
 
 # Initialize Terraform
@@ -35,3 +34,16 @@ else
   echo "FAILED: Terraform apply of all modules failed"
   exit 1
 fi
+
+# Install kubeflow training module separately due to version conflicts
+if kubectl get deployment training-operator -n kubeflow &> /dev/null; then
+  echo "Training operator already exists. Exiting."
+  exit 0
+else
+  git clone https://github.com/kubeflow/training-operator.git -b v1.6-branch /tmp/training-operator
+  cp ./training-operator/deployment.yaml /tmp/training-operator/manifests/base/deployment.yaml
+  cp ./training-operator/kustomization.yaml /tmp/training-operator/manifests/base/crds/kustomization.yaml
+  kubectl apply -k /tmp/training-operator/manifests/overlays/standalone
+  echo "Successfully installed customer training-operator."
+fi
+
