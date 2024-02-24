@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-prep-config
+data:
+  config.yaml: |-
+  {{ (.Files.Glob "config/*hydra.yaml").AsConfig | indent 4 }}

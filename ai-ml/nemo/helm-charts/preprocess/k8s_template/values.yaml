@@ -1,0 +1,13 @@
+image:
+  trainingImage: nvcr.io/nvidia/nemo:24.01.framework
+  pullPolicy: IfNotPresent
+  pullSecret: ngc-registry
+  nodes: 2
+dataPrepConfig:
+  shmSize: 32Gi
+  NFSServer: null
+  NFSPath: /
+  totalProcesses: 4
+  procsPerNode: 2
+  stage: preprocess
+  dnsPolicy: nil

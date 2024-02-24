@@ -1,0 +1,62 @@
+{{ $config := .Values.dataPrepConfig }}
+
+apiVersion: kubeflow.org/v2beta1
+kind: MPIJob
+metadata:
+  name: nlp-data-prep
+  labels:
+    app: nlp-data-prep
+spec:
+  mpiReplicaSpecs:
+    Launcher:
+      replicas: 1
+      template:
+        spec:
+          containers:
+          - name: nlp-data-prep
+            image: {{ .Values.image.trainingImage }}
+            command: ["bash", "-c"]
+            args:
+              - '{{- range tuple "download" "extract" "preprocess" }} mpirun --allow-run-as-root -np {{ $config.totalProcesses }} -npernode {{ $config.procsPerNode }} -bind-to none -map-by slot --oversubscribe -x PYTHONPATH -mca pml ob1 -mca btl ^openib python3 /opt/NeMo-Megatron-Launcher/launcher_scripts/nemo_launcher/collections/dataprep_scripts/pile_dataprep/{{ . }}.py --config-path=/config --config-name=config.yaml && {{- end}} echo Data preparation complete'
+            imagePullPolicy: Always
+          imagePullSecrets:
+          - name: {{ .Values.image.pullSecret }}
+    Worker:
+      replicas: {{ .Values.image.nodes }}
+      template:
+        spec:
+          containers:
+          - name: nlp-data-prep
+            image: {{ .Values.image.trainingImage }}
+            command: ["/usr/sbin/sshd"]
+            args:
+              - "-De"
+            volumeMounts:
+            - mountPath: {{ $config.NFSPath }}
+              name: workspace
+            - mountPath: /dev/shm
+              name: dshm
+            - mountPath: /config
+              name: data-prep-config
+            imagePullPolicy: Always
+          restartPolicy: Never
+          imagePullSecrets:
+          - name: {{ .Values.image.pullSecret }}
+
+          volumes:
+          - name: workspace
+            persistentVolumeClaim:
+              claimName: efs-claim
+
+          - name: dshm
+            emptyDir:
+              medium: Memory
+              sizeLimit: {{ $config.shmSize }}
+
+          - configMap:
+              name: data-prep-config
+            name: data-prep-config
+
+          {{ if ne $config.dnsPolicy "nil" }}
+          dnsPolicy: {{ $config.dnsPolicy }}
+          {{ end }}

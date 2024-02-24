@@ -47,3 +47,12 @@ else
   echo "Successfully installed customer training-operator."
 fi
 
+# Set nvidia ngc api key https://org.ngc.nvidia.com/setup/api-key
+if kubectl get secret ngc-registry &> /dev/null; then
+  echo "NGC API KEY is already set. Exiting."
+  exit 0
+else
+  echo "Follow https://org.ngc.nvidia.com/setup/api-key"
+  echo "Run: " 
+  echo "kubectl create secret docker-registry ngc-registry --docker-server=nvcr.io --docker-username=\$oauthtoken --docker-password=<NGC KEY HERE>"
+fi
