@@ -3,8 +3,10 @@ set -o errexit
 set -o pipefail
 
 targets=(
-  "module.eks_data_addons"
   "module.eks_blueprints_addons"
+  "module.ebs_csi_driver_irsa"
+  "module.eks"
+  "module.vpc"
 )
 
 #-------------------------------------------

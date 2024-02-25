@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "nemo-on-eks-karpenter"
+  default     = "nemo-on-eks"
   type        = string
 }
 

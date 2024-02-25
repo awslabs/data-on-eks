@@ -48,22 +48,6 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_efs_csi_driver = true
 
-  #---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
-  enable_karpenter                  = true
-  karpenter_enable_spot_termination = true
-  karpenter_node = {
-    iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-    }
-  }
-  karpenter = {
-    chart_version       = "v0.34.0"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
   tags = local.tags
 
 }
@@ -77,55 +61,6 @@ module "eks_data_addons" {
   version = "~> 1.2.3" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------
-  # Karpenter Provisioners for workloads
-  #---------------------------------------
-  enable_karpenter_resources = true
-  karpenter_resources_helm_config = {
-    spark-gpu-karpenter = {
-      values = [
-        <<-EOT
-      name: nemo-gpu-karpenter
-      clusterName: ${module.eks.cluster_name}
-      ec2NodeClass:
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-        subnetSelectorTerms:
-          id: ${module.vpc.private_subnets[2]}
-        securityGroupSelectorTerms:
-          tags:
-            Name: ${module.eks.cluster_name}-node
-        instanceStorePolicy: RAID0
-
-      nodePool:
-        labels:
-          - type: karpenter
-          - NodeGroupType: nemo-executor-gpu-karpenter
-        taints:
-          - key: nvidia.com/gpu
-            value: "Exists"
-            effect: "NoSchedule"
-        requirements:
-          - key: "karpenter.k8s.aws/instance-family"
-            operator: In
-            values: ["p3", "p4", "g5"]
-          - key: "kubernetes.io/arch"
-            operator: In
-            values: ["amd64"]
-          - key: "karpenter.sh/capacity-type"
-            operator: In
-            values: ["on-demand"]
-        limits:
-          cpu: 1000
-        disruption:
-          consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
-          expireAfter: 720h
-        weight: 100
-      EOT
-      ]
-    }
-  }
 
   #---------------------------------------------------------------
   # NVIDIA GPU Operator Add-on

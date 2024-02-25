@@ -15,17 +15,7 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   manage_aws_auth_configmap = true
-  aws_auth_roles = [
-    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-    {
-      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups = [
-        "system:bootstrappers",
-        "system:nodes",
-      ]
-    }
-  ]
+
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
@@ -76,41 +66,39 @@ module "eks" {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
-    core_node_group = {
-      name        = "core-node-group"
-      description = "EKS Core node group for hosting critical add-ons"
+    gpu1 = {
+      name        = "gpu-node-grp"
+      description = "EKS Node Group to run GPU workloads"
       # Filtering only Secondary CIDR private subnets starting with "100.".
       # Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
       )
 
-      min_size     = 3
-      max_size     = 6
-      desired_size = 3
+      ami_type     = "AL2_x86_64_GPU"
+      min_size     = 2
+      max_size     = 3
+      desired_size = 2
 
-      instance_types = ["m5.xlarge"]
-
+      instance_types = ["g5.4xlarge"]
       ebs_optimized = true
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 100
+            volume_size = 200
             volume_type = "gp3"
           }
         }
       }
 
       labels = {
-        Environment   = "preprod"
-        Zone          = "test"
         WorkerType    = "ON_DEMAND"
-        NodeGroupType = "core"
+        eks-node = "gpu"
       }
 
       tags = merge(local.tags, {
-        Name                     = "core-node-grp",
+        Name                     = "gpu-node-grp",
         "karpenter.sh/discovery" = local.name
       })
     }
