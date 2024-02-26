@@ -29,7 +29,7 @@ This blueprint deploys an EKS Cluster into a new VPC by default:
 - Creates a new sample VPC, 2 Private Subnets and 2 Public Subnets
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
 
-You may also deploy to an existing VPC by setting `create_vpc` variable to `true` and specify `vpc_id`, `private_subnet_ids`, and `vpc_cidr` values.
+You may also deploy to an existing VPC by setting value for `create_vpc` variable to `false` and specify `vpc_id`, `private_subnet_ids`, and `vpc_cidr` values.
 
 - Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with core managed node group, on-demand node group and Spot node group for Spark workloads.
 - Deploys Metrics server, Cluster Autoscaler, Prometheus server and AMP workspace, and AWS LoadBalancer Controller.
