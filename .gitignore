@@ -51,3 +51,7 @@ site
 .tfsec
 
 examples/gradio-ui/*
+ai-ml/trainium-inferentia/examples/gradio-ui/gradio_cached_examples/*
+
+# venv
+**/.venv/*
