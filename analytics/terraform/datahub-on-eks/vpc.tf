@@ -79,4 +79,3 @@ module "vpc_endpoints" {
 
   tags = local.tags
 }
-

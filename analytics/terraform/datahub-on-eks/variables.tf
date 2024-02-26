@@ -64,4 +64,3 @@ variable "private_subnets" {
   default     = ["10.1.0.0/17", "10.1.128.0/18"]
   type        = list(string)
 }
-

@@ -24,16 +24,19 @@ DataHub also depends on many underlying infrastructure and services to function,
 
 ## Deploying the Solution
 
-This blueprint deploys an EKS Cluster into a new VPC.
+This blueprint deploys an EKS Cluster into a new VPC by default:
 
 - Creates a new sample VPC, 2 Private Subnets and 2 Public Subnets
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
+
+You may also deploy to an existing VPC by setting `create_vpc` variable to `true` and specify `vpc_id`, `private_subnet_ids`, and `vpc_cidr` values.
+
 - Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with core managed node group, on-demand node group and Spot node group for Spark workloads.
 - Deploys Metrics server, Cluster Autoscaler, Prometheus server and AMP workspace, and AWS LoadBalancer Controller.
 
 It then provisions the storage services for DataHub.
 
-- Creates service-linked role, security group, and an OpenSearch domain with one data node in each of the private subnets / AZs that EKS cluster is deployed on.
+- Creates security group, and an OpenSearch domain with one data node in each of the private subnets / AZs that EKS cluster is deployed on.
 - Creates security group, kms key, and configuration for MSK.  Creates the MSK cluster with one broker in each of the private subnets.
 - Creates an RDS MySQL db instance with multi-AZ enabled.
 
@@ -54,6 +57,14 @@ Ensure that you have installed the following tools on your machine.
 1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+
+Also, you need opensearch service-linked role created in the account.  To verify and create the role if needed, run:
+```
+aws iam create-service-linked-role --aws-service-name opensearchservice.amazonaws.com || true
+```
+
+# If the role has already been successfully created, you will see:
+# An error occurred (InvalidInput) when calling the CreateServiceLinkedRole operation: Service role name AWSServiceRoleForOpenSearch has been taken in this account, please try a different suffix.
 
 ### Deploy
 
