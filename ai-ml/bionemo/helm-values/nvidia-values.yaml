@@ -34,19 +34,6 @@ operator:
 mig:
   strategy: single
 
-# https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/install-precompiled-signed-drivers.html
-# Currently NVIDIA Operator takes more than 5 mins to make the node GPU ready with all the required drivers.
-# With pre-compiled NVIDIA Drivers this process can be faster hence we are using the config values as driver.version: "515-signed"
-driver:
-  enabled: true
-  repository: nvcr.io/nvidia
-  image: driver
-  # Commented this as latest Ubuntu AMIs are failing with this option enabled
-  # version: "515-signed" # supported DRIVER_BRANCH value currently are 470, 510 and 515 which will install latest drivers available on that branch for current running kernel version.
-  manager:
-    image: k8s-driver-manager
-    repository: nvcr.io/nvidia/cloud-native
-
 toolkit:
   enabled: true
 

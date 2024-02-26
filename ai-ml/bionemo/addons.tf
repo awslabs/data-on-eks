@@ -43,6 +43,20 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
+    #---------------------------------------
+    # NVIDIA Device Plugin Add-on
+    #---------------------------------------
+    helm_releases = {
+    nvidia-device-plugin = {
+      description      = "A Helm chart for NVIDIA Device Plugin"
+      namespace        = "nvidia-device-plugin"
+      create_namespace = true
+      chart            = "nvidia-device-plugin"
+      chart_version    = "0.14.0"
+      repository       = "https://nvidia.github.io/k8s-device-plugin"
+      values           = [file("${path.module}/helm-values/nvidia-values.yaml")]
+    }
+  }
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
@@ -60,14 +74,6 @@ module "eks_data_addons" {
   version = "~> 1.2.3" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------------------------------
-  # NVIDIA GPU Operator Add-on
-  #---------------------------------------------------------------
-  enable_nvidia_gpu_operator = true
-  nvidia_gpu_operator_helm_config = {
-    values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
-  }
 
 }
 
