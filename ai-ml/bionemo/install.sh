@@ -36,19 +36,13 @@ else
 fi
 
 # Install kubeflow training module separately due to version conflicts
-echo "Installing Training Operator"
-if kubectl get service training-operator -n kubeflow &> /dev/null; then
-    echo "Training operator already exists"
+if kubectl get deployment training-operator -n kubeflow &> /dev/null; then
+  echo "Training operator already exists. Exiting."
+  exit 0
 else
-kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.7.0"
+  git clone https://github.com/kubeflow/training-operator.git -b v1.6-branch /tmp/training-operator
+  cp ./training-operator/deployment.yaml /tmp/training-operator/manifests/base/deployment.yaml
+  cp ./training-operator/kustomization.yaml /tmp/training-operator/manifests/base/crds/kustomization.yaml
+  kubectl apply -k /tmp/training-operator/manifests/overlays/standalone
+  echo "Successfully installed training-operator."
 fi
-
-# # Set nvidia ngc api key https://org.ngc.nvidia.com/setup/api-key
-# if kubectl get secret ngc-registry &> /dev/null; then
-#   echo "NGC API KEY is already set. Exiting."
-#   exit 0
-# else
-#   echo "Follow https://org.ngc.nvidia.com/setup/api-key"
-#   echo "Run: " 
-#   echo "kubectl create secret docker-registry ngc-registry --docker-server=nvcr.io --docker-username=\$oauthtoken --docker-password=<NGC KEY HERE>"
-# fi
