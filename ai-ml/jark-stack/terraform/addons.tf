@@ -145,6 +145,11 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_kuberay_operator = true
 
+  #---------------------------------------
+  # EFA Device Plugin Add-on
+  #---------------------------------------
+  enable_aws_efa_k8s_device_plugin = true
+
   depends_on = [
     kubernetes_secret_v1.huggingface_token,
     kubernetes_config_map_v1.notebook
