@@ -65,7 +65,7 @@ for sg in $(aws ec2 describe-security-groups \
 
 ## Final destroy to catch any remaining resources
 echo "Destroying remaining resources..."
-destroy_output=$(terraform destroy -var="region=$region"-auto-approve 2>&1 | tee /dev/tty)
+destroy_output=$(terraform destroy -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
 if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
   echo "SUCCESS: Terraform destroy of all modules completed successfully"
 else
