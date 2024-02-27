@@ -1,0 +1,47 @@
+apiVersion: "kubeflow.org/v1"
+kind: PyTorchJob
+metadata:
+  name: esm1nv-pretraining
+spec:
+  pytorchReplicaSpecs:
+    Worker:
+      replicas: 2
+      template:
+        spec:
+          volumes:
+          - name: fsx-pv-storage
+            persistentVolumeClaim:
+              claimName: fsx-static-pvc
+          containers:
+            - name: pytorch
+              image: nvcr.io/nvidia/clara/bionemo-framework:latest
+              env: 
+                - name: DATA_PATH
+                  value: "/fsx"
+              volumeMounts:
+                - mountPath: "/fsx"
+                  name: fsx-pv-storage
+              imagePullPolicy: Always
+              command:
+                - "python3"
+                - "/workspace/bionemo/examples/protein/esm1nv/pretrain.py"
+                - "--config-path=/workspace/bionemo/examples/protein/esm1nv/conf"
+                - "--config-name=pretrain_small"
+                - "exp_manager.exp_dir=/fsx/esm1nv-train/esm1nv_pretraining/esm1nv_batch256_gradacc1_nodes2-small/results"
+                - "exp_manager.create_wandb_logger=False"
+                - "exp_manager.wandb_logger_kwargs.name=esm1nv_batch256_gradacc1_nodes2-small"
+                - "exp_manager.wandb_logger_kwargs.project=esm1nv_pretraining"
+                - "++exp_manager.wandb_logger_kwargs.offline=False"
+                - "trainer.num_nodes=2"
+                - "trainer.devices=1"
+                - "trainer.max_steps=1000000"
+                - "trainer.accumulate_grad_batches=1"
+                - "trainer.val_check_interval=500"
+                - "model.micro_batch_size=256"
+                - "model.tensor_model_parallel_size=1"
+                - "model.data.dataset_path=/fsx/processed"
+                - "model.data.dataset.train='x_OP_000..049_CL_'"
+                - "model.data.dataset.val='x_OP_000..049_CL_'"
+                - "model.data.dataset.test='x_OP_000..049_CL_'"
+                - "model.data.index_mapping_dir=/fsx/processed"
+                - "++model.dwnstr_task_validation.enabled=False"
