@@ -81,7 +81,7 @@ module "eks" {
       desired_size = 2
 
       instance_types = ["p3.2xlarge"]
-      ebs_optimized = true
+      ebs_optimized  = true
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
@@ -93,8 +93,8 @@ module "eks" {
       }
 
       labels = {
-        WorkerType    = "ON_DEMAND"
-        eks-node = "gpu"
+        WorkerType = "ON_DEMAND"
+        eks-node   = "gpu"
       }
 
       tags = merge(local.tags, {

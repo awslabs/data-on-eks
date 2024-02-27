@@ -24,7 +24,7 @@ spec:
           - --enable-scheme=pytorchjob
           - --enable-scheme=xgboostjob
           - --enable-scheme=paddlejob
-          - --enable-scheme=mxjob         
+          - --enable-scheme=mxjob
           image: kubeflow/training-operator
           name: training-operator
           ports:

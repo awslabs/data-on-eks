@@ -15,7 +15,7 @@ spec:
           containers:
             - name: pytorch
               image: nvcr.io/nvidia/clara/bionemo-framework:latest
-              env: 
+              env:
                 - name: DATA_PATH
                   value: "/fsx"
               volumeMounts:

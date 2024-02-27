@@ -43,10 +43,10 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
-    #---------------------------------------
-    # NVIDIA Device Plugin Add-on
-    #---------------------------------------
-    helm_releases = {
+  #---------------------------------------
+  # NVIDIA Device Plugin Add-on
+  #---------------------------------------
+  helm_releases = {
     nvidia-device-plugin = {
       description      = "A Helm chart for NVIDIA Device Plugin"
       namespace        = "nvidia-device-plugin"

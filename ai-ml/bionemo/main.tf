@@ -41,10 +41,10 @@ data "aws_eks_cluster_auth" "this" {
 # Local variables
 #---------------------------------------------------------------
 locals {
-  name       = var.name
-  region     = var.region
-  vpc_cidr   = var.vpc_cidr
-  azs        = slice(data.aws_availability_zones.available.names, 0, 2)
+  name     = var.name
+  region   = var.region
+  vpc_cidr = var.vpc_cidr
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 
   tags = {
     Blueprint  = local.name

@@ -18,13 +18,13 @@ As part of our ongoing efforts to make this blueprint more enterprise-ready, we 
 
 [NVIDIA Bionemo](https://www.nvidia.com/en-us/clara/bionemo/) is a generative AI platform for drug discovery that simplifies and accelerates the training of models using your own data and scaling the deployment of models for drug discovery applications. BioNeMo offers the quickest path to both AI model development and deployment, accelerating the journey to AI-powered drug discovery. It has a growing community of users and contributors, and is actively maintained and developed by the NVIDIA.
 
-Since Bionemo is containerized, we can deploy it to Amazon Sagemaker, AWS ParallelCluster, Amazon ECS and Amazon EKS. In this solution we are going to focus on running Bionemo on Amazon EKS. 
+Since Bionemo is containerized, we can deploy it to Amazon Sagemaker, AWS ParallelCluster, Amazon ECS and Amazon EKS. In this solution we are going to focus on running Bionemo on Amazon EKS.
 
 *Source: https://blogs.nvidia.com/blog/bionemo-on-aws-generative-ai-drug-discovery/*
 
 ## Bionemo on Kubernetes
 
-In order to deploy Bionemo on Kubernetes, we need 4 major components. 
+In order to deploy Bionemo on Kubernetes, we need 4 major components.
 
 1) [**Kubeflow Training Operator**](https://www.kubeflow.org/docs/components/training/)
 2) [**MPI Operator**](https://github.com/kubeflow/mpi-operator)
