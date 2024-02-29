@@ -43,6 +43,15 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
+
+  #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  metrics_server = {
+    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  }
+  
   #---------------------------------------
   # NVIDIA Device Plugin Add-on
   #---------------------------------------
