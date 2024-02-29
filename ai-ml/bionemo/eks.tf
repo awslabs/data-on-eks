@@ -80,7 +80,7 @@ module "eks" {
       max_size     = 3
       desired_size = 2
 
-      instance_types = ["p3.2xlarge"]
+      instance_types = ["p3.16xlarge"]
       ebs_optimized  = true
       block_device_mappings = {
         xvda = {

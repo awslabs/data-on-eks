@@ -13,6 +13,13 @@ spec:
       containers:
       - name: bionemo
         image: nvcr.io/nvidia/clara/bionemo-framework:latest
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+          requests:
+            cpu: 1000m
+            memory: 2Gi
         env:
         - name: DATA_PATH
           value: "/fsx"
