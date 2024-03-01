@@ -75,7 +75,8 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
       )
 
-      ami_type     = "AL2_x86_64_GPU"
+      ami_id     = "ami-074b2f0953ea3375c"
+      enable_bootstrap_user_data = true
       min_size     = 2
       max_size     = 3
       desired_size = 2
