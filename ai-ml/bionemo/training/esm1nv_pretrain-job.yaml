@@ -14,7 +14,7 @@ spec:
               claimName: fsx-static-pvc
           containers:
             - name: pytorch
-              image: nvcr.io/nvidia/clara/bionemo-framework:latest
+              image: nvcr.io/nvidia/clara/bionemo-framework:1.2
               env:
                 - name: DATA_PATH
                   value: "/fsx"
