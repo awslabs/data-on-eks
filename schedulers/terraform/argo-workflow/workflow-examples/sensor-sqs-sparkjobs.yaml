@@ -87,11 +87,6 @@ spec:
                         sparkVersion: "3.1.1"
                         restartPolicy:
                           type: Never
-                        volumes:
-                          - name: "test-volume"
-                            hostPath:
-                              path: "/tmp"
-                              type: Directory
                         driver:
                           cores: 1
                           coreLimit: "1200m"
@@ -137,10 +132,6 @@ spec:
                                   },
                                   "tolerations": [{"key": "spark-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
                               }]
-                          volumeMounts:
-                            - name: "test-volume"
-                              mountPath: "/tmp"
-                              readOnly: false
                         executor:
                           cores: 1
                           instances: 4
@@ -158,10 +149,6 @@ spec:
                             version: 3.3.1
                           annotations:
                             yunikorn.apache.org/task-group-name: "spark-executor"
-                          volumeMounts:
-                            - name: "test-volume"
-                              mountPath: "/tmp"
-                              readOnly: false
                 - name: sparkapp-operator-taxi
                   resource:
                     action: create
@@ -222,23 +209,7 @@ spec:
                           onFailureRetryInterval: 10
                           onSubmissionFailureRetries: 5
                           onSubmissionFailureRetryInterval: 20
-                        volumes:  # using NVMe instance storage mounted on /mnt/k8s-disks
-                          - name: spark-local-dir-1
-                            hostPath:
-                              path: /mnt/k8s-disks
-                              type: Directory
                         driver:
-                          volumeMounts: # Points to InstanceStore 150GB NVMe SSD for shuffle spill over from memory
-                            - name: spark-local-dir-1
-                              mountPath: /data1
-                              readOnly: false
-                          initContainers:
-                            - name: volume-permissions
-                              image: public.ecr.aws/y4g4v0z7/busybox
-                              command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
-                              volumeMounts:
-                                - mountPath: "/mnt/k8s-disks"
-                                  name: "spark-local-dir-1"
                           cores: 1
                           coreLimit: "1200m"
                           memory: "4g"
@@ -288,17 +259,6 @@ spec:
                         executor:
                           podSecurityContext:
                             fsGroup: 185
-                          volumeMounts:
-                            - name: spark-local-dir-1
-                              mountPath: /data1
-                              readOnly: false
-                          initContainers:
-                            - name: volume-permissions
-                              image: public.ecr.aws/y4g4v0z7/busybox
-                              command: [ 'sh', '-c', 'chown -R 185 /mnt/k8s-disks' ]
-                              volumeMounts:
-                                - mountPath: "/mnt/k8s-disks"
-                                  name: "spark-local-dir-1"
                           cores: 1
                           coreLimit: "1200m"
                           instances: 4
