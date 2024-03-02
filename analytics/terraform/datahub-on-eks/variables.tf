@@ -22,12 +22,6 @@ variable "tags" {
   type        = map(string)
 }
 
-variable "vpc_cidr" {
-  description = "VPC CIDR - for existing or new VPC"
-  default     = "10.1.0.0/16"
-  type        = string
-}
-
 variable "create_vpc" {
   description = "Create VPC"
   default     = true
@@ -35,15 +29,21 @@ variable "create_vpc" {
 }
 
 variable "vpc_id" {
-  description = "VPC Id - with create_vpc set to false"
-  default     = "vpc-0bcc567a949321822"
+  description = "VPC Id for the existing vpc - needed when create_vpc set to false"
+  default     = ""
   type        = string
 }
 
 variable "private_subnet_ids" {
-  description = "Private subnet ids - needed with create_vpc set to false"
-  default     = ["subnet-066c6579a95470d55", "subnet-0b4bf52219857602f"]
+  description = "Ids for existing private subnets - needed when create_vpc set to false"
+  default     = []
   type        = list(string)
+}
+
+variable "vpc_cidr" {
+  description = "VPC CIDR - must change to match the cidr of the existing VPC if create_vpc set to false"
+  default     = "10.1.0.0/16"
+  type        = string
 }
 
 variable "enable_vpc_endpoints" {
