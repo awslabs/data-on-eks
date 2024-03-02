@@ -33,7 +33,7 @@ spec:
                 - "exp_manager.wandb_logger_kwargs.project=esm1nv_pretraining"
                 - "++exp_manager.wandb_logger_kwargs.offline=False"
                 - "trainer.num_nodes=2"
-                - "trainer.devices=1"
+                - "trainer.devices=8"
                 - "trainer.max_steps=1000000"
                 - "trainer.accumulate_grad_batches=1"
                 - "trainer.val_check_interval=500"
