@@ -350,24 +350,6 @@ module "eks_data_addons" {
   }
 }
 
-#---------------------------------------
-# Karpenter Provisioners
-#---------------------------------------
-# data "kubectl_path_documents" "karpenter_provisioners" {
-# pattern = "${path.module}/karpenter-provisioners/spark-*.yaml"
-# vars = {
-# azs            = local.region
-# eks_cluster_id = module.eks.cluster_name
-# }
-# }
-#
-# resource "kubectl_manifest" "karpenter_provisioner" {
-# for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-# yaml_body = each.value
-#
-# depends_on = [module.eks_blueprints_addons]
-# }
-
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
