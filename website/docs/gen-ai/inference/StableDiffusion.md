@@ -131,7 +131,7 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 **Deploy RayServe Cluster**
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/ray-serve/stable-diffusion-inf2
+cd ai-ml/trainium-inferentia/examples/inference/ray-serve/stable-diffusion-inf2
 kubectl apply -f ray-service-stablediffusion.yaml
 ```
 
@@ -192,11 +192,12 @@ From this webpage, you will be able to monitor the progress of Model deployment,
 ![Ray Dashboard](img/ray-dashboard-sdxl.png)
 
 ### To Test the Stable Diffusion XL Model
-Once you see the status of the model deployment is in `running` state then you can start using Llama-2-chat.
+
+Once you've verified that the Stable Diffusion model deployment status has switched to a `running` state in Ray Dashboard , you're all set to start leveraging the model. This change in status signifies that the Stable Diffusion model is now fully functional and prepared to handle your image generation requests based on textual descriptions."
 
 You can use the following URL with a query added at the end of the URL.
 
-    http://\<NLB_DNS_NAME\>/serve/serve/imagine?prompt=an astronaut is dancing on green grass, sunlit
+    http://\<NLB_DNS_NAME\>/serve/imagine?prompt=an astronaut is dancing on green grass, sunlit
 
 You will see an output like this in your browser:
 
@@ -205,66 +206,52 @@ You will see an output like this in your browser:
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
 
-Let's deploy Gradio app locally on your machine to interact with the Stable Diffusion XL model deployed using RayServe.
+Let's move forward with setting up the Gradio app as a Kubernetes deployment, utilizing a Docker container. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
 
 :::info
 
-The Gradio app interacts with the locally exposed service created solely for the demonstration. Alternatively, you can deploy the Gradio app on EKS as a Pod with Ingress and Load Balancer for wider accessibility.
+The Gradio UI application is containerized and the container image is stored in [data-on-eks](https://gallery.ecr.aws/data-on-eks/gradio-app) public repository. The Gradio app container internally points to the `stablediffusion-service` that's running on port 8000.
 
 :::
 
-### Execute Port Forward to the stablediffusion Ray Service
-First, execute a port forward to the stablediffusion Ray Service using kubectl:
+### Deploy the Gradio Pod as Deployment
+
+First, deploy the Gradio app as a Deployment on EKS using kubectl:
 
 ```bash
-kubectl port-forward svc/stablediffusion-service 8000:8000 -n stablediffusion
+cd gradio-ui
+kubectl apply -f gradio-deploy.yaml
 ```
 
-### Deploy Gradio WebUI Locally
-
-#### Create a Virtual Environment
-Create a Python virtual environment in your machine for the Gradio application:
+This should create a Deployment and a Service in namespace `gradio`. Check the status of the resources.
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/gradio-ui
-python3 -m venv .venv
-source .venv/bin/activate
-```
+kubectl -n gradio get all
+NAME                                     READY   STATUS    RESTARTS   AGE
+pod/gradio-deployment-59cfbffdf5-q745z   1/1     Running   0          143m
 
-#### Install Gradio Image Generator app
-Install all the Gradio WebUI app dependencies with pip
-
-```bash
-pip install gradio requests
+NAME                     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/gradio-service   ClusterIP   172.20.245.153   <none>        7860/TCP   3d12h
 ```
 
 #### Invoke the WebUI
-Run the Gradio WebUI using the following command:
 
-NOTE: `gradio-app-stablediffusion.py` refers to the port forward url. e.g., `service_name = "http://localhost:8000" `
+Execute a port forward to the `gradio-service` Service using kubectl:
 
 ```bash
-python gradio-app-stablediffusion.py
+kubectl -n gradio port-forward service/gradio-service 8080:7860
 ```
 
-You should see output similar to the following:
-
-```text
-Running on local URL:  http://127.0.0.1:7860
-
-To create a public link, set `share=True` in `launch()`.
-```
-
-#### 2.4. Access the WebUI from Your Browser
 Open your web browser and access the Gradio WebUI by navigating to the following URL:
 
-http://127.0.0.1:7860
+Running on local URL:  http://localhost:8080
 
 You should now be able to interact with the Gradio application from your local machine.
 
 ![Gradio Output](img/stable-diffusion-xl-gradio.png)
 
 ## Conclusion
+
 In conclusion, you will have successfully deployed the **Stable-diffusion-xl-base** model on EKS with Ray Serve and created a prompt based web UI using Gradio.
 This opens up exciting possibilities for natural language processing and prompt based image generator and image predictor development.
 
