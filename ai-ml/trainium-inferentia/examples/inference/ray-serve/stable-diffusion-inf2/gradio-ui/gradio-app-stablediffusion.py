@@ -13,7 +13,7 @@ def generate_image(prompt):
 
     # Create the URL for the inference
     url = f"{service_name}{model_endpoint}"
-    
+
     try:
         # Send the request to the model service
         response = requests.get(url, params={"prompt": prompt}, timeout=180)
@@ -24,7 +24,7 @@ def generate_image(prompt):
     except requests.exceptions.RequestException as e:
         # Handle any request exceptions (e.g., connection errors)
         # return f"AI: Error: {str(e)}"
-        return Image.new('RGB', (100, 100), color='red') 
+        return Image.new('RGB', (100, 100), color='red')
 
 # Define the Gradio PromptInterface
 demo = gr.Interface(fn=generate_image,

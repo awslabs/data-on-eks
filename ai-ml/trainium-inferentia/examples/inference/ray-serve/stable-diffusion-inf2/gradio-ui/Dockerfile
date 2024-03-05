@@ -1,8 +1,5 @@
 # Use Python base image
-FROM --platform=linux/amd64 python:3.9-slim as build
-
-ENV MODEL_ENDPOINT="/imagine"
-ENV SERVICE_NAME="http://localhost:8000"
+FROM --platform=linux/amd64 python:3.9-slim
 
 # Set working directory in the container
 WORKDIR /app

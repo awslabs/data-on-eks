@@ -193,7 +193,7 @@ From this webpage, you will be able to monitor the progress of Model deployment,
 
 ### To Test the Stable Diffusion XL Model
 
-Once you see the status of the model deployment is in `running` state then you can start using Llama-2-chat.
+Once you've verified that the Stable Diffusion model deployment status has switched to a `running` state in Ray Dashboard , you're all set to start leveraging the model. This change in status signifies that the Stable Diffusion model is now fully functional and prepared to handle your image generation requests based on textual descriptions."
 
 You can use the following URL with a query added at the end of the URL.
 
@@ -206,7 +206,7 @@ You will see an output like this in your browser:
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
 
-Let's deploy Gradio app as a docker container to interact with the Stable Diffusion XL model deployed using RayServe.
+Let's move forward with setting up the Gradio app as a Kubernetes deployment, utilizing a Docker container. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
 
 :::info
 

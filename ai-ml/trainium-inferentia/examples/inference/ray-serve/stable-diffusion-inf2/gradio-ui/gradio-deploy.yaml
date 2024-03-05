@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: gradio
-        image: public.ecr.aws/data-on-eks/gradio-app:sd-v3.0
+        image: public.ecr.aws/data-on-eks/gradio-app:sd-v1.0
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 7860
@@ -36,6 +36,7 @@ spec:
         env:
         - name: MODEL_ENDPOINT
           value: "/imagine"
+        #Please note that the service name is currently hardcoded to match the Stable Diffusion service for this blueprint. If there are any updates or changes to the actual RayServe deployment, you'll need to update the service name in this code accordingly.
         - name: SERVICE_NAME
           value: "http://stablediffusion-service.stablediffusion.svc.cluster.local:8000"
 ---
