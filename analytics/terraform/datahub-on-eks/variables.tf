@@ -22,8 +22,26 @@ variable "tags" {
   type        = map(string)
 }
 
+variable "create_vpc" {
+  description = "Create VPC"
+  default     = true
+  type        = bool
+}
+
+variable "vpc_id" {
+  description = "VPC Id for the existing vpc - needed when create_vpc set to false"
+  default     = ""
+  type        = string
+}
+
+variable "private_subnet_ids" {
+  description = "Ids for existing private subnets - needed when create_vpc set to false"
+  default     = []
+  type        = list(string)
+}
+
 variable "vpc_cidr" {
-  description = "VPC CIDR"
+  description = "VPC CIDR - must change to match the cidr of the existing VPC if create_vpc set to false"
   default     = "10.1.0.0/16"
   type        = string
 }
@@ -45,10 +63,4 @@ variable "private_subnets" {
   description = "Private Subnets CIDRs. 32766 Subnet1 and 16382 Subnet2 IPs per Subnet"
   default     = ["10.1.0.0/17", "10.1.128.0/18"]
   type        = list(string)
-}
-
-variable "create_iam_service_linked_role_es" {
-  type        = bool
-  default     = true
-  description = "Whether to create `AWSServiceRoleForAmazonOpensearchService` service-linked role. Set it to `false` if the role already exists"
 }

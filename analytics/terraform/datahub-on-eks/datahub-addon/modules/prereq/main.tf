@@ -1,7 +1,3 @@
-locals {
-  cidr_blocks = [coalesce(var.vpc_cidr, "10.1.0.0/16")]
-}
-
 #---------------------------------------------------------------
 # OpenSearch For DataHub metadata
 #---------------------------------------------------------------
@@ -13,13 +9,8 @@ resource "aws_security_group" "es" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = local.cidr_blocks
+    cidr_blocks = [var.vpc_cidr]
   }
-}
-
-resource "aws_iam_service_linked_role" "es" {
-  aws_service_name = "opensearchservice.amazonaws.com"
-  count            = var.create_iam_service_linked_role_es ? 1 : 0
 }
 
 resource "random_password" "master_password" {
@@ -32,7 +23,6 @@ resource "random_password" "master_password" {
 }
 
 resource "aws_opensearch_domain" "es" {
-  depends_on     = [aws_iam_service_linked_role.es]
   domain_name    = "${var.prefix}-es-domain"
   engine_version = "OpenSearch_1.1"
   cluster_config {
@@ -78,6 +68,7 @@ resource "aws_opensearch_domain" "es" {
 
 # Creating the AWS Elasticsearch domain policy
 resource "aws_opensearch_domain_policy" "main" {
+  depends_on      = [aws_msk_cluster.msk]
   domain_name     = aws_opensearch_domain.es.domain_name
   access_policies = <<POLICIES
 {
@@ -105,7 +96,7 @@ resource "aws_security_group" "msk" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = local.cidr_blocks
+    cidr_blocks = [var.vpc_cidr]
   }
 }
 
@@ -184,7 +175,7 @@ resource "aws_security_group" "rds" {
     from_port   = 0
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = local.cidr_blocks
+    cidr_blocks = [var.vpc_cidr]
   }
 }
 
