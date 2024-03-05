@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gradio
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gradio-deployment
+  namespace: gradio
+  labels:
+    app: gradio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gradio
+  template:
+    metadata:
+      labels:
+        app: gradio
+    spec:
+      containers:
+      - name: gradio
+        image: public.ecr.aws/data-on-eks/gradio-app:sd-v3.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 7860
+        resources:
+          requests:
+            cpu: "512m"
+            memory: "2048Mi"
+          limits:
+            cpu: "1"
+            memory: "4096Mi"
+        env:
+        - name: MODEL_ENDPOINT
+          value: "/imagine"
+        - name: SERVICE_NAME
+          value: "http://stablediffusion-service.stablediffusion.svc.cluster.local:8000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gradio-service
+  namespace: gradio
+spec:
+  selector:
+    app: gradio
+  ports:
+  - name: http
+    protocol: TCP
+    port: 7860
+    targetPort: 7860
+  type: ClusterIP
