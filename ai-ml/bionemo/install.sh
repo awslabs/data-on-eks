@@ -40,10 +40,6 @@ if kubectl get deployment training-operator -n kubeflow &> /dev/null; then
   echo "Training operator already exists. Exiting."
   exit 0
 else
-  rm -rf /tmp/training-operator
-  git clone https://github.com/kubeflow/training-operator.git -b v1.6-branch /tmp/training-operator
-  cp ./training-operator/deployment.yaml /tmp/training-operator/manifests/base/deployment.yaml
-  cp ./training-operator/kustomization.yaml /tmp/training-operator/manifests/base/crds/kustomization.yaml
-  kubectl apply -k /tmp/training-operator/manifests/overlays/standalone
+  kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.7.0"
   echo "Successfully installed training-operator."
 fi
