@@ -24,12 +24,11 @@ Since Bionemo is containerized, we can deploy it to Amazon Sagemaker, AWS Parall
 
 ## Bionemo on Kubernetes
 
-In order to deploy Bionemo on Kubernetes, we need 4 major components.
+In order to deploy Bionemo on Kubernetes, we need 3 major components.
 
 1) [**Kubeflow Training Operator**](https://www.kubeflow.org/docs/components/training/)
-2) [**MPI Operator**](https://github.com/kubeflow/mpi-operator)
-3) [**NVIDIA Device Plugin**](https://github.com/NVIDIA/k8s-device-plugin)
-4) [**FSx for Lustre CSI Driver**](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html)
+2) [**NVIDIA Device Plugin**](https://github.com/NVIDIA/k8s-device-plugin)
+3) [**FSx for Lustre CSI Driver**](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html)
 
 
 ## Deploying the Example
@@ -82,6 +81,11 @@ Update local kubeconfig so we can access kubernetes cluster
 aws eks update-kubeconfig --name bionemo-cluster #or whatever you used for EKS cluster name
 ```
 
+Install Kubeflow Training Operator:
+```bash
+kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.7.0"
+```
+
 First, lets verify that we have worker nodes running in the cluster.
 
 ```bash
@@ -100,7 +104,7 @@ Next, lets verify all the pods are running.
 ```bash
 kubectl get pods -A
 ```
-Make sure mpi-operator, training-operator, nvidia-device-plungin and fsx-csi-controller pods are running and healthy.
+Make sure training-operator, nvidia-device-plugin and fsx-csi-controller pods are running and healthy.
 
 #### Run bionemo jobs
 
@@ -115,7 +119,7 @@ kubectl apply -f uniref50-job.yaml
 
 If you look at the yaml manifest you would see it is a kubernetes Job, which simply runs a python script within the bionemo container.
 
-This process takes relatively a long time (~15-16 hours). In order to see if it is working check the logs from this pod:
+This process takes relatively a long time (~50-60 hours). In order to see if it is working check the logs from this pod:
 
 ```bash
 kubectl logs uniref50-download-xnz42
@@ -140,6 +144,75 @@ kubectl apply -f esm1nv_pretrain-job.yaml
 ```
 
 This manifest uses kubeflow's Pytorch training CRD. There are bunch of parameters within this manifest that could be modified. See [Bionemo's Docs](https://docs.nvidia.com/bionemo-framework/latest/notebooks/model_training_esm1nv.html) for detailed explanations of each parameter and how to tune them.
+
+According to Training Operator's documentation, ...worker-0 is the main process. In order to check the process:
+
+```bash
+kubectl logs esm1nv-pretraining-worker-0
+
+Epoch 0:   7%|▋         | 73017/1017679 [00:38<08:12, 1918.0%
+```
+
+Also, we can always connect to our nodes on EC2 console with Session Manager and run nvidia-smi to observe all gpus are leveraged.
+
+```bash
+sh-4.2$ nvidia-smi
+Thu Mar  7 16:31:01 2024
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 535.129.03             Driver Version: 535.129.03   CUDA Version: 12.2     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  Tesla V100-SXM2-16GB           On  | 00000000:00:17.0 Off |                    0 |
+| N/A   51C    P0              80W / 300W |   3087MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+|   1  Tesla V100-SXM2-16GB           On  | 00000000:00:18.0 Off |                    0 |
+| N/A   44C    P0              76W / 300W |   3085MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+|   2  Tesla V100-SXM2-16GB           On  | 00000000:00:19.0 Off |                    0 |
+| N/A   43C    P0              77W / 300W |   3085MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+|   3  Tesla V100-SXM2-16GB           On  | 00000000:00:1A.0 Off |                    0 |
+| N/A   52C    P0              77W / 300W |   3085MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+|   4  Tesla V100-SXM2-16GB           On  | 00000000:00:1B.0 Off |                    0 |
+| N/A   49C    P0              79W / 300W |   3085MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+|   5  Tesla V100-SXM2-16GB           On  | 00000000:00:1C.0 Off |                    0 |
+| N/A   44C    P0              74W / 300W |   3085MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+|   6  Tesla V100-SXM2-16GB           On  | 00000000:00:1D.0 Off |                    0 |
+| N/A   44C    P0              78W / 300W |   3085MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+|   7  Tesla V100-SXM2-16GB           On  | 00000000:00:1E.0 Off |                    0 |
+| N/A   50C    P0              79W / 300W |   3085MiB / 16384MiB |    100%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|    0   N/A  N/A   1552275      C   /usr/bin/python3                           3084MiB |
+|    1   N/A  N/A   1552277      C   /usr/bin/python3                           3082MiB |
+|    2   N/A  N/A   1552278      C   /usr/bin/python3                           3082MiB |
+|    3   N/A  N/A   1552280      C   /usr/bin/python3                           3082MiB |
+|    4   N/A  N/A   1552279      C   /usr/bin/python3                           3082MiB |
+|    5   N/A  N/A   1552274      C   /usr/bin/python3                           3082MiB |
+|    6   N/A  N/A   1552273      C   /usr/bin/python3                           3082MiB |
+|    7   N/A  N/A   1552276      C   /usr/bin/python3                           3082MiB |
++---------------------------------------------------------------------------------------+
+```
 
 #### Clean up
 Use the provided helper script `cleanup.sh` to tear down EKS cluster and other AWS resources.

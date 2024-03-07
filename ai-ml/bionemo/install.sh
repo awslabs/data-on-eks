@@ -34,12 +34,3 @@ else
   echo "FAILED: Terraform apply of all modules failed"
   exit 1
 fi
-
-# Install kubeflow training module separately due to version conflicts
-if kubectl get deployment training-operator -n kubeflow &> /dev/null; then
-  echo "Training operator already exists. Exiting."
-  exit 0
-else
-  kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.7.0"
-  echo "Successfully installed training-operator."
-fi
