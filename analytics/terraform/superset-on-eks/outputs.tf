@@ -9,4 +9,3 @@ output "superset_url" {
   kubectl get ingress  -n superset -o json | jq -r '"http://" + .items[0].status.loadBalancer.ingress[0].hostname'
   EOT
 }
-

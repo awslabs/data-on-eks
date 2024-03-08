@@ -30,16 +30,3 @@ variable "secondary_cidr_blocks" {
   default     = ["100.64.0.0/16"]
   type        = list(string)
 }
-
-
-variable "cert_manager" {
-  type = object({
-    enabled = bool
-    wait = bool  
-  })
-
-  default = {
-    enabled = true
-    wait = true
-  }
-}

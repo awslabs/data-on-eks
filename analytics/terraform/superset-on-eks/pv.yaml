@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: PersistentVolume
-metadata: 
+metadata:
   name: gp2-pv
 spec:
   capacity:
     storage: 8Gi
-  accessModes:  
+  accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Delete 
+  persistentVolumeReclaimPolicy: Delete
   storageClassName: gp2
   csi:
     driver: ebs.csi.aws.com

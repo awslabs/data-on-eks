@@ -31,7 +31,7 @@ module "eks" {
 
 
   #manage_aws_auth_configmap = true
- 
+
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
@@ -73,8 +73,8 @@ module "eks" {
   cluster_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      most_recent = true
-      resolve_conflicts="PRESERVE"
+      most_recent              = true
+      resolve_conflicts        = "PRESERVE"
     }
   }
 
@@ -117,7 +117,7 @@ module "eks" {
       }
 
       tags = merge(local.tags, {
-        Name                     = "core-node-grp"      })
+      Name = "core-node-grp" })
     }
   }
 }
@@ -129,20 +129,20 @@ resource "kubernetes_namespace" "superset" {
 }
 
 
-# Add Helm repo 
+# Add Helm repo
 resource "null_resource" "add_superset_repo" {
   provisioner "local-exec" {
     command = "helm repo add superset https://apache.github.io/superset"
   }
 }
 
-# Update repos  
+# Update repos
 resource "null_resource" "helm_update_repos" {
   provisioner "local-exec" {
-    command = "helm repo update" 
+    command = "helm repo update"
   }
 
-  # Depends on add repo 
+  # Depends on add repo
   depends_on = [
     null_resource.add_superset_repo
   ]
@@ -155,11 +155,11 @@ resource "helm_release" "superset" {
   namespace  = "superset"
 
   values = [
-    file("${path.module}/values.yaml") 
+    file("${path.module}/values.yaml")
   ]
   depends_on = [
     kubernetes_namespace.superset,
-     null_resource.add_superset_repo 
+    null_resource.add_superset_repo
 
   ]
 }
@@ -169,24 +169,24 @@ resource "helm_release" "superset" {
 # # Allow traffic from ALB to worker nodes
 # resource "aws_security_group_rule" "allow_alb" {
 #   type                     = "ingress"
-#   from_port                = 8088 
+#   from_port                = 8088
 #   to_port                  = 8088
 #   protocol                 = "tcp"
-#   security_group_id        = aws_eks_cluster.eks.worker_security_group_id  
+#   security_group_id        = aws_eks_cluster.eks.worker_security_group_id
 #   source_security_group_id = aws_security_group.alb.id
 # }
 
-# # Allow traffic from worker nodes to pods 
+# # Allow traffic from worker nodes to pods
 # resource "aws_security_group_rule" "allow_workers_to_pods" {
 #   type                     = "egress"
 #   from_port                = 8088
-#   to_port                  = 8088 
+#   to_port                  = 8088
 #   protocol                 = "tcp"
 #   security_group_id        = aws_eks_cluster.eks.worker_security_group_id
 #   source_security_group_id = aws_eks_cluster.eks.worker_security_group_id
 # }
 
-# Allow pod ingress from ALB 
+# Allow pod ingress from ALB
 # resource "kubernetes_network_policy" "allow_alb" {
 #   metadata {
 #     name = "allow-alb"

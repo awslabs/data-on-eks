@@ -132,10 +132,10 @@ extraVolumeMounts: []
 # -- A dictionary of overrides to append at the end of superset_config.py - the name does not matter
 # WARNING: the order is not guaranteed
 # Files can be passed as helm --set-file configOverrides.my-override=my-file.py
-configOverrides: 
+configOverrides:
    secret: |
      SECRET_KEY = '5WPuGEgPfGTrk9MCVLFkzNk0fO4hyfsykSrM03fHn1m8d3yQQd4yjyvf'
- 
+
   # extend_timeout: |
   #    # Extend timeout to allow long running queries.
   #    SUPERSET_WEBSERVER_TIMEOUT = ...
@@ -270,7 +270,6 @@ supersetNode:
     redis_ssl:
       enabled: false
       ssl_cert_reqs: CERT_NONE
-    # You need to change below configuration incase bringing own PostgresSQL instance and also set postgresql.enabled:false
     db_host: '{{ .Release.Name }}-postgresql'
     db_port: "5432"
     db_user: superset
@@ -810,7 +809,6 @@ redis:
     ## docker registry secret names (list)
     # pullSecrets: nil
     ##
-    ## Configure persistance
     persistence:
       ##
       ## Use a PVC to persist data.
@@ -831,4 +829,3 @@ affinity: {}
 
 # -- TopologySpreadConstrains to be added to all deployments
 topologySpreadConstraints: []
-

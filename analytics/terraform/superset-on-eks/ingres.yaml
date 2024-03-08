@@ -4,10 +4,10 @@ metadata:
   namespace: superset
   name: ingress
   annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing 
-    alb.ingress.kubernetes.io/target-type: ip 
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
 spec:
-  ingressClassName: alb 
+  ingressClassName: alb
   rules:
   - http:
       paths:
@@ -15,7 +15,6 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: superset 
+            name: superset
             port:
                number: 8088
-

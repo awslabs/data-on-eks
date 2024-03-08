@@ -5,7 +5,7 @@ This repository contains Terraform configuration to deploy Apache Superset on AW
 Terraform will create following AWS infrastructure for Superset:
 - VPC
 - Subnets (Public/Private)
-- EC2 Instance for Superset 
+- EC2 Instance for Superset
 - Security Groups
 - IAM Roles and Policies
 
@@ -31,7 +31,7 @@ Terraform will create following AWS infrastructure for Superset:
     ```
     terraform apply
     ```
- 
+
 - Access the Superset web UI at http://PUBLIC_IP
 
 - Default credentials are admin/admin
