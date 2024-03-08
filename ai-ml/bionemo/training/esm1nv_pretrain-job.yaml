@@ -24,6 +24,10 @@ spec:
           annotations:
             sidecar.istio.io/inject: "false"
         spec:
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
           volumes:
           - name: fsx-pv-storage
             persistentVolumeClaim:

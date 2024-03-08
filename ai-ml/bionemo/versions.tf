@@ -32,6 +32,6 @@ terraform {
   # backend "s3" {
   #   bucket = "doeks-github-actions-e2e-test-state"
   #   region = "us-west-2"
-  #   key    = "e2e/mlflow/terraform.tfstate"
+  #   key    = "e2e/bionemo/terraform.tfstate"
   # }
 }
