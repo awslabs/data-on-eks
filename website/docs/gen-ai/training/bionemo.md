@@ -151,6 +151,15 @@ After finishing this task, the processed dataset will be saved in the `/fsx/proc
 
 Following this, we can proceed to execute the pre-training job by running:
 
+In this PyTorchJob YAML, the command `python3 -m torch.distributed.run` plays a crucial role in orchestrating **distributed training** across multiple worker pods in your Kubernetes cluster. 
+
+It handles the following tasks:
+
+1. Initializes a distributed backend (e.g., c10d, NCCL) for communication between worker processes.In our example it's using c10d. This is a commonly used distributed backend in PyTorch that can leverage different communication mechanisms like TCP or Infiniband depending on your environment.
+2. Sets up environment variables to enable distributed training within your training script.
+3. Launches your training script on all worker pods, ensuring each process participates in the distributed training.
+
+
 ```bash
 cd training
 kubectl apply -f esm1nv_pretrain-job.yaml
@@ -229,6 +238,11 @@ Thu Mar  7 16:31:01 2024
 +---------------------------------------------------------------------------------------+
 ```
 
+#### Benefits of Distributed Training:
+
+By distributing the training workload across multiple GPUs in your worker pods, you can train large models faster by leveraging the combined computational power of all GPUs. Handle larger datasets that might not fit on a single GPU's memory.
+
+#### Conclusion
 BioNeMo stands as a formidable generative AI tool tailored for the realm of drug discovery. In this illustrative example, we took the initiative to pretrain a custom model entirely from scratch, utilizing the extensive uniref50 dataset. However, it's worth noting that BioNeMo offers the flexibility to expedite the process by employing pretrained models directly [provided by NVidia](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/clara/containers/bionemo-framework). This alternative approach can significantly streamline your workflow while maintaining the robust capabilities of the BioNeMo framework.
 
 
