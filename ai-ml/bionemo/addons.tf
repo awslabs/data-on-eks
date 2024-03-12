@@ -48,6 +48,7 @@ module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
   version = "~> 1.30" # ensure to update this to the latest/desired version
 
-  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_arn           = module.eks.oidc_provider_arn
   enable_nvidia_device_plugin = true
+
 }

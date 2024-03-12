@@ -5,12 +5,12 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.15"
 
-  cluster_name    = local.name
-  cluster_version = var.eks_cluster_version
+  cluster_name                   = local.name
+  cluster_version                = var.eks_cluster_version
   cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
-  vpc_id = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-  manage_aws_auth_configmap = true
+  vpc_id                         = module.vpc.vpc_id
+  subnet_ids                     = module.vpc.private_subnets
+  manage_aws_auth_configmap      = true
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
@@ -98,6 +98,7 @@ module "eks" {
         "karpenter.sh/discovery" = local.name
       })
     }
+
     gpu1 = {
       name        = "gpu-node-grp"
       description = "EKS Node Group to run GPU workloads"
@@ -109,9 +110,9 @@ module "eks" {
 
       ami_type            = "AL2_x86_64_GPU"
       ami_release_version = "1.29.0-20240213"
-      min_size     = 2
-      max_size     = 3
-      desired_size = 2
+      min_size            = 2
+      max_size            = 3
+      desired_size        = 2
 
       instance_types = ["p3.16xlarge"]
       ebs_optimized  = true

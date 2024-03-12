@@ -1,43 +1,38 @@
 ---
-sidebar_position: 2
-sidebar_label: Bionemo on EKS
+sidebar_position: 3
+sidebar_label: BioNeMo on EKS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
-# Bionemo on EKS
+# BioNeMo on EKS
 
 :::caution
 This blueprint should be considered as experimental and should only be used for proof of concept.
 :::
 
-:::info
-As part of our ongoing efforts to make this blueprint more enterprise-ready, we are actively working on adding several key functionalities. This includes cost management with Kubecost, advanced observability with Amazon Managed Prometheus, and Grafana, as well as improved security and data governance using tools such as IRSA. If you have specific requirements or suggestions for this blueprint, please feel free to open an issue on our GitHub repository.
-:::
 
 ## Introduction
 
-[NVIDIA Bionemo](https://www.nvidia.com/en-us/clara/bionemo/) is a generative AI platform for drug discovery that simplifies and accelerates the training of models using your own data and scaling the deployment of models for drug discovery applications. BioNeMo offers the quickest path to both AI model development and deployment, accelerating the journey to AI-powered drug discovery. It has a growing community of users and contributors, and is actively maintained and developed by the NVIDIA.
+[NVIDIA BioNeMo](https://www.nvidia.com/en-us/clara/bionemo/) is a generative AI platform for drug discovery that simplifies and accelerates the training of models using your own data and scaling the deployment of models for drug discovery applications. BioNeMo offers the quickest path to both AI model development and deployment, accelerating the journey to AI-powered drug discovery. It has a growing community of users and contributors, and is actively maintained and developed by the NVIDIA.
 
-Given its containerized nature, Bionemo finds versatility in deployment across various environments such as Amazon Sagemaker, AWS ParallelCluster, Amazon ECS, and Amazon EKS. This solution, however, zeroes in on the specific deployment of Bionemo on Amazon EKS.
+Given its containerized nature, BioNeMo finds versatility in deployment across various environments such as Amazon Sagemaker, AWS ParallelCluster, Amazon ECS, and Amazon EKS. This solution, however, zeroes in on the specific deployment of BioNeMo on Amazon EKS.
 
 *Source: https://blogs.nvidia.com/blog/bionemo-on-aws-generative-ai-drug-discovery/*
 
-## Bionemo on Kubernetes
+## Deploying BioNeMo on Kubernetes
 
-In order to deploy Bionemo on Kubernetes, we need 3 major components.
+This blueprint leverages three major components for its functionality. The NVIDIA Device Plugin facilitates GPU usage, FSx stores training data, and the Kubeflow Training Operator manages the actual training process.
 
 1) [**Kubeflow Training Operator**](https://www.kubeflow.org/docs/components/training/)
 2) [**NVIDIA Device Plugin**](https://github.com/NVIDIA/k8s-device-plugin)
 3) [**FSx for Lustre CSI Driver**](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html)
 
 
-## Deploying the Example
-
-In this example we are going to deploy an Amazon EKS cluster and run a data preparation job and a distributed model training job.
+In this blueprint, we will deploy an Amazon EKS cluster and execute both a data preparation job and a distributed model training job.
 
 <CollapsibleContent header={<h3><span>Pre-requisites</span></h3>}>
 
-Ensure that you have installed the following tools on your machine.
+Ensure that you have installed the following tools on your local machine or the machine you are using to deploy the Terraform blueprint, such as Mac, Windows, or Cloud9 IDE:
 
 1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
@@ -46,9 +41,11 @@ Ensure that you have installed the following tools on your machine.
 
 </CollapsibleContent>
 
-<CollapsibleContent header={<h3><span>Deploy the EKS Cluster</span></h3>}>
+<CollapsibleContent header={<h3><span>Deploy the blueprint</span></h3>}>
 
 #### Clone the repository
+
+First, clone the repository containing the necessary files for deploying the blueprint. Use the following command in your terminal:
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
@@ -56,7 +53,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 
 #### Initialize Terraform
 
-Navigate into the example directory
+Navigate into the directory specific to the blueprint you want to deploy. In this case, we're interested in the BioNeMo blueprint, so navigate to the appropriate directory using the terminal:
 
 ```bash
 cd data-on-eks/ai-ml/bionemo
@@ -110,20 +107,31 @@ kubectl get pods -A
 ```
 Make sure training-operator, nvidia-device-plugin and fsx-csi-controller pods are running and healthy.
 
-#### Run bionemo jobs
+</CollapsibleContent>
 
-Once we are sure everything is working, we can start submitting jobs to our clusters.
 
-We are initiating the first task, known as the uniref50-job, which involves downloading and partitioning the data for more efficient processing. This job specifically retrieves the uniref50 dataset and populates our FSx for Lustre Filesystem with a structured layout for training, testing, and validation. You can read more about the uniref dataset (here)[https://www.uniprot.org/help/uniref]
+### Run BioNeMo Training jobs
 
-To execute this job, navigate to the 'training' directory and deploy the uniref50-job.yaml manifest using the following commands:
+Once you've ensured that all components are functioning properly, you can proceed to submit jobs to your clusters.
+
+#### Step1: Initiate the Uniref50 Data Preparation Task:
+
+The first task, named the `uniref50-job.yaml`, involves downloading and partitioning the data to enhance processing efficiency. This task specifically retrieves the `uniref50 dataset` and organizes it within the FSx for Lustre Filesystem. This structured layout is designed for training, testing, and validation purposes. You can learn more about the uniref dataset [here](https://www.uniprot.org/help/uniref).
+
+To execute this job, navigate to the `examples\training` directory and deploy the `uniref50-job.yaml` manifest using the following commands:
 
 ```bash
 cd training
 kubectl apply -f uniref50-job.yaml
 ```
 
-Reviewing the YAML manifest, you'll observe that it defines a Kubernetes Job, orchestrating the execution of a Python script within the Bionemo container. It's crucial to note that this process entails a considerable duration, approximately ranging from 50 to 60 hours. To verify its progress, examine the logs generated by the corresponding pod:
+:::info
+
+It's important to note that this task requires a significant amount of time, typically ranging from 50 to 60 hours. 
+
+:::
+
+To verify its progress, examine the logs generated by the corresponding pod:
 
 
 ```bash
@@ -139,18 +147,20 @@ kubectl logs uniref50-download-xnz42
 [NeMo I 2024-02-26 23:16:21 preprocess:255] Creating train split...
 ```
 
-Upon completion of this task, the processed dataset will be stored in the /fsx/processed directory. Following this milestone, we can proceed to initiate the pre-training job by executing the following command:
+After finishing this task, the processed dataset will be saved in the `/fsx/processed` directory. Once this is done, we can move forward and start the `pre-training` job by running the following command:
 
-After this step we can run the pre-training job by running:
+Following this, we can proceed to execute the pre-training job by running:
 
 ```bash
 cd training
 kubectl apply -f esm1nv_pretrain-job.yaml
 ```
 
-This configuration leverages Kubeflow's PyTorch training Custom Resource Definition (CRD). Within this manifest, numerous parameters are available for customization. For a detailed understanding of each parameter and guidance on fine-tuning, refer to (Bionemo's documentation)[https://docs.nvidia.com/bionemo-framework/latest/notebooks/model_training_esm1nv.html].
+This configuration utilizes Kubeflow's PyTorch training Custom Resource Definition (CRD). Within this manifest, various parameters are available for customization. For detailed insights into each parameter and guidance on fine-tuning, you can refer to [BioNeMo's documentation](https://docs.nvidia.com/bionemo-framework/latest/notebooks/model_training_esm1nv.html).
 
-As per the Training Operator's documentation, the primary process is denoted as ...worker-0. To monitor the progress of this process, follow these steps:
+According to the Training Operator's documentation, the primary process is labeled as `...worker-0`. 
+
+To track the progress of this process, follow these steps:
 
 ```bash
 kubectl logs esm1nv-pretraining-worker-0
@@ -219,10 +229,11 @@ Thu Mar  7 16:31:01 2024
 +---------------------------------------------------------------------------------------+
 ```
 
-Bionemo stands as a formidable generative AI tool tailored for the realm of drug discovery. In this illustrative example, we took the initiative to pretrain a custom model entirely from scratch, utilizing the extensive uniref50 dataset. However, it's worth noting that Bionemo offers the flexibility to expedite the process by employing pretrained models directly (provided by NVidia)[https://catalog.ngc.nvidia.com/orgs/nvidia/teams/clara/containers/bionemo-framework]. This alternative approach can significantly streamline your workflow while maintaining the robust capabilities of the Bionemo framework.
+BioNeMo stands as a formidable generative AI tool tailored for the realm of drug discovery. In this illustrative example, we took the initiative to pretrain a custom model entirely from scratch, utilizing the extensive uniref50 dataset. However, it's worth noting that BioNeMo offers the flexibility to expedite the process by employing pretrained models directly [provided by NVidia](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/clara/containers/bionemo-framework). This alternative approach can significantly streamline your workflow while maintaining the robust capabilities of the BioNeMo framework.
 
 
-#### Clean up
+<CollapsibleContent header={<h3><span>Cleanup</span></h3>}>
+
 Use the provided helper script `cleanup.sh` to tear down EKS cluster and other AWS resources.
 
 ```bash
