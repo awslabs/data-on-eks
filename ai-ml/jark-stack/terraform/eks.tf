@@ -180,7 +180,7 @@ module "eks" {
     #   # The P Series can leverage EFA devices, below we attach EFA interfaces to all of the available slots to the instance
     #   # we assign the host interface device_index=0, and all other interfaces device_index=1
     #   #   p5.48xlarge has 32 network card indexes so the range should be 31, we'll create net interfaces 0-31
-    #   #   p4 instances hav 4 network card indexes so the range should be 4, we'll create Net interfaces 0-3
+    #   #   p4 instances have 4 network card indexes so the range should be 4, we'll create Net interfaces 0-3
     #   network_interfaces = [
     #     for i in range(32) : {
     #       associate_public_ip_address = false
