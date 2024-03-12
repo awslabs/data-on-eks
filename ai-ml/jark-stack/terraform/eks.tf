@@ -149,14 +149,14 @@ module "eks" {
     }
 
     # # This nodegroup can be used for P4/P5 instances with, or without, a Capacity Reservation.
-    # # 
+    # #
     # gpu_p5_node_group = {
     #   name        = "p5-gpu-node-grp"
     #   description = "EKS Node Group to run GPU workloads"
 
     #   ami_type     = "AL2_x86_64_GPU"
 
-    #   instance_types = ["p5.48xlarge"] 
+    #   instance_types = ["p5.48xlarge"]
     #   capacity_type = "ON_DEMAND"
 
     #   # Filtering only Secondary CIDR private subnets starting with "100.".
@@ -178,14 +178,14 @@ module "eks" {
     #   desired_size = 1
 
     #   # The P Series can leverage EFA devices, below we attach EFA interfaces to all of the available slots to the instance
-    #   # we assign the host interface device_index=0, and all other interfaces device_index=1 
+    #   # we assign the host interface device_index=0, and all other interfaces device_index=1
     #   #   p5.48xlarge has 32 network card indexes so the range should be 31, we'll create net interfaces 0-31
     #   #   p4 instances hav 4 network card indexes so the range should be 4, we'll create Net interfaces 0-3
     #   network_interfaces = [
     #     for i in range(32) : {
     #       associate_public_ip_address = false
     #       delete_on_termination       = true
-    #       device_index                = i == 0 ? 0 : 1 
+    #       device_index                = i == 0 ? 0 : 1
     #       network_card_index          = i
     #       interface_type              = "efa"
     #     }

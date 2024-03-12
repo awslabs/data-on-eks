@@ -150,7 +150,7 @@ module "data_addons" {
   #---------------------------------------
   enable_aws_efa_k8s_device_plugin = true
   aws_efa_k8s_device_plugin_helm_config = {
-    values           = [file("${path.module}/helm-values/aws-efa-k8s-device-plugin-values.yaml")]
+    values = [file("${path.module}/helm-values/aws-efa-k8s-device-plugin-values.yaml")]
   }
 
   depends_on = [
