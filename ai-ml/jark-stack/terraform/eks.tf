@@ -114,81 +114,26 @@ module "eks" {
     }
 
     # GPU Nodegroup for JupyterHub Notebook and Ray Service
-    # gpu1 = {
-    #   name        = "gpu-node-grp"
-    #   description = "EKS Node Group to run GPU workloads"
-    #   # Filtering only Secondary CIDR private subnets starting with "100.".
-    #   # Subnet IDs where the nodes/node groups will be provisioned
-    #   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-    #     substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
-    #   )
-
-    #   ami_type     = "AL2_x86_64_GPU"
-    #   min_size     = 1
-    #   max_size     = 1
-    #   desired_size = 1
-
-    #   instance_types = ["g5.12xlarge"]
-
-    #   labels = {
-    #     WorkerType    = "ON_DEMAND"
-    #     NodeGroupType = "gpu"
-    #   }
-
-    #   taints = {
-    #     gpu = {
-    #       key      = "nvidia.com/gpu"
-    #       effect   = "NO_SCHEDULE"
-    #       operator = "EXISTS"
-    #     }
-    #   }
-
-    #   tags = merge(local.tags, {
-    #     Name = "gpu-node-grp"
-    #   })
-    # }
-
-
-    gpu_efa_node_group = {
-      name        = "p5-gpu-node-grp"
+    gpu1 = {
+      name        = "gpu-node-grp"
       description = "EKS Node Group to run GPU workloads"
-
-      ami_type     = "AL2_x86_64_GPU"
-
-      instance_types = ["p5.48xlarge"] 
-      capacity_type = "SPOT"
-
       # Filtering only Secondary CIDR private subnets starting with "100.".
       # Subnet IDs where the nodes/node groups will be provisioned
-      # subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-      #   substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
-      # )
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+      )
 
-      # If you are using a Capacity Reservation, the Subnet for the instances must match AZ for the reservation.
-      subnet_ids = ["subnet-0492507ee1eb58c83"]
-      # capacity_reservation_specification = {
-      #   capacity_reservation_target = {
-      #     capacity_reservation_id = "cr-0614f67c348685538"
-      #   }
-      # }
-
+      ami_type     = "AL2_x86_64_GPU"
       min_size     = 1
       max_size     = 1
       desired_size = 1
 
-      # p5.48xlarge has 32 network card indexes
-      network_interfaces = [
-        for i in range(32) : {
-          associate_public_ip_address = false
-          delete_on_termination       = true
-          device_index                = i == 0 ? 0 : 1
-          network_card_index          = i
-          interface_type              = "efa"
-        }
-      ]
+      instance_types = ["g5.12xlarge"]
 
-      # add `--local-disks raid0` for NVMe auto-mapping: https://github.com/awslabs/amazon-eks-ami/pull/1171
-      bootstrap_extra_args = "--local-disks raid0"
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "gpu"
+      }
 
       taints = {
         gpu = {
@@ -198,15 +143,70 @@ module "eks" {
         }
       }
 
-      labels = {
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "gpu"
-      }
-
       tags = merge(local.tags, {
-        Name = "p5-gpu-node-grp"
+        Name = "gpu-node-grp"
       })
     }
 
+    # # This nodegroup can be used for P4/P5 instances with, or without, a Capacity Reservation.
+    # # 
+    # gpu_p5_node_group = {
+    #   name        = "p5-gpu-node-grp"
+    #   description = "EKS Node Group to run GPU workloads"
+
+    #   ami_type     = "AL2_x86_64_GPU"
+
+    #   instance_types = ["p5.48xlarge"] 
+    #   capacity_type = "ON_DEMAND"
+
+    #   # Filtering only Secondary CIDR private subnets starting with "100.".
+    #   # Subnet IDs where the nodes/node groups will be provisioned
+    #   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+    #     substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+    #   )
+
+    #   # If you are using a Capacity Reservation, the Subnet for the instances must match AZ for the reservation.
+    #   # subnet_ids = ["subnet-01234567890fds"]
+    #   # capacity_reservation_specification = {
+    #   #   capacity_reservation_target = {
+    #   #     capacity_reservation_id = "cr-01234567890fds"
+    #   #   }
+    #   # }
+
+    #   min_size     = 1
+    #   max_size     = 1
+    #   desired_size = 1
+
+    #   # The P Series can leverage EFA devices, below we attach EFA interfaces to all of the available slots to the instance
+    #   # we assign the host interface device_index=0, and all other interfaces device_index=1 
+    #   #   p5.48xlarge has 32 network card indexes so the range should be 31, we'll create net interfaces 0-31
+    #   #   p4 instances hav 4 network card indexes so the range should be 4, we'll create Net interfaces 0-3
+    #   network_interfaces = [
+    #     for i in range(32) : {
+    #       associate_public_ip_address = false
+    #       delete_on_termination       = true
+    #       device_index                = i == 0 ? 0 : 1 
+    #       network_card_index          = i
+    #       interface_type              = "efa"
+    #     }
+    #   ]
+
+    #   # add `--local-disks raid0` to use the NVMe devices underneath the Pods, kubelet, containerd, and logs: https://github.com/awslabs/amazon-eks-ami/pull/1171
+    #   bootstrap_extra_args = "--local-disks raid0"
+    #   taints = {
+    #     gpu = {
+    #       key      = "nvidia.com/gpu"
+    #       effect   = "NO_SCHEDULE"
+    #       operator = "EXISTS"
+    #     }
+    #   }
+    #   labels = {
+    #     WorkerType    = "ON_DEMAND"
+    #     NodeGroupType = "gpu"
+    #   }
+    #   tags = merge(local.tags, {
+    #     Name = "p5-gpu-node-grp"
+    #   })
+    # }
   }
 }
