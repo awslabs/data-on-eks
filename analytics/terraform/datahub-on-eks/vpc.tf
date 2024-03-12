@@ -8,6 +8,8 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 
+  create_vpc = var.create_vpc
+
   name           = local.name
   cidr           = local.vpc_cidr
   azs            = local.azs
@@ -36,43 +38,24 @@ module "vpc" {
   tags = local.tags
 }
 
-module "vpc_endpoints_sg" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 5.0"
-
-  create = var.enable_vpc_endpoints
-
-  name        = "${local.name}-vpc-endpoints"
-  description = "Security group for VPC endpoint access"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress_with_cidr_blocks = [
-    {
-      rule        = "https-443-tcp"
-      description = "VPC CIDR HTTPS"
-      cidr_blocks = join(",", module.vpc.private_subnets_cidr_blocks)
-    },
-  ]
-
-  egress_with_cidr_blocks = [
-    {
-      rule        = "https-443-tcp"
-      description = "All egress HTTPS"
-      cidr_blocks = "0.0.0.0/0"
-    },
-  ]
-
-  tags = local.tags
-}
-
 module "vpc_endpoints" {
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 5.0"
+  version = "~> 5.1"
 
   create = var.enable_vpc_endpoints
 
-  vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
+  vpc_id = module.vpc.vpc_id
+
+  # Security group
+  create_security_group      = true
+  security_group_name_prefix = "${local.name}-vpc-endpoints-"
+  security_group_description = "VPC endpoint security group"
+  security_group_rules = {
+    ingress_https = {
+      description = "HTTPS from VPC"
+      cidr_blocks = [module.vpc.vpc_cidr_block]
+    }
+  }
 
   endpoints = merge({
     s3 = {
