@@ -78,7 +78,7 @@ Update local kubeconfig so we can access kubernetes cluster
 aws eks update-kubeconfig --name bionemo-on-eks #or whatever you used for EKS cluster name
 ```
 
-Since there is no helm chart for Training Operator, we have to manually install the package. If a helm chart gets build by training-operator team, we 
+Since there is no helm chart for Training Operator, we have to manually install the package. If a helm chart gets build by training-operator team, we
 will incorporate it to the terraform-aws-eks-data-addons repository.
 
 Install Kubeflow Training Operator:
@@ -93,9 +93,12 @@ kubectl get nodes
 ```
 :::info
 ```bash
-NAME                                          STATUS   ROLES    AGE   VERSION
-ip-100-64-243-22.us-west-2.compute.internal   Ready    <none>   47h   v1.29.0-eks-5e0fdde
-ip-100-64-70-74.us-west-2.compute.internal    Ready    <none>   47h   v1.29.0-eks-5e0fdde
+NAME                                           STATUS   ROLES    AGE   VERSION
+ip-100-64-180-114.us-west-2.compute.internal   Ready    <none>   17m   v1.29.0-eks-5e0fdde
+ip-100-64-19-70.us-west-2.compute.internal     Ready    <none>   16m   v1.29.0-eks-5e0fdde
+ip-100-64-205-93.us-west-2.compute.internal    Ready    <none>   17m   v1.29.0-eks-5e0fdde
+ip-100-64-235-15.us-west-2.compute.internal    Ready    <none>   16m   v1.29.0-eks-5e0fdde
+ip-100-64-34-75.us-west-2.compute.internal     Ready    <none>   17m   v1.29.0-eks-5e0fdde
 ...
 ```
 :::
@@ -105,6 +108,49 @@ Next, lets verify all the pods are running.
 ```bash
 kubectl get pods -A
 ```
+
+:::info
+```bash
+NAMESPACE              NAME                                                              READY   STATUS    RESTARTS   AGE
+amazon-cloudwatch      aws-cloudwatch-metrics-4g9dm                                      1/1     Running   0          15m
+amazon-cloudwatch      aws-cloudwatch-metrics-4ktjc                                      1/1     Running   0          15m
+amazon-cloudwatch      aws-cloudwatch-metrics-5hj96                                      1/1     Running   0          15m
+amazon-cloudwatch      aws-cloudwatch-metrics-k84p5                                      1/1     Running   0          15m
+amazon-cloudwatch      aws-cloudwatch-metrics-rkt8f                                      1/1     Running   0          15m
+kube-system            aws-node-4pnpr                                                    2/2     Running   0          15m
+kube-system            aws-node-jrksf                                                    2/2     Running   0          15m
+kube-system            aws-node-lv7vn                                                    2/2     Running   0          15m
+kube-system            aws-node-q7cp9                                                    2/2     Running   0          14m
+kube-system            aws-node-zplq5                                                    2/2     Running   0          14m
+kube-system            coredns-86bd649884-8kwn9                                          1/1     Running   0          15m
+kube-system            coredns-86bd649884-bvltg                                          1/1     Running   0          15m
+kube-system            fsx-csi-controller-85d9ddfbff-7hgmn                               4/4     Running   0          16m
+kube-system            fsx-csi-controller-85d9ddfbff-lp28p                               4/4     Running   0          16m
+kube-system            fsx-csi-node-2tfgq                                                3/3     Running   0          16m
+kube-system            fsx-csi-node-jtdd6                                                3/3     Running   0          16m
+kube-system            fsx-csi-node-kj6tz                                                3/3     Running   0          16m
+kube-system            fsx-csi-node-pwp5x                                                3/3     Running   0          16m
+kube-system            fsx-csi-node-rl59r                                                3/3     Running   0          16m
+kube-system            kube-proxy-5nbms                                                  1/1     Running   0          15m
+kube-system            kube-proxy-dzjxz                                                  1/1     Running   0          15m
+kube-system            kube-proxy-j9bnp                                                  1/1     Running   0          15m
+kube-system            kube-proxy-p8xwq                                                  1/1     Running   0          15m
+kube-system            kube-proxy-pgqbb                                                  1/1     Running   0          15m
+kubeflow               training-operator-64c768746c-l5fbq                                1/1     Running   0          24s
+nvidia-device-plugin   neuron-device-plugin-gpu-feature-discovery-g4xx9                  1/1     Running   0          15m
+nvidia-device-plugin   neuron-device-plugin-gpu-feature-discovery-ggwjm                  1/1     Running   0          15m
+nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-master-68bc46c9dbw8   1/1     Running   0          16m
+nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-6b94s          1/1     Running   0          16m
+nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-7jzsn          1/1     Running   0          16m
+nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-kt9fd          1/1     Running   0          16m
+nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-vlpdp          1/1     Running   0          16m
+nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-wwnk6          1/1     Running   0          16m
+nvidia-device-plugin   neuron-device-plugin-nvidia-device-plugin-mslxx                   1/1     Running   0          15m
+nvidia-device-plugin   neuron-device-plugin-nvidia-device-plugin-phw2j                   1/1     Running   0          15m
+...
+```
+:::
+
 Make sure training-operator, nvidia-device-plugin and fsx-csi-controller pods are running and healthy.
 
 </CollapsibleContent>
@@ -121,19 +167,19 @@ The first task, named the `uniref50-job.yaml`, involves downloading and partitio
 To execute this job, navigate to the `examples\training` directory and deploy the `uniref50-job.yaml` manifest using the following commands:
 
 ```bash
-cd training
+cd examples/training
 kubectl apply -f uniref50-job.yaml
 ```
 
 :::info
 
-It's important to note that this task requires a significant amount of time, typically ranging from 50 to 60 hours. 
+It's important to note that this task requires a significant amount of time, typically ranging from 50 to 60 hours.
 
 :::
 
 To verify its progress, examine the logs generated by the corresponding pod:
 
-
+:::info
 ```bash
 kubectl logs uniref50-download-xnz42
 [NeMo I 2024-02-26 23:02:20 preprocess:289] Download and preprocess of UniRef50 data does not currently use GPU. Workstation or CPU-only instance recommended.
@@ -146,12 +192,13 @@ kubectl logs uniref50-download-xnz42
 [NeMo I 2024-02-26 23:16:21 preprocess:319] Writing processed dataset files to /fsx/processed...
 [NeMo I 2024-02-26 23:16:21 preprocess:255] Creating train split...
 ```
+:::
 
 After finishing this task, the processed dataset will be saved in the `/fsx/processed` directory. Once this is done, we can move forward and start the `pre-training` job by running the following command:
 
 Following this, we can proceed to execute the pre-training job by running:
 
-In this PyTorchJob YAML, the command `python3 -m torch.distributed.run` plays a crucial role in orchestrating **distributed training** across multiple worker pods in your Kubernetes cluster. 
+In this PyTorchJob YAML, the command `python3 -m torch.distributed.run` plays a crucial role in orchestrating **distributed training** across multiple worker pods in your Kubernetes cluster.
 
 It handles the following tasks:
 
@@ -161,24 +208,58 @@ It handles the following tasks:
 
 
 ```bash
-cd training
+cd examples/training
 kubectl apply -f esm1nv_pretrain-job.yaml
 ```
 
+After that we can check our pods:
+
+```bash
+kubectl get pods
+```
+
+:::info
+```bash
+NAME                           READY   STATUS    RESTARTS   AGE
+esm1nv-pretraining-worker-0    1/1     Running   0          13m
+esm1nv-pretraining-worker-1    1/1     Running   0          13m
+esm1nv-pretraining-worker-10   1/1     Running   0          13m
+esm1nv-pretraining-worker-11   1/1     Running   0          13m
+esm1nv-pretraining-worker-12   1/1     Running   0          13m
+esm1nv-pretraining-worker-13   1/1     Running   0          13m
+esm1nv-pretraining-worker-14   1/1     Running   0          13m
+esm1nv-pretraining-worker-15   1/1     Running   0          13m
+esm1nv-pretraining-worker-2    1/1     Running   0          13m
+esm1nv-pretraining-worker-3    1/1     Running   0          13m
+esm1nv-pretraining-worker-4    1/1     Running   0          13m
+esm1nv-pretraining-worker-5    1/1     Running   0          13m
+esm1nv-pretraining-worker-6    1/1     Running   0          13m
+esm1nv-pretraining-worker-7    1/1     Running   0          13m
+esm1nv-pretraining-worker-8    1/1     Running   0          13m
+esm1nv-pretraining-worker-9    1/1     Running   0          13m
+```
+:::
+
+We should see 16 pods running. We chose p3.16xlarge instances and each instance has 8 GPUs. In the pod definition we specified each job will leverage 1 gpu.
+Since we set up "nprocPerNode" to "8", each node will be responsible for 8 jobs. Since we have 2 nodes, total of 16 pods will start. For more details around distributed pytorch training see [pytorch docs](https://pytorch.org/docs/stable/distributed.html).
+
 This configuration utilizes Kubeflow's PyTorch training Custom Resource Definition (CRD). Within this manifest, various parameters are available for customization. For detailed insights into each parameter and guidance on fine-tuning, you can refer to [BioNeMo's documentation](https://docs.nvidia.com/bionemo-framework/latest/notebooks/model_training_esm1nv.html).
 
-According to the Training Operator's documentation, the primary process is labeled as `...worker-0`. 
+According to the Training Operator's documentation, the primary process is labeled as `...worker-0`.
 
 To track the progress of this process, follow these steps:
 
+:::info
 ```bash
 kubectl logs esm1nv-pretraining-worker-0
 
 Epoch 0:   7%|▋         | 73017/1017679 [00:38<08:12, 1918.0%
 ```
+:::
 
 Additionally, for comprehensive monitoring, you have the option to connect to your nodes through the EC2 console using Session Manager. Execute the command nvidia-smi to ensure optimal GPU utilization across all resources.
 
+:::info
 ```bash
 sh-4.2$ nvidia-smi
 Thu Mar  7 16:31:01 2024
@@ -237,6 +318,7 @@ Thu Mar  7 16:31:01 2024
 |    7   N/A  N/A   1552276      C   /usr/bin/python3                           3082MiB |
 +---------------------------------------------------------------------------------------+
 ```
+:::
 
 #### Benefits of Distributed Training:
 
