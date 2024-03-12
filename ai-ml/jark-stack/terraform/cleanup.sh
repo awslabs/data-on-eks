@@ -7,7 +7,7 @@ echo "Destroying RayService..."
 
 # Delete the Ingress/SVC before removing the addons
 TMPFILE=$(mktemp)
-terraform -chdir=$SCRIPTDIR output -raw configure_kubectl > "$TMPFILE"
+terraform output -raw configure_kubectl > "$TMPFILE"
 # check if TMPFILE contains the string "No outputs found"
 if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
   echo "No outputs found, skipping kubectl delete"

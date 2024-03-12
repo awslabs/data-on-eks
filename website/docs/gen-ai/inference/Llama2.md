@@ -154,7 +154,7 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 **Deploy RayServe Cluster**
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/ray-serve/llama2-inf2
+cd ai-ml/trainium-inferentia/examples/inference/ray-serve/llama2-inf2
 kubectl apply -f ray-service-llama2.yaml
 ```
 

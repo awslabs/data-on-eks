@@ -251,7 +251,7 @@ global:
       #   secretKey: postgres-password
 
   datahub:
-    version: v0.10.4
+    version: v0.12.0
 
     systemUpdate:
       enabled: true
@@ -277,7 +277,7 @@ global:
 
     managed_ingestion:
       enabled: true
-      defaultCliVersion: "0.10.4"
+      defaultCliVersion: "0.12.0"
 
     metadata_service_authentication:
       enabled: true

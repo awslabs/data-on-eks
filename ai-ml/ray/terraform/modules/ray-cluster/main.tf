@@ -20,7 +20,7 @@ resource "kubectl_manifest" "karpenter_provisioner" {
         {
           key      = "karpenter.sh/capacity-type"
           operator = "In"
-          values   = ["spot"]
+          values   = ["on-demand"]
         }
       ]
       limits = {
