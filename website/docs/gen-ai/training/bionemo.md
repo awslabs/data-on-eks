@@ -261,7 +261,7 @@ kubectl logs esm1nv-pretraining-worker-0
 Epoch 0:   7%|▋         | 73017/1017679 [00:38<08:12, 1918.0%
 ```
 
-Additionaly, to monitor the usage of the GPUs, you have the option to connect to your nodes through the EC2 console using Session Manager and run `nvidia-smi` command. If you want to have a more robust observability, you can refer to the [DCGM Exporter](https://docs.nvidia.com/datacenter/cloud-native/gpu-telemetry/latest/dcgm-exporter.html).
+Additionally, to monitor the usage of the GPUs, you have the option to connect to your nodes through the EC2 console using Session Manager and run `nvidia-smi` command. If you want to have a more robust observability, you can refer to the [DCGM Exporter](https://docs.nvidia.com/datacenter/cloud-native/gpu-telemetry/latest/dcgm-exporter.html).
 
 
 ```bash
