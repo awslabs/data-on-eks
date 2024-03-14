@@ -22,11 +22,17 @@ In this blueprint, we will deploy Apache Pinot on Kubernetes cluster managed by 
 - No single point of failure
 - Auto recovery
 
-> Note: All Apache Pinot components run on `StatefulSet` including **Zookeeper**
+## Architecture
 
-> Note: This blueprint doesn't leverage [DeepStore](https://docs.pinot.apache.org/basics/components/table/segment/deep-store) currently and uses EBS volumes to store table segments.
+![Apache Pinot on EKS](./img/pinot-on-eks.png)
 
-> Note: Based on your use case, you will need to update the cluster size and configuration to better handle your use case. You can read more about Apache Pinot capacity planning [here](https://startree.ai/blog/capacity-planning-in-apache-pinot-part-1) and [here](https://startree.ai/blog/capacity-planning-in-apache-pinot-part-2).
+In this setup we deploy all Apache Pinot components in private subnets across 3 availability zones. This allows for greater flexibility and resilience. Most pinot components can run on latest generation general purpose compute instances (`m7i`) except for server component which requires memory optimized instance types (`r7i`). We also setup internal NLB to easily communicate with Controller and Broker components.
+
+> Note: All Apache Pinot components run on `StatefulSet`.
+
+> Note: This blueprint doesn't leverage [DeepStore](https://docs.pinot.apache.org/basics/components/table/segment/deep-store) currently and uses EBS volumes to store table segments on server.
+
+> Note: Based on your use case, you will need to update the cluster size and configuration to better suite your use case. You can read more about Apache Pinot capacity planning [here](https://startree.ai/blog/capacity-planning-in-apache-pinot-part-1) and [here](https://startree.ai/blog/capacity-planning-in-apache-pinot-part-2).
 
 ## Prerequisites 📝
 
