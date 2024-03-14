@@ -1,0 +1,19 @@
+auth:
+  sasl:
+    enabled: true
+    secretRef: redpanda-superusers
+    users:
+      - name: ${redpanda_username}
+        password: "${redpanda_password}"
+
+storage:
+  persistentVolume:
+    enabled: true
+    size: 20Gi
+    storageClass: ${storage_class}
+    labels: {}
+    annotations: {}
+
+
+external:
+    domain: ${redpanda_domain}
