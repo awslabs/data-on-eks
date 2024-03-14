@@ -2,7 +2,7 @@
 sidebar_position: 2
 sidebar_label: Apache Pinot
 ---
-# Deploying Apache Pinot (🍷) on EKS (Experimental)
+# Deploying Apache Pinot (🍷) on EKS
 
 [Apache Pinot](https://pinot.apache.org/) is real-time distributed OLAP datastore, purpose built for low-latency and high-throughput analytics. You can use pinot to ingest and immediately query data from streaming or batch data sources e.g. Apache Kafka, Amazon Kinesis Data Streams, Amazon S3, etc).
 
@@ -24,9 +24,9 @@ In this blueprint, we will deploy Apache Pinot on Kubernetes cluster managed by 
 
 > Note: All Apache Pinot components run on `StatefulSet` including **Zookeeper**
 
-> Note: This blueprint doesn't leverage [DeepStore](#link) currently and uses EBS volumes to store table segments.
+> Note: This blueprint doesn't leverage [DeepStore](https://docs.pinot.apache.org/basics/components/table/segment/deep-store) currently and uses EBS volumes to store table segments.
 
-> Future: Currently all Apache Pinot components run on m5.xlarge nodes that are provisioned as part of node groups. In future, we would leverage separate node groups for each components so that we can provide each Apache Pinot component specialized underlying hardware that improves overall performance of Apache Pinot.
+> Note: Based on your use case, you will need to update the cluster size and configuration to better handle your use case. You can read more about Apache Pinot capacity planning [here](https://startree.ai/blog/capacity-planning-in-apache-pinot-part-1) and [here](https://startree.ai/blog/capacity-planning-in-apache-pinot-part-2).
 
 ## Prerequisites 📝
 
@@ -60,6 +60,12 @@ name                = "pinot-on-eks"
 region              = "us-west-2"
 eks_cluster_version = "1.25"
 ...
+```
+
+Once you have updated your variables, you can run the install script to deploy your pre-configured EKS cluster with Apache Pinot.
+
+```
+./install.sh
 ```
 
 ### Verify Deployment
@@ -231,6 +237,11 @@ Use the command mentioned above to create **Kafka Client** pod within your names
 
 ```bash
 kubectl run pinot-kafka-client --restart='Never' --image docker.io/bitnami/kafka:3.6.0-debian-11-r0 --namespace pinot --command -- sleep infinity
+```
+
+and then attach to the container shell
+
+```bash
 kubectl exec --tty -i pinot-kafka-client --namespace pinot -- bash
 ```
 
@@ -242,13 +253,19 @@ kafka-topics.sh --bootstrap-server pinot-kafka-controller-0.pinot-kafka-controll
 kafka-topics.sh --bootstrap-server pinot-kafka-controller-0.pinot-kafka-controller-headless.pinot.svc.cluster.local:9092 --topic flights-realtime-avro --create --partitions 1 --replication-factor 1
 ```
 
+and then `exit` from the container shell
+
+```bash
+exit
+```
+
 Use provided `example/pinot-realtime-quickstart.yml` to create tables and publish sample data to the above topics, which will then get ingested into tables.
 
 ```bash
 kubectl apply -f example/pinot-realtime-quickstart.yml
 ```
 
-Now, let navigate back to **Query Console** and then click one of the tables. You should be able to see the newly created tables and data coming into tables.
+Now, let's navigate back to **Query Console** and then click one of the tables. You should be able to see the newly created tables and data coming into tables.
 ```bash
 kubectl port-forward service/pinot-controller 9000:9000 -n pinot
 ```
