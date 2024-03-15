@@ -1,0 +1,5 @@
+{
+            'event_time': datetime.datetime.now().isoformat(),
+            'ticker': 'MSFT',
+            'price': round(random.random() * 100, 2)
+}
