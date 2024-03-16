@@ -145,6 +145,14 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_kuberay_operator = true
 
+  #---------------------------------------
+  # EFA Device Plugin Add-on
+  #---------------------------------------
+  enable_aws_efa_k8s_device_plugin = true
+  aws_efa_k8s_device_plugin_helm_config = {
+    values = [file("${path.module}/helm-values/aws-efa-k8s-device-plugin-values.yaml")]
+  }
+
   depends_on = [
     kubernetes_secret_v1.huggingface_token,
     kubernetes_config_map_v1.notebook
