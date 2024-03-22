@@ -50,7 +50,7 @@ module "eks_blueprints_addons" {
   enable_aws_efs_csi_driver = true
 
   #---------------------------------------
-  # CAUTION: This blueprint creates a PUBIC facing load balancer to show the Airflow Web UI for demos.
+  # CAUTION: This blueprint creates a PUBLIC facing load balancer to show the Airflow Web UI for demos.
   # Please change this to a private load balancer if you are using this in production.
   #---------------------------------------
   enable_aws_load_balancer_controller = true
