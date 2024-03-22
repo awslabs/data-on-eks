@@ -282,6 +282,10 @@ module "eks_data_addons" {
   enable_nvidia_gpu_operator = true
   nvidia_gpu_operator_helm_config = {
     values = [templatefile("${path.module}/helm/nvidia-gpu-operator/values.yaml", {})]
+    set = [{
+      name  = "toolkit.version",
+      value = "v1.14.6-ubi8",
+    }]
   }
 
   #---------------------------------------------------------------
