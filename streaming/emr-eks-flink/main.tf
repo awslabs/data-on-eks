@@ -196,13 +196,6 @@ resource "helm_release" "flink_kubernetes_operator" {
   repository = "oci://public.ecr.aws/emr-on-eks"
   chart      = "flink-kubernetes-operator"
   namespace  = "${local.flink_team}-ns"
-
-  # set service account
-  set {
-    name  = "serviceAccount.name"
-    value = "${local.flink_team}-sa"
-  }
-
   set {
     name  = "watchNamespace"
     value = "${local.flink_team}-ns"
