@@ -1,18 +1,32 @@
-#import aws provider
 provider "aws" {
-  region = "us-west-2"
+  region = local.region
 }
+
+# ECR always authenticates with `us-east-1` region
+# Docs -> https://docs.aws.amazon.com/AmazonECR/latest/public/public-registries.html
 provider "aws" {
   alias  = "ecr"
   region = "us-east-1"
 }
-provider "kubernetes" {
-  config_path = "~/.kube/config"
 
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.this.token
 }
 
 provider "helm" {
   kubernetes {
-    config_path = "~/.kube/config"
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    token                  = data.aws_eks_cluster_auth.this.token
   }
+}
+
+provider "kubectl" {
+  apply_retry_count      = 30
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  load_config_file       = false
+  token                  = data.aws_eks_cluster_auth.this.token
 }

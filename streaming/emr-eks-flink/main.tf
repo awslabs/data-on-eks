@@ -184,7 +184,6 @@ resource "aws_emrcontainers_virtual_cluster" "emr_eks_flink_cluster" {
     }
   }
 
-
   name = "emr-eks-flink-cluster"
 }
 
@@ -198,53 +197,29 @@ resource "helm_release" "flink_kubernetes_operator" {
   chart      = "flink-kubernetes-operator"
   namespace  = "${local.flink_team}-ns"
 
-
-
-  set {
-    name  = "watchNamespace"
-    value = "${local.flink_team}-ns"
-  }
-
+  # set service account
   set {
     name  = "serviceAccount.name"
     value = "${local.flink_team}-sa"
   }
 
   set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = module.flink_irsa.iam_role_arn
+    name  = "watchNamespace"
+    value = "${local.flink_team}-ns"
   }
+
 
   set {
     name  = "env.AWS_REGION"
     value = var.region
   }
 
-  set {
-    name  = "env.EMR_VIRTUAL_CLUSTER_ID"
-    value = aws_emrcontainers_virtual_cluster.emr_eks_flink_cluster.id
-  }
 
-  set {
-    name  = "env.JOB_MANAGER_IAM_ROLE"
-    value = module.flink_irsa.iam_role_arn
-  }
-
-  set {
-    name  = "env.TASK_MANAGER_IAM_ROLE"
-    value = module.flink_irsa.iam_role_arn
-  }
   # set the version
   set {
     name  = "image.tag"
-    value = "1.12.0"
-  }
-  # set the emr release version
-  set {
-    name  = "env.VERSION"
     value = "7.0.0"
   }
-  
 
   # set prometheus metrics
   set {
@@ -259,15 +234,3 @@ resource "helm_release" "flink_kubernetes_operator" {
   }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-

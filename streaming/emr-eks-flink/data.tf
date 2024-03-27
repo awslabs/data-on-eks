@@ -1,3 +1,4 @@
+
 data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
 }
@@ -8,11 +9,11 @@ data "aws_ecrpublic_authorization_token" "token" {
 
 data "aws_availability_zones" "available" {}
 
-data "aws_region" "current" {}
+
 
 data "aws_caller_identity" "current" {}
 
-data "aws_partition" "current" {}
+
 
 # This data source can be used to get the latest AMI for Managed Node Groups
 data "aws_ami" "x86" {
@@ -25,26 +26,6 @@ data "aws_ami" "x86" {
   }
 }
 
-#---------------------------------------------------------------
-# IAM policy for FluentBit
-#---------------------------------------------------------------
-data "aws_iam_policy_document" "fluent_bit" {
-  statement {
-    sid       = ""
-    effect    = "Allow"
-    resources = ["*"]
-
-    actions = [
-      "s3:ListBucket",
-      "s3:PutObject",
-      "s3:PutObjectAcl",
-      "s3:GetObject",
-      "s3:GetObjectAcl",
-      "s3:DeleteObject",
-      "s3:DeleteObjectVersion"
-    ]
-  }
-}
 
 #---------------------------------------------------------------
 # Example IAM policy for Flink job execution
