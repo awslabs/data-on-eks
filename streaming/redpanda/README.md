@@ -6,7 +6,7 @@ This guide also has the following prerequisites for setting up and deploying Red
 * AWS-CLI
 * Kubectl
 * Helm
-* jq 
+* jq
 
 ****
 
@@ -16,14 +16,14 @@ Terraform is an infrastructure as code tool that enables you to safely and predi
 
 https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
 
-**** 
+****
 
 ## AWS-CLI
 ****
-AWS-CLI is a command line tool for managing AWS resources, install the latest version. 
+AWS-CLI is a command line tool for managing AWS resources, install the latest version.
 
 https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-**** 
+****
 
 ## Kubectl
 
@@ -31,7 +31,7 @@ Kubectl is a command line tool that is used to communicate with the Kubernetes A
 
 https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 
-**** 
+****
 
 ## Helm
 
@@ -39,7 +39,7 @@ Helm is used as the Kubernetes package manager for deploying Redpanda. Install t
 
 https://helm.sh/docs/intro/install/
 
-**** 
+****
 
 Provider Versions Tested
 | Provider     | Version |
@@ -55,8 +55,8 @@ The Redpanda deployment documentation was used extensively in the creation of th
 https://docs.redpanda.com/current/deploy/deployment-option/self-hosted/kubernetes/eks-guide/
 
 In setting up and configuring our Redpanda cluster in AWS, we are using an Amazon EKS cluster as described in the guide linked above.
- 
-We will use Terraform to deploy our AWS Resources (VPC, EKS, EKS add-ons) and our Redpanda Cluster, clone the files from Git. 
+
+We will use Terraform to deploy our AWS Resources (VPC, EKS, EKS add-ons) and our Redpanda Cluster, clone the files from Git.
 
 
 To stand up the Amazon EKS Cluster and Infrastrucuture, run Terraform init, plan and apply.
@@ -86,7 +86,7 @@ In order to allow our Lambda function to communicate with the cluster, we will n
 * Get our superuser password from AWS Secrets Manager and Setup Environment Variables
 
 
-We will dive deeper on these steps in the following sections. 
+We will dive deeper on these steps in the following sections.
 
 ## 1/ Export the Certificate and Store into AWS Secrets Manager
 
@@ -118,7 +118,7 @@ REGUSER="redpanda-twitch-account"
 REGPASS="changethispassword"
 
 ```
- 
+
 ## Creating a User
 
 Now that we have set up and deployed the Redpanda cluster, we will need to create a user.  To create the user, determine a username and password you would like to use, and use the following command to create the user:
@@ -142,7 +142,7 @@ Save the user name and password in a separate text file for later when SAM is us
 Next, we will use the superuser to grant the newly created user permission to execute all operations for a topic called twitch-chat. Feel free to use the topic name of your choice:
 
 ```
-kubectl exec --namespace repanda -c redpanda redpanda-0 -- \
+kubectl exec --namespace redpanda -c redpanda redpanda-0 -- \
   rpk acl create --allow-principal User:$REGUSER \
   --operation all \
   --topic twitch-chat \
@@ -157,7 +157,7 @@ User:redpanda-twitch-account  *     TOPIC          twitch-chat    LITERAL       
 ```
 
 In the following steps, we are going to use the newly created user account to create the topic, produce messages to the topic, and consumer messages to the topic.
- 
+
 First, we will create an alias to simplify the usage of the rpk commands that will be used to work with the Redpanda deployment.  Use the following command to configure the alias:
 
 ```
@@ -192,7 +192,7 @@ internal-rpk topic produce twitch-chat
 ```
 
 Type in some text and press enter to publish the message.  After publishing several messages, use ctrl+C to end the publishing command.
- 
+
 The output should look something like the following:
 
 ```
@@ -246,7 +246,7 @@ Once you are able to access the Redpanda Console, you can view information about
 
 ## Expand the Permissions for the Created Redpanda Account
 
-Now that the cluster is configured, we need to expand the permissions of the account that we created so that this account can be used to configure the AWS Lambda trigger. The account needs permissions such as creating new consumer groups. 
+Now that the cluster is configured, we need to expand the permissions of the account that we created so that this account can be used to configure the AWS Lambda trigger. The account needs permissions such as creating new consumer groups.
 
 Steps:
 
@@ -258,7 +258,7 @@ Steps:
 
 
 ## Collecting Information Before Using SAM
- 
+
 We need to collect a few pieces of information before deploying our template.
 
 * The VPC ID of the VPC created by eksctl.
