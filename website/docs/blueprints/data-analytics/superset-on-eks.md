@@ -25,7 +25,7 @@ The blueprint performs the following to deploy Superset on EKS:
 
 - Create a new VPC with public and private subnets
 - Provision an EKS cluster control plane and managed worker nodes
-- Ceate an Amazon EBS file system and access point
+- Create an Amazon EBS file system and access point
 - Build Docker images and push to Amazon ECR
 - Install Superset and services on EKS via Helm chart
 - Expose Superset UI through a load balancer
@@ -59,18 +59,18 @@ Navigate into one of the example directories and run `install.sh` script
 ```bash
 cd data-on-eks/analytics/terraform/superset-on-eks
 chmod +x install.sh
-./install.sh 
+./install.sh
 ```
 or simply
 ```bash
-terraform init 
+terraform init
 terraform apply --auto-approve
 ```
 
 
 ### Verify Deployment
 
-After the deployment completes, we can access the Superset UI .  For demo purpose, this blueprint creates the Ingress object for the Superset FrontEnd UI with public LoadBalancer. 
+After the deployment completes, we can access the Superset UI .  For demo purpose, this blueprint creates the Ingress object for the Superset FrontEnd UI with public LoadBalancer.
 
 
 You may find the URL to the Superset frontend from the output superset_url, or by running kubectl command below:

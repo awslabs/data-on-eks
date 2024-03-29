@@ -58,52 +58,13 @@ resource "kubernetes_service_account" "service_account" {
 }
 
 
-resource "helm_release" "alb_controller" {
-  name       = "aws-load-balancer-controller"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  namespace  = "kube-system"
-  depends_on = [
-    kubernetes_service_account.service_account
-  ]
-
-  set {
-    name  = "region"
-    value = var.region
-  }
-
-  set {
-    name  = "vpcId"
-    value = module.vpc.vpc_id
-  }
-
-  set {
-    name  = "image.repository"
-    value = "602401143452.dkr.ecr.${var.region}.amazonaws.com/amazon/aws-load-balancer-controller"
-  }
-
-  set {
-    name  = "serviceAccount.create"
-    value = "false"
-  }
-
-  set {
-    name  = "serviceAccount.name"
-    value = "aws-load-balancer-controller"
-  }
-
-  set {
-    name  = "clusterName"
-    value = var.name
-  }
-}
 
 resource "kubernetes_ingress_v1" "superset" {
   metadata {
     name      = "superset-ingress3"
     namespace = "superset"
     annotations = {
-      "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
+      "alb.ingress.kubernetes.io/scheme"      = "internal-facing"
       "alb.ingress.kubernetes.io/target-type" = "ip"
     }
   }
@@ -142,10 +103,10 @@ module "eks_blueprints_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
-    aws-ebs-csi-driver = {
-      most_recent              = true
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
+    # aws-ebs-csi-driver = {
+    #   most_recent              = true
+    #   service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    # }
     coredns = {
       preserve = true
     }
@@ -157,7 +118,8 @@ module "eks_blueprints_addons" {
     }
   }
   enable_aws_load_balancer_controller = true
-
-
+  aws_load_balancer_controller = {
+    chart_version = "1.5.4"
+  }
   tags = local.tags
 }

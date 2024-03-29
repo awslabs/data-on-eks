@@ -10,8 +10,28 @@ locals {
   }
 }
 
+terraform {
+  required_version = "~> 1.3.0"
 
-
+  required_providers {
+    null = {
+      source  = "hashicorp/null"
+      version = "3.1.1"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "2.5.1"
+    }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.11.0"
+    }
+  }
+}
 #---------------------------------------------------------------
 # EKS Cluster
 #---------------------------------------------------------------
@@ -163,41 +183,3 @@ resource "helm_release" "superset" {
 
   ]
 }
-
-
-
-# # Allow traffic from ALB to worker nodes
-# resource "aws_security_group_rule" "allow_alb" {
-#   type                     = "ingress"
-#   from_port                = 8088
-#   to_port                  = 8088
-#   protocol                 = "tcp"
-#   security_group_id        = aws_eks_cluster.eks.worker_security_group_id
-#   source_security_group_id = aws_security_group.alb.id
-# }
-
-# # Allow traffic from worker nodes to pods
-# resource "aws_security_group_rule" "allow_workers_to_pods" {
-#   type                     = "egress"
-#   from_port                = 8088
-#   to_port                  = 8088
-#   protocol                 = "tcp"
-#   security_group_id        = aws_eks_cluster.eks.worker_security_group_id
-#   source_security_group_id = aws_eks_cluster.eks.worker_security_group_id
-# }
-
-# Allow pod ingress from ALB
-# resource "kubernetes_network_policy" "allow_alb" {
-#   metadata {
-#     name = "allow-alb"
-#   }
-
-#   spec {
-#     pod_selector {}
-#     ingress {
-#       from {
-#         security_group = aws_security_group.alb.id
-#       }
-#     }
-#   }
-# }
