@@ -321,9 +321,6 @@ module "eks_data_addons" {
           - provisionerType: Karpenter
           - hub.jupyter.org/node-purpose: user
         taints:
-          - key: aws.amazon.com/neuroncore
-            value: "true"
-            effect: "NoSchedule"
           - key: aws.amazon.com/neuron
             value: "true"
             effect: "NoSchedule"

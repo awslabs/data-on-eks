@@ -114,9 +114,6 @@ spec:
             instanceType: inferentia-inf2
             provisionerType: Karpenter
           tolerations:
-          - key: "aws.amazon.com/neuroncore"
-            operator: "Exists"
-            effect: "NoSchedule"
           - key: "aws.amazon.com/neuron"
             operator: "Exists"
             effect: "NoSchedule"
