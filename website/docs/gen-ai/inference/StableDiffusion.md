@@ -262,16 +262,14 @@ Whether you're building text-to-image generators, image-to-image generators or a
 ## Cleanup
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.
 
-**Step1:** Cancel the execution of the `python gradio-app-stablediffusion.py`
-
-**Step2:** Delete Ray Cluster
+**Step1:** Delete Ray Cluster
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/ray-serve/stable-diffusion-inf2
+cd ai-ml/trainium-inferentia/examples/inference/ray-serve/stable-diffusion-inf2
 kubectl delete -f ray-service-stablediffusion.yaml
 ```
 
-**Step3:** Cleanup the EKS Cluster
+**Step2:** Cleanup the EKS Cluster
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
