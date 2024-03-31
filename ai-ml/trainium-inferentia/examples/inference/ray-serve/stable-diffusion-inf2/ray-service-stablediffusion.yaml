@@ -51,7 +51,7 @@ spec:
         spec:
           containers:
           - name: ray-head
-            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:v1.0
+            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:v2.0
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
