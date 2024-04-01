@@ -472,21 +472,30 @@ kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
 
 <CollapsibleContent header={<h2><span>Example for TPCDS Benchmark test</span></h2>}>
 
-Check the pre-requisites in yaml file before running this job.
+Be sure that the S3_BUCKET variable is set in the terminal session. If it is
+not, see the Deployment documentation above.
+
+```bash
+if [ -z "$S3_BUCKET" ] ; then
+  printf "\nS3_BUCKET is NOT set."
+else
+  printf "\nS3_BUCKET is set, rock on."
+fi
+```
+
+If S3_HOME is set we can proceed into our example.
 
 ```bash
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
 ```
 
-Step1: Benchmark test data generation
-
 ```bash
-kubectl apply -f tpcds-benchmark-data-generation-1t
+kubectl apply -f tpcds-benchmark-data-generation-3t.yaml
 ```
 Step2: Execute Benchmark test
 
 ```bash
-kubectl apply -f tpcds-benchmark-1t.yaml
+kubectl apply -f tpcds-benchmark-3t.yaml
 ```
 </CollapsibleContent>
 
