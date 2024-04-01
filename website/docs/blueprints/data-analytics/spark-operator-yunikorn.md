@@ -275,6 +275,15 @@ chmod +x install.sh
 ./install.sh
 ```
 
+Now create an S3_BUCKET variable that holds the name of the bucket created
+during the install. This bucket will be used in later examples to store output
+data. If S3_BUCKET is ever unset, you can run the following commands again.
+
+```bash
+export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
+echo $S3_BUCKET
+```
+
 </CollapsibleContent>
 
 <CollapsibleContent header={<h2><span>Execute Sample Spark job with Karpenter</span></h2>}>
@@ -303,16 +312,31 @@ Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Execu
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
 ```
 
-Update the variables in Shell script and execute
+Run the *taxi-trip-execute.sh* script with the following input. You will use the S3_BUCKET variable created earlier. Additionally, you must change YOUR_REGION_HERE with the region of your choice, *us-west-2* for example.
+
+This script will download some example taxi trip data and create duplicates of
+it in order to increase the size a bit. This will take a bit of time and will
+require a relatively fast internet connection.
 
 ```bash
-./taxi-trip-execute.sh
+./taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
 ```
 
-Update YAML file and run the below command
+Once our sample data is uploaded you can run the Spark job. You will need to
+replace the *<S3_BUCKET>* placeholders in this file with the name of the bucket
+created earlier. You can get that value by running `echo $S3_BUCKET`.
+
+To do this automatically you can run the following, which will create a .old
+backup file and do the rename for you.
 
 ```bash
-  kubectl apply -f nvme-ephemeral-storage.yaml
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-ephemeral-storage.yaml
+```
+
+Now that the bucket name is in place you can create the Spark job.
+
+```bash
+kubectl apply -f nvme-ephemeral-storage.yaml
 ```
 
 ## EBS Dynamic PVC for shuffle storage
