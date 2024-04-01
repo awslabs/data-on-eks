@@ -260,12 +260,14 @@ Clone the repository
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
+cd data-on-eks
+export DOEKS_HOME=$(pwd)
 ```
 
 Navigate into one of the example directories and run `install.sh` script
 
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
 chmod +x install.sh
 ./install.sh
 ```
@@ -277,7 +279,7 @@ chmod +x install.sh
 Navigate to example directory and submit the Spark job.
 
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/karpenter
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter
 kubectl apply -f pyspark-pi-job.yaml
 ```
 
@@ -295,7 +297,7 @@ You can try the following examples to leverage multiple Karpenter Nodepools, EBS
 Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
+  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
 ```
 
 Update the variables in Shell script and execute
@@ -314,7 +316,7 @@ Update YAML file and run the below command
 Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc/
+  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc/
 ```
 
 Update the variables in Shell script and execute
@@ -355,7 +357,7 @@ Update YAML file and run the below command
 Navigate to example directory and submit the Spark job.
 
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler
 kubectl apply -f pyspark-pi-job.yaml
 ```
 
