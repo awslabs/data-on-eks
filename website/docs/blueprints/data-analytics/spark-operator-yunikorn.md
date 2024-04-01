@@ -300,13 +300,13 @@ You can try the following examples to leverage multiple Karpenter Nodepools, EBS
 Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
 ```
 
 Update the variables in Shell script and execute
 
 ```bash
-  ./taxi-trip-execute.sh
+./taxi-trip-execute.sh
 ```
 
 Update YAML file and run the below command
@@ -319,38 +319,38 @@ Update YAML file and run the below command
 Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
 
 ```bash
-  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc/
 ```
 
 Update the variables in Shell script and execute
 
 ```bash
-  ./taxi-trip-execute.sh
+./taxi-trip-execute.sh
 ```
 
 Update YAML file and run the below command
 
 ```bash
-  kubectl apply -f ebs-storage-dynamic-pvc.yaml
+kubectl apply -f ebs-storage-dynamic-pvc.yaml
 ```
 
 ## Apache YuniKorn Gang Scheduling with NVMe based SSD disk for shuffle storage
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
-  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
 ```
 
 Update the variables in Shell script and execute
 
 ```bash
-  ./taxi-trip-execute.sh
+./taxi-trip-execute.sh
 ```
 
 Update YAML file and run the below command
 
 ```bash
-  kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
+kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
 </CollapsibleContent>
@@ -376,57 +376,57 @@ kubectl get pods -n spark-team-a -w
 Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
 ```
 
 Update the variables in Shell script and execute
 
 ```bash
-  ./taxi-trip-execute.sh
+./taxi-trip-execute.sh
 ```
 
 Update YAML file and run the below command
 
 ```bash
-  kubectl apply -f nvme-ephemeral-storage.yaml
+kubectl apply -f nvme-ephemeral-storage.yaml
 ```
 
 ## EBS Dynamic PVC for shuffle storage
 Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
 
 ```bash
-  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
 ```
 
 Update the variables in Shell script and execute
 
 ```bash
-  ./taxi-trip-execute.sh
+./taxi-trip-execute.sh
 ```
 
 Update YAML file and run the below command
 
 ```bash
-  kubectl apply -f ebs-storage-dynamic-pvc.yaml
+kubectl apply -f ebs-storage-dynamic-pvc.yaml
 ```
 
 ## Apache YuniKorn Gang Scheduling with NVMe based SSD disk for shuffle storage
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
-  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
 ```
 
 Update the variables in Shell script and execute
 
 ```bash
-  ./taxi-trip-execute.sh
+./taxi-trip-execute.sh
 ```
 
 Update YAML file and run the below command
 
 ```bash
-  kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
+kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
 </CollapsibleContent>
@@ -447,7 +447,7 @@ kubectl apply -f tpcds-benchmark-data-generation-1t
 Step2: Execute Benchmark test
 
 ```bash
-  kubectl apply -f tpcds-benchmark-1t.yaml
+kubectl apply -f tpcds-benchmark-1t.yaml
 ```
 </CollapsibleContent>
 
