@@ -145,7 +145,7 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.5.1"
 
-  name = "vpc-emr-flink-eks"
+  name = local.name
 
   cidr = "10.0.0.0/16"
   azs  = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -170,43 +170,30 @@ module "vpc" {
 
 
 
-# create a virtual cluster in the eks cluster
-resource "aws_emrcontainers_virtual_cluster" "emr_eks_flink_cluster" {
-
-  container_provider {
-    id   = module.eks.cluster_name
-    type = "EKS"
-
-    info {
-      eks_info {
-        namespace = "${local.flink_team}-ns"
-      }
-    }
-  }
-
-  name = "emr-eks-flink-cluster"
-}
-
-
 
 # deploy a helm chart for flink-kubernetes-operator
 resource "helm_release" "flink_kubernetes_operator" {
-  depends_on = [module.flink_irsa]
-  name       = "flink-kubernetes-operator"
-  repository = "oci://public.ecr.aws/emr-on-eks"
-  chart      = "flink-kubernetes-operator"
-  namespace  = "${local.flink_team}-ns"
+
+  depends_on       = [module.flink_irsa, module.flink_irsa_operator]
+  name             = "flink-kubernetes-operator"
+  repository       = "oci://public.ecr.aws/emr-on-eks"
+  chart            = "flink-kubernetes-operator"
+  create_namespace = true
+  namespace        = "${local.flink_operator}-ns"
+
   set {
     name  = "watchNamespace"
     value = "${local.flink_team}-ns"
   }
-
+  set {
+    name  = "emrContainers.operatorExecutionRoleArn"
+    value = module.flink_irsa_operator.iam_role_arn
+  }
 
   set {
     name  = "env.AWS_REGION"
     value = var.region
   }
-
 
   # set the version
   set {

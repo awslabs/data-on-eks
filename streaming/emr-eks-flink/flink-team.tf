@@ -24,6 +24,7 @@ module "flink_irsa" {
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0"
 
+
   # Disable helm release
   create_release = false
 
@@ -37,9 +38,39 @@ module "flink_irsa" {
   assume_role_condition_test = "StringLike"
   oidc_providers = {
     this = {
-      provider_arn = module.eks.oidc_provider_arn
-      namespace    = "${local.flink_team}-ns"
+      provider_arn    = module.eks.oidc_provider_arn
+      namespace       = "${local.flink_team}-ns"
       service_account = "emr-containers-sa-*-*-${data.aws_caller_identity.current.account_id}-*"
+    }
+  }
+
+}
+
+
+#---------------------------------------------------------------
+# IRSA for flink pods for "flink-operator"
+#---------------------------------------------------------------
+module "flink_irsa_operator" {
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0"
+
+
+  # Disable helm release
+  create_release = false
+
+  # IAM role for service account (IRSA)
+  create_role   = true
+  role_name     = "${local.name}-operator"
+  create_policy = false
+  role_policies = {
+    flink_team_a_policy = aws_iam_policy.flink.arn
+  }
+  assume_role_condition_test = "StringLike"
+  oidc_providers = {
+    this = {
+      provider_arn    = module.eks.oidc_provider_arn
+      namespace       = "${local.flink_operator}-ns"
+      service_account = "emr-containers-sa-flink-operator"
     }
   }
 

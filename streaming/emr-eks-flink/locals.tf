@@ -1,6 +1,6 @@
 #create local
 locals {
-  name = "emr-eks-flink-starter"
+  name = var.name
 
   region = var.region
 
@@ -8,6 +8,6 @@ locals {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
   }
-  flink_team = "flink-team-a"
-
+  flink_team     = "flink-team-a"
+  flink_operator = "flink-kubernetes-operator"
 }

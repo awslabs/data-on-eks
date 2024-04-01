@@ -14,8 +14,8 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.42.0 |
-| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | 5.42.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.43.0 |
+| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | 5.43.0 |
 | <a name="provider_helm"></a> [helm](#provider\_helm) | 2.12.1 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | 2.27.0 |
 
@@ -28,6 +28,7 @@
 | <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.2 |
 | <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | aws-ia/eks-data-addons/aws | ~> 1.0 |
 | <a name="module_flink_irsa"></a> [flink\_irsa](#module\_flink\_irsa) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |
+| <a name="module_flink_irsa_operator"></a> [flink\_irsa\_operator](#module\_flink\_irsa\_operator) | aws-ia/eks-blueprints-addon/aws | ~> 1.0 |
 | <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | 5.5.1 |
 
@@ -35,7 +36,6 @@
 
 | Name | Type |
 |------|------|
-| [aws_emrcontainers_virtual_cluster.emr_eks_flink_cluster](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/emrcontainers_virtual_cluster) | resource |
 | [aws_iam_policy.flink](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [helm_release.flink_kubernetes_operator](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [kubernetes_namespace_v1.flink_team_a](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace_v1) | resource |
@@ -51,6 +51,7 @@
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS version for the cluster | `string` | `"1.28"` | no |
+| <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"emr-eks-flink"` | no |
 | <a name="input_region"></a> [region](#input\_region) | Region for deployment | `string` | `"us-west-2"` | no |
 
 ## Outputs
