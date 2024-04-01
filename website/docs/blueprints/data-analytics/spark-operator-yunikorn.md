@@ -256,7 +256,7 @@ Ensure that you have installed the following tools on your machine.
 
 ### Deploy
 
-Clone the repository
+Clone the repository.
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
@@ -264,7 +264,10 @@ cd data-on-eks
 export DOEKS_HOME=$(pwd)
 ```
 
-Navigate into one of the example directories and run `install.sh` script
+If DOEKS_HOME is ever unset, you can always set it manually using `export
+DATA_ON_EKS=$(pwd)` from your data-on-eks directory.
+
+Navigate into one of the example directories and run `install.sh` script.
 
 ```bash
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
@@ -335,7 +338,7 @@ Update YAML file and run the below command
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
+  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
 ```
 
 Update the variables in Shell script and execute
@@ -373,7 +376,7 @@ kubectl get pods -n spark-team-a -w
 Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
+  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
 ```
 
 Update the variables in Shell script and execute
@@ -392,7 +395,7 @@ Update YAML file and run the below command
 Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
+  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
 ```
 
 Update the variables in Shell script and execute
@@ -411,7 +414,7 @@ Update YAML file and run the below command
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
+  cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
 ```
 
 Update the variables in Shell script and execute
@@ -433,7 +436,7 @@ Update YAML file and run the below command
 Check the pre-requisites in yaml file before running this job.
 
 ```bash
-cd analytics/terraform/spark-k8s-operator/examples/benchmark
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
 ```
 
 Step1: Benchmark test data generation
@@ -615,7 +618,7 @@ Intel Nodepool (AMD): Set the weight of the Intel Nodepool to `50`. This ensures
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
 ./cleanup.sh
 ```
 
