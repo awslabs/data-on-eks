@@ -334,7 +334,7 @@ else
 fi
 ```
 
-If S3_HOME is set we can proceed into our example.
+If *S3_BUCKET* is set we can proceed into our example.
 
 ```bash
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
