@@ -374,19 +374,35 @@ kubectl apply -f ebs-storage-dynamic-pvc.yaml
 ```
 
 ## Apache YuniKorn Gang Scheduling with NVMe based SSD disk for shuffle storage
+
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
 ```
 
-Update the variables in Shell script and execute
+Run the *taxi-trip-execute.sh* script with the following input. You will use the S3_BUCKET variable created earlier. Additionally, you must change YOUR_REGION_HERE with the region of your choice, *us-west-2* for example.
+
+This script will download some example taxi trip data and create duplicates of
+it in order to increase the size a bit. This will take a bit of time and will
+require a relatively fast internet connection.
 
 ```bash
-./taxi-trip-execute.sh
+./taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
 ```
 
-Update YAML file and run the below command
+Once our sample data is uploaded you can run the Spark job. You will need to
+replace the *\<S3_BUCKET\>* placeholders in this file with the name of the bucket
+created earlier. You can get that value by running `echo $S3_BUCKET`.
+
+To do this automatically you can run the following, which will create a .old
+backup file and do the replacement for you.
+
+```bash
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-storage-yunikorn-gang-scheduling.yaml
+```
+
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
 kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
