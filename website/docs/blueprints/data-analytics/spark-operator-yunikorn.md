@@ -8,6 +8,9 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 import GravitonNodepool from './_graviton_nodepool.md'
 import MemoryOptimizedNodepool from './_memory_optimized_nodepool.md'
+import ComputeOptimizedNodepool from './_compute_optimized_nodepool.md'
+import TaxiTripExecute from './_taxi_trip_exec.md'
+import ReplaceS3BucketPlaceholders from './_replace_s3_bucket_placeholders.mdx';
 
 import CodeBlock from '@theme/CodeBlock';
 
@@ -177,23 +180,10 @@ Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Execu
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
 ```
 
-Run the *taxi-trip-execute.sh* script with the following input. You will use the S3_BUCKET variable created earlier. Additionally, you must change YOUR_REGION_HERE with the region of your choice, *us-west-2* for example.
+<TaxiTripExecute />
 
-This script will download some example taxi trip data and create duplicates of
-it in order to increase the size a bit. This will take a bit of time and will
-require a relatively fast internet connection.
-
-```bash
-./taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
-```
-
-Once our sample data is uploaded you can run the Spark job. You will need to
-replace the *\<S3_BUCKET\>* placeholders in this file with the name of the bucket
-created earlier. You can get that value by running `echo $S3_BUCKET`.
-
-To do this automatically you can run the following, which will create a .old
-backup file and do the replacement for you.
-
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders filename="./nvme-ephemeral-storage.yaml" />
 ```bash
 sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-ephemeral-storage.yaml
 ```
@@ -211,23 +201,10 @@ Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Drive
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc
 ```
 
-Run the *taxi-trip-execute.sh* script with the following input. You will use the S3_BUCKET variable created earlier. Additionally, you must change YOUR_REGION_HERE with the region of your choice, *us-west-2* for example.
+<TaxiTripExecute />
 
-This script will download some example taxi trip data and create duplicates of
-it in order to increase the size a bit. This will take a bit of time and will
-require a relatively fast internet connection.
-
-```bash
-./taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
-```
-
-Once our sample data is uploaded you can run the Spark job. You will need to
-replace the *\<S3_BUCKET\>* placeholders in this file with the name of the bucket
-created earlier. You can get that value by running `echo $S3_BUCKET`.
-
-To do this automatically you can run the following, which will create a .old
-backup file and do the replacement for you.
-
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders filename="./ebs-storage-dynamic-pvc.yaml" />
 ```bash
 sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./ebs-storage-dynamic-pvc.yaml
 ```
@@ -246,23 +223,10 @@ Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
 ```
 
-Run the *taxi-trip-execute.sh* script with the following input. You will use the S3_BUCKET variable created earlier. Additionally, you must change YOUR_REGION_HERE with the region of your choice, *us-west-2* for example.
+<TaxiTripExecute />
 
-This script will download some example taxi trip data and create duplicates of
-it in order to increase the size a bit. This will take a bit of time and will
-require a relatively fast internet connection.
-
-```bash
-./taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
-```
-
-Once our sample data is uploaded you can run the Spark job. You will need to
-replace the *\<S3_BUCKET\>* placeholders in this file with the name of the bucket
-created earlier. You can get that value by running `echo $S3_BUCKET`.
-
-To do this automatically you can run the following, which will create a .old
-backup file and do the replacement for you.
-
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders filename="./ebs-storage-dynamic-pvc.yaml" />
 ```bash
 sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-storage-yunikorn-gang-scheduling.yaml
 ```
@@ -299,13 +263,15 @@ Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Execu
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders />
 ```bash
-./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-ephemeral-storage.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
 kubectl apply -f nvme-ephemeral-storage.yaml
@@ -318,13 +284,15 @@ Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Drive
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders />
 ```bash
-./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./ebs-storage-dynamic-pvc.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
 kubectl apply -f ebs-storage-dynamic-pvc.yaml
@@ -337,13 +305,15 @@ Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders />
 ```bash
-./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
 kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
@@ -397,147 +367,7 @@ Graviton Nodepool (ARM): Set the weight of the Graviton Nodepool to `100`. This 
 
 Intel Nodepool (AMD): Set the weight of the Intel Nodepool to `50`. This ensures that Karpenter will fall back to the Intel Nodepool when Graviton instances are either unavailable or reach their maximum CPU capacity.
 
-```yaml
-  # spark-compute-optimized
-    name: spark-compute-optimized
-    clusterName: ${module.eks.cluster_name}
-    ec2NodeClass:
-      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-      subnetSelectorTerms:
-        tags:
-          Name: "${module.eks.cluster_name}-private*"
-      securityGroupSelectorTerms:
-        tags:
-          Name: ${module.eks.cluster_name}-node
-      userData: |
-        MIME-Version: 1.0
-        Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-        --BOUNDARY
-        Content-Type: text/x-shellscript; charset="us-ascii"
-
-        cat <<-EOF > /etc/profile.d/bootstrap.sh
-        #!/bin/sh
-
-
-        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-        export LOCAL_DISKS='raid0'
-        EOF
-
-        # Source extra environment variables in bootstrap script
-        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-        --BOUNDARY--
-
-    nodePool:
-      labels:
-        - type: karpenter
-        - NodeGroupType: SparkComputeOptimized
-        - multiArch: Spark
-      requirements:
-        - key: "karpenter.sh/capacity-type"
-          operator: In
-          values: ["spot", "on-demand"]
-        - key: "kubernetes.io/arch"
-          operator: In
-          values: ["amd64"]
-        - key: "karpenter.k8s.aws/instance-category"
-          operator: In
-          values: ["c"]
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: ["c5d"]
-        - key: "karpenter.k8s.aws/instance-cpu"
-          operator: In
-          values: ["4", "8", "16", "36"]
-        - key: "karpenter.k8s.aws/instance-hypervisor"
-          operator: In
-          values: ["nitro"]
-        - key: "karpenter.k8s.aws/instance-generation"
-          operator: Gt
-          values: ["2"]
-      limits:
-        cpu: 20 # Change this to 1000 or more for production according to your needs
-      disruption:
-        consolidationPolicy: WhenEmpty
-        consolidateAfter: 30s
-        expireAfter: 720h
-      weight: 100
-
-    # spark-graviton-memory-optimized Nodepool
-
-    name: spark-graviton-memory-optimized
-    clusterName: ${module.eks.cluster_name}
-    ec2NodeClass:
-      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-      subnetSelectorTerms:
-        tags:
-          Name: "${module.eks.cluster_name}-private*"
-      securityGroupSelectorTerms:
-        tags:
-          Name: ${module.eks.cluster_name}-node
-      userData: |
-        MIME-Version: 1.0
-        Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-        --BOUNDARY
-        Content-Type: text/x-shellscript; charset="us-ascii"
-
-        cat <<-EOF > /etc/profile.d/bootstrap.sh
-        #!/bin/sh
-
-
-        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-        export LOCAL_DISKS='raid0'
-        EOF
-
-        # Source extra environment variables in bootstrap script
-        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-        --BOUNDARY--
-    nodePool:
-      labels:
-        - type: karpenter
-        - NodeGroupType: SparkGravitonMemoryOptimized
-        - multiArch: Spark
-      requirements:
-        - key: "karpenter.sh/capacity-type"
-          operator: In
-          values: ["spot", "on-demand"]
-        - key: "kubernetes.io/arch"
-          operator: In
-          values: ["arm64"]
-        - key: "karpenter.k8s.aws/instance-category"
-          operator: In
-          values: ["r"]
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: ["r6gd"]
-        - key: "karpenter.k8s.aws/instance-cpu"
-          operator: In
-          values: ["4", "8", "16", "32"]
-        - key: "karpenter.k8s.aws/instance-hypervisor"
-          operator: In
-          values: ["nitro"]
-        - key: "karpenter.k8s.aws/instance-generation"
-          operator: Gt
-          values: ["2"]
-      limits:
-        cpu: 1000
-      disruption:
-        consolidationPolicy: WhenEmpty
-        consolidateAfter: 30s
-        expireAfter: 720h
-      weight: 50
-```
+<ComputeOptimizedNodepool />
 
 </CollapsibleContent>
 
