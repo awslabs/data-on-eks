@@ -6,6 +6,12 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
+import GravitonNodepool from './_graviton_nodepool.md'
+import MemoryOptimizedNodepool from './_memory_optimized_nodepool.md'
+import ComputeOptimizedNodepool from './_compute_optimized_nodepool.md'
+import TaxiTripExecute from './_taxi_trip_exec.md'
+import ReplaceS3BucketPlaceholders from './_replace_s3_bucket_placeholders.mdx';
+
 import CodeBlock from '@theme/CodeBlock';
 
 # Spark Operator with YuniKorn
@@ -29,76 +35,8 @@ In this tutorial, you will use Karpenter Nodepools that uses memory optimized in
 <details>
 <summary> To view Karpenter Nodepool for memory optimized instances, Click to toggle content!</summary>
 
-```yaml
-    name: spark-memory-optimized
-      clusterName: ${module.eks.cluster_name}
-      ec2NodeClass:
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-        subnetSelectorTerms:
-          tags:
-            Name: "${module.eks.cluster_name}-private*"
-        securityGroupSelectorTerms:
-          tags:
-            Name: ${module.eks.cluster_name}-node
-        userData: |
-          MIME-Version: 1.0
-          Content-Type: multipart/mixed; boundary="BOUNDARY"
+<MemoryOptimizedNodepool />
 
-          --BOUNDARY
-          Content-Type: text/x-shellscript; charset="us-ascii"
-
-          cat <<-EOF > /etc/profile.d/bootstrap.sh
-          #!/bin/sh
-
-
-          # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-          # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-          # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-          #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-          #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-          export LOCAL_DISKS='raid0'
-          EOF
-
-          # Source extra environment variables in bootstrap script
-          sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-          --BOUNDARY--
-
-      nodePool:
-        labels:
-          - type: karpenter
-          - NodeGroupType: SparkComputeOptimized
-          - multiArch: Spark
-        requirements:
-          - key: "karpenter.sh/capacity-type"
-            operator: In
-            values: ["spot", "on-demand"]
-          - key: "kubernetes.io/arch"
-            operator: In
-            values: ["amd64"]
-          - key: "karpenter.k8s.aws/instance-category"
-            operator: In
-            values: ["r"]
-          - key: "karpenter.k8s.aws/instance-family"
-            operator: In
-            values: ["r5d"]
-          - key: "karpenter.k8s.aws/instance-cpu"
-            operator: In
-            values: ["4", "8", "16", "32"]
-          - key: "karpenter.k8s.aws/instance-hypervisor"
-            operator: In
-            values: ["nitro"]
-          - key: "karpenter.k8s.aws/instance-generation"
-            operator: Gt
-            values: ["2"]
-        limits:
-          cpu: 1000
-        disruption:
-          consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
-          expireAfter: 720h
-        weight: 100
-```
 </details>
 
 
@@ -111,77 +49,7 @@ In this yaml, you will use Karpenter Nodepool that uses Graviton memory optimize
 <details>
 <summary> To view Karpenter Nodepool for Graviton memory optimized instances, Click to toggle content!</summary>
 
-```yaml
-    name: spark-graviton-memory-optimized
-    clusterName: ${module.eks.cluster_name}
-    ec2NodeClass:
-      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-      subnetSelectorTerms:
-        tags:
-          Name: "${module.eks.cluster_name}-private*"
-      securityGroupSelectorTerms:
-        tags:
-          Name: ${module.eks.cluster_name}-node
-      userData: |
-        MIME-Version: 1.0
-        Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-        --BOUNDARY
-        Content-Type: text/x-shellscript; charset="us-ascii"
-
-        cat <<-EOF > /etc/profile.d/bootstrap.sh
-        #!/bin/sh
-
-
-        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-        export LOCAL_DISKS='raid0'
-        EOF
-
-        # Source extra environment variables in bootstrap script
-        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-        --BOUNDARY--
-
-
-    nodePool:
-      labels:
-        - type: karpenter
-        - NodeGroupType: SparkGravitonMemoryOptimized
-        - multiArch: Spark
-      requirements:
-        - key: "karpenter.sh/capacity-type"
-          operator: In
-          values: ["spot", "on-demand"]
-        - key: "kubernetes.io/arch"
-          operator: In
-          values: ["arm64"]
-        - key: "karpenter.k8s.aws/instance-category"
-          operator: In
-          values: ["r"]
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: ["r6gd"]
-        - key: "karpenter.k8s.aws/instance-cpu"
-          operator: In
-          values: ["4", "8", "16", "32"]
-        - key: "karpenter.k8s.aws/instance-hypervisor"
-          operator: In
-          values: ["nitro"]
-        - key: "karpenter.k8s.aws/instance-generation"
-          operator: Gt
-          values: ["2"]
-      limits:
-        cpu: 1000
-      disruption:
-        consolidationPolicy: WhenEmpty
-        consolidateAfter: 30s
-        expireAfter: 720h
-      weight: 50
-```
+<GravitonNodepool />
 
 </details>
 
@@ -256,18 +124,32 @@ Ensure that you have installed the following tools on your machine.
 
 ### Deploy
 
-Clone the repository
+Clone the repository.
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
+cd data-on-eks
+export DOEKS_HOME=$(pwd)
 ```
 
-Navigate into one of the example directories and run `install.sh` script
+If DOEKS_HOME is ever unset, you can always set it manually using `export
+DATA_ON_EKS=$(pwd)` from your data-on-eks directory.
+
+Navigate into one of the example directories and run `install.sh` script.
 
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
 chmod +x install.sh
 ./install.sh
+```
+
+Now create an S3_BUCKET variable that holds the name of the bucket created
+during the install. This bucket will be used in later examples to store output
+data. If S3_BUCKET is ever unset, you can run the following commands again.
+
+```bash
+export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
+echo $S3_BUCKET
 ```
 
 </CollapsibleContent>
@@ -277,7 +159,7 @@ chmod +x install.sh
 Navigate to example directory and submit the Spark job.
 
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/karpenter
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter
 kubectl apply -f pyspark-pi-job.yaml
 ```
 
@@ -295,57 +177,64 @@ You can try the following examples to leverage multiple Karpenter Nodepools, EBS
 Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders filename="./nvme-ephemeral-storage.yaml" />
 ```bash
-  ./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-ephemeral-storage.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
-  kubectl apply -f nvme-ephemeral-storage.yaml
+kubectl apply -f nvme-ephemeral-storage.yaml
 ```
 
 ## EBS Dynamic PVC for shuffle storage
 Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders filename="./ebs-storage-dynamic-pvc.yaml" />
 ```bash
-  ./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./ebs-storage-dynamic-pvc.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
-  kubectl apply -f ebs-storage-dynamic-pvc.yaml
+kubectl apply -f ebs-storage-dynamic-pvc.yaml
 ```
 
 ## Apache YuniKorn Gang Scheduling with NVMe based SSD disk for shuffle storage
+
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders filename="./ebs-storage-dynamic-pvc.yaml" />
 ```bash
-  ./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
-  kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
+kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
 </CollapsibleContent>
@@ -355,7 +244,7 @@ Update YAML file and run the below command
 Navigate to example directory and submit the Spark job.
 
 ```bash
-cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler
 kubectl apply -f pyspark-pi-job.yaml
 ```
 
@@ -371,78 +260,93 @@ kubectl get pods -n spark-team-a -w
 Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders />
 ```bash
-  ./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-ephemeral-storage.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
-  kubectl apply -f nvme-ephemeral-storage.yaml
+kubectl apply -f nvme-ephemeral-storage.yaml
 ```
 
 ## EBS Dynamic PVC for shuffle storage
 Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders />
 ```bash
-  ./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./ebs-storage-dynamic-pvc.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
-  kubectl apply -f ebs-storage-dynamic-pvc.yaml
+kubectl apply -f ebs-storage-dynamic-pvc.yaml
 ```
 
 ## Apache YuniKorn Gang Scheduling with NVMe based SSD disk for shuffle storage
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
-  cd analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
 ```
 
-Update the variables in Shell script and execute
+<TaxiTripExecute />
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders />
 ```bash
-  ./taxi-trip-execute.sh
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
-Update YAML file and run the below command
+Now that the bucket name is in place you can create the Spark job.
 
 ```bash
-  kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
+kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
 </CollapsibleContent>
 
 <CollapsibleContent header={<h2><span>Example for TPCDS Benchmark test</span></h2>}>
 
-Check the pre-requisites in yaml file before running this job.
+Be sure that the S3_BUCKET variable is set in the terminal session. If it is
+not, see the Deployment documentation above.
 
 ```bash
-cd analytics/terraform/spark-k8s-operator/examples/benchmark
+if [ -z "$S3_BUCKET" ] ; then
+  printf "\nS3_BUCKET is NOT set."
+else
+  printf "\nS3_BUCKET is set, rock on."
+fi
 ```
 
-Step1: Benchmark test data generation
+If *S3_BUCKET* is set we can proceed into our example.
 
 ```bash
-kubectl apply -f tpcds-benchmark-data-generation-1t
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
+```
+
+```bash
+kubectl apply -f tpcds-benchmark-data-generation-3t.yaml
 ```
 Step2: Execute Benchmark test
 
 ```bash
-  kubectl apply -f tpcds-benchmark-1t.yaml
+kubectl apply -f tpcds-benchmark-3t.yaml
 ```
 </CollapsibleContent>
 
@@ -463,147 +367,7 @@ Graviton Nodepool (ARM): Set the weight of the Graviton Nodepool to `100`. This 
 
 Intel Nodepool (AMD): Set the weight of the Intel Nodepool to `50`. This ensures that Karpenter will fall back to the Intel Nodepool when Graviton instances are either unavailable or reach their maximum CPU capacity.
 
-```yaml
-  # spark-compute-optimized
-    name: spark-compute-optimized
-    clusterName: ${module.eks.cluster_name}
-    ec2NodeClass:
-      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-      subnetSelectorTerms:
-        tags:
-          Name: "${module.eks.cluster_name}-private*"
-      securityGroupSelectorTerms:
-        tags:
-          Name: ${module.eks.cluster_name}-node
-      userData: |
-        MIME-Version: 1.0
-        Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-        --BOUNDARY
-        Content-Type: text/x-shellscript; charset="us-ascii"
-
-        cat <<-EOF > /etc/profile.d/bootstrap.sh
-        #!/bin/sh
-
-
-        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-        export LOCAL_DISKS='raid0'
-        EOF
-
-        # Source extra environment variables in bootstrap script
-        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-        --BOUNDARY--
-
-    nodePool:
-      labels:
-        - type: karpenter
-        - NodeGroupType: SparkComputeOptimized
-        - multiArch: Spark
-      requirements:
-        - key: "karpenter.sh/capacity-type"
-          operator: In
-          values: ["spot", "on-demand"]
-        - key: "kubernetes.io/arch"
-          operator: In
-          values: ["amd64"]
-        - key: "karpenter.k8s.aws/instance-category"
-          operator: In
-          values: ["c"]
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: ["c5d"]
-        - key: "karpenter.k8s.aws/instance-cpu"
-          operator: In
-          values: ["4", "8", "16", "36"]
-        - key: "karpenter.k8s.aws/instance-hypervisor"
-          operator: In
-          values: ["nitro"]
-        - key: "karpenter.k8s.aws/instance-generation"
-          operator: Gt
-          values: ["2"]
-      limits:
-        cpu: 20 # Change this to 1000 or more for production according to your needs
-      disruption:
-        consolidationPolicy: WhenEmpty
-        consolidateAfter: 30s
-        expireAfter: 720h
-      weight: 100
-
-    # spark-graviton-memory-optimized Nodepool
-
-    name: spark-graviton-memory-optimized
-    clusterName: ${module.eks.cluster_name}
-    ec2NodeClass:
-      karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-      subnetSelectorTerms:
-        tags:
-          Name: "${module.eks.cluster_name}-private*"
-      securityGroupSelectorTerms:
-        tags:
-          Name: ${module.eks.cluster_name}-node
-      userData: |
-        MIME-Version: 1.0
-        Content-Type: multipart/mixed; boundary="BOUNDARY"
-
-        --BOUNDARY
-        Content-Type: text/x-shellscript; charset="us-ascii"
-
-        cat <<-EOF > /etc/profile.d/bootstrap.sh
-        #!/bin/sh
-
-
-        # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-        # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-        #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-        #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-        export LOCAL_DISKS='raid0'
-        EOF
-
-        # Source extra environment variables in bootstrap script
-        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-
-        --BOUNDARY--
-    nodePool:
-      labels:
-        - type: karpenter
-        - NodeGroupType: SparkGravitonMemoryOptimized
-        - multiArch: Spark
-      requirements:
-        - key: "karpenter.sh/capacity-type"
-          operator: In
-          values: ["spot", "on-demand"]
-        - key: "kubernetes.io/arch"
-          operator: In
-          values: ["arm64"]
-        - key: "karpenter.k8s.aws/instance-category"
-          operator: In
-          values: ["r"]
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: ["r6gd"]
-        - key: "karpenter.k8s.aws/instance-cpu"
-          operator: In
-          values: ["4", "8", "16", "32"]
-        - key: "karpenter.k8s.aws/instance-hypervisor"
-          operator: In
-          values: ["nitro"]
-        - key: "karpenter.k8s.aws/instance-generation"
-          operator: Gt
-          values: ["2"]
-      limits:
-        cpu: 1000
-      disruption:
-        consolidationPolicy: WhenEmpty
-        consolidateAfter: 30s
-        expireAfter: 720h
-      weight: 50
-```
+<ComputeOptimizedNodepool />
 
 </CollapsibleContent>
 
@@ -613,7 +377,7 @@ Intel Nodepool (AMD): Set the weight of the Intel Nodepool to `50`. This ensures
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
 ./cleanup.sh
 ```
 
