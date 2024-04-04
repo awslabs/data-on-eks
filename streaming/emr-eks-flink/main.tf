@@ -174,7 +174,7 @@ module "vpc" {
 # deploy a helm chart for flink-kubernetes-operator
 resource "helm_release" "flink_kubernetes_operator" {
 
-  depends_on       = [module.flink_irsa, module.flink_irsa_operator]
+  depends_on       = [module.flink_irsa_jobs, module.flink_irsa_operator]
   name             = "flink-kubernetes-operator"
   repository       = "oci://public.ecr.aws/emr-on-eks"
   chart            = "flink-kubernetes-operator"

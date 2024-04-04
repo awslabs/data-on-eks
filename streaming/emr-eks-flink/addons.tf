@@ -105,14 +105,20 @@ module "eks_blueprints_addons" {
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
   karpenter = {
+    chart_version       = "v0.33.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
   karpenter_node = {
+    iam_role_use_name_prefix = false
+    iam_role_name            = "${local.name}-karpenter-node"
+
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
+
+
 
   #---------------------------------------
   # CloudWatch metrics for EKS
@@ -129,7 +135,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  # Fluentbit is required to stream the logs to S3  when EMR Spark Operator is enabled
+  # Fluentbit is required to stream the logs to S3  when EMR Flink Operator is enabled
   enable_aws_for_fluentbit = true
   aws_for_fluentbit_cw_log_group = {
     use_name_prefix   = false
@@ -156,9 +162,66 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "~> 1.30" # ensure to update this to the latest/desired version
 
-  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_arn          = module.eks.oidc_provider_arn
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    flink-compute-optimized = {
+      values = [
+        <<-EOT
+      name: flink-compute-optimized
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
 
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: FlinkComputeOptimized
+          - multiArch: Flink
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5d"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["4", "8", "16", "36"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+          
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+  }
 
 }
+
+

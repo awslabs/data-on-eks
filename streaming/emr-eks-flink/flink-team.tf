@@ -20,7 +20,7 @@ resource "aws_iam_policy" "flink" {
 #---------------------------------------------------------------
 # IRSA for flink pods for "flink-team-a"
 #---------------------------------------------------------------
-module "flink_irsa" {
+module "flink_irsa_jobs" {
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0"
 
