@@ -42,7 +42,7 @@ In addition to the above features, EMR Flink Kubernetes operator provides the fo
 5. IRSA (IAM Roles for Service Accounts) Native Integration
 6. Apache Airflow Integration
 7. Pyflink support
-   
+
 
 Flink Operator defines two types of Custom Resources(CR) which are the extensions of the Kubernetes API.
 
@@ -335,4 +335,3 @@ cd .. && chmod +x cleanup.sh
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
-
