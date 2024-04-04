@@ -5,5 +5,5 @@ it in order to increase the size a bit. This will take a bit of time and will
 require a relatively fast internet connection.
 
 ```bash
-./taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
+${DOEKS_HOME}/analytics/scripts/taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
 ```
