@@ -209,7 +209,7 @@ module "eks_data_addons" {
           - key: "karpenter.k8s.aws/instance-generation"
             operator: Gt
             values: ["2"]
-          
+
         limits:
           cpu: 1000
         disruption:
@@ -223,5 +223,3 @@ module "eks_data_addons" {
   }
 
 }
-
-
