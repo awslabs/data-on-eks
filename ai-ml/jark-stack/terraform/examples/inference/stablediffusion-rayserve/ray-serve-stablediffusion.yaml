@@ -150,18 +150,10 @@ spec:
       # To access the dashboard:
       # Option 1: Use the `kubectl port-forward` command.
       # Option 2: Deploy a public-facing NLB by modifying the configuration file "ai-ml/jark-stack/terraform/helm-values/ingress-nginx-values.yaml".
-       - path: /dashboard/(.*)
+      - path: /dashboard/(.*)
         pathType: ImplementationSpecific
         backend:
           service:
             name: stablediffusion-service
             port:
               number: 8265
-      # This service endpoint used by the Gradio app to make requests to the Ray Serve deployment.
-      - path: /serve/(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: stablediffusion-service
-            port:
-              number: 8000

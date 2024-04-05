@@ -231,7 +231,7 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: spark-executor-gpu-karpenter
+          - NodeGroupType: g5-gpu-karpenter
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
@@ -253,7 +253,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
+          consolidateAfter: 180s
           expireAfter: 720h
         weight: 100
       EOT
@@ -276,7 +276,7 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: spark-driver-cpu-karpenter
+          - NodeGroupType: x86-cpu-karpenter
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
@@ -294,7 +294,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
+          consolidateAfter: 180s
           expireAfter: 720h
         weight: 100
       EOT
