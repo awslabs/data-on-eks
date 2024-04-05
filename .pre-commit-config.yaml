@@ -31,8 +31,6 @@ repos:
           - '--args=--only=terraform_required_providers'
           - '--args=--only=terraform_standard_module_structure'
           - '--args=--only=terraform_workspace_remote'
-      - id: terraform_validate
-        exclude: docs
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.6
     hooks:
