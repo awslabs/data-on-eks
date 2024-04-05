@@ -31,7 +31,7 @@ aws s3 cp pyspark-taxi-trip.py s3://${s3_bucket}/taxi-trip/scripts/ --region ${r
 wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "input/yellow_tripdata_2022-0.parquet"
 
 # Making duplicate copies to increase the size of the data.
-max=100
+max=5
 for (( i=1; i <= $max; ++i ))
 do
    cp -rf "input/yellow_tripdata_2022-0.parquet" "input/yellow_tripdata_2022-${i}.parquet"
