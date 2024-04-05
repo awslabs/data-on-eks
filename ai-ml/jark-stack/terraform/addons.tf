@@ -202,11 +202,16 @@ module "data_addons" {
   #---------------------------------------
   # EFA Device Plugin Add-on
   #---------------------------------------
-  enable_aws_efa_k8s_device_plugin = true
+  # IMPORTANT: Enable EFA only on nodes with EFA devices attached.
+  # Otherwise, you'll encounter the "No devices found..." error. Restart the pod after attaching an EFA device, or use a node selector to prevent incompatible scheduling.
+  enable_aws_efa_k8s_device_plugin = var.enable_aws_efa_k8s_device_plugin
   aws_efa_k8s_device_plugin_helm_config = {
     values = [file("${path.module}/helm-values/aws-efa-k8s-device-plugin-values.yaml")]
   }
 
+  #---------------------------------------------------------------
+  # Karpenter Resources Add-on
+  #---------------------------------------------------------------
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
     g5-gpu-karpenter = {
