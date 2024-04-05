@@ -1,3 +1,7 @@
+#----------------------------------------------------------------------
+# NOTE: For deployment instructions, refer to the DoEKS website.
+#----------------------------------------------------------------------
+---
 apiVersion: v1
 kind: Namespace
 metadata:
