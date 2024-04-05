@@ -90,7 +90,7 @@ spec:
                   cpu: 2
                   memory: 16Gi
           nodeSelector:
-            NodeGroupType: spark-driver-cpu-karpenter
+            NodeGroupType: x86-cpu-karpenter
             type: karpenter
           volumes:
             - name: ray-logs
@@ -126,7 +126,7 @@ spec:
                     memory: "14Gi"
                     nvidia.com/gpu: 1
             nodeSelector:
-              NodeGroupType: spark-executor-gpu-karpenter
+              NodeGroupType: g5-gpu-karpenter
               type: karpenter
             tolerations:
               - key: "nvidia.com/gpu"

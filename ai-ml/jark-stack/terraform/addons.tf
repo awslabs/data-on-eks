@@ -105,6 +105,41 @@ module "eks_blueprints_addons" {
     values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
   }
 
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
+  karpenter = {
+    chart_version       = "v0.34.0"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------
+  # Argo Workflows & Argo Events
+  #---------------------------------------
+  enable_argo_workflows = true
+  argo_workflows = {
+    name       = "argo-workflows"
+    namespace  = "argo-workflows"
+    repository = "https://argoproj.github.io/argo-helm"
+    values     = [templatefile("${path.module}/helm-values/argo-workflows-values.yaml", {})]
+  }
+
+  enable_argo_events = true
+  argo_events = {
+    name       = "argo-events"
+    namespace  = "argo-events"
+    repository = "https://argoproj.github.io/argo-helm"
+    values     = [templatefile("${path.module}/helm-values/argo-events-values.yaml", {})]
+  }
+
 }
 
 #---------------------------------------------------------------
@@ -170,6 +205,96 @@ module "data_addons" {
   enable_aws_efa_k8s_device_plugin = true
   aws_efa_k8s_device_plugin_helm_config = {
     values = [file("${path.module}/helm-values/aws-efa-k8s-device-plugin-values.yaml")]
+  }
+
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    g5-gpu-karpenter = {
+      values = [
+        <<-EOT
+      name: g5-gpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-executor-gpu-karpenter
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "2xlarge", "4xlarge", "8xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    x86-cpu-karpenter = {
+      values = [
+        <<-EOT
+      name: x86-cpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[3]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-driver-cpu-karpenter
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["m5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
   }
 
   depends_on = [
