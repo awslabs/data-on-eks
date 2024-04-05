@@ -1,0 +1,42 @@
+# Superset node configuration
+supersetNode:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+
+  resources:
+     limits:
+      cpu: 200m
+      memory: 256Mi
+     requests:
+      cpu: 200m
+      memory: 256Mi
+
+# Superset Celery worker configuration
+supersetWorker:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+postgresql:
+  ## Set to false if bringing your own PostgreSQL.
+  enabled: true
+  primary:
+    persistence:
+      ## Enable PostgreSQL persistence using Persistent Volume Claims.
+      enabled: true
+      storageClass: gp3

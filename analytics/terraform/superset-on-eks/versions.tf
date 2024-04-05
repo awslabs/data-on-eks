@@ -12,16 +12,18 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.12.1"
+      version = ">= 2.4.1"
     }
     random = {
       source  = "hashicorp/random"
-      version = "3.1.0" # Replace with the appropriate version of the random provider
-    }
-
-    archive = {
-      source  = "hashicorp/archive"
-      version = "2.4.0"
+      version = "3.3.2"
     }
   }
+
+  # ##  Used for end-to-end testing on project; update to suit your needs
+  # backend "s3" {
+  #   bucket = "doeks-github-actions-e2e-test-state"
+  #   region = "us-west-2"
+  #   key    = "e2e/superset/terraform.tfstate"
+  # }
 }

@@ -1,3 +1,40 @@
+#---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_annotations" "disable_gp2" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+resource "kubernetes_storage_class" "default_gp3" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+  volume_binding_mode    = "WaitForFirstConsumer"
+  parameters = {
+    fsType    = "ext4"
+    encrypted = true
+    type      = "gp3"
+  }
+
+  depends_on = [kubernetes_annotations.disable_gp2]
+}
 
 #---------------------------------------------------------------
 # IRSA for EBS CSI Driver
@@ -16,6 +53,68 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
+module "eks_blueprints_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.2"
+
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
+    }
+    kube-proxy = {
+      preserve = true
+    }
+  }
+
+  #---------------------------------------
+  # AWS Load Balancer Controller Add-on
+  #---------------------------------------
+  enable_aws_load_balancer_controller = true
+  # turn off the mutating webhook for services because we are using
+  # service.beta.kubernetes.io/aws-load-balancer-type: external
+  aws_load_balancer_controller = {
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
+
+  tags = local.tags
+}
+
+module "eks_data_addons" {
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.31.5" # ensure to update this to the latest/desired version
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------
+  # AWS Apache Superset Add-on
+  #---------------------------------------
+  enable_superset = true
+  superset_helm_config = {
+    values = [templatefile("${path.module}/helm-values/superset-values.yaml", {})]
+  }
+
+}
+
+#------------------------------------------------------------
+# Create AWS Application Load balancer with Ingres
+#------------------------------------------------------------
 resource "kubernetes_ingress_class_v1" "aws_alb" {
   metadata {
     name = "aws-alb"
@@ -24,40 +123,9 @@ resource "kubernetes_ingress_class_v1" "aws_alb" {
   spec {
     controller = "ingress.k8s.aws/alb"
   }
+
+  depends_on = [module.eks.cluster_id]
 }
-
-module "lb_role" {
-  source                                 = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version                                = "5.37.1"
-  role_name                              = format("%s-%s", local.name, "lb-controller-role")
-  attach_load_balancer_controller_policy = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
-    }
-  }
-}
-
-
-resource "kubernetes_service_account" "service_account" {
-  metadata {
-    name      = "aws-load-balancer-controller"
-    namespace = "kube-system"
-    labels = {
-      "app.kubernetes.io/name"      = "aws-load-balancer-controller"
-      "app.kubernetes.io/component" = "controller"
-    }
-    annotations = {
-      "eks.amazonaws.com/role-arn"               = module.lb_role.iam_role_arn
-      "eks.amazonaws.com/sts-regional-endpoints" = "true"
-    }
-  }
-  depends_on = [module.eks]
-}
-
-
 
 resource "kubernetes_ingress_v1" "superset" {
   metadata {
@@ -86,40 +154,6 @@ resource "kubernetes_ingress_v1" "superset" {
       }
     }
   }
-  depends_on = [helm_release.superset]
-}
 
-
-
-module "eks_blueprints_addons" {
-  source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
-
-  cluster_name      = module.eks.cluster_name
-  cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_version   = module.eks.cluster_version
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  #---------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------
-  eks_addons = {
-    # aws-ebs-csi-driver = {
-    #   most_recent              = true
-    #   service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    # }
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      preserve = true
-    }
-    kube-proxy = {
-      preserve = true
-    }
-  }
-  enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller = {
-    chart_version = "1.5.4"
-  }
-  tags = local.tags
+  depends_on = [module.eks_blueprints_addons]
 }
