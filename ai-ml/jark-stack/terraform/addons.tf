@@ -105,20 +105,6 @@ module "eks_blueprints_addons" {
     values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
   }
 
-  helm_releases = {
-    #---------------------------------------
-    # NVIDIA Device Plugin Add-on
-    #---------------------------------------
-    nvidia-device-plugin = {
-      description      = "A Helm chart for NVIDIA Device Plugin"
-      namespace        = "nvidia-device-plugin"
-      create_namespace = true
-      chart            = "nvidia-device-plugin"
-      chart_version    = "0.14.0"
-      repository       = "https://nvidia.github.io/k8s-device-plugin"
-      values           = [file("${path.module}/helm-values/nvidia-values.yaml")]
-    }
-  }
 }
 
 #---------------------------------------------------------------
@@ -126,7 +112,7 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.1" # ensure to update this to the latest/desired version
+  version = "~> 1.31.4" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -140,10 +126,43 @@ module "data_addons" {
     values           = [file("${path.module}/helm-values/jupyterhub-values.yaml")]
   }
 
-  #---------------------------------------------------------------
-  # KubeRay Operator Add-on
-  #---------------------------------------------------------------
+  enable_volcano = true
+  #---------------------------------------
+  # Kuberay Operator
+  #---------------------------------------
   enable_kuberay_operator = true
+  kuberay_operator_helm_config = {
+    version = "1.1.0"
+    # Enabling Volcano as Batch scheduler for KubeRay Operator
+    values = [
+      <<-EOT
+      batchScheduler:
+        enabled: true
+    EOT
+    ]
+  }
+
+  #---------------------------------------------------------------
+  # NVIDIA Device Plugin Add-on
+  #---------------------------------------------------------------
+  enable_nvidia_device_plugin = true
+  nvidia_device_plugin_helm_config = {
+    version = "v0.15.0-rc.2"
+    name    = "nvidia-device-plugin"
+    values = [
+      <<-EOT
+        gfd:
+          enabled: true
+        nfd:
+          worker:
+            tolerations:
+              - key: nvidia.com/gpu
+                operator: Exists
+                effect: NoSchedule
+              - operator: "Exists"
+      EOT
+    ]
+  }
 
   #---------------------------------------
   # EFA Device Plugin Add-on

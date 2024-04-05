@@ -45,7 +45,7 @@ spec:
               num_cpus: 3
               num_gpus: 1
   rayClusterConfig:
-    rayVersion: '2.10.0'    
+    rayVersion: '2.10.0'
     enableInTreeAutoscaling: true
     headGroupSpec:
       serviceType: NodePort
@@ -59,10 +59,10 @@ spec:
         spec:
           containers:
             - name: ray-head
-            # Important Performance Note: 
-            # This image is large (20GB uncompressed, 10GB compressed) and may take up to 5 minutes to pull. 
-            # For faster inference scaling, consider building a custom image with only your workload's essential dependencies. 
-            # Smaller images lead to faster scaling, especially across multiple nodes. 
+            # Important Performance Note:
+            # This image is large (20GB uncompressed, 10GB compressed) and may take up to 5 minutes to pull.
+            # For faster inference scaling, consider building a custom image with only your workload's essential dependencies.
+            # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
               image: 464566837657.dkr.ecr.us-west-2.amazonaws.com/ray2.10.0-py310-gpu-stablediffusion:v3
               imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
@@ -88,7 +88,7 @@ spec:
                   memory: 16Gi
                 requests:
                   cpu: 2
-                  memory: 16Gi  
+                  memory: 16Gi
           nodeSelector:
             NodeGroupType: spark-driver-cpu-karpenter
             type: karpenter
@@ -105,10 +105,10 @@ spec:
           spec:
             containers:
               - name: ray-worker
-            # Important Performance Note: 
-            # This image is large (20GB uncompressed, 10GB compressed) and may take up to 5 minutes to pull. 
-            # For faster inference scaling, consider building a custom image with only your workload's essential dependencies. 
-            # Smaller images lead to faster scaling, especially across multiple nodes. 
+            # Important Performance Note:
+            # This image is large (20GB uncompressed, 10GB compressed) and may take up to 5 minutes to pull.
+            # For faster inference scaling, consider building a custom image with only your workload's essential dependencies.
+            # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
                 image: 464566837657.dkr.ecr.us-west-2.amazonaws.com/ray2.10.0-py310-gpu-stablediffusion:v3
                 imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
@@ -132,7 +132,7 @@ spec:
               - key: "nvidia.com/gpu"
                 operator: "Exists"
                 effect: "NoSchedule"
-   
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -149,7 +149,7 @@ spec:
       # Ray Dashboard: you can access the dashboard using the NLB DNS name with port 8265 and the path "/dashboard". However, the NLB is currently configured as private, preventing access from outside the VPC.
       # To access the dashboard:
       # Option 1: Use the `kubectl port-forward` command.
-      # Option 2: Deploy a public-facing NLB by modifying the configuration file "ai-ml/jark-stack/terraform/helm-values/ingress-nginx-values.yaml". 
+      # Option 2: Deploy a public-facing NLB by modifying the configuration file "ai-ml/jark-stack/terraform/helm-values/ingress-nginx-values.yaml".
        - path: /dashboard/(.*)
         pathType: ImplementationSpecific
         backend:

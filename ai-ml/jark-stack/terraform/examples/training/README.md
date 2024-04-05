@@ -1,2 +1,2 @@
-# Coming soon 
+# Coming soon
 # Training Examples
