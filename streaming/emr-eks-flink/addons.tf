@@ -194,7 +194,7 @@ module "eks_data_addons" {
         requirements:
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: ["on-demand"]
+            values: ["spot","on-demand"]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
