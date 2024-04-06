@@ -14,9 +14,9 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.43.0 |
-| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | 5.43.0 |
-| <a name="provider_helm"></a> [helm](#provider\_helm) | 2.12.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.44.0 |
+| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | 5.44.0 |
+| <a name="provider_helm"></a> [helm](#provider\_helm) | 2.13.0 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | 2.27.0 |
 
 ## Modules
