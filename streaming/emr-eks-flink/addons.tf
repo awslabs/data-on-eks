@@ -105,14 +105,13 @@ module "eks_blueprints_addons" {
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
   karpenter = {
-    chart_version       = "v0.33.1"
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
   karpenter_node = {
-    iam_role_use_name_prefix = false
     iam_role_name            = "${local.name}-karpenter-node"
-
+    iam_role_use_name_prefix = false
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
@@ -171,8 +170,10 @@ module "eks_data_addons" {
       values = [
         <<-EOT
       name: flink-compute-optimized
+
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
+
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
@@ -183,14 +184,17 @@ module "eks_data_addons" {
         instanceStorePolicy: RAID0
 
       nodePool:
+
         labels:
           - type: karpenter
           - NodeGroupType: FlinkComputeOptimized
           - multiArch: Flink
+        nodeClassRef:
+          name: flink-compute-optimized
         requirements:
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: ["spot", "on-demand"]
+            values: ["on-demand"]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]

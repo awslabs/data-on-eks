@@ -14,12 +14,18 @@ module "eks" {
 
   manage_aws_auth_configmap = true
   aws_auth_roles = [
+
+    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
-      # Required for EMR on EKS virtual cluster
-      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
-      username = "emr-containers"
-    },
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+      username = "system:node:{{EC2PrivateDNSName}}"
+      groups = [
+        "system:bootstrappers",
+        "system:nodes",
+      ]
+    }
   ]
+
 
 
   #---------------------------------------
