@@ -1,7 +1,6 @@
 #----------------------------------------------------------------------
 # NOTE: For deployment instructions, refer to the DoEKS website.
 #----------------------------------------------------------------------
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -29,7 +28,7 @@ spec:
           - name: stable-diffusion-v2
             autoscaling_config:
               metrics_interval_s: 0.2
-              min_replicas: 8
+              min_replicas: 2
               max_replicas: 12
               look_back_period_s: 2
               downscale_delay_s: 30
@@ -55,7 +54,7 @@ spec:
         spec:
           containers:
           - name: ray-head
-            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:v1.0
+            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -98,7 +97,7 @@ spec:
         spec:
           containers:
           - name: ray-worker
-            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:v1.0
+            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
