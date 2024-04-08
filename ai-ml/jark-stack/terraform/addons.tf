@@ -105,20 +105,41 @@ module "eks_blueprints_addons" {
     values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
   }
 
-  helm_releases = {
-    #---------------------------------------
-    # NVIDIA Device Plugin Add-on
-    #---------------------------------------
-    nvidia-device-plugin = {
-      description      = "A Helm chart for NVIDIA Device Plugin"
-      namespace        = "nvidia-device-plugin"
-      create_namespace = true
-      chart            = "nvidia-device-plugin"
-      chart_version    = "0.14.0"
-      repository       = "https://nvidia.github.io/k8s-device-plugin"
-      values           = [file("${path.module}/helm-values/nvidia-values.yaml")]
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
   }
+  karpenter = {
+    chart_version       = "v0.34.0"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------
+  # Argo Workflows & Argo Events
+  #---------------------------------------
+  enable_argo_workflows = true
+  argo_workflows = {
+    name       = "argo-workflows"
+    namespace  = "argo-workflows"
+    repository = "https://argoproj.github.io/argo-helm"
+    values     = [templatefile("${path.module}/helm-values/argo-workflows-values.yaml", {})]
+  }
+
+  enable_argo_events = true
+  argo_events = {
+    name       = "argo-events"
+    namespace  = "argo-events"
+    repository = "https://argoproj.github.io/argo-helm"
+    values     = [templatefile("${path.module}/helm-values/argo-events-values.yaml", {})]
+  }
+
 }
 
 #---------------------------------------------------------------
@@ -126,7 +147,7 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.1" # ensure to update this to the latest/desired version
+  version = "~> 1.31.4" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -140,17 +161,145 @@ module "data_addons" {
     values           = [file("${path.module}/helm-values/jupyterhub-values.yaml")]
   }
 
-  #---------------------------------------------------------------
-  # KubeRay Operator Add-on
-  #---------------------------------------------------------------
+  enable_volcano = true
+  #---------------------------------------
+  # Kuberay Operator
+  #---------------------------------------
   enable_kuberay_operator = true
+  kuberay_operator_helm_config = {
+    version = "1.1.0"
+    # Enabling Volcano as Batch scheduler for KubeRay Operator
+    values = [
+      <<-EOT
+      batchScheduler:
+        enabled: true
+    EOT
+    ]
+  }
+
+  #---------------------------------------------------------------
+  # NVIDIA Device Plugin Add-on
+  #---------------------------------------------------------------
+  enable_nvidia_device_plugin = true
+  nvidia_device_plugin_helm_config = {
+    version = "v0.14.5"
+    name    = "nvidia-device-plugin"
+    values = [
+      <<-EOT
+        gfd:
+          enabled: true
+        nfd:
+          worker:
+            tolerations:
+              - key: nvidia.com/gpu
+                operator: Exists
+                effect: NoSchedule
+              - operator: "Exists"
+      EOT
+    ]
+  }
 
   #---------------------------------------
   # EFA Device Plugin Add-on
   #---------------------------------------
-  enable_aws_efa_k8s_device_plugin = true
+  # IMPORTANT: Enable EFA only on nodes with EFA devices attached.
+  # Otherwise, you'll encounter the "No devices found..." error. Restart the pod after attaching an EFA device, or use a node selector to prevent incompatible scheduling.
+  enable_aws_efa_k8s_device_plugin = var.enable_aws_efa_k8s_device_plugin
   aws_efa_k8s_device_plugin_helm_config = {
     values = [file("${path.module}/helm-values/aws-efa-k8s-device-plugin-values.yaml")]
+  }
+
+  #---------------------------------------------------------------
+  # Karpenter Resources Add-on
+  #---------------------------------------------------------------
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    g5-gpu-karpenter = {
+      values = [
+        <<-EOT
+      name: g5-gpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: g5-gpu-karpenter
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "2xlarge", "4xlarge", "8xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 180s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    x86-cpu-karpenter = {
+      values = [
+        <<-EOT
+      name: x86-cpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[3]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: x86-cpu-karpenter
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["m5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 180s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
   }
 
   depends_on = [
