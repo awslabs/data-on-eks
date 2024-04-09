@@ -53,12 +53,56 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   allow_volume_expansion = true
   volume_binding_mode    = "WaitForFirstConsumer"
   parameters = {
-    fsType    = "xfs"
-    type      = "gp3"
+    fsType = "xfs"
+    type   = "gp3"
   }
 
   depends_on = [kubernetes_annotations.gp2_default]
 }
+
+#---------------------------------------
+# Redpanda Config
+#---------------------------------------
+
+resource "random_password" "redpanada_password" {
+  length  = 16
+  special = false
+}
+resource "aws_secretsmanager_secret" "redpanada_password" {
+  name                    = "redpanda_password-1234"
+  recovery_window_in_days = 0
+}
+resource "aws_secretsmanager_secret_version" "redpanada_password" {
+  secret_id     = aws_secretsmanager_secret.redpanada_password.id
+  secret_string = random_password.redpanada_password.result
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+#---------------------------------------------------------------
+resource "random_string" "random_suffix" {
+  length  = 10
+  special = false
+  upper   = false
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name                    = "grafana-${random_string.random_suffix.result}"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana_password_version" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
+}
+
 
 
 #---------------------------------------------------------------
@@ -78,7 +122,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   eks_addons = {
     aws-ebs-csi-driver = {
-      most_recent = true
+      most_recent              = true
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
     coredns = {
@@ -91,23 +135,23 @@ module "eks_blueprints_addons" {
       most_recent = true
     }
   }
-  enable_aws_load_balancer_controller    = true
-  enable_cluster_autoscaler              = true
-  enable_metrics_server                  = true
-  enable_aws_cloudwatch_metrics          = true
+  enable_aws_load_balancer_controller = true
+  enable_cluster_autoscaler           = true
+  enable_metrics_server               = true
+  enable_aws_cloudwatch_metrics       = true
+  enable_cert_manager                 = true
 
- 
 
   #---------------------------------------
   # FluentBit Config for EKS Cluster
   #---------------------------------------
- enable_aws_for_fluentbit = true
+  enable_aws_for_fluentbit = true
   aws_for_fluentbit = {
     enable_containerinsights = true
     kubelet_monitoring       = true
     set = [{
-        name  = "cloudWatchLogs.autoCreateGroup"
-        value = true
+      name  = "cloudWatchLogs.autoCreateGroup"
+      value = true
       },
       {
         name  = "hostNetwork"
@@ -133,14 +177,14 @@ module "eks_blueprints_addons" {
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
     values = [
-      var.enable_amazon_prometheus ? templatefile("${path.module}/templates/kube-prometheus-amp-enable.yaml", {
+      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
         region              = local.region
         amp_sa              = local.amp_ingest_service_account
         amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
         amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
         storage_class_type  = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
-      }) : templatefile("${path.module}/templates/kube-prometheus.yaml", {})
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
     chart_version = "48.1.1"
     set_sensitive = [
@@ -153,39 +197,25 @@ module "eks_blueprints_addons" {
 
   tags = local.tags
 }
-
- ## Cert-Manager Config
-  resource "helm_release" "cert-manager" {
-    name = "cert-manager"
-    repository = "https://charts.jetstack.io"
-    chart = "cert-manager"
-    version = "1.14.2"
-    namespace = "cert-manager"
-    create_namespace = true
-    set {
-     name = "installCRDs"
-     value = true 
-    }
-    depends_on = [ module.eks_blueprints_addons ]
-  }
-  
-  ## Redpanda Helm Config
+#---------------------------------------
+## Redpanda Helm Config
+#---------------------------------------
 resource "helm_release" "redpanda" {
-    name = "redpanda"
-    repository = "https://charts.redpanda.com"
-    chart = "redpanda"
-    version = "5.7.22"
-    namespace = "redpanda"
-    create_namespace = true
+  name             = "redpanda"
+  repository       = "https://charts.redpanda.com"
+  chart            = "redpanda"
+  version          = "5.7.22"
+  namespace        = "redpanda"
+  create_namespace = true
 
-    values = [
-        templatefile("${path.module}/templates/redpanda_values.yaml", {
-        redpanda_username = var.redpanda_username,
-        redpanda_password = data.aws_secretsmanager_secret_version.redpanada_password_version.secret_string,
-        redpanda_domain = var.redpanda_domain,
-        storage_class = "gp3"
-         })
-    ]
-    #timeout = "3600"
-    depends_on = [ helm_release.cert-manager ]
-    }
+  values = [
+    templatefile("${path.module}/helm-values/redpanda-values.yaml", {
+      redpanda_username = var.redpanda_username,
+      redpanda_password = data.aws_secretsmanager_secret_version.redpanada_password_version.secret_string,
+      redpanda_domain   = var.redpanda_domain,
+      storage_class     = "gp3"
+    })
+  ]
+  #timeout = "3600"
+  depends_on = [module.eks_blueprints_addons]
+}

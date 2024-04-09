@@ -1,3 +1,8 @@
+# Redpanda on Amazon EKS
+****
+Redpanda is a simple, powerful, and cost-efficient streaming data platform that is compatible with Kafka APIs but much less complex, faster and more affordable. Get started in seconds with Redpanda Serverless!
+****
+![redpanda.png](redpanda.png)
 ## Prerequisites
 
 This guide also has the following prerequisites for setting up and deploying Redpanda in EKS.
@@ -293,9 +298,8 @@ kubectl get pod --namespace <namespace>  \
 
 ## Conclusion
 
-With the Redpanda cluster now configured in EKS, we are ready to return to setting up the Lambda integration with Redpanda.
+With the Redpanda cluster now configured in EKS, you can now dive deeper by integrating with other AWS services, Creating Consumer and Producers.
 
-[Lambda Integration with Redpanda](README.md)
 
 * * *
 * * *
