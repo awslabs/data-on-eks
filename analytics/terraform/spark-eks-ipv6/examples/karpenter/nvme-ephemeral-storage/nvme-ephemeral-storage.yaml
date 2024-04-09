@@ -1,0 +1,114 @@
+# Pre-requisite before running this job
+# Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
+
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "taxi-trip"
+  namespace: spark-team-a
+  labels:
+    app: "taxi-trip"
+    applicationId: "taxi-trip-nvme"
+    # Assign the job to a Yunikorn Queue via label.
+    queue: root.test
+spec:
+  #  To create Ingress object for Spark driver.
+  #  Ensure Spark Operator Helm Chart deployed with Ingress enabled to use this feature
+  #  sparkUIOptions:
+  #    servicePort: 4040
+  #    servicePortName: taxi-trip-ui-svc
+  #    serviceType: ClusterIP
+  #    ingressAnnotations:
+  #      kubernetes.io/ingress.class: nginx
+  #      nginx.ingress.kubernetes.io/use-regex: "true"
+  type: Python
+  sparkVersion: "3.2.1"
+  pythonVersion: "3"
+  mode: cluster
+  image: public.ecr.aws/data-on-eks/spark3.3.1-hadoop3.2-aws-java-sdk-bundle-1.12.647
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://spark-eks-ipv6-spark-logs-20240409151822662700000003/taxi-trip/scripts/pyspark-taxi-trip.py" # MainFile is the path to a bundled JAR, Python, or R file of the application
+  arguments:
+    - "s3a://spark-eks-ipv6-spark-logs-20240409151822662700000003/taxi-trip/input/"
+    - "s3a://spark-eks-ipv6-spark-logs-20240409151822662700000003/taxi-trip/output/"
+  hadoopConf:
+    "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+    "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "mapreduce.fileoutputcommitter.algorithm.version": "2"
+  sparkConf:
+    "spark.app.name": "taxi-trip"
+    "spark.kubernetes.driver.pod.name": "taxi-trip"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
+    "spark.speculation": "false"
+    "spark.network.timeout": "2400"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.local.dir": "/data"
+
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://spark-eks-ipv6-spark-logs-20240409151822662700000003/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+    #    "spark.history.fs.eventLog.rolling.maxFilesToRetain": 100
+
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/path": "/metrics/executors/prometheus/"
+    "spark.kubernetes.driver.annotation.prometheus.io/port": "4040"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/path": "/metrics/driver/prometheus/"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/port": "4040"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
+    "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  driver:
+    podSecurityContext:
+      fsGroup: 2000 # Group ID
+      runAsUser: 1000 # User ID
+    cores: 1
+    coreLimit: "1200m"
+    memory: "4g"
+    memoryOverhead: "4g"
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.3.1
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      multiArch: Spark
+
+  executor:
+    podSecurityContext:
+      fsGroup: 2000 # Group ID
+      runAsUser: 1000 # User ID
+    cores: 1
+    coreLimit: "3400m"
+    instances: 4
+    memory: "4g"
+    memoryOverhead: "4g"
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.3.1
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      multiArch: Spark

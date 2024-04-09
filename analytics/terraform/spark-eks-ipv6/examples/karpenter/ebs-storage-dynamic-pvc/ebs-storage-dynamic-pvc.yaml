@@ -1,0 +1,158 @@
+# Pre-requisite before running this job
+# 1/ Open taxi-trip-execute.sh and update <S3_BUCKET> and <REGION>
+# 2/ Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
+# 3/ execute taxi-trip-execute.sh
+
+# This example supports the following features
+  # Support shuffle data recovery on the reused PVCs (SPARK-35593)
+  # Support driver-owned on-demand PVC (SPARK-35182)
+# WARNING: spark-operator cluster role is missing a 'persistenvolumeclaims' permission. Ensure you add this permission to spark-operator cluster role
+
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "taxi-trip"
+  namespace: spark-team-a
+  labels:
+    app: "taxi-trip"
+    applicationId: "taxi-trip-ebs"
+    queue: root.test
+spec:
+#  To create Ingress object for Spark driver.
+#  Ensure Spark Operator Helm Chart deployed with Ingress enabled to use this feature
+#  sparkUIOptions:
+#    servicePort: 4040
+#    servicePortName: taxi-trip-ui-svc
+#    serviceType: ClusterIP
+#    ingressAnnotations:
+#      kubernetes.io/ingress.class: nginx
+#      nginx.ingress.kubernetes.io/use-regex: "true"
+  type: Python
+  sparkVersion: "3.2.1"
+  pythonVersion: "3"
+  mode: cluster
+  image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://<S3_BUCKET>/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  arguments:
+    - "s3a://<S3_BUCKET>/taxi-trip/input/"
+    - "s3a://<S3_BUCKET>/taxi-trip/output/"
+  hadoopConf:
+    "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+    "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "mapreduce.fileoutputcommitter.algorithm.version": "2"
+  sparkConf:
+    "spark.app.name": "taxi-trip"
+    "spark.kubernetes.driver.pod.name": "taxi-trip"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
+    "spark.local.dir": "/data1"
+    "spark.speculation": "false"
+    "spark.network.timeout": "2400"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+#    "spark.history.fs.eventLog.rolling.maxFilesToRetain": 100
+
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/path": "/metrics/executors/prometheus/"
+    "spark.kubernetes.driver.annotation.prometheus.io/port": "4040"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/path": "/metrics/driver/prometheus/"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/port": "4040"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
+    "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
+
+    # EBS Dynamic PVC Config
+    # You can mount a dynamically-created persistent volume claim per executor by using OnDemand as a claim name and storageClass and sizeLimit options like the following. This is useful in case of Dynamic Allocation.
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp2"
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "500Gi"
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false"
+
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp2"
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "500Gi"
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false"
+
+    # Support shuffle data recovery on the reused PVCs (SPARK-35593)
+    # If true, driver pod becomes the owner of on-demand persistent volume claims instead of the executor pods
+    "spark.kubernetes.driver.ownPersistentVolumeClaim": "true"
+    # If true, driver pod tries to reuse driver-owned on-demand persistent volume claims of the deleted executor pods if exists.
+    #    This can be useful to reduce executor pod creation delay by skipping persistent volume creations.
+    #    Note that a pod in `Terminating` pod status is not a deleted pod by definition and its resources including persistent volume claims are not reusable yet. Spark will create new persistent volume claims when there exists no reusable one.
+    #    In other words, the total number of persistent volume claims can be larger than the number of running executors sometimes.
+    #    This config requires spark.kubernetes.driver.ownPersistentVolumeClaim=true.
+    "spark.kubernetes.driver.reusePersistentVolumeClaim": "true" #
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+
+  driver:
+    podSecurityContext:
+      fsGroup: 185
+    initContainers:
+      - name: volume-permissions
+        image: public.ecr.aws/y4g4v0z7/busybox
+        command: [ 'sh', '-c', 'chown -R 185 /data1' ]
+        volumeMounts:
+          - mountPath: "/data1"
+            name: "spark-local-dir-1"
+    cores: 1
+    coreLimit: "1200m"
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.2.1
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
+  executor:
+    podSecurityContext:
+      fsGroup: 185
+    initContainers:
+      - name: volume-permissions
+        image: public.ecr.aws/y4g4v0z7/busybox
+        command: [ 'sh', '-c', 'chown -R 185 /data1' ]
+        volumeMounts:
+          - mountPath: "/data1"
+            name: "spark-local-dir-1"
+    cores: 1
+    coreLimit: "1200m"
+    instances: 4
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.2.1
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
