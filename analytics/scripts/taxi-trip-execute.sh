@@ -19,7 +19,7 @@ fi
 S3_BUCKET="$1"
 REGION="$2"
 
-INPUT_DATA_S3_PATH="s3://${S3_BUCKET}/taxi-trip/input/"
+INPUT_DATA_S3_PATH="s3://${S3_BUCKET}/taxi-trip/input"
 
 # Create a local input folder
 mkdir input
@@ -29,15 +29,15 @@ aws s3 cp pyspark-taxi-trip.py s3://${S3_BUCKET}/taxi-trip/scripts/ --region ${R
 
 # Copy Test Input data to S3 bucket
 wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet -O "input/yellow_tripdata_2022-0.parquet"
-aws s3 cp "input/yellow_tripdata_2022-0.parquet" s3://${S3_BUCKET}/input/yellow_tripdata_2022-0.parquet
+aws s3 cp "input/yellow_tripdata_2022-0.parquet" ${INPUT_DATA_S3_PATH}/yellow_tripdata_2022-0.parquet
 
 pids=()
 
 # Making duplicate copies to increase the size of the data.
-max=100
+max=25
 for (( i=1; i <= $max; ++i ))
 do
-  aws s3 cp s3://${S3_BUCKET}/input/yellow_tripdata_2022-0.parquet s3://${S3_BUCKET}/input/yellow_tripdata_2022-${i}.parquet &
+  aws s3 cp ${INPUT_DATA_S3_PATH}/yellow_tripdata_2022-0.parquet ${INPUT_DATA_S3_PATH}/yellow_tripdata_2022-${i}.parquet &
   pids+=($!)
 done
 
