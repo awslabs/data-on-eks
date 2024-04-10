@@ -302,6 +302,7 @@ module "eks_data_addons" {
       jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
       region                      = var.region
     })]
+    version = "3.2.1"
   }
 
   #---------------------------------------------------------------

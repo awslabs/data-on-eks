@@ -83,6 +83,14 @@ module "eks_blueprints_kubernetes_addons" {
     }
   }
   #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  metrics_server = {
+    values = [templatefile("${path.module}/helm/metrics-server-values.yaml", {})]
+  }
+
+  #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
 
@@ -123,7 +131,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # AWS Load Balancer Controller
   #---------------------------------------
-  enable_aws_load_balancer_controller = false
+  enable_aws_load_balancer_controller = true
 
 
   tags = local.tags
@@ -176,7 +184,7 @@ module "eks_data_addons" {
       },
       {
         name  = "server.replicaCount"
-        value = 3
+        value = 6
       },
       {
         name  = "server.persistence.storageClass"
