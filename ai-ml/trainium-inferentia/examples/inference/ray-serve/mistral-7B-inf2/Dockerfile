@@ -23,10 +23,8 @@ USER $USER
 
 # Set pip repository pointing to the Neuron repository and install required Python packages
 RUN pip config set global.extra-index-url https://pip.repos.neuron.amazonaws.com && \
-    pip install neuronx-cc==2.11.0.34 torch-neuronx==1.13.1.1.12.0 torchvision transformers-neuronx sentencepiece transformers && \
-    pip install optimum[neuronx] && \
-    pip install optimum[diffusers] && \
-    pip install optimum-neuron==0.0.13 diffusers==0.21.4 transformers==4.36.0 && \
+    # pip install neuronx-cc==2.11.0.34 torch-neuronx==1.13.1.1.12.0 torchvision transformers-neuronx sentencepiece transformers && \
+    pip install transformers-neuronx sentencepiece -U && \
     pip install starlette==0.34.0
 
 
@@ -35,4 +33,4 @@ ENV PATH /opt/aws/neuron/bin:$PATH
 
 WORKDIR /serve_app
 
-COPY ray_serve_stablediffusion.py /serve_app/ray_serve_stablediffusion.py
+COPY ray_serve_mistral.py /serve_app/ray_serve_mistral.py

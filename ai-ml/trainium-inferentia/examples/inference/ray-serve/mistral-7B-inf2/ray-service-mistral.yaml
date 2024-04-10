@@ -4,28 +4,28 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: stablediffusion
+  name: mistral
 
 ---
 apiVersion: ray.io/v1
 kind: RayService
 metadata:
-  name: stablediffusion-service
-  namespace: stablediffusion
+  name: mistral-service
+  namespace: mistral
 spec:
   serviceUnhealthySecondThreshold: 900
   deploymentUnhealthySecondThreshold: 300
   serveConfigV2: |
     applications:
-      - name: stable-diffusion-deployment
-        import_path: "ray_serve_stablediffusion:entrypoint"
+      - name: mistral-deployment
+        import_path: "ray_serve_mistral:entrypoint"
         route_prefix: "/"
         runtime_env:
           env_vars:
-            MODEL_ID: "aws-neuron/stable-diffusion-xl-base-1-0-1024x1024"
+            MODEL_ID: "mistralai/Mistral-7B-Instruct-v0.2"
             NEURON_CC_FLAGS: "-O1"
         deployments:
-          - name: stable-diffusion-v2
+          - name: mistral-7b
             autoscaling_config:
               metrics_interval_s: 0.2
               min_replicas: 2
@@ -46,15 +46,15 @@ spec:
       serviceType: NodePort
       headService:
         metadata:
-          name: stablediffusion-service
-          namespace: stablediffusion
+          name: mistral-service
+          namespace: mistral
       rayStartParams:
         dashboard-host: '0.0.0.0'
       template:
         spec:
           containers:
           - name: ray-head
-            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:latest
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.9.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -97,7 +97,7 @@ spec:
         spec:
           containers:
           - name: ray-worker
-            image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:latest
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.9.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -128,8 +128,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: stablediffusion-ingress
-  namespace: stablediffusion
+  name: mistral-ingress
+  namespace: mistral
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: "/$1"
 spec:
@@ -142,7 +142,7 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: stablediffusion-service
+            name: mistral-service
             port:
               number: 8265
       # Ray Serve
@@ -150,6 +150,6 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: stablediffusion-service
+            name: mistral-service
             port:
               number: 8000
