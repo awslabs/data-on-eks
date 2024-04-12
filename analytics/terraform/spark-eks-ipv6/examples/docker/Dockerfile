@@ -12,12 +12,12 @@
 #--------------------------------------------------------------------------------------------
 
 # Use the official Apache Spark base image
-FROM apache/spark:3.5.1
+FROM apache/spark:3.5.0
 
 # Define Spark and Hadoop versions
 ENV SPARK_VERSION=3.5.1
-ENV HADOOP_VERSION=3.3.4
-ENV AWS_SDK_VERSION=1.12.599
+ENV HADOOP_VERSION=3.4.0
+ENV AWS_SDK_VERSION=1.12.699
 
 # Install wget, Python, and PySpark
 USER root
