@@ -14,10 +14,10 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.44.0 |
-| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | 5.44.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.45.0 |
+| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | 5.45.0 |
 | <a name="provider_helm"></a> [helm](#provider\_helm) | 2.13.0 |
-| <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | 2.27.0 |
+| <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | 2.29.0 |
 
 ## Modules
 
@@ -36,6 +36,7 @@
 
 | Name | Type |
 |------|------|
+| [aws_cloudwatch_log_group.flink_team_a](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
 | [aws_iam_policy.flink](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [helm_release.flink_kubernetes_operator](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [kubernetes_namespace_v1.flink_team_a](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/namespace_v1) | resource |

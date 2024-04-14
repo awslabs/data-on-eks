@@ -134,25 +134,8 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  # Fluentbit is required to stream the logs to S3  when EMR Flink Operator is enabled
-  enable_aws_for_fluentbit = true
-  aws_for_fluentbit_cw_log_group = {
-    use_name_prefix   = false
-    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
-    retention_in_days = 30
-  }
-  aws_for_fluentbit = {
-    s3_bucket_arns = [
-      module.s3_bucket.s3_bucket_arn,
-      "${module.s3_bucket.s3_bucket_arn}/*}"
-    ]
-    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = var.region,
-      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
-      s3_bucket_name       = module.s3_bucket.s3_bucket_id
-      cluster_name         = module.eks.cluster_name
-    })]
-  }
+  # With EMR Flink on EKS, set up monitoring configurations to archive application logs to S3/CW.
+  enable_aws_for_fluentbit = false
 
 
 }

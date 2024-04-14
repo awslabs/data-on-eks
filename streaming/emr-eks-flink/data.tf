@@ -60,4 +60,5 @@ data "aws_iam_policy_document" "flink_operator" {
       "logs:PutLogEvents",
     ]
   }
+
 }

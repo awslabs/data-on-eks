@@ -1,72 +1,61 @@
----
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: basic-example
+  name: basic-example-cluster-auto-flink
   namespace: flink-team-a-ns
 spec:
-  image: flink:1.16
-  flinkVersion: v1_16
+  imagePullPolicy: Always
+  emrReleaseLabel: "emr-7.0.0-flink-latest"
+  flinkVersion: v1_18
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "2"
-    state.savepoints.dir: file:///flink/data/checkpoint/savepoints
-    state.checkpoints.dir: file:///flink/data/checkpoint/checkpoints
-    high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
-    high-availability.storageDir: file:///flink/data/checkpoint/ha
-    job-result-store.storage-path: file:///flink/data/checkpoint/job-result-store
-    # restartNonce: 123 # Application restarts without spec change
-    kubernetes.operator.periodic.savepoint.interval: 1h # periodic savepoint triggering
-    kubernetes.operator.deployment.rollback.enabled: "true"
-    env.log.dir: "/flink/data/log"
-    env.taskmanager.tmp.dirs: "/flink/data/tmp"
-  serviceAccount: flink-team-a-sa
-  # Pod templates permit customization of the Flink job and task manager pods,
-  # for example to specify volume mounts, ephemeral storage, sidecar containers etc.
-  #  A common pod template may hold the settings that apply to both job and task manager, like volumeMounts
-  podTemplate:
-    apiVersion: v1
-    kind: Pod
-    metadata:
-      name: pod-template
-    spec:
-      nodeSelector:
-        NodeGroupType: "flink-on-demand-ca"
-      tolerations:
-        - key: "flink-on-demand-ca"
-          operator: "Exists"
-          effect: "NoSchedule"
-      initContainers:
-        - name: flink-ssd-volume-permissions
-          image: public.ecr.aws/y4g4v0z7/busybox
-          command: [ 'sh', '-c', 'chown -R 9999 /local1' ]
-          volumeMounts:
-            - mountPath: /local1
-              name: flink-ssd-volume
-      containers:
-        # Do not change the main container name
-        - name: flink-main-container
-          volumeMounts:
-            - mountPath: /flink/data/checkpoint
-              name: flink-ssd-volume
-            - mountPath: /flink/data/tmp
-              name: flink-ssd-volume
-            - mountPath: /flink/data/log
-              name: flink-ssd-volume
-      volumes:
-        - name: flink-ssd-volume
-          hostPath:
-            path: /local1
-            type: Directory
+    # Autotuning parameters
+    kubernetes.operator.job.autoscaler.autotune.enable: "true"
+    kubernetes.operator.job.autoscaler.autotune.metrics.history.max.count: "2"
+    kubernetes.operator.job.autoscaler.autotune.metrics.restart.count: "1"
+    metrics.job.status.enable: TOTAL_TIME
+
+    # Autoscaler parameters
+    kubernetes.operator.job.autoscaler.enabled: "true"
+    kubernetes.operator.job.autoscaler.scaling.enabled: "true"
+    kubernetes.operator.job.autoscaler.stabilization.interval: "5s"
+    kubernetes.operator.job.autoscaler.metrics.window: "1m"
+
+    jobmanager.scheduler: adaptive
+    # Replace with s3 bucket in your own account
+    state.checkpoints.dir: s3://emr-flink-data/checkpoints
+    state.savepoints.dir: s3://emr-flink-data/savepoints
+
+
+  executionRoleArn: arn:aws:iam::xxxxxxxxx:role/emr-eks-flink-flink-team-a-20240406012025932700000008
   jobManager:
+    # Replace with s3 bucket in your own account
+    storageDir: s3://emr-flink-data/data/basic-example-app-cluster/jobmanager
     resource:
       memory: "2048m"
       cpu: 1
+
   taskManager:
     replicas: 2
     resource:
       memory: "2048m"
       cpu: 1
+
   job:
+    # if you have your job jar in S3 bucket you can use that path as well
     jarURI: local:///opt/flink/examples/streaming/StateMachineExample.jar
-    parallelism: 2
-    upgradeMode: stateless # last-state
+    parallelism: 4
+    upgradeMode: savepoint
+    savepointTriggerNonce: 0
+  monitoringConfiguration:
+    s3MonitoringConfiguration:
+      logUri: emr-flink-data/logs
+    cloudWatchMonitoringConfiguration:
+       logGroupName: /aws/emr-flink/flink-team-a
+    sideCarResources:
+      limits:
+        cpuLimit: 500m
+        memoryLimit: 250Mi
+    containerLogRotationConfiguration:
+        rotationSize: 2GB
+        maxFilesToKeep: "10"

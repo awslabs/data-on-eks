@@ -75,3 +75,9 @@ module "flink_irsa_operator" {
   }
 
 }
+
+#create a log group
+resource "aws_cloudwatch_log_group" "flink_team_a" {
+  name              = "/aws/emr-flink/flink-team-a"
+  retention_in_days = 30
+}
