@@ -13,7 +13,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.27"
+  default     = "1.29"
   type        = string
 }
 
@@ -37,4 +37,10 @@ variable "huggingface_token" {
   type        = string
   default     = "DUMMY_TOKEN_REPLACE_ME"
   sensitive   = true
+}
+
+variable "enable_aws_efa_k8s_device_plugin" {
+  description = "Enable AWS EFA K8s Device Plugin"
+  type        = bool
+  default     = false
 }

@@ -292,7 +292,7 @@ Finally, we'll provide instructions for cleaning up and deprovisioning the resou
 **Step2:** Delete Ray Cluster
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/ray-serve/llama2-inf2
+cd ai-ml/trainium-inferentia/examples/inference/ray-serve/llama2-inf2
 kubectl delete -f ray-service-llama2.yaml
 ```
 

@@ -38,10 +38,10 @@ class StableDiffusionV2:
     def __init__(self):
         from optimum.neuron import NeuronStableDiffusionXLPipeline
 
-        compiled_model_id = "aws-neuron/stable-diffusion-xl-base-1-0-1024x1024"
+        model_id = os.getenv('MODEL_ID')
 
         # To avoid saving the model locally, we can use the pre-compiled model directly from HF
-        self.pipe = NeuronStableDiffusionXLPipeline.from_pretrained(compiled_model_id, device_ids=[0, 1])
+        self.pipe = NeuronStableDiffusionXLPipeline.from_pretrained(model_id, device_ids=[0, 1])
 
     async def generate(self, prompt: str):
         assert len(prompt), "prompt parameter cannot be empty"

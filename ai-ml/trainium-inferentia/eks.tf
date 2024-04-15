@@ -529,12 +529,7 @@ module "eks" {
           key    = "aws.amazon.com/neuron",
           value  = "true",
           effect = "NO_SCHEDULE"
-        },
-        {
-          key    = "aws.amazon.com/neuroncore",
-          value  = "true",
-          effect = "NO_SCHEDULE"
-        },
+        }
       ]
 
       tags = merge(local.tags, {
@@ -586,12 +581,7 @@ module "eks" {
           key    = "aws.amazon.com/neuron",
           value  = true,
           effect = "NO_SCHEDULE"
-        },
-        {
-          key    = "aws.amazon.com/neuroncore",
-          value  = true,
-          effect = "NO_SCHEDULE"
-        },
+        }
       ]
 
       tags = merge(local.tags, {
