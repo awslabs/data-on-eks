@@ -115,7 +115,7 @@ Alternatively this can be done with ACM, please check out this document on how:
 
 ## 2/ Setup Environment Variables for Redpanda Cluster
 
-Create Environment Variables, we will pull aws secretsmanager secret we created with Terraform for superuser of cluster, then configure our topic username of "redpanda-twitch-account" and password "changethispassword" which will be used later with SAM. This is for lab purposes only and you should secure this password.
+Create Environment Variables, we will pull aws secretsmanager secret we created with Terraform for superuser of cluster, then configure our topic username of "redpanda-twitch-account" and password "changethispassword" which will be used later for testing topics. This is for lab purposes only and you should secure this password.
 ```
 SUPUSER="superuser"
 SUPPASS=`aws secretsmanager get-secret-value --secret-id redpanda_password-1234 --query "SecretString" --output text`
