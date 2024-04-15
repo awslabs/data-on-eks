@@ -83,9 +83,9 @@ kubectl get nodes
 ```
 You should see 6 worked nodes, 3 deployed for EKS Add-ons (Cert-Manager, AWS Load Balancer Controller, Monitoring Tools, etc).
 
-## Configuring Environment for Lambda/Serverless Lab
+## Configuring Environment
 
-In order to allow our Lambda function to communicate with the cluster, we will need to take several steps to set up external access:
+In order to utilize our Redpanda Cluster we will need to create some items:
 
 * Export the external certificate that was generated during the prior steps from the Redpanda cluster, and store it in AWS Secrets Manager
 * Get our superuser password from AWS Secrets Manager and Setup Environment Variables
@@ -249,52 +249,6 @@ Do not allow full public access to port 8080, as the Redpanda Community Edition 
 
 Once you are able to access the Redpanda Console, you can view information about your brokers, IP addresses and IDs, as well as information on your topics.  You can view the messages produced to your topics, and produce additional messages to topics using the web interface.
 
-## Expand the Permissions for the Created Redpanda Account
-
-Now that the cluster is configured, we need to expand the permissions of the account that we created so that this account can be used to configure the AWS Lambda trigger. The account needs permissions such as creating new consumer groups.
-
-Steps:
-
-1. Access the Redpanda console as described in previous steps.
-2. Click on “Security” on the left margin.
-3. Click on the username that you created in previous steps, our example uses “redpanda-twitch-account”.
-4. A dialog titled “Edit ACL” will appear.  For the sake of this demo, click on “Allow all operations”.  Note that for production use, you will want to limit these permissions.
-5. Click on “OK”.
-
-
-## Collecting Information Before Using SAM
-
-We need to collect a few pieces of information before deploying our template.
-
-* The VPC ID of the VPC created by eksctl.
-* The subnet IDs of the public subnets created by eksctl.
-
-Get our VPC ID:
-```
-export VPCID=`aws eks describe-cluster --name devcluster-02 | jq -r ".cluster.resourcesVpcConfig.vpcId"`
-```
-Get the public subnets used by our VPC:
-
-```
-for subnet in $(aws ec2 describe-subnets --filter Name=vpc-id,Values=$VPCID --query 'Subnets[?MapPublicIpOnLaunch==`true`].SubnetId' --output text); do SUBNETS="${SUBNETS}${subnet}", ; done;
-
-```
-We now have Environment Variables $VPCID and $SUBNETS, as well as $REGUSER, $REPASS for uses with Lambda SAM Template.
-
-OR gather this data from console
-
-1. Navigate to the AWS Console and go to the VPC service.
-2. Find the VPC created by our EKS cluster - the VPC name should have “eksctl” in the name.  Copy the VPC ID to your notes.  It should look something like “vpc-02bd59e133e36991d”.
-3. Click on “Subnets” on the left margin.  Find the two subnets with “Public” and “eksctl” in the name, and copy the subnet IDs to your notes.  They should look something like “subnet-0d7fed3e19322e837”.
-
-
-Get the IP Addresses assigned to your Redpanda containers:
-```
-kubectl get pod --namespace <namespace>  \
--o=custom-columns=NODE:.spec.nodeName,NAME:.[metadata.name](http://metadata.name/) -l \
-[app.kubernetes.io/component=redpanda-statefulset](http://app.kubernetes.io/component=redpanda-statefulset)
-
-```
 
 ## Conclusion
 
