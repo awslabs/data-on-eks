@@ -1,6 +1,6 @@
 # Redpanda on Amazon EKS
 ****
-Redpanda is a simple, powerful, and cost-efficient streaming data platform that is compatible with Kafka APIs but much less complex, faster and more affordable. Get started in seconds with Redpanda Serverless!
+Redpanda is a simple, powerful, and cost-efficient streaming data platform that is compatible with Kafka APIs but much less complex, faster and more affordable. Lets take a look at how we can deploy this on Amazon EKS!
 ****
 ![redpanda.png](redpanda.png)
 ## Prerequisites
