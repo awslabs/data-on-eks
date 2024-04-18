@@ -60,7 +60,7 @@ data "aws_ami" "eks" {
 
   filter {
     name   = "name"
-    values = ["amazon-eks-node-1.24-*"]
+    values = ["amazon-eks-node-1.26-*"]
   }
 }
 

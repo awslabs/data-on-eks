@@ -121,12 +121,12 @@ Output
 
 ```text
 NAME                                        STATUS   ROLES    AGE     VERSION
-ip-10-0-10-36.us-west-2.compute.internal    Ready    <none>   5h28m   v1.24.7-eks-fb459a0
-ip-10-0-10-47.us-west-2.compute.internal    Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-11-218.us-west-2.compute.internal   Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-11-223.us-west-2.compute.internal   Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-12-202.us-west-2.compute.internal   Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-12-50.us-west-2.compute.internal    Ready    <none>   5h20m   v1.24.7-eks-fb459a0
+ip-10-0-10-36.us-west-2.compute.internal    Ready    <none>   5h28m   v1.26.7-eks-fb459a0
+ip-10-0-10-47.us-west-2.compute.internal    Ready    <none>   5h20m   v1.26.7-eks-fb459a0
+ip-10-0-11-218.us-west-2.compute.internal   Ready    <none>   5h20m   v1.26.7-eks-fb459a0
+ip-10-0-11-223.us-west-2.compute.internal   Ready    <none>   5h20m   v1.26.7-eks-fb459a0
+ip-10-0-12-202.us-west-2.compute.internal   Ready    <none>   5h20m   v1.26.7-eks-fb459a0
+ip-10-0-12-50.us-west-2.compute.internal    Ready    <none>   5h20m   v1.26.7-eks-fb459a0
 ```
 
 ### Verify Kafka Brokers and Zookeeper

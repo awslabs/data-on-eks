@@ -66,7 +66,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 |------|-------------|------|---------|:--------:|
 | <a name="input_acm_certificate_domain"></a> [acm\_certificate\_domain](#input\_acm\_certificate\_domain) | An ACM Certificate in the account + region where you are deploying this example. A wildcard certificate is preferred, e.g. *.example.com | `string` | n/a | yes |
 | <a name="input_eks_cluster_domain"></a> [eks\_cluster\_domain](#input\_eks\_cluster\_domain) | A Route53 Public Hosted Zone configured in the account where you are deploying this example. E.g. example.com | `string` | n/a | yes |
-| <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.24"` | no |
+| <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.26"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"nifi-on-eks"` | no |
 | <a name="input_nifi_sub_domain"></a> [nifi\_sub\_domain](#input\_nifi\_sub\_domain) | Subdomain for NiFi cluster. | `string` | `"mynifi"` | no |
 | <a name="input_nifi_username"></a> [nifi\_username](#input\_nifi\_username) | NiFi login username | `string` | `"admin"` | no |
