@@ -54,7 +54,7 @@ variable "enable_fsx_for_lustre" {
 }
 
 variable "enable_cloudwatch_metrics" {
-  default     = false
+  default     = false 
   description = "Enable Cloudwatch metrics"
   type        = bool
 }
