@@ -34,7 +34,7 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
-  enable_metrics_server = true
+  enable_metrics_server = false
   metrics_server = {
     values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }

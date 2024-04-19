@@ -53,3 +53,5 @@ else
   echo "FAILED: Terraform destroy of all targets failed"
   exit 1
 fi
+
+# aws secretsmanager delete-secret --secret-id workshop-grafana --force-delete-without-recovery 

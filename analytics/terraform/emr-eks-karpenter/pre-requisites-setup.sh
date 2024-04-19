@@ -38,10 +38,10 @@ helm repo update
 
 helm version
 
-# Install latest AWS CLIv2 (not needed after EMR on EKS Lab is up)
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install
+# # Install latest AWS CLIv2 (not needed after EMR on EKS Lab is up)
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+# unzip awscliv2.zip
+# sudo ./aws/install
 
 # Clone repo
 git clone -b apac-workshop --single-branch https://github.com/awslabs/data-on-eks.git
