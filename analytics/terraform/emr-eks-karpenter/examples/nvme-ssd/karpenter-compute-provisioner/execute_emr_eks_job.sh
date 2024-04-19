@@ -3,14 +3,17 @@
 #------------------------------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #------------------------------------------------------------------
-JOB_NAME='taxidata'
-EMR_EKS_RELEASE_LABEL="emr-6.10.0-latest" # Spark 3.3.1
-
 cp ../../../terraform.tfstate .
 VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".virtual_cluster_id')
 EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".job_execution_role_arn')
 CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".cloudwatch_log_group_name')
 rm terraform.tfstate
+
+#--------------------------------------------
+# DEFAULT VARIABLES CAN BE MODIFIED
+#--------------------------------------------
+JOB_NAME='taxidata'
+EMR_EKS_RELEASE_LABEL="emr-6.10.0-latest" # Spark 3.3.1
 
 SPARK_JOB_S3_PATH="s3://${S3BUCKET}/${VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
 SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"
@@ -20,6 +23,7 @@ OUTPUT_DATA_S3_PATH="${SPARK_JOB_S3_PATH}/output"
 #--------------------------------------------
 # Copy PySpark Scripts, Pod Templates and Input data to S3 bucket
 #--------------------------------------------
+echo ${SCRIPTS_S3_PATH}
 aws s3 sync "./" ${SCRIPTS_S3_PATH}
 
 #--------------------------------------------

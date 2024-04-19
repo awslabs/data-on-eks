@@ -7,12 +7,10 @@ metadata:
 spec:
   volumes:
     - name: spark-local-dir-1
-      hostPath:
-        path: /local1
-        type: Directory
+      emptyDir: {}
 
   nodeSelector:
-    NodeGroupType: "SparkComputeOptimized"
+    provisioner: spark-compute-optimized
 #    topology.kubernetes.io/zone: "us-west-2a"
 
   containers:
@@ -22,7 +20,7 @@ spec:
           mountPath: /data1
           readOnly: false
 
-  tolerations:
-    - key: "spark-compute-optimized"
-      operator: "Exists"
-      effect: "NoSchedule"
+  # tolerations:
+  #   - key: "spark-compute-optimized"
+  #     operator: "Exists"
+  #     effect: "NoSchedule"
