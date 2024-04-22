@@ -1,7 +1,7 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: basic-example-karpenter-flink
+  name: graviton-example-karpenter-flink
   namespace: flink-team-a-ns
 spec:
   imagePullPolicy: Always
@@ -36,7 +36,7 @@ spec:
       name: pod-template
     spec:
       nodeSelector:
-        NodeGroupType: "FlinkComputeOptimized"
+        NodeGroupType: "FlinkGravitonMemoryOptimized"
 
 
   jobManager:

@@ -2,13 +2,9 @@ module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket_prefix = "${local.name}-flink-logs-"
+  bucket_prefix = "${local.name}-"
 
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
+  attach_require_latest_tls_policy = true
 
   block_public_acls       = true
   block_public_policy     = true
@@ -143,11 +139,27 @@ module "eks_blueprints_addons" {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
+
+  depends_on = [module.flink_irsa_jobs, module.flink_irsa_operator]
+  #source  = "git@github.com:mithun008/terraform-aws-eks-data-addons/"
   source  = "aws-ia/eks-data-addons/aws"
   version = "~> 1.30" # ensure to update this to the latest/desired version
 
   oidc_provider_arn          = module.eks.oidc_provider_arn
   enable_karpenter_resources = true
+  enable_emr_flink_operator  = true
+  emr_flink_operator_helm_config = {
+    namespace                = "emr-flink-operator"
+    create_namespace         = true
+    namespace                = "${local.flink_operator}-ns"
+    name                     = "flink-kubernetes-operator"
+    repository               = "oci://public.ecr.aws/emr-on-eks"
+    chart                    = "flink-kubernetes-operator"
+    operatorExecutionRoleArn = module.flink_irsa_operator.iam_role_arn
+
+
+  }
+
   karpenter_resources_helm_config = {
     flink-compute-optimized = {
       values = [
@@ -207,6 +219,77 @@ module "eks_data_addons" {
       EOT
       ]
     }
+    flink-graviton-memory-optimized = {
+      values = [
+        <<-EOT
+      name: flink-graviton-memory-optimized
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: FlinkGravitonMemoryOptimized
+          - multiArch: Flink
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["arm64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["r"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["r6gd"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["4", "8", "16", "32"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 50
+      EOT
+      ]
+    }
   }
+}
 
+resource "aws_s3_object" "checkpoints" {
+  bucket       = module.s3_bucket.s3_bucket_id
+  key          = "checkpoints/"
+  content_type = "application/x-directory"
+}
+resource "aws_s3_object" "savepoints" {
+  bucket       = module.s3_bucket.s3_bucket_id
+  key          = "savepoints/"
+  content_type = "application/x-directory"
+}
+resource "aws_s3_object" "jobmanager" {
+  bucket       = module.s3_bucket.s3_bucket_id
+  key          = "jobmanager/"
+  content_type = "application/x-directory"
+}
+resource "aws_s3_object" "logs" {
+  bucket       = module.s3_bucket.s3_bucket_id
+  key          = "logs/"
+  content_type = "application/x-directory"
 }

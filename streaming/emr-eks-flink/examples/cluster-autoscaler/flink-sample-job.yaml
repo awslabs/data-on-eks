@@ -5,7 +5,7 @@ metadata:
   namespace: flink-team-a-ns
 spec:
   imagePullPolicy: Always
-  emrReleaseLabel: "emr-7.0.0-flink-latest"
+  emrReleaseLabel: "emr-7.1.0-flink-latest"
   flinkVersion: v1_18
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "2"
@@ -26,7 +26,7 @@ spec:
     state.checkpoints.dir: s3://emr-flink-data/checkpoints
     state.savepoints.dir: s3://emr-flink-data/savepoints
 
-
+  # Replace this execution role ARN with your own
   executionRoleArn: arn:aws:iam::xxxxxxxxx:role/emr-eks-flink-flink-team-a-20240406012025932700000008
   jobManager:
     # Replace with s3 bucket in your own account

@@ -14,7 +14,7 @@ resource "kubernetes_namespace_v1" "flink_team_a" {
 resource "aws_iam_policy" "flink" {
   description = "IAM role policy for flink Job execution"
   name        = "${local.name}-flink-irsa"
-  policy      = data.aws_iam_policy_document.flink_operator.json
+  policy      = data.aws_iam_policy_document.flink_sample_job.json
 }
 
 #---------------------------------------------------------------
@@ -45,7 +45,6 @@ module "flink_irsa_jobs" {
   }
 
 }
-
 
 #---------------------------------------------------------------
 # IRSA for flink pods for "flink-operator"
@@ -79,5 +78,37 @@ module "flink_irsa_operator" {
 #create a log group
 resource "aws_cloudwatch_log_group" "flink_team_a" {
   name              = "/aws/emr-flink/flink-team-a"
-  retention_in_days = 30
+  retention_in_days = 7
+}
+
+#---------------------------------------------------------------
+# Example IAM policy for Flink job execution
+#---------------------------------------------------------------
+data "aws_iam_policy_document" "flink_sample_job" {
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["*"]
+    actions = [
+      "s3:ListBucket",
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:GetBucketLocation",
+      "s3:GetObjectVersion"
+    ]
+  }
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["*"]
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
+    ]
+  }
 }

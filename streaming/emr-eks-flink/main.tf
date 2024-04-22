@@ -1,3 +1,31 @@
+#create local
+locals {
+  name   = var.name
+  region = var.region
+  tags = {
+    Blueprint  = local.name
+    GithubRepo = "github.com/awslabs/data-on-eks"
+  }
+  flink_team     = "flink-team-a"
+  flink_operator = "flink-kubernetes-operator"
+}
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
+}
+data "aws_availability_zones" "available" {}
+data "aws_caller_identity" "current" {}
+# This data source can be used to get the latest AMI for Managed Node Groups
+data "aws_ami" "x86" {
+  owners      = ["amazon"]
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["amazon-eks-node-${module.eks.cluster_version}-*"] # Update this for ARM ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
+  }
+}
 # create eks cluster
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
@@ -25,8 +53,6 @@ module "eks" {
       ]
     }
   ]
-
-
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
@@ -140,83 +166,5 @@ module "eks" {
         "karpenter.sh/discovery" = local.name
       }
     }
-
-
   }
-
-}
-
-#import module vpc
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.5.1"
-
-  name = local.name
-
-  cidr = "10.0.0.0/16"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 3)
-
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
-
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
-
-  public_subnet_tags = {
-    "kubernetes.io/cluster/${local.name}" = "shared"
-    "kubernetes.io/role/elb"              = 1
-  }
-
-  private_subnet_tags = {
-    "kubernetes.io/cluster/${local.name}" = "shared"
-    "kubernetes.io/role/internal-elb"     = 1
-  }
-}
-
-
-
-
-# deploy a helm chart for flink-kubernetes-operator
-resource "helm_release" "flink_kubernetes_operator" {
-
-  depends_on       = [module.flink_irsa_jobs, module.flink_irsa_operator]
-  name             = "flink-kubernetes-operator"
-  repository       = "oci://public.ecr.aws/emr-on-eks"
-  chart            = "flink-kubernetes-operator"
-  create_namespace = true
-  namespace        = "${local.flink_operator}-ns"
-
-  set {
-    name  = "watchNamespace"
-    value = "${local.flink_team}-ns"
-  }
-  set {
-    name  = "emrContainers.operatorExecutionRoleArn"
-    value = module.flink_irsa_operator.iam_role_arn
-  }
-
-  set {
-    name  = "env.AWS_REGION"
-    value = var.region
-  }
-
-  # set the version
-  set {
-    name  = "image.tag"
-    value = "7.0.0"
-  }
-
-  # set prometheus metrics
-  set {
-    name  = "prometheus.enabled"
-    value = "true"
-  }
-
-  #set prometheus metrics
-  set {
-    name  = "prometheus.metrics.port"
-    value = "8081"
-  }
-
 }
