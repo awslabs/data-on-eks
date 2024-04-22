@@ -27,7 +27,7 @@ spec:
     state.savepoints.dir: s3://emr-flink-data/savepoints
 
   # Replace this execution role ARN with your own
-  executionRoleArn: arn:aws:iam::681921237057:role/emr-eks-flink-flink-team-a-20240406012025932700000008
+  executionRoleArn: arn:aws:iam::xxxxxxxxxx:role/emr-eks-flink-flink-team-a-20240406012025932700000008
 
   podTemplate:
     apiVersion: v1
