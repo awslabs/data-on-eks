@@ -7,8 +7,10 @@ metadata:
 spec:
   volumes:
     - name: spark-local-dir-1
-      emptyDir: {}
-
+      hostPath:
+        path: /local1
+        type: Directory
+        
   nodeSelector:
     provisioner: spark-compute-optimized
 #    topology.kubernetes.io/zone: "us-west-2a"
