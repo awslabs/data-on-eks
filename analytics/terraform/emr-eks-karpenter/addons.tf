@@ -55,7 +55,13 @@ module "eks_blueprints_kubernetes_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   karpenter = {
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -167,6 +173,7 @@ data "kubectl_path_documents" "karpenter_provisioners" {
   vars = {
     azs            = local.region
     eks_cluster_id = data.aws_eks_cluster.cluster.name
+    ec2_node_role  = module.eks_blueprints_kubernetes_addons.karpenter.node_iam_role_name
   }
 }
 
