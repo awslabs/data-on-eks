@@ -74,37 +74,57 @@ spec:
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
-        volumeSize: 100Gi
+        volumeSize: 50Gi
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
-  role: "${eks_cluster_id}-karpenter-node"
+  # required, IAM role to use for the node identity
+  role: "${ec2_node_role}"
   subnetSelectorTerms:
     - tags: # Update the correct region and zones
-        Name: "${eks_cluster_id}-private*"
+        Name: "${eks_cluster_id}/*/Private*"   	#emr-roadshow/network-sg/eksVpc/Private
   securityGroupSelectorTerms:
-    - name: "${eks_cluster_id}-node*"
-  userData: |
+    - name: "eks-*-${eks_cluster_id}-*"
+  userData: |                   
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"
 
     --BOUNDARY
     Content-Type: text/x-shellscript; charset="us-ascii"
 
-    cat <<-EOF > /etc/profile.d/bootstrap.sh
-    #!/bin/sh
+    #!/bin/bash
+    echo "Running a custom user data script"
+    set -ex
+    yum install mdadm -y
 
+    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
 
-    # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-    # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-    # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-    #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-    #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-    export LOCAL_DISKS='raid0'
-    EOF
+    DISK_ARRAY=()
 
-    # Source extra environment variables in bootstrap script
-    sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
+    for DEV in $DEVICES
+    do
+      DISK_ARRAY+=("/dev/$${DEV}")
+    done
+
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. No further action needed."
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /local1
+      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /local1
+    fi
 
     --BOUNDARY--
   tags:

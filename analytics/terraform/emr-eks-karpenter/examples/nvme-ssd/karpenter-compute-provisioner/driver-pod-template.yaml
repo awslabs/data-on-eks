@@ -6,7 +6,9 @@ metadata:
 spec:
   volumes:
     - name: spark-local-dir-1
-      emptyDir: {}
+      hostPath:
+        path: /local1
+        type: Directory
 
   nodeSelector:
     provisioner: spark-compute-optimized
