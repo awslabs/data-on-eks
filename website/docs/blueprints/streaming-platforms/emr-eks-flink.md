@@ -40,8 +40,7 @@ In addition to the above features, EMR Flink Kubernetes operator provides the fo
 3. Automatically tunes Autoscaler configurations based on historical trends of observed metrics.
 4. Faster Flink Job Restart during scaling or Failure Recovery
 5. IRSA (IAM Roles for Service Accounts) Native Integration
-6. Apache Airflow Integration
-7. Pyflink support
+6. Pyflink support
 
 
 Flink Operator defines two types of Custom Resources(CR) which are the extensions of the Kubernetes API.
@@ -201,7 +200,7 @@ This example deploys an EKS Cluster running the Flink Operator into a new VPC.
 - Deploys Metrics server, Cluster Autoscaler, Apache YuniKorn, Karpenter, Grafana, AMP and Prometheus server
 - Deploys Cert Manager and EMR Flink Operator. Flink Operator has dependency on Cert Manager
 - Creates a new Flink Data team resources that includes namespace, IRSA, Role and Role binding
-- Deploys three Karpenter provisioners for different compute types
+- Deploys Karpenter provisioner for flink-compute-optimized types
 
 ### Prerequisites
 
@@ -270,7 +269,7 @@ To list all the resources created for Flink team to run Flink jobs using this na
 Navigate to example directory and submit the Flink job.
 
 ```bash
-cd data-on-eks/streaming/emr-eks-flink/examples
+cd data-on-eks/streaming/emr-eks-flink/examples/karpenter
 ```
 Get the role arn linked to the job execution service account.
 ```bash
@@ -278,8 +277,23 @@ terraform output flink_jobs_role_arn
 
 "arn:aws:iam::681921237057:role/emr-eks-flink-flink-team-a-20240402170622025900000001"
 ```
+Get the S3 bucket paths for checkpoint,savepoint,logs and job storage data.
+```bash
+terraform output flink_checkpoint_path
+"s3://emr-eks-flink-20240417234319144300000001/checkpoints"
 
-Open the basic-example-app-cluster.yaml in any editor and replace the place holder for **REPLACE_WITH_JOB_EXECUTION_ROLE_ARN** with the role ARN that you got from the terraform output command and save the file.
+terraform output flink_savepoint_path
+"s3://emr-eks-flink-20240417234319144300000001/savepoints"
+
+terraform output flink_jobmanager_path
+"s3://emr-eks-flink-20240417234319144300000001/jobmanager"
+
+terraform output flink_logs_path
+"s3://emr-eks-flink-20240417234319144300000001/logs"
+
+```
+
+Open the basic-example-app-cluster.yaml in any editor and replace the place holder for **REPLACE_WITH_JOB_EXECUTION_ROLE_ARN** with the role ARN that you got from the terraform output command. Replace the s3 object paths with the s3 object paths that you created in previous step.The monitoring jobUri only takes the object name.
 
 Deploy the job by running the kubectl deply command.
 
