@@ -78,12 +78,13 @@ spec:
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
-  role: "${eks_cluster_id}-karpenter-node"
+  # required, IAM role to use for the node identity
+  role: "${ec2_node_role}"
   subnetSelectorTerms:
     - tags: # Update the correct region and zones
-        Name: "${eks_cluster_id}-private*"
+        Name: "${eks_cluster_id}/*/Private*"   	#emr-roadshow/network-sg/eksVpc/Private
   securityGroupSelectorTerms:
-    - name: "${eks_cluster_id}-node*"
+    - name: "eks-*-${eks_cluster_id}-*"
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"
