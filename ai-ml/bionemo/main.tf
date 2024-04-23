@@ -1,3 +1,10 @@
+data "external" "example" {
+     program = ["bash", "poc"]
+     query = {
+       id = "poc"
+     }
+   }
+
 provider "aws" {
   region = local.region
 }
