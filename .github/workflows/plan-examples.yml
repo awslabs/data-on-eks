@@ -18,7 +18,7 @@ jobs:
     # Do not remove environment setup without considering changes to pull_request_target and checkout of PR, as it may lead to checks running automatically against malicious code in PRs.
     environment: DoEKS Test
     # Skip running on forks since it won't have access to secrets
-    if: github.repository == 'awslabs/data-on-eks'
+    
     outputs:
       directories: ${{ steps.dirs.outputs.directories }}
     steps:
@@ -74,14 +74,6 @@ jobs:
               - '*.tf'
 
       # https://github.com/aws-actions/configure-aws-credentials
-      - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        if: steps.changes.outputs.src== 'true'
-        with:
-          role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
-          aws-region: us-west-2
-          role-duration-seconds: 3600
-          role-session-name: GithubActions-Session
 
       - name: Terraform Job
         uses: hashicorp/setup-terraform@v2
