@@ -65,12 +65,10 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Description |
 |------|-------------|
-| <a name="output_flink_checkpoint_path"></a> [flink\_checkpoint\_path](#output\_flink\_checkpoint\_path) | S3 path for checkpoint data |
-| <a name="output_flink_jobmanager_path"></a> [flink\_jobmanager\_path](#output\_flink\_jobmanager\_path) | S3 path for jobmanager data |
-| <a name="output_flink_jobs_role_arn"></a> [flink\_jobs\_role\_arn](#output\_flink\_jobs\_role\_arn) | IAM linked role for the flink job |
-| <a name="output_flink_logs_path"></a> [flink\_logs\_path](#output\_flink\_logs\_path) | S3 path for logs |
+| <a name="output_configure_kubectl"></a> [configure\_kubectl](#output\_configure\_kubectl) | Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig |
+| <a name="output_flink_job_execution_role_arn"></a> [flink\_job\_execution\_role\_arn](#output\_flink\_job\_execution\_role\_arn) | IAM linked role for the flink job |
+| <a name="output_flink_operator_bucket"></a> [flink\_operator\_bucket](#output\_flink\_operator\_bucket) | S3 bucket name for Flink operator data,logs,checkpoint and savepoint |
 | <a name="output_flink_operator_role_arn"></a> [flink\_operator\_role\_arn](#output\_flink\_operator\_role\_arn) | IAM linked role for the flink operator |
-| <a name="output_flink_savepoint_path"></a> [flink\_savepoint\_path](#output\_flink\_savepoint\_path) | S3 path for savepoint data |
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -135,10 +133,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Description |
 |------|-------------|
-| <a name="output_flink_checkpoint_path"></a> [flink\_checkpoint\_path](#output\_flink\_checkpoint\_path) | S3 path for checkpoint data |
-| <a name="output_flink_jobmanager_path"></a> [flink\_jobmanager\_path](#output\_flink\_jobmanager\_path) | S3 path for jobmanager data |
-| <a name="output_flink_jobs_role_arn"></a> [flink\_jobs\_role\_arn](#output\_flink\_jobs\_role\_arn) | IAM linked role for the flink job |
-| <a name="output_flink_logs_path"></a> [flink\_logs\_path](#output\_flink\_logs\_path) | S3 path for logs |
+| <a name="output_configure_kubectl"></a> [configure\_kubectl](#output\_configure\_kubectl) | Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig |
+| <a name="output_flink_job_execution_role_arn"></a> [flink\_job\_execution\_role\_arn](#output\_flink\_job\_execution\_role\_arn) | IAM linked role for the flink job |
+| <a name="output_flink_operator_bucket"></a> [flink\_operator\_bucket](#output\_flink\_operator\_bucket) | S3 bucket name for Flink operator data,logs,checkpoint and savepoint |
 | <a name="output_flink_operator_role_arn"></a> [flink\_operator\_role\_arn](#output\_flink\_operator\_role\_arn) | IAM linked role for the flink operator |
-| <a name="output_flink_savepoint_path"></a> [flink\_savepoint\_path](#output\_flink\_savepoint\_path) | S3 path for savepoint data |
 <!-- END_TF_DOCS -->

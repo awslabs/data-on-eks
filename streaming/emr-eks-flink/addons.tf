@@ -1,26 +1,3 @@
-module "s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
-
-  bucket_prefix = "${local.name}-"
-
-  attach_require_latest_tls_policy = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
-
-  tags = local.tags
-}
 #---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
@@ -66,7 +43,10 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
-  # install cert-manager
+
+  #---------------------------------------
+  # Install cert-manager
+  #---------------------------------------
   enable_cert_manager = true
   cert_manager = {
     set_values = [
@@ -76,6 +56,7 @@ module "eks_blueprints_addons" {
       },
     ]
   }
+
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -95,6 +76,7 @@ module "eks_blueprints_addons" {
       eks_cluster_id = module.eks.cluster_name
     })]
   }
+
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
@@ -113,8 +95,6 @@ module "eks_blueprints_addons" {
     }
   }
 
-
-
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
@@ -122,29 +102,23 @@ module "eks_blueprints_addons" {
   aws_cloudwatch_metrics = {
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
-  #---------------------------------------
-  # Adding AWS Load Balancer Controller
-  #---------------------------------------
-  enable_aws_load_balancer_controller = true
-
-  #---------------------------------------
-  # AWS for FluentBit - DaemonSet
-  #---------------------------------------
-  # With EMR Flink on EKS, set up monitoring configurations to archive application logs to S3/CW.
-  enable_aws_for_fluentbit = false
-
 
 }
+
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  depends_on                 = [module.flink_irsa_jobs, module.flink_irsa_operator]
-  source                     = "aws-ia/eks-data-addons/aws"
-  version                    = "~> 1.30" # ensure to update this to the latest/desired version
-  oidc_provider_arn          = module.eks.oidc_provider_arn
-  enable_karpenter_resources = true
-  enable_emr_flink_operator  = true
+  depends_on = [module.flink_irsa_jobs, module.flink_irsa_operator]
+
+  source            = "aws-ia/eks-data-addons/aws"
+  version           = "~> 1.30" # ensure to update this to the latest/desired version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # EMR Flink operator
+  #---------------------------------------------------------------
+  enable_emr_flink_operator = true
   emr_flink_operator_helm_config = {
     namespace                = "emr-flink-operator"
     create_namespace         = true
@@ -153,10 +127,12 @@ module "eks_data_addons" {
     repository               = "oci://public.ecr.aws/emr-on-eks"
     chart                    = "flink-kubernetes-operator"
     operatorExecutionRoleArn = module.flink_irsa_operator.iam_role_arn
-
-
   }
 
+  #---------------------------------------------------------------
+  # Karpenter nodepools
+  #---------------------------------------------------------------
+  enable_karpenter_resources = true
   karpenter_resources_helm_config = {
     flink-compute-optimized = {
       values = [
@@ -268,25 +244,4 @@ module "eks_data_addons" {
       ]
     }
   }
-}
-
-resource "aws_s3_object" "checkpoints" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  key          = "checkpoints/"
-  content_type = "application/x-directory"
-}
-resource "aws_s3_object" "savepoints" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  key          = "savepoints/"
-  content_type = "application/x-directory"
-}
-resource "aws_s3_object" "jobmanager" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  key          = "jobmanager/"
-  content_type = "application/x-directory"
-}
-resource "aws_s3_object" "logs" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  key          = "logs/"
-  content_type = "application/x-directory"
 }
