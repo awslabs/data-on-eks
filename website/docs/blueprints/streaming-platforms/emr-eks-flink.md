@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 3
 title: EMR on EKS with Flink Streaming
 ---
 
@@ -273,27 +273,14 @@ cd data-on-eks/streaming/emr-eks-flink/examples/karpenter
 ```
 Get the role arn linked to the job execution service account.
 ```bash
-terraform output flink_jobs_role_arn
-
-"arn:aws:iam::681921237057:role/emr-eks-flink-flink-team-a-20240402170622025900000001"
+terraform output flink_job_execution_role_arn
 ```
-Get the S3 bucket paths for checkpoint,savepoint,logs and job storage data.
+Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
 ```bash
-terraform output flink_checkpoint_path
-"s3://emr-eks-flink-20240417234319144300000001/checkpoints"
-
-terraform output flink_savepoint_path
-"s3://emr-eks-flink-20240417234319144300000001/savepoints"
-
-terraform output flink_jobmanager_path
-"s3://emr-eks-flink-20240417234319144300000001/jobmanager"
-
-terraform output flink_logs_path
-"s3://emr-eks-flink-20240417234319144300000001/logs"
-
+terraform output flink_operator_bucket
 ```
 
-Open the basic-example-app-cluster.yaml in any editor and replace the place holder for **REPLACE_WITH_JOB_EXECUTION_ROLE_ARN** with the role ARN that you got from the terraform output command. Replace the s3 object paths with the s3 object paths that you created in previous step.The monitoring jobUri only takes the object name.
+Open the basic-example-app-cluster.yaml in any editor and replace the place holder for **JOB_EXECUTION_ROLE_ARN** with the flink_job_execution_role_arn terraform output command. Replace the **ENTER_S3_BUCKET** placeholder with the flink_operator_bucket output.
 
 Deploy the job by running the kubectl deply command.
 
