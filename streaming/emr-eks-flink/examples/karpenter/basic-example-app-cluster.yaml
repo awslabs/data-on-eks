@@ -1,5 +1,5 @@
-# NOTE: Make sure you you replce <ENTER_S3_BUCKET> and with your S3 Bucket before running this job.
-# Replace <JOB_EXECUTION_ROLE_ARN> with flink_job_execution_role_arn
+# NOTE: Make sure you replace <ENTER_S3_BUCKET> with your S3 Bucket before running this job.
+# Replace the <JOB_EXECUTION_ROLE_ARN> with the Flink_job_execution_role_arn output.
 ---
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment

@@ -120,12 +120,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_emr_flink_operator = true
   emr_flink_operator_helm_config = {
-    namespace                = "emr-flink-operator"
-    create_namespace         = true
-    namespace                = "${local.flink_operator}-ns"
-    name                     = "flink-kubernetes-operator"
     repository               = "oci://public.ecr.aws/emr-on-eks"
-    chart                    = "flink-kubernetes-operator"
     operatorExecutionRoleArn = module.flink_irsa_operator.iam_role_arn
   }
 
