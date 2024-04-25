@@ -282,7 +282,7 @@ terraform output flink_operator_bucket
 
 Open the basic-example-app-cluster.yaml in any editor and replace the place holder for **JOB_EXECUTION_ROLE_ARN** with the flink_job_execution_role_arn terraform output command. Replace the **ENTER_S3_BUCKET** placeholder with the flink_operator_bucket output.
 
-Deploy the job by running the kubectl deply command.
+Deploy the job by running the kubectl deploy command.
 
 ```bash
 kubectl apply -f basic-example-app-cluster.yaml
