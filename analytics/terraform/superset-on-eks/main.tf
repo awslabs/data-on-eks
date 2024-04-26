@@ -68,13 +68,13 @@ module "eks" {
       source_cluster_security_group = true
     }
   }
-  cluster_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      most_recent              = true
-      resolve_conflicts        = "PRESERVE"
-    }
-  }
+  # cluster_addons = {
+  #   aws-ebs-csi-driver = {
+  #     service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+  #     most_recent              = true
+  #     resolve_conflicts_on_update        = "PRESERVE"
+  #   }
+  # }
 
   eks_managed_node_group_defaults = {
     iam_role_additional_policies = {

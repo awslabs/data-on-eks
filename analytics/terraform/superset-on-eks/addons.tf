@@ -109,6 +109,7 @@ module "eks_data_addons" {
   superset_helm_config = {
     values = [templatefile("${path.module}/helm-values/superset-values.yaml", {})]
   }
+    depends_on = [module.eks_blueprints_addons]
 
 }
 
@@ -132,7 +133,7 @@ resource "kubernetes_ingress_v1" "superset" {
     name      = "superset-ingress3"
     namespace = "superset"
     annotations = {
-      "alb.ingress.kubernetes.io/scheme"      = "internal-facing"
+      "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
       "alb.ingress.kubernetes.io/target-type" = "ip"
     }
   }
@@ -155,5 +156,5 @@ resource "kubernetes_ingress_v1" "superset" {
     }
   }
 
-  depends_on = [module.eks_blueprints_addons]
+  depends_on = [module.eks_blueprints_addons, module.eks_data_addons]
 }
