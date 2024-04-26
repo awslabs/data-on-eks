@@ -212,7 +212,7 @@ module "data_addons" {
   #---------------------------------------------------------------
   # Kubecost Add-on
   #---------------------------------------------------------------
-  enable_kubecost = true
+  enable_kubecost = var.enable_kubecost
   kubecost_helm_config = {
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     version             = "2.2.2"
