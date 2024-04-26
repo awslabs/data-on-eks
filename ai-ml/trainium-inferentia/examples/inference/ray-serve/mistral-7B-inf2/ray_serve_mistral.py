@@ -1,10 +1,9 @@
 from io import BytesIO
 from fastapi import FastAPI
-from fastapi.responses import Response
 import os
 
-
 from ray import serve
+
 import torch
 
 app = FastAPI()
@@ -20,9 +19,7 @@ class APIIngress:
     @app.get("/infer")
     async def infer(self, sentence: str):
         # Asynchronously perform inference using the provided sentence
-        ref = await self.handle.infer.remote(sentence)
-        # Await the result of the asynchronous inference and return it
-        result = await ref
+        result = await self.handle.infer.remote(sentence)
         return result
     
 
@@ -38,8 +35,12 @@ class MistralModel:
 
         from transformers import AutoTokenizer
         from transformers_neuronx import MistralForSampling, GQA, NeuronConfig
-
+        from huggingface_hub import login
+        
+        hf_token = os.getenv('HUGGING_FACE_HUB_TOKEN')
         model_id = os.getenv('MODEL_ID')
+
+        login(token=hf_token)
 
         # Set sharding strategy for GQA to be shard over heads
         neuron_config = NeuronConfig(
@@ -57,18 +58,16 @@ class MistralModel:
         # Define the method for performing inference with the Mistral model
     def infer(self, sentence: str):
 
-        text = "[INST] What is your favourite condiment? [/INST]"
-        sentence = text
+        text = "[INST]" + sentence + "[/INST]"
+
         # Tokenize the input sentence and encode it
-        encoded_input = self.tokenizer.encode(sentence, return_tensors='pt')
+        encoded_input = self.tokenizer.encode(text, return_tensors='pt')
 
         # Run inference
         with torch.inference_mode():
-            generated_sequence = self.neuron_model.sample(encoded_input, sequence_length=256, start_ids=None)
+            generated_sequence = self.neuron_model.sample(encoded_input, sequence_length=512, start_ids=None)
 
         # Decode the generated sequences and return the results
-        return [self.tokenizer.decode(seq, skip_special_tokens=True) for seq in generated_sequence]
-
-
+        return [self.tokenizer.decode(seq) for seq in generated_sequence]
 
 entrypoint = APIIngress.bind(MistralModel.bind())

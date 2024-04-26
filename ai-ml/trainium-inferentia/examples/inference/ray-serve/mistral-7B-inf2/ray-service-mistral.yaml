@@ -24,6 +24,7 @@ spec:
           env_vars:
             MODEL_ID: "mistralai/Mistral-7B-Instruct-v0.2"
             NEURON_CC_FLAGS: "-O1"
+            HUGGING_FACE_HUB_TOKEN: $HUGGING_FACE_HUB_TOKEN
         deployments:
           - name: mistral-7b
             autoscaling_config:
@@ -40,7 +41,7 @@ spec:
               num_cpus: 10
               resources: {"neuron_cores": 2}
   rayClusterConfig:
-    rayVersion: '2.9.0'
+    rayVersion: '2.11.0'
     enableInTreeAutoscaling: true
     headGroupSpec:
       serviceType: NodePort
@@ -54,7 +55,7 @@ spec:
         spec:
           containers:
           - name: ray-head
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.9.0-py310-mistral7b-neuron:latest
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.11.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -89,15 +90,15 @@ spec:
 
     workerGroupSpecs:
     - groupName: inf2-worker-group
-      # replicas: 1
-      minReplicas: 2
-      maxReplicas: 8
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 5
       rayStartParams: {}
       template:
         spec:
           containers:
           - name: ray-worker
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.9.0-py310-mistral7b-neuron:latest
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.11.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -145,11 +146,3 @@ spec:
             name: mistral-service
             port:
               number: 8265
-      # Ray Serve
-      - path: /serve/(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: mistral-service
-            port:
-              number: 8000
