@@ -210,6 +210,17 @@ module "data_addons" {
   }
 
   #---------------------------------------------------------------
+  # Kubecost Add-on
+  #---------------------------------------------------------------
+  enable_kubecost = true
+  kubecost_helm_config = {
+    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+    version             = "2.2.2"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------------------------------
   # Karpenter Resources Add-on
   #---------------------------------------------------------------
   enable_karpenter_resources = true
