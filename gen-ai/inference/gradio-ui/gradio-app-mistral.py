@@ -63,4 +63,3 @@ chat_interface = gr.ChatInterface(
 
 # Launch the ChatInterface
 chat_interface.launch()
-

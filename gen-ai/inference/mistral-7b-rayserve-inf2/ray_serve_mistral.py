@@ -21,7 +21,7 @@ class APIIngress:
         # Asynchronously perform inference using the provided sentence
         result = await self.handle.infer.remote(sentence)
         return result
-    
+
 
 @serve.deployment(name="mistral-7b",
     autoscaling_config={"min_replicas": 0, "max_replicas": 6},
@@ -36,7 +36,7 @@ class MistralModel:
         from transformers import AutoTokenizer
         from transformers_neuronx import MistralForSampling, GQA, NeuronConfig
         from huggingface_hub import login
-        
+
         hf_token = os.getenv('HUGGING_FACE_HUB_TOKEN')
         model_id = os.getenv('MODEL_ID')
 
@@ -53,7 +53,7 @@ class MistralModel:
 
         # Get a tokenizer and exaple input
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
-  
+
 
         # Define the method for performing inference with the Mistral model
     def infer(self, sentence: str):

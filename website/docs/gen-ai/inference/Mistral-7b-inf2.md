@@ -135,9 +135,9 @@ This deployment also sets up a mistral service with multiple ports configured; p
 ```bash
 kubectl get svc -n mistral
 
-NAME                        TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                                                       
-mistral-service             NodePort   172.20.118.238   <none>        10001:30998/TCP,8000:32437/TCP,52365:31487/TCP,8080:30351/TCP,6379:30392/TCP,8265:30904/TCP   
-mistral-service-head-svc    NodePort   172.20.245.131   <none>        6379:31478/TCP,8265:31393/TCP,10001:32627/TCP,8000:31251/TCP,52365:31492/TCP,8080:31471/TCP   
+NAME                        TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)  
+mistral-service             NodePort   172.20.118.238   <none>        10001:30998/TCP,8000:32437/TCP,52365:31487/TCP,8080:30351/TCP,6379:30392/TCP,8265:30904/TCP  
+mistral-service-head-svc    NodePort   172.20.245.131   <none>        6379:31478/TCP,8265:31393/TCP,10001:32627/TCP,8000:31251/TCP,52365:31492/TCP,8080:31471/TCP  
 mistral-service-serve-svc   NodePort   172.20.109.223   <none>        8000:31679/TCP
 ```
 
@@ -176,7 +176,7 @@ The Gradio UI application is containerized and the container image is stored in 
 As part of the deployment, there's a publicly available Docker image for the mistral-7b Gradio UI app at [Data-on-EKS](public.ecr.aws/data-on-eks/gradio-app:mistral-7b) repository that can be used as is.
 The Dockerfile for the above image is available at `data-on-eks/gen-ai/inference/gradio-ui/Dockerfile-app-mistral` path.
 
-You can also customize the Gradio UI app according to your design requirements. 
+You can also customize the Gradio UI app according to your design requirements.
 To build a custom Gradio app Docker image, please run the below commands. Please make sure to change the image `tag` and custom `Dockerfile` name accordingly.
 
 ```bash
@@ -229,7 +229,7 @@ You should now be able to interact with the Gradio application from your local m
 
 #### Interaction With Mistral Model
 
-Mistral-7B-Instruct-v0.2 Model can be used for purposes such as chat applications (Q&A, conversation), text generation, knowledge retrieval and others. 
+Mistral-7B-Instruct-v0.2 Model can be used for purposes such as chat applications (Q&A, conversation), text generation, knowledge retrieval and others.
 
 Below screenshots provide some examples of the model response based on different text prompts.
 
