@@ -11,7 +11,6 @@ ENV DEBIAN_FRONTEND=non-interactive
 USER root
 
 # Set up the Neuron repository and install Neuron packages
-
 RUN . /etc/os-release && \
     sudo echo "deb https://apt.repos.neuron.amazonaws.com ${VERSION_CODENAME} main" > /etc/apt/sources.list.d/neuron.list && \
     sudo wget -qO - https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB | apt-key add - && \

@@ -1,3 +1,5 @@
+# Dockerfile to build a container image for the Gradio app for Mistral-7b model
+
 # Use Python base image
 FROM --platform=linux/amd64 python:3.9-slim
 

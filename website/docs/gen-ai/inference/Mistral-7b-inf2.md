@@ -1,5 +1,5 @@
 ---
-title: Mistral-7B on AWS Inferentia2
+title: Mistral-7B on Inferentia2
 sidebar_position: 2
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
@@ -11,14 +11,14 @@ To generate a token in HuggingFace, log in using your HuggingFace account and cl
 
 :::
 
-# Deploying Mistral-7B-Instruct-v0.2 with AWS Inferentia2, Ray Serve and Gradio
-This pattern demonstrates how to deploy the [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) model on Amazon EKS, using [AWS Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) for accelerated image generation. [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) provides efficient scaling of Ray Worker nodes, while [Karpenter](https://karpenter.sh/) dynamically manages AWS Inferentia2 node provisioning.
+# Deploying Mistral-7B-Instruct-v0.2 on Inferentia2, Ray Serve, Gradio
+This pattern outlines the deployment of the [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) model on Amazon EKS, utilizing [AWS Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) for enhanced text generation performance. [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) ensures efficient scaling of Ray Worker nodes, while [Karpenter](https://karpenter.sh/) dynamically manages the provisioning of AWS Inferentia2 nodes. This setup optimizes for high-performance and cost-effective text generation applications in a scalable cloud environment.
 
 Through this pattern, you will accomplish the following:
 
-- Create an Amazon EKS cluster with a Karpenter managed AWS Inferentia2 nodepool for dynamic provisioning of Nodes.
-- Install KubeRay Operator and other core EKS add-ons using the [trainium-inferentia](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/trainium-inferentia) Terraform blueprint.
-- Deploy the Mistral-7B-Instruct-v0.2 model using RayServe for efficient scaling.
+- Create an [Amazon EKS](https://aws.amazon.com/eks/) cluster with a Karpenter managed AWS Inferentia2 nodepool for dynamic provisioning of Nodes.
+- Install [KubeRay Operator](https://github.com/ray-project/kuberay) and other core EKS add-ons using the [trainium-inferentia](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/trainium-inferentia) Terraform blueprint.
+- Deploy the `Mistral-7B-Instruct-v0.2` model with RayServe for efficient scaling.
 
 ### What is Mistral-7B-Instruct-v0.2 Model?
 
@@ -27,12 +27,12 @@ The `mistralai/Mistral-7B-Instruct-v0.2` is an instruction-tuned version of the 
 Please refer to the [Model Card](https://replicate.com/mistralai/mistral-7b-instruct-v0.2/readme) for more detail.
 
 ## Deploying the Solution
-Let's get Mistral-7B-Instruct-v0.2 model up and running on Amazon EKS! In this section, we'll cover:
+Let's get `Mistral-7B-Instruct-v0.2` model up and running on Amazon EKS! In this section, we'll cover:
 
-- **Prerequisites**: Ensuring you have everything in place.
-- **Infrastructure Setup**: Creating your EKS cluster and preparing it for deployment.
+- **Prerequisites**: Ensuring all necessary tools are installed before you begin.
+- **Infrastructure Setup**: Creating your your EKS cluster and setting the stage for deployment.
 - **Deploying the Ray Cluster**: The core of your image generation pipeline, providing scalability and efficiency.
-- **Building the Gradio Web UI**: A user-friendly interface for interacting with Mistral 7B.
+- **Building the Gradio Web UI**: Creating a user-friendly interface for seamless interaction with the Mistral 7B model.
 
 <CollapsibleContent header={<h2><span>Prerequisites</span></h2>}>
 Before we begin, ensure you have all the prerequisites in place to make the deployment process smooth and hassle-free.
@@ -82,7 +82,7 @@ kubectl get nodes
 
 ## Deploying the Ray Cluster with Mistral 7B Model
 
-Once the `trainium-inferentia` cluster is deployed, you can proceed to use `kubectl` to deploy the `ray-service-mistral.yaml` from `/data-on-eks/gen-ai/inference/mistral-7b-rayserve-inf2/` path.
+Once the `trainium-inferentia` EKS cluster is deployed, you can proceed to use `kubectl` to deploy the `ray-service-mistral.yaml` from `/data-on-eks/gen-ai/inference/mistral-7b-rayserve-inf2/` path.
 
 In this step, we will deploy the Ray Serve cluster, which comprises one `Head Pod` on `x86 CPU` instances using Karpenter autoscaling, as well as `Ray workers` on `inf2.24xlarge` instances, autoscaled by [Karpenter](https://karpenter.sh/).
 
@@ -105,9 +105,18 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 
 **Deploy RayServe Cluster**
 
+:::info
+
+To deploy the Mistral-7B-Instruct-v0.2 model, it's essential to configure your Hugging Face Hub token as an environment variable. This token is required for authentication and accessing the model. For guidance on how to create and manage your Hugging Face tokens, please visit [Hugging Face Token Management](https://huggingface.co/docs/hub/security-tokens).
+
+:::
+
+
 ```bash
 # set the Hugging Face Hub Token as an environment variable. This variable will be substituted when applying the ray-service-mistral.yaml file
+
 export  HUGGING_FACE_HUB_TOKEN=<Your-Hugging-Face-Hub-Token-Value>
+
 cd data-on-eks/gen-ai/
 envsubst < inference/mistral-7b-rayserve-inf2/ray-service-mistral.yaml| kubectl apply -f -
 ```
@@ -120,7 +129,7 @@ The deployment process may take up to 10 to 12 minutes. The Head Pod is expected
 
 :::
 
-This deployment establishes a Ray head pod running on an x86 instance and a worker pod on inf2.24xl instance as shown below.
+This deployment establishes a Ray head pod running on an `x86` instance and a worker pod on `inf2.24xl` instance as shown below.
 
 ```bash
 kubectl get pods -n mistral
@@ -169,9 +178,9 @@ Let's move forward with setting up the Gradio app as a Kubernetes deployment, ut
 
 The Gradio UI application is containerized and the container image is stored in [data-on-eks](https://gallery.ecr.aws/data-on-eks/gradio-app) public repository. The Gradio app container internally points to the `mistral-service` that's running on port 8000.
 
-The Dockerfile for the above image is available at `data-on-eks/gen-ai/inference/gradio-ui/Dockerfile-app-mistral` path.
+The Dockerfile for the above image is available at `data-on-eks/gen-ai/inference/gradio-ui/Dockerfile-gradio-app-mistral` path.
 
-You can also customize the Gradio UI app according to your design requirements.
+This is an optional step for this deployment. You can also customize the Gradio UI app according to your design requirements.
 To build a custom Gradio app Docker image, please run the below commands. Please make sure to change the image `tag` and custom `Dockerfile` name accordingly.
 
 ```bash
@@ -228,7 +237,7 @@ You should now be able to interact with the Gradio application from your local m
 
 #### Interaction With Mistral Model
 
-Mistral-7B-Instruct-v0.2 Model can be used for purposes such as chat applications (Q&A, conversation), text generation, knowledge retrieval and others.
+`Mistral-7B-Instruct-v0.2` Model can be used for purposes such as chat applications (Q&A, conversation), text generation, knowledge retrieval and others.
 
 Below screenshots provide some examples of the model response based on different text prompts.
 
