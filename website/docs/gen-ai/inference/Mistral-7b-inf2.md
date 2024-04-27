@@ -169,11 +169,6 @@ Let's move forward with setting up the Gradio app as a Kubernetes deployment, ut
 
 The Gradio UI application is containerized and the container image is stored in [data-on-eks](https://gallery.ecr.aws/data-on-eks/gradio-app) public repository. The Gradio app container internally points to the `mistral-service` that's running on port 8000.
 
-:::
-
-### Deploy the Gradio Pod as Deployment
-
-As part of the deployment, there's a publicly available Docker image for the mistral-7b Gradio UI app at [Data-on-EKS](public.ecr.aws/data-on-eks/gradio-app:mistral-7b) repository that can be used as is.
 The Dockerfile for the above image is available at `data-on-eks/gen-ai/inference/gradio-ui/Dockerfile-app-mistral` path.
 
 You can also customize the Gradio UI app according to your design requirements.
@@ -184,7 +179,11 @@ cd data-on-eks/gen-ai/inference
 docker buildx build --platform=linux/amd64 -t gradio-app:<tag> -f gradio-ui/<Custom-Dockerfile> gradio-ui/
 ```
 
-Then, deploy the Gradio app as a Deployment on EKS using kubectl:
+:::
+
+### Deploy the Gradio Pod as Deployment
+
+First, deploy the Gradio app as a Deployment on EKS using kubectl:
 
 ```bash
 cd data-on-eks/gen-ai/inference/
