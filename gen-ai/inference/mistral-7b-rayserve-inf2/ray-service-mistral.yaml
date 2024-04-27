@@ -55,7 +55,7 @@ spec:
         spec:
           containers:
           - name: ray-head
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.11.0-py310-mistral7b-neuron:latest
+            image: public.ecr.aws/data-on-eks/ray2.11.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -98,7 +98,7 @@ spec:
         spec:
           containers:
           - name: ray-worker
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.11.0-py310-mistral7b-neuron:latest
+            image: public.ecr.aws/data-on-eks/ray2.11.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:

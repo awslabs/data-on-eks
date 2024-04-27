@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: gradio-mistral
+  name: gradio
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gradio-deployment
-  namespace: gradio-mistral
+  namespace: gradio
   labels:
     app: gradio
 spec:
@@ -23,7 +23,7 @@ spec:
       containers:
       - name: gradio
         # Update this image to the Gradio app image you want to deploy
-        image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/gradio-app-mistral7b:latest
+        image: public.ecr.aws/data-on-eks/gradio-app:mistral-7b
         imagePullPolicy: Always
         ports:
         - containerPort: 7860
@@ -46,7 +46,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gradio-service
-  namespace: gradio-mistral
+  namespace: gradio
 spec:
   selector:
     app: gradio

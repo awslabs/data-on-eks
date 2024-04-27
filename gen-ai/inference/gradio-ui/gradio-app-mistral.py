@@ -10,7 +10,7 @@ service_name = os.environ.get("SERVICE_NAME", "http://localhost:8000")
 # Function to generate text
 def generate_text(message, history):
     prompt = message
-    print("prompt === "+ prompt)
+
     # Create the URL for the inference
     url = f"{service_name}{model_endpoint}"
 
@@ -54,7 +54,7 @@ chat_interface = gr.ChatInterface(
     title="Mistral AI Chat",
     description="Ask me any question",
     theme="soft",
-    examples=["How Big Is Observable Universe", "Tell me about Mistral-7B model"],
+    examples=["How Big Is Observable Universe", "How to kill a linux process"],
     cache_examples=False,
     retry_btn=None,
     undo_btn="Delete Previous",
