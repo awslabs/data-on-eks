@@ -45,7 +45,7 @@ spec:
               num_cpus: 3
               num_gpus: 1
   rayClusterConfig:
-    rayVersion: '2.10.0'
+    rayVersion: '2.11.0'
     enableInTreeAutoscaling: true
     headGroupSpec:
       serviceType: NodePort
@@ -64,7 +64,7 @@ spec:
             # For faster inference scaling, consider building a custom image with only your workload's essential dependencies.
             # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
-              image: public.ecr.aws/data-on-eks/ray2.10.0-py310-gpu-stablediffusion:latest
+              image: public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest
               imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
               lifecycle:
                 preStop:
@@ -110,7 +110,7 @@ spec:
             # For faster inference scaling, consider building a custom image with only your workload's essential dependencies.
             # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
-                image: public.ecr.aws/data-on-eks/ray2.10.0-py310-gpu-stablediffusion:latest
+                image: public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest
                 imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
                 lifecycle:
                   preStop:

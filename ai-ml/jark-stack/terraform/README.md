@@ -52,6 +52,7 @@ Docs coming soon...
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.29"` | no |
 | <a name="input_enable_aws_efa_k8s_device_plugin"></a> [enable\_aws\_efa\_k8s\_device\_plugin](#input\_enable\_aws\_efa\_k8s\_device\_plugin) | Enable AWS EFA K8s Device Plugin | `bool` | `false` | no |
+| <a name="input_enable_kubecost"></a> [enable\_kubecost](#input\_enable\_kubecost) | Enable Kubecost addon | `bool` | `false` | no |
 | <a name="input_huggingface_token"></a> [huggingface\_token](#input\_huggingface\_token) | Hugging Face Secret Token | `string` | `"DUMMY_TOKEN_REPLACE_ME"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"jark-stack"` | no |
 | <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
