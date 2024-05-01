@@ -63,6 +63,10 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
 #---------------------------------------
 # Redpanda Config
 #---------------------------------------
+data "aws_secretsmanager_secret_version" "redpanada_password_version" {
+  secret_id  = aws_secretsmanager_secret.redpanada_password.id
+  depends_on = [aws_secretsmanager_secret_version.redpanada_password_version]
+}
 
 resource "random_password" "redpanada_password" {
   length  = 16
@@ -72,7 +76,7 @@ resource "aws_secretsmanager_secret" "redpanada_password" {
   name                    = "redpanda_password-1234"
   recovery_window_in_days = 0
 }
-resource "aws_secretsmanager_secret_version" "redpanada_password" {
+resource "aws_secretsmanager_secret_version" "redpanada_password_version" {
   secret_id     = aws_secretsmanager_secret.redpanada_password.id
   secret_string = random_password.redpanada_password.result
 }
@@ -80,6 +84,13 @@ resource "aws_secretsmanager_secret_version" "redpanada_password" {
 #---------------------------------------------------------------
 # Grafana Admin credentials resources
 #---------------------------------------------------------------
+
+data "aws_secretsmanager_secret_version" "grafana_password_version" {
+  secret_id  = aws_secretsmanager_secret.redpanada_password.id
+  depends_on = [aws_secretsmanager_secret_version.grafana_password_version]
+}
+
+
 resource "random_string" "random_suffix" {
   length  = 10
   special = false
@@ -135,11 +146,11 @@ module "eks_blueprints_addons" {
       most_recent = true
     }
   }
-  enable_aws_load_balancer_controller = true
-  enable_cluster_autoscaler           = true
-  enable_metrics_server               = true
-  enable_aws_cloudwatch_metrics       = true
-  enable_cert_manager                 = true
+  enable_cluster_autoscaler     = true
+  enable_metrics_server         = true
+  enable_aws_cloudwatch_metrics = true
+  enable_cert_manager           = true
+
 
 
   #---------------------------------------
@@ -162,6 +173,9 @@ module "eks_blueprints_addons" {
         value = "ClusterFirstWithHostNet"
       }
     ]
+
+    tags = local.tags
+
   }
 
 

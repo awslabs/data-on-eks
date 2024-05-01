@@ -6,15 +6,6 @@ data "aws_availability_zones" "available" {}
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
-data "aws_secretsmanager_secret_version" "redpanada_password_version" {
-  secret_id  = aws_secretsmanager_secret.redpanada_password.id
-  depends_on = [aws_secretsmanager_secret_version.redpanada_password]
-}
-data "aws_secretsmanager_secret_version" "grafana_password_version" {
-  secret_id  = aws_secretsmanager_secret.redpanada_password.id
-  depends_on = [aws_secretsmanager_secret_version.grafana_password_version]
-}
-
 
 ################################################################################
 # Local Variables
@@ -79,7 +70,7 @@ module "eks" {
     core_node_group = {
       name           = "core-mng-01"
       description    = "Core EKS managed node group"
-      instance_types = ["m5.large"]
+      instance_types = ["m5.xlarge"]
       min_size       = 3
       max_size       = 6
       desired_size   = 3
@@ -87,15 +78,6 @@ module "eks" {
       #---------------------------------------------------------------
       # Managed Node Group - Redpanda
       #---------------------------------------------------------------
-
-    }
-    redpanda_node_group = {
-      name           = "redpanda-mng-01"
-      description    = "Redpanda EKS Managed Node Group"
-      instance_types = ["c5d.large"]
-      min_size       = 3
-      max_size       = 6
-      desired_size   = 3
 
     }
 
