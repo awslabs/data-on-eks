@@ -61,9 +61,9 @@ module "producer_iam_role" {
 
   role_name = "producer-irsa"
 
-  role_policy_arns = [
-    aws_iam_policy.producer_s3_kafka.arn
-  ]
+  role_policy_arns = {
+    arn = aws_iam_policy.producer_s3_kafka.arn
+  }
 
   oidc_providers = {
     main = {
@@ -78,9 +78,9 @@ module "consumer_iam_role" {
 
   role_name = "consumer-irsa"
 
-  role_policy_arns = [
-    aws_iam_policy.consumer_s3_kafka.arn
-  ]
+  role_policy_arns = {
+    arn = aws_iam_policy.consumer_s3_kafka.arn
+  }
 
   oidc_providers = {
     main = {

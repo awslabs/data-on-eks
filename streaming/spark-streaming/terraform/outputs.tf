@@ -61,10 +61,10 @@ output "s3_bucket_id_iceberg_bucket" {
 
 output "producer_iam_role_arn" {
   description = "IAM role ARN for the producer"
-  value = module.producer_iam_role.iam_role_arn
+  value       = module.producer_iam_role.iam_role_arn
 }
 
 output "consumer_iam_role_arn" {
   description = "IAM role ARN for the consumer"
-  value = module.consumer_iam_role.iam_role_arn
+  value       = module.consumer_iam_role.iam_role_arn
 }
