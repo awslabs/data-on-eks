@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: producer-sa
+  annotations:
+    eks.amazonaws.com/role-arn: __MY_PRODUCER_ROLE_ARN__ # Replace with your producer role ARN: producer_iam_role_arn
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer-deployment
+spec:
+  replicas: 1  # You can adjust the number of replicas
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      serviceAccountName: producer-sa
+      containers:
+      - name: producer
+        image: __MY_PRODUCER_IMAGE__ # Replace with your producer image
+        command: ["python", "app.py"]  
+        env:
+          - name: AWS_REGION
+            value: "__MY_AWS_REGION__" # Replace with your AWS region 
+          - name: BOOTSTRAP_BROKERS  
+            value: "__MY_KAFKA_BROKERS__" # Replace with your bootstrap brokers: bootstrap_brokers
+            # value: "b-1.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092,b-2.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092"
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        volumeMounts:
+          - name: shared-volume
+            mountPath: /mnt
+      volumes:
+        - name: shared-volume
+          emptyDir: {}
