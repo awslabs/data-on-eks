@@ -1,7 +1,3 @@
-data "http" "myip" {
-  url = "https://ipv4.icanhazip.com"
-}
-
 resource "aws_security_group" "msk_security_group" {
   name        = "msk-security-group"
   description = "Security group for MSK cluster"
@@ -11,31 +7,31 @@ resource "aws_security_group" "msk_security_group" {
     from_port   = 9092
     to_port     = 9092
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.myip.response_body)}/32", var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
+    cidr_blocks = [var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
   }
   ingress {
     from_port   = 9198
     to_port     = 9198
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.myip.response_body)}/32", var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
+    cidr_blocks = [var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
   }
   ingress {
     from_port   = 9094
     to_port     = 9094
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.myip.response_body)}/32", var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
+    cidr_blocks = [var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
   }
   ingress {
     from_port   = 9096
     to_port     = 9096
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.myip.response_body)}/32", var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
+    cidr_blocks = [var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
   }
   ingress {
     from_port   = 9098
     to_port     = 9098
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.myip.response_body)}/32", var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
+    cidr_blocks = [var.vpc_cidr, element(var.secondary_cidr_blocks, 0)]
   }
   egress {
     from_port   = 0
@@ -53,7 +49,7 @@ resource "aws_msk_cluster" "kafka_test_demo" {
 
   broker_node_group_info {
     instance_type  = "kafka.m5.large"
-    client_subnets = module.vpc.private_subnets
+    client_subnets = [module.vpc.private_subnets[0], module.vpc.private_subnets[1]]
     storage_info {
       ebs_storage_info {
         volume_size = 1000
