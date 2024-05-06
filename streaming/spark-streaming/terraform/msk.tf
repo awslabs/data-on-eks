@@ -76,12 +76,10 @@ resource "aws_msk_cluster" "kafka_test_demo" {
 
     unauthenticated = true
   }
-  #Lyfecycle to ignore 
+  #Lyfecycle to ignore
   lifecycle {
     ignore_changes = [
       client_authentication[0].tls
     ]
   }
 }
-
-

@@ -43,7 +43,7 @@ def consume_and_write():
             'write.format.default'='parquet'  -- Explicitly specifying Parquet format
         )
     """)
-    
+
     # Read from Kafka
     df = spark.readStream \
         .format("kafka") \

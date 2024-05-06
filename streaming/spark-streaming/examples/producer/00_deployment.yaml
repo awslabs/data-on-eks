@@ -23,11 +23,11 @@ spec:
       containers:
       - name: producer
         image: public.ecr.aws/data-on-eks/producer-kafka:1
-        command: ["python", "app.py"]  
+        command: ["python", "app.py"]
         env:
           - name: AWS_REGION
-            value: "__MY_AWS_REGION__" # Replace with your AWS region 
-          - name: BOOTSTRAP_BROKERS  
+            value: "__MY_AWS_REGION__" # Replace with your AWS region
+          - name: BOOTSTRAP_BROKERS
             value: "__MY_KAFKA_BROKERS__" # Replace with your bootstrap brokers: bootstrap_brokers
             # value: "b-1.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092,b-2.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092"
         resources:
