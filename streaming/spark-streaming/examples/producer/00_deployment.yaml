@@ -22,7 +22,7 @@ spec:
       serviceAccountName: producer-sa
       containers:
       - name: producer
-        image: __MY_PRODUCER_IMAGE__ # Replace with your producer image
+        image: public.ecr.aws/data-on-eks/producer-kafka:1
         command: ["python", "app.py"]  
         env:
           - name: AWS_REGION

@@ -8,7 +8,7 @@ spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  image: "__CONSUMER_IMAGE_URI__" # replace with your consumer image URI
+  image: "public.ecr.aws/data-on-eks/consumer-spark-streaming-3.3.2-kafka:1"
   mainApplicationFile: "local:///app/app.py"
   sparkVersion: "3.3.2"
   deps:
