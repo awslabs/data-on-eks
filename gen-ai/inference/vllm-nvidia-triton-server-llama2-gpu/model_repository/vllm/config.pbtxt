@@ -1,0 +1,40 @@
+name: "vllm"
+backend: "python"
+max_batch_size: 0
+
+model_transaction_policy {
+  decoupled: True
+}
+
+input [
+  {
+    name: "PROMPT"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  },
+  {
+    name: "STREAM"
+    data_type: TYPE_BOOL
+    dims: [ 1 ]
+  },
+  {
+    name: "SAMPLING_PARAMETERS"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+    optional: true
+  }
+]
+
+output [
+  {
+    name: "TEXT"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_MODEL
+  }
+]
