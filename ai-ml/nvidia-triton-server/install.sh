@@ -5,7 +5,7 @@ echo "Initializing ..."
 # Initialize Terraform
 terraform init -upgrade
 
-# echo ${TF_VAR_huggingface_token}
+# validate if env is empty or has dummy value
 
 if [[ -z "${TF_VAR_huggingface_token}" ]]; then
     echo "FAILED: TF_VAR_huggingface_token environment variable is not set"
@@ -17,15 +17,13 @@ if [[ "${TF_VAR_huggingface_token}" = "DUMMY_TOKEN_REPLACE_ME" ]] ; then
     exit 1
 fi
 
-echo "Proceed with targets..."
+echo "Proceed with deployment of targets..."
 
 List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
   "module.eks"
 )
-
-
 
 # Apply modules in sequence
 for target in "${targets[@]}"
