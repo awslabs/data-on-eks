@@ -35,12 +35,10 @@ variable "secondary_cidr_blocks" {
 #-------------------------------------------------------------------
 # Instructions for Securely Setting the Huggingface Token
 # -------------------------------------------------------------------
-# 1. Obtain your Huggingface token and encode it in Base64.
-#    You can use a command like this on the command line:
-#        echo -n 'your_actual_huggingface_token' | base64
+# 1. Obtain your Huggingface token
 # 2. Before running 'terraform apply', set the environment variable:
 #    * Linux/macOS:
-#        export TF_VAR_huggingface_token=base64_encoded_value
+#        export TF_VAR_huggingface_token=<your Huggingface token>
 # 3. Now you can safely run 'terraform apply'
 #-------------------------------------------------------------------
 variable "huggingface_token" {

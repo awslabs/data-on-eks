@@ -7,8 +7,9 @@ locals {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "triton_server_vllm_llama2" {
-  source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.32.0" # ensure to update this to the latest/desired version
+  depends_on = [module.eks_blueprints_addons.kube_prometheus_stack]
+  source     = "aws-ia/eks-data-addons/aws"
+  version    = "~> 1.32.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -17,6 +18,7 @@ module "triton_server_vllm_llama2" {
   nvidia_triton_server_helm_config = {
     version   = "1.0.0"
     timeout   = 120
+    wait      = false
     namespace = kubernetes_namespace_v1.triton.metadata[0].name
     values = [
       <<-EOT
@@ -27,7 +29,7 @@ module "triton_server_vllm_llama2" {
       serviceAccount:
         create: false
         name: ${kubernetes_service_account_v1.triton.metadata[0].name}
-      modelRepositoryPath: s3://${module.s3_bucket.bucket_name}/model_repository
+      modelRepositoryPath: s3://${module.s3_bucket.s3_bucket_id}/model_repository
       environment:
         - name: model_name
           value: ${local.model_name}
@@ -92,7 +94,7 @@ resource "kubernetes_secret_v1" "huggingface_token" {
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  version = "4.1.2"
 
   bucket_prefix = "${local.name}-${local.triton_model}-"
 
@@ -108,6 +110,18 @@ module "s3_bucket" {
   }
 
   tags = local.tags
+}
+
+# Use null_resource to sync local files to the S3 bucket
+resource "null_resource" "sync_local_to_s3" {
+  # Re-run the provisioner if the bucket name changes
+  triggers = {
+    bucket_name = module.s3_bucket.s3_bucket_id
+  }
+
+  provisioner "local-exec" {
+    command = "aws s3 sync ../../gen-ai/inference/vllm-nvidia-triton-server-llama2-gpu/ s3://${module.s3_bucket.s3_bucket_id}"
+  }
 }
 
 #---------------------------------------------------------------
