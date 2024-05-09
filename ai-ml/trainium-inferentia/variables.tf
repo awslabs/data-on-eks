@@ -51,6 +51,24 @@ variable "enable_mpi_operator" {
   default     = false
 }
 
+variable "enable_volcano" {
+  description = "Flag to enable the Volcano batch scheduler"
+  type        = bool
+  default     = false
+}
+
+variable "enable_torchx_etcd" {
+  description = "Flag to enable etcd deployment for torchx"
+  type        = bool
+  default     = false
+}
+
+variable "enable_fsx_for_lustre" {
+  description = "Flag to enable resources for FSx for Lustre"
+  type        = bool
+  default     = false
+}
+
 variable "trn1_32xl_min_size" {
   description = "trn1 Worker node minimum size"
   type        = number

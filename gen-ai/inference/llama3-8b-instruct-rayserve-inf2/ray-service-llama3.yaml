@@ -1,66 +1,45 @@
-#----------------------------------------------------------------------
-# NOTE: For deployment instructions, refer to the DoEKS website.
-#----------------------------------------------------------------------
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mistral
+  name: llama3
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: hf-token
-  namespace: mistral
+  namespace: llama3
 data:
   hf-token: $HUGGING_FACE_HUB_TOKEN
 ---
 apiVersion: ray.io/v1
 kind: RayService
 metadata:
-  name: mistral
-  namespace: mistral
+  name: llama3
+  namespace: llama3
 spec:
   serviceUnhealthySecondThreshold: 900
-  deploymentUnhealthySecondThreshold: 300
+  deploymentUnhealthySecondThreshold: 900
   serveConfigV2: |
     applications:
-      - name: mistral-deployment
-        import_path: "ray_serve_mistral:entrypoint"
-        route_prefix: "/"
+      - name: llama3
+        import_path: ray_serve_llama3:entrypoint
         runtime_env:
           env_vars:
-            MODEL_ID: "mistralai/Mistral-7B-Instruct-v0.2"
-            NEURON_CC_FLAGS: "-O1"
-        deployments:
-          - name: mistral-7b
-            autoscaling_config:
-              metrics_interval_s: 0.2
-              min_replicas: 2
-              max_replicas: 12
-              look_back_period_s: 2
-              downscale_delay_s: 30
-              upscale_delay_s: 2
-              target_num_ongoing_requests_per_replica: 1
-            graceful_shutdown_timeout_s: 5
-            max_concurrent_queries: 100
-            ray_actor_options:
-              num_cpus: 10
-              resources: {"neuron_cores": 2}
+            MODEL_ID: meta-llama/Meta-Llama-3-8B-Instruct
   rayClusterConfig:
-    rayVersion: '2.11.0'
-    enableInTreeAutoscaling: true
+    rayVersion: '2.21.0'
     headGroupSpec:
       headService:
         metadata:
-          name: mistral
-          namespace: mistral
+          name: llama3
+          namespace: llama3
       rayStartParams:
         dashboard-host: '0.0.0.0'
       template:
         spec:
           containers:
           - name: head
-            image: public.ecr.aws/data-on-eks/ray2.11.0-py310-mistral7b-neuron:latest
+            image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama3:latest # Image created using the Dockerfile attached in the folder
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -68,7 +47,7 @@ spec:
                   command: ["/bin/sh", "-c", "ray stop"]
             ports:
             - containerPort: 6379
-              name: gcs-server
+              name: gcs
             - containerPort: 8265
               name: dashboard
             - containerPort: 10001
@@ -80,18 +59,20 @@ spec:
               name: ray-logs
             resources:
               limits:
-                cpu: "2"
-                memory: "20G"
+                cpu: 4
+                memory: 20Gi
               requests:
-                cpu: "2"
-                memory: "20G"
+                cpu: 4
+                memory: 20Gi
             env:
-            - name: HUGGING_FACE_HUB_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: hf-token
-                  key: hf-token
-          nodeSelector:
+              - name: HUGGING_FACE_HUB_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: hf-token
+                    key: hf-token
+              - name: LD_LIBRARY_PATH
+                value: "/home/ray/anaconda3/lib"
+          nodeSelector: # This is using Karpenter Nodes with the provisioner label
             instanceType: mixed-x86
             provisionerType: Karpenter
             workload: rayhead
@@ -102,34 +83,35 @@ spec:
     - groupName: inf2
       replicas: 1
       minReplicas: 1
-      maxReplicas: 5
+      maxReplicas: 1
       rayStartParams: {}
       template:
         spec:
           containers:
           - name: worker
-            image: public.ecr.aws/data-on-eks/ray2.11.0-py310-mistral7b-neuron:latest
+            image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama3:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
                 exec:
                   command: ["/bin/sh", "-c", "ray stop"]
-            # We are using 2 Neuron cores per HTTP request hence this configuration handles 6 requests per second
             resources:
               limits:
-                cpu: "90" # All vCPUs of inf2.24xlarge; 6vCPU daemonset overhead
-                memory: "360G" # All memory of inf2.24xlarge; 24G for daemonset overhead
-                aws.amazon.com/neuron: "6" # All Neuron cores of inf2.24xlarge
+                cpu: "180"
+                memory: "700G"
+                aws.amazon.com/neuron: "12"
               requests:
-                cpu: "90" # All vCPUs of inf2.24xlarge; 6vCPU daemonset overhead
-                memory: "360G" # All memory of inf2.24xlarge; 24G for daemonset overhead
-                aws.amazon.com/neuron: "6" # All Neuron cores of inf2.24xlarge
+                cpu: "180"
+                memory: "700G"
+                aws.amazon.com/neuron: "12"
             env:
-            - name: HUGGING_FACE_HUB_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: hf-token
-                  key: hf-token
+              - name: LD_LIBRARY_PATH
+                value: /home/ray/anaconda3/lib
+              - name: HUGGING_FACE_HUB_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: hf-token
+                    key: hf-token
           nodeSelector:
             instanceType: inferentia-inf2
             provisionerType: Karpenter
@@ -145,8 +127,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: mistral
-  namespace: mistral
+  name: llama3
+  namespace: llama3
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: "/$1"
 spec:
@@ -159,7 +141,7 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: mistral
+            name: llama3
             port:
               number: 8265
       # Ray Serve
@@ -167,6 +149,6 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: mistral
+            name: llama3
             port:
               number: 8000
