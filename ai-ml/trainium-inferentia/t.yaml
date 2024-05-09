@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: hf-token
-  namespace: llama3
-data:
-  hf-token: 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
