@@ -51,8 +51,8 @@ site
 # Checks
 .tfsec
 
-examples/gradio-ui/*
-ai-ml/trainium-inferentia/examples/gradio-ui/gradio_cached_examples/*
-
 # venv
 **/.venv/*
+
+# gradio
+**/gradio_cached_examples
