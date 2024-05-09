@@ -10,6 +10,8 @@
 # Sec group for FSx for Lustre
 #---------------------------------------------------------------
 resource "aws_security_group" "fsx" {
+  count = var.enable_fsx_for_lustre ? 1 : 0
+  
   name        = "${local.name}-fsx"
   description = "Allow inbound traffic from private subnets of the VPC to FSx filesystem"
   vpc_id      = module.vpc.vpc_id
@@ -35,6 +37,8 @@ resource "aws_security_group" "fsx" {
 # Storage Class - FSx for Lustre
 #---------------------------------------------------------------
 resource "kubectl_manifest" "fsx_storageclass" {
+  count = var.enable_fsx_for_lustre ? 1 : 0
+
   yaml_body = <<YAML
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -43,7 +47,7 @@ metadata:
 provisioner: fsx.csi.aws.com
 parameters:
   subnetId: ${module.vpc.private_subnets[0]}
-  securityGroupIds: ${aws_security_group.fsx.id}
+  securityGroupIds: ${aws_security_group.fsx[0].id}
   deploymentType: PERSISTENT_1
   automaticBackupRetentionDays: "1"
   dailyAutomaticBackupStartTime: "00:00"
@@ -64,6 +68,8 @@ YAML
 # Don't change the metadata.name `fsx-claim` as this is referenced in lib/trn1_dist_ddp.py script
 #---------------------------------------------------------------
 resource "kubectl_manifest" "static_pv" {
+  count = var.enable_fsx_for_lustre ? 1 : 0
+
   yaml_body = <<YAML
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -85,6 +91,8 @@ YAML
 # AWS CLI Command shell pod to copy the files Training dataset from S3 to FSx for Lustre
 #---------------------------------------------------------------
 resource "kubectl_manifest" "cmd_shell_fsx" {
+  count = var.enable_fsx_for_lustre ? 1 : 0
+
   yaml_body = <<YAML
 apiVersion: v1
 kind: Pod

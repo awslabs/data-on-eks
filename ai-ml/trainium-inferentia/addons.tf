@@ -154,7 +154,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
-  enable_aws_fsx_csi_driver = true
+  enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
   aws_fsx_csi_driver = {
     # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
     values = [
@@ -257,23 +257,24 @@ module "eks_data_addons" {
 
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
+
   #---------------------------------------
   # Volcano Scheduler for TorchX used in BERT-Large distributed training example
   # Volcano is also a default scheduler for KubeRay Operator
   #---------------------------------------
-  enable_volcano = true
+  enable_volcano = var.enable_volcano
 
   #---------------------------------------
   # Kuberay Operator
   #---------------------------------------
   enable_kuberay_operator = true
   kuberay_operator_helm_config = {
-    version = "1.0.0"
+    version = "1.1.0"
     # Enabling Volcano as Batch scheduler for KubeRay Operator
     values = [
       <<-EOT
       batchScheduler:
-        enabled: true
+        enabled: ${var.enable_volcano}
     EOT
     ]
   }
@@ -345,7 +346,7 @@ module "eks_data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT
@@ -390,7 +391,7 @@ module "eks_data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT
@@ -411,7 +412,7 @@ data "kubectl_file_documents" "torchx_etcd_yaml" {
 }
 
 resource "kubectl_manifest" "torchx_etcd" {
-  for_each   = data.kubectl_file_documents.torchx_etcd_yaml.manifests
+  for_each   = var.enable_torchx_etcd ? data.kubectl_file_documents.torchx_etcd_yaml.manifests : {}
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }

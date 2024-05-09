@@ -6,12 +6,11 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: stablediffusion
-
 ---
 apiVersion: ray.io/v1
 kind: RayService
 metadata:
-  name: stablediffusion-service
+  name: stablediffusion
   namespace: stablediffusion
 spec:
   serviceUnhealthySecondThreshold: 900
@@ -22,7 +21,7 @@ spec:
   serveConfigV2: |
     applications:
       - name: stable-diffusion-deployment
-        import_path: "ray_serve_sd:entrypoint"
+        import_path: "ray_serve_stablediffusion:entrypoint"
         route_prefix: "/"
         runtime_env:
           env_vars:
@@ -48,22 +47,21 @@ spec:
     rayVersion: '2.11.0'
     enableInTreeAutoscaling: true
     headGroupSpec:
-      serviceType: NodePort
       headService:
         metadata:
-          name: stablediffusion-service
+          name: stablediffusion
           namespace: stablediffusion
       rayStartParams:
         dashboard-host: '0.0.0.0'
       template:
         spec:
           containers:
-            - name: ray-head
             # Important Performance Note:
             # This image is large (20GB uncompressed, 10GB compressed) and may take up to 5 minutes to pull.
             # For faster inference scaling, consider building a custom image with only your workload's essential dependencies.
             # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
+            - name: head
               image: public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest
               imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
               lifecycle:
@@ -96,7 +94,7 @@ spec:
             - name: ray-logs
               emptyDir: {}
     workerGroupSpecs:
-      - groupName: gpu-worker-group
+      - groupName: gpu
         # With g5.2xlarge instance, Ray can scale up to 4 nodes, with one pod per node and 1 GPU per pod.
         minReplicas: 1
         maxReplicas: 4
@@ -104,12 +102,12 @@ spec:
         template:
           spec:
             containers:
-              - name: ray-worker
             # Important Performance Note:
             # This image is large (20GB uncompressed, 10GB compressed) and may take up to 5 minutes to pull.
             # For faster inference scaling, consider building a custom image with only your workload's essential dependencies.
             # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
+              - name: worker
                 image: public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest
                 imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
                 lifecycle:
@@ -132,12 +130,11 @@ spec:
               - key: "nvidia.com/gpu"
                 operator: "Exists"
                 effect: "NoSchedule"
-
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: stablediffusion-ingress
+  name: stablediffusion
   namespace: stablediffusion
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: "/$1"
@@ -154,6 +151,14 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: stablediffusion-service
+            name: stablediffusion
             port:
               number: 8265
+      # Ray Serve
+      - path: /serve/(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: stablediffusion
+            port:
+              number: 8000
