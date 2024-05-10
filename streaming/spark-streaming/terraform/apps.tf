@@ -73,19 +73,4 @@ module "producer_iam_role" {
   }
 }
 
-module "consumer_iam_role" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-
-  role_name = "consumer-irsa"
-
-  role_policy_arns = {
-    arn = aws_iam_policy.consumer_s3_kafka.arn
-  }
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["spark-operator:consumer-sa"]
-    }
-  }
-}
+# Consumer IAM role and Spark additional components are being managed by spark-team.tf

@@ -1,14 +1,16 @@
+# This script is used to run the spark-consumer application on EKS, 
+# users need to replace MY_BUCKET_NAME and MY_KAFKA_BROKERS_ADRESSm to match your environment.
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
   name: spark-consumer
-  namespace: spark-operator
+  namespace: spark-team-a
 spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  image: "public.ecr.aws/data-on-eks/consumer-spark-streaming-3.3.2-kafka:1"
+  image: "public.ecr.aws/data-on-eks/consumer-spark-streaming-3.3.2-kafka:1" # You can build your own image using the Dockefile in this folder
   mainApplicationFile: "local:///app/app.py"
   sparkVersion: "3.3.2"
   deps:

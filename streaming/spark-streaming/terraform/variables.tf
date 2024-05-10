@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "spark-operator-doeks"
+  default     = "spark-streaming-doeks"
   type        = string
 }
 
@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.28"
+  default     = "1.29"
   type        = string
 }
 

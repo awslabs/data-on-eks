@@ -1,3 +1,5 @@
+# This is the producer deployment file, you can adjust the number of replicas to produce more data.
+# You will need to change __MY_AWS_REGION__, __MY_KAFKA_BROKERS__, and __MY_PRODUCER_ROLE_ARN__ to match your environment.
 apiVersion: v1
 kind: ServiceAccount
 metadata:

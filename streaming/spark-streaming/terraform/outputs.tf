@@ -66,5 +66,5 @@ output "producer_iam_role_arn" {
 
 output "consumer_iam_role_arn" {
   description = "IAM role ARN for the consumer"
-  value       = module.consumer_iam_role.iam_role_arn
+  value       = module.spark_team_a_irsa.iam_role_arn
 }
