@@ -95,7 +95,7 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
       )
 
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2/recommended/image_id --region us-west-2
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.29/amazon-linux-2/recommended/image_id --region us-west-2
       ami_type     = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
       min_size     = 2
       max_size     = 8

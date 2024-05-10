@@ -110,7 +110,7 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
       )
 
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2/recommended/image_id --region us-west-2
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.29/amazon-linux-2/recommended/image_id --region us-west-2
       ami_type     = "AL2_x86_64" # Use this for Graviton AL2_ARM_64
       min_size     = 3
       max_size     = 8
@@ -139,7 +139,7 @@ module "eks" {
       # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
       #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
       subnet_ids = [module.vpc.private_subnets[2]]
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.29/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU" # Contains Neuron driver
       instance_types = ["trn1.32xlarge"]
@@ -284,7 +284,7 @@ module "eks" {
       # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
       #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
       subnet_ids = [module.vpc.private_subnets[2]]
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.29/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU" # Contains Neuron driver
       instance_types = ["trn1n.32xlarge"]
@@ -493,7 +493,7 @@ module "eks" {
       #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
       subnet_ids = [module.vpc.private_subnets[2]]
 
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.29/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU"
       capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
@@ -545,7 +545,7 @@ module "eks" {
       #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
       subnet_ids = [module.vpc.private_subnets[2]]
 
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.29/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU"
       capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
