@@ -55,7 +55,7 @@ spec:
     memory: "1024m"
     labels:
       version: "3.3.2"
-    serviceAccount: consumer-sa
+    serviceAccount: spark-team-a
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
     tolerations:
@@ -74,7 +74,7 @@ spec:
     memory: "1024m"
     labels:
       version: "3.3.2"
-    serviceAccount: consumer-sa
+    serviceAccount: spark-team-a
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
     tolerations:
