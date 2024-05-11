@@ -94,7 +94,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.33.1"
+    chart_version       = "0.36.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -140,7 +140,7 @@ module "eks_blueprints_addons" {
   aws_for_fluentbit = {
     s3_bucket_arns = [
       module.s3_bucket.s3_bucket_arn,
-      "${module.s3_bucket.s3_bucket_arn}/*}"
+      "${module.s3_bucket.s3_bucket_arn}/*"
     ]
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,

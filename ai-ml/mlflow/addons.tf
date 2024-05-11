@@ -89,7 +89,7 @@ module "eks_blueprints_addons" {
   aws_for_fluentbit = {
     s3_bucket_arns = [
       module.fluentbit_s3_bucket.s3_bucket_arn,
-      "${module.fluentbit_s3_bucket.s3_bucket_arn}/*}"
+      "${module.fluentbit_s3_bucket.s3_bucket_arn}/*"
     ]
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,

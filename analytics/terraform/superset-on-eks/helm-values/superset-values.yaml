@@ -1,0 +1,95 @@
+# Superset node configuration
+supersetNode:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+
+  resources:
+     limits:
+      cpu: 200m
+      memory: 256Mi
+     requests:
+      cpu: 200m
+      memory: 256Mi
+
+# Superset Celery worker configuration
+supersetWorker:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+  command:
+    - "/bin/sh"
+    - "-c"
+    - ". {{ .Values.configMountPath }}/superset_bootstrap.sh; celery --app=superset.tasks.celery_app:app worker"
+  # -- If true, forces deployment to reload on each upgrade
+  forceReload: false
+  # -- Init container
+  # @default -- a container waiting for postgres and redis
+  initContainers:
+    - name: wait-for-postgres-redis
+      image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+      imagePullPolicy: "{{ .Values.initImage.pullPolicy }}"
+      envFrom:
+        - secretRef:
+            name: "{{ tpl .Values.envFromSecret . }}"
+      command:
+        - /bin/sh
+        - -c
+        - dockerize -wait "tcp://$DB_HOST:$DB_PORT" -wait "tcp://$REDIS_HOST:$REDIS_PORT" -timeout 120s
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 400Mi
+
+  persistence:
+    enabled: true
+
+
+postgresql:
+  ## Set to false if bringing your own PostgreSQL.
+  enabled: true
+  loadExamples: true
+  primary:
+    persistence:
+      ## Enable PostgreSQL persistence using Persistent Volume Claims.
+      enabled: true
+      storageClass: gp3
+
+configOverrides:
+   secret: |
+     SECRET_KEY = '5WPuGEgPfGTrk9MCVLFkzNk0fO4hyfsykSrM03fHn1m8d3yQQd4yjyvf'
+
+
+
+redis:
+
+ master:
+    ##
+    ## Image configuration
+    # image:
+    ##
+    ## docker registry secret names (list)
+    # pullSecrets: nil
+    ##
+    persistence:
+      ##
+      ## Use a PVC to persist data.
+      enabled: true
+      ##
+      ## Persistent class
+      # storageClass: classname
+      ##
+      ## Access mode:
+      accessModes:
+        - ReadWriteOnce
+runAsUser: 1000
