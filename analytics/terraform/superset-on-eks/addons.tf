@@ -109,7 +109,7 @@ module "eks_data_addons" {
   superset_helm_config = {
     values = [templatefile("${path.module}/helm-values/superset-values.yaml", {})]
   }
-    depends_on = [module.eks_blueprints_addons]
+  depends_on = [module.eks_blueprints_addons]
 
 }
 
