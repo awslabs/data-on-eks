@@ -2,7 +2,7 @@
 sidebar_position: 4
 sidebar_label: ClickHouse
 ---
-# ClickHouse on EKS 
+# ClickHouse on EKS
 [ClickHouse](https://clickhouse.com/) is a high-performance, column-oriented SQL database management system (DBMS) for online analytical processing (OLAP) that is open sourced under the Apache 2.0 license.
 
 
@@ -17,4 +17,4 @@ OLAP is software technology you can use to analyze business data from different 
 * SQL Support: ClickHouse supports a subset of SQL, making it familiar and easy to use for developers and analysts who are already familiar with SQL-based databases.
 * Integrated Data Formats: ClickHouse supports various data formats, including CSV, JSON, Apache Avro, and Apache Parquet, making it flexible for ingesting and querying different types of data.
 
-**To deploy Clickhouse on EKS**, we recommend this [Clickhouse on EKS blueprint](https://github.com/Altinity/terraform-aws-eks-clickhouse) from Altinity, an AWS Partner who maintains the [Clickouse Kubernetes Operator](https://github.com/Altinity/clickhouse-operator). If you have any issues with the blueprint or operator, please create an issue on the corresponding Altinity GitHub repository. 
+**To deploy Clickhouse on EKS**, we recommend this [Clickhouse on EKS blueprint](https://github.com/Altinity/terraform-aws-eks-clickhouse) from Altinity, an AWS Partner who maintains the [Clickouse Kubernetes Operator](https://github.com/Altinity/clickhouse-operator). If you have any issues with the blueprint or operator, please create an issue on the corresponding Altinity GitHub repository.
