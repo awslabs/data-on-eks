@@ -48,11 +48,11 @@ chat_interface = gr.ChatInterface(
     description="Ask me any question",
     theme="soft",
     examples=["How many languages are in India", "What is Generative AI?"],
-    cache_examples=True,
+    cache_examples=False,
     retry_btn=None,
     undo_btn="Delete Previous",
     clear_btn="Clear",
 )
 
 # Launch the ChatInterface
-chat_interface.launch()
+chat_interface.launch(server_name="0.0.0.0")
