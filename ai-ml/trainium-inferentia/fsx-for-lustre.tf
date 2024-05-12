@@ -11,7 +11,7 @@
 #---------------------------------------------------------------
 resource "aws_security_group" "fsx" {
   count = var.enable_fsx_for_lustre ? 1 : 0
-  
+
   name        = "${local.name}-fsx"
   description = "Allow inbound traffic from private subnets of the VPC to FSx filesystem"
   vpc_id      = module.vpc.vpc_id

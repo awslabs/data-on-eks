@@ -58,7 +58,7 @@ Additionally, confirm that your local region setting matches the specified regio
 For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
 
 ```bash
-cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x install.sh
+cd data-on-eks/ai-ml/trainium-inferentia/
 ./install.sh
 ```
 
@@ -117,8 +117,8 @@ To deploy the Mistral-7B-Instruct-v0.2 model, it's essential to configure your H
 
 export  HUGGING_FACE_HUB_TOKEN=<Your-Hugging-Face-Hub-Token-Value>
 
-cd data-on-eks/gen-ai/
-envsubst < inference/mistral-7b-rayserve-inf2/ray-service-mistral.yaml| kubectl apply -f -
+cd ./../gen-ai/inference/mistral-7b-rayserve-inf2
+envsubst < ray-service-mistral.yaml| kubectl apply -f -
 ```
 
 Verify the deployment by running the following commands
@@ -174,62 +174,34 @@ Discover how to create a user-friendly chat interface using [Gradio](https://www
 
 Let's move forward with setting up the Gradio app as a Kubernetes deployment, utilizing a Docker container. This setup will enable interaction with the Mistral model, which is deployed using RayServe.
 
-:::info
 
-The Gradio UI application is containerized and the container image is stored in [data-on-eks](https://gallery.ecr.aws/data-on-eks/gradio-app) public repository. The Gradio app container internally points to the `mistral-service` that's running on port 8000.
+### Build the Gradio app docker container
 
-The Dockerfile for the above image is available at `data-on-eks/gen-ai/inference/gradio-ui/Dockerfile-gradio-app-mistral` path.
+First, lets build the docker container for the client app.
 
-This is an optional step for this deployment. You can also customize the Gradio UI app according to your design requirements.
-To build a custom Gradio app Docker image, please run the below commands. Please make sure to change the image `tag` and custom `Dockerfile` name accordingly.
 
 ```bash
-cd data-on-eks/gen-ai/inference
-docker buildx build --platform=linux/amd64 -t gradio-app:<tag> -f gradio-ui/<Custom-Dockerfile> gradio-ui/
+cd ../gradio-ui
+docker build --platform=linux/amd64 \
+  -t gradio-app:mistral \
+  --build-arg GRADIO_APP="gradio-app-mistral.py" \
+  .
 ```
 
-:::
+### Deploy the Gradio container
 
-### Deploy the Gradio Pod as Deployment
+Deploy the Gradio app as a container on localhost using docker:
 
-First, deploy the Gradio app as a Deployment on EKS using kubectl:
-
-```bash
-cd data-on-eks/gen-ai/inference/
-kubectl apply -f mistral-7b-rayserve-inf2/gradio-deploy.yaml
-
-namespace/gradio created
-deployment.apps/gradio-deployment created
-service/gradio-service created
-```
-
-This should create a Deployment and a Service in namespace `gradio`. Check the status of the resources.
 
 ```bash
-NAME                                     READY   STATUS    RESTARTS   AGE
-pod/gradio-deployment-846cb4dbf6-plmgc   1/1     Running   0          61s
-
-NAME                     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
-service/gradio-service   ClusterIP   172.20.179.184   <none>        7860/TCP   60s
-
-NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/gradio-deployment   1/1     1            1           62s
-
-NAME                                           DESIRED   CURRENT   READY   AGE
-replicaset.apps/gradio-deployment-846cb4dbf6   1         1         1       62s
+docker run --rm -it -p 7860:7860 gradio-app:mistral
 ```
 
 #### Invoke the WebUI
 
-Execute a port forward to the `gradio-service` Service using kubectl:
-
-```bash
-kubectl -n gradio port-forward service/gradio-service 8080:7860
-```
-
 Open your web browser and access the Gradio WebUI by navigating to the following URL:
 
-Running on local URL:  http://localhost:8080
+Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
@@ -248,20 +220,27 @@ Below screenshots provide some examples of the model response based on different
 ![Gradio Convo 2](img/mistral-conv-2.png)
 
 ## Cleanup
+
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.
 
-**Step1:** Delete Ray Cluster
+**Step1:** Delete Gradio Container
+
+`Ctrl-c` on the localhost terminal window where `docker run` is running to kill the container running the Gradio app. Optionally clean up the docker image
 
 ```bash
-cd data-on-eks/gen-ai/inference/mistral-7b-rayserve-inf2
+docker rmi gradio-app:mistral
+```
+**Step2:** Delete Ray Cluster
+
+```bash
+cd ../mistral-7b-rayserve-inf2
 kubectl delete -f ray-service-mistral.yaml
 ```
 
-**Step2:** Cleanup the EKS Cluster
+**Step3:** Cleanup the EKS Cluster
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-export AWS_DEAFULT_REGION="DEPLOYED_EKS_CLUSTER_REGION>"
-cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x cleanup.sh
+cd ../../../ai-ml/trainium-inferentia/
 ./cleanup.sh
 ```
