@@ -70,7 +70,7 @@ class LlamaModel:
                                 n_positions=4096
                             )
         self.neuron_model.to_neuron()
-        
+
         # Initialize tokenizer for the model
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
 
