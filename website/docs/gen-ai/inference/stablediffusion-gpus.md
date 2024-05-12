@@ -152,7 +152,7 @@ Discover how to create a user-friendly chat interface using [Gradio](https://www
 
 Let's move forward with setting up the Gradio app as a Docker container running on localhost. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
 
-### Build the Gradio app docker container 
+### Build the Gradio app docker container
 
 First, lets build the docker container for the client app.
 

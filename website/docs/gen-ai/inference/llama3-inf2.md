@@ -26,7 +26,7 @@ In this tutorial, you will not only learn how to harness the power of Llama-3, b
 
 ### What is Llama-3-8B Instruct?
 
-Meta developed and released the Meta Llama 3 family of large language models (LLMs), a collection of pretrained and instruction tuned generative text models in 8 and 70B sizes. The Llama 3 instruction tuned models are optimized for dialogue use cases and outperform many of the available open source chat models on common industry benchmarks. Further, in developing these models, we took great care to optimize helpfulness and safety. 
+Meta developed and released the Meta Llama 3 family of large language models (LLMs), a collection of pretrained and instruction tuned generative text models in 8 and 70B sizes. The Llama 3 instruction tuned models are optimized for dialogue use cases and outperform many of the available open source chat models on common industry benchmarks. Further, in developing these models, we took great care to optimize helpfulness and safety.
 
 More information on Llama3 sizes and model architecture can be found [here](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct).
 
@@ -36,7 +36,7 @@ One of the key challenges in deploying large language models (`LLMs`) like Llama
 
 In contrast, `Trn1/Inf2` instances, such as `trn1.32xlarge`, `trn1n.32xlarge`, `inf2.24xlarge` and `inf2.48xlarge`, are purpose built for high-performance deep learning (DL) training and inference of generative AI models, including LLMs. They offer both scalability and availability, ensuring that you can deploy and scale your `Llama-3` models as needed, without resource bottlenecks or delays.
 
-**Cost Optimization** 
+**Cost Optimization**
 
 Running LLMs on traditional GPU instances can be cost-prohibitive, especially given the scarcity of GPUs and their competitive pricing. **Trn1/Inf2** instances provide a cost-effective alternative. By offering dedicated hardware optimized for AI and machine learning tasks, Trn1/Inf2 instances allow you to achieve top-notch performance at a fraction of the cost. This cost optimization enables you to allocate your budget efficiently, making LLM deployment accessible and sustainable.
 
@@ -234,7 +234,7 @@ Discover how to create a user-friendly chat interface using [Gradio](https://www
 
 Let's move forward with setting up the Gradio app as a Docker container running on localhost. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
 
-### Build the Gradio app docker container 
+### Build the Gradio app docker container
 
 First, lets build the docker container for the client app.
 

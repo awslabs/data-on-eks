@@ -62,4 +62,4 @@ chat_interface = gr.ChatInterface(
 )
 
 # Launch the ChatInterface
-chat_interface.launch()
+chat_interface.launch(server_name="0.0.0.0")
