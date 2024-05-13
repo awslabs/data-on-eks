@@ -21,7 +21,8 @@ def generate_text(message, history):
         prompt_to_replace = "[INST]" + prompt + "[/INST]"
 
         # Removing the original prompt with instruction set from the output
-        text = response.text.replace(prompt_to_replace, "", 1).strip('["]?\n')
+        text = response.json()[0].replace(prompt_to_replace, "", 1).strip('["]?\n')
+
         # remove '<s>' strikethrough markdown
         if text.startswith("<s>"):
             text = text.replace("<s>", "", 1)

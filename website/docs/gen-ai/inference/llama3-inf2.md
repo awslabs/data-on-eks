@@ -251,8 +251,18 @@ docker build --platform=linux/amd64 \
 Deploy the Gradio app as a container on localhost using docker:
 
 ```bash
-docker run --rm -it -p 7860:7860 gradio-app:llama
+docker run --rm -it -p 7860:7860 -p 8000:8000 gradio-app:llama
 ```
+:::info
+If you are not running Docker Desktop on your machine and using something like [finch](https://runfinch.com/) instead then you will need to additional flags for a custom host-to-IP mapping inside the container.
+
+```
+docker run --rm -it \
+    --add-host ray-service:<workstation-ip> \
+    -e "SERVICE_NAME=http://ray-service:8000" \
+    -p 7860:7860 gradio-app:llama
+```
+:::
 
 #### Invoke the WebUI
 
