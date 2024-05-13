@@ -1,10 +1,11 @@
 import gradio as gr
 import requests
+import os
 
 # Constants for model endpoint and service name
 model_endpoint = "/infer"
 # service_name = "http://<REPLACE_ME_WITH_ELB_DNS_NAME>/serve"
-service_name = "http://localhost:8000"  # Replace with your actual service name
+service_name = os.environ.get("SERVICE_NAME", "http://localhost:8000")
 
 
 # Function to generate text
@@ -19,7 +20,7 @@ def text_generation(message, history):
         response = requests.get(url, params={"sentence": prompt}, timeout=180)
         response.raise_for_status()  # Raise an exception for HTTP errors
 
-        full_output = response.text
+        full_output = response.json()[0]
         # Removing the original question from the output
         answer_only = full_output.replace(prompt, "", 1).strip('["]?\n')
 
