@@ -67,11 +67,15 @@ terraform init
 terraform apply --auto-approve
 ```
 
+### Architecture Overview
+
+![img.png](img/apache-superset-eks.png)
 
 ### Verify Deployment
 
-After the deployment completes, we can access the Superset UI .  For demo purpose, this blueprint creates the Ingress object for the Superset FrontEnd UI with public LoadBalancer.
+After the deployment completes, we can access the Superset UI .  For demo purpose, this blueprint creates the Ingress object for the Superset FrontEnd UI with public LoadBalancer and also number of pods across 2 AZ's in the corenode and superset node respectively.
 
+![img.png](img/superset-pods.png)
 
 You may find the URL to the Superset frontend from the output superset_url, or by running kubectl command below:
 
@@ -83,11 +87,45 @@ NAME                CLASS     HOSTS   ADDRESS                                   
 superset-ingress   aws-alb   *       k8s-superset-***.***.elb.amazonaws.com                                     80      125m
 ```
 
+
+
 Copy the ADDRESS field from the output, then open browser and enter the URL as `http://<address>/`. Enter `admin` as both user name and password when prompted.  We can view the Superset UI like below.
 
 ![img.png](img/superset1.png)
 ![img.png](img/superset2.png)
 
+In order to visualize  data, we need to first connect to  Postgres database. the IP address of the database can be obtained by describing a pod 'superset-postgresql-0'. Basically the database is hosted on the superset-node
+
+
+```sh
+k describe po superset-postgresql-0 -n superset
+
+```
+
+
+After obtaining the IP address, database connection can be established as per the screenshot below
+![img.png](img/superset-connect-database.png)
+
+Once the database is connected, it has to be configured to allow file upload. This features allows, csv and other format files to be uploaded as a new table. Please refer to the screeshots below
+
+Step -1 : Edit database configuration and navigate to 'ADVANCED' settings
+
+![img.png](img/superset-edit-database.png)
+
+Step - 2 : Under Security scroll down to the very end and 'check allow file uploads to the database'
+
+![img.png](img/superset-enable-fileupload.png)
+
+Step -3 : Createa dataset by uploading a file
+
+![img.png](img/superset-create-dataset.png)
+
+Step - 4 : To show a sample visualization a sample CSV of COVID reasearch across various countries was uploaded. Here are a few visualizations that shows countires porgess with respect to trial of various vaccines
+
+![img.png](img/superset-sample-graph.png)
+
+
+![img.png](img/superset-view-by-country.png)
 ## Cleanup
 
 To clean up your environment, run the `cleanup.sh` script.
