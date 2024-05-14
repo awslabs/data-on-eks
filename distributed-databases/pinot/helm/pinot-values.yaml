@@ -54,10 +54,11 @@ controller:
     name: controller
 
   external:
-    enabled: false
+    enabled: true
     type: LoadBalancer
     port: 9000
-    annotations: {}
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-internal: "true"
 
   ingress:
     v1beta1:
@@ -76,7 +77,11 @@ controller:
 
   resources:
     requests:
-      memory: "1.25Gi"
+      cpu: 1
+      memory: 1G
+    limits:
+      cpu: 1
+      memory: 1G
 
   nodeSelector:
     NodeGroupType: controller
@@ -165,11 +170,12 @@ broker:
     nodePort: ""
 
   external:
-    enabled: false
+    enabled: true
     type: LoadBalancer
     port: 8099
     # For example, in private GKE cluster, you might add cloud.google.com/load-balancer-type: Internal
-    annotations: {}
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-internal: "true"
 
   ingress:
     v1beta1:
@@ -188,7 +194,11 @@ broker:
 
   resources:
     requests:
-      memory: "1.25Gi"
+      cpu: 1
+      memory: 1G
+    limits:
+      cpu: 1
+      memory: 1G
 
   nodeSelector:
     NodeGroupType: broker
@@ -254,7 +264,7 @@ server:
   persistence:
     enabled: true
     accessMode: ReadWriteOnce
-    size: 4G
+    size: 100G
     mountPath: /var/pinot/server/data
     storageClass: ""
     #storageClass: "ssd"
@@ -262,7 +272,7 @@ server:
     extraVolumeMounts: []
 
   #jvmOpts: "-Xms512M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-server.log"
-  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms256M -Xmx1G"
+  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms1G -Xmx4G"
 
   log4j2ConfFile: /opt/pinot/conf/log4j2.xml
   pluginsDir: /opt/pinot/plugins
@@ -286,7 +296,8 @@ server:
 
   resources:
     requests:
-      memory: "1.25Gi"
+      cpu: 4
+      memory: "10G"
 
   nodeSelector:
     NodeGroupType: server

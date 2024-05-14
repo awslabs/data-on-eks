@@ -1,48 +1,76 @@
-apiVersion: karpenter.sh/v1alpha5
-kind: Provisioner
-metadata:
-  name: flink-memory-optimized
-  namespace: karpenter
-spec:
-  kubeletConfiguration:
-    containerRuntime: containerd
-#    podsPerCore: 2
-#    maxPods: 20
-  requirements:
-    - key: "topology.kubernetes.io/zone"
-      operator: In
-      values: [${azs}a] #Update the correct region and zone
-    - key: "karpenter.sh/capacity-type"
-      operator: In
-      values: ["spot", "on-demand"]
-    - key: "node.kubernetes.io/instance-type" #If not included, all instance types are considered
-      operator: In
-      values: ["r5d.4xlarge","r5d.8xlarge","r5d.12xlarge"] # 2 NVMe disk
-    - key: "kubernetes.io/arch"
-      operator: In
-      values: ["amd64"]
-  limits:
-    resources:
-      cpu: 1000
-  providerRef: # optional, recommended to use instead of `provider`
-    name: flink-memory-optimized
-  labels:
-    type: karpenter
-    provisioner: flink-memory-optimized
-    NodeGroupType: flink-memory-optimized
-  taints:
-    - key: flink-memory-optimized
-      value: 'true'
-      effect: NoSchedule
-  ttlSecondsAfterEmpty: 120 # optional, but never scales down if not set
-
 ---
-apiVersion: karpenter.k8s.aws/v1alpha1
-kind: AWSNodeTemplate
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool # Previously kind: Provisioner
+metadata:
+  name: flink-memory-optimized
+  namespace: karpenter # Same namespace as Karpenter add-on installed
+spec:
+  template:
+    metadata:
+      labels:
+        type: karpenter
+        provisioner: flink-memory-optimized
+        NodeGroupType: FlinkMemoryOptimized
+    spec:
+      nodeClassRef:
+        name: flink-memory-optimized
+      requirements:
+        - key: "topology.kubernetes.io/zone"
+          operator: In
+          values: [${azs}a] #Update the correct region and zones
+        - key: "karpenter.sh/capacity-type"
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: "kubernetes.io/arch"
+          operator: In
+          values: ["amd64"]
+        - key: "karpenter.k8s.aws/instance-category"
+          operator: In
+          values: ["r"]
+        - key: "karpenter.k8s.aws/instance-family"
+          operator: In
+          values: ["r5d"]
+        - key: "karpenter.k8s.aws/instance-cpu"
+          operator: In
+          values: ["4", "8", "16", "32"]
+        - key: "karpenter.k8s.aws/instance-hypervisor"
+          operator: In
+          values: ["nitro"]
+        - key: "karpenter.k8s.aws/instance-generation"
+          operator: Gt
+          values: ["2"]
+  limits:
+    cpu: 1000
+  disruption:
+    # Describes which types of Nodes Karpenter should consider for consolidation
+    # If using 'WhenUnderutilized', Karpenter will consider all nodes for consolidation and attempt to remove or replace Nodes when it discovers that the Node is underutilized and could be changed to reduce cost
+    # If using `WhenEmpty`, Karpenter will only consider nodes for consolidation that contain no workload pods
+    consolidationPolicy: WhenEmpty
+    # The amount of time Karpenter should wait after discovering a consolidation decision
+    # This value can currently only be set when the consolidationPolicy is 'WhenEmpty'
+    # You can choose to disable consolidation entirely by setting the string value 'Never' here
+    consolidateAfter: 30s
+    # The amount of time a Node can live on the cluster before being removed
+    # Avoiding long-running Nodes helps to reduce security vulnerabilities as well as to reduce the chance of issues that can plague Nodes with long uptimes such as file fragmentation or memory leaks from system processes
+    # You can choose to disable expiration entirely by setting the string value 'Never' here
+    expireAfter: 720h
+
+  # Priority given to the NodePool when the scheduler considers which NodePool
+  # to select. Higher weights indicate higher priority when comparing NodePools.
+  # Specifying no weight is equivalent to specifying a weight of 0.
+  weight: 10
+
+
+
+# NOTE: Multiple NodePools may point to the same EC2NodeClass.
+---
+apiVersion: karpenter.k8s.aws/v1beta1
+kind: EC2NodeClass # Previously kind: AWSNodeTemplate
 metadata:
   name: flink-memory-optimized
   namespace: karpenter
 spec:
+  amiFamily: AL2
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -50,17 +78,12 @@ spec:
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
-  metadataOptions:
-    httpEndpoint: enabled
-    httpProtocolIPv6: disabled
-    httpPutResponseHopLimit: 2
-    httpTokens: required
-  subnetSelector:
-    Name: "${eks_cluster_id}-private*"        # Name of the Subnets to spin up the nodes
-  securityGroupSelector:                      # required, when not using launchTemplate
-    Name: "${eks_cluster_id}-node*"           # name of the SecurityGroup to be used with Nodes
-  #  instanceProfile: ""      # optional, if already set in controller args
-  #RAID0 config example
+  role: "${eks_cluster_id}-karpenter-node"
+  subnetSelectorTerms:
+    - tags: # Update the correct region and zones
+        Name: "${eks_cluster_id}-private*"
+  securityGroupSelectorTerms:
+    - name: "${eks_cluster_id}-node*"
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"
@@ -68,42 +91,21 @@ spec:
     --BOUNDARY
     Content-Type: text/x-shellscript; charset="us-ascii"
 
-    #!/bin/bash
-    echo "Running a custom user data script"
-    set -ex
-    yum install mdadm -y
+    cat <<-EOF > /etc/profile.d/bootstrap.sh
+    #!/bin/sh
 
-    IDX=1
-    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
 
-    DISK_ARRAY=()
+    # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
+    # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
+    # This will create a RAID volume and mount it at /mnt/k8s-disks/0
+    #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
+    #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
+    export LOCAL_DISKS='raid0'
+    EOF
 
-    for DEV in $DEVICES
-    do
-      DISK_ARRAY+=("/dev/$${DEV}")
-    done
-
-    DISK_COUNT=$${#DISK_ARRAY[@]}
-
-    if [ $${DISK_COUNT} -eq 0 ]; then
-      echo "No SSD disks available. No further action needed."
-    else
-      if [ $${DISK_COUNT} -eq 1 ]; then
-        TARGET_DEV=$${DISK_ARRAY[0]}
-        mkfs.xfs $${TARGET_DEV}
-      else
-        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
-        mkfs.xfs /dev/md0
-        TARGET_DEV=/dev/md0
-      fi
-
-      mkdir -p /local1
-      echo $${TARGET_DEV} /local1 xfs defaults,noatime 1 2 >> /etc/fstab
-      mount -a
-      /usr/bin/chown -hR +999:+1000 /local1
-    fi
+    # Source extra environment variables in bootstrap script
+    sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
 
     --BOUNDARY--
-
   tags:
     InstanceType: "flink-memory-optimized"    # optional, add tags for your own use

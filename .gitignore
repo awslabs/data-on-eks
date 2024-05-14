@@ -1,6 +1,7 @@
 .DS_Store
 .idea
 .build
+*.old
 
 # ignore the lock file
 website/package-lock.json
@@ -49,3 +50,9 @@ site
 
 # Checks
 .tfsec
+
+# venv
+**/.venv/*
+
+# gradio
+**/gradio_cached_examples

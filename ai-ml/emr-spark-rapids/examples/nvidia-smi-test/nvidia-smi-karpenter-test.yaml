@@ -9,21 +9,22 @@ metadata:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nvidia-smi-ubuntu-karpenter
+  name: nvidia-smi-al2-karpenter
   namespace: nvidia-smi-ns
 spec:
   restartPolicy: OnFailure
   containers:
-  - name: nvidia-smi
-    image: ubuntu:22.04
-    args:
-    - "nvidia-smi"
-    resources:
-      limits:
-        nvidia.com/gpu: 1
+    - name: nvidia-smi
+      image: ubuntu:22.04
+      args:
+        - "nvidia-smi"
+      resources:
+        limits:
+          nvidia.com/gpu: 1
   nodeSelector:
-    NodeGroupType: "spark-ubuntu-gpu-karpenter"
+    NodeGroupType: spark-executor-gpu-karpenter
   tolerations:
-    - key: "spark-ubuntu-gpu-karpenter"
-      operator: "Exists"
+    - key: "nvidia.com/gpu"
+      operator: "Equal"
+      value: "present"
       effect: "NoSchedule"

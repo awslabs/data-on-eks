@@ -10,24 +10,14 @@ metadata:
   namespace: emr-ml-team-a
 
 spec:
-  volumes:
-    - name: spark-local-dir-1
-      hostPath:
-        path: /local1
-        type: Directory
-
   nodeSelector:
-    NodeGroupType: "spark-ubuntu-gpu-ca"
-    topology.kubernetes.io/zone: "us-west-2b"
-
+    NodeGroupType: "spark-executor-gpu-ca" # Comment this line if you want to use Karpenter autosclaing
+    # NodeGroupType: spark-executor-gpu-karpenter # Uncomment this line if you want to use Karpenter autosclaing
   containers:
     - name: spark-kubernetes-executor # Don't change this name. EMR on EKS looking for this name
-      volumeMounts:
-        - name: spark-local-dir-1
-          mountPath: /data1
-          readOnly: false
 
   tolerations:
-    - key: "spark-ubuntu-gpu-ca"
-      operator: "Exists"
+    - key: "nvidia.com/gpu"
+      operator: "Equal"
+      value: "present"
       effect: "NoSchedule"

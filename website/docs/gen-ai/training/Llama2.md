@@ -1,6 +1,6 @@
 ---
 title: Llama-2 on Trainium
-sidebar_position: 1
+sidebar_position: 2
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
@@ -98,9 +98,10 @@ By default **MPI operator** is not installed and its set to false. We will run t
 
 ```bash
 export TF_VAR_enable_mpi_operator=true
+export TF_VAR_enable_fsx_for_lustre=true
 export TF_VAR_region=us-west-2
-export TF_VAR_trn1_min_size=4
-export TF_VAR_trn1_desired_size=4
+export TF_VAR_trn1_32xl_min_size=4
+export TF_VAR_trn1_32xl_desired_size=4
 ```
 
 Run the install script to provision an EKS cluster with all the add-ons needed for the solution.
@@ -160,7 +161,7 @@ Run the following script to launch the CLI pod:
 Next, periodically run the following command until you see the CLI pod go into ‘Running’ state:
 
 ```bash
-kubectl get pod
+kubectl get pod -w
 ```
 
 Once the CLI pod is ‘Running’, connect to it using the following command:
@@ -204,6 +205,7 @@ Tokenize the dataset using the preprocessing script included with neuronx-nemo-m
 
 ```bash
 cd /shared
+
 # Clone the neuronx-nemo-megatron repo, which includes the required scripts
 git clone https://github.com/aws-neuron/neuronx-nemo-megatron.git
 
@@ -229,11 +231,10 @@ Note: When we later launch our training jobs in EKS, the training pods will run 
 
 Modify the test_llama.sh script `/shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh` to update the following two lines. These lines tell the training pod workers where to find the Llama tokenizer and the dataset on the FSx filesystem.
 
-You can use any common text editor such as nano or vim to make these changes.
-
 Run:
 ```bash
-nano /shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh
+sed -i 's#^\(: ${TOKENIZER_PATH=\).*#\1/shared/llama7b_tokenizer}#' /shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh
+sed -i 's#^\(: ${DATASET_PATH=\).*#\1/shared/data/redpajama_sample_text_document}#' /shared/neuronx-nemo-megatron/nemo/examples/nlp/language_modeling/test_llama.sh
 ```
 
 Before changes:
@@ -348,3 +349,12 @@ kubectl delete mpijob test-mpi-train
 ```
 
 You can then run `kubectl get pods` to confirm that the launcher/worker pods have been removed.
+
+### Cleaning up
+
+To remove the resources created using this solution, run the cleanup script:
+
+```bash
+cd data-on-eks/ai-ml/trainium-inferentia
+./cleanup.sh
+```

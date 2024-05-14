@@ -16,6 +16,7 @@ spec:
     importPath: dogbooth:entrypoint
     runtimeEnv: |
       env_vars: {"MODEL_ID": "askulkarni2/dogbooth"}
+      #env_vars: {"MODEL_ID": "stabilityai/stable-diffusion-2-1"}
   rayClusterConfig:
     rayVersion: '2.6.0'
     headGroupSpec:

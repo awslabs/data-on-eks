@@ -116,11 +116,12 @@ module "eks" {
       max_size     = 8
       desired_size = 3
 
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m5.2xlarge"]
 
       labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
+        workload      = "rayhead"
       }
 
       tags = merge(local.tags, {
@@ -488,16 +489,14 @@ module "eks" {
     inf2-24xl-ng = {
       name        = "inf2-24xl-ng"
       description = "inf2 24xl node group for ML inference workloads"
-      # The code filters the private subnets based on their CIDR blocks and selects the subnet ID if the CIDR block starts with "100." Otherwise, it assigns a null value.
-      # The element(compact([...]), 0) expression ensures that only the first non-null value is included in the resulting list of subnet IDs.
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
+      # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
+      #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
+      subnet_ids = [module.vpc.private_subnets[2]]
 
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU"
-      capacity_type  = "SPOT"
+      capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
       instance_types = ["inf2.24xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
@@ -511,41 +510,45 @@ module "eks" {
       desired_size = var.inf2_24xl_desired_size
 
       labels = {
-        instance-type = "inf2"
-        provisioner   = "cluster-autoscaler"
+        instanceType    = "inf2-24xl"
+        provisionerType = "cluster-autoscaler"
+      }
+
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 500
+            volume_type = "gp3"
+          }
+        }
       }
 
       taints = [
         {
           key    = "aws.amazon.com/neuron",
-          value  = true,
+          value  = "true",
           effect = "NO_SCHEDULE"
-        },
-        {
-          key    = "aws.amazon.com/neuroncore",
-          value  = true,
-          effect = "NO_SCHEDULE"
-        },
+        }
       ]
 
       tags = merge(local.tags, {
-        Name                     = "inf2-ng1",
+        Name                     = "inf2-24xl-ng",
         "karpenter.sh/discovery" = local.name
       })
     }
+
     inf2-48xl-ng = {
       name        = "inf2-48xl-ng"
       description = "inf2 48x large node group for ML inference workloads"
-      # The code filters the private subnets based on their CIDR blocks and selects the subnet ID if the CIDR block starts with "100." Otherwise, it assigns a null value.
-      # The element(compact([...]), 0) expression ensures that only the first non-null value is included in the resulting list of subnet IDs.
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
+      # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
+      #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
+      subnet_ids = [module.vpc.private_subnets[2]]
 
       # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
       # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
       ami_type       = "AL2_x86_64_GPU"
-      capacity_type  = "SPOT"
+      capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
       instance_types = ["inf2.48xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
@@ -554,13 +557,23 @@ module "eks" {
         export PATH=/opt/aws/neuron/bin:$PATH
       EOT
 
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 500
+            volume_type = "gp3"
+          }
+        }
+      }
+
       min_size     = var.inf2_48xl_min_size
       max_size     = 2
       desired_size = var.inf2_48xl_desired_size
 
       labels = {
-        instance-type = "inf2-48xl"
-        provisioner   = "cluster-autoscaler"
+        instanceType    = "inf2-48xl"
+        provisionerType = "cluster-autoscaler"
       }
 
       taints = [
@@ -568,12 +581,7 @@ module "eks" {
           key    = "aws.amazon.com/neuron",
           value  = true,
           effect = "NO_SCHEDULE"
-        },
-        {
-          key    = "aws.amazon.com/neuroncore",
-          value  = true,
-          effect = "NO_SCHEDULE"
-        },
+        }
       ]
 
       tags = merge(local.tags, {

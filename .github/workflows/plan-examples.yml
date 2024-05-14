@@ -1,10 +1,6 @@
 name: plan-examples
 
 on:
-  # Review https://securitylab.github.com/research/github-actions-preventing-pwn-requests/ and better understand the risks of using pull_request_target before making major changes to this workflow.
-  pull_request_target:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:
@@ -55,7 +51,7 @@ jobs:
         if: "contains(github.event_name, 'pull_request')"
         uses: actions/checkout@v3
         with:
-          ref: refs/pull/${{github.event.pull_request.number}}/merge
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: checkout
         if: "!contains(github.event_name, 'pull_request')"

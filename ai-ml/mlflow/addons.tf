@@ -89,7 +89,7 @@ module "eks_blueprints_addons" {
   aws_for_fluentbit = {
     s3_bucket_arns = [
       module.fluentbit_s3_bucket.s3_bucket_arn,
-      "${module.fluentbit_s3_bucket.s3_bucket_arn}/*}"
+      "${module.fluentbit_s3_bucket.s3_bucket_arn}/*"
     ]
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
@@ -104,7 +104,13 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   karpenter = {
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -168,7 +174,7 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.2.3" # ensure to update this to the latest/desired version
+  version = "~> 1.3" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -201,6 +207,109 @@ module "eks_data_addons" {
     values = [templatefile("${path.module}/helm-values/nvidia-values.yaml", {})]
   }
 
+  #---------------------------------------
+  # Deploying Karpenter resources(Nodepool and NodeClass) with Helm Chart
+  #---------------------------------------
+  enable_karpenter_resources = true
+  # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
+  #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
+  karpenter_resources_helm_config = {
+    gpu-g5 = {
+      values = [
+        <<-EOT
+      name: gpu-g5
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        blockDevice:
+          deviceName: /dev/xvda
+          volumeSize: 500Gi
+          volumeType: gp3
+          encrypted: true
+          deleteOnTermination: true
+      nodePool:
+        labels:
+          - instanceType: gp5
+          - provisionerType: Karpenter
+        taints:
+          - key: nvidia.com/gpu
+            operator: "Exists"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        amiFamily: Ubuntu
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    default = {
+      values = [
+        <<-EOT
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+          blockDevice:
+            deviceName: /dev/xvda
+            volumeSize: 200Gi
+            volumeType: gp3
+            encrypted: true
+            deleteOnTermination: true
+      nodePool:
+        labels:
+          - instanceType: mixed-x86
+          - provisionerType: Karpenter
+          - workload: mlflow
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5", "m5", "r5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 30s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+  }
 }
 
 #---------------------------------------------------------------
@@ -280,23 +389,6 @@ module "fluentbit_s3_bucket" {
   }
 
   tags = local.tags
-}
-
-#---------------------------------------
-# Karpenter Provisioners for workloads
-#---------------------------------------
-data "kubectl_path_documents" "karpenter_provisioners" {
-  pattern = "${path.module}/karpenter-provisioners/*.yaml"
-  vars = {
-    cluster_name = module.eks.cluster_name
-  }
-}
-
-resource "kubectl_manifest" "karpenter_provisioner" {
-  for_each  = toset(data.kubectl_path_documents.karpenter_provisioners.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_addons]
 }
 
 #---------------------------------------------------------------

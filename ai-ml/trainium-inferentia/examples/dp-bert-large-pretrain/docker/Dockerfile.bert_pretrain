@@ -70,8 +70,8 @@ RUN wget -qO - $APT_REPO/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB | apt-key add -
 RUN apt-get update \
  && apt-get install -y \
     aws-neuronx-tools \
-    aws-neuronx-collectives \
-    aws-neuronx-runtime-lib \
+    aws-neuronx-collectives=2.19.7.0* \
+    aws-neuronx-runtime-lib=2.19.5.0* \
  && rm -rf /var/lib/apt/lists/* \
  && rm -rf /tmp/tmp* \
  && apt-get clean
@@ -95,7 +95,7 @@ RUN ${PIP} install --no-cache-dir -U \
 
 RUN mkdir -p /etc/pki/tls/certs && cp /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
 RUN ${PIP} config set global.extra-index-url $PIP_REPO \
- && ${PIP} install --force-reinstall torch-neuronx==1.13.0.* neuronx-cc==2.* --extra-index-url $PIP_REPO
+ && ${PIP} install --force-reinstall torch-neuronx==1.13.1.1.13.0 neuronx-cc==2.12.68.0 --extra-index-url $PIP_REPO
 
 # attrs, neurox-cc required: >=19.2.0, sagemaker 2.103.0 <22,>=20.3.0
 # protobuf neurox-cc<4 , sagemaker training <3.20,>=3.9.2

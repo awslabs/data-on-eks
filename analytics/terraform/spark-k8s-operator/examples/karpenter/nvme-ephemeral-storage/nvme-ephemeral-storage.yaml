@@ -1,7 +1,5 @@
 # Pre-requisite before running this job
-# 1/ Open taxi-trip-execute.sh and update <ENTER_S3_BUCKET> and <REGION>
-# 2/ Replace <ENTER_S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
-# 3/ execute taxi-trip-execute.sh
+# Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -30,10 +28,10 @@ spec:
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.3.1-hadoop3.2-aws-java-sdk-bundle-1.12.647
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://<ENTER_S3_BUCKET>/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<S3_BUCKET>/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
-    - "s3a://<ENTER_S3_BUCKET>/taxi-trip/input/"
-    - "s3a://<ENTER_S3_BUCKET>/taxi-trip/output/"
+    - "s3a://<S3_BUCKET>/taxi-trip/input/"
+    - "s3a://<S3_BUCKET>/taxi-trip/output/"
   hadoopConf:
     "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
@@ -42,7 +40,6 @@ spec:
     "spark.app.name": "taxi-trip"
     "spark.kubernetes.driver.pod.name": "taxi-trip"
     "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
-    "spark.local.dir": "/data1"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
@@ -52,10 +49,11 @@ spec:
     "spark.hadoop.fs.s3a.readahead.range": "256K"
     "spark.hadoop.fs.s3a.input.fadvise": "random"
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.local.dir": "/data"
 
     # Spark Event logs
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<ENTER_S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
     "spark.eventLog.rolling.enabled": "true"
     "spark.eventLog.rolling.maxFileSize": "64m"
 #    "spark.history.fs.eventLog.rolling.maxFilesToRetain": 100
@@ -81,6 +79,9 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
   driver:
+    podSecurityContext:
+      fsGroup: 2000  # Group ID
+      runAsUser: 1000  # User ID
     cores: 1
     coreLimit: "1200m"
     memory: "4g"
@@ -95,7 +96,10 @@ spec:
       multiArch: Spark
 
   executor:
-    cores: 3
+    podSecurityContext:
+      fsGroup: 2000  # Group ID
+      runAsUser: 1000  # User ID
+    cores: 1
     coreLimit: "3400m"
     instances: 4
     memory: "4g"

@@ -15,7 +15,7 @@ resource "kubernetes_annotations" "disable_gp2" {
   depends_on = [module.eks.eks_cluster_id]
 }
 
-resource "kubernetes_storage_class" "default_gp3" {
+resource "kubernetes_storage_class_v1" "default_gp3" {
   metadata {
     name = "gp3"
     annotations = {
@@ -138,6 +138,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
+    chart_version       = "v0.34.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -153,7 +154,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
-  enable_aws_fsx_csi_driver = true
+  enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
   aws_fsx_csi_driver = {
     # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
     values = [
@@ -177,7 +178,7 @@ module "eks_blueprints_addons" {
   aws_for_fluentbit = {
     s3_bucket_arns = [
       module.s3_bucket.s3_bucket_arn,
-      "${module.s3_bucket.s3_bucket_arn}/*}"
+      "${module.s3_bucket.s3_bucket_arn}/*"
     ]
     values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
       region               = local.region,
@@ -199,13 +200,15 @@ module "eks_blueprints_addons" {
   kube_prometheus_stack = {
     values = [
       var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
+        storage_class_type  = kubernetes_storage_class_v1.default_gp3.id
         region              = local.region
         amp_sa              = local.amp_ingest_service_account
         amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
         amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
-        storage_class_type  = kubernetes_storage_class.default_gp3.id
-      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
+        }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
+        storage_class_type = kubernetes_storage_class_v1.default_gp3.id
+      })
     ]
     chart_version = "48.1.1"
     set_sensitive = [
@@ -248,41 +251,52 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.2.9" # ensure to update this to the latest/desired version
+  version = "~> 1.30" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin  = true
   enable_aws_efa_k8s_device_plugin = true
+
   #---------------------------------------
-  # Volcano Scheduler for TorchX
+  # Volcano Scheduler for TorchX used in BERT-Large distributed training example
+  # Volcano is also a default scheduler for KubeRay Operator
   #---------------------------------------
-  enable_volcano = true
+  enable_volcano = var.enable_volcano
 
   #---------------------------------------
   # Kuberay Operator
   #---------------------------------------
   enable_kuberay_operator = true
   kuberay_operator_helm_config = {
-    version = "1.0.0-rc.0"
+    version = "1.1.0"
     # Enabling Volcano as Batch scheduler for KubeRay Operator
     values = [
       <<-EOT
       batchScheduler:
-        enabled: true
+        enabled: ${var.enable_volcano}
     EOT
     ]
   }
 
-  enable_jupyterhub = true
+  #---------------------------------------
+  # JupyterHub Addon
+  #---------------------------------------
+  enable_jupyterhub = var.enable_jupyterhub
   jupyterhub_helm_config = {
     values = [
       templatefile("${path.module}/helm-values/jupyterhub-values.yaml", {
-        jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+        jupyter_single_user_sa_name = "${module.eks.cluster_name}-jupyterhub-single-user"
       })
     ]
   }
+
+  #---------------------------------------
+  # Deploying Karpenter resources(Nodepool and NodeClass) with Helm Chart
+  #---------------------------------------
   enable_karpenter_resources = true
+  # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
+  #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
   karpenter_resources_helm_config = {
     inferentia-inf2 = {
       values = [
@@ -292,18 +306,22 @@ module "eks_data_addons" {
       ec2NodeClass:
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
-          id: ${module.vpc.private_subnets[3]}
+          id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
+        blockDevice:
+          deviceName: /dev/xvda
+          volumeSize: 500Gi
+          volumeType: gp3
+          encrypted: true
+          deleteOnTermination: true
       nodePool:
         labels:
-          - provisioner: inferentia-inf2
+          - instanceType: inferentia-inf2
+          - provisionerType: Karpenter
           - hub.jupyter.org/node-purpose: user
         taints:
-          - key: aws.amazon.com/neuroncore
-            value: "true"
-            effect: "NoSchedule"
           - key: aws.amazon.com/neuron
             value: "true"
             effect: "NoSchedule"
@@ -324,6 +342,13 @@ module "eks_data_addons" {
           - key: "karpenter.sh/capacity-type"
             operator: In
             values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
       EOT
       ]
     }
@@ -334,13 +359,20 @@ module "eks_data_addons" {
       ec2NodeClass:
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
-          id: ${module.vpc.private_subnets[3]}
+          id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
+          blockDevice:
+            deviceName: /dev/xvda
+            volumeSize: 200Gi
+            volumeType: gp3
+            encrypted: true
+            deleteOnTermination: true
       nodePool:
         labels:
-          - provisioner: default
+          - instanceType: mixed-x86
+          - provisionerType: Karpenter
           - workload: rayhead
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
@@ -355,6 +387,13 @@ module "eks_data_addons" {
           - key: "karpenter.sh/capacity-type"
             operator: In
             values: ["spot", "on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
       EOT
       ]
     }
@@ -373,7 +412,7 @@ data "kubectl_file_documents" "torchx_etcd_yaml" {
 }
 
 resource "kubectl_manifest" "torchx_etcd" {
-  for_each   = data.kubectl_file_documents.torchx_etcd_yaml.manifests
+  for_each   = var.enable_torchx_etcd ? data.kubectl_file_documents.torchx_etcd_yaml.manifests : {}
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }
@@ -395,7 +434,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-oss-grafana"
+  name_prefix             = "${local.name}-oss-grafana"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
@@ -420,7 +459,7 @@ module "s3_bucket" {
 # MPI Operator for distributed training on Trainium
 #---------------------------------------------------------------
 data "http" "mpi_operator_yaml" {
-  url = "https://raw.githubusercontent.com/kubeflow/mpi-operator/${var.mpi_operator_version}/deploy/v2beta1/mpi-operator.yaml"
+  url = "https://raw.githubusercontent.com/kubeflow/mpi-operator/v0.4.0/deploy/v2beta1/mpi-operator.yaml"
 }
 
 data "kubectl_file_documents" "mpi_operator_yaml" {

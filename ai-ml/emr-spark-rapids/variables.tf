@@ -13,7 +13,7 @@ variable "region" {
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   type        = string
-  default     = "1.26"
+  default     = "1.29"
 }
 
 variable "tags" {
@@ -43,8 +43,8 @@ variable "enable_amazon_prometheus" {
   type        = bool
 }
 
-variable "enable_kubecost" {
-  description = "Enable Kubecost"
-  default     = true
+variable "enable_nvidia_gpu_operator" {
+  description = "Enable NVIDIA GPU Operator"
+  default     = false
   type        = bool
 }

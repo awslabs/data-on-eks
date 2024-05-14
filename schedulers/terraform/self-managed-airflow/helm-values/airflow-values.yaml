@@ -6,25 +6,6 @@
 securityContext:
   fsGroup: 65534
 
-# Airflow home directory
-# Used for mount paths
-airflowHome: /opt/airflow
-
-# Default airflow repository -- overridden by all the specific images below
-defaultAirflowRepository: apache/airflow
-
-# Default airflow tag to deploy
-defaultAirflowTag: ${airflow_version}
-
-# Airflow version (Used to make some decisions based on Airflow Version being deployed)
-airflowVersion: ${airflow_version}
-
-###################################
-# Images
-###################################
-images:
-  migrationsWaitTimeout: 300
-
 ###################################
 # Ingress configuration
 ###################################
@@ -55,36 +36,6 @@ ingress:
     ingressClassName: "alb"
 
 ###################################
-# `airflow_local_settings` file as a string (can be templated).
-###################################
-airflowLocalSettings: |-
-  {{- if semverCompare ">=2.2.0" .Values.airflowVersion }}
-  {{- if not (or .Values.webserverSecretKey .Values.webserverSecretKeySecretName) }}
-  from airflow.www.utils import UIAlert
-
-  DASHBOARD_UIALERTS = [
-    UIAlert(
-      'Usage of a dynamic webserver secret key detected. We recommend a static webserver secret key instead.'
-      ' See the <a href='
-      '"https://airflow.apache.org/docs/helm-chart/stable/production-guide.html#webserver-secret-key">'
-      'Helm Chart Production Guide</a> for more details.',
-      category="warning",
-      roles=["Admin"],
-      html=True,
-    )
-  ]
-  {{- end }}
-  {{- end }}
-
-###################################
-# Enable RBAC (default on most clusters these days)
-###################################
-rbac:
-  # Specifies whether RBAC resources should be created
-  create: true
-  createSCCRoleBinding: false
-
-###################################
 # Airflow executor
 ###################################
 # One of: LocalExecutor, LocalKubernetesExecutor, CeleryExecutor, KubernetesExecutor, CeleryKubernetesExecutor
@@ -107,118 +58,24 @@ data:
 ###################################
 # Flask secret key for Airflow Webserver: `[webserver] secret_key` in airflow.cfg
 ###################################
-#webserverSecretKey: ~
 webserverSecretKeySecretName: ${webserver_secret_name}
 
 ###################################
 # Airflow Worker Config
 ###################################
 workers:
-  # Number of airflow celery workers in StatefulSet
-  replicas: 1
-  # Max number of old replicasets to retain
-  revisionHistoryLimit: ~
-
-  # Command to use when running Airflow workers (templated).
-  command: ~
-  # Args to use when running Airflow workers (templated).
-  args:
-    - "bash"
-    - "-c"
-
-  # If the worker stops responding for 5 minutes (5*60s) kill the
-  # worker and let Kubernetes restart it
-  livenessProbe:
-    enabled: true
-    initialDelaySeconds: 10
-    timeoutSeconds: 20
-    failureThreshold: 5
-    periodSeconds: 60
-
-  # Update Strategy when worker is deployed as a Deployment
-  strategy:
-    rollingUpdate:
-      maxSurge: "100%"
-      maxUnavailable: "50%"
-
-  # Allow KEDA autoscaling.
-  # Persistence.enabled must be set to false to use KEDA.
-  #keda:
-  #  enabled: false
-  #  namespaceLabels: {}
-
-    # How often KEDA polls the airflow DB to report new scale requests to the HPA
-  #  pollingInterval: 5
-
-    # How many seconds KEDA will wait before scaling to zero.
-    # Note that HPA has a separate cooldown period for scale-downs
-  #  cooldownPeriod: 30
-
-    # Minimum number of workers created by keda
-  #  minReplicaCount: 0
-
-    # Maximum number of workers created by keda
-  #  maxReplicaCount: 10
-
-  # Specify HPA related options
-  #  advanced: {}
-    # horizontalPodAutoscalerConfig:
-    #   behavior:
-    #     scaleDown:
-    #       stabilizationWindowSeconds: 300
-    #       policies:
-    #         - type: Percent
-    #           value: 100
-    #           periodSeconds: 15
-
   persistence:
     # Enable persistent volumes
     enabled: false
-
-  #resources: {}
-  #  limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  #  requests:
-  #   cpu: 100m
-  #   memory: 128Mi
-
-  # Grace period for tasks to finish after SIGTERM is sent from kubernetes
-  terminationGracePeriodSeconds: 600
-
-  # This setting tells kubernetes that its ok to evict
-  # when it wants to scale a node down.
-  safeToEvict: true
-
-  # Select certain nodes for airflow worker pods.
-#  nodeSelector: {}
-#  priorityClassName: ~
-#  affinity: {}
-  # default worker affinity is:
-  #  podAntiAffinity:
-  #    preferredDuringSchedulingIgnoredDuringExecution:
-  #    - podAffinityTerm:
-  #        labelSelector:
-  #          matchLabels:
-  #            component: worker
-  #        topologyKey: kubernetes.io/hostname
-  #      weight: 100
-#  tolerations: []
-#  topologySpreadConstraints: []
+  # Create ServiceAccount
+  serviceAccount:
+    create: false
+    name: ${worker_service_account}
 
 ###################################
 # Airflow scheduler settings
 ###################################
 scheduler:
-
-  # If the scheduler stops heartbeating for 5 minutes (5*60s) kill the
-  # scheduler and let Kubernetes restart it
-  livenessProbe:
-    initialDelaySeconds: 10
-    timeoutSeconds: 20
-    failureThreshold: 5
-    periodSeconds: 60
-
   # Airflow 2.0 allows users to run multiple schedulers,
   # However this feature is only recommended for MySQL 8+ and Postgres
   replicas: 2
@@ -231,7 +88,6 @@ scheduler:
     config:
       # minAvailable and maxUnavailable are mutually exclusive
       maxUnavailable: 1
-      #minAvailable: 1
 
   resources:
     limits:
@@ -244,96 +100,20 @@ scheduler:
   # This setting tells kubernetes that its ok to evict
   # when it wants to scale a node down.
   safeToEvict: false
-
-
-  # Select certain nodes for airflow scheduler pods.
-#  nodeSelector: {}
-#  affinity: {}
-  # default scheduler affinity is:
-  #  podAntiAffinity:
-  #    preferredDuringSchedulingIgnoredDuringExecution:
-  #    - podAffinityTerm:
-  #        labelSelector:
-  #          matchLabels:
-  #            component: scheduler
-  #        topologyKey: kubernetes.io/hostname
-  #      weight: 100
-#  tolerations: []
-#  topologySpreadConstraints: []
+  # Create ServiceAccount
+  serviceAccount:
+    create: false
+    name: ${scheduler_service_account}
 
 #extraVolumes is required for DAG GitSync #https://github.com/apache/airflow/issues/27476
   extraVolumes:
     - name: git-sync-ssh-key
       secret:
         secretName: airflow-ssh-secret
-
-###################################
-# Airflow create user job settings
-###################################
-createUserJob:
-  # Limit the lifetime of the job object after it finished execution.
-  ttlSecondsAfterFinished: 300
-  # Command to use when running the create user job (templated).
-  args:
-    - "bash"
-    - "-c"
-    # The format below is necessary to get `helm lint` happy
-    - |-
-      exec \
-      airflow {{ semverCompare ">=2.0.0" .Values.airflowVersion | ternary "users create" "create_user" }} "$@"
-    - --
-    - "-r"
-    - "{{ .Values.webserver.defaultUser.role }}"
-    - "-u"
-    - "{{ .Values.webserver.defaultUser.username }}"
-    - "-e"
-    - "{{ .Values.webserver.defaultUser.email }}"
-    - "-f"
-    - "{{ .Values.webserver.defaultUser.firstName }}"
-    - "-l"
-    - "{{ .Values.webserver.defaultUser.lastName }}"
-    - "-p"
-    - "{{ .Values.webserver.defaultUser.password }}"
-
-
-###################################
-# Airflow database migration job settings
-###################################
-migrateDatabaseJob:
-  enabled: true
-  # Limit the lifetime of the job object after it finished execution.
-  ttlSecondsAfterFinished: 300
-  # Command to use when running the migrate database job (templated).
-  command: ~
-  # Args to use when running the migrate database job (templated).
-  args:
-    - "bash"
-    - "-c"
-    # The format below is necessary to get `helm lint` happy
-    - |-
-      exec \
-      airflow {{ semverCompare ">=2.0.0" .Values.airflowVersion | ternary "db upgrade" "upgradedb" }}
-
-
 ###################################
 # Airflow webserver settings
 ###################################
 webserver:
-  allowPodLogReading: true
-  livenessProbe:
-    initialDelaySeconds: 15
-    timeoutSeconds: 30
-    failureThreshold: 20
-    periodSeconds: 10
-    scheme: HTTP
-
-  readinessProbe:
-    initialDelaySeconds: 15
-    timeoutSeconds: 30
-    failureThreshold: 20
-    periodSeconds: 10
-    scheme: HTTP
-
   # Number of webservers
   replicas: 2
 
@@ -367,53 +147,11 @@ webserver:
   service:
     #type: ClusterIP
     type: NodePort
-    ## service annotations
-    #annotations: {}
-    ports:
-      - name: airflow-ui
-        port: "{{ .Values.ports.airflowUI }}"
 
-  # Select certain nodes for airflow webserver pods.
-  #nodeSelector: {}
-  #priorityClassName: ~
-  #affinity: {}
-  # default webserver affinity is:
-  #  podAntiAffinity:
-  #    preferredDuringSchedulingIgnoredDuringExecution:
-  #    - podAffinityTerm:
-  #        labelSelector:
-  #          matchLabels:
-  #            component: webserver
-  #        topologyKey: kubernetes.io/hostname
-  #      weight: 100
-  #tolerations: []
-  #topologySpreadConstraints: []
-
-###################################
-# Airflow Triggerer Config
-###################################
-triggerer:
-  enabled: true
-
-###################################
-# Airflow Dag Processor Config
-###################################
-dagProcessor:
-  enabled: false
-
-###################################
-# StatsD settings
-###################################
-statsd:
-  enabled: true
-  resources:
-    limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
-      cpu: 200m
-      memory: 256Mi
-
+  # Create ServiceAccount
+  serviceAccount:
+    create: false
+    name: ${webserver_service_account}
 
 ###################################
 # PgBouncer settings
@@ -421,34 +159,10 @@ statsd:
 pgbouncer:
   # Enable PgBouncer
   enabled: true
-  # Number of PgBouncer replicas to run in Deployment
-  replicas: 1
-  auth_type: scram-sha-256
-
-###################################
-# All ports used by chart
-###################################
-ports:
-  airflowUI: 8080
-  workerLogs: 8793
-  triggererLogs: 8794
-  statsdIngest: 9125
-  statsdScrape: 9102
-  pgbouncer: 6543
-  pgbouncerScrape: 9127
 
 ###################################
 # Config settings to go into the mounted airflow.cfg
 ###################################
-#
-# Please note that these values are passed through the `tpl` function, so are
-# all subject to being rendered as go templates. If you need to include a
-# literal `{{` in a value, it must be expressed like this:
-#
-#    a: '{{ "{{ not a template }}" }}'
-#
-# Do not set config containing secrets via plain text values, use Env Var or k8s secret object
-# yamllint disable rule:line-length
 config:
   core:
     dags_folder: '{{ include "airflow_dags" . }}'
@@ -466,41 +180,6 @@ config:
     remote_log_conn_id: 'aws_s3_conn'
     delete_worker_pods: 'False'
     encrypt_s3_logs: 'True'
-  metrics:
-    statsd_on: '{{ ternary "True" "False" .Values.statsd.enabled }}'
-    statsd_port: 9125
-    statsd_prefix: airflow
-    statsd_host: '{{ printf "%s-statsd" .Release.Name }}'
-  webserver:
-    enable_proxy_fix: 'True'
-    # For Airflow 1.10
-    rbac: 'True'
-  scheduler:
-    standalone_dag_processor: '{{ ternary "True" "False" .Values.dagProcessor.enabled }}'
-    # statsd params included for Airflow 1.10 backward compatibility; moved to [metrics] in 2.0
-    statsd_on: '{{ ternary "True" "False" .Values.statsd.enabled }}'
-    statsd_port: 9125
-    statsd_prefix: airflow
-    statsd_host: '{{ printf "%s-statsd" .Release.Name }}'
-    # `run_duration` included for Airflow 1.10 backward compatibility; removed in 2.0.
-    run_duration: 41460
-  kubernetes:
-    namespace: '{{ .Release.Namespace }}'
-    # The following `airflow_` entries are for Airflow 1, and can be removed when it is no longer supported.
-    airflow_configmap: '{{ include "airflow_config" . }}'
-    airflow_local_settings_configmap: '{{ include "airflow_config" . }}'
-    pod_template_file: '{{ include "airflow_pod_template_file" . }}/pod_template_file.yaml'
-    worker_container_repository: '{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}'
-    worker_container_tag: '{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}'
-    multi_namespace_mode: '{{ ternary "True" "False" .Values.multiNamespaceMode }}'
-  # The `kubernetes_executor` section duplicates the `kubernetes` section in Airflow >= 2.5.0 due to an airflow.cfg schema change.
-  kubernetes_executor:
-    namespace: '{{ .Release.Namespace }}'
-    pod_template_file: '{{ include "airflow_pod_template_file" . }}/pod_template_file.yaml'
-    worker_container_repository: '{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}'
-    worker_container_tag: '{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}'
-    multi_namespace_mode: '{{ ternary "True" "False" .Values.multiNamespaceMode }}'
-# yamllint enable rule:line-length
 
 
 ###################################
@@ -523,8 +202,8 @@ dags:
     enabled: true
 
     # git repo clone url
-    #repo: git@github.com:Hyper-Mesh/airflow-dags.git
-    repo: git@github.com:jagpk/sample-airflow-dags.git
+    repo: git@github.com:Hyper-Mesh/airflow-dags.git
+    #repo: git@github.com:jagpk/sample-airflow-dags.git
     branch: main
     rev: HEAD
     depth: 1
@@ -548,18 +227,6 @@ dags:
       github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
       github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
 
-    # interval between git sync attempts in seconds
-    # high values are more likely to cause DAGs to become out of sync between different components
-    # low values cause more traffic to the remote git repository
-    wait: 5
-    containerName: git-sync
-    resources:
-      limits:
-        cpu: 100m
-        memory: 512Mi
-      requests:
-        cpu: 100m
-        memory: 512Mi
 
 ###################################
 # Airflow Extra Secrets
