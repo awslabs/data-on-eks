@@ -154,7 +154,7 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 **Deploy RayServe Cluster**
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/inference/ray-serve/llama2-inf2
+cd inference/llama2-13b-chat-rayserve-inf2
 kubectl apply -f ray-service-llama2.yaml
 ```
 
@@ -230,47 +230,47 @@ First, execute a port forward to the Llama-2 Ray Service using kubectl:
 kubectl port-forward svc/llama2-service 8000:8000 -n llama2
 ```
 
-### Deploy Gradio WebUI Locally
+## Deploying the Gradio WebUI App
+Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
 
-#### Create a Virtual Environment
-Create a Python virtual environment in your machine for the Gradio application:
+Let's move forward with setting up the Gradio app as a Docker container running on localhost. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
 
-```bash
-cd ai-ml/trainium-inferentia/examples/gradio-ui
-python3 -m venv .venv
-source .venv/bin/activate
-```
+### Build the Gradio app docker container
 
-#### Install Gradio ChatBot app
-Install all the Gradio WebUI app dependencies with pip
+First, lets build the docker container for the client app.
 
 ```bash
-pip install gradio requests
+cd ../gradio-ui
+docker build --platform=linux/amd64 \
+    -t gradio-app:llama \
+    --build-arg GRADIO_APP="gradio-app-llama.py" \
+    .
 ```
+
+### Deploy the Gradio container
+
+Deploy the Gradio app as a container on localhost using docker:
+
+```bash
+docker run --rm -it -p 7860:7860 -p 8000:8000 gradio-app:llama
+```
+
+:::info
+If you are not running Docker Desktop on your machine and using something like [finch](https://runfinch.com/) instead then you will need to additional flags for a custom host-to-IP mapping inside the container.
+
+```
+docker run --rm -it \
+    --add-host ray-service:<workstation-ip> \
+    -e "SERVICE_NAME=http://ray-service:8000" \
+    -p 7860:7860 gradio-app:llama
+```
+:::
 
 #### Invoke the WebUI
-Run the Gradio WebUI using the following command:
 
-NOTE: `gradio-app.py` refers to the port forward url. e.g., `service_name = "http://localhost:8000" `
-
-```bash
-python gradio-app.py
-```
-
-You should see output similar to the following:
-
-```text
-Using cache from ~/data-on-eks/ai-ml/trainium-inferentia/examples/gradio-ui/gradio_cached_examples/16' directory. If method or examples have changed since last caching, delete this folder to clear cache.
-
-Running on local URL:  http://127.0.0.1:7860
-
-To create a public link, set `share=True` in `launch()`.
-```
-
-#### 2.4. Access the WebUI from Your Browser
 Open your web browser and access the Gradio WebUI by navigating to the following URL:
 
-http://127.0.0.1:7860
+Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
@@ -285,14 +285,20 @@ They provide the scalability, cost optimization, and performance boost needed to
 Whether you're building chatbots, natural language processing applications, or any other LLM-driven solution, Trn1/Inf2 instances empower you to harness the full potential of Llama-2 on the AWS cloud.
 
 ## Cleanup
+
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.
 
-**Step1:** Cancel the execution of the `python gradio-app.py`
+**Step1:** Delete Gradio Container
 
+`Ctrl-c` on the localhost terminal window where `docker run` is running to kill the container running the Gradio app. Optionally clean up the docker image
+
+```bash
+docker rmi gradio-app:llama
+```
 **Step2:** Delete Ray Cluster
 
 ```bash
-cd ai-ml/trainium-inferentia/examples/inference/ray-serve/llama2-inf2
+cd ../llama2-13b-chat-rayserve-inf2
 kubectl delete -f ray-service-llama2.yaml
 ```
 
@@ -300,7 +306,6 @@ kubectl delete -f ray-service-llama2.yaml
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-export AWS_DEAFULT_REGION="DEPLOYED_EKS_CLUSTER_REGION>"
-cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x cleanup.sh
+cd ../../../ai-ml/trainium-inferentia/
 ./cleanup.sh
 ```

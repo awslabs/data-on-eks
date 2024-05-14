@@ -28,5 +28,9 @@ def generate_image(prompt):
 
 # Define the Gradio PromptInterface
 demo = gr.Interface(fn=generate_image,
-                    inputs = [gr.Textbox(label="Enter the Prompt")],
-                    outputs = gr.Image(type='pil')).launch(server_name="0.0.0.0")
+    inputs=[gr.Textbox(label="Enter the Prompt")],
+    outputs=gr.Image(type='pil'),
+)
+
+# Launch
+demo.launch(server_name="0.0.0.0")

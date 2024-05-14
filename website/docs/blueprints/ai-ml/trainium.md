@@ -87,6 +87,10 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `install.sh` script
 
 ```bash
+export TF_VAR_enable_fsx_for_lustre=true
+export TF_VAR_enable_torchx_etcd=true
+export TF_VAR_enable_volcano=true
+
 cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x install.sh
 ./install.sh
 ```
