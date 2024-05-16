@@ -76,10 +76,23 @@ resource "aws_msk_cluster" "kafka_test_demo" {
 
     unauthenticated = true
   }
-  #Lyfecycle to ignore
+
+  open_monitoring {
+    prometheus {
+      jmx_exporter {
+        enabled_in_broker = true
+      }
+
+      node_exporter {
+        enabled_in_broker = true
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       client_authentication[0].tls
     ]
   }
 }
+

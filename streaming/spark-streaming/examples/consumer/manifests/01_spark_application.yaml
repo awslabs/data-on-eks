@@ -1,5 +1,5 @@
 # This script is used to run the spark-consumer application on EKS, 
-# users need to replace MY_BUCKET_NAME and MY_KAFKA_BROKERS_ADRESSm to match your environment.
+# users need to replace MY_BUCKET_NAME and MY_KAFKA_BROKERS_ADRESS to match your environment.
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -10,7 +10,7 @@ spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  image: "public.ecr.aws/data-on-eks/consumer-spark-streaming-3.3.2-kafka:1" # You can build your own image using the Dockefile in this folder
+  image: "public.ecr.aws/data-on-eks/consumer-spark-streaming-3.3.2-kafka:1" # You can build your own image using the Dockerfile in this folder
   mainApplicationFile: "local:///app/app.py"
   sparkVersion: "3.3.2"
   deps:
@@ -43,18 +43,34 @@ spec:
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.DefaultAWSCredentialsProviderChain"
     "spark.sql.warehouse.dir": "s3a://__MY_BUCKET_NAME__/iceberg/warehouse/" # Replace bucket name with your S3 bucket name: s3_bucket_id_iceberg_bucket
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics"
+    "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master"
+    "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications"
+    "spark.ui.prometheus.enabled": "true"
+    "spark.ui.prometheus.port": "4040"
   restartPolicy:
     type: OnFailure
     onFailureRetries: 2
     onFailureRetryInterval: 10
     onSubmissionFailureRetries: 3
     onSubmissionFailureRetryInterval: 20
+  dynamicAllocation:
+    enabled: true
+    initialExecutors: 3
+    minExecutors: 3
+    maxExecutors: 10
   driver:
     cores: 1
     coreLimit: "1200m"
     memory: "1024m"
     labels:
       version: "3.3.2"
+      app: spark
+    annotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: /metrics
+      prometheus.io/port: '4040'
     serviceAccount: spark-team-a
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
@@ -70,10 +86,14 @@ spec:
         # value: "b-1.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092,b-2.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092"
   executor:
     cores: 2
-    instances: 3
     memory: "1024m"
     labels:
       version: "3.3.2"
+      app: spark
+    annotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: /metrics
+      prometheus.io/port: '4040'
     serviceAccount: spark-team-a
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"

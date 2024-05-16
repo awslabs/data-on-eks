@@ -54,17 +54,17 @@ sed -i.bak -e "s|__MY_PRODUCER_ROLE_ARN__|$PRODUCER_ROLE_ARN|g" \
            -e "s|__MY_AWS_REGION__|$REGION|g" \
            -e "s|__MY_KAFKA_BROKERS__|$MSK_BROKERS|g" \
            ../examples/producer/00_deployment.yaml
+
+# Apply sed to delete topic manifest, this can be used to delete kafka topic and start the stack once again
+sed -i.bak -e "s|__MY_KAFKA_BROKERS__|$MSK_BROKERS|g" \
+           ../examples/producer/01_delete_topic.yaml
 ```
 
 ### Configuring Consumer
 
-In order to deploy the Spark consumer, update the `examples/consumer/manifests/00_rbac_permissions.yaml` and `examples/consumer/manifests/01_spark_application.yaml` manifests with the variables exported from Terraform.
+In order to deploy the Spark consumer, update the `examples/consumer/manifests/01_spark_application.yaml` manifests with the variables exported from Terraform.
 
 ```bash
-# Apply `sed` commands to replace placeholders in the consumer RBAC permissions manifest
-sed -i.bak -e "s|__MY_CONSUMER_ROLE_ARN__|$CONSUMER_ROLE_ARN|g" \
-           ../examples/consumer/manifests/00_rbac_permissions.yaml
-
 # Apply `sed` commands to replace placeholders in the consumer Spark application manifest
 sed -i.bak -e "s|__MY_BUCKET_NAME__|$ICEBERG_BUCKET|g" \
            -e "s|__MY_KAFKA_BROKERS_ADRESS__|$MSK_BROKERS|g" \
@@ -154,8 +154,6 @@ If you need to reset the `.yaml` files to their original state with placeholders
 # Restore Producer manifest
 mv ../examples/producer/00_deployment.yaml.bak ../examples/producer/00_deployment.yaml
 
-# Restore Consumer RBAC permissions manifest
-mv ../examples/consumer/manifests/00_rbac_permissions.yaml.bak ../examples/consumer/manifests/00_rbac_permissions.yaml
 
 # Restore Consumer Spark application manifest
 mv ../examples/consumer/manifests/01_spark_application.yaml.bak ../examples/consumer/manifests/01_spark_application.yaml

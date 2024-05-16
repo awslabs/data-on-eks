@@ -1,13 +1,13 @@
 import boto3
 import json
 from kafka import KafkaProducer
-from kafka.errors import KafkaError
 from kafka.admin import KafkaAdminClient, NewTopic
-import socket
+from kafka.errors import KafkaError, TopicAlreadyExistsError
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import random
-from kafka.errors import TopicAlreadyExistsError
 import os
+import threading
 
 def create_topic(bootstrap_servers, topic_name, num_partitions, replication_factor):
     """Create a Kafka topic."""
@@ -23,11 +23,29 @@ def create_topic(bootstrap_servers, topic_name, num_partitions, replication_fact
 
 def create_producer(bootstrap_brokers):
     """Create a Kafka producer."""
-    return KafkaProducer(bootstrap_servers=bootstrap_brokers)
+    return KafkaProducer(
+        bootstrap_servers=bootstrap_brokers,
+        linger_ms=10,  # Add some delay to batch messages
+        batch_size=32768,  # Adjust batch size
+        buffer_memory=33554432  # Increase buffer memory
+    )
 
-def produce_data(producer, topic_name):
-    """Simulate and send random security detection data."""
-    data_id = 1
+def generate_random_alert(data_id, alert_types, severities, descriptions):
+    """Generate a random alert message."""
+    alert_type = random.choice(alert_types)
+    severity = random.choice(severities)
+    description = random.choice(descriptions[alert_type])
+
+    return {
+        'id': data_id,
+        'timestamp': time.time(),
+        'alert_type': alert_type,
+        'severity': severity,
+        'description': description
+    }
+
+def produce_data(producer, topic_name, rate_per_second, num_messages=1000, num_threads=4):
+    """Produce data at a specified rate per second."""
     alert_types = ['intrusion', 'data leak', 'malware', 'phishing', 'ransomware']
     severities = ['low', 'medium', 'high', 'critical']
 
@@ -59,22 +77,33 @@ def produce_data(producer, topic_name):
         ]
     }
 
-    while True:
-        alert_type = random.choice(alert_types)
-        severity = random.choice(severities)
-        description = random.choice(descriptions[alert_type])
+    def produce_batch(batch_id, num_batches, rate_limiter):
+        for i in range(batch_id * num_batches, (batch_id + 1) * num_batches):
+            rate_limiter.acquire()  # Wait for permission to send
+            message = generate_random_alert(i, alert_types, severities, descriptions)
+            try:
+                producer.send(topic_name, json.dumps(message).encode('utf-8'))
+                print(f"Sent: {message}")
+            except KafkaError as e:
+                print(f"Failed to send message: {e}")
+        producer.flush()
 
-        message = {
-            'id': data_id,
-            'timestamp': time.time(),
-            'alert_type': alert_type,
-            'severity': severity,
-            'description': description
-        }
-        producer.send(topic_name, json.dumps(message).encode('utf-8'))
-        print(f"Sent: {message}")
-        data_id += 1
-        time.sleep(random.uniform(0.5, 2))  # Randomize time between messages
+    num_batches_per_thread = num_messages // num_threads
+    rate_limiter = threading.Semaphore(rate_per_second)
+
+    def refill_semaphore():
+        while True:
+            time.sleep(1)
+            for _ in range(rate_per_second):
+                rate_limiter.release()
+
+    # Start a background thread to refill the rate limiter semaphore
+    threading.Thread(target=refill_semaphore, daemon=True).start()
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(produce_batch, thread_id, num_batches_per_thread, rate_limiter) for thread_id in range(num_threads)]
+        for future in as_completed(futures):
+            future.result()
 
 if __name__ == '__main__':
     # Configuration
@@ -83,11 +112,18 @@ if __name__ == '__main__':
     num_partitions = 3
     replication_factor = 2
     bootstrap_brokers = os.getenv("BOOTSTRAP_BROKERS", 'b-1.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092,b-2.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092')
-    print(bootstrap_brokers)
+    rate_per_second = int(os.getenv("RATE_PER_SECOND", 100000))
+    num_messages = int(os.getenv("NUM_OF_MESSAGES", 10000000))
+    num_threads = 8
+    
+    # Create Kafka topic if it doesn't exist
     create_topic(bootstrap_brokers, topic_name, num_partitions, replication_factor)
+    
+    # Create Kafka producer
     producer = create_producer(bootstrap_brokers)
+    
+    # Produce data with rate limiting
     try:
-        produce_data(producer, topic_name)
+        produce_data(producer, topic_name, rate_per_second=rate_per_second, num_messages=num_messages, num_threads=num_threads)  # Adjust `rate_per_second` as needed
     finally:
-        producer.flush()
         producer.close()
