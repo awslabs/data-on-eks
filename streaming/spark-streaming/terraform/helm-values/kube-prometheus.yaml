@@ -1,0 +1,47 @@
+prometheus:
+  prometheusSpec:
+    retention: 5h
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    scrapeTimeout: 10s
+    storageSpec:
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          storageClassName: gp2
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
+    # Scrape Cost metrics for Karpenter and Yunikorn add-ons
+    additionalScrapeConfigs:
+      - job_name: yunikorn
+        honor_labels: true
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        metrics_path: /ws/v1//metrics
+        scheme: http
+        dns_sd_configs:
+          - names:
+              - yunikorn-service.yunikorn.svc
+            type: 'A'
+            port: 9080
+      - job_name: karpenter
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - karpenter
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          regex: http-metrics
+          action: keep
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: true
