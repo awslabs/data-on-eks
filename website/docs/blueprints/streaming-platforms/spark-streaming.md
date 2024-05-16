@@ -127,12 +127,119 @@ You should see only `INFO` logs indicating that the job is running.
 
 ### Verify Data Flow
 
-After deploying both the producer and consumer, verify the data flow by checking the consumer application's output in the S3 bucket.
+After deploying both the producer and consumer, verify the data flow by checking the consumer application's output in the S3 bucket. You can run the `s3_automation` script to get a live view of the data size in your S3 bucket.
+
+Follow these steps:
+
+1. **Navigate to the `s3_automation` directory**:
+
+    ```bash
+    cd ../examples/s3_automation/
+    ```
+
+2. **Run the `s3_automation` script**:
+
+    ```bash
+    python app.py
+    ```
+
+    This script will continuously monitor and display the total size of your S3 bucket, giving you a real-time view of data being ingested. You can choose to view the bucket size or delete specific directories as needed.
+
+
+#### Using the `s3_automation` Script
+
+The `s3_automation` script offers two primary functions:
+
+- **Check Bucket Size**: Continuously monitor and display the total size of your S3 bucket.
+- **Delete Directory**: Delete specific directories within your S3 bucket.
+
+Here's how to use these functions:
+
+1. **Check Bucket Size**:
+    - When prompted, enter `size` to get the current size of your bucket in megabytes (MB).
+
+2. **Delete Directory**:
+    - When prompted, enter `delete` and then provide the directory prefix you wish to delete (e.g., `myfolder/`).
+
+## Tuning the Producer and Consumer for Better Performance
+
+After deploying the producer and consumer, you can further optimize the data ingestion and processing by adjusting the number of replicas for the producer and the executor configuration for the Spark application. Here are some suggestions to get you started:
+
+### Adjusting the Number of Producer Replicas
+
+You can increase the number of replicas of the producer deployment to handle a higher rate of message production. By default, the producer deployment is configured with a single replica. Increasing this number allows more instances of the producer to run concurrently, increasing the overall throughput.
+
+To change the number of replicas, update the `replicas` field in `examples/producer/00_deployment.yaml`:
+
+```yaml
+spec:
+  replicas: 200  # Increase this number to scale up the producer
+```
+
+You can also adjust the environment variables to control the rate and volume of messages produced:
+
+```yaml
+env:
+  - name: RATE_PER_SECOND
+    value: "200000"  # Increase this value to produce more messages per second
+  - name: NUM_OF_MESSAGES
+    value: "20000000"  # Increase this value to produce more messages in total
+```
+
+Apply the updated deployment:
 
 ```bash
-# List data in the Iceberg bucket
-aws s3 ls s3://$ICEBERG_BUCKET/iceberg/warehouse/my_table/data/
+kubectl apply -f ../examples/producer/00_deployment.yaml
 ```
+
+### Tuning Spark Executors for Better Ingestion Performance
+
+To handle the increased data volume efficiently, you can add more executors to the Spark application or increase the resources allocated to each executor. This will allow the consumer to process data faster and reduce ingestion time.
+
+To adjust the Spark executor configuration, update `examples/consumer/manifests/01_spark_application.yaml`:
+
+```yaml
+spec:
+  dynamicAllocation:
+    enabled: true
+    initialExecutors: 5
+    minExecutors: 5
+    maxExecutors: 50  # Increase this number to allow more executors
+  executor:
+    cores: 4  # Increase CPU allocation
+    memory: "8g"  # Increase memory allocation
+```
+
+Apply the updated Spark application:
+
+```bash
+kubectl apply -f ../examples/consumer/manifests/01_spark_application.yaml
+```
+
+### Verify and Monitor
+
+After making these changes, monitor the logs and metrics to ensure the system is performing as expected. You can check the producer logs to verify data production and the consumer logs to verify data ingestion and processing.
+
+To check producer logs:
+
+```bash
+kubectl logs $(kubectl get pods -l app=producer -oname) -f
+```
+
+To check consumer logs:
+
+```bash
+kubectl logs pod/spark-consumer-driver -n spark-operator
+```
+
+> Can use verify dataflow script again
+
+### Summary
+
+By adjusting the number of producer replicas and tuning the Spark executor settings, you can optimize the performance of your data pipeline. This allows you to handle higher ingestion rates and process data more efficiently, ensuring that your Spark Streaming application can keep up with the increased data volume from Kafka.
+
+Feel free to experiment with these settings to find the optimal configuration for your workload. Happy streaming!
+
 
 ### Cleaning Up Producer and Consumer Resources
 
