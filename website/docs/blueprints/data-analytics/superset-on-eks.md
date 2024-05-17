@@ -116,11 +116,11 @@ Step - 2 : Under Security scroll down to the very end and 'check allow file uplo
 
 ![img.png](img/superset-enable-fileupload.png)
 
-Step -3 : Createa dataset by uploading a file
+Step -3 : Create a dataset by uploading a file
 
 ![img.png](img/superset-create-dataset.png)
 
-Step - 4 : To show a sample visualization a sample CSV of COVID reasearch across various countries was uploaded. Here are a few visualizations that shows countires porgess with respect to trial of various vaccines
+Step - 4 : To show a sample visualization a sample CSV of COVID research across various countries was uploaded. Here are a few visualizations that shows countries porgess with respect to trial of various vaccines
 
 ![img.png](img/superset-sample-graph.png)
 
