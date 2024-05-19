@@ -4,11 +4,11 @@
 ECR_REPO_NAME="kuberay_trn1"
 
 # Check that we are running on an x86_64 instance to avoid issues with docker build
-# arch=$(uname -m)
-# if [[ ! "$arch" = "x86_64" ]]; then
-#   echo "Error: please run this script on an x86_64-based instance"
-#   exit 1
-# fi
+arch=$(uname -m)
+if [[ ! "$arch" = "x86_64" ]]; then
+  echo "Error: please run this script on an x86_64-based instance"
+  exit 1
+fi
 
 # Check if docker is installed
 junk=$(which docker 2>&1 > /dev/null)
