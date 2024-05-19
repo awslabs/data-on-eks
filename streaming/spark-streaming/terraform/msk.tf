@@ -95,4 +95,3 @@ resource "aws_msk_cluster" "kafka_test_demo" {
     ]
   }
 }
-

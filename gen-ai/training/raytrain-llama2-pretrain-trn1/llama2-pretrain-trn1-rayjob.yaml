@@ -1,0 +1,36 @@
+
+---
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: llama2-precompilation-job
+  namespace: default
+spec:
+  # submissionMode: K8sJobMode
+  entrypoint: "NEURON_NUM_DEVICES=32 python3 /llama2_pretrain/ray_train_llama2.py --neuron_parallel_compile"
+  # Note the environment variable set before the Python command
+  runtimeEnvYAML: |  # You can add any necessary dependencies here if needed
+    working_dir: /llama2_pretrain
+    env_vars:
+      PYTHONUNBUFFERED: '0'
+  clusterSelector:
+    rayClusterName: kuberay-trn1
+
+---
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: llama2-pretraining-job
+spec:
+  entrypoint: /llama2_pretrain/launch_training_job.sh   # Direct path to script in container
+  runtimeEnvYAML: |  # You can add any necessary dependencies here if needed
+    working_dir: /llama2_pretrain
+    env_vars:
+      PYTHONUNBUFFERED: '0'
+  clusterSelector:
+    rayClusterName: kuberay-trn1
+  dependsOn:
+    - type: RayJob
+      name: llama2-precompilation-job
+  shutdownAfterJobFinishes: true
+  activeDeadlineSeconds: 600

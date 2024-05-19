@@ -1,0 +1,113 @@
+#----------------------------------------------------------------------
+# NOTE: For deployment instructions, refer to the DoEKS website.
+#----------------------------------------------------------------------
+
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: kuberay-trn1
+spec:
+  rayVersion: 2.22.0
+  headGroupSpec:
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: <your-docker-image-url>:<your-docker-image-tag>
+            imagePullPolicy: Always # Ensure the image is always pulled when updated
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            ports:
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 6379
+                name: redis
+              - containerPort: 10001
+                name: object-manager
+            resources:
+              limits:
+                cpu: '1'
+                memory: 2G
+              requests:
+                cpu: '1'
+                memory: 2G
+            volumeMounts:
+              - mountPath: /tmp/ray
+                name: log-volume
+              - name: persistent-storage
+                mountPath: /shared
+        nodeSelector:
+          instanceType: mixed-x86
+          provisionerType: Karpenter
+        volumes:
+          - name: log-volume
+            emptyDir: {}
+          - name: persistent-storage
+            persistentVolumeClaim:
+              claimName: fsx-claim
+    rayStartParams:
+      dashboard-host: 0.0.0.0
+
+  workerGroupSpecs:
+    - groupName: workergroup
+      replicas: 2
+      minReplicas: 2
+      maxReplicas: 2
+      rayStartParams: {}
+      template:
+        spec:
+          containers:
+            - name: ray-worker
+              image: <your-docker-image-url>:<your-docker-image-tag>
+              imagePullPolicy: Always # Ensure the image is always pulled when updated
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh", "-c", "ray stop"]
+              ports:
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 6379
+                  name: redis
+                - containerPort: 10001
+                  name: object-manager
+              resources:
+                limits:
+                  aws.amazon.com/neuron: '16'
+                  vpc.amazonaws.com/efa: '8'
+                  cpu: '120'
+                  memory: 495G
+                requests:
+                  aws.amazon.com/neuron: '16'
+                  vpc.amazonaws.com/efa: '8'
+                  cpu: '120'
+                  memory: 495G
+              volumeMounts:
+                - name: persistent-storage
+                  mountPath: /shared
+                - name: dshm
+                  mountPath: /dev/shm
+                - mountPath: /tmp/ray
+                  name: log-volume
+          nodeSelector:
+            instance-type: trn1-32xl
+            provisioner: cluster-autoscaler
+          tolerations:
+            - key: "aws.amazon.com/neuron"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "hub.jupyter.org/dedicated"
+              operator: "Equal"
+              value: "user"
+              effect: "NoSchedule"
+          volumes:
+            - name: persistent-storage
+              persistentVolumeClaim:
+                claimName: fsx-claim
+            - name: dshm
+              emptyDir:
+                medium: Memory
+            - name: log-volume
+              emptyDir: {}
