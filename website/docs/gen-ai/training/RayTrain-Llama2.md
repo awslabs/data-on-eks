@@ -78,7 +78,7 @@ By using this combination of technologies, you can take advantage of the latest 
     * [kubectl](https://Kubernetes.io/docs/tasks/tools/)
     * [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
-    To install all the pre-reqs on EC2, you can run this [script](https://github.com/sanjeevrg89/data-on-eks/blob/main/ai-ml/trainium-inferentia/examples/llama2/install-pre-requsites-for-ec2.sh) which is compatible with Amazon Linux 2023.
+    To install all the pre-reqs on EC2, you can run this [script](https://github.com/awslabs/data-on-eks/blob/main/ai-ml/trainium-inferentia/examples/llama2/install-pre-requsites-for-ec2.sh) which is compatible with Amazon Linux 2023.
 
 
     **Clone the Data on EKS repository**
@@ -156,14 +156,79 @@ Once you have updated the YAML file, run the following command to launch the Kub
 kubectl apply -f llama2-pretrain-trn1-raycluster.yaml
 ```
 
+Verify the Pod Status:
+
+```bash
+kubectl get pods -l "ray.io/cluster=kuberay-trn1"
+```
+
+You should see one ray-head pod and two ray-worker pods in the Running state:
+
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE
+kuberay-trn1-head-xxxxx      1/1     Running   0          5m
+kuberay-trn1-worker-xxxxx   1/1     Running   0          4m30s
+kuberay-trn1-worker-xxxxx   1/1     Running   0          4m30s
+```
+
+Check the logs of the head pod:
+
+Look for messages indicating that the Ray head has started and the cluster is operational.
+
+```bash
+kubectl logs kuberay-trn1-head-xxxxx
+```
+
+### Accessing the Ray Dashboard (Port Forwarding):
+The Ray dashboard provides valuable insights into your cluster's status and job progress. To access it:
+
+Forward the Port:
+
+This forwards the Ray dashboard port (8265) from your local machine to the head pod within the cluster.
+
+```bash
+kubectl port-forward service/kuberay-trn1-head-svc 8265:8265
+```
+
+Open Browser and navigate to [http://localhost:8265](http://localhost:8265) in your web browser to view the dashboard.
+
+:::info
+
+**Important Note**: At this stage, only the Ray cluster infrastructure is up and running.  
+You'll initiate the actual precompilation and training jobs in the next steps.
+
+**Future Enhancement**: In an upcoming version, you won't need to manually run the precompilation and training jobs from within the head pod.
+We're working on using KubeRay's RayJob feature to trigger these jobs seamlessly, further streamlining the process.
+
+:::
+
 ## 4. Prepare the Dataset
 Run `kubectl get pods` and identify the name of one of the worker pods. Then run the following command (substituting in your worker pod name) to prepare/tokenize the wikicorpus dataset. The tokenized dataset will be stored on FSx storage that is accessible to the worker pods during training jobs. This step will take approximately 25 minutes.
+
+Identify a Worker Pod and note the name of one of the worker pods. This is where we'll run the data preparation script.
+
+```bash
+kubectl get pods -l "ray.io/cluster=kuberay-trn1"
+```
+
+Execute the `get_dataset.py` script inside a worker pod. This script tokenizes the dataset and saves it to your shared FSx for Lustre filesystem:
+
+:::caution
+
+Note: This tokenization process might take about 25 minutes, depending on the dataset's size and the worker node's resources.
+
+:::
 
 ```bash
 kubectl exec -it <YOUR_WORKER_POD_NAME> -- python3 get_dataset.py
 ```
 
-## 5. Run Precompilation Job
+![Prepare the Dataset](img/dataset-progress.png)
+
+
+## 5. Run Precompilation Job (Optimization Step)
+
+Before starting the actual training, we'll perform a precompilation step to optimize the model for the Neuron SDK. This helps the model run more efficiently on the Trn1 instances.
 
 :::info
 
@@ -175,19 +240,38 @@ This enhancement will allow you to run both jobs without having to log in to the
 
 In this step, you will run a precompilation job where the Neuron SDK will identify, compile, and cache the compute graphs associated with Llama2 pretraining.
 
-Run kubectl get pods and identify the name of your KubeRay head pod. Then run the following command (substituting in your head pod name) to launch the precompilation job:
+Use `kubectl get pods` to find the name of your RayCluster's head pod (e.g., kuberay-trn1-head-xxxxx). Then run the following command (substituting in your head pod name) to launch the precompilation job:
 
 ```bash
 kubectl exec -it <YOUR_HEAD_POD_NAME> -- ./launch_precompile_job.sh
 ```
 
+This script will use the Neuron SDK to compile and optimize the model's computational graph, making it ready for efficient training on the Trn1 processors.
+
+![Precompilation progress](img/pre-compilation.png)
+
 ## 6. Run Training Job
 
-Now it is time to run the training job. Feel free to cancel the job using CTRL-C once you are convinced that the loss is decreasing and the model is learning.
+Now, you're ready to begin the actual training of the Llama 2 model!. Feel free to cancel the job using CTRL-C once you are convinced that the loss is decreasing and the model is learning.
+
+Still within the Ray head pod, execute the `launch_training_job.sh` script:
 
 ```bash
 kubectl exec -it <YOUR_HEAD_POD_NAME> -- ./launch_training_job.sh
 ```
+
+**Monitor Progress**:
+
+You can monitor the progress of the training job using TensorBoard or by observing the logs output to your terminal. Look for information like the training loss, learning rate, and other metrics to assess how well the model is learning.
+
+![Training Progress](img/training-progress.png)
+
+![Training Progress Ray Dashboard](img/training-progress-raydash.png)
+
+![Training Progress Ray Dashboard](img/training-progress-raydash1.png)
+
+**Interrupt (Optional)**: If you want to stop the training process before it completes, press Ctrl+C in the terminal where you started the job.
+
 
 ### Cleaning up
 

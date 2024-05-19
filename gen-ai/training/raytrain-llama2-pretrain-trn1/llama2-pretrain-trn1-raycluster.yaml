@@ -1,43 +1,51 @@
-#----------------------------------------------------------------------
-# NOTE: For deployment instructions, refer to the DoEKS website.
-#----------------------------------------------------------------------
+# This RayCluster configuration deploys a distributed training environment for Llama2
+# using AWS Neuron SDK and RayTrain on Amazon EKS.
 
-apiVersion: ray.io/v1
+# ----------------------------------------------------------------------
+# NOTE: For detailed deployment instructions, refer to the DoEKS website (https://awslabs.github.io/data-on-eks/docs/category/training-on-eks).
+# ----------------------------------------------------------------------
+
+apiVersion: ray.io/v1alpha1
 kind: RayCluster
 metadata:
   name: kuberay-trn1
 spec:
   rayVersion: 2.22.0
   headGroupSpec:
+    # Head Node Configuration
+    # This section defines the specification for the Ray head pod.
+    # The head node manages the cluster and provides services like the dashboard and GCS.
     template:
       spec:
         containers:
           - name: ray-head
-            image: <your-docker-image-url>:<your-docker-image-tag>
-            imagePullPolicy: Always # Ensure the image is always pulled when updated
+            image: <your-docker-image-url>:<your-docker-image-tag> # Replace with your Docker image URL
+            imagePullPolicy: Always # Pull the latest image each time
             lifecycle:
               preStop:
                 exec:
-                  command: ["/bin/sh", "-c", "ray stop"]
+                  command: ["/bin/sh", "-c", "ray stop"]  # Graceful shutdown of Ray processes
             ports:
               - containerPort: 8265
-                name: dashboard
+                name: dashboard   # Expose Ray dashboard
               - containerPort: 6379
-                name: redis
+                name: redis       # Expose Redis port
               - containerPort: 10001
-                name: object-manager
+                name: object-manager # Expose object manager port
             resources:
               limits:
                 cpu: '1'
-                memory: 2G
+                memory: 2Gi
               requests:
                 cpu: '1'
-                memory: 2G
+                memory: 2Gi
             volumeMounts:
               - mountPath: /tmp/ray
-                name: log-volume
-              - name: persistent-storage
+                name: log-volume   # Mount for Ray logs
+              - name: persistent-storage # Mount shared filesystem (FSx for Lustre)
                 mountPath: /shared
+        # Node Selector for Karpenter
+        # Karpenter will provision this head pod on a node with the specified labels.
         nodeSelector:
           instanceType: mixed-x86
           provisionerType: Karpenter
@@ -46,22 +54,25 @@ spec:
             emptyDir: {}
           - name: persistent-storage
             persistentVolumeClaim:
-              claimName: fsx-claim
+              claimName: fsx-claim   # Reference the PVC for shared storage
     rayStartParams:
-      dashboard-host: 0.0.0.0
+      dashboard-host: 0.0.0.0    # Make dashboard accessible
 
   workerGroupSpecs:
+    # Worker Node Configuration
+    # This section defines the specification for the Ray worker pods.
+    # Worker nodes execute tasks and participate in distributed training.
     - groupName: workergroup
-      replicas: 2
-      minReplicas: 2
-      maxReplicas: 2
+      replicas: 2  # Number of worker replicas
+      minReplicas: 2 # Minimum number of worker replicas
+      maxReplicas: 2 # Maximum number of worker replicas (no scaling in this case)
       rayStartParams: {}
       template:
         spec:
           containers:
             - name: ray-worker
-              image: <your-docker-image-url>:<your-docker-image-tag>
-              imagePullPolicy: Always # Ensure the image is always pulled when updated
+              image: <your-docker-image-url>:<your-docker-image-tag> # Replace with your Docker image URL
+              imagePullPolicy: Always # Pull the latest image each time
               lifecycle:
                 preStop:
                   exec:
@@ -75,25 +86,31 @@ spec:
                   name: object-manager
               resources:
                 limits:
-                  aws.amazon.com/neuron: '16'
-                  vpc.amazonaws.com/efa: '8'
+                  aws.amazon.com/neuron: '16'  # Request AWS Neuron cores
+                  vpc.amazonaws.com/efa: '8'   # Request AWS EFA devices
                   cpu: '120'
-                  memory: 495G
+                  memory: 495Gi
                 requests:
                   aws.amazon.com/neuron: '16'
                   vpc.amazonaws.com/efa: '8'
                   cpu: '120'
-                  memory: 495G
+                  memory: 495Gi
               volumeMounts:
                 - name: persistent-storage
-                  mountPath: /shared
+                  mountPath: /shared   # Mount shared filesystem (FSx for Lustre)
                 - name: dshm
-                  mountPath: /dev/shm
+                  mountPath: /dev/shm   # Mount for shared memory
                 - mountPath: /tmp/ray
-                  name: log-volume
+                  name: log-volume     # Mount for Ray logs
+
+          # Node Selector for Managed Node Group (with Cluster Autoscaler)
+          # These workers will run on Trn1 instances provisioned by the cluster autoscaler.
+          # This is necessary as Karpenter doesn't currently support EFA (required for Neuron distributed training).
           nodeSelector:
             instance-type: trn1-32xl
             provisioner: cluster-autoscaler
+
+          # Tolerations for Trn1 and Dedicated Nodes
           tolerations:
             - key: "aws.amazon.com/neuron"
               operator: "Exists"
@@ -103,6 +120,7 @@ spec:
               value: "user"
               effect: "NoSchedule"
           volumes:
+            # Persistent Volume Claim (PVC) to access the FSx for Lustre filesystem
             - name: persistent-storage
               persistentVolumeClaim:
                 claimName: fsx-claim
