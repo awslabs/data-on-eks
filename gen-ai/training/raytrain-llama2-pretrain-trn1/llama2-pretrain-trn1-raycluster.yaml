@@ -5,10 +5,26 @@
 # NOTE: For detailed deployment instructions, refer to the DoEKS website (https://awslabs.github.io/data-on-eks/docs/category/training-on-eks).
 # ----------------------------------------------------------------------
 
-apiVersion: ray.io/v1alpha1
+# Docs for Volcano with KubeRay: https://docs.ray.io/en/master/cluster/kubernetes/k8s-ecosystem/volcano.html
+---
+apiVersion: scheduling.volcano.sh/v1beta1
+kind: Queue
+metadata:
+  name: llama2-training-queue
+spec:
+  weight: 1
+  capability:
+    cpu: '500'
+    memory: 1500Gi
+
+---
+apiVersion: ray.io/v1
 kind: RayCluster
 metadata:
   name: kuberay-trn1
+  labels:
+    ray.io/scheduler-name: volcano
+    volcano.sh/queue-name: llama2-training-queue
 spec:
   rayVersion: 2.22.0
   headGroupSpec:
@@ -89,12 +105,12 @@ spec:
                   aws.amazon.com/neuron: '16'  # Request AWS Neuron cores
                   vpc.amazonaws.com/efa: '8'   # Request AWS EFA devices
                   cpu: '120'
-                  memory: 495Gi
+                  memory: 440Gi
                 requests:
                   aws.amazon.com/neuron: '16'
                   vpc.amazonaws.com/efa: '8'
                   cpu: '120'
-                  memory: 495Gi
+                  memory: 440Gi
               volumeMounts:
                 - name: persistent-storage
                   mountPath: /shared   # Mount shared filesystem (FSx for Lustre)
@@ -102,7 +118,6 @@ spec:
                   mountPath: /dev/shm   # Mount for shared memory
                 - mountPath: /tmp/ray
                   name: log-volume     # Mount for Ray logs
-
           # Node Selector for Managed Node Group (with Cluster Autoscaler)
           # These workers will run on Trn1 instances provisioned by the cluster autoscaler.
           # This is necessary as Karpenter doesn't currently support EFA (required for Neuron distributed training).

@@ -22,6 +22,8 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 
 This comprehensive guide walks you through pre-training the `Llama2-7B` language model using AWS Trainium (Trn1) instances and the AWS Neuron SDK within a KubeRay cluster on Amazon EKS. This is a tailored version of the original [Llama2 pretraining tutorial](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/libraries/neuronx-distributed/tutorials/training_llama2_7b.html#llama2-7b-tp-zero1-tutorial) optimized for KubeRay's distributed training capabilities.
 
+![Llama2-RayTrain](img/Llama2-RayTrain-Trn1.png)
+
 ### What is Llama-2?
 
 Llama-2 is a state-of-the-art large language model (LLM) designed for various natural language processing (NLP) tasks, including text generation, summarization, translation, question answering, and more. It's a powerful tool that can be fine-tuned for specific use cases.
@@ -58,6 +60,11 @@ Distributed training is essential for large models like Llama-2 due to their ext
 
 By using this combination of technologies, you can take advantage of the latest advancements in distributed training and hardware to pre-train Llama-2 efficiently and effectively.
 
+### What is Volcano?
+Volcano is an open-source batch scheduling system built on Kubernetes, specifically designed to manage high-performance computing (HPC) and machine learning workloads. It provides advanced scheduling capabilities such as gang scheduling, fair sharing, and preemption, which are essential for efficiently running large-scale, distributed training jobs in a Kubernetes environment.
+
+### How Volcano Works with Gang Scheduling
+Volcano's gang scheduling ensures that all pods in a job (or "gang") are scheduled simultaneously. This is critical for distributed training workloads where multiple pods need to start together to function correctly. If even one pod in the gang cannot be scheduled due to resource constraints, none of the pods in the gang will start. This prevents partial execution and ensures that all resources required for the job are available before execution begins.
 
 ## 1. Deploying the Solution
 
@@ -148,7 +155,7 @@ cd gen-ai/training/raytrain-llama2-pretrain-trn1
 After running this script, note the Docker image URL and tag that are produced. You will need this information for the next step.
 
 ## 3. Launch the Ray Cluster with KubeRay Operator
-Before launching the Ray cluster, update the `llama2-pretrain-kuberay.yaml` file with the Docker image URL and tag obtained from the previous step. Replace the placeholder(`<your-docker-image-url>:<your-docker-image-tag>`) values for the image URL and tag in the YAML file.
+Before launching the Ray cluster, update the `llama2-pretrain-trn1-raycluster.yaml` file with the Docker image URL and tag obtained from the previous step. Replace the placeholder(`<your-docker-image-url>:<your-docker-image-tag>`) values for the image URL and tag in the YAML file.
 
 Once you have updated the YAML file, run the following command to launch the KubeRay cluster pods in your EKS cluster:
 
@@ -162,13 +169,48 @@ Verify the Pod Status:
 kubectl get pods -l "ray.io/cluster=kuberay-trn1"
 ```
 
+
+### Scheduling Ray Worker Pods with Volcano
+
+In the context of deploying a Ray cluster for training Llama2, Volcano is crucial for ensuring that the Ray head and worker pods are scheduled together efficiently. The Ray head pod, typically running on an x86 instance, coordinates the distributed training, while the worker pods, running on AWS Trainium (Trn1) instances, perform the computationally intensive tasks. By leveraging Volcano's gang scheduling, we can ensure that the head and all worker pods are allocated the necessary resources simultaneously, enabling the distributed training job to start without delays.
+
+Here's an example configuration for integrating Volcano with a RayCluster for Llama2 training:
+
+```yaml
+# Docs for Volcano with KubeRay: https://docs.ray.io/en/master/cluster/kubernetes/k8s-ecosystem/volcano.html
+---
+apiVersion: scheduling.volcano.sh/v1beta1
+kind: Queue
+metadata:
+  name: llama2-training-queue
+spec:
+  weight: 1
+  capability:
+    cpu: '500'
+    memory: 1500Gi
+
+---
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: kuberay-trn1
+  labels:
+    ray.io/scheduler-name: volcano
+    volcano.sh/queue-name: llama2-training-queue
+spec:
+  rayVersion: 2.22.0
+  headGroupSpec:
+...
+...  
+```
+
 You should see one ray-head pod and two ray-worker pods in the Running state:
 
 ```bash
-NAME                         READY   STATUS    RESTARTS   AGE
-kuberay-trn1-head-xxxxx      1/1     Running   0          5m
-kuberay-trn1-worker-xxxxx   1/1     Running   0          4m30s
-kuberay-trn1-worker-xxxxx   1/1     Running   0          4m30s
+NAME                                    READY   STATUS    RESTARTS   AGE
+kuberay-trn1-head-67t46                 0/1     Pending   0          2m50s
+kuberay-trn1-worker-workergroup-fz8bs   0/1     Pending   0          2m50s
+kuberay-trn1-worker-workergroup-gpnxh   0/1     Pending   0          2m50s
 ```
 
 Check the logs of the head pod:
