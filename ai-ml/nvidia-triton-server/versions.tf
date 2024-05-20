@@ -26,6 +26,10 @@ terraform {
       source  = "hashicorp/http"
       version = ">= 3.3"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = ">= 3.1"
+    }
   }
 
   # ##  Used for end-to-end testing on project; update to suit your needs
