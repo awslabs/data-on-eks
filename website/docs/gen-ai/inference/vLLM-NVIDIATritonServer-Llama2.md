@@ -120,7 +120,7 @@ This blueprint uses [Triton helm chart](https://github.com/aws-ia/terraform-aws-
 
 **Note:** The container image that's being used for Triton server is `nvcr.io/nvidia/tritonserver:24.02-vllm-python-py3` and is vLLM backend enabled.
 
-You can choose appropriate tags in the [NGC Catalog](`https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver/tags`).
+You can choose appropriate tags in the [NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver/tags).
 
 The Triton helm configuration includes:
 
