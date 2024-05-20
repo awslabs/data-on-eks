@@ -101,7 +101,7 @@ aws eks --region us-west-2 update-kubeconfig --name jark-stack
 **Deploy RayServe Cluster**
 
 ```bash
-cd data-on-eks/gen-ai/inference/stable-diffusion-rayserve-gpu
+cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
 kubectl apply -f ray-service-stablediffusion.yaml
 ```
 
@@ -150,59 +150,48 @@ The screenshots provided will show the Serve deployment and the Ray Cluster depl
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
 
-Let's move forward with setting up the Gradio app as a Kubernetes deployment, utilizing a Docker container. This setup will enable interaction with the Stable Diffusion model, which is deployed using RayServe.
+Let's move forward with setting up the Gradio app as a Docker container running on localhost. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
+
+### Build the Gradio app docker container
+
+First, lets build the docker container for the client app.
+
+```bash
+cd ../gradio-ui
+docker build --platform=linux/amd64 \
+    -t gradio-app:sd \
+    --build-arg GRADIO_APP="gradio-app-stable-diffusion.py" \
+    .
+```
+
+### Deploy the Gradio container
+
+Deploy the Gradio app as a container on localhost using docker:
+
+```bash
+docker run --rm -it -p 7860:7860 -p 8000:8000 gradio-app:sd
+```
 
 :::info
+If you are not running Docker Desktop on your machine and using something like [finch](https://runfinch.com/) instead then you will need to additional flags for a custom host-to-IP mapping inside the container.
 
-The Gradio UI application is containerized and the container image is stored in [data-on-eks](https://gallery.ecr.aws/data-on-eks/gradio-app) public repository. The Gradio app container internally points to the `stablediffusion-service` that's running on port 8000.
-
+```
+docker run --rm -it \
+    --add-host ray-service:<workstation-ip> \
+    -e "SERVICE_NAME=http://ray-service:8000" \
+    -p 7860:7860 gradio-app:sd
+```
 :::
-
-### Deploy the Gradio Pod as Deployment
-
-First, deploy the Gradio app as a Deployment on EKS using kubectl:
-
-```bash
-cd data-on-eks/gen-ai/inference/gradio-ui
-kubectl apply -f gradio-deploy.yaml
-
-  namespace/gradio created
-  deployment.apps/gradio-deployment created
-  service/gradio-service created
-```
-
-This should create a Deployment and a Service in namespace `gradio`. Check the status of the resources.
-
-```bash
-kubectl -n gradio get all
-NAME                                     READY   STATUS    RESTARTS   AGE
-pod/gradio-deployment-668cf5dc7c-h22bl   1/1     Running   0          52s
-
-NAME                     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-service/gradio-service   ClusterIP   172.20.130.85   <none>        7860/TCP   52s
-
-NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/gradio-deployment   1/1     1            1           52s
-
-NAME                                           DESIRED   CURRENT   READY   AGE
-replicaset.apps/gradio-deployment-668cf5dc7c   1         1         1       52s
-```
 
 #### Invoke the WebUI
 
-Execute a port forward to the `gradio-service` Service using kubectl:
-
-```bash
-kubectl -n gradio port-forward service/gradio-service 8080:7860
-```
-
 Open your web browser and access the Gradio WebUI by navigating to the following URL:
 
-Running on local URL:  http://localhost:8080
+Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![Gradio WebUI](img/gradio-app-gpu.png)
+![Gradio Output](img/gradio-app-gpu.png)
 
 ### Ray Autoscaling
 The Ray Autoscaling configuration detailed in the `ray-serve-stablediffusion.yaml` file leverages the capabilities of Ray on Kubernetes to dynamically scale applications based on computational needs.
@@ -220,22 +209,27 @@ The Ray Autoscaling configuration detailed in the `ray-serve-stablediffusion.yam
         The number of nodes in your Ray cluster.
 3. **Observe (Kubernetes)**: Use `kubectl get pods -n stablediffusion` to see the creation of new pods. Use `kubectl get nodes` to observe new nodes provisioned by Karpenter.
 
-
 ## Cleanup
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.
 
-**Step1:** Delete Ray Cluster
+**Step1:** Delete Gradio Container
+
+`Ctrl-c` on the localhost terminal window where `docker run` is running to kill the container running the Gradio app. Optionally clean up the docker image
 
 ```bash
-cd data-on-eks/gen-ai/inference/stable-diffusion-rayserve-gpu
+docker rmi gradio-app:sd
+```
+**Step2:** Delete Ray Cluster
+
+```bash
+cd ../stable-diffusion-rayserve-gpu
 kubectl delete -f ray-service-stablediffusion.yaml
 ```
 
-**Step2:** Cleanup the EKS Cluster
+**Step3:** Cleanup the EKS Cluster
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-export AWS_DEAFULT_REGION="DEPLOYED_EKS_CLUSTER_REGION>"
-cd data-on-eks/ai-ml/jark-stack/ && chmod +x cleanup.sh
+cd ../../../ai-ml/jark-stack/
 ./cleanup.sh
 ```
