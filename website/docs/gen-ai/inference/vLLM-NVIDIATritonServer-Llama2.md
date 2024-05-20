@@ -224,7 +224,7 @@ pip install tritonclient[all]
 
 Populate the 'prompts.txt' file with multiple prompts. Please snure that each prompt is on a new line.
 
-The `triton-client.py` is a python application that demonstrates asynchronous communication with th Triton Inference Server using the tritonclient library. It sends the reuests to the Triton server using `grpc` protocol.
+The `triton-client.py` is a python application that demonstrates asynchronous communication with th Triton Inference Server using the tritonclient library. It sends the requests to the Triton server using `grpc` protocol.
 
 Run the Triton client app using the following command:
 
