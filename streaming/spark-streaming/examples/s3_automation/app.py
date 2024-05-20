@@ -60,7 +60,7 @@ def main():
             delete_directory(bucket_name, prefix)
         else:
             print("Invalid action. Please enter 'size' or 'delete'.")
-        
+
         time.sleep(refresh_interval)
 
 if __name__ == "__main__":

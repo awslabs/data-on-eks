@@ -1,4 +1,4 @@
-# This script is used to run the spark-consumer application on EKS, 
+# This script is used to run the spark-consumer application on EKS,
 # users need to replace MY_BUCKET_NAME and MY_KAFKA_BROKERS_ADRESS to match your environment.
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"

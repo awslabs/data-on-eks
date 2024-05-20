@@ -23,6 +23,8 @@ Welcome to the comprehensive guide on deploying the [Meta Llama-2-13b chat](http
 In this tutorial, you will not only learn how to harness the power of Llama-2, but also gain insights into the intricacies of deploying large language models (LLMs) efficiently, particularly on [trn1/inf2](https://aws.amazon.com/machine-learning/neuron/) (powered by AWS Trainium and Inferentia) instances, such as `inf2.24xlarge` and `inf2.48xlarge`,
 which are optimized for deploying and scaling large language models.
 
+![NVIDIA Triton Server](img/nvidia-triton-vllm.png)
+
 ### What is Llama-2?
 Llama-2 is a pretrained large language model (LLM) trained on 2 trillion tokens of text and code. It is one of the largest and most powerful LLMs available today. Llama-2 can be used for a variety of tasks, including natural language processing, text generation, and translation.
 
