@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir requests torch "diffusers==0.12.1" "transformers=
 WORKDIR /serve_app
 
 # Copy your Ray Serve script into the container
-COPY ray_serve_sd.py /serve_app/ray_serve_sd.py
+COPY ray_serve_stablediffusion.py /serve_app/ray_serve_stablediffusion.py
 
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/serve_app:$PYTHONPATH
