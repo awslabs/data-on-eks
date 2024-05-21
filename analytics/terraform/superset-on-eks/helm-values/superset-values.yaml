@@ -50,10 +50,8 @@ supersetWorker:
     requests:
       cpu: 200m
       memory: 400Mi
-
   persistence:
     enabled: true
-
 
 postgresql:
   ## Set to false if bringing your own PostgreSQL.
@@ -93,3 +91,4 @@ redis:
       accessModes:
         - ReadWriteOnce
 runAsUser: 1000
+
