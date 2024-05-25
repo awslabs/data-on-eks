@@ -5,12 +5,18 @@
 # NOTE: For detailed deployment instructions, refer to the DoEKS website (https://awslabs.github.io/data-on-eks/docs/category/training-on-eks).
 # ----------------------------------------------------------------------
 
+# ----------------------------------------------------------------------
+# NOTE: We are using the default namespace for this deployment because the fsx-claim PVC is created under the default namespace by the Terraform blueprint.
+# If you want to deploy the cluster in a dedicated namespace, ensure that the FSX for Lustre file system is also created in the same namespace since PVCs are namespace-bound.
+# ----------------------------------------------------------------------
+
 # Docs for Volcano with KubeRay: https://docs.ray.io/en/master/cluster/kubernetes/k8s-ecosystem/volcano.html
 ---
 apiVersion: scheduling.volcano.sh/v1beta1
 kind: Queue
 metadata:
   name: llama2-training-queue
+  namespace: default
 spec:
   weight: 1
   capability:
@@ -22,6 +28,7 @@ apiVersion: ray.io/v1
 kind: RayCluster
 metadata:
   name: kuberay-trn1
+  namespace: default
   labels:
     ray.io/scheduler-name: volcano
     volcano.sh/queue-name: llama2-training-queue
@@ -35,7 +42,7 @@ spec:
       spec:
         containers:
           - name: ray-head
-            image: <your-docker-image-url>:<your-docker-image-tag> # Replace with your Docker image URL
+            image: public.ecr.aws/data-on-eks/ray-pytorch-training-neuronx:latest # Replace with your Docker image URL
             imagePullPolicy: Always # Pull the latest image each time
             lifecycle:
               preStop:
@@ -49,12 +56,9 @@ spec:
               - containerPort: 10001
                 name: object-manager # Expose object manager port
             resources:
-              limits:
-                cpu: '1'
-                memory: 2Gi
               requests:
-                cpu: '1'
-                memory: 2Gi
+                cpu: 6
+                memory: 30Gi
             volumeMounts:
               - mountPath: /tmp/ray
                 name: log-volume   # Mount for Ray logs
@@ -87,7 +91,7 @@ spec:
         spec:
           containers:
             - name: ray-worker
-              image: <your-docker-image-url>:<your-docker-image-tag> # Replace with your Docker image URL
+              image: public.ecr.aws/data-on-eks/ray-pytorch-training-neuronx:latest # Replace with your Docker image URL
               imagePullPolicy: Always # Pull the latest image each time
               lifecycle:
                 preStop:
@@ -104,7 +108,6 @@ spec:
                 limits:
                   aws.amazon.com/neuron: '16'  # Request AWS Neuron cores
                   vpc.amazonaws.com/efa: '8'   # Request AWS EFA devices
-                  cpu: '120'
                   memory: 440Gi
                 requests:
                   aws.amazon.com/neuron: '16'

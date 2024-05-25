@@ -1,5 +1,22 @@
 #!/bin/bash
 
+# This script automates the process of building a multi-architecture Docker image
+# and pushing it to an Amazon ECR (Elastic Container Registry) repository.
+# The script performs the following steps:
+# 1. Ensures the script is run on an x86_64-based instance.
+# 2. Checks if Docker is installed and running.
+# 3. Verifies that AWS CLI is installed and configured.
+# 4. Prompts the user for the desired AWS region.
+# 5. Checks if the specified ECR repository exists, and creates it if it does not.
+# 6. Logs into Amazon ECR.
+# 7. Creates a Docker Buildx builder instance to support multi-architecture builds.
+# 8. Builds and pushes a multi-architecture Docker image to the specified ECR repository.
+
+# Note: It is preferable to use AWS Cloud9 IDE with at least 100GB of storage for creating this image
+# to avoid storage issues during the build process. You can use your local Mac or Windows machine,
+# but ensure that you have enough memory and storage allocated for Docker to build this image.
+# For more help, reach out to Perplexity or Google.
+
 # Replace with your desired repository name
 ECR_REPO_NAME="kuberay_trn1"
 
@@ -57,8 +74,10 @@ echo -e "\nLogging in to ECR"
 aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin $ECR_REPO_URI
 aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin 763104351884.dkr.ecr.${region}.amazonaws.com/pytorch-training-neuronx
 
-# Build docker image and push to user's ECR repo
+# Create and use a new builder instance for multi-arch builds
+docker buildx create --use --name mybuilder --driver docker-container
+docker buildx inspect mybuilder --bootstrap
+
 echo -e "\nBuilding kuberay_trn1 docker image" \
-  && docker buildx build --platform=linux/amd64 -t $ECR_REPO_URI --build-arg REGION=$region . --load \
-  && echo -e "\nPushing image to ECR" \
-  && docker push $ECR_REPO_URI:latest
+  && docker buildx build --platform linux/amd64 -t $ECR_REPO_URI:latest --build-arg REGION=$region . --push \
+  && echo -e "\nImage successfully pushed to ECR"

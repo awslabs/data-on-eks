@@ -116,12 +116,15 @@ Volcano's gang scheduling ensures that all pods in a job (or "gang") are schedul
     # Set the region according to your requirements. Check Trn1 instance availability in the specified region.
     export TF_VAR_region=us-west-2
 
+    # Enable Volcano custom scheduler with KubeRay Operator
+    export TF_VAR_enable_volcano=true
+
     # Note: This configuration will create two new Trn1 32xl instances. Ensure you validate the associated costs before proceeding.
     export TF_VAR_trn1_32xl_min_size=2
     export TF_VAR_trn1_32xl_desired_size=2
     ```
 
-    Run the install script to provision an EKS cluster with all the add-ons needed for the solution.
+    Run the installation script to provision an EKS cluster with all the add-ons needed for the solution.
 
     ```bash
     ./install.sh
@@ -144,37 +147,53 @@ Volcano's gang scheduling ensures that all pods in a job (or "gang") are schedul
 
 </CollapsibleContent>
 
-## 2. Build the Docker Image
+## 2. Optional Step: Build the Docker Image
 
-Build and push the custom Docker image containing KubeRay and Neuron components:
+To simplify the blueprint deployment, we have already built the Docker image and made it available under the public ECR.
+If you want to customize the Docker image, you can update the `Dockerfile` and follow the optional step to build the Docker image.
+Please note that you will also need to modify the RayCluster YAML file, `llama2-pretrain-trn1-raycluster.yaml`, with the newly created image using your own private ECR.
 
 ```bash
 cd gen-ai/training/raytrain-llama2-pretrain-trn1
-./1-kuberay-trn1-llama2-pretrain-build-image.sh
+./kuberay-trn1-llama2-pretrain-build-image.sh
 ```
-After running this script, note the Docker image URL and tag that are produced. You will need this information for the next step.
+After running this script, note the Docker image URL and tag that are produced.
+You will need this information for the next step.
 
 ## 3. Launch the Ray Cluster with KubeRay Operator
-Before launching the Ray cluster, update the `llama2-pretrain-trn1-raycluster.yaml` file with the Docker image URL and tag obtained from the previous step. Replace the placeholder(`<your-docker-image-url>:<your-docker-image-tag>`) values for the image URL and tag in the YAML file.
 
-Once you have updated the YAML file, run the following command to launch the KubeRay cluster pods in your EKS cluster:
+If you skip step 2, you don't need to modify the YAML file.
+You can simply run the kubectl apply command on the file, and it will use the public ECR image that we published.
+
+If you built a custom Docker image in **step 2**, update the `llama2-pretrain-trn1-raycluster.yaml` file with the Docker image URL and tag obtained from the previous step.
+
+Once you have updated the YAML file (if needed), run the following command to launch the KubeRay cluster pods in your EKS cluster:
 
 ```bash
 kubectl apply -f llama2-pretrain-trn1-raycluster.yaml
 ```
 
-Verify the Pod Status:
+**Verify the Pod Status:**
 
 ```bash
 kubectl get pods -l "ray.io/cluster=kuberay-trn1"
 ```
 
+### Gang Scheduling Ray Head and Worker Pods with Volcano
 
-### Scheduling Ray Worker Pods with Volcano
-
-In the context of deploying a Ray cluster for training Llama2, Volcano is crucial for ensuring that the Ray head and worker pods are scheduled together efficiently. The Ray head pod, typically running on an x86 instance, coordinates the distributed training, while the worker pods, running on AWS Trainium (Trn1) instances, perform the computationally intensive tasks. By leveraging Volcano's gang scheduling, we can ensure that the head and all worker pods are allocated the necessary resources simultaneously, enabling the distributed training job to start without delays.
+In the context of deploying a Ray cluster for training Llama2, Volcano is crucial for ensuring that the Ray head and worker pods are scheduled together efficiently.
+The Ray head pod, typically running on an x86 instance, coordinates the distributed training, while the worker pods, running on AWS Trainium (Trn1) instances, perform the computationally intensive tasks.
+By leveraging **Volcano's gang scheduling**, we can ensure that the head and all worker pods are allocated the necessary resources simultaneously, enabling the distributed training job to start without delays.
 
 Here's an example configuration for integrating Volcano with a RayCluster for Llama2 training:
+
+:::info
+
+We are using the default namespace for this deployment because the `fsx-claim` **PVC** is created under the `default` namespace by the Terraform blueprint.
+
+If you want to deploy the cluster in a dedicated namespace, ensure that the FSX for Lustre file system is also created in the same namespace since PVCs are namespace-bound.
+
+:::
 
 ```yaml
 # Docs for Volcano with KubeRay: https://docs.ray.io/en/master/cluster/kubernetes/k8s-ecosystem/volcano.html
@@ -183,6 +202,7 @@ apiVersion: scheduling.volcano.sh/v1beta1
 kind: Queue
 metadata:
   name: llama2-training-queue
+  namespace: default
 spec:
   weight: 1
   capability:
@@ -194,6 +214,7 @@ apiVersion: ray.io/v1
 kind: RayCluster
 metadata:
   name: kuberay-trn1
+  namespace: default
   labels:
     ray.io/scheduler-name: volcano
     volcano.sh/queue-name: llama2-training-queue
@@ -205,6 +226,12 @@ spec:
 ```
 
 You should see one ray-head pod and two ray-worker pods in the Running state:
+
+:::warning
+
+Please be aware that it may take up to 10 minutes for the image to be pulled and the pod to become ready.
+
+:::
 
 ```bash
 NAME                                    READY   STATUS    RESTARTS   AGE
@@ -244,53 +271,227 @@ We're working on using KubeRay's RayJob feature to trigger these jobs seamlessly
 
 :::
 
-## 4. Prepare the Dataset
-Run `kubectl get pods` and identify the name of one of the worker pods. Then run the following command (substituting in your worker pod name) to prepare/tokenize the wikicorpus dataset. The tokenized dataset will be stored on FSx storage that is accessible to the worker pods during training jobs. This step will take approximately 25 minutes.
+## 4. Generate Pre-training Data on FSx Shared Filesystem
 
-Identify a Worker Pod and note the name of one of the worker pods. This is where we'll run the data preparation script.
+:::warning
 
-```bash
-kubectl get pods -l "ray.io/cluster=kuberay-trn1"
-```
-
-Execute the `get_dataset.py` script inside a worker pod. This script tokenizes the dataset and saves it to your shared FSx for Lustre filesystem:
-
-:::caution
-
-Note: This tokenization process might take about 25 minutes, depending on the dataset's size and the worker node's resources.
+Data generation step can take up to 20 minutes to create all the data in FSx for Lustre.
 
 :::
 
-```bash
-kubectl exec -it <YOUR_WORKER_POD_NAME> -- python3 get_dataset.py
+
+In this step, we'll leverage KubeRay's Job specification to kickstart the data generation process. We'll submit a job directly to the Ray head pod. This job plays a key role in preparing your model for training.
+
+Check out the `RayJob` definition spec below to leverage the existing RayCluster using `clusterSelector` to submit the jobs to RayCluster.
+
+
+```yaml
+# ----------------------------------------------------------------------------
+# RayJob: llama2-generate-pretraining-test-data
+#
+# Description:
+# This RayJob is responsible for generating pre-training test data required for
+# the Llama2 model training. It sources data from the specified dataset, processes
+# it, and prepares it for use in subsequent training stages. The job runs a Python
+# script (`get_dataset.py`) that performs these data preparation steps.
+
+# Usage:
+# Apply this configuration to your Kubernetes cluster using `kubectl apply -f 1-llama2-pretrain-trn1-rayjob-create-test-data.yaml`.
+# Ensure that the Ray cluster (`kuberay-trn1`) is running and accessible in the specified namespace.
+# ----------------------------------------------------------------------------
+
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: llama2-generate-pretraining-test-data
+  namespace: default
+spec:
+  submissionMode: K8sJobMode
+  entrypoint: "python3 get_dataset.py"
+  runtimeEnvYAML: |
+    working_dir: /llama2_pretrain
+    env_vars:
+      PYTHONUNBUFFERED: '0'
+    resources:
+      requests:
+        cpu: "6"
+        memory: "30Gi"
+  clusterSelector:
+    ray.io/cluster: kuberay-trn1
+    rayClusterNamespace: default  # Replace with the namespace where your RayCluster is deployed
+  ttlSecondsAfterFinished: 60  # Time to live for the pod after completion (in seconds)
 ```
 
-![Prepare the Dataset](img/dataset-progress.png)
+Execute the following command to run the Test Data creation Ray job:
 
+
+```bash
+kubectl apply -f 1-llama2-pretrain-trn1-rayjob-create-test-data.yaml
+```
+
+**What Happens Behind the Scenes:**
+
+**Job Launch:** You'll use kubectl to submit the KubeRay job specification. The Ray head pod in your `kuberay-trn1` cluster receives and executes this job.
+
+**Data Generation:** The job runs the `gen-ai/training/raytrain-llama2-pretrain-trn1/llama2_pretrain/get_dataset.py` script, which harnesses the power of the Hugging Face datasets library to fetch and process the raw English Wikipedia dataset ("wikicorpus").
+
+**Tokenization:** The script tokenizes the text using a pre-trained tokenizer from Hugging Face transformers. Tokenization breaks down the text into smaller units (words or subwords) for the model to understand.
+
+**Data Storage:** The tokenized data is neatly organized and saved to a specific directory (`/shared/wikicorpus_llama2_7B_tokenized_4k/`) within your FSx for Lustre shared filesystem. This ensures all worker nodes in your cluster can readily access this standardized data during pre-training.
+
+### Monitoring the Job:
+
+To keep tabs on the job's progress:
+
+**Ray Dashboard**: Head over to the Ray dashboard, accessible via your Ray head pod's IP address and port 8265. You'll see real-time updates on the job's status.
+
+
+![Prepare the Dataset](img/raytrain-testdata-raydash1.png)
+
+![Prepare the Dataset](img/raytrain-testdata-raydash2.png)
+
+![Prepare the Dataset](img/raytrain-testdata-raydash3.png)
+
+Alternatively, you can use the following command in your terminal:
+
+```bash
+kubectl get pods | grep llama2
+```
+
+**Output:**
+
+```
+llama2-generate-pretraining-test-data-g6ccl   1/1     Running   0             5m5s
+```
+
+The following screenshot taken from Lens K8s IDE to show the logs of the pod.
+
+![Prepare the Dataset](img/raytrain-testdata-lens.png)
 
 ## 5. Run Precompilation Job (Optimization Step)
 
-Before starting the actual training, we'll perform a precompilation step to optimize the model for the Neuron SDK. This helps the model run more efficiently on the Trn1 instances.
-
 :::info
 
-Currently, precompilation and training jobs are run from the RayHead pod. However, in the next iteration, this process will be improved to trigger the job using RayJob with KubeRay Operator, utilizing the existing RayClusters.
-
-This enhancement will allow you to run both jobs without having to log in to the actual Ray head pod by using the `llama2-pretrain-trn1-rayjob.yaml` file.
+Pre-compilation job can take upto 6 min
 
 :::
 
-In this step, you will run a precompilation job where the Neuron SDK will identify, compile, and cache the compute graphs associated with Llama2 pretraining.
+Before starting the actual training, we'll perform a precompilation step to optimize the model for the Neuron SDK. This helps the model run more efficiently on the `Trn1` instances. This script will use the Neuron SDK to compile and optimize the model's computational graph, making it ready for efficient training on the Trn1 processors.
 
-Use `kubectl get pods` to find the name of your RayCluster's head pod (e.g., kuberay-trn1-head-xxxxx). Then run the following command (substituting in your head pod name) to launch the precompilation job:
+In this step, you will run a precompilation job where the Neuron SDK will identify, compile, and cache the compute graphs associated with `Llama2` pretraining.
 
-```bash
-kubectl exec -it <YOUR_HEAD_POD_NAME> -- ./launch_precompile_job.sh
+Check out the `RayJob` definition spec below to run the precompilation job:
+
+```yaml
+# ----------------------------------------------------------------------------
+# RayJob: llama2-precompilation-job
+#
+# Description:
+# This RayJob is responsible for the precompilation step required for the Llama2 model
+# training. It runs a Python script (`ray_train_llama2.py`) with the `--neuron_parallel_compile`
+# option to compile the model in parallel using AWS Neuron devices. This step is crucial for
+# optimizing the model for efficient training on AWS infrastructure.
+
+# Usage:
+# Apply this configuration to your Kubernetes cluster using `kubectl apply -f 2-llama2-pretrain-trn1-rayjob-precompilation.yaml`.
+# Ensure that the Ray cluster (`kuberay-trn1`) is running and accessible in the specified namespace.
+# ----------------------------------------------------------------------------
+
+---
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: llama2-precompilation-job
+  namespace: default
+spec:
+  submissionMode: K8sJobMode
+  entrypoint: "NEURON_NUM_DEVICES=32 python3 /llama2_pretrain/ray_train_llama2.py --neuron_parallel_compile"
+  runtimeEnvYAML: |
+    working_dir: /llama2_pretrain
+    env_vars:
+      PYTHONUNBUFFERED: '0'
+  clusterSelector:
+    ray.io/cluster: kuberay-trn1
+    rayClusterNamespace: default  # Replace with the namespace where your RayCluster is deployed
+  ttlSecondsAfterFinished: 60  # Time to live for the pod after completion (in seconds)
 ```
 
-This script will use the Neuron SDK to compile and optimize the model's computational graph, making it ready for efficient training on the Trn1 processors.
+Execute the following command to run the precompilation job:
 
-![Precompilation progress](img/pre-compilation.png)
+```bash
+kubectl apply -f 2-llama2-pretrain-trn1-rayjob-precompilation.yaml
+```
+
+**Verification Steps:**
+
+To monitor the job's progress and verify that it is running correctly, use the following commands and tools:
+
+**Ray Dashboard:** Access the Ray dashboard via your Ray head pod's IP address and port `8265` to see real-time updates on the job's status.
+
+![Precompilation progress](img/raytrain-precomplilation1.png)
+
+![Precompilation progress](img/raytrain-precomplilation2.png)
+
+The following screenshot taken from Lens K8s IDE to show the logs of the pod.
+
+![Precompilation progress](img/raytrain-precomplilation3.png)
+
+## 6. Run Distributed Pre-training Job
+
+Now, you're ready to begin the actual training of the Llama 2 model! This step involves running the distributed pre-training job using a RayJob. The job will utilize AWS Neuron devices to efficiently train the model with the prepared dataset.
+
+Check out the `RayJob` definition spec below to run the pretraining job:
+
+```yaml
+# ----------------------------------------------------------------------------
+# RayJob: llama2-pretraining-job
+#
+# Description:
+# This RayJob is responsible for the main pretraining step of the Llama2 model.
+# It runs a Python script (`ray_train_llama2.py`) to perform the pretraining using AWS Neuron devices.
+# This step is critical for training the language model with the prepared dataset.
+
+# Usage:
+# Apply this configuration to your Kubernetes cluster using `kubectl apply -f 3-llama2-pretrain-trn1-rayjob.yaml`.
+# Ensure that the Ray cluster (`kuberay-trn1`) is running and accessible in the specified namespace.
+# ----------------------------------------------------------------------------
+
+---
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: llama2-pretraining-job
+  namespace: default
+spec:
+  submissionMode: K8sJobMode
+  entrypoint: "NEURON_NUM_DEVICES=32 python3 ray_train_llama2.py"
+  runtimeEnvYAML: |
+    working_dir: /llama2_pretrain
+    env_vars:
+      PYTHONUNBUFFERED: '0'
+  clusterSelector:
+    ray.io/cluster: kuberay-trn1
+    rayClusterNamespace: default  # Replace with the namespace where your RayCluster is deployed
+  shutdownAfterJobFinishes: true
+  activeDeadlineSeconds: 600   # The job will be terminated if it runs longer than 600 seconds (10 minutes)
+  ttlSecondsAfterFinished: 60  # Time to live for the pod after completion (in seconds)
+```
+
+Execute the following command to run the pretraining job:
+
+```bash
+kubectl apply -f 3-llama2-pretrain-trn1-rayjob.yaml
+```
+
+**Monitor Progress:**
+
+You can monitor the progress of the training job using the Ray Dashboard or by observing the logs output to your terminal. Look for information like the training loss, learning rate, and other metrics to assess how well the model is learning.
+
+
+
+Ray Dashboard: Access the Ray dashboard via your Ray head pod's IP address and port 8265 to see real-time updates on the job's status.
+
+
 
 ## 6. Run Training Job
 
@@ -306,14 +507,16 @@ kubectl exec -it <YOUR_HEAD_POD_NAME> -- ./launch_training_job.sh
 
 You can monitor the progress of the training job using TensorBoard or by observing the logs output to your terminal. Look for information like the training loss, learning rate, and other metrics to assess how well the model is learning.
 
-![Training Progress](img/training-progress.png)
+![Training Progress](img/raytrain-training-progress1.png)
 
-![Training Progress Ray Dashboard](img/training-progress-raydash.png)
+**Ray Dashboard:** Access the Ray dashboard via your Ray head pod's IP address and port 8265 to see real-time updates on the job's status.
 
-![Training Progress Ray Dashboard](img/training-progress-raydash1.png)
 
-**Interrupt (Optional)**: If you want to stop the training process before it completes, press Ctrl+C in the terminal where you started the job.
+![Training Progress Ray Dashboard](img/raytrain-training-progress2.png)
 
+![Training Progress Ray Dashboard](img/raytrain-training-progress3.png)
+
+**Interrupt (Optional)**: Feel free to cancel the job using Ctrl+C once you are convinced that the loss is decreasing and the model is learning.
 
 ### Cleaning up
 
