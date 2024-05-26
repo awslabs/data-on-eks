@@ -13,7 +13,7 @@ Data on Amazon EKS(DoEKS) - A tool for building [aws](https://aws.amazon.com/) m
 5. In-depth Reference Architectures and Data Blogs to keep you ahead of the curve
 
 # Architecture
-The diagram displays the open source data tools, k8s operators and frameworks that runs on Kubernetes covered in DoEKS. AWS Data Analytics managed services integration with Data on EKS OSS tools.  
+The diagram displays the open source data tools, k8s operators and frameworks that runs on Kubernetes covered in DoEKS. AWS Data Analytics managed services integration with Data on EKS OSS tools.
 
 ![Data on EKS.png](doeks.png)
 

@@ -97,7 +97,7 @@ module "eks_blueprints_addons" {
   # Prommetheus and Grafana stack
   #---------------------------------------
   #---------------------------------------------------------------
-  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # Install Kafka Monitoring Stack with Prometheus and Grafana
   # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`

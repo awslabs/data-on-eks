@@ -1,5 +1,5 @@
 module "emr_ack" {
-  source = "../../../workshop/modules/emr-ack"
+  source = "./modules/emr-ack"
 
   eks_cluster_id                 = module.eks.cluster_name
   eks_oidc_provider_arn          = module.eks.oidc_provider_arn

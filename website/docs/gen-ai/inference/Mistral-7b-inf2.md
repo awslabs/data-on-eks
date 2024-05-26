@@ -144,9 +144,9 @@ This deployment also sets up a mistral service with multiple ports configured; p
 ```bash
 kubectl get svc -n mistral
 
-NAME                        TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)  
-mistral-service             NodePort   172.20.118.238   <none>        10001:30998/TCP,8000:32437/TCP,52365:31487/TCP,8080:30351/TCP,6379:30392/TCP,8265:30904/TCP  
-mistral-service-head-svc    NodePort   172.20.245.131   <none>        6379:31478/TCP,8265:31393/TCP,10001:32627/TCP,8000:31251/TCP,52365:31492/TCP,8080:31471/TCP  
+NAME                        TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)
+mistral-service             NodePort   172.20.118.238   <none>        10001:30998/TCP,8000:32437/TCP,52365:31487/TCP,8080:30351/TCP,6379:30392/TCP,8265:30904/TCP
+mistral-service-head-svc    NodePort   172.20.245.131   <none>        6379:31478/TCP,8265:31393/TCP,10001:32627/TCP,8000:31251/TCP,52365:31492/TCP,8080:31471/TCP
 mistral-service-serve-svc   NodePort   172.20.109.223   <none>        8000:31679/TCP
 ```
 

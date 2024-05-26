@@ -18,14 +18,6 @@ terraform {
       source  = "gavinbunney/kubectl"
       version = ">= 1.14"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.1"
-    }
-    http = {
-      source  = "hashicorp/http"
-      version = ">= 3.3"
-    }
   }
 
   # ##  Used for end-to-end testing on project; update to suit your needs

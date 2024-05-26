@@ -115,13 +115,13 @@ if __name__ == '__main__':
     rate_per_second = int(os.getenv("RATE_PER_SECOND", 100000))
     num_messages = int(os.getenv("NUM_OF_MESSAGES", 10000000))
     num_threads = 8
-    
+
     # Create Kafka topic if it doesn't exist
     create_topic(bootstrap_brokers, topic_name, num_partitions, replication_factor)
-    
+
     # Create Kafka producer
     producer = create_producer(bootstrap_brokers)
-    
+
     # Produce data with rate limiting
     try:
         produce_data(producer, topic_name, rate_per_second=rate_per_second, num_messages=num_messages, num_threads=num_threads)  # Adjust `rate_per_second` as needed
