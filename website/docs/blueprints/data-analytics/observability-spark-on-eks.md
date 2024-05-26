@@ -99,7 +99,7 @@ Grafana has been installed. Use the command below to access with port forward.
 # get grafana password
 
 ```bash
-kubectl  port-forward service/grafana 8080:80 -n grafana  
+kubectl  port-forward service/grafana 8080:80 -n grafana
 ```
 
 login username is admin and password can get from secrets manager. You can import dashboard with ID: 7890.

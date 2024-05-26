@@ -307,7 +307,7 @@ aws dynamodb create-table --cli-input-json  JSONSchemaDynamoDBTABLE.json
 
 #### Create AWS credential setup
 
-9. Setup the AWS credentials to access the AWS resource in the account using the AWS Credentials Provider Service. In this example, we are using the access key and secret key. <em>**Note** : Other options are IAM role-based, assumed role options to authenticate an AWS resources.</em>  
+9. Setup the AWS credentials to access the AWS resource in the account using the AWS Credentials Provider Service. In this example, we are using the access key and secret key. <em>**Note** : Other options are IAM role-based, assumed role options to authenticate an AWS resources.</em>
 
 ![Apache NiFi Canvas](img/nifi-screenshot-5.png)
 

@@ -181,7 +181,7 @@ module "eks" {
       max_size     = 4
       desired_size = var.trn1_32xl_desired_size
 
-      # EFA Network Interfaces configuration for Trn1.32xlarge
+      # EFA Network Interfaces configuration for Trn1.32xlarge
       network_interfaces = [
         {
           description                 = "NetworkInterfaces Configuration For EFA and EKS"

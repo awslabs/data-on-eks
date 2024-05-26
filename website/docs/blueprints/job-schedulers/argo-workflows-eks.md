@@ -120,7 +120,7 @@ cat workflow-examples/argo-spark.yaml | sed "s/<your_eks_api_server_url>/$eks_ap
 
 kubectl get wf -n argo-workflows
 NAME    STATUS    AGE   MESSAGE
-spark   Running   8s  
+spark   Running   8s
 ```
 
 You can also check the workflow status from Web UI
@@ -134,8 +134,8 @@ kubectl apply -f workflow-examples/argo-spark-operator.yaml
 
 kubectl get wf -n argo-workflows
 NAME             STATUS      AGE     MESSAGE
-spark            Succeeded   3m58s  
-spark-operator   Running     5s  
+spark            Succeeded   3m58s
+spark-operator   Running     5s
 ```
 
 The workflow status from web UI
@@ -269,7 +269,7 @@ kubectl get wf -A
 
 # Output should look like below
 NAMESPACE        NAME                           STATUS    AGE   MESSAGE
-argo-workflows   aws-sqs-spark-workflow-hh79p   Running   11s  
+argo-workflows   aws-sqs-spark-workflow-hh79p   Running   11s
 ```
 
 Run the command below to check spark application driver pods and executor pods under spark-team-a namespace.

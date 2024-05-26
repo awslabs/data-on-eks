@@ -161,11 +161,11 @@ To show a list of catalogs, run query - `SHOW CATALOGS;` and you can see `hive` 
 ```bash
  Catalog
 ---------
- hive  
+ hive
  iceberg
- system  
- tpcds  
- tpch  
+ system
+ tpcds
+ tpch
 (5 rows)
 
 Query 20240215_200117_00003_6jdxw, FINISHED, 1 node
