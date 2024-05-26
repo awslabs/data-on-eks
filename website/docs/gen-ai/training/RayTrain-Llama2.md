@@ -261,15 +261,6 @@ kubectl port-forward service/kuberay-trn1-head-svc 8265:8265
 
 Open Browser and navigate to [http://localhost:8265](http://localhost:8265) in your web browser to view the dashboard.
 
-:::info
-
-**Important Note**: At this stage, only the Ray cluster infrastructure is up and running.
-You'll initiate the actual precompilation and training jobs in the next steps.
-
-**Future Enhancement**: In an upcoming version, you won't need to manually run the precompilation and training jobs from within the head pod.
-We're working on using KubeRay's RayJob feature to trigger these jobs seamlessly, further streamlining the process.
-
-:::
 
 ## 4. Generate Pre-training Data on FSx Shared Filesystem
 
@@ -368,7 +359,7 @@ The following screenshot taken from Lens K8s IDE to show the logs of the pod.
 
 ![Prepare the Dataset](img/raytrain-testdata-lens.png)
 
-## 5. Run Precompilation Job (Optimization Step)
+## 5. Run Pre-compilation Job (Optimization Step)
 
 :::info
 
@@ -376,18 +367,18 @@ Pre-compilation job can take upto 6 min
 
 :::
 
-Before starting the actual training, we'll perform a precompilation step to optimize the model for the Neuron SDK. This helps the model run more efficiently on the `Trn1` instances. This script will use the Neuron SDK to compile and optimize the model's computational graph, making it ready for efficient training on the Trn1 processors.
+Before starting the actual training, we'll perform a pre-compilation step to optimize the model for the Neuron SDK. This helps the model run more efficiently on the `Trn1` instances. This script will use the Neuron SDK to compile and optimize the model's computational graph, making it ready for efficient training on the Trn1 processors.
 
-In this step, you will run a precompilation job where the Neuron SDK will identify, compile, and cache the compute graphs associated with `Llama2` pretraining.
+In this step, you will run a pre-compilation job where the Neuron SDK will identify, compile, and cache the compute graphs associated with `Llama2` pretraining.
 
-Check out the `RayJob` definition spec below to run the precompilation job:
+Check out the `RayJob` definition spec below to run the pre-compilation job:
 
 ```yaml
 # ----------------------------------------------------------------------------
 # RayJob: llama2-precompilation-job
 #
 # Description:
-# This RayJob is responsible for the precompilation step required for the Llama2 model
+# This RayJob is responsible for the pre-compilation step required for the Llama2 model
 # training. It runs a Python script (`ray_train_llama2.py`) with the `--neuron_parallel_compile`
 # option to compile the model in parallel using AWS Neuron devices. This step is crucial for
 # optimizing the model for efficient training on AWS infrastructure.
@@ -416,7 +407,7 @@ spec:
   ttlSecondsAfterFinished: 60  # Time to live for the pod after completion (in seconds)
 ```
 
-Execute the following command to run the precompilation job:
+Execute the following command to run the pre-compilation job:
 
 ```bash
 kubectl apply -f 2-llama2-pretrain-trn1-rayjob-precompilation.yaml
