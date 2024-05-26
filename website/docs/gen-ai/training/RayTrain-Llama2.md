@@ -147,7 +147,7 @@ Volcano's gang scheduling ensures that all pods in a job (or "gang") are schedul
 
 </CollapsibleContent>
 
-## 2. Optional Step: Build the Docker Image
+## 2. Build the Docker Image (Optional Step)
 
 To simplify the blueprint deployment, we have already built the Docker image and made it available under the public ECR.
 If you want to customize the Docker image, you can update the `Dockerfile` and follow the optional step to build the Docker image.
@@ -163,9 +163,9 @@ You will need this information for the next step.
 ## 3. Launch the Ray Cluster with KubeRay Operator
 
 If you skip step 2, you don't need to modify the YAML file.
-You can simply run the kubectl apply command on the file, and it will use the public ECR image that we published.
+You can simply run the `kubectl apply` command on the file, and it will use the public ECR image that we published.
 
-If you built a custom Docker image in **step 2**, update the `llama2-pretrain-trn1-raycluster.yaml` file with the Docker image URL and tag obtained from the previous step.
+If you built a custom Docker image in **Step 2**, update the `gen-ai/training/raytrain-llama2-pretrain-trn1/llama2-pretrain-trn1-raycluster.yaml` file with the Docker image URL and tag obtained from the previous step.
 
 Once you have updated the YAML file (if needed), run the following command to launch the KubeRay cluster pods in your EKS cluster:
 
@@ -179,7 +179,7 @@ kubectl apply -f llama2-pretrain-trn1-raycluster.yaml
 kubectl get pods -l "ray.io/cluster=kuberay-trn1"
 ```
 
-### Gang Scheduling Ray Head and Worker Pods with Volcano
+### Gang Scheduling of Ray Head and Worker Pods with Volcano
 
 In the context of deploying a Ray cluster for training Llama2, Volcano is crucial for ensuring that the Ray head and worker pods are scheduled together efficiently.
 The Ray head pod, typically running on an x86 instance, coordinates the distributed training, while the worker pods, running on AWS Trainium (Trn1) instances, perform the computationally intensive tasks.
@@ -251,7 +251,7 @@ kubectl logs kuberay-trn1-head-xxxxx
 ### Accessing the Ray Dashboard (Port Forwarding):
 The Ray dashboard provides valuable insights into your cluster's status and job progress. To access it:
 
-Forward the Port:
+**Forward the Port:**
 
 This forwards the Ray dashboard port (8265) from your local machine to the head pod within the cluster.
 
@@ -429,6 +429,12 @@ The following screenshot taken from Lens K8s IDE to show the logs of the pod.
 
 ## 6. Run Distributed Pre-training Job
 
+:::warning
+
+This job can run for many hours so feel free to cancel the job using Ctrl+C once you are convinced that the loss is decreasing and the model is learning.
+
+:::
+
 Now, you're ready to begin the actual training of the Llama 2 model! This step involves running the distributed pre-training job using a RayJob. The job will utilize AWS Neuron devices to efficiently train the model with the prepared dataset.
 
 Check out the `RayJob` definition spec below to run the pretraining job:
@@ -478,36 +484,14 @@ kubectl apply -f 3-llama2-pretrain-trn1-rayjob.yaml
 
 You can monitor the progress of the training job using the Ray Dashboard or by observing the logs output to your terminal. Look for information like the training loss, learning rate, and other metrics to assess how well the model is learning.
 
-
-
-Ray Dashboard: Access the Ray dashboard via your Ray head pod's IP address and port 8265 to see real-time updates on the job's status.
-
-
-
-## 6. Run Training Job
-
-Now, you're ready to begin the actual training of the Llama 2 model!. Feel free to cancel the job using CTRL-C once you are convinced that the loss is decreasing and the model is learning.
-
-Still within the Ray head pod, execute the `launch_training_job.sh` script:
-
-```bash
-kubectl exec -it <YOUR_HEAD_POD_NAME> -- ./launch_training_job.sh
-```
-
-**Monitor Progress**:
-
-You can monitor the progress of the training job using TensorBoard or by observing the logs output to your terminal. Look for information like the training loss, learning rate, and other metrics to assess how well the model is learning.
-
 ![Training Progress](img/raytrain-training-progress1.png)
 
 **Ray Dashboard:** Access the Ray dashboard via your Ray head pod's IP address and port 8265 to see real-time updates on the job's status.
-
 
 ![Training Progress Ray Dashboard](img/raytrain-training-progress2.png)
 
 ![Training Progress Ray Dashboard](img/raytrain-training-progress3.png)
 
-**Interrupt (Optional)**: Feel free to cancel the job using Ctrl+C once you are convinced that the loss is decreasing and the model is learning.
 
 ### Cleaning up
 
