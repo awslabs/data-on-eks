@@ -18,10 +18,6 @@ terraform {
       source  = "hashicorp/random"
       version = "3.3.2"
     }
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = ">= 1.14"
-    }
   }
 
   # ##  Used for end-to-end testing on project; update to suit your needs

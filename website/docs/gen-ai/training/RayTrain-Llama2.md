@@ -222,7 +222,7 @@ spec:
   rayVersion: 2.22.0
   headGroupSpec:
 ...
-...  
+...
 ```
 
 You should see one ray-head pod and two ray-worker pods in the Running state:
@@ -263,7 +263,7 @@ Open Browser and navigate to [http://localhost:8265](http://localhost:8265) in y
 
 :::info
 
-**Important Note**: At this stage, only the Ray cluster infrastructure is up and running.  
+**Important Note**: At this stage, only the Ray cluster infrastructure is up and running.
 You'll initiate the actual precompilation and training jobs in the next steps.
 
 **Future Enhancement**: In an upcoming version, you won't need to manually run the precompilation and training jobs from within the head pod.

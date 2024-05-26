@@ -117,7 +117,7 @@ kubectl get pods -n jupyterhub
 
 JupyterHub, by default, creates a proxy service called proxy-public which is exposed by Load Balancer.
 
-To validate that the proxy service and running and exposed via LoadBalancer.  
+To validate that the proxy service and running and exposed via LoadBalancer.
 
 Run the following command
 

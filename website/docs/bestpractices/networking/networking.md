@@ -50,7 +50,7 @@ This failure delays the launch of the Pod and adds pressure to the kubelet and w
 
 ### Avoid using `WARM_IP_TARGET` in large clusters, or cluster with a lot of churn
 
-`WARM_IP_TARGET` can help limit the “wasted” IPs for small clusters, or clusters that has very low pod churn. However, this environment variable on the VPC CNI needs to be carefully configured in large clusters as it may increase the number of EC2 API calls, increasing the risk and impact of rate throttling.  
+`WARM_IP_TARGET` can help limit the “wasted” IPs for small clusters, or clusters that has very low pod churn. However, this environment variable on the VPC CNI needs to be carefully configured in large clusters as it may increase the number of EC2 API calls, increasing the risk and impact of rate throttling.
 
 For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_TARGET` to a value slightly higher than the expected number of pods you plan to run on each node. This will allow the CNI to provision all of those IP addresses in a single (or few) calls.
 
@@ -121,7 +121,7 @@ To configure the --max-pods option you can update the userdata for your worker n
 
       bootstrap_extra_args = "--use-max-pods false --kubelet-extra-args '--max-pods=<your_value>'"
 
-    }  
+    }
 ```
 
 One problem is the number of IPs per ENI is different based on the Instance type ([for example a `m5d.2xlarge` can have 15 IPs per ENI, where a `m5d.4xlarge` can hold 30 IPs per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI)). This means hard-coding a value for `max-pods` may cause problems if you change instance types or in mixed-instance environments.
@@ -143,7 +143,7 @@ In the EKS Optimized AMI releases there is [a script included that can be used t
 
       bootstrap_extra_args = "--use-max-pods false --kubelet-extra-args '--max-pods=<your_value>'"
 
-    }  
+    }
 ```
 
 
@@ -219,7 +219,7 @@ spec:
 
 :::info
 
-While setting `ndots` to “2” in your pod deployment is a reasonable place to start, this will not universally work in all situations and shouldn’t be applied across the entire cluster. The `ndots` configuration needs to be configured at the Pod or Deployment level. Reducing this setting at the Cluster level CoreDNS configuration is not recommended.  
+While setting `ndots` to “2” in your pod deployment is a reasonable place to start, this will not universally work in all situations and shouldn’t be applied across the entire cluster. The `ndots` configuration needs to be configured at the Pod or Deployment level. Reducing this setting at the Cluster level CoreDNS configuration is not recommended.
 
 :::
 

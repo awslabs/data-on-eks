@@ -145,7 +145,7 @@ Enter the ECR region: us-west-2
 ECR repository 'eks_torchx_test' already exists.
 Repository URL: <YOUR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/eks_torchx_test
 Building and Tagging Docker image... <YOUR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/eks_torchx_test:bert_pretrain
-[+] Building 2.4s (26/26) FINISHED  
+[+] Building 2.4s (26/26) FINISHED
  => [internal] load build definition from Dockerfile.bert_pretrain                                                                                                                   0.0s
  => => transferring dockerfile: 5.15kB                                                                                                                                               0.0s
  => [internal] load .dockerignore                                                                                                                                                    0.0s
