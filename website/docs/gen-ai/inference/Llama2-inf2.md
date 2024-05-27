@@ -144,7 +144,7 @@ It defines a Kubernetes namespace named `Llama-2` to isolate resources. Within t
 The Docker image used in this example is publicly available on Amazon Elastic Container Registry (ECR) for ease of deployment.
 Users can also modify the Dockerfile to suit their specific requirements and push it to their own ECR repository, referencing it in the YAML file.
 
-### Deploy the Llama-2-Chat Model
+### Step1: Deploy the Llama-2-Chat Model
 
 **Ensure the cluster is configured locally**
 ```bash
@@ -210,7 +210,7 @@ Alternatively, you can use port-forwarding to test the service without using a l
 
 :::
 
-Now, you can access the Ray Dashboard from the Load balancer URL below.
+Now, you can access the Ray Dashboard using the Load Balancer URL below by replacing `<NLB_DNS_NAME>` with your NLB endpoint:
 
 ```text
 http://\<NLB_DNS_NAME\>/dashboard/#/serve
@@ -219,16 +219,16 @@ http://\<NLB_DNS_NAME\>/dashboard/#/serve
 If you don't have access to a public Load Balancer, you can use port-forwarding and browse the Ray Dashboard using localhost with the following command:
 
 ```bash
-kubectl port-forward service/llama2-head-svc 8265:8265 -n llama2
+kubectl port-forward service/llama2 8265:8265 -n llama2
 ```
 
 **Open the link in the browser**: http://localhost:8265/
 
 From this webpage, you will be able to monitor the progress of Model deployment, as shown in the image below:
 
-![Ray Dashboard](img/ray-dashboard.png)
+![RayDashboard](img/rayserve-llama2-13b-dashboard.png)
 
-### To Test the Llama-2-Chat Model
+### Step2: To Test the Llama-2-Chat Model
 Once you see the status of the model deployment is in `running` state then you can start using Llama-2-chat.
 
 **Using Port-Forwarding**
@@ -263,62 +263,43 @@ You will see an output like this in your browser:
 
 ![Chat Output](img/llama-2-chat-ouput.png)
 
-## Deploying the Gradio WebUI App
-Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
+### Step3: Deploying the Gradio WebUI App
 
-Let's deploy Gradio app locally on your machine to interact with the LLama-2-Chat model deployed using RayServe.
+[Gradio](https://www.gradio.app/) Web UI is used to interact with the Llama2 inference service deployed on EKS Clusters using inf2 instances.
+The Gradio UI communicates internally with the Llama2 service(`llama2-serve-svc.llama2.svc.cluster.local:8000`), which is exposed on port `8000`, using its service name and port.
 
-:::info
+We have created a base Docker(`gen-ai/inference/gradio-ui/Dockerfile-gradio-base`) image for the Gradio app, which can be used with any model inference.
+This image is published on [Public ECR](https://gallery.ecr.aws/data-on-eks/gradio-web-app-base).
 
-The Gradio app interacts with the locally exposed service created solely for the demonstration. Alternatively, you can deploy the Gradio app on EKS as a Pod with Ingress and Load Balancer for wider accessibility.
+#### Steps to Deploy a Gradio App:
 
-:::
+The following YAML script (`gen-ai/inference/llama2-13b-chat-rayserve-inf2/gradio-ui.yaml`) creates a dedicated namespace, deployment, service, and a ConfigMap where your model client script goes.
 
-### Execute Port Forward to the llama2 Ray Service
-
-If you have already executed the port-forward for port 8000 in a previous step, you don't need to do it again.
-
-First, execute a port forward to the Llama-2 Ray Service using kubectl:
+To deploy this, execute:
 
 ```bash
-kubectl port-forward service/llama2-serve-svc 8000:8000 -n llama2
+cd gen-ai/inference/llama2-13b-chat-rayserve-inf2/
+kubectl apply -f gradio-ui.yaml
 ```
 
-## Deploying the Gradio WebUI App
-Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
-
-Let's move forward with setting up the Gradio app as a Docker container running on localhost. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
-
-### Build the Gradio app docker container
-
-First, lets build the docker container for the client app.
+**Verification Steps:**
+Run the following commands to verify the deployment, service, and ConfigMap:
 
 ```bash
-cd ../gradio-ui
-docker build --platform=linux/amd64 \
-    -t gradio-app:llama \
-    --build-arg GRADIO_APP="gradio-app-llama.py" \
-    .
+kubectl get deployments -n gradio-llama2-inf2
+
+kubectl get services -n gradio-llama2-inf2
+
+kubectl get configmaps -n gradio-llama2-inf2
 ```
 
-### Deploy the Gradio container
+**Port-Forward the Service:**
 
-Deploy the Gradio app as a container on localhost using docker:
+Run the port-forward command so that you can access the Web UI locally:
 
 ```bash
-docker run --rm -it -p 7860:7860 -p 8000:8000 gradio-app:llama
+kubectl port-forward service/gradio-service 7860:7860 -n gradio-llama2-inf2
 ```
-
-:::info
-If you are not running Docker Desktop on your machine and using something like [finch](https://runfinch.com/) instead then you will need to additional flags for a custom host-to-IP mapping inside the container.
-
-```
-docker run --rm -it \
-    --add-host ray-service:<workstation-ip> \
-    -e "SERVICE_NAME=http://ray-service:8000" \
-    -p 7860:7860 gradio-app:llama
-```
-:::
 
 #### Invoke the WebUI
 
@@ -328,7 +309,7 @@ Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![Gradio Llama-2 AI Chat](img/gradio-llama-ai-chat.png)
+![gradio-llama2-13b-chat](img/gradio-llama2-13b-chat.png)
 
 ## Conclusion
 In conclusion, you will have successfully deployed the **Llama-2-13b chat** model on EKS with Ray Serve and created a chatGPT-style chat web UI using Gradio.
@@ -342,24 +323,18 @@ Whether you're building chatbots, natural language processing applications, or a
 
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.
 
-**Step1:** Delete Gradio Container
-
-`Ctrl-c` on the localhost terminal window where `docker run` is running to kill the container running the Gradio app. Optionally clean up the docker image
+**Step1:** Delete Gradio App and Llama2 Inference deployment
 
 ```bash
-docker rmi gradio-app:llama
-```
-**Step2:** Delete Ray Cluster
-
-```bash
-cd ../llama2-13b-chat-rayserve-inf2
+cd gen-ai/inference/llama2-13b-chat-rayserve-inf2
+kubectl delete -f gradio-ui.yaml
 kubectl delete -f ray-service-llama2.yaml
 ```
 
-**Step3:** Cleanup the EKS Cluster
+**Step2:** Cleanup the EKS Cluster
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ../../../ai-ml/trainium-inferentia/
+cd ai-ml/trainium-inferentia
 ./cleanup.sh
 ```
