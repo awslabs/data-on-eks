@@ -154,7 +154,7 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 **Deploy RayServe Cluster**
 
 ```bash
-cd inference/llama2-13b-chat-rayserve-inf2
+cd gen-ai/inference/llama2-13b-chat-rayserve-inf2
 kubectl apply -f ray-service-llama2.yaml
 ```
 
@@ -166,36 +166,63 @@ The deployment process may take up to 10 minutes. The Head Pod is expected to be
 
 :::
 
+```bash
+kubectl get all -n llama2
+```
+
+**Output:**
+
 ```text
-$ kubectl get all -n llama2
+NAME                                            READY   STATUS    RESTARTS   AGE
+pod/llama2-raycluster-fcmtr-head-bf58d          1/1     Running   0          67m
+pod/llama2-raycluster-fcmtr-worker-inf2-lgnb2   1/1     Running   0          5m30s
 
-NAME                                                          READY   STATUS              RESTARTS   AGE
-pod/llama2-service-raycluster-smqrl-head-4wlbb                0/1     ContainerCreating   0          77s
-pod/service-raycluster-smqrl-worker-inf2-worker-group-wjxqq   0/1     Init:0/1            0          77s
+NAME                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
+service/llama2             ClusterIP   172.20.118.243   <none>        10001/TCP,8000/TCP,8080/TCP,6379/TCP,8265/TCP   67m
+service/llama2-head-svc    ClusterIP   172.20.168.94    <none>        8080/TCP,6379/TCP,8265/TCP,10001/TCP,8000/TCP   57m
+service/llama2-serve-svc   ClusterIP   172.20.61.167    <none>        8000/TCP                                        57m
 
-NAME                     TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                                                       AGE
-service/llama2-service   NodePort   172.20.246.48   <none>        8000:32138/TCP,52365:32653/TCP,8080:32604/TCP,6379:32739/TCP,8265:32288/TCP,10001:32419/TCP   78s
+NAME                                        DESIRED WORKERS   AVAILABLE WORKERS   CPUS   MEMORY        GPUS   STATUS   AGE
+raycluster.ray.io/llama2-raycluster-fcmtr   1                 1                   184    704565270Ki   0      ready    67m
 
-$ kubectl get ingress -n llama2
-
-NAME             CLASS   HOSTS   ADDRESS                                                                         PORTS   AGE
-llama2-ingress   nginx   *       k8s-ingressn-ingressn-randomid-randomid.elb.us-west-2.amazonaws.com   80      2m4s
+NAME                       SERVICE STATUS   NUM SERVE ENDPOINTS
+rayservice.ray.io/llama2   Running          2
 
 ```
 
+```bash
+kubectl get ingress -n llama2
+```
+
+**Output:**
+
+```text
+NAME     CLASS   HOSTS   ADDRESS                                                                         PORTS   AGE
+llama2   nginx   *       k8s-ingressn-ingressn-aca7f16a80-1223456666.elb.us-west-2.amazonaws.com   80      69m
+```
+
+:::caution
+
+This blueprint deploys an internal load balancer for security reasons, so you may not be able to access it from the browser unless you are in the same vpc.
+You can modify the blueprint to make the NLB public by following the instructions [here](https://github.com/awslabs/data-on-eks/blob/5a2d1dfb39c89f3fd961beb350d6f1df07c2b31c/ai-ml/trainium-inferentia/helm-values/ingress-nginx-values.yaml#L8).
+
+Alternatively, you can use port-forwarding to test the service without using a load balancer.
+
+:::
+
 Now, you can access the Ray Dashboard from the Load balancer URL below.
 
-    http://\<NLB_DNS_NAME\>/dashboard/#/serve
+```text
+http://\<NLB_DNS_NAME\>/dashboard/#/serve
+```
 
 If you don't have access to a public Load Balancer, you can use port-forwarding and browse the Ray Dashboard using localhost with the following command:
 
 ```bash
-kubectl port-forward svc/llama2-service 8265:8265 -n llama2
-
-# Open the link in the browser
-http://localhost:8265/
-
+kubectl port-forward service/llama2-head-svc 8265:8265 -n llama2
 ```
+
+**Open the link in the browser**: http://localhost:8265/
 
 From this webpage, you will be able to monitor the progress of Model deployment, as shown in the image below:
 
@@ -204,9 +231,33 @@ From this webpage, you will be able to monitor the progress of Model deployment,
 ### To Test the Llama-2-Chat Model
 Once you see the status of the model deployment is in `running` state then you can start using Llama-2-chat.
 
-You can use the following URL with a query added at the end of the URL.
+**Using Port-Forwarding**
 
-    http://\<NLB_DNS_NAME\>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
+First, use port-forwarding to access the service locally:
+
+```bash
+kubectl port-forward service/llama2-serve-svc 8000:8000 -n llama2
+```
+
+Then, you can test the model using the following URL with a query added at the end of the URL:
+
+```bash
+http://localhost:8000/infer?sentence=what is data parallelism and tensor parallelism and the differences
+```
+
+You will see an output like this in your browser.
+
+![llama2-13b-response](img/llama2-13b-response.png)
+
+**Using the NLB**:
+
+If you prefer to use a Network Load Balancer (NLB), you can modify the blueprint to make the NLB public by following the instructions [here](https://github.com/awslabs/data-on-eks/blob/5a2d1dfb39c89f3fd961beb350d6f1df07c2b31c/ai-ml/trainium-inferentia/helm-values/ingress-nginx-values.yaml#L8).
+
+Then, you can use the following URL with a query added at the end of the URL:
+
+```text
+http://\<NLB_DNS_NAME\>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
+```
 
 You will see an output like this in your browser:
 
@@ -224,10 +275,13 @@ The Gradio app interacts with the locally exposed service created solely for the
 :::
 
 ### Execute Port Forward to the llama2 Ray Service
+
+If you have already executed the port-forward for port 8000 in a previous step, you don't need to do it again.
+
 First, execute a port forward to the Llama-2 Ray Service using kubectl:
 
 ```bash
-kubectl port-forward svc/llama2-service 8000:8000 -n llama2
+kubectl port-forward service/llama2-serve-svc 8000:8000 -n llama2
 ```
 
 ## Deploying the Gradio WebUI App
