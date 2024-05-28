@@ -124,18 +124,9 @@ variable "enable_kuberay_operator" {
 }
 
 variable "aws_auth_roles" {
-  description = "additional aws auth roles"
-  type = list(
-    object(
-      {
-        rolearn  = string
-        username = string
-        groups = list(string
-        )
-      }
-    )
-  )
-  default = []
+  description = "List of role maps to add to the aws-auth configmap"
+  type        = list(any)
+  default     = []
   # example structure
   #  {
   #     rolearn  = "arn:aws:iam::12345678901:role/role1"
@@ -148,5 +139,4 @@ variable "kms_key_admin_roles" {
   description = "list of role ARNs to add to the KMS policy"
   type        = list(string)
   default     = []
-
 }
