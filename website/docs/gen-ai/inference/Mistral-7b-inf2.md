@@ -1,5 +1,5 @@
 ---
-title: Mistral-7B on Inferentia2
+title: Mistral-7B on Inferentia
 sidebar_position: 2
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
