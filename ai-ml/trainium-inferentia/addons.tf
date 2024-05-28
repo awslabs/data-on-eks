@@ -267,7 +267,7 @@ module "eks_data_addons" {
   #---------------------------------------
   # Kuberay Operator
   #---------------------------------------
-  enable_kuberay_operator = true
+  enable_kuberay_operator = var.enable_kuberay_operator
   kuberay_operator_helm_config = {
     version = "1.1.1"
     # Enabling Volcano as Batch scheduler for KubeRay Operator
@@ -333,9 +333,6 @@ module "eks_data_addons" {
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
             values: ["inf2"]
-          - key: "karpenter.k8s.aws/instance-size"
-            operator: In
-            values: ["24xlarge", "48xlarge"]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
