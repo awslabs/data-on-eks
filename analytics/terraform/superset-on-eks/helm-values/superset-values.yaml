@@ -91,4 +91,3 @@ redis:
       accessModes:
         - ReadWriteOnce
 runAsUser: 1000
-
