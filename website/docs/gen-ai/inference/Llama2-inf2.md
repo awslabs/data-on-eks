@@ -144,7 +144,7 @@ It defines a Kubernetes namespace named `Llama-2` to isolate resources. Within t
 The Docker image used in this example is publicly available on Amazon Elastic Container Registry (ECR) for ease of deployment.
 Users can also modify the Dockerfile to suit their specific requirements and push it to their own ECR repository, referencing it in the YAML file.
 
-### Deploy the Llama-2-Chat Model
+### Step1: Deploy the Llama-2-Chat Model
 
 **Ensure the cluster is configured locally**
 ```bash
@@ -154,7 +154,7 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 **Deploy RayServe Cluster**
 
 ```bash
-cd inference/llama2-13b-chat-rayserve-inf2
+cd gen-ai/inference/llama2-13b-chat-rayserve-inf2
 kubectl apply -f ray-service-llama2.yaml
 ```
 
@@ -166,105 +166,140 @@ The deployment process may take up to 10 minutes. The Head Pod is expected to be
 
 :::
 
+```bash
+kubectl get all -n llama2
+```
+
+**Output:**
+
 ```text
-$ kubectl get all -n llama2
+NAME                                            READY   STATUS    RESTARTS   AGE
+pod/llama2-raycluster-fcmtr-head-bf58d          1/1     Running   0          67m
+pod/llama2-raycluster-fcmtr-worker-inf2-lgnb2   1/1     Running   0          5m30s
 
-NAME                                                          READY   STATUS              RESTARTS   AGE
-pod/llama2-service-raycluster-smqrl-head-4wlbb                0/1     ContainerCreating   0          77s
-pod/service-raycluster-smqrl-worker-inf2-worker-group-wjxqq   0/1     Init:0/1            0          77s
+NAME                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
+service/llama2             ClusterIP   172.20.118.243   <none>        10001/TCP,8000/TCP,8080/TCP,6379/TCP,8265/TCP   67m
+service/llama2-head-svc    ClusterIP   172.20.168.94    <none>        8080/TCP,6379/TCP,8265/TCP,10001/TCP,8000/TCP   57m
+service/llama2-serve-svc   ClusterIP   172.20.61.167    <none>        8000/TCP                                        57m
 
-NAME                     TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                                                       AGE
-service/llama2-service   NodePort   172.20.246.48   <none>        8000:32138/TCP,52365:32653/TCP,8080:32604/TCP,6379:32739/TCP,8265:32288/TCP,10001:32419/TCP   78s
+NAME                                        DESIRED WORKERS   AVAILABLE WORKERS   CPUS   MEMORY        GPUS   STATUS   AGE
+raycluster.ray.io/llama2-raycluster-fcmtr   1                 1                   184    704565270Ki   0      ready    67m
 
-$ kubectl get ingress -n llama2
-
-NAME             CLASS   HOSTS   ADDRESS                                                                         PORTS   AGE
-llama2-ingress   nginx   *       k8s-ingressn-ingressn-randomid-randomid.elb.us-west-2.amazonaws.com   80      2m4s
+NAME                       SERVICE STATUS   NUM SERVE ENDPOINTS
+rayservice.ray.io/llama2   Running          2
 
 ```
 
-Now, you can access the Ray Dashboard from the Load balancer URL below.
+```bash
+kubectl get ingress -n llama2
+```
 
-    http://\<NLB_DNS_NAME\>/dashboard/#/serve
+**Output:**
+
+```text
+NAME     CLASS   HOSTS   ADDRESS                                                                         PORTS   AGE
+llama2   nginx   *       k8s-ingressn-ingressn-aca7f16a80-1223456666.elb.us-west-2.amazonaws.com   80      69m
+```
+
+:::caution
+
+This blueprint deploys an internal load balancer for security reasons, so you may not be able to access it from the browser unless you are in the same vpc.
+You can modify the blueprint to make the NLB public by following the instructions [here](https://github.com/awslabs/data-on-eks/blob/5a2d1dfb39c89f3fd961beb350d6f1df07c2b31c/ai-ml/trainium-inferentia/helm-values/ingress-nginx-values.yaml#L8).
+
+Alternatively, you can use port-forwarding to test the service without using a load balancer.
+
+:::
+
+Now, you can access the Ray Dashboard using the Load Balancer URL below by replacing `<NLB_DNS_NAME>` with your NLB endpoint:
+
+```text
+http://\<NLB_DNS_NAME\>/dashboard/#/serve
+```
 
 If you don't have access to a public Load Balancer, you can use port-forwarding and browse the Ray Dashboard using localhost with the following command:
 
 ```bash
-kubectl port-forward svc/llama2-service 8265:8265 -n llama2
-
-# Open the link in the browser
-http://localhost:8265/
-
+kubectl port-forward service/llama2 8265:8265 -n llama2
 ```
+
+**Open the link in the browser**: http://localhost:8265/
 
 From this webpage, you will be able to monitor the progress of Model deployment, as shown in the image below:
 
-![Ray Dashboard](img/ray-dashboard.png)
+![RayDashboard](img/rayserve-llama2-13b-dashboard.png)
 
-### To Test the Llama-2-Chat Model
+### Step2: To Test the Llama-2-Chat Model
 Once you see the status of the model deployment is in `running` state then you can start using Llama-2-chat.
 
-You can use the following URL with a query added at the end of the URL.
+**Using Port-Forwarding**
 
-    http://\<NLB_DNS_NAME\>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
+First, use port-forwarding to access the service locally:
+
+```bash
+kubectl port-forward service/llama2-serve-svc 8000:8000 -n llama2
+```
+
+Then, you can test the model using the following URL with a query added at the end of the URL:
+
+```bash
+http://localhost:8000/infer?sentence=what is data parallelism and tensor parallelism and the differences
+```
+
+You will see an output like this in your browser.
+
+![llama2-13b-response](img/llama2-13b-response.png)
+
+**Using the NLB**:
+
+If you prefer to use a Network Load Balancer (NLB), you can modify the blueprint to make the NLB public by following the instructions [here](https://github.com/awslabs/data-on-eks/blob/5a2d1dfb39c89f3fd961beb350d6f1df07c2b31c/ai-ml/trainium-inferentia/helm-values/ingress-nginx-values.yaml#L8).
+
+Then, you can use the following URL with a query added at the end of the URL:
+
+```text
+http://\<NLB_DNS_NAME\>/serve/infer?sentence=what is data parallelism and tensor parallelisma and the differences
+```
 
 You will see an output like this in your browser:
 
 ![Chat Output](img/llama-2-chat-ouput.png)
 
-## Deploying the Gradio WebUI App
-Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
+### Step3: Deploying the Gradio WebUI App
 
-Let's deploy Gradio app locally on your machine to interact with the LLama-2-Chat model deployed using RayServe.
+[Gradio](https://www.gradio.app/) Web UI is used to interact with the Llama2 inference service deployed on EKS Clusters using inf2 instances.
+The Gradio UI communicates internally with the Llama2 service(`llama2-serve-svc.llama2.svc.cluster.local:8000`), which is exposed on port `8000`, using its service name and port.
 
-:::info
+We have created a base Docker(`gen-ai/inference/gradio-ui/Dockerfile-gradio-base`) image for the Gradio app, which can be used with any model inference.
+This image is published on [Public ECR](https://gallery.ecr.aws/data-on-eks/gradio-web-app-base).
 
-The Gradio app interacts with the locally exposed service created solely for the demonstration. Alternatively, you can deploy the Gradio app on EKS as a Pod with Ingress and Load Balancer for wider accessibility.
+#### Steps to Deploy a Gradio App:
 
-:::
+The following YAML script (`gen-ai/inference/llama2-13b-chat-rayserve-inf2/gradio-ui.yaml`) creates a dedicated namespace, deployment, service, and a ConfigMap where your model client script goes.
 
-### Execute Port Forward to the llama2 Ray Service
-First, execute a port forward to the Llama-2 Ray Service using kubectl:
-
-```bash
-kubectl port-forward svc/llama2-service 8000:8000 -n llama2
-```
-
-## Deploying the Gradio WebUI App
-Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
-
-Let's move forward with setting up the Gradio app as a Docker container running on localhost. This setup will enable interaction with the Stable Diffusion XL model, which is deployed using RayServe.
-
-### Build the Gradio app docker container
-
-First, lets build the docker container for the client app.
+To deploy this, execute:
 
 ```bash
-cd ../gradio-ui
-docker build --platform=linux/amd64 \
-    -t gradio-app:llama \
-    --build-arg GRADIO_APP="gradio-app-llama.py" \
-    .
+cd gen-ai/inference/llama2-13b-chat-rayserve-inf2/
+kubectl apply -f gradio-ui.yaml
 ```
 
-### Deploy the Gradio container
-
-Deploy the Gradio app as a container on localhost using docker:
+**Verification Steps:**
+Run the following commands to verify the deployment, service, and ConfigMap:
 
 ```bash
-docker run --rm -it -p 7860:7860 -p 8000:8000 gradio-app:llama
+kubectl get deployments -n gradio-llama2-inf2
+
+kubectl get services -n gradio-llama2-inf2
+
+kubectl get configmaps -n gradio-llama2-inf2
 ```
 
-:::info
-If you are not running Docker Desktop on your machine and using something like [finch](https://runfinch.com/) instead then you will need to additional flags for a custom host-to-IP mapping inside the container.
+**Port-Forward the Service:**
 
+Run the port-forward command so that you can access the Web UI locally:
+
+```bash
+kubectl port-forward service/gradio-service 7860:7860 -n gradio-llama2-inf2
 ```
-docker run --rm -it \
-    --add-host ray-service:<workstation-ip> \
-    -e "SERVICE_NAME=http://ray-service:8000" \
-    -p 7860:7860 gradio-app:llama
-```
-:::
 
 #### Invoke the WebUI
 
@@ -274,7 +309,7 @@ Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![Gradio Llama-2 AI Chat](img/gradio-llama-ai-chat.png)
+![gradio-llama2-13b-chat](img/gradio-llama2-13b-chat.png)
 
 ## Conclusion
 In conclusion, you will have successfully deployed the **Llama-2-13b chat** model on EKS with Ray Serve and created a chatGPT-style chat web UI using Gradio.
@@ -288,24 +323,18 @@ Whether you're building chatbots, natural language processing applications, or a
 
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.
 
-**Step1:** Delete Gradio Container
-
-`Ctrl-c` on the localhost terminal window where `docker run` is running to kill the container running the Gradio app. Optionally clean up the docker image
+**Step1:** Delete Gradio App and Llama2 Inference deployment
 
 ```bash
-docker rmi gradio-app:llama
-```
-**Step2:** Delete Ray Cluster
-
-```bash
-cd ../llama2-13b-chat-rayserve-inf2
+cd gen-ai/inference/llama2-13b-chat-rayserve-inf2
+kubectl delete -f gradio-ui.yaml
 kubectl delete -f ray-service-llama2.yaml
 ```
 
-**Step3:** Cleanup the EKS Cluster
+**Step2:** Cleanup the EKS Cluster
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ../../../ai-ml/trainium-inferentia/
+cd ai-ml/trainium-inferentia
 ./cleanup.sh
 ```
