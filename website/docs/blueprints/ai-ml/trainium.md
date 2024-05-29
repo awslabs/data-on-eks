@@ -134,7 +134,7 @@ If you are executing this script on a Cloud9 IDE/EC2 instance different from the
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 1-bert-pretrain-build-image.sh
+chmod +x 1-bert-pretrain-build-image.sh
 ./1-bert-pretrain-build-image.sh
 ```
 
@@ -184,7 +184,7 @@ Execute the following commands.This script prompts the user to configure their k
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 2-bert-pretrain-precompile.sh
+chmod +x 2-bert-pretrain-precompile.sh
 ./2-bert-pretrain-precompile.sh
 ```
 
@@ -215,7 +215,7 @@ We are now in the final step of training the BERT-large model with WikiCorpus da
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 3-bert-pretrain.sh
+chmod +x 3-bert-pretrain.sh
 ./3-bert-pretrain.sh
 ```
 
