@@ -116,3 +116,27 @@ variable "inf2_48xl_desired_size" {
   type        = number
   default     = 0
 }
+
+variable "enable_kuberay_operator" {
+  description = "Flag to enable kuberay operator"
+  type        = bool
+  default     = true
+}
+
+variable "aws_auth_roles" {
+  description = "List of role maps to add to the aws-auth configmap"
+  type        = list(any)
+  default     = []
+  # example structure
+  #  {
+  #     rolearn  = "arn:aws:iam::12345678901:role/role1"
+  #     username = "role1"
+  #     groups   = ["system:masters"]
+  #   }
+}
+
+variable "kms_key_admin_roles" {
+  description = "list of role ARNs to add to the KMS policy"
+  type        = list(string)
+  default     = []
+}
