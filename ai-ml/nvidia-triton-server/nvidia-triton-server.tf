@@ -22,7 +22,7 @@ module "triton_server_vllm_llama2" {
     namespace = kubernetes_namespace_v1.triton.metadata[0].name
     values = [
       <<-EOT
-      replicaCount: 2
+      replicaCount: 1
       image:
         repository: nvcr.io/nvidia/tritonserver
         tag: "24.02-vllm-python-py3"
@@ -53,13 +53,13 @@ module "triton_server_vllm_llama2" {
           key: "HF_TOKEN"
       resources:
         limits:
-          cpu: 3
-          memory: 14Gi
-          nvidia.com/gpu: 1
+          cpu: 6
+          memory: 25Gi
+          nvidia.com/gpu: 2
         requests:
-          cpu: 3
-          memory: 14Gi
-          nvidia.com/gpu: 1
+          cpu: 6
+          memory: 25Gi
+          nvidia.com/gpu: 2
       nodeSelector:
         NodeGroupType: g5-gpu-karpenter
         type: karpenter

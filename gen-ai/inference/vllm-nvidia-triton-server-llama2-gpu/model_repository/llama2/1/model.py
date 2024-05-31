@@ -1,3 +1,5 @@
+# Reference from https://github.com/triton-inference-server/vllm_backend
+
 import asyncio
 import json
 import os
@@ -18,6 +20,8 @@ huggingface_hub.login(token=os.environ.get('HUGGING_FACE_TOKEN', ''))
 
 
 class TritonPythonModel:
+    # initialize method sets up the model configuration, initializes the vLLM engine with the provided parameters,
+    # and starts an asynchronous event loop to process requests.
     def initialize(self, args):
         self.logger = pb_utils.Logger
         self.model_config = json.loads(args["model_config"])
@@ -32,17 +36,25 @@ class TritonPythonModel:
             self.using_decoupled
         ), "vLLM Triton backend must be configured to use decoupled model transaction policy"
 
+        # Load engine arguments from the model repository
         engine_args_filepath = os.path.join(
             args["model_repository"], _VLLM_ENGINE_ARGS_FILENAME
         )
 
-        vllm_engine_config ={
-          "model": os.environ.get('model_name', 'mistralai/Mistral-7B-v0.1'),
-          "disable_log_requests": "true",
-          "tensor_parallel_size": int(os.environ.get('tensor_parallel_size',1)),
-          "gpu_memory_utilization":  float(os.environ.get('gpu_memory_utilization', '0.9')),
-          "dtype":  os.environ.get('dtype', 'auto')
+        # GPU ID
+        gpu_id = args.get("model_instance_device_id", "0")
+        os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+
+        vllm_engine_config = {
+            "model": os.environ.get('model_name', 'mistralai/Mistral-7B-v0.1'),
+            "disable_log_requests": "true",
+            "tensor_parallel_size": int(os.environ.get('tensor_parallel_size',1)),
+            "gpu_memory_utilization": float(os.environ.get('gpu_memory_utilization', '0.8')),
+            "dtype": os.environ.get('dtype', 'auto'),
+            "max_model_len": int(os.environ.get('max_model_len', 4096)),
+            "enforce_eager": True
         }
+
         # Create an AsyncLLMEngine from the config from JSON
         self.llm_engine = AsyncLLMEngine.from_engine_args(
             AsyncEngineArgs(**vllm_engine_config)
@@ -64,7 +76,8 @@ class TritonPythonModel:
 
     def create_task(self, coro):
         """
-        Creates a task on the engine's event loop which is running on a separate thread.
+        The create_task method schedules asynchronous tasks on the
+        event loop running in a separate thread.
         """
         assert (
             self._shutdown_event.is_set() is False
@@ -125,8 +138,8 @@ class TritonPythonModel:
 
     def create_response(self, vllm_output):
         """
-        Parses the output from the vLLM engine into Triton
-        response.
+        Responses are created using the create_response
+        method and sent back to Triton.
         """
         prompt = vllm_output.prompt
         text_outputs = [
@@ -139,7 +152,8 @@ class TritonPythonModel:
 
     async def generate(self, request):
         """
-        Forwards single request to LLM engine and returns responses.
+        Generate method forwards the input prompt to the
+        vLLM engine and collects the output.
         """
         response_sender = request.get_response_sender()
         self.ongoing_request_count += 1
@@ -149,10 +163,6 @@ class TritonPythonModel:
             if isinstance(prompt, bytes):
                 prompt = prompt.decode("utf-8")
             stream = pb_utils.get_input_tensor_by_name(request, "STREAM").as_numpy()[0]
-
-            # Request parameters are not yet supported via
-            # BLS. Provide an optional mechanism to receive serialized
-            # parameters as an input tensor until support is added
 
             parameters_input_tensor = pb_utils.get_input_tensor_by_name(request, "SAMPLING_PARAMETERS")
             if parameters_input_tensor:
@@ -198,7 +208,7 @@ class TritonPythonModel:
         this function would prevent the backend from pulling additional requests from
         Triton into the vLLM engine. This can be done if the kv cache within vLLM engine
         is too loaded.
-        We are pushing all the requests on vllm and let it handle the full traffic.
+        We are pushing all the requests on mistral7b and let it handle the full traffic.
         """
         for request in requests:
             self.create_task(self.generate(request))
@@ -208,7 +218,7 @@ class TritonPythonModel:
         """
         Triton virtual method; called when the model is unloaded.
         """
-        self.logger.log_info("Issuing finalize to vllm backend")
+        self.logger.log_info("Issuing finalize to mistral7b backend")
         self._shutdown_event.set()
         if self._loop_thread is not None:
             self._loop_thread.join()
