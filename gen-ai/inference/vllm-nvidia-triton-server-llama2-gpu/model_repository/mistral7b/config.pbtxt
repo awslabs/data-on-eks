@@ -43,7 +43,7 @@ instance_group [
 
 parameters: {
   key: "model_name"
-  value: { string_value: "mistralai/Mistral-7B-v0.1" }
+  value: { string_value: "mistralai/Mistral-7B-Instruct-v0.2" }
 }
 parameters: {
   key: "tensor_parallel_size"

@@ -1,40 +1,14 @@
-# This Python script demonstrates asynchronous communication with a Triton Inference Server using the tritonclient library.
-# It is designed to send multiple prompts to the server, which processes them and returns the results asynchronously.
+# kubectl -n vllm-llama2 port-forward svc/nvidia-triton-server-triton-inference-server 8001:8001
 
-# -----------------------------
-# Requirements:
-# -----------------------------
-# 1. Install Python 3.9.6 or later
-# 2. tritonclient library installed with all its dependencies:
-#   pip install tritonclient[all]
+# python3 triton-client.py --model-name mistral7b --input-prompts prompts.txt --results-file mistral_results.txt
 
-# -----------------------------
-# Preparation before running the script:
-# -----------------------------
-# 1. Populate the 'prompts.txt' file with multiple prompts. Each prompt should be on a new line.
-#    This file will be used as the input for making inferences.
-# 2. Ensure that the Triton Inference Server is up and running and properly configured to process the requests.
-# 3. Ensure Triton model deployment service is port-forward to local port 8001
-
-# -----------------------------
-# Execution:
-# -----------------------------
-# Run the script using the following command:
-# python3 client.py
-
-# -----------------------------
-# Post-Execution:
-# -----------------------------
-# Check the 'results.txt' file in the same directory after running the script. This file will contain
-# the processed outputs for each prompt sent to the inference server. The results are stored to allow
-# easy verification of the outputs.
+# python3 triton-client.py --model-name llama2 --input-prompts prompts.txt --results-file llama2_results.txt
 
 import argparse
 import asyncio
-import queue
+import json
 import sys
 from os import system
-import json
 
 import numpy as np
 import tritonclient.grpc.aio as grpcclient
@@ -54,10 +28,6 @@ def create_request(prompt, stream, request_id, sampling_parameters, model_name, 
     inputs.append(grpcclient.InferInput("STREAM", [1], "BOOL"))
     inputs[-1].set_data_from_numpy(stream_data)
 
-    # Request parameters are not yet supported via BLS. Provide an
-    # optional mechanism to send serialized parameters as an input
-    # tensor until support is added
-
     if send_parameters_as_tensor:
         sampling_parameters_data = np.array(
             [json.dumps(sampling_parameters).encode("utf-8")], dtype=np.object_
@@ -65,11 +35,9 @@ def create_request(prompt, stream, request_id, sampling_parameters, model_name, 
         inputs.append(grpcclient.InferInput("SAMPLING_PARAMETERS", [1], "BYTES"))
         inputs[-1].set_data_from_numpy(sampling_parameters_data)
 
-    # Add requested outputs
     outputs = []
     outputs.append(grpcclient.InferRequestedOutput("TEXT"))
 
-    # Issue the asynchronous sequence inference.
     return {
         "model_name": model_name,
         "inputs": inputs,
@@ -80,9 +48,9 @@ def create_request(prompt, stream, request_id, sampling_parameters, model_name, 
 
 
 async def main(FLAGS):
-    model_name = "vllm"
     sampling_parameters = {"temperature": "0.01", "top_p": "1.0", "top_k": 20, "max_tokens": 512}
     stream = FLAGS.streaming_mode
+    model_name = FLAGS.model_name
     with open(FLAGS.input_prompts, "r") as file:
         print(f"Loading inputs from `{FLAGS.input_prompts}`...")
         prompts = file.readlines()
@@ -92,7 +60,6 @@ async def main(FLAGS):
     async with grpcclient.InferenceServerClient(
             url=FLAGS.url, verbose=FLAGS.verbose
     ) as triton_client:
-        # Request iterator that yields the next request
         async def async_request_iterator():
             try:
                 for iter in range(FLAGS.iterations):
@@ -105,15 +72,13 @@ async def main(FLAGS):
                             prompt, stream, prompt_id, sampling_parameters, model_name
                         )
             except Exception as error:
-                print(f"caught error in request iterator:  {error}")
+                print(f"caught error in request iterator: {error}")
 
         try:
-            # Start streaming
             response_iterator = triton_client.stream_infer(
                 inputs_iterator=async_request_iterator(),
                 stream_timeout=FLAGS.stream_timeout,
             )
-            # Read response from the stream
             async for response in response_iterator:
                 result, error = response
                 if error:
@@ -203,6 +168,12 @@ if __name__ == "__main__":
         required=False,
         default=False,
         help="Enable streaming mode",
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        required=True,
+        help="Name of the model to test",
     )
     FLAGS = parser.parse_args()
     asyncio.run(main(FLAGS))

@@ -46,7 +46,7 @@ class TritonPythonModel:
         os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 
         vllm_engine_config = {
-            "model": "mistralai/Mistral-7B-v0.1",
+            "model": "mistralai/Mistral-7B-Instruct-v0.2",
             "disable_log_requests": "true",
             "tensor_parallel_size": int(os.environ.get('tensor_parallel_size',1)),
             "gpu_memory_utilization": float(os.environ.get('gpu_memory_utilization', '0.8')),

@@ -18,27 +18,20 @@ To generate a token in HuggingFace, log in using your HuggingFace account and cl
 
 :::
 
-# Deploying Llama-2-7b Chat Model with NVIDIA Triton Server and vLLM
-Welcome to the comprehensive guide on deploying the [Meta Llama-2-13b chat](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using [Ray Serve](https://docs.ray.io/en/latest/serve/index.html).
-In this tutorial, you will not only learn how to harness the power of Llama-2, but also gain insights into the intricacies of deploying large language models (LLMs) efficiently, particularly on [trn1/inf2](https://aws.amazon.com/machine-learning/neuron/) (powered by AWS Trainium and Inferentia) instances, such as `inf2.24xlarge` and `inf2.48xlarge`,
-which are optimized for deploying and scaling large language models.
+# Deploying Multiple Large Language Models with NVIDIA Triton Server and vLLM
+This guide presents a blueprint for multi-model deployment using the Triton Inference Server and the vLLM backend/engine. 
+By following this pattern, you can deploy multiple models simultaneously. 
+We demonstrate this using two models: mistralai/Mistral-7B-Instruct-v0.2 and meta-llama/Llama-2-7b-chat-hf. 
+These models will be hosted on a multi-GPU instance (`g5.12xlarge` with 4 GPUs), with each model utilizing up to 1 GPU. 
+Triton can create multiple replica pods within the same node or across multiple nodes. Autoscaling is managed using HPA and custom metrics, scaling Triton pods based on throughput or requests for each model.
 
 ![NVIDIA Triton Server](img/nvidia-triton-vllm.png)
 
-### What is Llama-2?
-Llama-2 is a pretrained large language model (LLM) trained on 2 trillion tokens of text and code. It is one of the largest and most powerful LLMs available today. Llama-2 can be used for a variety of tasks, including natural language processing, text generation, and translation.
+### Mistralai/Mistral-7B-Instruct-v0.2
+Mistralai/Mistral-7B-Instruct-v0.2 is a state-of-the-art large language model designed to provide high-quality, instructive responses. Trained on a diverse dataset, it excels in understanding and generating human-like text across a variety of topics. Its capabilities make it suitable for applications requiring detailed explanations, complex queries, and natural language understanding.
 
-#### Llama-2-chat
-Llama-2 is a remarkable language model that has undergone a rigorous training process. It starts with pretraining using publicly available online data. An initial version of Llama-2-chat is then created through supervised fine-tuning.
-Following that, `Llama-2-chat` undergoes iterative refinement using Reinforcement Learning from Human Feedback (`RLHF`), which includes techniques like rejection sampling and proximal policy optimization (`PPO`).
-This process results in a highly capable and fine-tuned language model that we will guide you to deploy and utilize effectively on **Amazon EKS** with **Ray Serve**.
-
-Llama-2 is available in three different model sizes:
-
-- **Llama-2-70b:** This is the largest Llama-2 model, with 70 billion parameters. It is the most powerful Llama-2 model and can be used for the most demanding tasks.
-- **Llama-2-13b:** This is a medium-sized Llama-2 model, with 13 billion parameters. It is a good balance between performance and efficiency, and can be used for a variety of tasks.
-- **Llama-2-7b:** This is the smallest Llama-2 model, with 7 billion parameters. It is the most efficient Llama-2 model and can be used for tasks that do not require the highest level of performance.
-
+### Meta-llama/Llama-2-7b-chat-hf
+Meta-llama/Llama-2-7b-chat-hf is an advanced conversational AI model developed by Meta. It is optimized for chat applications, delivering coherent and contextually relevant responses. With its robust training on extensive dialogue datasets, this model excels in maintaining engaging and dynamic conversations, making it ideal for customer service bots, interactive agents, and other chat-based applications.
 
 ## Deploying the Solution
 To get started with deploying `Llama-2-7b chat` on [Amazon EKS](https://aws.amazon.com/eks/), we will cover the necessary prerequisites and guide you through the deployment process step by step.
@@ -51,6 +44,8 @@ nsure that you have installed the following tools on your machine.
 1. [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+
+
 
 ### Deploy
 
@@ -68,7 +63,13 @@ Navigate into one of the example directories and run `install.sh` script
 Additionally, confirm that your local region setting matches the specified region to prevent any discrepancies.
 For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
 
-- Ensure that you set environment variable TF_VAR_huggingface_token with your hugging face account token.
+- To proceed, ensure you have access to both models using your Huggingface account:
+
+![mistral7b-hg.png](img/mistral7b-hg.png)
+
+![llma27b-hg.png](img/llma27b-hg.png)
+
+- Next, set the environment variable TF_VAR_huggingface_token with your Huggingface account token:
   `export TF_VAR_huggingface_token=<your Huggingface token>`.
 
 Run the installation script.
@@ -180,7 +181,7 @@ aws eks --region us-west-2 update-kubeconfig --name nvidia-triton-server
 Verify the deployment by running the following commands
 
 ```text
-$ kubectl -n vllm-llama2 get all
+$ kubectl -n triton-vllm get all
 
 NAME                                                                READY   STATUS    RESTARTS   AGE
 pod/nvidia-triton-server-triton-inference-server-66b6546977-bb77w   1/1     Running   0          88m
@@ -207,7 +208,7 @@ Once you see the status of the model deployment is in `running` state then you c
 First, execute a port forward to the Triton-inference-server Service using kubectl:
 
 ```bash
-kubectl -n vllm-llama2 port-forward svc/nvidia-triton-server-triton-inference-server 8001:8001
+kubectl -n triton-vllm port-forward svc/nvidia-triton-server-triton-inference-server 8001:8001
 ```
 
 Next, Create a Python virtual environment by going to the Triton client location.

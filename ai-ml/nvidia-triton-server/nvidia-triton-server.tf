@@ -1,6 +1,7 @@
 locals {
-  triton_model = "vllm-llama2"
-  model_name   = "meta-llama/Llama-2-7b-chat-hf"
+  triton_model = "triton-vllm"
+  # Update this with any vLLM supported model
+  default_model_name   = "meta-llama/Llama-2-7b-chat-hf"
 }
 
 #---------------------------------------------------------------
@@ -32,7 +33,7 @@ module "triton_server_vllm_llama2" {
       modelRepositoryPath: s3://${module.s3_bucket.s3_bucket_id}/model_repository
       environment:
         - name: model_name
-          value: ${local.model_name}
+          value: ${local.default_model_name}
         - name: "LD_PRELOAD"
           value: ""
         - name: "TRANSFORMERS_CACHE"
@@ -116,6 +117,7 @@ module "s3_bucket" {
 resource "null_resource" "sync_local_to_s3" {
   # Re-run the provisioner if the bucket name changes
   triggers = {
+    always_run  = uuid(),
     bucket_name = module.s3_bucket.s3_bucket_id
   }
 
