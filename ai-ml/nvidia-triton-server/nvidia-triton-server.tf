@@ -1,7 +1,7 @@
 locals {
   triton_model = "triton-vllm"
   # Update this with any vLLM supported model
-  default_model_name   = "meta-llama/Llama-2-7b-chat-hf"
+  default_model_name = "meta-llama/Llama-2-7b-chat-hf"
 }
 
 #---------------------------------------------------------------

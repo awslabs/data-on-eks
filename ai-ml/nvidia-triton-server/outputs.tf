@@ -12,3 +12,8 @@ output "s3_bucket_region" {
   description = "The AWS region this bucket resides in."
   value       = module.s3_bucket.s3_bucket_region
 }
+
+output "grafana_secret_name" {
+  description = "The name of the secret containing the Grafana admin password."
+  value       = aws_secretsmanager_secret.grafana.name
+}

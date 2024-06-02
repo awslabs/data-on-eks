@@ -1,13 +1,8 @@
-# kubectl -n vllm-llama2 port-forward svc/nvidia-triton-server-triton-inference-server 8001:8001
-
-# python3 triton-client.py --model-name mistral7b --input-prompts prompts.txt --results-file mistral_results.txt
-
-# python3 triton-client.py --model-name llama2 --input-prompts prompts.txt --results-file llama2_results.txt
-
 import argparse
 import asyncio
 import json
 import sys
+import time  # Import the time module
 from os import system
 
 import numpy as np
@@ -56,6 +51,7 @@ async def main(FLAGS):
         prompts = file.readlines()
 
     results_dict = {}
+    total_time_sec = 0  # Initialize total time in seconds
 
     async with grpcclient.InferenceServerClient(
             url=FLAGS.url, verbose=FLAGS.verbose
@@ -80,13 +76,20 @@ async def main(FLAGS):
                 stream_timeout=FLAGS.stream_timeout,
             )
             async for response in response_iterator:
+                start_time = time.time()  # Record the start time
                 result, error = response
+                end_time = time.time()  # Record the end time
+
                 if error:
                     print(f"Encountered error while processing: {error}")
                 else:
                     output = result.as_numpy("TEXT")
                     for i in output:
                         results_dict[result.get_response().id].append(i)
+
+                    duration = (end_time - start_time) * 1000  # Calculate the duration in milliseconds
+                    total_time_sec += (end_time - start_time)  # Add duration to total time in seconds
+                    print(f"Model {FLAGS.model_name} - Request {result.get_response().id}: {duration:.2f} ms")
 
         except InferenceServerException as error:
             print(error)
@@ -104,6 +107,8 @@ async def main(FLAGS):
         print(f"\nContents of `{FLAGS.results_file}` ===>")
         system(f"cat {FLAGS.results_file}")
 
+    total_time_ms = total_time_sec * 1000  # Convert total time to milliseconds
+    print(f"Total time for all requests: {total_time_sec:.2f} seconds ({total_time_ms:.2f} milliseconds)")
     print("PASS: vLLM example")
 
 
