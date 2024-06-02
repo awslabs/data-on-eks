@@ -11,15 +11,15 @@ The use of [Meta-llama/Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Met
 :::
 
 # Deploying Multiple Large Language Models with NVIDIA Triton Server and vLLM
-This blueprint presents a multi-model deployment using the [Triton Inference Server](https://github.com/triton-inference-server/server) and the [vLLM](https://github.com/vllm-project/vllm) backend/engine. We will demonstrate this with two models: `mistralai/Mistral-7B-Instruct-v0.2` and `meta-llama/Llama-2-7b-chat-hf`. These models will be hosted on a `g5.12xlarge` multi-GPU instance, equipped with 4 GPUs, with each model utilizing up to one GPU.
+In this pattern, we'll explore how to deploy multiple large language models (LLMs) using the [Triton Inference Server](https://github.com/triton-inference-server/server) and the [vLLM](https://github.com/vllm-project/vllm) backend/engine. We'll demonstrate this process with two specific models: `mistralai/Mistral-7B-Instruct-v0.2` and `meta-llama/Llama-2-7b-chat-hf`. These models will be hosted on a **g5.24xlarge** multi-GPU instance, equipped with **4 GPUs**, with each model utilizing up to one GPU.
 
-The NVIDIA Triton Inference Server, when combined with the vLLM backend, offers a robust framework for deploying multiple large language models (LLMs). User applications interact with the inference service via REST API or gRPC, which is managed by NGINX and a Network Load Balancer (NLB) to efficiently distribute incoming requests to the Triton K8s Service. The Triton K8s Service is the core of our deployment, where the Triton Server processes inference requests. For this deployment, we use g5.12xlarge instances, each equipped with 4 GPUs, to run multiple models like Llama2-7b and Mistral7b. The Horizontal Pod Autoscaler (HPA) monitors custom metrics and dynamically scales Triton pods based on demand, ensuring efficient handling of varying loads. Prometheus and Grafana are used to collect and visualize metrics, providing insights into performance and aiding in autoscaling decisions.
+NVIDIA Triton Inference Server, when combined with the vLLM backend, offers a robust framework for deploying multiple large language models (LLMs). User applications interact with the inference service via REST API or gRPC, which is managed by NGINX and a Network Load Balancer (NLB) to efficiently distribute incoming requests to the Triton K8s Service. The Triton K8s Service is the core of our deployment, where the Triton Server processes inference requests. For this deployment, we use g5.24xlarge instances, each equipped with 4 GPUs, to run multiple models like Llama2-7b and Mistral7b. The Horizontal Pod Autoscaler (HPA) monitors custom metrics and dynamically scales Triton pods based on demand, ensuring efficient handling of varying loads. Prometheus and Grafana are used to collect and visualize metrics, providing insights into performance and aiding in autoscaling decisions.
 
 ![NVIDIA Triton Server](img/triton-architecture.png)
 
 ## What to Expect
 
-When you deploy everything as described, you can expect quick response times for your inference requests. Below is an example output from running the `triton-client.py` script with the `llama2` model:
+When you deploy everything as described, you can expect quick response times for your inference requests. Below is an example output from running the `triton-client.py` script with the `Llama-2-7b-chat-hf` and `Mistral-7B-Instruct-v0.2` models:
 
 
 <details>
@@ -84,7 +84,7 @@ To get started with deploying both `mistralai/Mistral-7B-Instruct-v0.2` and `met
 
 :::danger
 
-Important: Deploying on `g5.12xlarge` instances, which are equipped with multiple GPUs, can be expensive. Ensure you carefully monitor and manage your usage to avoid unexpected costs. Consider setting budget alerts and usage limits to keep track of your expenditures.
+Important: Deploying on `g5.24xlarge` instances, which are equipped with multiple GPUs, can be expensive. Ensure you carefully monitor and manage your usage to avoid unexpected costs. Consider setting budget alerts and usage limits to keep track of your expenditures.
 
 :::
 
@@ -274,7 +274,7 @@ model-repository/
 </details>
 
 
-For vLLM enabled Triton model, the model_repository can be found at `gen-ai/inference/vllm-nvidia-triton-server-llama2-gpu/model_reposiotry` location. During the deployment, the blueprint creates an S3 bucket and syncs the local `model_repository` contents to the S3 bucket.
+For vLLM enabled Triton model, the model_repository can be found at `gen-ai/inference/vllm-nvidia-triton-server-gpu/model_reposiotry` location. During the deployment, the blueprint creates an S3 bucket and syncs the local `model_repository` contents to the S3 bucket.
 
 **model.py**: This script uses vLLM library as Triton backend framework and initializes a `TritonPythonModel` class by loading the model configuration and configuring vLLM engine. The `huggingface_hub` library's login function is used to establish access to the hugging face repository for model access. It then starts an asyncio event loop to process the received requests asynchronously. The script has several functions that processes the inference requests, issues the requests to vLLM backend and return the response.
 
@@ -329,7 +329,7 @@ kubectl -n triton-vllm port-forward svc/nvidia-triton-server-triton-inference-se
 Next, run the Triton client for each model using the same prompts:
 
 ```bash
-cd gen-ai/inference/vllm-nvidia-triton-server-llama2-gpu/triton-client
+cd gen-ai/inference/vllm-nvidia-triton-server-gpu/triton-client
 python3 triton-client.py --model-name mistral7b --input-prompts prompts.txt --results-file mistral_results.txt
 ```
 
@@ -519,6 +519,8 @@ aws secretsmanager get-secret-value --secret-id <grafana_secret_name_output> --r
 - Follow the prompts to complete the import process.
 
 You should now see the metrics displayed on your new Grafana dashboard, allowing you to monitor the performance and health of your NVIDIA Triton Inference Server deployment.
+
+![triton-grafana-dash2](img/triton-grafana-dash2.png)
 
 
 ## Conclusion

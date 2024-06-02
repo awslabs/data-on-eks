@@ -23,7 +23,7 @@ module "triton_server_vllm_llama2" {
     namespace = kubernetes_namespace_v1.triton.metadata[0].name
     values = [
       <<-EOT
-      replicaCount: 1
+      replicaCount: 2
       image:
         repository: nvcr.io/nvidia/tritonserver
         tag: "24.02-vllm-python-py3"
