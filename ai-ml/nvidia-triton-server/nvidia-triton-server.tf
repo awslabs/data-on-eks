@@ -23,7 +23,7 @@ module "triton_server_vllm_llama2" {
     namespace = kubernetes_namespace_v1.triton.metadata[0].name
     values = [
       <<-EOT
-      replicaCount: 2
+      replicaCount: 1
       image:
         repository: nvcr.io/nvidia/tritonserver
         tag: "24.02-vllm-python-py3"
@@ -122,7 +122,7 @@ resource "null_resource" "sync_local_to_s3" {
   }
 
   provisioner "local-exec" {
-    command = "aws s3 sync ../../gen-ai/inference/vllm-nvidia-triton-server-llama2-gpu/ s3://${module.s3_bucket.s3_bucket_id}"
+    command = "aws s3 sync ../../gen-ai/inference/vllm-nvidia-triton-server-gpu/ s3://${module.s3_bucket.s3_bucket_id}"
   }
 }
 
