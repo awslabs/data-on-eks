@@ -115,7 +115,7 @@ To deploy the Mistral-7B-Instruct-v0.2 model, it's essential to configure your H
 ```bash
 # set the Hugging Face Hub Token as an environment variable. This variable will be substituted when applying the ray-service-mistral.yaml file
 
-export  HUGGING_FACE_HUB_TOKEN=<Your-Hugging-Face-Hub-Token-Value>
+export HUGGING_FACE_HUB_TOKEN=$(echo -n "Your-Hugging-Face-Hub-Token-Value" | base64)
 
 cd ./../gen-ai/inference/mistral-7b-rayserve-inf2
 envsubst < ray-service-mistral.yaml| kubectl apply -f -
@@ -125,7 +125,7 @@ Verify the deployment by running the following commands
 
 :::info
 
-The deployment process may take up to 10 to 12 minutes. The Head Pod is expected to be ready within 2 to 3 minutes, while the Ray Serve worker pod may take up to 10 minutes for image retrieval and Model deployment from Huggingface.
+The deployment process may take up to 10 minutes. The Head Pod is expected to be ready within 2 to 3 minutes, while the Ray Serve worker pod may take up to 10 minutes for image retrieval and Model deployment from Huggingface.
 
 :::
 
@@ -152,6 +152,8 @@ mistral-service-serve-svc   NodePort   172.20.109.223   <none>        8000:31679
 
 For the Ray dashboard, you can port-forward these ports individually to access the web UI locally using localhost.
 
+
+
 ```bash
 kubectl -n mistral port-forward svc/mistral-service 8265:8265
 ```
@@ -170,42 +172,42 @@ You can monitor Serve deployment and the Ray Cluster deployment including resour
 ![RayServe Cluster](img/ray-serve-inf2-mistral-cluster.png)
 
 ## Deploying the Gradio WebUI App
-Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
 
-Let's move forward with setting up the Gradio app as a Kubernetes deployment, utilizing a Docker container. This setup will enable interaction with the Mistral model, which is deployed using RayServe.
+[Gradio](https://www.gradio.app/) Web UI is used to interact with the Mistral7b inference service deployed on EKS Clusters using inf2 instances.
+The Gradio UI communicates internally with the mistral service(`mistral-serve-svc.mistral.svc.cluster.local:8000`), which is exposed on port `8000`, using its service name and port.
 
+We have created a base Docker(`gen-ai/inference/gradio-ui/Dockerfile-gradio-base`) image for the Gradio app, which can be used with any model inference.
+This image is published on [Public ECR](https://gallery.ecr.aws/data-on-eks/gradio-web-app-base).
 
-### Build the Gradio app docker container
+#### Steps to Deploy a Gradio App:
 
-First, lets build the docker container for the client app.
+The following YAML script (`gen-ai/inference/mistral-7b-rayserve-inf2/gradio-ui.yaml`) creates a dedicated namespace, deployment, service, and a ConfigMap where your model client script goes.
 
-
-```bash
-cd ../gradio-ui
-docker build --platform=linux/amd64 \
-  -t gradio-app:mistral \
-  --build-arg GRADIO_APP="gradio-app-mistral.py" \
-  .
-```
-
-### Deploy the Gradio container
-
-Deploy the Gradio app as a container on localhost using docker:
-
+To deploy this, execute:
 
 ```bash
-docker run --rm -it -p 7860:7860 -p 8000:8000 gradio-app:mistral
+cd gen-ai/inference/mistral-7b-rayserve-inf2/
+kubectl apply -f gradio-ui.yaml
 ```
-:::info
-If you are not running Docker Desktop on your machine and using something like [finch](https://runfinch.com/) instead then you will need to additional flags for a custom host-to-IP mapping inside the container.
 
+**Verification Steps:**
+Run the following commands to verify the deployment, service, and ConfigMap:
+
+```bash
+kubectl get deployments -n gradio-mistral7b-inf2
+
+kubectl get services -n gradio-mistral7b-inf2
+
+kubectl get configmaps -n gradio-mistral7b-inf2
 ```
-docker run --rm -it \
-    --add-host ray-service:<workstation-ip> \
-    -e "SERVICE_NAME=http://ray-service:8000" \
-    -p 7860:7860 gradio-app:mistral
+
+**Port-Forward the Service:**
+
+Run the port-forward command so that you can access the Web UI locally:
+
+```bash
+kubectl port-forward service/gradio-service 7860:7860 -n gradio-mistral7b-inf2
 ```
-:::
 
 #### Invoke the WebUI
 
@@ -233,21 +235,16 @@ Below screenshots provide some examples of the model response based on different
 
 Finally, we'll provide instructions for cleaning up and deprovisioning the resources when they are no longer needed.
 
-**Step1:** Delete Gradio Container
+**Step1:** Delete Gradio App and mistral Inference deployment
 
-`Ctrl-c` on the localhost terminal window where `docker run` is running to kill the container running the Gradio app. Optionally clean up the docker image
-
-```bash
-docker rmi gradio-app:mistral
-```
-**Step2:** Delete Ray Cluster
 
 ```bash
-cd ../mistral-7b-rayserve-inf2
+cd gen-ai/inference/mistral-7b-rayserve-inf2
+kubectl delete -f gradio-ui.yaml
 kubectl delete -f ray-service-mistral.yaml
 ```
 
-**Step3:** Cleanup the EKS Cluster
+**Step2:** Cleanup the EKS Cluster
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
