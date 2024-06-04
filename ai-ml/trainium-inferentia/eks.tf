@@ -17,18 +17,27 @@ module "eks" {
   substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
 
+  # Combine root account, current user/role and additinoal roles to be able to access the cluster KMS key - required for terraform updates
+  kms_key_administrators = distinct(concat([
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"],
+    var.kms_key_admin_roles,
+    [data.aws_iam_session_context.current.issuer_arn]
+
+  ))
+
   manage_aws_auth_configmap = true
-  aws_auth_roles = [
-    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-    {
-      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups = [
-        "system:bootstrappers",
-        "system:nodes",
-      ]
-    }
-  ]
+  # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
+  aws_auth_roles = distinct(concat([{
+    rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+    username = "system:node:{{EC2PrivateDNSName}}"
+    groups = [
+      "system:bootstrappers",
+      "system:nodes",
+    ]
+    }],
+    var.aws_auth_roles
+  ))
+
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
@@ -181,7 +190,7 @@ module "eks" {
       max_size     = 4
       desired_size = var.trn1_32xl_desired_size
 
-      # EFA Network Interfaces configuration for Trn1.32xlarge
+      # EFA Network Interfaces configuration for Trn1.32xlarge
       network_interfaces = [
         {
           description                 = "NetworkInterfaces Configuration For EFA and EKS"

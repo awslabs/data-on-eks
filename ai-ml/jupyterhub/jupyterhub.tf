@@ -49,7 +49,7 @@ resource "kubernetes_secret_v1" "jupyterhub_single_user" {
 
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
-# This will be repalced with Dynamic EFS provision using EFS CSI Driver
+# This will be replaced with Dynamic EFS provision using EFS CSI Driver
 #---------------------------------------------------------------
 resource "aws_efs_file_system" "efs" {
   encrypted = true

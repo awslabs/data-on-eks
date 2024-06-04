@@ -87,6 +87,10 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `install.sh` script
 
 ```bash
+export TF_VAR_enable_fsx_for_lustre=true
+export TF_VAR_enable_torchx_etcd=true
+export TF_VAR_enable_volcano=true
+
 cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x install.sh
 ./install.sh
 ```
@@ -130,7 +134,7 @@ If you are executing this script on a Cloud9 IDE/EC2 instance different from the
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 1-bert-pretrain-build-image.sh
+chmod +x 1-bert-pretrain-build-image.sh
 ./1-bert-pretrain-build-image.sh
 ```
 
@@ -141,7 +145,7 @@ Enter the ECR region: us-west-2
 ECR repository 'eks_torchx_test' already exists.
 Repository URL: <YOUR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/eks_torchx_test
 Building and Tagging Docker image... <YOUR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/eks_torchx_test:bert_pretrain
-[+] Building 2.4s (26/26) FINISHED  
+[+] Building 2.4s (26/26) FINISHED
  => [internal] load build definition from Dockerfile.bert_pretrain                                                                                                                   0.0s
  => => transferring dockerfile: 5.15kB                                                                                                                                               0.0s
  => [internal] load .dockerignore                                                                                                                                                    0.0s
@@ -156,13 +160,13 @@ Login to AWS Console and verify the ECR repo(`<YOUR_ACCOUNT_ID>.dkr.ecr.<REGION>
 
 #### Step2: Copy WikiCorpus pre-training dataset for BERT model to FSx for Lustre filesystem
 
-In this step, we make it easy to transfer the WikiCorpus pre-training dataset, which is crucial for training the BERT model in distributed mode by multiple Trainium instances, to the FSx for Lustre filesystem. To achieve this, we will login to `aws-cli-cmd-shell` pod which includes an AWS CLI container, providing access to the filesystem.
+In this step, we make it easy to transfer the WikiCorpus pre-training dataset, which is crucial for training the BERT model in distributed mode by multiple Trainium instances, to the FSx for Lustre filesystem. To achieve this, we will login to `cmd-shell` pod which includes an AWS CLI container, providing access to the filesystem.
 
 Once you're inside the container, Copy the WikiCorpus dataset from S3 bucket (`s3://neuron-s3/training_datasets/bert_pretrain_wikicorpus_tokenized_hdf5/bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar`). The dataset is then unpacked, giving you access to its contents, ready for use in the subsequent BERT model pre-training process.
 
 
 ```bash
-kubectl exec -i -t -n default aws-cli-cmd-shell -c app -- sh -c "clear; (bash || ash || sh)"
+kubectl exec -i -t -n default cmd-shell -c app -- sh -c "clear; (bash || ash || sh)"
 
 # Once logged into the container
 yum install tar
@@ -180,7 +184,7 @@ Execute the following commands.This script prompts the user to configure their k
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 2-bert-pretrain-precompile.sh
+chmod +x 2-bert-pretrain-precompile.sh
 ./2-bert-pretrain-precompile.sh
 ```
 
@@ -211,7 +215,7 @@ We are now in the final step of training the BERT-large model with WikiCorpus da
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 3-bert-pretrain.sh
+chmod +x 3-bert-pretrain.sh
 ./3-bert-pretrain.sh
 ```
 

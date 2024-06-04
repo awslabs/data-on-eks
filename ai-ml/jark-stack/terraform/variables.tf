@@ -44,3 +44,9 @@ variable "enable_aws_efa_k8s_device_plugin" {
   type        = bool
   default     = false
 }
+
+variable "enable_kubecost" {
+  description = "Enable Kubecost addon"
+  type        = bool
+  default     = false
+}

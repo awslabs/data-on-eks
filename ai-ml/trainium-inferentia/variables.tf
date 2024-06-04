@@ -51,6 +51,24 @@ variable "enable_mpi_operator" {
   default     = false
 }
 
+variable "enable_volcano" {
+  description = "Flag to enable the Volcano batch scheduler"
+  type        = bool
+  default     = false
+}
+
+variable "enable_torchx_etcd" {
+  description = "Flag to enable etcd deployment for torchx"
+  type        = bool
+  default     = false
+}
+
+variable "enable_fsx_for_lustre" {
+  description = "Flag to enable resources for FSx for Lustre"
+  type        = bool
+  default     = false
+}
+
 variable "trn1_32xl_min_size" {
   description = "trn1 Worker node minimum size"
   type        = number
@@ -97,4 +115,28 @@ variable "inf2_48xl_desired_size" {
   description = "Worker node desired size"
   type        = number
   default     = 0
+}
+
+variable "enable_kuberay_operator" {
+  description = "Flag to enable kuberay operator"
+  type        = bool
+  default     = true
+}
+
+variable "aws_auth_roles" {
+  description = "List of role maps to add to the aws-auth configmap"
+  type        = list(any)
+  default     = []
+  # example structure
+  #  {
+  #     rolearn  = "arn:aws:iam::12345678901:role/role1"
+  #     username = "role1"
+  #     groups   = ["system:masters"]
+  #   }
+}
+
+variable "kms_key_admin_roles" {
+  description = "list of role ARNs to add to the KMS policy"
+  type        = list(string)
+  default     = []
 }

@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.3.0"
+  required_version = ">= 1.0.0"
 
   required_providers {
     aws = {
@@ -28,6 +28,6 @@ terraform {
   # backend "s3" {
   #   bucket = "terraform-ssp-github-actions-state"
   #   region = "us-west-2"
-  #   key    = "e2e/cnpg-on-eks/terraform.tfstate"
+  #   key    = "e2e/trino-on-eks/terraform.tfstate"
   # }
 }
