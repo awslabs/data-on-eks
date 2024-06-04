@@ -31,6 +31,8 @@ spec:
           env_vars:
             MODEL_ID: "mistralai/Mistral-7B-Instruct-v0.2"
             NEURON_CC_FLAGS: "-O1"
+            LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+            NEURON_CORES: "2"
         deployments:
           - name: mistral-7b
             autoscaling_config:
@@ -46,8 +48,11 @@ spec:
             ray_actor_options:
               num_cpus: 10
               resources: {"neuron_cores": 2}
+              runtime_env:
+                env_vars:
+                  LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
   rayClusterConfig:
-    rayVersion: '2.11.0'
+    rayVersion: '2.22.0'
     enableInTreeAutoscaling: true
     headGroupSpec:
       headService:
@@ -60,7 +65,7 @@ spec:
         spec:
           containers:
           - name: head
-            image: public.ecr.aws/data-on-eks/ray2.11.0-py310-mistral7b-neuron:latest
+            image: public.ecr.aws/data-on-eks/ray2.22.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -68,7 +73,7 @@ spec:
                   command: ["/bin/sh", "-c", "ray stop"]
             ports:
             - containerPort: 6379
-              name: gcs-server
+              name: gcs
             - containerPort: 8265
               name: dashboard
             - containerPort: 10001
@@ -86,6 +91,8 @@ spec:
                 cpu: "2"
                 memory: "20G"
             env:
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -108,7 +115,7 @@ spec:
         spec:
           containers:
           - name: worker
-            image: public.ecr.aws/data-on-eks/ray2.11.0-py310-mistral7b-neuron:latest
+            image: public.ecr.aws/data-on-eks/ray2.22.0-py310-mistral7b-neuron:latest
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -125,6 +132,8 @@ spec:
                 memory: "360G" # All memory of inf2.24xlarge; 24G for daemonset overhead
                 aws.amazon.com/neuron: "6" # All Neuron cores of inf2.24xlarge
             env:
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
