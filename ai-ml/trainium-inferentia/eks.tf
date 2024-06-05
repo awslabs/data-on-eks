@@ -133,7 +133,7 @@ module "eks" {
       }
 
       tags = merge(local.tags, {
-        Name                     = "core-node-grp",
+        Name                     = "core-node-grp"
       })
     }
 
