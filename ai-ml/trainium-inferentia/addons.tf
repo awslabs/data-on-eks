@@ -308,6 +308,7 @@ module "eks_data_addons" {
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
+          id: ${module.eks.node_security_group_id}
           tags:
             Name: ${module.eks.cluster_name}-node
         blockDevice:
@@ -358,6 +359,7 @@ module "eks_data_addons" {
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
+          id: ${module.eks.node_security_group_id}
           tags:
             Name: ${module.eks.cluster_name}-node
           blockDevice:
