@@ -1,5 +1,0 @@
-apiVersion: v2
-name: storage
-description: Helm chart for storage options on the cluster
-version: 0.0.1
-appVersion: 0.0.1
