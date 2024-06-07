@@ -241,6 +241,20 @@ module "eks_data_addons" {
                 operator: Exists
                 effect: NoSchedule
               - operator: "Exists"
+              - key: "hub.jupyter.org/dedicated"
+                operator: "Equal"
+                value: "user"
+                effect: "NoSchedule"
+        tolerations:
+          - key: CriticalAddonsOnly
+            operator: Exists
+          - key: nvidia.com/gpu
+            operator: Exists
+            effect: NoSchedule
+          - key: "hub.jupyter.org/dedicated"
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
       EOT
     ]
   }
