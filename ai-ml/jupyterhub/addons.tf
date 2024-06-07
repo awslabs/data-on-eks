@@ -199,16 +199,14 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_nvidia_device_plugin = true
   nvidia_device_plugin_helm_config = {
-    version = "v0.14.5"
+    version = "v0.15.0"
     name    = "nvidia-device-plugin"
     values = [
       <<-EOT
         mixedStrategy: "mixed"
         config:
-          name: time-slicing-config-fine
-          default: "nvidia-a10g"
           map:
-            default: nvidia-a10g
+            default: |-
               version: v1
               flags:
                 migStrategy: none
@@ -246,16 +244,6 @@ module "eks_data_addons" {
       EOT
     ]
   }
-
-  #---------------------------------------------------------------
-  # Enable GPU operator
-  #---------------------------------------------------------------
-  # enable_nvidia_gpu_operator = true
-
-  # nvidia_gpu_operator_helm_config = {
-  #   version = "v23.3.2"
-  #   values = [templatefile("${path.module}/helm/nvidia-gpu-operator/values.yaml", {})]
-  # }
 
   #---------------------------------------------------------------
   # JupyterHub Add-on
