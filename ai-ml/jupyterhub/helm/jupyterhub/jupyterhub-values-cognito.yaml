@@ -123,6 +123,7 @@ singleuser:
       kubespawner_override:
         node_selector:
           NodePool: trainium
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: aws.amazon.com/neuroncore
             operator: Exists
@@ -186,6 +187,7 @@ singleuser:
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
           NodePool: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
@@ -210,6 +212,7 @@ singleuser:
         node_selector:
           provisioner: cluster-autoscaler
           node.kubernetes.io/instance-type: p4d.24xlarge
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
@@ -232,8 +235,8 @@ singleuser:
       kubespawner_override:
         image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
         node_selector:
-          node.kubernetes.io/instance-type: p4d.24xlarge
-          NodePool: gpu
+          NodePool: gpu-mig
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
