@@ -133,7 +133,7 @@ module "eks" {
       }
 
       tags = merge(local.tags, {
-        Name                     = "core-node-grp"
+        Name = "core-node-grp"
       })
     }
 
@@ -276,7 +276,7 @@ module "eks" {
       ]
 
       tags = merge(local.tags, {
-        Name                     = "trn1-32xl-ng1",
+        Name = "trn1-32xl-ng1",
       })
     }
     #--------------------------------------------------
@@ -484,7 +484,7 @@ module "eks" {
       ]
 
       tags = merge(local.tags, {
-        Name                     = "trn1n-32xl-ng1",
+        Name = "trn1n-32xl-ng1",
       })
     }
 
@@ -590,7 +590,7 @@ module "eks" {
       ]
 
       tags = merge(local.tags, {
-        Name                     = "inf2-48xl-ng",
+        Name = "inf2-48xl-ng",
       })
     }
   }
