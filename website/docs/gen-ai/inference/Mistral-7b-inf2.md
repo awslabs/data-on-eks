@@ -239,7 +239,7 @@ A critical component of a Ray cluster is the head node, which orchestrates the e
 
 To address this, High Availability (HA) for the Ray head node is essential. Global Control Service (GCS) manages cluster-level metadata in a RayCluster. By default, the GCS lacks fault tolerance as it stores all data in-memory, and a failure can cause the entire Ray cluster to fail. To avoid this, one must add fault tolerance to Ray’s Global Control Store (GCS), which allows the Ray Serve application to serve traffic even when the head node crashes. In the event of a GCS restart, it retrieves all the data from the Redis instance and resumes its regular functions.
 
-Folloiwng sections provide the steps on how to enable GCS fault tolerance and ensure high availability for the Ray head Pod.
+Following sections provide the steps on how to enable GCS fault tolerance and ensure high availability for the Ray head Pod.
 
 #### Add an External Redis Server
 
