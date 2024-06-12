@@ -1,5 +1,5 @@
 module "elasticache" {
-  count   = var.enable_rayserve_ha_elastic_cache_redis ? 1 : 0
+  create   = var.enable_rayserve_ha_elastic_cache_redis
   source  = "terraform-aws-modules/elasticache/aws"
   version = "1.2.0"
 
