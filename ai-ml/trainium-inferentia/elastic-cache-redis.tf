@@ -30,7 +30,6 @@ module "elasticache" {
       to_port                      = 6379
       type                         = "ingress"
     }
-
   }
 
   # Subnet Group

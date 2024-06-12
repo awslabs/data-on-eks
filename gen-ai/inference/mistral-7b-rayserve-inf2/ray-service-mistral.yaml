@@ -61,7 +61,7 @@ spec:
           namespace: mistral
       rayStartParams:
         dashboard-host: '0.0.0.0'
-        num-cpus: "0"
+        num-cpus: "0" # this is to ensure no tasks or actors are scheduled on the head Pod
       template:
         spec:
           containers:

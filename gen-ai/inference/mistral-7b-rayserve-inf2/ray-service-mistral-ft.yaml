@@ -20,7 +20,7 @@ metadata:
   name: mistral
   namespace: mistral
   annotations:
-    ray.io/ft-enabled: "true"
+    ray.io/ft-enabled: "true" # enables Global Control Service(GCS) fault tolerance
 spec:
   serviceUnhealthySecondThreshold: 900
   deploymentUnhealthySecondThreshold: 300
@@ -63,7 +63,7 @@ spec:
           namespace: mistral
       rayStartParams:
         dashboard-host: '0.0.0.0'
-        num-cpus: "0"
+        num-cpus: "0" # this is to ensure no tasks or actors are scheduled on the head Pod
       template:
         spec:
           containers:

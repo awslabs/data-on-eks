@@ -5,5 +5,5 @@ output "configure_kubectl" {
 
 output "elastic_cache_redis_cluster_arn" {
   description = "Cluster arn of the cache cluster"
-  value       = length(module.elasticache) > 0 ? module.elasticache[0].cluster_arn : ""
+  value       = try(module.elasticache[0].cluster_arn, null)
 }
