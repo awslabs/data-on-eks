@@ -144,5 +144,5 @@ variable "kms_key_admin_roles" {
 variable "enable_rayserve_ha_elastic_cache_redis" {
   description = "Flag to enable Ray Head High Availability with Elastic Cache for Redis"
   type        = bool
-  default     = true
+  default     = false
 }

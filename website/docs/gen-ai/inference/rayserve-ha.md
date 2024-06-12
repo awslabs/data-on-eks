@@ -21,7 +21,7 @@ To address this, High Availability (HA) for the Ray head node is essential. Glob
 
 ![Ray-head-ha](img/ray-head-ha-2.png)
 
-Following sections provide the steps on how to enable GCS fault tolerance and ensure high availability for the Ray head Pod. We're using the `Mistral-7B-Instruct-v0.2` model to demonstrate the Reay head high availability.
+Following sections provide the steps on how to enable GCS fault tolerance and ensure high availability for the Ray head Pod. We're using the `Mistral-7B-Instruct-v0.2` model to demonstrate the Ray head high availability.
 
 ### Add an External Redis Server
 
@@ -53,9 +53,13 @@ This Mistral7b deployment is using Ray Serve with High availability. If you have
 4. [envsubst](https://pypi.org/project/envsubst/)
 5. [jq](https://jqlang.github.io/jq/download/)
 
-First, enable the creation of the Redis cluster by setting the `enable_rayserve_ha_elastic_cache_redis` variable to `true` in `variables.tf` file. By default it's set to `false`.
+First, enable the creation of the Redis cluster by setting the `enable_rayserve_ha_elastic_cache_redis` variable to `true` by running the below command. By default it's set to `false`.
 
-Then, run the `install.sh` script to install the EKS cluster with KubeRay operator and other add ons.
+```bash
+export TF_VAR_enable_rayserve_ha_elastic_cache_redis=true
+```
+
+Then, run the `install.sh` script to install the EKS cluster with KubeRay operator and other add-ons.
 
 ```bash
 cd ai-ml/trainimum-inferentia
@@ -70,7 +74,7 @@ Apply complete! Resources: 8 added, 1 changed, 0 destroyed.
 Outputs:
 
 configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia"
-elastic_cache_redis_cluster_arn = "arn:aws:elasticache:us-west-2:489829964455:cluster:trainium-inferentia"
+elastic_cache_redis_cluster_arn = "arn:aws:elasticache:us-west-2:11111111111:cluster:trainium-inferentia"
 ```
 
 ### Add External Redis Information to RayService
@@ -196,7 +200,7 @@ Finally, we'll provide instructions for cleaning up and deprovisioning the resou
 ```bash
 cd gen-ai/inference/mistral-7b-rayserve-inf2
 kubectl delete -f gradio-ui.yaml
-kubectl delete -f ray-service-mistral.yaml
+kubectl delete -f ray-service-mistral-ft.yaml
 ```
 
 **Step2:** Cleanup the EKS Cluster
