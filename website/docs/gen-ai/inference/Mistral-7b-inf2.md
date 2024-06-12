@@ -237,7 +237,6 @@ Finally, we'll provide instructions for cleaning up and deprovisioning the resou
 
 **Step1:** Delete Gradio App and mistral Inference deployment
 
-
 ```bash
 cd gen-ai/inference/mistral-7b-rayserve-inf2
 kubectl delete -f gradio-ui.yaml
