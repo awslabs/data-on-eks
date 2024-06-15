@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rayserve-vllm
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hf-token
+  namespace: rayserve-vllm
+data:
+  hf-token: $HUGGING_FACE_HUB_TOKEN
+---
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: vllm
+  namespace: rayserve-vllm
+spec:
+  serviceUnhealthySecondThreshold: 1800 # Config for the health check threshold for service. Default value is 60.
+  deploymentUnhealthySecondThreshold: 1800 # Config for the health check threshold for deployments. Default value is 60.
+  serveConfigV2: |
+    applications:
+      - name: mistral-deployment
+        import_path: "vllm_serve:deployment"
+        runtime_env:
+          env_vars:
+            LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+            VLLM_PORT: 8000
+  rayClusterConfig:
+    rayVersion: '2.24.0' # Should match the Ray version in the image of the containers
+    ######################headGroupSpecs#################################
+    # Ray head pod template.
+    headGroupSpec:
+      headService:
+        metadata:
+          name: vllm
+          namespace: rayserve-vllm
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+        num-cpus: "0"
+      # Pod template
+      template:
+        spec:
+          containers:
+          - name: ray-head
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v1
+            imagePullPolicy: IfNotPresent # Pull the latest image each time
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            ports:
+            - containerPort: 6379
+              name: gcs
+            - containerPort: 8265
+              name: dashboard
+            - containerPort: 10001
+              name: client
+            - containerPort: 8000
+              name: serve
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+            resources:
+              limits:
+                cpu: 16
+                memory: "32G"
+              requests:
+                cpu: 16
+                memory: "32G"
+            env:
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: hf-token
+          nodeSelector:
+            NodeGroupType: x86-cpu-karpenter
+            type: karpenter
+          volumes:
+          - name: ray-logs
+            emptyDir: {}
+    workerGroupSpecs:
+    # The pod replicas in this group typed worker
+    - replicas: 1
+      minReplicas: 1
+      maxReplicas: 4
+      groupName: gpu-group
+      rayStartParams: {}
+      # Pod template
+      template:
+        spec:
+          containers:
+          - name: ray-worker
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v1
+            imagePullPolicy: IfNotPresent # Pull the latest image each time
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            resources:
+              limits:
+                cpu: 16
+                memory: "32G"
+                nvidia.com/gpu: 1
+              requests:
+                cpu: 16
+                memory: "32G"
+                nvidia.com/gpu: 1
+            env:
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+          nodeSelector:
+            NodeGroupType: g5-gpu-karpenter
+            type: karpenter
+          # Please add the following taints to the GPU node.
+          tolerations:
+          - key: "nvidia.com/gpu"
+            operator: "Exists"
+            effect: "NoSchedule"
+
