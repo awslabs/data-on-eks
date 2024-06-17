@@ -21,12 +21,26 @@ spec:
   deploymentUnhealthySecondThreshold: 1800 # Config for the health check threshold for deployments. Default value is 60.
   serveConfigV2: |
     applications:
-      - name: mistral-deployment
+      - name: mistral
         import_path: "vllm_serve:deployment"
         runtime_env:
           env_vars:
             LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
-            VLLM_PORT: 8000
+        deployments:
+          - name: mistral-deployment
+            autoscaling_config:
+              metrics_interval_s: 0.2
+              min_replicas: 1
+              max_replicas: 4
+              look_back_period_s: 2
+              downscale_delay_s: 600
+              upscale_delay_s: 30
+              target_num_ongoing_requests_per_replica: 1
+            graceful_shutdown_timeout_s: 5
+            max_concurrent_queries: 100
+            ray_actor_options:
+              num_cpus: 3
+              num_gpus: 1
   rayClusterConfig:
     rayVersion: '2.24.0' # Should match the Ray version in the image of the containers
     ######################headGroupSpecs#################################
@@ -45,7 +59,7 @@ spec:
           containers:
           - name: ray-head
             image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v1
-            imagePullPolicy: IfNotPresent # Pull the latest image each time
+            imagePullPolicy: Always # Pull the latest image each time
             lifecycle:
               preStop:
                 exec:
@@ -70,6 +84,8 @@ spec:
                 cpu: 16
                 memory: "32G"
             env:
+            - name: VLLM_PORT
+              value: "8000"
             - name: LD_LIBRARY_PATH
               value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
@@ -96,7 +112,7 @@ spec:
           containers:
           - name: ray-worker
             image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v1
-            imagePullPolicy: IfNotPresent # Pull the latest image each time
+            imagePullPolicy: Always # Pull the latest image each time
             lifecycle:
               preStop:
                 exec:
@@ -111,6 +127,8 @@ spec:
                 memory: "32G"
                 nvidia.com/gpu: 1
             env:
+            - name: VLLM_PORT
+              value: "8000"
             - name: LD_LIBRARY_PATH
               value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
           nodeSelector:

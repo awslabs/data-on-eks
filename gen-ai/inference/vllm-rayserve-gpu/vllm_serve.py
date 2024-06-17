@@ -20,65 +20,22 @@ from ray import serve
 import os
 import logging
 
-import huggingface_hub
+from huggingface_hub import login
 
 # Environment and configuration setup
-huggingface_hub.login(token=os.environ.get('HUGGING_FACE_TOKEN', ''))
 logger = logging.getLogger("ray.serve")
 
-@serve.deployment(name="mistral-deployment", ray_actor_options={"num_gpus": 1}, route_prefix="/")
+@serve.deployment(name="mistral-deployment", route_prefix="/vllm",
+    ray_actor_options={"num_gpus": 1},
+    autoscaling_config={"min_replicas": 1, "max_replicas": 2},
+)
 class VLLMDeployment:
     def __init__(self, **kwargs):
-        """
-        Construct a VLLM deployment.
-
-        Refer to https://github.com/vllm-project/vllm/blob/main/vllm/engine/arg_utils.py
-        for the full list of arguments.
-
-        Args:
-            model: name or path of the huggingface model to use
-            download_dir: directory to download and load the weights,
-                default to the default cache dir of huggingface.
-            use_np_weights: save a numpy copy of model weights for
-                faster loading. This can increase the disk usage by up to 2x.
-            use_dummy_weights: use dummy values for model weights.
-            dtype: data type for model weights and activations.
-                The "auto" option will use FP16 precision
-                for FP32 and FP16 models, and BF16 precision.
-                for BF16 models.
-            seed: random seed.
-            worker_use_ray: use Ray for distributed serving, will be
-                automatically set when using more than 1 GPU
-            pipeline_parallel_size: number of pipeline stages.
-            tensor_parallel_size: number of tensor parallel replicas.
-            block_size: token block size.
-            swap_space: CPU swap space size (GiB) per GPU.
-            gpu_memory_utilization: the percentage of GPU memory to be used for
-                the model executor
-            max_num_batched_tokens: maximum number of batched tokens per iteration
-            max_num_seqs: maximum number of sequences per iteration.
-            disable_log_stats: disable logging statistics.
-            engine_use_ray: use Ray to start the LLM engine in a separate
-                process as the server process.
-            disable_log_requests: disable logging requests.
-        """
-        vllm_engine_config = {
-            "model": "mistralai/Mistral-7B-Instruct-v0.2",
-            "disable_log_requests": "true",
-            "tensor_parallel_size": int(os.environ.get('tensor_parallel_size',1)),
-            "gpu_memory_utilization": float(os.environ.get('gpu_memory_utilization', '0.8')),
-            "dtype": os.environ.get('dtype', 'auto'),
-            "max_model_len": int(os.environ.get('max_model_len', 4096)),
-            "enforce_eager": True
-        }
-
-        # args = AsyncEngineArgs(**kwargs)
-        # self.engine = AsyncLLMEngine.from_engine_args(args)
-
-        # Create an AsyncLLMEngine from the config from JSON
-        self.llm_engine = AsyncLLMEngine.from_engine_args(
-            AsyncEngineArgs(**vllm_engine_config)
-        )
+        hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        login(token=hf_token)
+        logger.info(f"login to HF done")
+        args = AsyncEngineArgs(**kwargs)
+        self.engine = AsyncLLMEngine.from_engine_args(args)
 
     async def stream_results(self, results_generator) -> AsyncGenerator[bytes, None]:
         num_returned = 0
@@ -130,10 +87,9 @@ class VLLMDeployment:
         text_outputs = [prompt + output.text for output in final_output.outputs]
         ret = {"text": text_outputs}
         return Response(content=json.dumps(ret))
-
-
-# Deployment definition for Ray Serve
+        
+        
 deployment = VLLMDeployment.bind(model="mistralai/Mistral-7B-Instruct-v0.2",
-                                    dtype="bfloat16",
-                                    trust_remote_code=True,
-                                    )
+                                        dtype="bfloat16",
+                                        trust_remote_code=True,
+                                        )
