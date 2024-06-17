@@ -18,7 +18,7 @@ input:
   name: "tail"
   enabled: true
   tag: "systempods.<namespace_name>.<container_name>.<pod_name>.<docker_id>-"
-  path: "/var/log/containers/*.log"
+  path: "/var/log/containers/aws-node*,/var/log/containers/kube-proxy*,/var/log/containers/aws-for-fluent-bit*,/var/log/containers/spark-history-server*,/var/log/containers/spark-operator*,/var/log/containers/*_yunikorn_*"
   db: "/var/log/flb_kube.db"
   memBufLimit: 5MB
   skipLongLines: "On"
@@ -27,8 +27,31 @@ input:
     multiline.parser  docker, cri
     Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
 
+additionalInputs: |
+  [INPUT]
+      Name                tail
+      Tag                 spark.<namespace_name>.<container_name>.<spark_app_id>.<driver_or_executor>.<docker_id>-
+      Path                /var/log/containers/*_default_*
+      DB                  /var/log/flb_spark.db
+      multiline.parser    docker, cri
+      Mem_Buf_Limit       5MB
+      Skip_Long_Lines     On
+      Refresh_Interval    10
+      Tag_Regex           (?<spark_app_id>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)-(?<driver_or_executor>(?:driver|exec-[\d]+))_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log
 
-# NOTE: extraFilters config for using Kubelet to get the Metadata instead of talking to API server for large clusters
+  [INPUT]
+      Name                tail
+      Tag                 sel.<spark_internal_app_id>
+      Path                /var/log/containers/eventlogs/*\.inprogress
+      DB                  /var/log/sel_spark.db
+      multiline.parser    docker, cri
+      Mem_Buf_Limit       10MB
+      Skip_Long_Lines     On
+      Refresh_Interval    10
+      Tag_Regex           (?<spark_internal_app_id>spark-[a-z0-9]+)
+      Buffer_Chunk_Size   1MB
+      Buffer_Max_Size     5MB
+
 filter:
   name: "kubernetes"
   match: "systempods.*"
@@ -49,19 +72,52 @@ filter:
     Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
 
-# CATION: Do not use `cloudwatch` plugin. This Golang Plugin is not recommended by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
+additionalFilters: |
+  [FILTER]
+      Name                rewrite_tag
+      Match               systempods.*
+      Rule                $log ^.+\s(YK_APP_SUMMARY:).*$ yuni.$TAG.log false
+
+  [FILTER]
+      Name                kubernetes
+      Match               spark.*
+      Kube_URL            https://kubernetes.default.svc.cluster.local:443
+      Merge_Log           On
+      Merge_Log_Key       log_processed
+      Keep_Log            On
+      K8S-Logging.Parser  On
+      K8S-Logging.Exclude On
+      Labels              On
+      Buffer_Size         0
+      Kube_Tag_Prefix     spark.
+      Regex_Parser        kubernetes
+      Use_Kubelet         true
+      Kubelet_Port        10250
+      Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+      Annotations         Off
+
+  [FILTER]
+      Name                rewrite_tag
+      Match               sel.*
+      Rule                $log ^(\{\"Event\":\"SparkListenerLogStart\").+$ app.$TAG.log true
+
+
+# CAUTION: Do not use `cloudwatch` plugin. This Golang Plugin is not recommended by AWS anymore instead use C plugin(`cloudWatchLogs`) for better performance.
 # cloudWatch:
 #   enabled: false
 
-# This is a new high performance C Plugin for CloudWatchLogs. See docs here https://docs.fluentbit.io/manual/pipeline/outputs/cloudwatch
-cloudWatchLogs:
-  enabled: true
-  match: "systempods.*"
-  region: ${region}
-  logGroupName: ${cloudwatch_log_group}
-  autoCreateGroup: false
-  extraOutputs: |
-    log_key               log
+# This is a new high performance C Plugin for CloudWatchLogs. See docs here https://docs.fluentbit.io/manual/pipeline/outputs/cloudwatch
+
+#cloudWatchLogs:
+#  enabled: true
+#  match: "systempods.*"
+#  region: ${region}
+#  logGroupName: ${cloudwatch_log_group}
+#  autoCreateGroup: false
+#  extraOutputs: |
+#    log_key               log
+
 
 #----------------------------------------------------------#
 # OUTPUT logs to S3
@@ -78,25 +134,57 @@ additionalOutputs: |
       region                          ${region}
       bucket                          ${s3_bucket_name}
       total_file_size                 100M
-      s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.log
+      s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[3]/$TAG[2]_%H%M%S_$UUID.log
       s3_key_format_tag_delimiters    ..
       store_dir                       /home/ec2-user/buffer
-      upload_timeout                  10m
+      upload_timeout                  5m
       log_key                         log
 
+  [OUTPUT]
+      Name                            s3
+      Match                           spark.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 5M
+      s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[3]/$TAG[4]/%H%M%S_$UUID.log
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  5m
+      log_key                         log
 
-# Resource config for large clusters
-resources:
-  limits:
-    cpu: 1000m
-    memory: 1500Mi
-  requests:
-    cpu: 500m
-    memory: 500Mi
+  [OUTPUT]
+      Name                            s3
+      Match                           yuni.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 5M
+      s3_key_format                   /${cluster_name}/yunikorn-app-summary/%Y/%m/%d/%H/%H%M%S_${cluster_name}_$UUID.log
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  5m
+      log_key                         log
 
-## Assign a PriorityClassName to pods if set
-priorityClassName: system-node-critical
+  [OUTPUT]
+      Name                            s3
+      Match                           sel.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 10M
+      s3_key_format                   /${cluster_name}/spark-event-logs/eventlog_v2_$TAG[1]/events_$INDEX_$TAG[1]_$UUID
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  7m
+      log_key                         log
 
-# This toleration allows Daemonset pod to be scheduled on any node, regardless of their Taints.
-tolerations:
-  - operator: Exists
+  [OUTPUT]
+      Name                            s3
+      Match                           app.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 1M
+      static_file_path                true
+      s3_key_format                   /${cluster_name}/spark-event-logs/eventlog_v2_$TAG[2]/appstatus_$TAG[2]
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  5m
+      log_key                         log
