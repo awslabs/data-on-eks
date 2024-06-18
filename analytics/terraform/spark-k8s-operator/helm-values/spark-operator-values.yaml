@@ -22,10 +22,12 @@ serviceAccounts:
     # -- Optional annotations for the operator service account
     annotations: {}
 
-# -- Set this if running spark jobs in a different namespace than the operator
-# -- List of namespaces where to run spark jobs
-sparkJobNamespaces:
-  - "spark-team-a"
+# Enable this to monitor only one namespace with this Spark Operator.
+# By default, this operator monitors all namespaces for submitting Spark jobs.
+# Currently, it does not support selecting multiple namespaces to be monitored by each Spark Operator. You can select either one or all namespaces.
+# sparkJobNamespaces:
+#   - "spark-team-a"
+
 
 # -- Operator concurrency, higher values might increase memory usage
 controllerThreads: 10

@@ -301,10 +301,8 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    name      = "spark-operator-team-a-release"
-    namespace = "spark-operator-team-a-ns"
-    version   = "1.4.2"
-    values    = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
+    version = "1.4.2"
+    values  = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
   }
 
   #---------------------------------------------------------------
@@ -390,21 +388,6 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Kubernetes Add-ons
-  #---------------------------------------
-  #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_cluster_proportional_autoscaler = true
-  cluster_proportional_autoscaler = {
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      target = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
-
-  #---------------------------------------
   # Metrics Server
   #---------------------------------------
   enable_metrics_server = true
@@ -472,6 +455,10 @@ module "eks_blueprints_addons" {
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
     chart_version = "1.5.4"
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
   }
 
   enable_ingress_nginx = true
