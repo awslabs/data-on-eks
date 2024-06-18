@@ -27,7 +27,7 @@ input:
     multiline.parser  docker, cri
     Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
 
-# Filtering the Spark job logs by using the namesapce in the path `spark-team-`
+# Filtering the Spark job logs by using the namespace in the path `spark-team-`
 additionalInputs: |
   [INPUT]
       Name                tail
