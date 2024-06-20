@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([[88],{99:e=>{e.exports=JSON.parse('{"title":"Amazon EMR on EKS","slug":"/category/amazon-emr-on-eks","permalink":"/data-on-eks/docs/category/amazon-emr-on-eks","navigation":{"next":{"title":"Introduction","permalink":"/data-on-eks/docs/blueprints/amazon-emr-on-eks/"}}}')}}]);
