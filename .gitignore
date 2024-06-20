@@ -56,3 +56,6 @@ site
 
 # gradio
 **/gradio_cached_examples
+
+# node modules
+node_modules
