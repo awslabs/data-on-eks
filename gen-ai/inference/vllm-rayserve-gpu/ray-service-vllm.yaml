@@ -10,7 +10,7 @@ metadata:
   name: hf-token
   namespace: rayserve-vllm
 data:
-  hf-token: aGZfRmNkZEhRa0xEeWN5dE5wYUxPY3pTTlJvR1dhZ3BUeUVYZw==
+  hf-token: $HUGGING_FACE_HUB_TOKEN
 
 # Mistral-7B-Instruct-v0.2 can theoretically handle sequences up to 32768 tokens long. 
 # However, practical limitations such as GPU memory might necessitate setting a lower MAX_MODEL_LEN when initializing the vLLM engine. 
@@ -30,12 +30,13 @@ spec:
     applications:
       - name: mistral
         import_path: "vllm_serve:deployment"
+        route_prefix: "/vllm"
         runtime_env:
           env_vars:
             LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             MODEL_ID: "mistralai/Mistral-7B-Instruct-v0.2"
-            GPU_MEMORY_UTILIZATION: "0.9"
-            MAX_MODEL_LEN: "8192"
+            GPU_MEMORY_UTILIZATION: "0.8"
+            MAX_MODEL_LEN: "4096"
         deployments:
           - name: mistral-deployment
             autoscaling_config:
@@ -65,7 +66,7 @@ spec:
         spec:
           containers:
           - name: ray-head
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v2
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v3
             imagePullPolicy: Always
             lifecycle:
               preStop:
@@ -78,7 +79,7 @@ spec:
               name: dashboard
             - containerPort: 10001
               name: client
-            - containerPort: 8001
+            - containerPort: 8000
               name: serve
             volumeMounts:
             - mountPath: /tmp/ray
@@ -92,7 +93,7 @@ spec:
                 memory: "32G"
             env:
             - name: VLLM_PORT
-              value: "8001"
+              value: "8003"
             - name: LD_LIBRARY_PATH
               value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
@@ -103,9 +104,9 @@ spec:
             - name: MODEL_ID
               value: "mistralai/Mistral-7B-Instruct-v0.2"
             - name: GPU_MEMORY_UTILIZATION
-              value: "0.9"
+              value: "0.8"
             - name: MAX_MODEL_LEN
-              value: "8192"
+              value: "4096"
           volumes:
           - name: ray-logs
             emptyDir: {}
@@ -119,7 +120,7 @@ spec:
         spec:
           containers:
           - name: ray-worker
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v2
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v3
             imagePullPolicy: Always
             lifecycle:
               preStop:
@@ -136,7 +137,7 @@ spec:
                 nvidia.com/gpu: 1
             env:
             - name: VLLM_PORT
-              value: "8001"
+              value: "8003"
             - name: LD_LIBRARY_PATH
               value: "/home/ray/anaconda3/lib/$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
@@ -147,9 +148,9 @@ spec:
             - name: MODEL_ID
               value: "mistralai/Mistral-7B-Instruct-v0.2"
             - name: GPU_MEMORY_UTILIZATION
-              value: "0.9"
+              value: "0.8"
             - name: MAX_MODEL_LEN
-              value: "8192"
+              value: "4096"
           volumes:
           - name: ray-logs
             emptyDir: {}

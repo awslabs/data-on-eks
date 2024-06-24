@@ -3,8 +3,8 @@ import os
 
 
 # Constants for model endpoint and service name
-model_endpoint = os.getenv("MODEL_ENDPOINT", "/vllm")
-service_name = os.getenv("SERVICE_NAME", "http://localhost:8001")
+model_endpoint = os.getenv("MODEL_ENDPOINT", "/generate")
+service_name = os.getenv("SERVICE_NAME", "http://localhost:8000/vllm")
 
 # Function to generate text
 def generate_text(message, history):
