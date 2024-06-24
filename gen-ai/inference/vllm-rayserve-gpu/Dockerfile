@@ -1,4 +1,4 @@
-# https://hub.docker.com/layers/rayproject/ray/2.11.0-py310/images/sha256-de798e487b76a8f2412c718c43c5f342b3eb05e0705a71325102904cd27c3613?context=explore
+# Use the base image
 FROM rayproject/ray:2.24.0-py310-cu118
 
 # Maintainer label
@@ -7,15 +7,14 @@ LABEL maintainer="DoEKS"
 # Set environment variables to non-interactive (this prevents some prompts)
 ENV DEBIAN_FRONTEND=non-interactive
 
-# Install vLLM and other dependencies
-RUN pip install vllm==0.4.3
+# Set LD_LIBRARY_PATH to include the directory with libpython3.10.so.1.0
+ENV LD_LIBRARY_PATH=/home/ray/anaconda3/lib:$LD_LIBRARY_PATH
 
-RUN pip install huggingface_hub
-
+# Set the working directory
 WORKDIR /app
+
+# Install vLLM and other dependencies in a single RUN command to reduce layers
+RUN pip install vllm==0.4.3 huggingface_hub==0.23.4
 
 # Copy the serving script into the container
 COPY vllm_serve.py /app/vllm_serve.py
-
-# Set LD_LIBRARY_PATH to include the directory with libpython3.10.so.1.0
-ENV LD_LIBRARY_PATH /home/ray/anaconda3/lib:$LD_LIBRARY_PATH

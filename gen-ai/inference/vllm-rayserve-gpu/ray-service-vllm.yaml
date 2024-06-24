@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: rayserve-vllm
+
 ---
 apiVersion: v1
 kind: Secret
@@ -9,7 +10,13 @@ metadata:
   name: hf-token
   namespace: rayserve-vllm
 data:
-  hf-token: $HUGGING_FACE_HUB_TOKEN
+  hf-token: aGZfRmNkZEhRa0xEeWN5dE5wYUxPY3pTTlJvR1dhZ3BUeUVYZw==
+
+# Mistral-7B-Instruct-v0.2 can theoretically handle sequences up to 32768 tokens long. 
+# However, practical limitations such as GPU memory might necessitate setting a lower MAX_MODEL_LEN when initializing the vLLM engine. 
+# For instance, limiting the model to handle sequences up to 8192 tokens can help avoid memory constraints and improve performance. 
+# This means users of your API can work with sequences up to 8192 tokens (combined input and output), even though the model itself could theoretically handle longer sequences.
+
 ---
 apiVersion: ray.io/v1
 kind: RayService
@@ -17,8 +24,8 @@ metadata:
   name: vllm
   namespace: rayserve-vllm
 spec:
-  serviceUnhealthySecondThreshold: 1800 # Config for the health check threshold for service. Default value is 60.
-  deploymentUnhealthySecondThreshold: 1800 # Config for the health check threshold for deployments. Default value is 60.
+  serviceUnhealthySecondThreshold: 1800
+  deploymentUnhealthySecondThreshold: 1800
   serveConfigV2: |
     applications:
       - name: mistral
@@ -26,6 +33,9 @@ spec:
         runtime_env:
           env_vars:
             LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+            MODEL_ID: "mistralai/Mistral-7B-Instruct-v0.2"
+            GPU_MEMORY_UTILIZATION: "0.9"
+            MAX_MODEL_LEN: "8192"
         deployments:
           - name: mistral-deployment
             autoscaling_config:
@@ -39,12 +49,10 @@ spec:
             graceful_shutdown_timeout_s: 5
             max_concurrent_queries: 100
             ray_actor_options:
-              num_cpus: 3
+              num_cpus: 1
               num_gpus: 1
   rayClusterConfig:
-    rayVersion: '2.24.0' # Should match the Ray version in the image of the containers
-    ######################headGroupSpecs#################################
-    # Ray head pod template.
+    rayVersion: '2.24.0'
     headGroupSpec:
       headService:
         metadata:
@@ -52,14 +60,13 @@ spec:
           namespace: rayserve-vllm
       rayStartParams:
         dashboard-host: '0.0.0.0'
-        num-cpus: "0"
-      # Pod template
+        num-cpus: '0'
       template:
         spec:
           containers:
           - name: ray-head
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v1
-            imagePullPolicy: Always # Pull the latest image each time
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v2
+            imagePullPolicy: Always
             lifecycle:
               preStop:
                 exec:
@@ -71,21 +78,21 @@ spec:
               name: dashboard
             - containerPort: 10001
               name: client
-            - containerPort: 8000
+            - containerPort: 8001
               name: serve
             volumeMounts:
             - mountPath: /tmp/ray
               name: ray-logs
             resources:
               limits:
-                cpu: 16
+                cpu: 2
                 memory: "32G"
               requests:
-                cpu: 16
+                cpu: 2
                 memory: "32G"
             env:
             - name: VLLM_PORT
-              value: "8000"
+              value: "8001"
             - name: LD_LIBRARY_PATH
               value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
@@ -93,50 +100,63 @@ spec:
                 secretKeyRef:
                   name: hf-token
                   key: hf-token
-          nodeSelector:
-            NodeGroupType: x86-cpu-karpenter
-            type: karpenter
+            - name: MODEL_ID
+              value: "mistralai/Mistral-7B-Instruct-v0.2"
+            - name: GPU_MEMORY_UTILIZATION
+              value: "0.9"
+            - name: MAX_MODEL_LEN
+              value: "8192"
           volumes:
           - name: ray-logs
             emptyDir: {}
     workerGroupSpecs:
-    # The pod replicas in this group typed worker
     - replicas: 1
       minReplicas: 1
       maxReplicas: 4
       groupName: gpu-group
       rayStartParams: {}
-      # Pod template
       template:
         spec:
           containers:
           - name: ray-worker
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v1
-            imagePullPolicy: Always # Pull the latest image each time
+            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v2
+            imagePullPolicy: Always
             lifecycle:
               preStop:
                 exec:
                   command: ["/bin/sh", "-c", "ray stop"]
             resources:
               limits:
-                cpu: 16
+                cpu: 12
                 memory: "32G"
                 nvidia.com/gpu: 1
               requests:
-                cpu: 16
+                cpu: 12
                 memory: "32G"
                 nvidia.com/gpu: 1
             env:
             - name: VLLM_PORT
-              value: "8000"
+              value: "8001"
             - name: LD_LIBRARY_PATH
-              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+              value: "/home/ray/anaconda3/lib/$LD_LIBRARY_PATH"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: hf-token
+            - name: MODEL_ID
+              value: "mistralai/Mistral-7B-Instruct-v0.2"
+            - name: GPU_MEMORY_UTILIZATION
+              value: "0.9"
+            - name: MAX_MODEL_LEN
+              value: "8192"
+          volumes:
+          - name: ray-logs
+            emptyDir: {}
           nodeSelector:
             NodeGroupType: g5-gpu-karpenter
             type: karpenter
-          # Please add the following taints to the GPU node.
           tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
             effect: "NoSchedule"
-
