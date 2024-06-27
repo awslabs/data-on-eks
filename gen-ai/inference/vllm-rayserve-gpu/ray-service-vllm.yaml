@@ -2,7 +2,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: rayserve-vllm
-
 ---
 apiVersion: v1
 kind: Secret
@@ -11,12 +10,6 @@ metadata:
   namespace: rayserve-vllm
 data:
   hf-token: $HUGGING_FACE_HUB_TOKEN
-
-# Mistral-7B-Instruct-v0.2 can theoretically handle sequences up to 32768 tokens long. 
-# However, practical limitations such as GPU memory might necessitate setting a lower MAX_MODEL_LEN when initializing the vLLM engine. 
-# For instance, limiting the model to handle sequences up to 8192 tokens can help avoid memory constraints and improve performance. 
-# This means users of your API can work with sequences up to 8192 tokens (combined input and output), even though the model itself could theoretically handle longer sequences.
-
 ---
 apiVersion: ray.io/v1
 kind: RayService
@@ -24,19 +17,18 @@ metadata:
   name: vllm
   namespace: rayserve-vllm
 spec:
-  serviceUnhealthySecondThreshold: 1800
-  deploymentUnhealthySecondThreshold: 1800
+  serviceUnhealthySecondThreshold: 1800 # Config for the health check threshold for service. Default value is 60.
+  deploymentUnhealthySecondThreshold: 1800 # Config for the health check threshold for deployments. Default value is 60.
   serveConfigV2: |
     applications:
       - name: mistral
         import_path: "vllm_serve:deployment"
-        route_prefix: "/vllm"
         runtime_env:
           env_vars:
             LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             MODEL_ID: "mistralai/Mistral-7B-Instruct-v0.2"
-            GPU_MEMORY_UTILIZATION: "0.8"
-            MAX_MODEL_LEN: "4096"
+            GPU_MEMORY_UTILIZATION: "0.9"
+            MAX_MODEL_LEN: "8192"
         deployments:
           - name: mistral-deployment
             autoscaling_config:
@@ -53,7 +45,9 @@ spec:
               num_cpus: 1
               num_gpus: 1
   rayClusterConfig:
-    rayVersion: '2.24.0'
+    rayVersion: '2.24.0' # Should match the Ray version in the image of the containers
+    ######################headGroupSpecs#################################
+    # Ray head pod template.
     headGroupSpec:
       headService:
         metadata:
@@ -61,13 +55,14 @@ spec:
           namespace: rayserve-vllm
       rayStartParams:
         dashboard-host: '0.0.0.0'
-        num-cpus: '0'
+        num-cpus: "0"
+      # Pod template
       template:
         spec:
           containers:
           - name: ray-head
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v3
-            imagePullPolicy: Always
+            image: public.ecr.aws/data-on-eks/ray2.24.0-py310-vllm-gpu:latest
+            imagePullPolicy: IfNotPresent
             lifecycle:
               preStop:
                 exec:
@@ -86,14 +81,15 @@ spec:
               name: ray-logs
             resources:
               limits:
-                cpu: 2
-                memory: "32G"
+                cpu: 1
+                memory: "6G"
               requests:
-                cpu: 2
-                memory: "32G"
+                cpu: 1
+                memory: "6G"
             env:
+            # Ensure to set VLLM_PORT to avoid conflict with Ray serve port 8000
             - name: VLLM_PORT
-              value: "8003"
+              value: "8004"
             - name: LD_LIBRARY_PATH
               value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
@@ -101,62 +97,54 @@ spec:
                 secretKeyRef:
                   name: hf-token
                   key: hf-token
-            - name: MODEL_ID
-              value: "mistralai/Mistral-7B-Instruct-v0.2"
-            - name: GPU_MEMORY_UTILIZATION
-              value: "0.8"
-            - name: MAX_MODEL_LEN
-              value: "4096"
+          nodeSelector:
+            NodeGroupType: x86-cpu-karpenter
+            type: karpenter
           volumes:
           - name: ray-logs
             emptyDir: {}
     workerGroupSpecs:
+    # The pod replicas in this group typed worker
     - replicas: 1
       minReplicas: 1
       maxReplicas: 4
       groupName: gpu-group
       rayStartParams: {}
+      # Pod template
       template:
         spec:
           containers:
           - name: ray-worker
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.24.0-py310-vllm-gpu:v3
-            imagePullPolicy: Always
+            image: public.ecr.aws/data-on-eks/ray2.24.0-py310-vllm-gpu:latest
+            imagePullPolicy: IfNotPresent
             lifecycle:
               preStop:
                 exec:
                   command: ["/bin/sh", "-c", "ray stop"]
             resources:
               limits:
-                cpu: 12
+                cpu: 16
                 memory: "32G"
                 nvidia.com/gpu: 1
               requests:
-                cpu: 12
+                cpu: 16
                 memory: "32G"
                 nvidia.com/gpu: 1
             env:
+            # Ensure to set VLLM_PORT to avoid conflict with Ray serve port 8000
             - name: VLLM_PORT
-              value: "8003"
+              value: "8004"
             - name: LD_LIBRARY_PATH
-              value: "/home/ray/anaconda3/lib/$LD_LIBRARY_PATH"
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: hf-token
-            - name: MODEL_ID
-              value: "mistralai/Mistral-7B-Instruct-v0.2"
-            - name: GPU_MEMORY_UTILIZATION
-              value: "0.8"
-            - name: MAX_MODEL_LEN
-              value: "4096"
-          volumes:
-          - name: ray-logs
-            emptyDir: {}
           nodeSelector:
             NodeGroupType: g5-gpu-karpenter
             type: karpenter
+          # Please add the following taints to the GPU node.
           tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
