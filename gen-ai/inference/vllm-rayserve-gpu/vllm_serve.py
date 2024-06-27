@@ -27,7 +27,7 @@ class VLLMDeployment:
         if not hf_token:
             raise ValueError("HUGGING_FACE_HUB_TOKEN environment variable is not set")
         login(token=hf_token)
-        logger.info(f"login to HF sucess")
+        logger.info(f"login to HF success")
 
 
         args = AsyncEngineArgs(
