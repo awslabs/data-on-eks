@@ -124,9 +124,9 @@ module "eks" {
       )
 
       ami_type     = "AL2_x86_64_GPU"
-      min_size     = 1
+      min_size     = 0
       max_size     = 1
-      desired_size = 1
+      desired_size = 0
 
       instance_types = ["g5.12xlarge"]
 

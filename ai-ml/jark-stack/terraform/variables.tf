@@ -13,7 +13,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.29"
+  default     = "1.30"
   type        = string
 }
 
