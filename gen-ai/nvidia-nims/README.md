@@ -4,10 +4,10 @@ This guide provides instructions for deploying NVIDIA NIM (NVIDIA Inference Micr
 
 ## Prerequisites
 
-- An active AWS account with appropriate permissions
-- AWS CLI installed and configured
-- kubectl installed and configured to work with your EKS cluster
-- Helm installed
+- An active AWS account with admin equivalent permissions
+- [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+- [kubectl](https://Kubernetes.io/docs/tasks/tools/)
+- [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) installed
 - NVIDIA NGC account and API key
 
 ## Setup
@@ -25,6 +25,7 @@ export TF_VAR_ngc_api_key=<replace-with-your-NGC-API-KEY>
 Run the installation script:
 
 ```bash
+cd ai-ml/trainimum-inferentia
 ./install.sh
 ```
 
@@ -45,7 +46,7 @@ You should see output similar to the following:
 
 Once all pods in `nim` namespace is ready with `1/1` status, use below command to verify it's ready to serve the traffic.
 
-```
+```bash
 export INGRESS_URL=$(kubectl get ingress -n nim -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
 
 curl -X 'POST' \
@@ -71,10 +72,9 @@ kubectl scale sts nim-llm -n --replicas=2
 
 To remove all resources created by this deployment, run:
 
-```
+```bash
 ./cleanup.sh
 ```
-
 
 ## Additional Resources
 
