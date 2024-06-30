@@ -74,7 +74,7 @@ export TF_VAR_ngc_api_key=<replace-with-your-NGC-API-KEY>
 
 **2. Installation**
 
-Important Note: Ensure that you update the region in the variables.tf file before deploying the blueprint. Additionally, confirm that your local region setting matches the specified region to prevent any discrepancies. For example, set your export AWS_DEFAULT_REGION="<REGION>" to the desired region:
+Important Note: Ensure that you update the region in the variables.tf file before deploying the blueprint. Additionally, confirm that your local region setting matches the specified region to prevent any discrepancies. For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
 
 Run the installation script:
 
@@ -97,7 +97,7 @@ You should see output similar to the following:
 ![alt text](../../../../gen-ai/nvidia-nims/images/all-pod-svc.png)
 
 :::info
-The `Llama3` model deployed is specified in `gen-ai/nvidia-nims/helm-values/nim-llm.yaml` with below config. Please visit https://build.nvidia.com/explore/discover to explore more. You may simply update this image configuration if you want to change to deploy another model.
+The `Llama3` model deployed is specified in `gen-ai/nvidia-nims/helm-values/nim-llm.yaml` with below config. Please visit <https://build.nvidia.com/explore/discover> to explore more. You may simply update this image configuration if you want to change to deploy another model.
 :::
 
 ```yaml
