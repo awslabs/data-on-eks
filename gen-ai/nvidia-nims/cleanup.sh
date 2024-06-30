@@ -3,7 +3,7 @@
 read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
-echo "Destroying RayService..."
+echo "Destroying Ingress and LoadBalancer type service..."
 
 # Delete the Ingress/SVC before removing the addons
 TMPFILE=$(mktemp)
@@ -12,7 +12,8 @@ terraform output -raw configure_kubectl > "$TMPFILE"
 if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
   echo "No outputs found, skipping kubectl delete"
   source "$TMPFILE"
-  kubectl delete -f src/service/ray-service.yaml
+  kubectl delete ingress -n nim --all
+  kubectl delete svc -n ingress-nginx --all
 fi
 
 
