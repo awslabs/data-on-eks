@@ -97,7 +97,7 @@ You should see output similar to the following:
 ![alt text](../../../../gen-ai/nvidia-nims/images/all-pod-svc.png)
 
 :::info
-The `Llama3` model deployed is specified in `gen-ai/nvidia-nims/helm-values/nim-llm.yaml` with below config. Please visit <https://build.nvidia.com/explore/discover> to explore more. You may simply update this image configuration if you want to change to deploy another model.
+The `Llama3` model deployed is specified in `gen-ai/nvidia-nims/helm-values/nim-llm.yaml` with below config. Please visit [this page](https://build.nvidia.com/explore/discover) to explore more. You may simply update this image configuration if you want to change to deploy another model.
 :::
 
 ```yaml
@@ -122,6 +122,12 @@ curl -X 'POST' \
 "prompt": "Once upon a time",
 "max_tokens": 64
 }'
+```
+
+you will see similar output like the following
+
+```json
+{"id":"cmpl-63a0b66aeda1440c8b6ca1ce3583b173","object":"text_completion","created":1719742336,"model":"meta/llama3-8b-instruct","choices":[{"index":0,"text":", there was a young man named Jack who lived in a small village at the foot of a vast and ancient forest. Jack was a curious and adventurous soul, always eager to explore the world beyond his village. One day, he decided to venture into the forest, hoping to discover its secrets.\nAs he wandered deeper into","logprobs":null,"finish_reason":"length","stop_reason":null}],"usage":{"prompt_tokens":5,"total_tokens":69,"completion_tokens":64}}
 ```
 
 ## Cleanup
