@@ -1,0 +1,24 @@
+image:
+  repository: nvcr.io/nim/meta/llama3-8b-instruct
+  tag: latest
+model:
+  ngcAPIKey: ${ngc_api_key}
+resources:
+  limits:
+    nvidia.com/gpu: 1
+  requests:
+    nvidia.com/gpu: 1
+statefulSet:
+  enabled: true
+persistence:
+  enabled: true
+  existingClaim: ${pvc_name}
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+  - paths:
+    - path: /
+      pathType: ImplementationSpecific
+      serviceType: openai
