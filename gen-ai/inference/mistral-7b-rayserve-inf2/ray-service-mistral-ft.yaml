@@ -19,6 +19,8 @@ kind: RayService
 metadata:
   name: mistral
   namespace: mistral
+  annotations:
+    ray.io/ft-enabled: "true" # enables Global Control Service(GCS) fault tolerance
 spec:
   serviceUnhealthySecondThreshold: 900
   deploymentUnhealthySecondThreshold: 300
@@ -67,14 +69,14 @@ spec:
           containers:
           - name: head
             image: public.ecr.aws/data-on-eks/ray2.22.0-py310-mistral7b-neuron:latest
-            imagePullPolicy: Always # Ensure the image is always pulled when updated
+            imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
                 exec:
                   command: ["/bin/sh", "-c", "ray stop"]
             ports:
             - containerPort: 6379
-              name: gcs
+              name: redis
             - containerPort: 8265
               name: dashboard
             - containerPort: 10001
@@ -92,6 +94,8 @@ spec:
                 cpu: "2"
                 memory: "20G"
             env:
+            - name: RAY_REDIS_ADDRESS
+              value: $EXT_REDIS_ENDPOINT:6379
             - name: LD_LIBRARY_PATH
               value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
             - name: HUGGING_FACE_HUB_TOKEN

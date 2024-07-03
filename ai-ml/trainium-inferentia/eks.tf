@@ -22,7 +22,6 @@ module "eks" {
     "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"],
     var.kms_key_admin_roles,
     [data.aws_iam_session_context.current.issuer_arn]
-
   ))
 
   manage_aws_auth_configmap = true
@@ -134,8 +133,7 @@ module "eks" {
       }
 
       tags = merge(local.tags, {
-        Name                     = "core-node-grp",
-        "karpenter.sh/discovery" = local.name
+        Name = "core-node-grp"
       })
     }
 
@@ -278,8 +276,7 @@ module "eks" {
       ]
 
       tags = merge(local.tags, {
-        Name                     = "trn1-32xl-ng1",
-        "karpenter.sh/discovery" = local.name
+        Name = "trn1-32xl-ng1",
       })
     }
     #--------------------------------------------------
@@ -487,8 +484,7 @@ module "eks" {
       ]
 
       tags = merge(local.tags, {
-        Name                     = "trn1n-32xl-ng1",
-        "karpenter.sh/discovery" = local.name
+        Name = "trn1n-32xl-ng1",
       })
     }
 
@@ -594,8 +590,7 @@ module "eks" {
       ]
 
       tags = merge(local.tags, {
-        Name                     = "inf2-48xl-ng",
-        "karpenter.sh/discovery" = local.name
+        Name = "inf2-48xl-ng",
       })
     }
   }
