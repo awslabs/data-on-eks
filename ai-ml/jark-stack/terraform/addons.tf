@@ -253,7 +253,7 @@ module "data_addons" {
             values: ["g5"]
           - key: "karpenter.k8s.aws/instance-size"
             operator: In
-            values: [ "2xlarge", "4xlarge", "8xlarge"]
+            values: [ "2xlarge", "4xlarge", "8xlarge" ]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
@@ -264,7 +264,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 180s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT
@@ -305,7 +305,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 180s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT
