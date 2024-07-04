@@ -79,13 +79,21 @@ Important Note: Ensure that you update the region in the variables.tf file befor
 Run the installation script:
 
 ```bash
-cd gen-ai/nvidia-nims
+cd data-on-eks/ai-ml/nvidia-triton-server
+export TF_VAR_enable_nvidia_triton_server=false
 ./install.sh
 ```
 
 This process will take approximately 20 minutes to complete.
 
 **3. Verify the Installation**
+
+Once the installation finishes, verify the Amazon EKS Cluster
+
+```bash
+# Creates k8s config file to authenticate with EKS
+aws eks --region us-west-2 update-kubeconfig --name nvidia-triton-server
+```
 
 Check the status of your pods deployed
 
@@ -94,10 +102,54 @@ kubectl get po -A
 ```
 
 You should see output similar to the following:
-![alt text](../../../../gen-ai/nvidia-nims/images/all-pod-svc.png)
+<details>
+<summary>Click to expand the deployment details</summary>
+
+```text
+NAMESPACE               NAME                                                              READY   STATUS    RESTARTS      AGE
+ingress-nginx           ingress-nginx-controller-55474d95c5-994fc                         1/1     Running   0             29h
+karpenter               karpenter-57f7f6bc4f-c6cts                                        1/1     Running   0             29h
+karpenter               karpenter-57f7f6bc4f-cfwwt                                        1/1     Running   0             29h
+kube-prometheus-stack   kube-prometheus-stack-grafana-558586c645-hv7hm                    3/3     Running   0             29h
+kube-prometheus-stack   kube-prometheus-stack-kube-state-metrics-6669bff85f-fsmfz         1/1     Running   0             29h
+kube-prometheus-stack   kube-prometheus-stack-operator-67b968589d-k6ndp                   1/1     Running   0             29h
+kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-58pfp              1/1     Running   0             19h
+kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-95xzb              1/1     Running   0             29h
+kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-wtpgc              1/1     Running   0             29h
+kube-prometheus-stack   prometheus-adapter-6f4ff878bc-64ntq                               1/1     Running   0             24h
+kube-prometheus-stack   prometheus-kube-prometheus-stack-prometheus-0                     2/2     Running   0             29h
+kube-system             aws-load-balancer-controller-55cb4579f6-9bp8d                     1/1     Running   0             29h
+kube-system             aws-load-balancer-controller-55cb4579f6-n2trc                     1/1     Running   0             29h
+kube-system             aws-node-rlxwv                                                    2/2     Running   0             29h
+kube-system             aws-node-tz56x                                                    2/2     Running   0             19h
+kube-system             aws-node-v29s9                                                    2/2     Running   0             29h
+kube-system             coredns-848555ff5-kkngd                                           1/1     Running   0             29h
+kube-system             coredns-848555ff5-n6dnv                                           1/1     Running   0             29h
+kube-system             ebs-csi-controller-657544c77c-hl4z5                               6/6     Running   0             29h
+kube-system             ebs-csi-controller-657544c77c-sncv6                               6/6     Running   0             29h
+kube-system             ebs-csi-node-9xjnt                                                3/3     Running   0             19h
+kube-system             ebs-csi-node-fhphc                                                3/3     Running   0             29h
+kube-system             ebs-csi-node-hjg9v                                                3/3     Running   0             29h
+kube-system             efs-csi-controller-77c44b5fc7-pqwv9                               3/3     Running   0             25h
+kube-system             efs-csi-controller-77c44b5fc7-vxpng                               3/3     Running   0             25h
+kube-system             efs-csi-node-5k7k8                                                3/3     Running   0             25h
+kube-system             efs-csi-node-l4n5t                                                3/3     Running   0             25h
+kube-system             efs-csi-node-wxl97                                                3/3     Running   0             19h
+kube-system             kube-proxy-5qg9q                                                  1/1     Running   0             29h
+kube-system             kube-proxy-7fzdh                                                  1/1     Running   0             29h
+kube-system             kube-proxy-vm56n                                                  1/1     Running   0             19h
+nim                     nim-llm-0                                                         1/1     Running   0             15m
+nvidia-device-plugin    nvidia-device-plugin-gpu-feature-discovery-64c9v                  1/1     Running   0             19h
+nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-master-568b497ddvx9   1/1     Running   0             29h
+nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-worker-28wvj          1/1     Running   1 (29h ago)   29h
+nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-worker-5nplt          1/1     Running   0             29h
+nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-worker-hztcq          1/1     Running   0             19h
+nvidia-device-plugin    nvidia-device-plugin-vn5dn                                        1/1     Running   0             19h
+```
+</details>
 
 :::info
-The `Llama3` model deployed is specified in `gen-ai/nvidia-nims/helm-values/nim-llm.yaml` with below config. Please visit [this page](https://build.nvidia.com/explore/discover) to explore more. You may simply update this image configuration if you want to change to deploy another model.
+The `Llama3` model deployed is specified in `ai-ml/nvidia-triton-server/helm-values/nim-llm.yaml` with below config. Please visit [this page](https://build.nvidia.com/explore/discover) to explore more. You may simply update this image configuration if you want to change to deploy another model.
 :::
 
 ```yaml
@@ -129,6 +181,86 @@ you will see similar output like the following
 ```json
 {"id":"cmpl-63a0b66aeda1440c8b6ca1ce3583b173","object":"text_completion","created":1719742336,"model":"meta/llama3-8b-instruct","choices":[{"index":0,"text":", there was a young man named Jack who lived in a small village at the foot of a vast and ancient forest. Jack was a curious and adventurous soul, always eager to explore the world beyond his village. One day, he decided to venture into the forest, hoping to discover its secrets.\nAs he wandered deeper into","logprobs":null,"finish_reason":"length","stop_reason":null}],"usage":{"prompt_tokens":5,"total_tokens":69,"completion_tokens":64}}
 ```
+
+### Testing the Llama3 model deployed with NIM
+It's time to test the Llama3 just deployed. We will run the following commands with the same prompts to verify the generated outputs.
+
+First, expose the model serving service with port-forward using kubectl
+
+```bash
+kubectl port-forward -n nim svc/nim-llm 8000
+```
+
+Next, open another Terminal window, run the client using the existing prompts:
+
+```bash
+cd gen-ai/inference/nvidia-nim/nim-client
+python3 client.py --input-prompts prompts.txt --results-file results.txt
+```
+
+You will see an output something like below:
+
+```text
+Loading inputs from `prompts.txt`...
+Model meta/llama3-8b-instruct - Request 14: 4655.84 ms
+Model meta/llama3-8b-instruct - Request 10: 6463.45 ms
+Model meta/llama3-8b-instruct - Request 3: 7787.67 ms
+Model meta/llama3-8b-instruct - Request 15: 7794.37 ms
+Model meta/llama3-8b-instruct - Request 1: 8320.75 ms
+Model meta/llama3-8b-instruct - Request 12: 8925.80 ms
+Model meta/llama3-8b-instruct - Request 5: 9079.14 ms
+Model meta/llama3-8b-instruct - Request 16: 9501.56 ms
+Model meta/llama3-8b-instruct - Request 18: 9790.65 ms
+Model meta/llama3-8b-instruct - Request 0: 10248.90 ms
+Model meta/llama3-8b-instruct - Request 6: 10243.54 ms
+Model meta/llama3-8b-instruct - Request 4: 10596.04 ms
+Model meta/llama3-8b-instruct - Request 11: 10798.81 ms
+Model meta/llama3-8b-instruct - Request 17: 10793.39 ms
+Model meta/llama3-8b-instruct - Request 8: 10977.41 ms
+Model meta/llama3-8b-instruct - Request 2: 12085.08 ms
+Model meta/llama3-8b-instruct - Request 19: 12645.12 ms
+Model meta/llama3-8b-instruct - Request 9: 13346.84 ms
+Model meta/llama3-8b-instruct - Request 13: 13581.21 ms
+Model meta/llama3-8b-instruct - Request 7: 14917.04 ms
+Storing results into `results.txt`...
+Total time for all requests: 202.55 seconds (202552.60 milliseconds)
+PASS: NVIDIA NIM example
+```
+
+Output for `results.txt` should look like the follwoing
+
+<details>
+<summary>Click to expand the partial output</summary>
+```text
+The key differences between traditional machine learning models and very large language models (vLLM) are:
+
+1. **Scale**: vLLMs are massive, with billions of parameters, whereas traditional models typically have millions.
+2. **Training data**: vLLMs are trained on vast amounts of text data, often sourced from the internet, whereas traditional models are trained on smaller, curated datasets.
+3. **Architecture**: vLLMs often use transformer architectures, which are designed for sequential data like text, whereas traditional models may use feedforward networks or recurrent neural networks.
+4. **Training objectives**: vLLMs are often trained using masked language modeling or next sentence prediction tasks, whereas traditional models may use classification, regression, or clustering objectives.
+5. **Evaluation metrics**: vLLMs are typically evaluated using metrics like perplexity, accuracy, or fluency, whereas traditional models may use metrics like accuracy, precision, or recall.
+6. **Interpretability**: vLLMs are often less interpretable due to their massive size and complex architecture, whereas traditional models may be more interpretable due to their smaller size and simpler architecture.
+
+These differences enable vLLMs to excel in tasks like language translation, text generation, and conversational AI, whereas traditional models are better suited for tasks like image classification or regression.
+
+=========
+
+TensorRT (Triton Runtime) optimizes LLM (Large Language Model) inference on NVIDIA hardware by:
+
+1. **Model Pruning**: Removing unnecessary weights and connections to reduce model size and computational requirements.
+2. **Quantization**: Converting floating-point models to lower-precision integer formats (e.g., INT8) to reduce memory bandwidth and improve performance.
+3. **Kernel Fusion**: Combining multiple kernel launches into a single launch to reduce overhead and improve parallelism.
+4. **Optimized Tensor Cores**: Utilizing NVIDIA's Tensor Cores for matrix multiplication, which provides significant performance boosts.
+5. **Batching**: Processing multiple input batches concurrently to improve throughput.
+6. **Mixed Precision**: Using a combination of floating-point and integer precision to balance accuracy and performance.
+7. **Graph Optimization**: Reordering and reorganizing the computation graph to minimize memory access and optimize data transfer.
+
+By applying these optimizations, TensorRT can significantly accelerate LLM inference on NVIDIA hardware, achieving faster inference times and improved performance.
+
+=========
+```
+</details>
+
 
 ## Cleanup
 

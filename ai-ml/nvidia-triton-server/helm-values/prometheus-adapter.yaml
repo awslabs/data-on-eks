@@ -1,0 +1,14 @@
+# ref: https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-adapter/values.yaml
+prometheus:
+  url: http://kube-prometheus-stack-prometheus.kube-prometheus-stack
+  port: 9090
+rules:
+  default: false
+  custom:
+  - seriesQuery: '{__name__=~"num_requests_running"}'
+    resources:
+      template: <<.Resource>>
+    name:
+      matches: "num_requests_running"
+      as: ""
+    metricsQuery: sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)
