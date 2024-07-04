@@ -60,13 +60,11 @@ resource "kubernetes_namespace" "nim" {
 resource "kubernetes_persistent_volume_claim_v1" "efs_pvc" {
   count = var.enable_nvidia_nim ? 1 : 0
   metadata {
-    # name      = "nim-llm-pvc"
     name      = kubernetes_namespace.nim[count.index].metadata[0].name
     namespace = "nim"
   }
   spec {
-    access_modes = ["ReadWriteMany"]
-    # storage_class_name = kubernetes_storage_class_v1.efs.id
+    access_modes       = ["ReadWriteMany"]
     storage_class_name = kubernetes_storage_class_v1.efs[count.index].metadata[0].name
     resources {
       requests = {
@@ -76,6 +74,9 @@ resource "kubernetes_persistent_volume_claim_v1" "efs_pvc" {
   }
 }
 
+#---------------------------------------------------------------
+# NIM LLM Helm Chart
+#---------------------------------------------------------------
 
 resource "null_resource" "download_nim_deploy" {
   count = var.enable_nvidia_nim ? 1 : 0
@@ -114,8 +115,7 @@ resource "helm_release" "nim_llm" {
       "${path.module}/helm-values/nim-llm.yaml",
       {
         ngc_api_key = var.ngc_api_key
-        # pvc_name    = kubernetes_persistent_volume_claim_v1.efs_pvc.metadata[0].name
-        pvc_name = kubernetes_persistent_volume_claim_v1.efs_pvc[count.index].metadata[0].name
+        pvc_name    = kubernetes_persistent_volume_claim_v1.efs_pvc[count.index].metadata[0].name
       }
     )
   ]

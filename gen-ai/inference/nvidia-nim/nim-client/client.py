@@ -45,6 +45,7 @@ async def process_prompt(client, prompt, prompt_id, sampling_parameters, results
 
 
 async def main(FLAGS):
+    start = time.time()
     sampling_parameters = {
         "temperature": "0.01",
         "top_p": "1.0",
@@ -86,9 +87,14 @@ async def main(FLAGS):
 
     total_time_ms = total_time_sec * 1000
     print(
-        f"Total time for all requests: {total_time_sec:.2f} seconds ({total_time_ms:.2f} milliseconds)"
+        f"Accumulated time for all requests: {total_time_sec:.2f} seconds ({total_time_ms:.2f} milliseconds)"
     )
     print("PASS: NVIDIA NIM example")
+    end = time.time()
+    actual_duration = end - start
+    print(
+        f"Actual execution time used with concurrency {len(tasks)} is: {actual_duration:.2f} seconds ..."
+    )
 
 
 if __name__ == "__main__":
