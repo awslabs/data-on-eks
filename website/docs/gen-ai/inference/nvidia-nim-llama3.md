@@ -227,7 +227,7 @@ Total time for all requests: 202.55 seconds (202552.60 milliseconds)
 PASS: NVIDIA NIM example
 ```
 
-Output for `results.txt` should look like the follwoing
+Output for `results.txt` should look like the following
 
 <details>
 <summary>Click to expand the partial output</summary>
