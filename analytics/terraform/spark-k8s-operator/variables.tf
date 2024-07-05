@@ -85,12 +85,6 @@ variable "aws_auth_roles" {
     )
   )
   default = []
-  # example structure
-  #  {
-  #     rolearn  = "arn:aws:iam::12345678901:role/role1"
-  #     username = "role1"
-  #     groups   = ["system:masters"]
-  #   }
 }
 
 variable "kms_key_admin_roles" {
