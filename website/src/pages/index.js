@@ -4,6 +4,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
+import VideoGrid from '@site/src/components/VideoGrid/VideoGrid';
 import styles from './index.module.css';
 
 function HomepageHeader() {
@@ -15,7 +16,7 @@ function HomepageHeader() {
         <img
           src="img/light-logo.png"
           alt="Header image"
-          className={styles.logoImage} // Add this line
+          className={styles.logoImage}
         />
         <p
           className='hero__subtitle'
@@ -39,6 +40,14 @@ function HomepageHeader() {
   );
 }
 
+function DataOnEKSHeader() {
+  return (
+    <div className={styles.dataOnEKSHeader}>
+      <h2>In the Spotlight 🎥</h2>
+    </div>
+  );
+}
+
 export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
@@ -47,7 +56,11 @@ export default function Home() {
       description="Description will go into a meta tag in <head />">
       <HomepageHeader />
       <main>
-        <HomepageFeatures />
+        <div className="container">
+          <HomepageFeatures />
+          <DataOnEKSHeader />
+          <VideoGrid />
+        </div>
       </main>
     </Layout>
   );
