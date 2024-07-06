@@ -168,7 +168,7 @@ kubectl port-forward svc/proxy-public 8080:80 -n jupyterhub
 
 Select server options: Upon sign-in, you’ll be presented with a variety of Notebook instance profiles to choose from. For this time-slicing feature demonstration, we’ll be using the **Data Science (GPU + Time-Slicing – G5)** profile. Go ahead and select this option and choose the Start button.
 
-![alt text](img/image-1.png)
+![alt text](img/notebook-server-list.png)
 
 The new node created by Karpenter with the `g5.2xlarge` instance type has been configured to leverage the timeslicing feature provided by the [NVIDIA device plugin](https://github.com/NVIDIA/k8s-device-plugin). This feature allows for efficient GPU utilization by dividing a single GPU into multiple allocatable units. In this case, we have defined `4` allocatable GPUs in the NVIDIA device plugin Helm chart config map. Below is the status of the node:
 
