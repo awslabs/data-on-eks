@@ -292,9 +292,7 @@ kubectl port-forward -n nim svc/nim-llm 8000
 curl localhost:8000/metrics # run this in another terminal
 ```
 
-We also provided a pre-configured Grafana dashboard.
-
-In the Grafana dashboard below, you can see several important metrics:
+We also provided a pre-configured Grafana dashboard. In the Grafana dashboard below, you can see several important metrics:
 
 - **Running Count**: This gauge shows number of requests currently running on GPU.
 - **Latency (p95 percentile)**: It includes metrics `Time to First Token`, `Time per Output Token` and `End to End` latency. These metrics illustrate the time taken to compute inference requests, helping identify any latency issues.

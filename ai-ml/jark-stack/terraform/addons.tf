@@ -116,7 +116,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.34.0"
+    chart_version       = "0.37.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -167,7 +167,7 @@ module "data_addons" {
   #---------------------------------------
   enable_kuberay_operator = true
   kuberay_operator_helm_config = {
-    version = "1.1.0"
+    version = "1.1.1"
     # Enabling Volcano as Batch scheduler for KubeRay Operator
     values = [
       <<-EOT
@@ -253,7 +253,7 @@ module "data_addons" {
             values: ["g5"]
           - key: "karpenter.k8s.aws/instance-size"
             operator: In
-            values: [ "2xlarge", "4xlarge", "8xlarge"]
+            values: [ "2xlarge", "4xlarge", "8xlarge" ]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
@@ -264,7 +264,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 180s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT
@@ -305,7 +305,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 180s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT

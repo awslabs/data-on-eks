@@ -1,13 +1,11 @@
 locals {
   triton_model = "triton-vllm"
-  # Update this with any vLLM supported model
-  default_model_name = "meta-llama/Llama-2-7b-chat-hf"
 }
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-module "triton_server_vllm_llama2" {
+module "triton_server_vllm" {
   count      = var.enable_nvidia_triton_server ? 1 : 0
   depends_on = [module.eks_blueprints_addons.kube_prometheus_stack]
   source     = "aws-ia/eks-data-addons/aws"
@@ -27,14 +25,12 @@ module "triton_server_vllm_llama2" {
       replicaCount: 1
       image:
         repository: nvcr.io/nvidia/tritonserver
-        tag: "24.02-vllm-python-py3"
+        tag: "24.06-vllm-python-py3"
       serviceAccount:
         create: false
         name: ${kubernetes_service_account_v1.triton[count.index].metadata[0].name}
       modelRepositoryPath: s3://${module.s3_bucket[count.index].s3_bucket_id}/model_repository
       environment:
-        - name: model_name
-          value: ${local.default_model_name}
         - name: "LD_PRELOAD"
           value: ""
         - name: "TRANSFORMERS_CACHE"
@@ -57,11 +53,11 @@ module "triton_server_vllm_llama2" {
         limits:
           cpu: 6
           memory: 25Gi
-          nvidia.com/gpu: 2
+          nvidia.com/gpu: 4
         requests:
           cpu: 6
           memory: 25Gi
-          nvidia.com/gpu: 2
+          nvidia.com/gpu: 4
       nodeSelector:
         NodeGroupType: g5-gpu-karpenter
         type: karpenter

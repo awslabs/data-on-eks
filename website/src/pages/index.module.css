@@ -1,4 +1,20 @@
-/* Update the heroBanner class */
+/* src/pages/index.module.css */
+
+:root {
+  --primary-text-color: #000000; /* Black for light theme */
+  --primary-bg-color: #ffffff; /* White for light theme */
+}
+
+[data-theme='dark'] {
+  --primary-text-color: #ffffff; /* White for dark theme */
+  --primary-bg-color: #000000; /* Black for dark theme */
+}
+
+.container {
+  max-width: 100%;
+  padding: 0 20px;
+}
+
 .heroBanner {
   padding: 4rem 0;
   text-align: center;
@@ -7,18 +23,15 @@
   height: 500px;
 }
 
-/* Add styles for logo image */
 .logoImage {
   width: 60%;
   transition: transform 0.3s ease-in-out;
 }
 
-/* Apply zoom effect on hovering the logo image */
 .logoImage:hover {
-  transform: scale(1.1); /* Increase size on hover */
+  transform: scale(1.1);
 }
 
-/* Rest of your existing CSS remains unchanged */
 @media screen and (max-width: 996px) {
   .heroBanner {
     padding: 4rem;
@@ -37,4 +50,24 @@
 
 .main {
   padding: 10px;
+}
+
+.dataOnEKSHeader {
+  text-align: center;
+  margin: 40px 0; /* Center the section horizontally */
+}
+
+.dataOnEKSHeader h2 {
+  display: inline-block;
+  font-size: 2rem;
+  margin: 0 10px; /* Add margin between the emojis and text */
+  color: var(--primary-text-color); /* Use custom property for text color */
+  background: linear-gradient(90deg, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.flashingText span {
+  font-size: 2rem;
+  vertical-align: middle; /* Align with the text */
 }
