@@ -28,7 +28,7 @@ singleuser:
     - display_name: Elyra (CPU)
       description: "Elyra Notebooks | Karpenter Autoscaling"
       kubespawner_override:
-        image: 975050295866.dkr.ecr.us-east-1.amazonaws.com/elyra:3.15.0 # Replace with image pushed to ECR
+        image: public.ecr.aws/data-on-eks/elyra-jupyter:3.15.0
         node_selector:
           NodePool: default
         cpu_guarantee: 2
