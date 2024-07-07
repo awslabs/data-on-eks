@@ -261,6 +261,77 @@ By applying these optimizations, TensorRT can significantly accelerate LLM infer
 ```
 </details>
 
+## Observability
+As part of this blueprint, we have also deployed the Kube Prometheus stack, which provides Prometheus server and Grafana deployments for monitoring and observability.
+
+First, let's verify the services deployed by the Kube Prometheus stack:
+
+```bash
+kubectl get svc -n kube-prometheus-stack
+```
+
+You should see output similar to this:
+
+```text
+kubectl get svc -n kube-prometheus-stack
+NAME                                             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+kube-prometheus-stack-grafana                    ClusterIP   172.20.225.77    <none>        80/TCP              10m
+kube-prometheus-stack-kube-state-metrics         ClusterIP   172.20.237.248   <none>        8080/TCP            10m
+kube-prometheus-stack-operator                   ClusterIP   172.20.118.163   <none>        443/TCP             10m
+kube-prometheus-stack-prometheus                 ClusterIP   172.20.132.214   <none>        9090/TCP,8080/TCP   10m
+kube-prometheus-stack-prometheus-node-exporter   ClusterIP   172.20.213.178   <none>        9100/TCP            10m
+prometheus-adapter                               ClusterIP   172.20.171.163   <none>        443/TCP             10m
+prometheus-operated                              ClusterIP   None             <none>        9090/TCP            10m
+```
+
+The NVIDIA NIM LLM service expose metrics via `/metrics` endpoint from `nim-llm` service at port `8000`. Verify it by running
+```bash
+kubectl get svc -n nim
+kubectl port-forward -n nim svc/nim-llm 8000
+
+curl localhost:8000/metrics # run this in another terminal
+```
+
+We also provided a pre-configured Grafana dashboard.
+
+In the Grafana dashboard below, you can see several important metrics:
+
+- **Running Count**: This gauge shows number of requests currently running on GPU.
+- **Latency (p95 percentile)**: It includes metrics `Time to First Token`, `Time per Output Token` and `End to End` latency. These metrics illustrate the time taken to compute inference requests, helping identify any latency issues.
+- **Token Count**: It includes metrics `Prompt Token Count` and `Generation Token Count`, illustrate the input and output consumption.
+
+You can find more metrics description from this [document](https://docs.nvidia.com/nim/large-language-models/latest/observability.html).
+
+![NVIDIA LLM Server](img/nim-dashboard.png)
+
+You can visualize these metrics using the Grafana. To view the Grafana dashboard to monitor these metrics, follow the steps below:
+
+```bash
+- Port-forward Grafana service:
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n kube-prometheus-stack
+
+- Grafana Admin user
+admin
+
+- Get secret name from Terraform output
+terraform output grafana_secret_name
+
+- Get admin user password
+aws secretsmanager get-secret-value --secret-id <grafana_secret_name_output> --region $AWS_REGION --query "SecretString" --output text
+```
+
+**Login to Grafana:**
+
+- Open your web browser and navigate to [http://localhost:3000](http://localhost:3000).
+- Login with the username `admin` and the password retrieved from AWS Secrets Manager.
+
+**Open the NIM Monitoring Dashboard:**
+
+- Once logged in, click "Dashboards" on the left sidebar and search "nim"
+- You can find the Dashboard `NVIDIA NIM Monitoring` from the list
+- Click and entering to the dashboard.
+
+You should now see the metrics displayed on the Grafana dashboard, allowing you to monitor the performance your NVIDIA NIM service deployment.
 
 ## Cleanup
 

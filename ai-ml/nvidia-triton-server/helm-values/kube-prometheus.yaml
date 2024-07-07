@@ -21,28 +21,20 @@ alertmanager:
 
 grafana:
   enabled: true
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
   defaultDashboardsEnabled: true
-prometheus:
-  prometheusSpec:
-    retention: 5h
-    scrapeInterval: 30s
-    evaluationInterval: 30s
-    scrapeTimeout: 10s
-    serviceMonitorSelectorNilUsesHelmValues: false # This is required to use the serviceMonitorSelector
-    storageSpec:
-      volumeClaimTemplate:
-        metadata:
-          name: data
-        spec:
-          storageClassName: ${storage_class_type}
-          accessModes:
-          - ReadWriteOnce
-          resources:
-            requests:
-              storage: 50Gi
-alertmanager:
-  enabled: false
-
-grafana:
-  enabled: true
-  defaultDashboardsEnabled: true
+  dashboards:
+    default:
+      nim-llm-monitoring:
+        url: https://raw.githubusercontent.com/hustshawn/nim-llm-eks/main/monitoring/nim-llm-monitoring.json
