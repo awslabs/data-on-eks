@@ -33,22 +33,21 @@ class VLLMDeployment:
             model=os.getenv("MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.2"),
             dtype="auto",
             gpu_memory_utilization=float(os.getenv("GPU_MEMORY_UTILIZATION", "0.8")), # Reserve some memory for overhead
-            max_model_len=int(os.getenv("MAX_MODEL_LEN", "4096")), # Maximum sequence length the model can handle, including both input and output.
-            max_num_seqs=int(os.getenv("MAX_NUM_SEQ", "2")),  # Start with 2 sequences in parallel
-            max_num_batched_tokens=int(os.getenv("MAX_NUM_BATCHED_TOKENS", "8192")), # max_model_len * max_num_seqs sets the maximum number of tokens that can be processed in a single batch across all sequences.
+            max_model_len=int(os.getenv("MAX_MODEL_LEN", "8192")), # Maximum sequence length the model can handle, including both input and output.
+            max_num_seqs=int(os.getenv("MAX_NUM_SEQ", "4")),  # Start with 2 sequences in parallel
+            max_num_batched_tokens=int(os.getenv("MAX_NUM_BATCHED_TOKENS", "32768")), # max_model_len * max_num_seqs sets the maximum number of tokens that can be processed in a single batch across all sequences.
             trust_remote_code=True,
-            enable_chunked_prefill=True,
+            enable_chunked_prefill=False,
             tokenizer_pool_size=4, # Creates a pool of tokenizer instances to handle concurrent requests.
             tokenizer_pool_type="ray",
             max_parallel_loading_workers=2, # Concurrent model loading wtih multiple workers
             pipeline_parallel_size=1,
             tensor_parallel_size=1,
-            enable_prefix_caching=True # It works by caching the key-value pairs for prompt prefixes, which can speed up processing when you have multiple requests with similar prompts.
+            enable_prefix_caching=True  # Disable prefix caching to avoid conflicts
         )
         self.engine = AsyncLLMEngine.from_engine_args(args)
         self.max_model_len = args.max_model_len
         logger.info(f"VLLM Engine initialized with max_model_len: {self.max_model_len}")
-
 
     async def stream_results(self, results_generator) -> AsyncGenerator[bytes, None]:
         num_returned = 0
@@ -72,14 +71,19 @@ class VLLMDeployment:
         context_length = request_dict.pop("context_length", 8192)  # Default to 8k
 
         # Ensure context length is either 8k or 32k
-        if context_length not in [4096, 32768]:
-            context_length = 4096  # Default to 8k if invalid
+        if context_length not in [8192, 32768]:
+            context_length = 8192  # Default to 8k if invalid
         prompt = request_dict.pop("prompt")
         stream = request_dict.pop("stream", False)
 
-        input_tokens = len(self.engine.tokenizer.encode(prompt))
-        max_possible_new_tokens = min(context_length, self.max_model_len) - input_tokens
-        max_new_tokens = min(request_dict.get("max_tokens", 4096), max_possible_new_tokens)
+        # Get model config and tokenizer
+        model_config = await self.engine.get_model_config()
+        tokenizer = await self.engine.get_tokenizer()
+
+        input_token_ids = tokenizer.encode(prompt)
+        input_tokens = len(input_token_ids)
+        max_possible_new_tokens = min(context_length, model_config.max_model_len) - input_tokens
+        max_new_tokens = min(request_dict.get("max_tokens", 8192), max_possible_new_tokens)
 
         sampling_params = SamplingParams(
             max_tokens=max_new_tokens,
