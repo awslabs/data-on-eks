@@ -30,21 +30,22 @@ class VLLMDeployment:
         logger.info("Successfully logged in to Hugging Face Hub")
 
         args = AsyncEngineArgs(
-            model=os.getenv("MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.2"),
-            dtype="auto",
-            gpu_memory_utilization=float(os.getenv("GPU_MEMORY_UTILIZATION", "0.8")), # Reserve some memory for overhead
-            max_model_len=int(os.getenv("MAX_MODEL_LEN", "8192")), # Maximum sequence length the model can handle, including both input and output.
-            max_num_seqs=int(os.getenv("MAX_NUM_SEQ", "4")),  # Start with 2 sequences in parallel
-            max_num_batched_tokens=int(os.getenv("MAX_NUM_BATCHED_TOKENS", "32768")), # max_model_len * max_num_seqs sets the maximum number of tokens that can be processed in a single batch across all sequences.
-            trust_remote_code=True,
-            enable_chunked_prefill=False,
-            tokenizer_pool_size=4, # Creates a pool of tokenizer instances to handle concurrent requests.
-            tokenizer_pool_type="ray",
-            max_parallel_loading_workers=2, # Concurrent model loading wtih multiple workers
-            pipeline_parallel_size=1,
-            tensor_parallel_size=1,
-            enable_prefix_caching=True  # Disable prefix caching to avoid conflicts
+            model=os.getenv("MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.2"),  # Model identifier from Hugging Face Hub or local path.
+            dtype="auto",  # Automatically determine the data type (e.g., float16 or float32) for model weights and computations.
+            gpu_memory_utilization=float(os.getenv("GPU_MEMORY_UTILIZATION", "0.8")),  # Percentage of GPU memory to utilize, reserving some for overhead.
+            max_model_len=int(os.getenv("MAX_MODEL_LEN", "8192")),  # Maximum sequence length (in tokens) the model can handle, including both input and output tokens.
+            max_num_seqs=int(os.getenv("MAX_NUM_SEQ", "4")),  # Maximum number of sequences (requests) to process in parallel.
+            max_num_batched_tokens=int(os.getenv("MAX_NUM_BATCHED_TOKENS", "32768")),  # Maximum number of tokens processed in a single batch across all sequences (max_model_len * max_num_seqs).
+            trust_remote_code=True,  # Allow execution of untrusted code from the model repository (use with caution).
+            enable_chunked_prefill=False,  # Disable chunked prefill to avoid compatibility issues with prefix caching.
+            tokenizer_pool_size=4,  # Number of tokenizer instances to handle concurrent requests efficiently.
+            tokenizer_pool_type="ray",  # Pool type for tokenizers; 'ray' uses Ray for distributed processing.
+            max_parallel_loading_workers=2,  # Number of parallel workers to load the model concurrently.
+            pipeline_parallel_size=1,  # Number of pipeline parallelism stages; typically set to 1 unless using model parallelism.
+            tensor_parallel_size=1,  # Number of tensor parallelism stages; typically set to 1 unless using model parallelism.
+            enable_prefix_caching=True  # Enable prefix caching to improve performance for similar prompt prefixes.
         )
+
         self.engine = AsyncLLMEngine.from_engine_args(args)
         self.max_model_len = args.max_model_len
         logger.info(f"VLLM Engine initialized with max_model_len: {self.max_model_len}")
