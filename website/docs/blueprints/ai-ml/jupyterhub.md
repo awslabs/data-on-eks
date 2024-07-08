@@ -166,7 +166,7 @@ kubectl port-forward svc/proxy-public 8080:80 -n jupyterhub
 **Sign-in:** Navigate to [http://localhost:8080/](http://localhost:8080/) in your web browser. Input `user-1` as the username and choose any password.
 ![alt text](img/image.png)
 
-Select server options: Upon sign-in, you’ll be presented with a variety of Notebook instance profiles to choose from. The `Data Engineering (CPU)` server is for traditional, CPU based notebook work. The `Elyra` server provides [Elyra](https://github.com/elyra-ai/elyra) functionality, allowing you to quickly develop pipelines: ![workflow](img/elyra-workflow.png). `Trainium` and `Inferentia` servers will deploy the notebook server onto Trainium and Inferentia nodes, allowing accelerated workloads. `Time Slicing` and `MIG` are two different strategies for GPU sharing. Finally, the `Data Science (GPU)` server is a traditional server running on an NVIDIA GPU.   
+Select server options: Upon sign-in, you’ll be presented with a variety of Notebook instance profiles to choose from. The `Data Engineering (CPU)` server is for traditional, CPU based notebook work. The `Elyra` server provides [Elyra](https://github.com/elyra-ai/elyra) functionality, allowing you to quickly develop pipelines: ![workflow](img/elyra-workflow.png). `Trainium` and `Inferentia` servers will deploy the notebook server onto Trainium and Inferentia nodes, allowing accelerated workloads. `Time Slicing` and `MIG` are two different strategies for GPU sharing. Finally, the `Data Science (GPU)` server is a traditional server running on an NVIDIA GPU.
 
 For this time-slicing feature demonstration, we’ll be using the **Data Science (GPU + Time-Slicing – G5)** profile. Go ahead and select this option and choose the Start button.
 
