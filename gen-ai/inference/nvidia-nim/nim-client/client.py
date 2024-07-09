@@ -9,7 +9,7 @@ import openai
 async def generate(client, prompt, sampling_parameters):
     try:
         response = await client.chat.completions.create(
-            model="meta/llama3-8b-instruct",  # You can change this to the appropriate model
+            model=FLAGS.model_name,
             messages=[
                 {
                     "role": "system",
