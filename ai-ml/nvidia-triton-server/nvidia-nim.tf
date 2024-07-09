@@ -78,6 +78,9 @@ resource "kubernetes_persistent_volume_claim_v1" "efs_pvc" {
 # NIM LLM Helm Chart
 #---------------------------------------------------------------
 
+# As of now, this helm chart from NVIDIA is not hosted in a Helm registry,
+# so we will download it from the github repo.
+# https://github.com/NVIDIA/nim-deploy.git
 resource "null_resource" "download_nim_deploy" {
   count = var.enable_nvidia_nim ? 1 : 0
   # This trigger ensures the script runs only when the file doesn't exist

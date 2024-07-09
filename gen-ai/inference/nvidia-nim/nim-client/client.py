@@ -36,8 +36,11 @@ async def process_prompt(client, prompt, prompt_id, sampling_parameters, results
 
     if response:
         results_dict[str(prompt_id)].append(response.encode("utf-8"))
-        duration = (end_time - start_time) * 1000
-        print(f"Model {FLAGS.model_name} - Request {prompt_id}: {duration:.2f} ms")
+        duration = end_time - start_time
+        duration_ms = duration * 1000
+        print(
+            f"Model {FLAGS.model_name} - Request {prompt_id}: {duration:.2f}s ({duration_ms:.2f}ms)"
+        )
         return end_time - start_time
     else:
         print(f"Error processing prompt {prompt_id}")
@@ -92,8 +95,9 @@ async def main(FLAGS):
     print("PASS: NVIDIA NIM example")
     end = time.time()
     actual_duration = end - start
+    actual_duration_ms = end - start
     print(
-        f"Actual execution time used with concurrency {len(tasks)} is: {actual_duration:.2f} seconds ..."
+        f"Actual execution time used with concurrency {len(tasks)} is: {actual_duration:.2f} seconds ({actual_duration_ms:.2f} milliseconds)"
     )
 
 

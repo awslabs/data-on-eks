@@ -80,6 +80,7 @@ Run the installation script:
 
 ```bash
 cd data-on-eks/ai-ml/nvidia-triton-server
+export TF_VAR_enable_nvidia_nim=true
 export TF_VAR_enable_nvidia_triton_server=false
 ./install.sh
 ```
@@ -195,6 +196,9 @@ Next, open another Terminal window, run the client using the existing prompts:
 
 ```bash
 cd gen-ai/inference/nvidia-nim/nim-client
+python3 -m venv .venv
+source .venv/bin/activate
+pip install openai
 python3 client.py --input-prompts prompts.txt --results-file results.txt
 ```
 
@@ -202,29 +206,30 @@ You will see an output something like below:
 
 ```text
 Loading inputs from `prompts.txt`...
-Model meta/llama3-8b-instruct - Request 14: 4655.84 ms
-Model meta/llama3-8b-instruct - Request 10: 6463.45 ms
-Model meta/llama3-8b-instruct - Request 3: 7787.67 ms
-Model meta/llama3-8b-instruct - Request 15: 7794.37 ms
-Model meta/llama3-8b-instruct - Request 1: 8320.75 ms
-Model meta/llama3-8b-instruct - Request 12: 8925.80 ms
-Model meta/llama3-8b-instruct - Request 5: 9079.14 ms
-Model meta/llama3-8b-instruct - Request 16: 9501.56 ms
-Model meta/llama3-8b-instruct - Request 18: 9790.65 ms
-Model meta/llama3-8b-instruct - Request 0: 10248.90 ms
-Model meta/llama3-8b-instruct - Request 6: 10243.54 ms
-Model meta/llama3-8b-instruct - Request 4: 10596.04 ms
-Model meta/llama3-8b-instruct - Request 11: 10798.81 ms
-Model meta/llama3-8b-instruct - Request 17: 10793.39 ms
-Model meta/llama3-8b-instruct - Request 8: 10977.41 ms
-Model meta/llama3-8b-instruct - Request 2: 12085.08 ms
-Model meta/llama3-8b-instruct - Request 19: 12645.12 ms
-Model meta/llama3-8b-instruct - Request 9: 13346.84 ms
-Model meta/llama3-8b-instruct - Request 13: 13581.21 ms
-Model meta/llama3-8b-instruct - Request 7: 14917.04 ms
+Model meta/llama3-8b-instruct - Request 14: 4.68s (4678.46ms)
+Model meta/llama3-8b-instruct - Request 10: 6.43s (6434.32ms)
+Model meta/llama3-8b-instruct - Request 3: 7.82s (7824.33ms)
+Model meta/llama3-8b-instruct - Request 1: 8.54s (8540.69ms)
+Model meta/llama3-8b-instruct - Request 5: 8.81s (8807.52ms)
+Model meta/llama3-8b-instruct - Request 12: 8.95s (8945.85ms)
+Model meta/llama3-8b-instruct - Request 18: 9.77s (9774.75ms)
+Model meta/llama3-8b-instruct - Request 16: 9.99s (9994.51ms)
+Model meta/llama3-8b-instruct - Request 6: 10.26s (10263.60ms)
+Model meta/llama3-8b-instruct - Request 0: 10.27s (10274.35ms)
+Model meta/llama3-8b-instruct - Request 4: 10.65s (10654.39ms)
+Model meta/llama3-8b-instruct - Request 17: 10.75s (10746.08ms)
+Model meta/llama3-8b-instruct - Request 11: 10.86s (10859.91ms)
+Model meta/llama3-8b-instruct - Request 15: 10.86s (10857.15ms)
+Model meta/llama3-8b-instruct - Request 8: 11.07s (11068.78ms)
+Model meta/llama3-8b-instruct - Request 2: 12.11s (12105.07ms)
+Model meta/llama3-8b-instruct - Request 19: 12.64s (12636.42ms)
+Model meta/llama3-8b-instruct - Request 9: 13.37s (13370.75ms)
+Model meta/llama3-8b-instruct - Request 13: 13.57s (13571.28ms)
+Model meta/llama3-8b-instruct - Request 7: 14.90s (14901.51ms)
 Storing results into `results.txt`...
-Total time for all requests: 202.55 seconds (202552.60 milliseconds)
+Accumulated time for all requests: 206.31 seconds (206309.73 milliseconds)
 PASS: NVIDIA NIM example
+Actual execution time used with concurrency 20 is: 14.92 seconds (14.92 milliseconds)
 ```
 
 Output for `results.txt` should look like the following
@@ -292,11 +297,11 @@ kubectl port-forward -n nim svc/nim-llm 8000
 curl localhost:8000/metrics # run this in another terminal
 ```
 
-We also provided a pre-configured Grafana dashboard. In the Grafana dashboard below, you can see several important metrics:
+We also provided a pre-configured Grafana dashboard. In the Grafana dashboard below, it contains several important metrics:
 
-- **Running Count**: This gauge shows number of requests currently running on GPU.
-- **Latency (p95 percentile)**: It includes metrics `Time to First Token`, `Time per Output Token` and `End to End` latency. These metrics illustrate the time taken to compute inference requests, helping identify any latency issues.
-- **Token Count**: It includes metrics `Prompt Token Count` and `Generation Token Count`, illustrate the input and output consumption.
+- **Time to First Token (TTFT)**: The latency between the initial inference request to the model and the return of the first token.
+- **Inter-Token Latency (ITL)**: The latency between each token after the first.
+- **Total Throughput**: The total number of tokens generated per second by the NIM.
 
 You can find more metrics description from this [document](https://docs.nvidia.com/nim/large-language-models/latest/observability.html).
 

@@ -56,7 +56,7 @@ variable "huggingface_token" {
 
 variable "enable_nvidia_nim" {
   description = "Toggle to enable or disable NVIDIA NIM pattern resource creation"
-  default     = true
+  default     = false
   type        = bool
 }
 
