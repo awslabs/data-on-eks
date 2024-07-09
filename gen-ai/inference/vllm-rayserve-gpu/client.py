@@ -24,7 +24,7 @@ async def generate_text(session, prompt):
     payload = {
         "prompt": prompt,
         "stream": False,
-        "max_tokens": 1024,  # Increased to allow for longer responses
+        "max_tokens": 8192,  # Increased to allow for longer responses
         "temperature": 0.7,  # Adjusted for balanced responses
         "top_p": 0.9,  # Adjusted for balanced responses
         "top_k": 50,  # Increased for more diversity in responses
