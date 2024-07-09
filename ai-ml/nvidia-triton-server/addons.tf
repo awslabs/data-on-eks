@@ -154,7 +154,9 @@ module "eks_blueprints_addons" {
       version    = "4.10.0"
       values = [
         templatefile(
-          "${path.module}/helm-values/prometheus-adapter.yaml", {}
+          "${path.module}/helm-values/prometheus-adapter.yaml", {
+            prometheus_namespace = module.eks_blueprints_addons.kube_prometheus_stack.namespace
+          }
         )
       ]
     }

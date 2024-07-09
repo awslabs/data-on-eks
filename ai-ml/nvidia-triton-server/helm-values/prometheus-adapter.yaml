@@ -1,6 +1,6 @@
 # ref: https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus-adapter/values.yaml
 prometheus:
-  url: http://kube-prometheus-stack-prometheus.kube-prometheus-stack
+  url: http://kube-prometheus-stack-prometheus.${prometheus_namespace}
   port: 9090
 rules:
   default: false

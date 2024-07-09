@@ -1,14 +1,14 @@
 ---
-title: NVIDIA NIM Llama-3 Deployment on Amazon EKS
+title: NVIDIA NIM LLM on Amazon EKS
 sidebar_position: 8
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
-:::danger
+:::warning
 
-Note: Use of this Llama-3 Instruct model is governed by the Meta license.
-In order to download the model weights and tokenizer, please visit the [website](https://huggingface.co/meta-llama/Meta-Llama-3-8B) and accept the license before requesting access.
+Note: Before implementing NVIDIA NIM, please be aware it is part of [NVIDIA AI Enterprise](https://www.nvidia.com/en-us/data-center/products/ai-enterprise/), which may introduce potential cost and licensing for production use.
 
+For evaluation, NVIDIA also offers a free evaluation license to try NVIDIA AI Enterprise for 90 days, and you can [register](https://enterpriseproductregistration.nvidia.com/?LicType=EVAL&ProductFamily=NVAIEnterprise) it with your corporate email.
 :::
 
 :::info
