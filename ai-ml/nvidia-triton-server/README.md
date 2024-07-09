@@ -72,7 +72,7 @@
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster version | `string` | `"1.30"` | no |
-| <a name="input_enable_nvidia_nim"></a> [enable\_nvidia\_nim](#input\_enable\_nvidia\_nim) | Toggle to enable or disable NVIDIA NIM pattern resource creation | `bool` | `true` | no |
+| <a name="input_enable_nvidia_nim"></a> [enable\_nvidia\_nim](#input\_enable\_nvidia\_nim) | Toggle to enable or disable NVIDIA NIM pattern resource creation | `bool` | `false` | no |
 | <a name="input_enable_nvidia_triton_server"></a> [enable\_nvidia\_triton\_server](#input\_enable\_nvidia\_triton\_server) | Toggle to enable or disable NVIDIA Triton server resource creation | `bool` | `true` | no |
 | <a name="input_huggingface_token"></a> [huggingface\_token](#input\_huggingface\_token) | Hugging Face Secret Token | `string` | `"DUMMY_TOKEN_REPLACE_ME"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"nvidia-triton-server"` | no |
