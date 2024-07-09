@@ -72,6 +72,7 @@ Then open browser and enter localhost:18085. You can view your spark history ser
 ## Prometheus
 Spark users must add the following config to spark application yaml file to extract the metrics from Spark Driver and Executors. In the example, they are added into nvme-ephemeral-storage.yaml already.
 
+```yaml
     "spark.ui.prometheus.enabled": "true"
     "spark.executor.processTreeMetrics.enabled": "true"
     "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
@@ -84,6 +85,7 @@ Spark users must add the following config to spark application yaml file to extr
     "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
     "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
     "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
+```
 
 Run port forward command to expose prometheus service.
 ```bash
