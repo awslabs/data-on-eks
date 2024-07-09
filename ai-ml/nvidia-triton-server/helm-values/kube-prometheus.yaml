@@ -37,4 +37,5 @@ grafana:
   dashboards:
     default:
       nim-llm-monitoring:
-        url: https://raw.githubusercontent.com/hustshawn/nim-llm-eks/main/monitoring/nim-llm-monitoring.json
+        json: |
+          ${nim_llm_dashbaord_json}

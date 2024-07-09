@@ -133,7 +133,8 @@ module "eks_blueprints_addons" {
   kube_prometheus_stack = {
     values = [
       templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
-        storage_class_type = kubernetes_storage_class.default_gp3.id
+        storage_class_type     = kubernetes_storage_class.default_gp3.id
+        nim_llm_dashbaord_json = indent(10, file("${path.module}/monitoring/nim-llm-dashboard.json"))
       })
     ]
     chart_version = "48.1.1"
