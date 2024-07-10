@@ -1,6 +1,43 @@
 # JupyterHub, Argo, Ray, Kubernetes
 
-Docs coming soon...
+# Prerequisites
+
+Before we begin, ensure you have all the prerequisites in place to make the deployment process smooth and hassle-free. Ensure that you have installed the following tools on your machine.
+
+- aws cli
+- kubectl
+- terraform
+
+# Deploy
+
+Clone the repository
+
+```
+git clone https://github.com/awslabs/data-on-eks.git
+```
+
+Navigate into one of the example directories and run install.sh script
+
+Important Note: Ensure that you update the region in the variables.tf file before deploying the blueprint. Additionally, confirm that your local region setting matches the specified region to prevent any discrepancies. For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
+
+```
+cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
+./install.sh
+```
+
+# Verify the resources
+Verify the Amazon EKS Cluster
+
+```
+aws eks --region us-west-2 describe-cluster --name jark-stack
+
+# Creates k8s config file to authenticate with EKS
+aws eks --region us-west-2 update-kubeconfig --name jark-stack
+
+# Output shows the EKS Managed Node group nodes
+kubectl get nodes
+
+```
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
