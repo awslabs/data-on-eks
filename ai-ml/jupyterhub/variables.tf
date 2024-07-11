@@ -36,7 +36,7 @@ variable "secondary_cidr_blocks" {
 # Example of public domain name(<subdomain-name>.<domain-name>.com): eks.jupyter-doeks.dynamic-dns.com
 variable "jupyter_hub_auth_mechanism" {
   type        = string
-  description = "Allowed values: cognito, dummy"
+  description = "Allowed values: cognito, dummy, oauth"
   default     = "dummy"
 }
 
@@ -55,6 +55,26 @@ variable "acm_certificate_domain" {
 }
 variable "jupyterhub_domain" {
   type        = string
-  description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito"
+  description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito or oauth"
+  default     = ""
+}
+variable "oauth_domain" {
+  type        = string
+  description = "Enter oauth domain and endpoint, e.g. https://keycloak.example.com/realms/master/protocol/openid-connect/. Only needed if auth mechanism is set to oauth"
+  default     = ""
+}
+variable "oauth_jupyter_client_id" {
+  type        = string
+  description = "Enter oauth client id for jupyterhub, e.g. jupyterhub. Only needed if auth mechanism is set to oauth"
+  default     = ""
+}
+variable "oauth_jupyter_client_secret" {
+  type        = string
+  description = "Enter oauth client secret. Only needed if auth mechanism is set to oauth"
+  default     = ""
+}
+variable "oauth_username_key" {
+  type        = string
+  description = "oauth field for the username. e.g. 'preferred_username' Only needed if auth mechanism is set to oauth"
   default     = ""
 }
