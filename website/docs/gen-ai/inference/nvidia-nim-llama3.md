@@ -266,6 +266,62 @@ By applying these optimizations, TensorRT can significantly accelerate LLM infer
 ```
 </details>
 
+## Performance Testing with NVIDIA GenAI-Perf Tool
+
+[GenAI-Perf](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/client/src/c%2B%2B/perf_analyzer/genai-perf/README.html) is a command line tool for measuring the throughput and latency of generative AI models as served through an inference server.
+
+GenAI-Perf can be used as standard tool to benchmark with other models deployed with inference server. But this tool requires a GPU. To make it easier, we provide you a pre-configured manifest `genaiperf-deploy.yaml` to run the tool.
+
+```bash
+cd gen-ai/inference/nvidia-nim
+kubectl apply -f genaiperf-deploy.yaml
+```
+
+Once the pod is ready with running status `1/1`, can execute into the pod.
+```bash
+export POD_NAME=$(kubectl get po -l app=tritonserver -ojsonpath='{.items[0].metadata.name}')
+kubectl exec -it $POD_NAME -- bash
+```
+Run the testing to the deployed NIM Llama3 model
+```bash
+genai-perf \
+  -m meta/llama3-8b-instruct \
+  --service-kind openai \
+  --endpoint v1/completions \
+  --endpoint-type completions \
+  --num-prompts 100 \
+  --random-seed 123 \
+  --synthetic-input-tokens-mean 200 \
+  --synthetic-input-tokens-stddev 0 \
+  --output-tokens-mean 100 \
+  --output-tokens-stddev 0 \
+  --tokenizer hf-internal-testing/llama-tokenizer \
+  --concurrency 10 \
+  --measurement-interval 4000 \
+  --profile-export-file my_profile_export.json \
+  --url nim-llm.nim:8000
+```
+You should see similar output like the following
+
+```bash
+2024-07-11 03:32 [INFO] genai_perf.parser:166 - Model name 'meta/llama3-8b-instruct' cannot be used to create artifact directory. Instead, 'meta_llama3-8b-instruct' will be used.
+2024-07-11 03:32 [INFO] genai_perf.wrapper:137 - Running Perf Analyzer : 'perf_analyzer -m meta/llama3-8b-instruct --async --input-data artifacts/meta_llama3-8b-instruct-openai-completions-concurrency10/llm_inputs.json --endpoint v1/completions --service-kind openai -u nim-llm.nim:8000 --measurement-interval 4000 --stability-percentage 999 --profile-export-file artifacts/meta_llama3-8b-instruct-openai-completions-concurrency10/my_profile_export.json -i http --concurrency-range 10'
+                                                      LLM Metrics
+┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃            Statistic ┃           avg ┃           min ┃           max ┃           p99 ┃           p90 ┃           p75 ┃
+┡━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ Request latency (ns) │ 3,934,624,446 │ 3,897,758,114 │ 3,936,987,882 │ 3,936,860,185 │ 3,936,429,317 │ 3,936,333,682 │
+│     Num output token │           112 │           105 │           119 │           119 │           117 │           115 │
+│      Num input token │           200 │           200 │           200 │           200 │           200 │           200 │
+└──────────────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┘
+Output token throughput (per sec): 284.64
+Request throughput (per sec): 2.54
+```
+You should be able to see the [metrics](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/client/src/c%2B%2B/perf_analyzer/genai-perf/README.html#metrics) that genai-perf collects, including Request latency, Out token throughput, Request throughput.
+
+To understand the command line options, please refer to [this documentation](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/client/src/c%2B%2B/perf_analyzer/genai-perf/README.html#command-line-options).
+
+
 ## Observability
 As part of this blueprint, we have also deployed the Kube Prometheus stack, which provides Prometheus server and Grafana deployments for monitoring and observability.
 
