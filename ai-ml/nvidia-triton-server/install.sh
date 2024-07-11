@@ -17,9 +17,18 @@ if [[ "${TF_VAR_huggingface_token}" = "DUMMY_TOKEN_REPLACE_ME" ]] ; then
     exit 1
 fi
 
+if [ "$TF_VAR_enable_nvidia_nim" = true ]; then
+    # Check if server_token does not start with "nvapi-"
+    # Obtain your NVIDIA NGC API key from https://docs.nvidia.com/ai-enterprise/deployment-guide-spark-rapids-accelerator/0.1.0/appendix-ngc.html
+    if [[ ! "$TF_VAR_ngc_api_key" == nvapi-* ]]; then
+        echo "FAILED: TF_VAR_ngc_api_key must start with 'nvapi-'"
+        exit 1
+    fi
+fi
+
 echo "Proceed with deployment of targets..."
 
-List of Terraform modules to apply in sequence
+# List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
   "module.eks"
