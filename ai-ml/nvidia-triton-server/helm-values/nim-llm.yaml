@@ -1,0 +1,53 @@
+# ref: https://github.com/NVIDIA/nim-deploy/blob/main/helm/nim-llm/values.yaml
+image:
+  repository: nvcr.io/nim/meta/llama3-8b-instruct
+  tag: latest
+model:
+  ngcAPIKey: ${ngc_api_key}
+  nimCache: /model-store
+resources:
+  limits:
+    nvidia.com/gpu: 1
+  requests:
+    nvidia.com/gpu: 1
+statefulSet:
+  enabled: true
+persistence:
+  enabled: true
+  existingClaim: ${pvc_name}
+nodeSelector:
+  NodeGroupType: g5-gpu-karpenter
+  type: karpenter
+tolerations:
+- key: "nvidia.com/gpu"
+  operator: "Exists"
+  effect: "NoSchedule"
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: prometheus
+      app: prometheus
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  scaleDownStabilizationSecs: 300
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: num_requests_running
+      target:
+        type: Value
+        averageValue: 5
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+  - paths:
+    - path: /
+      pathType: ImplementationSpecific
+      serviceType: openai

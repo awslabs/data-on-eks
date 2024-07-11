@@ -79,6 +79,11 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
+  # AWS EFS CSI Add-on
+  #---------------------------------------
+  enable_aws_efs_csi_driver = true
+
+  #---------------------------------------
   # AWS Load Balancer Controller Add-on
   #---------------------------------------
   enable_aws_load_balancer_controller = true
@@ -128,7 +133,8 @@ module "eks_blueprints_addons" {
   kube_prometheus_stack = {
     values = [
       templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
-        storage_class_type = kubernetes_storage_class.default_gp3.id
+        storage_class_type     = kubernetes_storage_class.default_gp3.id
+        nim_llm_dashbaord_json = indent(10, file("${path.module}/monitoring/nim-llm-dashboard.json"))
       })
     ]
     chart_version = "48.1.1"
@@ -138,6 +144,22 @@ module "eks_blueprints_addons" {
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
     ],
+  }
+
+  helm_releases = {
+    "prometheus-adapter" = {
+      repository = "https://prometheus-community.github.io/helm-charts"
+      chart      = "prometheus-adapter"
+      namespace  = module.eks_blueprints_addons.kube_prometheus_stack.namespace
+      version    = "4.10.0"
+      values = [
+        templatefile(
+          "${path.module}/helm-values/prometheus-adapter.yaml", {
+            prometheus_namespace = module.eks_blueprints_addons.kube_prometheus_stack.namespace
+          }
+        )
+      ]
+    }
   }
 
 }

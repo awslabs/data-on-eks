@@ -6,6 +6,7 @@ locals {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "triton_server_vllm" {
+  count      = var.enable_nvidia_triton_server ? 1 : 0
   depends_on = [module.eks_blueprints_addons.kube_prometheus_stack]
   source     = "aws-ia/eks-data-addons/aws"
   version    = "~> 1.32.0" # ensure to update this to the latest/desired version
@@ -18,7 +19,7 @@ module "triton_server_vllm" {
     version   = "1.0.0"
     timeout   = 120
     wait      = false
-    namespace = kubernetes_namespace_v1.triton.metadata[0].name
+    namespace = kubernetes_namespace_v1.triton[count.index].metadata[0].name
     values = [
       <<-EOT
       replicaCount: 1
@@ -27,8 +28,8 @@ module "triton_server_vllm" {
         tag: "24.06-vllm-python-py3"
       serviceAccount:
         create: false
-        name: ${kubernetes_service_account_v1.triton.metadata[0].name}
-      modelRepositoryPath: s3://${module.s3_bucket.s3_bucket_id}/model_repository
+        name: ${kubernetes_service_account_v1.triton[count.index].metadata[0].name}
+      modelRepositoryPath: s3://${module.s3_bucket[count.index].s3_bucket_id}/model_repository
       environment:
         - name: "LD_PRELOAD"
           value: ""
@@ -46,7 +47,7 @@ module "triton_server_vllm" {
           value: "auto"
       secretEnvironment:
         - name: "HUGGING_FACE_TOKEN"
-          secretName: ${kubernetes_secret_v1.huggingface_token.metadata[0].name}
+          secretName: ${kubernetes_secret_v1.huggingface_token[count.index].metadata[0].name}
           key: "HF_TOKEN"
       resources:
         limits:
@@ -75,9 +76,10 @@ module "triton_server_vllm" {
 # Replace the value with your Hugging Face token
 #---------------------------------------------------------------
 resource "kubernetes_secret_v1" "huggingface_token" {
+  count = var.enable_nvidia_triton_server ? 1 : 0
   metadata {
     name      = "huggingface-secret"
-    namespace = kubernetes_namespace_v1.triton.metadata[0].name
+    namespace = kubernetes_namespace_v1.triton[count.index].metadata[0].name
   }
 
   data = {
@@ -90,6 +92,7 @@ resource "kubernetes_secret_v1" "huggingface_token" {
 #---------------------------------------------------------------
 #tfsec:ignore:*
 module "s3_bucket" {
+  count   = var.enable_nvidia_triton_server ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "4.1.2"
 
@@ -111,14 +114,15 @@ module "s3_bucket" {
 
 # Use null_resource to sync local files to the S3 bucket
 resource "null_resource" "sync_local_to_s3" {
+  count = var.enable_nvidia_triton_server ? 1 : 0
   # Re-run the provisioner if the bucket name changes
   triggers = {
     always_run  = uuid(),
-    bucket_name = module.s3_bucket.s3_bucket_id
+    bucket_name = module.s3_bucket[count.index].s3_bucket_id
   }
 
   provisioner "local-exec" {
-    command = "aws s3 sync ../../gen-ai/inference/vllm-nvidia-triton-server-gpu/ s3://${module.s3_bucket.s3_bucket_id}"
+    command = "aws s3 sync ../../gen-ai/inference/vllm-nvidia-triton-server-gpu/ s3://${module.s3_bucket[count.index].s3_bucket_id}"
   }
 }
 
@@ -126,6 +130,7 @@ resource "null_resource" "sync_local_to_s3" {
 # IAM role for service account (IRSA)
 #---------------------------------------------------------------
 resource "kubernetes_namespace_v1" "triton" {
+  count = var.enable_nvidia_triton_server ? 1 : 0
   metadata {
     name = local.triton_model
   }
@@ -138,10 +143,11 @@ resource "kubernetes_namespace_v1" "triton" {
 # Service account for Triton model
 #---------------------------------------------------------------
 resource "kubernetes_service_account_v1" "triton" {
+  count = var.enable_nvidia_triton_server ? 1 : 0
   metadata {
     name        = local.triton_model
-    namespace   = kubernetes_namespace_v1.triton.metadata[0].name
-    annotations = { "eks.amazonaws.com/role-arn" : module.triton_irsa.iam_role_arn }
+    namespace   = kubernetes_namespace_v1.triton[count.index].metadata[0].name
+    annotations = { "eks.amazonaws.com/role-arn" : module.triton_irsa[count.index].iam_role_arn }
   }
 
   automount_service_account_token = true
@@ -151,12 +157,13 @@ resource "kubernetes_service_account_v1" "triton" {
 # Secret for Triton model
 #---------------------------------------------------------------
 resource "kubernetes_secret_v1" "triton" {
+  count = var.enable_nvidia_triton_server ? 1 : 0
   metadata {
     name      = "${local.triton_model}-secret"
-    namespace = kubernetes_namespace_v1.triton.metadata[0].name
+    namespace = kubernetes_namespace_v1.triton[count.index].metadata[0].name
     annotations = {
-      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.triton.metadata[0].name
-      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.triton.metadata[0].name
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.triton[count.index].metadata[0].name
+      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.triton[count.index].metadata[0].name
     }
   }
 
@@ -167,6 +174,7 @@ resource "kubernetes_secret_v1" "triton" {
 # IRSA for Triton model server pods
 #---------------------------------------------------------------
 module "triton_irsa" {
+  count   = var.enable_nvidia_triton_server ? 1 : 0
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0"
 
@@ -178,7 +186,7 @@ module "triton_irsa" {
   role_name     = "${var.name}-${local.triton_model}"
   create_policy = false
   role_policies = {
-    triton_policy = aws_iam_policy.triton.arn
+    triton_policy = aws_iam_policy.triton[count.index].arn
   }
 
   oidc_providers = {
@@ -194,6 +202,7 @@ module "triton_irsa" {
 # Creates IAM policy for IRSA. Provides IAM permissions for Triton model server pods
 #---------------------------------------------------------------
 resource "aws_iam_policy" "triton" {
+  count       = var.enable_nvidia_triton_server ? 1 : 0
   description = "IAM role policy for Triton models"
   name        = "${local.name}-${local.triton_model}-irsa"
   policy      = data.aws_iam_policy_document.triton_model.json
