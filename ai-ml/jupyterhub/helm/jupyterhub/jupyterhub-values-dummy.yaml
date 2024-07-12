@@ -25,6 +25,17 @@ proxy:
 singleuser:
   startTimeout: 1200 # 20 mins to spin up a notebook server for GPU including the image pull
   profileList:
+    - display_name: Elyra (CPU)
+      description: "Elyra Notebooks | Karpenter Autoscaling"
+      kubespawner_override:
+        image: public.ecr.aws/data-on-eks/elyra-jupyter:3.15.0
+        node_selector:
+          NodePool: default
+        cpu_guarantee: 2
+        mem_guarantee: 8G
+        cpu_limit: 4
+        mem_limit: 8G
+      cmd: null
     - display_name: Data Engineering (CPU)
       description: "PySpark Notebooks | Karpenter AutoScaling"
       profile_options:

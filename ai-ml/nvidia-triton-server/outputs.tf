@@ -5,12 +5,12 @@ output "configure_kubectl" {
 
 output "s3_bucket_name" {
   description = "The name of the S3 bucket."
-  value       = module.s3_bucket.s3_bucket_id
+  value       = var.enable_nvidia_triton_server ? module.s3_bucket[0].s3_bucket_id : null
 }
 
 output "s3_bucket_region" {
   description = "The AWS region this bucket resides in."
-  value       = module.s3_bucket.s3_bucket_region
+  value       = var.enable_nvidia_triton_server ? module.s3_bucket[0].s3_bucket_region : null
 }
 
 output "grafana_secret_name" {

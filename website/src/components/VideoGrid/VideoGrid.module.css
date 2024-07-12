@@ -1,0 +1,89 @@
+/* src/components/VideoGrid/VideoGrid.module.css */
+
+.videoGridContainer {
+  width: 100%;
+  position: relative;
+  padding: 50px;
+  padding-bottom: 60px; /* Added extra padding for the footer */
+}
+
+.slick-list {
+  margin: 0 -10px; /* Adjusts the margin to ensure videos use full width */
+}
+
+.slick-slide {
+  padding: 0 15px; /* Add padding to ensure spacing between slides */
+}
+
+.videoCard {
+  box-sizing: border-box;
+  max-width: none; /* Allow cards to stretch */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #fff;
+  color: #333;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.videoCard:hover {
+  transform: scale(1.05);
+}
+
+.thumbnail {
+  width: 100%;
+  height: 200px; /* Adjust the height as needed */
+  object-fit: cover; /* Ensures the image covers the entire area without being cut off */
+}
+
+.videoInfo {
+  padding: 16px;
+}
+
+.videoInfo h3 {
+  margin: 10px 0;
+  font-size: 18px;
+  color: #1a1a1a;
+}
+
+.videoInfo p {
+  font-size: 14px;
+  color: #555;
+}
+
+.videoInfo small {
+  display: block;
+  margin-bottom: 10px;
+  color: #999;
+}
+
+.arrow {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  width: 80px; /* Increased size */
+  height: 80px; /* Increased size */
+  display: flex !important;
+  align-items: center; /* Center the arrow vertically */
+  justify-content: center; /* Center the arrow horizontally */
+  z-index: 1; /* Ensure arrows are on top of the carousel */
+  font-size: 40px; /* Larger arrow icon */
+  color: white; /* Arrow icon color */
+}
+
+.slick-prev {
+  left: -40px; /* Adjust as needed */
+}
+
+.slick-next {
+  right: -40px; /* Adjust as needed */
+}
+
+.slick-dots li button:before {
+  font-size: 20px; /* Increased size of dots */
+  color: #fff; /* Change color for visibility */
+}
+
+.slick-dots li.slick-active button:before {
+  color: #ff0; /* Active dot color */
+}

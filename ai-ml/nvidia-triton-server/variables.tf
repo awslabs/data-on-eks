@@ -32,6 +32,12 @@ variable "secondary_cidr_blocks" {
   type        = list(string)
 }
 
+variable "enable_nvidia_triton_server" {
+  description = "Toggle to enable or disable NVIDIA Triton server resource creation"
+  default     = true
+  type        = bool
+}
+
 #-------------------------------------------------------------------
 # Instructions for Securely Setting the Huggingface Token
 # -------------------------------------------------------------------
@@ -45,5 +51,27 @@ variable "huggingface_token" {
   description = "Hugging Face Secret Token"
   type        = string
   default     = "DUMMY_TOKEN_REPLACE_ME"
+  sensitive   = true
+}
+
+variable "enable_nvidia_nim" {
+  description = "Toggle to enable or disable NVIDIA NIM pattern resource creation"
+  default     = false
+  type        = bool
+}
+
+#-------------------------------------------------------------------
+# Instructions for Securely Setting the NVIDIA NGC API key
+# -------------------------------------------------------------------
+# 1. Obtain your NVIDIA NGC API key from https://docs.nvidia.com/ai-enterprise/deployment-guide-spark-rapids-accelerator/0.1.0/appendix-ngc.html
+# 2. Before running 'terraform apply', set the environment variable:
+#    * Linux/macOS:
+#        export TF_VAR_ngc_api_key=<your NVIDIA NGC API key>
+# 3. Now you can safely run 'terraform apply'
+#-------------------------------------------------------------------
+variable "ngc_api_key" {
+  description = "NGC API Key"
+  type        = string
+  default     = "DUMMY_NGC_API_KEY_REPLACE_ME"
   sensitive   = true
 }

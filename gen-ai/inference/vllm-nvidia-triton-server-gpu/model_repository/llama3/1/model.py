@@ -42,11 +42,13 @@ class TritonPythonModel:
         )
 
         # GPU ID
-        gpu_id = args.get("model_instance_device_id", "0")
+        gpu_id = args.get("model_instance_device_id", "2")
         os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 
         vllm_engine_config = {
-            "model": "mistralai/Mistral-7B-Instruct-v0.2",
+            "model": os.environ.get(
+                "model_name", "meta-llama/Meta-Llama-3-8B-Instruct"
+            ),
             "disable_log_requests": "true",
             "tensor_parallel_size": int(os.environ.get("tensor_parallel_size", 1)),
             "gpu_memory_utilization": float(
