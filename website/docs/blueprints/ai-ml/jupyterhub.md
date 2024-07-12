@@ -166,9 +166,11 @@ kubectl port-forward svc/proxy-public 8080:80 -n jupyterhub
 **Sign-in:** Navigate to [http://localhost:8080/](http://localhost:8080/) in your web browser. Input `user-1` as the username and choose any password.
 ![alt text](img/image.png)
 
-Select server options: Upon sign-in, you’ll be presented with a variety of Notebook instance profiles to choose from. For this time-slicing feature demonstration, we’ll be using the **Data Science (GPU + Time-Slicing – G5)** profile. Go ahead and select this option and choose the Start button.
+Select server options: Upon sign-in, you’ll be presented with a variety of Notebook instance profiles to choose from. The `Data Engineering (CPU)` server is for traditional, CPU based notebook work. The `Elyra` server provides [Elyra](https://github.com/elyra-ai/elyra) functionality, allowing you to quickly develop pipelines: ![workflow](img/elyra-workflow.png). `Trainium` and `Inferentia` servers will deploy the notebook server onto Trainium and Inferentia nodes, allowing accelerated workloads. `Time Slicing` and `MIG` are two different strategies for GPU sharing. Finally, the `Data Science (GPU)` server is a traditional server running on an NVIDIA GPU.
 
-![alt text](img/image-1.png)
+For this time-slicing feature demonstration, we’ll be using the **Data Science (GPU + Time-Slicing – G5)** profile. Go ahead and select this option and choose the Start button.
+
+![alt text](img/notebook-server-list.png)
 
 The new node created by Karpenter with the `g5.2xlarge` instance type has been configured to leverage the timeslicing feature provided by the [NVIDIA device plugin](https://github.com/NVIDIA/k8s-device-plugin). This feature allows for efficient GPU utilization by dividing a single GPU into multiple allocatable units. In this case, we have defined `4` allocatable GPUs in the NVIDIA device plugin Helm chart config map. Below is the status of the node:
 

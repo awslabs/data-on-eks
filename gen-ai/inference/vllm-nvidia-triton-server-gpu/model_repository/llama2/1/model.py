@@ -16,7 +16,7 @@ import huggingface_hub
 
 # Environment and configuration setup
 _VLLM_ENGINE_ARGS_FILENAME = "vllm_engine_args.json"
-huggingface_hub.login(token=os.environ.get('HUGGING_FACE_TOKEN', ''))
+huggingface_hub.login(token=os.environ.get("HUGGING_FACE_TOKEN", ""))
 
 
 class TritonPythonModel:
@@ -42,17 +42,19 @@ class TritonPythonModel:
         )
 
         # GPU ID
-        gpu_id = args.get("model_instance_device_id", "0")
+        gpu_id = args.get("model_instance_device_id", "1")
         os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 
         vllm_engine_config = {
-            "model": os.environ.get('model_name', 'mistralai/Mistral-7B-v0.1'),
+            "model": os.environ.get("model_name", "meta-llama/Llama-2-7b-chat-hf"),
             "disable_log_requests": "true",
-            "tensor_parallel_size": int(os.environ.get('tensor_parallel_size',1)),
-            "gpu_memory_utilization": float(os.environ.get('gpu_memory_utilization', '0.8')),
-            "dtype": os.environ.get('dtype', 'auto'),
-            "max_model_len": int(os.environ.get('max_model_len', 4096)),
-            "enforce_eager": True
+            "tensor_parallel_size": int(os.environ.get("tensor_parallel_size", 1)),
+            "gpu_memory_utilization": float(
+                os.environ.get("gpu_memory_utilization", "0.8")
+            ),
+            "dtype": os.environ.get("dtype", "auto"),
+            "max_model_len": int(os.environ.get("max_model_len", 4096)),
+            "enforce_eager": True,
         }
 
         # Create an AsyncLLMEngine from the config from JSON
@@ -124,7 +126,13 @@ class TritonPythonModel:
             if k in params_dict:
                 params_dict[k] = bool(params_dict[k])
 
-        float_keys = ["frequency_penalty", "length_penalty", "presence_penalty", "temperature", "top_p"]
+        float_keys = [
+            "frequency_penalty",
+            "length_penalty",
+            "presence_penalty",
+            "temperature",
+            "top_p",
+        ]
         for k in float_keys:
             if k in params_dict:
                 params_dict[k] = float(params_dict[k])
@@ -164,7 +172,9 @@ class TritonPythonModel:
                 prompt = prompt.decode("utf-8")
             stream = pb_utils.get_input_tensor_by_name(request, "STREAM").as_numpy()[0]
 
-            parameters_input_tensor = pb_utils.get_input_tensor_by_name(request, "SAMPLING_PARAMETERS")
+            parameters_input_tensor = pb_utils.get_input_tensor_by_name(
+                request, "SAMPLING_PARAMETERS"
+            )
             if parameters_input_tensor:
                 parameters = parameters_input_tensor.as_numpy()[0].decode("utf-8")
             else:
