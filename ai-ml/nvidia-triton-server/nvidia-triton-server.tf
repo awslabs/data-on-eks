@@ -42,7 +42,7 @@ module "triton_server_vllm" {
         - name: tensor_parallel_size
           value: "1"
         - name: gpu_memory_utilization
-          value: "0.9"
+          value: "0.8"
         - name: dtype
           value: "auto"
       secretEnvironment:
@@ -51,13 +51,13 @@ module "triton_server_vllm" {
           key: "HF_TOKEN"
       resources:
         limits:
-          cpu: 6
-          memory: 25Gi
-          nvidia.com/gpu: 4
+          cpu: 10
+          memory: 60Gi
+          nvidia.com/gpu: 1
         requests:
-          cpu: 6
-          memory: 25Gi
-          nvidia.com/gpu: 4
+          cpu: 10
+          memory: 60Gi
+          nvidia.com/gpu: 1
       nodeSelector:
         NodeGroupType: g5-gpu-karpenter
         type: karpenter
