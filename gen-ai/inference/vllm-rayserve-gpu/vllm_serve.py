@@ -36,7 +36,10 @@ class VLLMDeployment:
             max_model_len=int(os.getenv("MAX_MODEL_LEN", "4096")),
             gpu_memory_utilization=float(os.getenv("GPU_MEMORY_UTILIZATION", "0.8")),
             max_num_seqs=int(os.getenv("MAX_NUM_SEQ", "512")),
+            max_num_batched_tokens=32768,
             trust_remote_code=True,
+            enforce_eager=True,
+            disable_log_requests=True,
         )
         self.engine = AsyncLLMEngine.from_engine_args(args)
 
