@@ -60,7 +60,7 @@ variable "jupyterhub_domain" {
 }
 variable "oauth_domain" {
   type        = string
-  description = "Enter oauth domain and endpoint, e.g. https://keycloak.example.com/realms/master/protocol/openid-connect/. Only needed if auth mechanism is set to oauth"
+  description = "Enter oauth domain and endpoint, e.g. https://keycloak.example.com/realms/master/protocol/openid-connect. Only needed if auth mechanism is set to oauth"
   default     = ""
 }
 variable "oauth_jupyter_client_id" {
@@ -72,6 +72,7 @@ variable "oauth_jupyter_client_secret" {
   type        = string
   description = "Enter oauth client secret. Only needed if auth mechanism is set to oauth"
   default     = ""
+  sensitive   = true
 }
 variable "oauth_username_key" {
   type        = string
