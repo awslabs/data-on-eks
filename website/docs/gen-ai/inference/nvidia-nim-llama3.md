@@ -50,11 +50,49 @@ By combining these components, our proposed solution delivers a powerful and cos
 
 ### Prerequisites
 
+Before getting started with NVIDIA NIM, ensure you have the following:
+
+**NVIDIA AI Enterprise Account**
+
+- Register for an NVIDIA AI Enterprise account. If you don't have one, you can sign up for a trial account using this [link](https://enterpriseproductregistration.nvidia.com/?LicType=EVAL&ProductFamily=NVAIEnterprise).
+
+**NGC API Key**
+
+1. Log in to your NVIDIA AI Enterprise account
+2. Navigate to the NGC (NVIDIA GPU Cloud) [portal](https://org.ngc.nvidia.com/)
+3. Generate a personal API key:
+    - Go to your account settings or navigate directly to: https://org.ngc.nvidia.com/setup/personal-keys
+    - Click on "Generate Personal Key"
+    - Ensure that at least "NGC Catalog" is selected from the "Services Included" dropdown
+    - Copy and securely store your API key, the key should have a prefix with `nvapi-`
+
+    ![NGC API KEY](./img/nim-ngc-api-key.png)
+
+**Validate NGC API Key and Test Image Pull**
+
+To ensure your API key is valid and working correctly:
+1. Set up your NGC API key as an environment variable:
+```bash
+export NGC_API_KEY=<your_api_key_here>
+```
+
+2. Authenticate Docker with the NVIDIA Container Registry:
+
+```bash
+echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
+```
+
+3. Test pulling an image from NGC:
+```bash
+docker pull nvcr.io/nim/meta/llama3-8b-instruct:latest
+```
+You do not have to wait for it to complete, just to make sure the API key is valid to pull the image.
+
+The following are required to run this tutorial
 - An active AWS account with admin equivalent permissions
 - [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 - [kubectl](https://Kubernetes.io/docs/tasks/tools/)
-- [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) installed
-- NVIDIA NGC account and API key
+- [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 
 ### Deploy
 

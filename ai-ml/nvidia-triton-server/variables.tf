@@ -63,7 +63,7 @@ variable "enable_nvidia_nim" {
 #-------------------------------------------------------------------
 # Instructions for Securely Setting the NVIDIA NGC API key
 # -------------------------------------------------------------------
-# 1. Obtain your NVIDIA NGC API key from https://docs.nvidia.com/ai-enterprise/deployment-guide-spark-rapids-accelerator/0.1.0/appendix-ngc.html
+# 1. Obtain your NVIDIA NGC API key from https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html#generate-an-api-key
 # 2. Before running 'terraform apply', set the environment variable:
 #    * Linux/macOS:
 #        export TF_VAR_ngc_api_key=<your NVIDIA NGC API key>
