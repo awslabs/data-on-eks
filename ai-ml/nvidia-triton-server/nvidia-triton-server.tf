@@ -61,7 +61,17 @@ module "triton_server_vllm" {
       nodeSelector:
         NodeGroupType: g5-gpu-karpenter
         type: karpenter
-
+      hpa:
+        minReplicas: 1
+        maxReplicas: 5
+        metrics:
+          - type: Pods
+            pods:
+              metric:
+                name: nv_inference_queue_duration_ms
+              target:
+                type: AverageValue
+                averageValue: 10
       tolerations:
         - key: "nvidia.com/gpu"
           operator: "Exists"
