@@ -5,25 +5,30 @@ echo "Initializing ..."
 # Initialize Terraform
 terraform init -upgrade
 
-# validate if env is empty or has dummy value
-
-if [[ -z "${TF_VAR_huggingface_token}" ]]; then
+# Check logic
+# 1. if TF_VAR_enable_nvidia_triton_server not specifically set to false; when customer just enabled NIM pattern, we should not check the huggingface_token
+# 2. if TF_VAR_enable_nvidia_triton_server is explicitly set to true, check the huggingface_token
+# 3. if TF_VAR_enable_nvidia_triton_server is empty, still check the huggingface_token token, as it's the default behaviour.
+if [[ "${TF_VAR_enable_nvidia_triton_server}" != "false" || "${TF_VAR_enable_nvidia_triton_server}" == "true" || -z "${TF_VAR_enable_nvidia_triton_server}" ]]; then
+  echo "Triton server enabled..."
+  if [[ -z "${TF_VAR_huggingface_token}" ]]; then
     echo "FAILED: TF_VAR_huggingface_token environment variable is not set"
     exit 1
-fi
+  fi
 
-if [[ "${TF_VAR_huggingface_token}" = "DUMMY_TOKEN_REPLACE_ME" ]] ; then
+  if [[ "${TF_VAR_huggingface_token}" = "DUMMY_TOKEN_REPLACE_ME" ]]; then
     echo "FAILED: Please replace dummy HuggingFace Token before proceeding"
     exit 1
+  fi
 fi
 
 if [ "$TF_VAR_enable_nvidia_nim" = true ]; then
-    # Check if server_token does not start with "nvapi-"
-    # Obtain your NVIDIA NGC API key from https://docs.nvidia.com/ai-enterprise/deployment-guide-spark-rapids-accelerator/0.1.0/appendix-ngc.html
-    if [[ ! "$TF_VAR_ngc_api_key" == nvapi-* ]]; then
-        echo "FAILED: TF_VAR_ngc_api_key must start with 'nvapi-'"
-        exit 1
-    fi
+  # Check if server_token does not start with "nvapi-"
+  # Obtain your NVIDIA NGC API key from https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html#generate-an-api-key
+  if [[ ! "$TF_VAR_ngc_api_key" == nvapi-* ]]; then
+    echo "FAILED: TF_VAR_ngc_api_key must start with 'nvapi-'"
+    exit 1
+  fi
 fi
 
 echo "Proceed with deployment of targets..."
@@ -35,8 +40,7 @@ targets=(
 )
 
 # Apply modules in sequence
-for target in "${targets[@]}"
-do
+for target in "${targets[@]}"; do
   echo "Applying module $target..."
   apply_output=$(terraform apply -target="$target" -auto-approve 2>&1 | tee /dev/tty)
   if [[ ${PIPESTATUS[0]} -eq 0 && $apply_output == *"Apply complete"* ]]; then
