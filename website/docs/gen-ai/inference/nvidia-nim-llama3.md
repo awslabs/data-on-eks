@@ -50,11 +50,49 @@ By combining these components, our proposed solution delivers a powerful and cos
 
 ### Prerequisites
 
+Before getting started with NVIDIA NIM, ensure you have the following:
+
+**NVIDIA AI Enterprise Account**
+
+- Register for an NVIDIA AI Enterprise account. If you don't have one, you can sign up for a trial account using this [link](https://enterpriseproductregistration.nvidia.com/?LicType=EVAL&ProductFamily=NVAIEnterprise).
+
+**NGC API Key**
+
+1. Log in to your NVIDIA AI Enterprise account
+2. Navigate to the NGC (NVIDIA GPU Cloud) [portal](https://org.ngc.nvidia.com/)
+3. Generate a personal API key:
+    - Go to your account settings or navigate directly to: https://org.ngc.nvidia.com/setup/personal-keys
+    - Click on "Generate Personal Key"
+    - Ensure that at least "NGC Catalog" is selected from the "Services Included" dropdown
+    - Copy and securely store your API key, the key should have a prefix with `nvapi-`
+
+    ![NGC API KEY](./img/nim-ngc-api-key.png)
+
+**Validate NGC API Key and Test Image Pull**
+
+To ensure your API key is valid and working correctly:
+1. Set up your NGC API key as an environment variable:
+```bash
+export NGC_API_KEY=<your_api_key_here>
+```
+
+2. Authenticate Docker with the NVIDIA Container Registry:
+
+```bash
+echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
+```
+
+3. Test pulling an image from NGC:
+```bash
+docker pull nvcr.io/nim/meta/llama3-8b-instruct:latest
+```
+You do not have to wait for it to complete, just to make sure the API key is valid to pull the image.
+
+The following are required to run this tutorial
 - An active AWS account with admin equivalent permissions
 - [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 - [kubectl](https://Kubernetes.io/docs/tasks/tools/)
-- [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) installed
-- NVIDIA NGC account and API key
+- [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 
 ### Deploy
 
@@ -89,7 +127,7 @@ This process will take approximately 20 minutes to complete.
 
 **3. Verify the Installation**
 
-Once the installation finishes, verify the Amazon EKS Cluster
+Once the installation finishes, you may find the configure_kubectl command from the output. Run the following to configure EKS cluster access
 
 ```bash
 # Creates k8s config file to authenticate with EKS
@@ -99,7 +137,7 @@ aws eks --region us-west-2 update-kubeconfig --name nvidia-triton-server
 Check the status of your pods deployed
 
 ```bash
-kubectl get po -A
+kubectl get po -n nim
 ```
 
 You should see output similar to the following:
@@ -107,45 +145,17 @@ You should see output similar to the following:
 <summary>Click to expand the deployment details</summary>
 
 ```text
-NAMESPACE               NAME                                                              READY   STATUS    RESTARTS      AGE
-ingress-nginx           ingress-nginx-controller-55474d95c5-994fc                         1/1     Running   0             29h
-karpenter               karpenter-57f7f6bc4f-c6cts                                        1/1     Running   0             29h
-karpenter               karpenter-57f7f6bc4f-cfwwt                                        1/1     Running   0             29h
-kube-prometheus-stack   kube-prometheus-stack-grafana-558586c645-hv7hm                    3/3     Running   0             29h
-kube-prometheus-stack   kube-prometheus-stack-kube-state-metrics-6669bff85f-fsmfz         1/1     Running   0             29h
-kube-prometheus-stack   kube-prometheus-stack-operator-67b968589d-k6ndp                   1/1     Running   0             29h
-kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-58pfp              1/1     Running   0             19h
-kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-95xzb              1/1     Running   0             29h
-kube-prometheus-stack   kube-prometheus-stack-prometheus-node-exporter-wtpgc              1/1     Running   0             29h
-kube-prometheus-stack   prometheus-adapter-6f4ff878bc-64ntq                               1/1     Running   0             24h
-kube-prometheus-stack   prometheus-kube-prometheus-stack-prometheus-0                     2/2     Running   0             29h
-kube-system             aws-load-balancer-controller-55cb4579f6-9bp8d                     1/1     Running   0             29h
-kube-system             aws-load-balancer-controller-55cb4579f6-n2trc                     1/1     Running   0             29h
-kube-system             aws-node-rlxwv                                                    2/2     Running   0             29h
-kube-system             aws-node-tz56x                                                    2/2     Running   0             19h
-kube-system             aws-node-v29s9                                                    2/2     Running   0             29h
-kube-system             coredns-848555ff5-kkngd                                           1/1     Running   0             29h
-kube-system             coredns-848555ff5-n6dnv                                           1/1     Running   0             29h
-kube-system             ebs-csi-controller-657544c77c-hl4z5                               6/6     Running   0             29h
-kube-system             ebs-csi-controller-657544c77c-sncv6                               6/6     Running   0             29h
-kube-system             ebs-csi-node-9xjnt                                                3/3     Running   0             19h
-kube-system             ebs-csi-node-fhphc                                                3/3     Running   0             29h
-kube-system             ebs-csi-node-hjg9v                                                3/3     Running   0             29h
-kube-system             efs-csi-controller-77c44b5fc7-pqwv9                               3/3     Running   0             25h
-kube-system             efs-csi-controller-77c44b5fc7-vxpng                               3/3     Running   0             25h
-kube-system             efs-csi-node-5k7k8                                                3/3     Running   0             25h
-kube-system             efs-csi-node-l4n5t                                                3/3     Running   0             25h
-kube-system             efs-csi-node-wxl97                                                3/3     Running   0             19h
-kube-system             kube-proxy-5qg9q                                                  1/1     Running   0             29h
-kube-system             kube-proxy-7fzdh                                                  1/1     Running   0             29h
-kube-system             kube-proxy-vm56n                                                  1/1     Running   0             19h
-nim                     nim-llm-0                                                         1/1     Running   0             15m
-nvidia-device-plugin    nvidia-device-plugin-gpu-feature-discovery-64c9v                  1/1     Running   0             19h
-nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-master-568b497ddvx9   1/1     Running   0             29h
-nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-worker-28wvj          1/1     Running   1 (29h ago)   29h
-nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-worker-5nplt          1/1     Running   0             29h
-nvidia-device-plugin    nvidia-device-plugin-node-feature-discovery-worker-hztcq          1/1     Running   0             19h
-nvidia-device-plugin    nvidia-device-plugin-vn5dn                                        1/1     Running   0             19h
+NAME            READY   STATUS    RESTARTS   AGE
+pod/nim-llm-0   1/1     Running   0          105s
+
+NAME              TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/nim-llm   ClusterIP   172.20.63.25   <none>        8000/TCP   107s
+
+NAME                       READY   AGE
+statefulset.apps/nim-llm   1/4     106s
+
+NAME                                          REFERENCE             TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/nim-llm   StatefulSet/nim-llm   1/5       1         5         4          107s
 ```
 </details>
 
@@ -158,47 +168,78 @@ image:
   repository: nvcr.io/nim/meta/llama3-8b-instruct
   tag: latest
 ```
+The Llama3 model is deployed with a StatefulSet in nim-llm namespace. As it is running, Karpenter provisioned a GPU
+Check the Karpenter provisioned node.
+
+```bash
+kubectl get node -l type=karpenter -L node.kubernetes.io/instance-type
+```
+
+```text
+NAME                                         STATUS   ROLES    AGE     VERSION               INSTANCE-TYPE
+ip-100-64-77-39.us-west-2.compute.internal   Ready    <none>   4m46s   v1.30.0-eks-036c24b   g5.2xlarge
+```
 
 **4. Verify the deployed model**
 
-Once all pods in `nim` namespace is ready with `1/1` status, use below command to verify it's ready to serve the traffic.
-
-```bash
-export INGRESS_URL=$(kubectl get ingress -n nim -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-
-curl -X 'POST' \
-"http://$INGRESS_URL/v1/completions" \
--H 'accept: application/json' \
--H 'Content-Type: application/json' \
--d '{
-"model": "meta/llama3-8b-instruct",
-"prompt": "Once upon a time",
-"max_tokens": 64
-}'
-```
-
-you will see similar output like the following
-
-```json
-{"id":"cmpl-63a0b66aeda1440c8b6ca1ce3583b173","object":"text_completion","created":1719742336,"model":"meta/llama3-8b-instruct","choices":[{"index":0,"text":", there was a young man named Jack who lived in a small village at the foot of a vast and ancient forest. Jack was a curious and adventurous soul, always eager to explore the world beyond his village. One day, he decided to venture into the forest, hoping to discover its secrets.\nAs he wandered deeper into","logprobs":null,"finish_reason":"length","stop_reason":null}],"usage":{"prompt_tokens":5,"total_tokens":69,"completion_tokens":64}}
-```
-
-### Testing the Llama3 model deployed with NIM
-It's time to test the Llama3 just deployed. We will run the following commands with the same prompts to verify the generated outputs.
-
-First, expose the model serving service with port-forward using kubectl
+Once all pods in `nim` namespace is ready with `1/1` status, use below command to verify it's ready to serve the traffic. To verify, expose the model serving service with port-forward using kubectl.
 
 ```bash
 kubectl port-forward -n nim svc/nim-llm 8000
 ```
 
-Next, open another Terminal window, run the client using the existing prompts:
+Then you can invoke the deployed model with a simple HTTP request with curl command.
+
+```bash
+curl -X 'POST' \
+  "http://localhost:8000/v1/completions" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+      "model": "meta/llama3-8b-instruct",
+      "prompt": "Once upon a time",
+      "max_tokens": 64
+      }'
+```
+
+you will see similar output like the following
+
+```json
+{
+  "id": "cmpl-63a0b66aeda1440c8b6ca1ce3583b173",
+  "object": "text_completion",
+  "created": 1719742336,
+  "model": "meta/llama3-8b-instruct",
+  "choices": [
+    {
+      "index": 0,
+      "text": ", there was a young man named Jack who lived in a small village at the foot of a vast and ancient forest. Jack was a curious and adventurous soul, always eager to explore the world beyond his village. One day, he decided to venture into the forest, hoping to discover its secrets.\nAs he wandered deeper into",
+      "logprobs": null,
+      "finish_reason": "length",
+      "stop_reason": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5,
+    "total_tokens": 69,
+    "completion_tokens": 64
+  }
+}
+```
+
+### Testing the Llama3 model deployed with NIM
+It's time to test the Llama3 just deployed. First setup a simple environment for the testing.
 
 ```bash
 cd gen-ai/inference/nvidia-nim/nim-client
 python3 -m venv .venv
 source .venv/bin/activate
 pip install openai
+```
+
+We have prepared some prompts in prompts.txt , it contains 20 prompts. You can run following commands with the prompts to verify the generated outputs.
+
+```bash
 python3 client.py --input-prompts prompts.txt --results-file results.txt
 ```
 
