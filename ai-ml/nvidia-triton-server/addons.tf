@@ -138,6 +138,7 @@ module "eks_blueprints_addons" {
       })
     ]
     chart_version = "48.1.1"
+    namespace     = "monitoring"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
