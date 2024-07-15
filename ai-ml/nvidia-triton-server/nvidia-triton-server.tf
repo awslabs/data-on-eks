@@ -53,11 +53,11 @@ module "triton_server_vllm" {
         limits:
           cpu: 10
           memory: 60Gi
-          nvidia.com/gpu: 1
+          nvidia.com/gpu: 4
         requests:
           cpu: 10
           memory: 60Gi
-          nvidia.com/gpu: 1
+          nvidia.com/gpu: 4
       nodeSelector:
         NodeGroupType: g5-gpu-karpenter
         type: karpenter
