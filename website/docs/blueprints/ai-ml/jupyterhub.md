@@ -78,7 +78,7 @@ Open the private key(`key.pem`) in a text editor and copy the contents into the 
 
 **JupyterHub authentication options**
 
-This blueprint provides support for two authentication mechanisms: `dummy` and `cognito`. In this post, we’ll use the dummy mechanism for easy demonstration and it’s not a recommended authentication mechanism for production. We strongly advise utilizing the cognito method or other supported authentication mechanisms found on the Authenticators page for production-ready setups.
+This blueprint provides support for three authentication mechanisms: `dummy` and `cognito`, and `oauth`. In this post, we’ll use the dummy mechanism for easy demonstration and it’s not a recommended authentication mechanism for production. We strongly advise utilizing the cognito method or other supported authentication mechanisms found on the Authenticators page for production-ready setups.
 
 ### Deploy
 
@@ -93,6 +93,14 @@ Update the `variables.tf` file with the following variables:
  - `jupyterhub_domain`
  - `jupyter_hub_auth_mechanism=cognito`
 
+**Type3 Deployment config changes:**
+- `acm_certificate_domain`
+- `jupyterhub_domain`
+- `jupyter_hub_auth_mechanism=oauth`
+- `oauth_domain`
+- `oauth_jupyter_client_id`
+- `oauth_jupyter_client_secret`
+- `oauth_username_key`
 
 Clone the repository
 
@@ -234,7 +242,7 @@ Add the `CNAME` DNS record in ChangeIP for the JupyterHub domain with the load b
 When adding the load balancer DNS name in the value field of CNAME in ChangeIP make sure to add a dot(`.`) at the end of the load-balancer DNS name.
 :::
 
-Now typing the domain url in the browser should redirect to the Cognito login page.
+Now typing the domain url in the browser should redirect to the Jupyterhub login page.
 
 ![](img/Cognito-Sign-in.png)
 
@@ -258,6 +266,30 @@ To test the setup of the shared and personal directories in JupyterHub, you can 
 df -h
 ```
 Verify EFS mounts created. Each user's private home directory is available at `/home/jovyan`. The shared directory is available at `/home/shared`
+
+### Type3 deployment(Optional): Login into JupyterHub via OAuth (Keycloak)
+
+Note: This will look a little different depending on your OAuth provider.
+
+Add the `CNAME` DNS record in ChangeIP for the JupyterHub domain with the load balancer DNS name.
+
+![](img/CNAME.png)
+
+:::info
+When adding the load balancer DNS name in the value field of CNAME in ChangeIP make sure to add a dot(`.`) at the end of the load-balancer DNS name.
+:::
+
+Now typing the domain url in the browser should redirect to the Jupyterhub login page.
+
+![](img/oauth.png)
+
+Follow the Keycloak sign-up and sign-in process to login.
+
+![](img/keycloak-login.png)
+
+Successful sign-in will open up the JupyterHub environment for the logged in user.
+
+![](img/jupyter_launcher.png)
 
 
 <CollapsibleContent header={<h3><span>Cleanup</span></h3>}>

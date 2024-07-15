@@ -53,27 +53,37 @@ variable "acm_certificate_domain" {
   description = "Enter domain name with wildcard and ensure ACM certificate is created for this domain name, e.g. *.example.com"
   default     = ""
 }
+
+# Only needed if auth mechanism is set to cognito or oauth. This is the domain for jupyterhub
 variable "jupyterhub_domain" {
   type        = string
-  description = "Enter sub-domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito or oauth"
+  description = "Enter domain name for jupyterhub to be hosted,  e.g. eks.example.com. Only needed if auth mechanism is set to cognito or oauth"
   default     = ""
 }
+
+# Only needed if auth mechanism is set to oauth. This is the root path for the oidc endpoints
 variable "oauth_domain" {
   type        = string
   description = "Enter oauth domain and endpoint, e.g. https://keycloak.example.com/realms/master/protocol/openid-connect. Only needed if auth mechanism is set to oauth"
   default     = ""
 }
+
+# Only needed if auth mechanism is set to oauth. This is the id of the client
 variable "oauth_jupyter_client_id" {
   type        = string
   description = "Enter oauth client id for jupyterhub, e.g. jupyterhub. Only needed if auth mechanism is set to oauth"
   default     = ""
 }
+
+# Only needed if auth mechanism is set to oauth. This is the secret for the client
 variable "oauth_jupyter_client_secret" {
   type        = string
   description = "Enter oauth client secret. Only needed if auth mechanism is set to oauth"
   default     = ""
   sensitive   = true
 }
+
+# Only needed if auth mechanism is set to oauth. This is the key to use for looking up the username.
 variable "oauth_username_key" {
   type        = string
   description = "oauth field for the username. e.g. 'preferred_username' Only needed if auth mechanism is set to oauth"
