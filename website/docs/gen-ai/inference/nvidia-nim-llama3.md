@@ -30,6 +30,8 @@ NIMs are packaged as container images on a per model/model family basis. Each NI
 
 ![NIM Architecture](img/nim-architecture.png)
 
+Source: https://docs.nvidia.com/nim/large-language-models/latest/introduction.html#architecture
+
 ## Overview of this deployment pattern on Amazon EKS
 
 This pattern combines the capabilities of NVIDIA NIM, Amazon Elastic Kubernetes Service (EKS), and various AWS services to deliver a high-performance and cost-optimized model serving infrastructure.
@@ -51,6 +53,9 @@ By combining these components, our proposed solution delivers a powerful and cos
 ### Prerequisites
 
 Before getting started with NVIDIA NIM, ensure you have the following:
+
+<details>
+<summary>Click to expand the NVIDIA NIM account setup details</summary>
 
 **NVIDIA AI Enterprise Account**
 
@@ -87,6 +92,7 @@ echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-s
 docker pull nvcr.io/nim/meta/llama3-8b-instruct:latest
 ```
 You do not have to wait for it to complete, just to make sure the API key is valid to pull the image.
+</details>
 
 The following are required to run this tutorial
 - An active AWS account with admin equivalent permissions
@@ -319,11 +325,14 @@ kubectl apply -f genaiperf-deploy.yaml
 ```
 
 Once the pod is ready with running status `1/1`, can execute into the pod.
+
 ```bash
 export POD_NAME=$(kubectl get po -l app=tritonserver -ojsonpath='{.items[0].metadata.name}')
 kubectl exec -it $POD_NAME -- bash
 ```
+
 Run the testing to the deployed NIM Llama3 model
+
 ```bash
 genai-perf \
   -m meta/llama3-8b-instruct \
@@ -342,6 +351,7 @@ genai-perf \
   --profile-export-file my_profile_export.json \
   --url nim-llm.nim:8000
 ```
+
 You should see similar output like the following
 
 ```bash
@@ -362,20 +372,19 @@ You should be able to see the [metrics](https://docs.nvidia.com/deeplearning/tri
 
 To understand the command line options, please refer to [this documentation](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/client/src/c%2B%2B/perf_analyzer/genai-perf/README.html#command-line-options).
 
-
 ## Observability
+
 As part of this blueprint, we have also deployed the Kube Prometheus stack, which provides Prometheus server and Grafana deployments for monitoring and observability.
 
 First, let's verify the services deployed by the Kube Prometheus stack:
 
 ```bash
-kubectl get svc -n kube-prometheus-stack
+kubectl get svc -n monitoring
 ```
 
 You should see output similar to this:
 
 ```text
-kubectl get svc -n kube-prometheus-stack
 NAME                                             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
 kube-prometheus-stack-grafana                    ClusterIP   172.20.225.77    <none>        80/TCP              10m
 kube-prometheus-stack-kube-state-metrics         ClusterIP   172.20.237.248   <none>        8080/TCP            10m
@@ -394,7 +403,9 @@ kubectl port-forward -n nim svc/nim-llm 8000
 curl localhost:8000/metrics # run this in another terminal
 ```
 
-We also provided a pre-configured Grafana dashboard. In the Grafana dashboard below, it contains several important metrics:
+### Grafana Dashboard
+
+We provides a pre-configured Grafana dashboard to better visualize NIM status. In the Grafana dashboard below, it contains several important metrics:
 
 - **Time to First Token (TTFT)**: The latency between the initial inference request to the model and the return of the first token.
 - **Inter-Token Latency (ITL)**: The latency between each token after the first.
@@ -404,34 +415,50 @@ You can find more metrics description from this [document](https://docs.nvidia.c
 
 ![NVIDIA LLM Server](img/nim-dashboard.png)
 
-You can visualize these metrics using the Grafana. To view the Grafana dashboard to monitor these metrics, follow the steps below:
+To view the Grafana dashboard to monitor these metrics, follow the steps below:
+
+<details>
+<summary>Click to expand details</summary>
+
+**1. Retrieve the Grafana password.**
+
+The password is saved in the AWS Secret Manager. Below Terraform command will show you the secret name.
 
 ```bash
-- Port-forward Grafana service:
-kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n kube-prometheus-stack
-
-- Grafana Admin user
-admin
-
-- Get secret name from Terraform output
 terraform output grafana_secret_name
+```
 
-- Get admin user password
+Then use the output secret name to run below command,
+
+```bash
 aws secretsmanager get-secret-value --secret-id <grafana_secret_name_output> --region $AWS_REGION --query "SecretString" --output text
 ```
 
-**Login to Grafana:**
+**2. Expose the Grafana Service**
+
+Use port-forward to expose the Grafana service.
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
+```
+
+**3. Login to Grafana:**
 
 - Open your web browser and navigate to [http://localhost:3000](http://localhost:3000).
 - Login with the username `admin` and the password retrieved from AWS Secrets Manager.
 
-**Open the NIM Monitoring Dashboard:**
+**4. Open the NIM Monitoring Dashboard:**
 
 - Once logged in, click "Dashboards" on the left sidebar and search "nim"
 - You can find the Dashboard `NVIDIA NIM Monitoring` from the list
 - Click and entering to the dashboard.
 
 You should now see the metrics displayed on the Grafana dashboard, allowing you to monitor the performance your NVIDIA NIM service deployment.
+</details>
+
+:::info
+As of writing this guide, NVIDIA also provides an example Grafana dashboard. You can check it from [here](https://docs.nvidia.com/nim/large-language-models/latest/observability.html#grafana).
+:::
 
 ## Cleanup
 

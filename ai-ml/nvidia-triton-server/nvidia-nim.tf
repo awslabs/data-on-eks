@@ -124,6 +124,7 @@ resource "helm_release" "nim_llm" {
   ]
 
   depends_on = [
-    null_resource.download_nim_deploy
+    null_resource.download_nim_deploy,
+    module.eks_blueprints_addons.ingress_nginx
   ]
 }
