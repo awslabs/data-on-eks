@@ -55,7 +55,10 @@ async def main(FLAGS):
         "top_k": 20,
         "max_tokens": 512,
     }
-    client = openai.AsyncOpenAI(base_url=FLAGS.url)
+    client = openai.AsyncOpenAI(
+        base_url=FLAGS.url,
+        api_key="not_used_for_self_host",  # To avoid report OPENAI_API_KEY missing
+    )
     with open(FLAGS.input_prompts, "r") as file:
         print(f"Loading inputs from `{FLAGS.input_prompts}`...")
         prompts = file.readlines()
