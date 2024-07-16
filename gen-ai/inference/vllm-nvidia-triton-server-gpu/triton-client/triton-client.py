@@ -10,6 +10,10 @@ import tritonclient.grpc.aio as grpcclient
 from tritonclient.utils import *
 
 
+def count_tokens(text):
+    return len(text.split())
+
+
 def create_request(prompt, stream, request_id, sampling_parameters, model_name, send_parameters_as_tensor=True):
     inputs = []
     prompt_data = np.array([prompt.encode("utf-8")], dtype=np.object_)
@@ -71,12 +75,12 @@ async def main(FLAGS):
                 print(f"caught error in request iterator: {error}")
 
         try:
+            start_time = time.time()  # Record the start time
             response_iterator = triton_client.stream_infer(
                 inputs_iterator=async_request_iterator(),
                 stream_timeout=FLAGS.stream_timeout,
             )
             async for response in response_iterator:
-                start_time = time.time()  # Record the start time
                 result, error = response
                 end_time = time.time()  # Record the end time
 
@@ -85,21 +89,26 @@ async def main(FLAGS):
                 else:
                     output = result.as_numpy("TEXT")
                     for i in output:
-                        results_dict[result.get_response().id].append(i)
+                        debug = {
+                            "Prompt": prompts[int(result.get_response().id)],
+                            "Response Time": end_time - start_time,
+                            "Tokens": count_tokens(i.decode('utf-8')),
+                            "Response": i.decode('utf-8'),
+                        }
+                        results_dict[result.get_response().id] = debug
 
-                    duration = (end_time - start_time) * 1000  # Calculate the duration in milliseconds
+                    duration = (end_time - start_time)  # Calculate the duration in seconds
                     total_time_sec += (end_time - start_time)  # Add duration to total time in seconds
-                    print(f"Model {FLAGS.model_name} - Request {result.get_response().id}: {duration:.2f} ms")
+                    print(f"Model {FLAGS.model_name} - Request {result.get_response().id}: {duration:.2f} seconds")
 
         except InferenceServerException as error:
             print(error)
             sys.exit(1)
 
     with open(FLAGS.results_file, "w") as file:
-        for id in results_dict.keys():
-            for result in results_dict[id]:
-                file.write(result.decode("utf-8"))
-                file.write("\n")
+        for key, val in results_dict.items():
+            file.write(
+                f"Prompt: {val['Prompt']}\nResponse Time: {val['Response Time']}\nTokens: {val['Tokens']}\nResponse: {val['Response']}")
             file.write("\n=========\n\n")
         print(f"Storing results into `{FLAGS.results_file}`...")
 
@@ -107,8 +116,8 @@ async def main(FLAGS):
         print(f"\nContents of `{FLAGS.results_file}` ===>")
         system(f"cat {FLAGS.results_file}")
 
-    total_time_ms = total_time_sec * 1000  # Convert total time to milliseconds
-    print(f"Total time for all requests: {total_time_sec:.2f} seconds ({total_time_ms:.2f} milliseconds)")
+    total_time_ms = total_time_sec  # Convert total time to milliseconds
+    print(f"Total time for all requests: {total_time_sec:.2f} seconds ({total_time_ms:.2f} seconds)")
     print("PASS: vLLM example")
 
 

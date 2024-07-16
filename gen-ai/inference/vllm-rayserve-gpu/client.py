@@ -21,13 +21,14 @@ def count_tokens(text):
 
 # Function to generate text asynchronously
 async def generate_text(session, prompt):
+    SYSTEM_PROMPT = """<<SYS>>\nKeep short answers of no more than 100 sentences.\n<</SYS>>\n\n"""
     payload = {
-        "prompt": prompt,
+        "prompt": "<s>[INST]" + SYSTEM_PROMPT + prompt + "[/INST]",
         "stream": False,
-        "max_tokens": 8192,  # Increased to allow for longer responses
-        "temperature": 0.7,  # Adjusted for balanced responses
-        "top_p": 0.9,  # Adjusted for balanced responses
-        "top_k": 50,  # Increased for more diversity in responses
+        "max_tokens": 512,  # Increased to allow for longer responses
+        "temperature": 0.01,  # Adjusted for balanced responses
+        "top_p": 1,  # Adjusted for balanced responses
+        "top_k": 20,  # Increased for more diversity in responses
         "stop": None
     }
     # Create the URL for the inference

@@ -33,8 +33,8 @@ class VLLMDeployment:
             model=os.getenv("MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.2"),  # Model identifier from Hugging Face Hub or local path.
             dtype="auto",  # Automatically determine the data type (e.g., float16 or float32) for model weights and computations.
             gpu_memory_utilization=float(os.getenv("GPU_MEMORY_UTILIZATION", "0.8")),  # Percentage of GPU memory to utilize, reserving some for overhead.
-            max_model_len=int(os.getenv("MAX_MODEL_LEN", "8192")),  # Maximum sequence length (in tokens) the model can handle, including both input and output tokens.
-            max_num_seqs=int(os.getenv("MAX_NUM_SEQ", "4")),  # Maximum number of sequences (requests) to process in parallel.
+            max_model_len=int(os.getenv("MAX_MODEL_LEN", "4096")),  # Maximum sequence length (in tokens) the model can handle, including both input and output tokens.
+            max_num_seqs=int(os.getenv("MAX_NUM_SEQ", "512")),  # Maximum number of sequences (requests) to process in parallel.
             max_num_batched_tokens=int(os.getenv("MAX_NUM_BATCHED_TOKENS", "32768")),  # Maximum number of tokens processed in a single batch across all sequences (max_model_len * max_num_seqs).
             trust_remote_code=True,  # Allow execution of untrusted code from the model repository (use with caution).
             enable_chunked_prefill=False,  # Disable chunked prefill to avoid compatibility issues with prefix caching.
@@ -43,7 +43,9 @@ class VLLMDeployment:
             max_parallel_loading_workers=2,  # Number of parallel workers to load the model concurrently.
             pipeline_parallel_size=1,  # Number of pipeline parallelism stages; typically set to 1 unless using model parallelism.
             tensor_parallel_size=1,  # Number of tensor parallelism stages; typically set to 1 unless using model parallelism.
-            enable_prefix_caching=True  # Enable prefix caching to improve performance for similar prompt prefixes.
+            enable_prefix_caching=True,  # Enable prefix caching to improve performance for similar prompt prefixes.
+            enforce_eager=True,
+            disable_log_requests=True,
         )
 
         self.engine = AsyncLLMEngine.from_engine_args(args)

@@ -47,6 +47,13 @@ const videos = [
     linkTo: "https://www.youtube.com/watch?v=7AHuMNqbR7o",
     date: "Feb 2, 2023"
   },
+  {
+    title: "Dynamic Large Scale Spark on Kubernetes with Argo Workflows and Argo Events - DoK Day KubeCon NA 2023",
+    description: "Dynamic Large Scale Spark on Kubernetes with Argo Workflows and Argo Events - DoK Day KubeCon NA 2023",
+    imageSrc: 'news/video7.png',
+    linkTo: "https://www.youtube.com/watch?v=pTALAJ2r1uY",
+    date: "Nov 6, 2023"
+  },
 ];
 
 const VideoGrid = () => {

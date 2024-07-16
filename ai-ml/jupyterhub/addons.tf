@@ -1,6 +1,6 @@
 # Use this data source to get the ARN of a certificate in AWS Certificate Manager (ACM)
 data "aws_acm_certificate" "issued" {
-  count    = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
+  count    = var.jupyter_hub_auth_mechanism != "dummy" ? 1 : 0
   domain   = var.acm_certificate_domain
   statuses = ["ISSUED"]
 }
@@ -267,11 +267,12 @@ module "eks_data_addons" {
     values = [templatefile("${path.module}/helm/jupyterhub/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
       ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
       jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")
-      authorize_url               = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")
-      token_url                   = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token", "")
-      userdata_url                = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
-      client_id                   = try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
-      client_secret               = try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
+      authorize_url               = var.oauth_domain != "" ? "${var.oauth_domain}/auth" : try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")
+      token_url                   = var.oauth_domain != "" ? "${var.oauth_domain}/token" : try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token", "")
+      userdata_url                = var.oauth_domain != "" ? "${var.oauth_domain}/userinfo" : try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
+      username_key                = try(var.oauth_username_key, "")
+      client_id                   = var.oauth_jupyter_client_id != "" ? var.oauth_jupyter_client_id : try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
+      client_secret               = var.oauth_jupyter_client_secret != "" ? var.oauth_jupyter_client_secret : try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
       user_pool_id                = try(aws_cognito_user_pool.pool[0].id, "")
       identity_pool_id            = try(aws_cognito_identity_pool.identity_pool[0].id, "")
       jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
