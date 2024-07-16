@@ -1,10 +1,10 @@
 ---
-sidebar_position: 5
+sidebar_position: 2
 sidebar_label: Trainium on EKS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
-# AWS Trainium on EKS
+# AWS Trainium and Inferentia on EKS
 [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/) is an advanced ML accelerator that transforms high-performance deep learning(DL) training. `Trn1` instances, powered by AWS Trainium chips, are purpose-built for high-performance DL training of **100B+ parameter** models. Meticulously designed for exceptional performance, Trn1 instances cater specifically to training popular Natual Language Processing(NLP) models on AWS, offering up to  **50% cost savings ** compared to GPU-based EC2 instances. This cost efficiency makes them an attractive option for data scientists and ML practitioners seeking optimized training costs without compromising performance.
 
 At the core of Trn1 instance's capabilities lies the [AWS Neuron SDK](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/), a software development kit seamlessly integrated with leading ML frameworks and libraries, such as [PyTorch](https://pytorch.org/), [TensorFlow](https://tensorflow.org/), [Megatron-LM](https://huggingface.co/docs/accelerate/usage_guides/megatron_lm), and [Hugging Face](https://huggingface.co/). The Neuron SDK empowers developers to train NLP, computer vision, and recommender models on Trainium with ease, requiring only a few lines of code changes.
