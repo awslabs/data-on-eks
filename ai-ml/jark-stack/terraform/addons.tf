@@ -182,7 +182,7 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_nvidia_device_plugin = true
   nvidia_device_plugin_helm_config = {
-    version = "v0.14.5"
+    version = "v0.15.1"
     name    = "nvidia-device-plugin"
     values = [
       <<-EOT
