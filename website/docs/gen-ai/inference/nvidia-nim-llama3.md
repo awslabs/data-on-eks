@@ -1,6 +1,6 @@
 ---
 title: NVIDIA NIM LLM on Amazon EKS
-sidebar_position: 8
+sidebar_position: 9
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 

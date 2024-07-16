@@ -27,6 +27,8 @@ Data on EKS(DoEKS) solution is categorized into the following focus areas.
 
 🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml) on EKS
 
+🎯  [Gen AI](https://awslabs.github.io/data-on-eks/docs/gen-ai) on EKS
+
 🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms) on EKS
 
 🎯  [Scheduler Workflow Platforms](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers) on EKS
@@ -38,13 +40,13 @@ In this repository, you'll find a variety of deployment blueprints for creating 
 
 🚀 [JupyterHub on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub) 👈 This blueprint deploys a self-managed JupyterHub on EKS with Amazon Cognito authentication.
 
-🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/ray) 👈 This blueprint deploys Ray Operator on EKS with sample scripts.
+🚀 [JARK on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark) 👈 This blueprint deploys Ray Operator on EKS with sample scripts.
 
 🚀 [Trainium/Inferentia with TorchX and Volcano on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium) 👈 This blueprint deploys Gen AI blueprint on EKS with sample Training scripts.
 
-🚀 [EMR-on-EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-karpenter)  👈 Start here if you are new to EMR on EKS. This blueprint deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
-
 🚀 [Spark Operator with Apache YuniKorn on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/spark-operator-yunikorn) 👈 This blueprint deploys EKS cluster and uses Spark Operator and Apache YuniKorn for running self-managed Spark jobs
+
+🚀 [EMR-on-EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-karpenter)  👈 Start here if you are new to EMR on EKS. This blueprint deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
 
 🚀 [Self-managed Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/self-managed-airflow) 👈 This blueprint sets up a self-managed Apache Airflow on an Amazon EKS cluster, following best practices.
 

@@ -1,6 +1,6 @@
 ---
 title: Llama-3 on Inferentia
-sidebar_position: 1
+sidebar_position: 7
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
