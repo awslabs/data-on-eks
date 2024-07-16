@@ -223,7 +223,7 @@ module "data_addons" {
   #---------------------------------------------------------------
   # Karpenter Resources Add-on
   #---------------------------------------------------------------
-  enable_karpenter_resources = true
+  enable_karpenter_resources = false
   karpenter_resources_helm_config = {
     g5-gpu-karpenter = {
       values = [

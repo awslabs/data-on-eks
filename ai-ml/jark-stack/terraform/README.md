@@ -8,6 +8,40 @@ Before we begin, ensure you have all the prerequisites in place to make the depl
 - kubectl
 - terraform
 
+## Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS 
+
+Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins for downloading and extracting container images from Amazon ECR.
+
+To build snapshots with preloaded container images, refer to [this page](../preload-container-image-ami/README.md) for details. 
+
+```
+# Get the snapshot ID with ./snapshot.sh
+
+export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
+
+./install.sh
+...
+```
+You can find the container image is preloaded into the disk disk.
+
+```
+kubectl describe pod
+
+...
+Events:
+  Type     Reason            Age                From               Message
+  ----     ------            ----               ----               -------
+  Warning  FailedScheduling  41m                default-scheduler  0/8 nodes are available: 1 Insufficient cpu, 3 Insufficient memory, 8 Insufficient nvidia.com/gpu. preemption: 0/8 nodes are available: 8 No preemption victims found for incoming pod.
+  Normal   Nominated         41m                karpenter          Pod should schedule on: nodeclaim/gpu-ljvhl
+  Normal   Scheduled         40m                default-scheduler  Successfully assigned stablediffusion/stablediffusion-raycluster-ms6pl-worker-gpu-85d22 to ip-100-64-136-72.us-west-2.compute.internal
+  Normal   Pulled            40m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
+  Normal   Created           40m                kubelet            Created container wait-gcs-ready
+  Normal   Started           40m                kubelet            Started container wait-gcs-ready
+  Normal   Pulled            39m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
+  Normal   Created           39m                kubelet            Created container worker
+  Normal   Started           38m                kubelet            Started container worker
+  ```
+
 # Deploy
 
 Clone the repository
@@ -93,6 +127,7 @@ kubectl get nodes
 | <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
 | <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br>  "100.64.0.0/16"<br>]</pre> | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR. This should be a valid private (RFC 1918) CIDR range | `string` | `"10.1.0.0/21"` | no |
+| <a name="preload-image-bottlerocket-snapshot-id"></a> [preload-image-bottlerocket-snapshot-id](#input\_preload-image-bottlerocket-snapshot-id) | The snapshot ID of bottlerocket that preloads the container image | `string` | | no
 
 ## Outputs
 
