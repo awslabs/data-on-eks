@@ -88,9 +88,9 @@ spec:
                 requests:
                   cpu: 2
                   memory: 16Gi
-          # nodeSelector:
-            # NodeGroupType: x86-cpu-karpenter
-            # type: karpenter
+          nodeSelector:
+            NodeGroupType: x86-cpu-karpenter
+            type: karpenter
           volumes:
             - name: ray-logs
               emptyDir: {}
@@ -124,9 +124,9 @@ spec:
                     cpu: "3"
                     memory: "14Gi"
                     nvidia.com/gpu: 1
-            # nodeSelector:
-            #   NodeGroupType: g5-gpu-karpenter
-            #   type: karpenter
+            nodeSelector:
+              NodeGroupType: g5-gpu-karpenter
+              type: karpenter
             tolerations:
               - key: "nvidia.com/gpu"
                 operator: "Exists"
