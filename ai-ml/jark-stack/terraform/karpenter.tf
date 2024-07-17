@@ -40,9 +40,6 @@ resource "kubectl_manifest" "karpenter_gpu_node_pool" {
     kind: NodePool
     metadata:
       name: gpu
-      labels:
-        NodeGroupType: g5-gpu-karpenter
-        type: karpenter
     spec:
       disruption:
         consolidateAfter: 600s
@@ -53,6 +50,10 @@ resource "kubectl_manifest" "karpenter_gpu_node_pool" {
         memory: 1000Gi
         nvidia.com/gpu: 50
       template:
+        metadata: 
+          labels:
+            NodeGroupType: g5-gpu-karpenter
+            type: karpenter
         spec:
           nodeClassRef:
             name: default
@@ -96,9 +97,7 @@ resource "kubectl_manifest" "karpenter_node_pool" {
     kind: NodePool
     metadata:
       name: default
-      labels:
-        NodeGroupType: x86-cpu-karpenter
-        type: karpenter
+
     spec:
       disruption:
         consolidateAfter: 600s
@@ -107,6 +106,10 @@ resource "kubectl_manifest" "karpenter_node_pool" {
       limits:
         cpu: 1k
       template:
+        metadata:
+          labels:
+            NodeGroupType: x86-cpu-karpenter
+            type: karpenter
         spec:
           kubelet:
             maxPods: 110
