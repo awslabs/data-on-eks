@@ -1,0 +1,25 @@
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: default
+spec:
+  template:
+    metadata:
+      labels:
+        NodeGroupType: apps
+    spec:
+      nodeClassRef:
+        name: default
+      requirements:
+        - key: "kubernetes.io/arch"
+          operator: In
+          values: [ "amd64", "arm64"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: "karpenter.k8s.aws/instance-category"
+          operator: In
+          values: ["c", "m", "r"]
+  disruption:
+    consolidationPolicy: WhenUnderutilized
+    expireAfter: 720h

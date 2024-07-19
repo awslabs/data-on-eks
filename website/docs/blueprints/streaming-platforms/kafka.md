@@ -83,17 +83,18 @@ terraform init
 Run Terraform plan to verify the resources created by this execution.
 
 ```bash
-export AWS_REGION="us-west-2"   # Select your own region
-terraform plan -var="region=$AWS_REGION"
+export AWS_REGION="us-west-2" # Select your own region
+export TF_VAR_region=$AWS_REGION
+terraform plan
 ```
 
 Deploy the pattern
 
 ```bash
-terraform apply -var="region=$AWS_REGION"
+terraform apply -target="module.vpc" --auto-approve
+terraform apply -target="module.eks" --auto-approve
+terraform apply --auto-approve
 ```
-
-Enter `yes` to apply.
 
 :::info
 
@@ -120,13 +121,13 @@ kubectl get nodes
 Output
 
 ```text
-NAME                                        STATUS   ROLES    AGE     VERSION
-ip-10-0-10-36.us-west-2.compute.internal    Ready    <none>   5h28m   v1.24.7-eks-fb459a0
-ip-10-0-10-47.us-west-2.compute.internal    Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-11-218.us-west-2.compute.internal   Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-11-223.us-west-2.compute.internal   Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-12-202.us-west-2.compute.internal   Ready    <none>   5h20m   v1.24.7-eks-fb459a0
-ip-10-0-12-50.us-west-2.compute.internal    Ready    <none>   5h20m   v1.24.7-eks-fb459a0
+NAME                                       STATUS   ROLES    AGE   VERSION
+ip-10-1-0-144.eu-west-1.compute.internal   Ready    <none>   40m   v1.30.0-eks-036c24b
+ip-10-1-1-131.eu-west-1.compute.internal   Ready    <none>   40m   v1.30.0-eks-036c24b
+ip-10-1-2-126.eu-west-1.compute.internal   Ready    <none>   40m   v1.30.0-eks-036c24b
+ip-10-1-2-19.eu-west-1.compute.internal    Ready    <none>   15m   v1.30.0-eks-036c24b
+ip-10-1-1-144.eu-west-1.compute.internal   Ready    <none>   13m   v1.30.0-eks-036c24b
+ip-10-1-0-214.eu-west-1.compute.internal   Ready    <none>   6m    v1.30.0-eks-036c24b
 ```
 
 ### Verify Kafka Brokers and Zookeeper
@@ -138,17 +139,17 @@ kubectl get strimzipodsets.core.strimzi.io -n kafka
 ```
 Output
 
-    NAME                PODS   READY PODS   CURRENT PODS   AGE
-    cluster-kafka       3      3            3              4h35m
-    cluster-zookeeper   3      3            3              4h36m
+    NAME                 PODS   READY PODS   CURRENT PODS   AGE
+    cluster-broker       3      2            3              19h
+    cluster-controller   3      3            3              19h
 
 ```bash
 kubectl get kafka.kafka.strimzi.io -n kafka
 ```
 Output
 
-    NAME      DESIRED KAFKA REPLICAS   DESIRED ZK REPLICAS   READY   WARNINGS
-    cluster   3                        3                     True
+    NAME      DESIRED KAFKA REPLICAS   DESIRED ZK REPLICAS   READY   METADATA STATE   WARNINGS
+    cluster                                                  True    KRaft            True
 
 ```bash
 kubectl get kafkatopic.kafka.strimzi.io -n kafka
@@ -170,16 +171,16 @@ kubectl get pods -n kafka
 ```
 Output
 
-    NAME                                       READY   STATUS    RESTARTS   AGE
-    cluster-cruise-control-79f6457f8d-sm8c2    1/1     Running   0          4h40m
-    cluster-entity-operator-5594c965ff-t9nl4   3/3     Running   0          4h40m
-    cluster-kafka-0                            1/1     Running   0          4h41m
-    cluster-kafka-1                            1/1     Running   0          4h41m
-    cluster-kafka-2                            1/1     Running   0          4h41m
-    cluster-kafka-exporter-9dbfdff54-wx8vq     1/1     Running   0          4h39m
-    cluster-zookeeper-0                        1/1     Running   0          4h42m
-    cluster-zookeeper-1                        1/1     Running   0          4h42m
-    cluster-zookeeper-2                        1/1     Running   0          4h42m
+    NAME                                      READY   STATUS    RESTARTS   AGE
+    cluster-broker-0                          1/1     Running   0          24m
+    cluster-broker-1                          1/1     Running   0          15m
+    cluster-broker-2                          1/1     Running   0          8m31s
+    cluster-controller-3                      1/1     Running   0          16m
+    cluster-controller-4                      1/1     Running   0          7m8s
+    cluster-controller-5                      1/1     Running   0          7m48s
+    cluster-cruise-control-74f5977f48-l8pzp   1/1     Running   0          24m
+    cluster-entity-operator-d46598d9c-xgwnh   2/2     Running   0          24m
+    cluster-kafka-exporter-5ff5ff4675-2cz9m   1/1     Running   0          24m
 
 
 ## Create Kafka Topic and run Sample test
@@ -197,35 +198,36 @@ kubectl apply -f kafka-topics.yaml
 Verify the status of the `test-topic` topic.
 
 ```bash
-kubectl exec -it cluster-kafka-0 -c kafka -n kafka -- /bin/bash -c "/opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092"
+kubectl exec -it cluster-broker-0 -c kafka -n kafka -- /bin/bash -c "/opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092"
 ```
 Output
 
     __consumer_offsets
     __strimzi-topic-operator-kstreams-topic-store-changelog
     __strimzi_store_topic
+    my-topic
+    my-topic-reversed
     strimzi.cruisecontrol.metrics
     strimzi.cruisecontrol.modeltrainingsamples
     strimzi.cruisecontrol.partitionmetricsamples
-    test-topic
 
 ### Execute sample Kafka Producer
 
 Open two terminals one for Kafka producer and one for Kafka Consumer.
 
 Execute the following command and press enter twice until you see the `>` prompt.
-Start typing some random content. This data will be written to the `test-topic`.
+Start typing some random content. This data will be written to the `my-topic`.
 
 ```bash
-kubectl -n kafka run kafka-producer -ti --image=strimzi/kafka:0.14.0-kafka-2.3.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --broker-list cluster-kafka-bootstrap:9092 --topic test-topic
+kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.42.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic
 ```
 
 ### Execute sample Kafka Consumer
 
-Now, you can verify the data written to `test-topic` by running Kafka consumer pod in another terminal
+Now, you can verify the data written to `my-topic` by running Kafka consumer pod in another terminal
 
 ```bash
-kubectl -n kafka run kafka-consumer -ti --image=strimzi/kafka:0.14.0-kafka-2.3.0 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic
+kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.42.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic --from-beginning
 ```
 
 ### Kafka Producer and Consumer output
@@ -245,8 +247,7 @@ Open browser with local [Grafana Web UI](http://localhost:8080/)
 Enter username as `admin` and **password** can be extracted from AWS Secrets Manager with the below command.
 
 ```bash
-aws secretsmanager get-secret-value \
-    --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text
+aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text
 ```
 
 ### Open Strimzi Kafka Dashboard
@@ -255,12 +256,8 @@ The below are builtin Kafka dashboards which created during the deployment.
 
 ![Kafka Brokers Dashboard](img/kafka-brokers.png)
 
-### Open Strimzi Zookeeper Dashboard
-
-![Kafka Zookeeper](img/zookeeper.png)
-
 ### Open Strimzi Kafka Exporter
-You can verify the `test-topic` with three partitions below.
+You can verify the `my-topic` with three partitions below.
 
 ![img.png](img/kafka-exporter.png)
 
@@ -271,6 +268,8 @@ To clean up your environment, destroy the Terraform modules in reverse order wit
 Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
 
 ```bash
+export AWS_REGION="us-west-2" # Select your own region
+export TF_VAR_region=$AWS_REGION
 terraform destroy -target="module.eks_blueprints_kubernetes_addons" -auto-approve
 terraform destroy -target="module.eks_blueprints" -auto-approve
 terraform destroy -target="module.vpc" -auto-approve

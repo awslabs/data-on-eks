@@ -86,23 +86,6 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Kubernetes Add-ons
-  #---------------------------------------
-
-  #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_cluster_proportional_autoscaler = true
-  cluster_proportional_autoscaler = {
-    timeout = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      target = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
-
-  #---------------------------------------
   # Metrics Server
   #---------------------------------------
   enable_metrics_server = true
@@ -115,16 +98,18 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Cluster Autoscaler
+  # Karpenter
   #---------------------------------------
-  enable_cluster_autoscaler = true
-  cluster_autoscaler = {
-    timeout     = "300"
-    create_role = true
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = local.region,
-      eks_cluster_id = module.eks.cluster_name
-    })]
+  enable_karpenter = true
+  karpenter = {
+    chart_version       = "0.37.0"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+  karpenter_enable_spot_termination          = true
+  karpenter_enable_instance_profile_creation = true
+  karpenter_node = {
+    iam_role_use_name_prefix = false
   }
 
   #---------------------------------------
@@ -191,7 +176,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "1.32.1" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------------------------------
@@ -202,13 +187,13 @@ module "eks_data_addons" {
     values = [templatefile("${path.module}/helm-values/strimzi-kafka-values.yaml", {
       operating_system = "linux"
       node_group_type  = "core"
-    })]
+    })],
+    version = "0.42.0"
   }
 }
 
 #---------------------------------------------------------------
 # Install Kafka cluster
-# NOTE: Kafka Zookeeper and Broker pod creation may to 2 to 3 mins
 #---------------------------------------------------------------
 
 resource "kubernetes_namespace" "kafka_namespace" {
@@ -254,4 +239,19 @@ resource "kubectl_manifest" "grafana_strimzi_dashboard" {
   yaml_body = each.value
 
   depends_on = [module.eks_blueprints_addons]
+}
+
+#---------------------------------------------------------------
+# Karpenter Resources
+#---------------------------------------------------------------
+
+data "kubectl_path_documents" "karpenter" {
+  pattern = "${path.module}/karpenter-manifests/*.yaml"
+}
+
+resource "kubectl_manifest" "karpenter" {
+  for_each  = toset(data.kubectl_path_documents.karpenter.documents)
+  yaml_body = replace(each.value, "--CLUSTER_NAME--", local.name)
+
+  depends_on = [module.eks_data_addons]
 }

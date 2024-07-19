@@ -5,6 +5,10 @@ data "aws_availability_zones" "available" {}
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.virginia
+}
+
 locals {
   name   = var.name
   region = var.region
@@ -31,7 +35,7 @@ locals {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.15"
+  version = "20.8.3"
 
   cluster_name    = local.name
   cluster_version = local.cluster_version
@@ -41,7 +45,8 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  manage_aws_auth_configmap = true
+  authentication_mode                      = "API_AND_CONFIG_MAP"
+  enable_cluster_creator_admin_permissions = true
 
   node_security_group_additional_rules = {
     ingress_self_all = {
@@ -73,13 +78,13 @@ module "eks" {
   eks_managed_node_groups = {
     core_node_group = {
       name        = "core-node-group"
-      description = "EKS managed node group example launch template"
 
       min_size     = 3
       max_size     = 9
       desired_size = 3
 
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m6g.xlarge", "m6gd.xlarge", "m7g.xlarge", "c6g.xlarge", "c6gd.xlarge", "c7g.xlarge"]
+      ami_type       = "AL2_ARM_64"
 
       ebs_optimized = true
       block_device_mappings = {
@@ -99,44 +104,27 @@ module "eks" {
         Name = "core-node-grp"
       }
     }
-
-    kafka_node_group = {
-      name        = "kafka-node-group"
-      description = "EKS managed node group example launch template"
-
-      min_size     = 3
-      max_size     = 12
-      desired_size = 5
-
-      instance_types = ["r6i.2xlarge"]
-
-      ebs_optimized = true
-      # This is the root filesystem Not used by the brokers
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 1000
-            volume_type = "gp3"
-          }
-        }
-      }
-      labels = {
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "kafka"
-      }
-      taints = [
-        {
-          key    = "dedicated"
-          value  = "kafka"
-          effect = "NO_SCHEDULE"
-        }
-      ]
-      tags = {
-        Name = "kafka-node-grp"
-      }
-    }
   }
 
-  tags = local.tags
+  tags = merge(local.tags, {
+    "karpenter.sh/discovery" = local.name
+  })
+}
+
+module "aws-auth" {
+  source  = "terraform-aws-modules/eks/aws//modules/aws-auth"
+  version = "20.17.2"
+
+  manage_aws_auth_configmap = true
+
+  aws_auth_roles = [
+    {
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+      username = "system:node:{{EC2PrivateDNSName}}"
+      groups = [
+        "system:bootstrappers",
+        "system:nodes",
+      ]
+    }
+  ]
 }
