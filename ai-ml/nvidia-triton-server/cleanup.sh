@@ -1,7 +1,5 @@
 #!/bin/bash
 
-read -p "Enter the region: " region
-export AWS_DEFAULT_REGION=$region
 export STACK_NAME="nvidia-triton-server"
 
 echo "Destroying LoadBalancer type service from Nginx ingress controller..."
@@ -28,7 +26,7 @@ targets=(
 for target in "${targets[@]}"
 do
   echo "Destroying module $target..."
-  destroy_output=$(terraform destroy -target="$target" -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
+  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1 | tee /dev/tty)
   if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else
