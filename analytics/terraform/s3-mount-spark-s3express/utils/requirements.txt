@@ -1,0 +1,8 @@
+pyspark
+pandas
+pyarrow
+boto3
+fsspec
+requests
+faker-cli[parquet]
+numpy==1.26.4

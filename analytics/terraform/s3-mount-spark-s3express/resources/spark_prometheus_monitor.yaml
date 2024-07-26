@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    prometheus: "true"
+    release: "kube-prometheus-stack"
+  name: spark-driver-monitoring
+  namespace: spark-s3-express
+spec:
+  jobLabel: spark-driver-monitoring
+  namespaceSelector:
+    matchNames: [spark-s3-express]
+  podMetricsEndpoints:
+    - port: "spark-ui"
+      path: /metrics/executors/prometheus/
+  selector:
+    matchLabels:
+      spark-role: driver
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: "true"
+    release: "kube-prometheus-stack"
+  name: spark-service-monitoring
+  namespace: spark-s3-express
+spec:
+  namespaceSelector:
+    matchNames: [spark-s3-express]
+  endpoints:
+    - port: "spark-ui"
+      path: /metrics/driver/prometheus/
+  selector:
+    matchLabels:
+      spark_role: driver
