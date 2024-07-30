@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubernetes.io/metadata.name: spark
+  name: spark
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-mount-claim
+  namespace: spark
+spec:
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  storageClassName: "" # required for static provisioning
+  resources:
+    requests:
+      storage: 5Gi # ignored, required
+  volumeName: spark-s3-mount-pv
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: s3-mount-pod
+  namespace: spark
+spec:
+  containers:
+    - name: app-container
+      image: nginx  # Example image
+      volumeMounts:
+        - name: s3-storage
+          mountPath: "/data"  # The path where the S3 bucket will be mounted
+  securityContext:
+    fsGroup: 185
+  volumes:
+    - name: s3-storage
+      persistentVolumeClaim:
+        claimName: s3-mount-claim
+  nodeSelector:
+    NodeGroupType: "SparkComputeOptimized"
+  tolerations:
+    - key: "spark-compute-optimized"
+      operator: "Exists"
+      effect: "NoSchedule"
