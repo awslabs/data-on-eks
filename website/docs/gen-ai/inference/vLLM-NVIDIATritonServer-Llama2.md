@@ -1,6 +1,6 @@
 ---
 title: NVIDIA Triton Server with vLLM
-sidebar_position: 5
+sidebar_position: 2
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 

@@ -1,6 +1,6 @@
 ---
 title: Ray Serve High Availability
-sidebar_position: 6
+sidebar_position: 3
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
