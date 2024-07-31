@@ -441,6 +441,7 @@ module "eks_blueprints_addons" {
     retention_in_days = 30
   }
   aws_for_fluentbit = {
+    chart_version = "0.1.34"
     s3_bucket_arns = [
       module.s3_bucket.s3_bucket_arn,
       "${module.s3_bucket.s3_bucket_arn}/*"
