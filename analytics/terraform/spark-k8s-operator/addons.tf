@@ -310,8 +310,9 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
+    version = "1.5.1"
     values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.2.0"
+      image_version = "1.5.1"
     })]
   }
 
