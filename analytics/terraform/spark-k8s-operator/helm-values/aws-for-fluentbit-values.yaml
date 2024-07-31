@@ -8,6 +8,15 @@ dnsPolicy: ClusterFirstWithHostNet
 service:
   parsersFiles:
     - /fluent-bit/parsers/parsers.conf
+  # https://github.com/aws/eks-charts/issues/983
+  extraService: |
+    HTTP_Server  On
+    HTTP_Listen  [::]
+    HTTP_PORT    2020
+    Health_Check On 
+    HC_Errors_Count 5 
+    HC_Retry_Failure_Count 5 
+    HC_Period 5 
   extraParsers: |
     [PARSER]
         Name    kubernetes
