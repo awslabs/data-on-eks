@@ -414,7 +414,8 @@ module "eks_blueprints_addons" {
   karpenter_enable_spot_termination = true
   karpenter_node = {
     iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+      AmazonVPCCniIpv6Policy = "arn:aws:iam::463630279612:policy/AmazonEKS_CNI_IPv6_Policy"
     }
   }
   karpenter = {
