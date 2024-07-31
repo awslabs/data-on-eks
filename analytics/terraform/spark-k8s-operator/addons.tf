@@ -456,11 +456,7 @@ module "eks_blueprints_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.5.4"
-    set = [{
-      name  = "enableServiceMutatorWebhook"
-      value = "false"
-    }]
+    chart_version = "1.8.1"
   }
 
   enable_ingress_nginx = true
