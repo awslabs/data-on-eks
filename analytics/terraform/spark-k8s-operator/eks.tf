@@ -8,14 +8,17 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
+  # IPv6 
+  cluster_ip_family          = var.enable_ipv6 ? "ipv6" : "ipv4"
+  # Creating the policy here causes duplicate resource issues https://github.com/terraform-aws-modules/terraform-aws-eks/issues/2131
+  # create_cni_ipv6_iam_policy = var.enable_ipv6
+
   #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
 
   vpc_id = module.vpc.vpc_id
-  # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
-  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-    substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
-  )
+  # Subnet IDs where the EKS Control Plane ENIs will be created, providing the Private "10.1.x.x/24 subnets"
+  subnet_ids = module.vpc.private_subnets
 
   # Combine root account, current user/role and additinoal roles to be able to access the cluster KMS key - required for terraform updates
   kms_key_administrators = distinct(concat([
@@ -121,9 +124,7 @@ module "eks" {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
-      )
+      subnet_ids = module.vpc.database_subnets
 
       min_size     = 3
       max_size     = 9
@@ -146,9 +147,7 @@ module "eks" {
       name        = "spark-ondemand-r5d"
       description = "Spark managed node group for Driver pods"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
+      subnet_ids = module.vpc.database_subnets
 
       min_size     = 0
       max_size     = 20
@@ -180,9 +179,7 @@ module "eks" {
       name        = "spark-spot-48cpu"
       description = "Spark Spot node group for executor workloads"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
+      subnet_ids = module.vpc.database_subnets
 
       min_size     = 0
       max_size     = 12

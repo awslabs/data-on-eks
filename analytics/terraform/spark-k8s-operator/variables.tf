@@ -72,6 +72,12 @@ variable "enable_yunikorn" {
   type        = bool
 }
 
+variable "enable_ipv6" {
+  default     = true #TODO: default to false
+  description = "Create IPv6 compatible VPC and EKS cluster"
+  type        = bool
+}
+
 variable "aws_auth_roles" {
   description = "additional aws auth roles"
   type = list(

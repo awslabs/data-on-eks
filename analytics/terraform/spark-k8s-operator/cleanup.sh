@@ -9,6 +9,15 @@ targets=(
   "module.eks_data_addons"
   "module.eks_blueprints_addons"
   "module.eks"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_0_65"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_0_66"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_0_67"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_1_65"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_1_66"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_1_67"
+  "module.vpc_endpoints"
+  "module.vpc_endpoints_sg"
+  "module.vpc"
 )
 
 for target in "${targets[@]}"

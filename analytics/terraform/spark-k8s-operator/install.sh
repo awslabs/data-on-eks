@@ -6,6 +6,14 @@ export AWS_DEFAULT_REGION=$region
 # List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
+  "module.vpc_endpoints_sg"
+  "module.vpc_endpoints"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_0_65"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_0_66"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_0_67"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_1_65"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_1_66"
+  "aws_ec2_subnet_cidr_reservation.eks_cidr_reservation_1_67"
   "module.eks"
 )
 
