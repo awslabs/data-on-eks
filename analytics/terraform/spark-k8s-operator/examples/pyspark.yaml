@@ -1,0 +1,52 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: spark-pi
+  namespace: spark-team-a
+spec:
+  image: apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
+  imagePullPolicy: Always
+  mainApplicationFile: local:///opt/spark/examples/jars/spark-examples_2.12-3.5.1.jar
+  mainClass: org.apache.spark.examples.SparkPi
+  mode: cluster
+  restartPolicy:
+    type: Never
+  sparkVersion: 3.5.1
+  type: Scala
+  sparkConf:
+    # IPv6 service address
+    "spark.kubernetes.driver.service.ipFamilies": "IPv6"
+  driver:
+    coreLimit: 1200m
+    cores: 1
+    labels:
+      version: 3.5.1
+    memory: 512m
+    serviceAccount: spark-team-a
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
+  executor:
+    cores: 1
+    instances: 1
+    labels:
+      version: 3.5.1
+    memory: 512m
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.5.1
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
