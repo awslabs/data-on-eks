@@ -2,7 +2,7 @@ controller:
   service:
     # For more annotations https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
     annotations:
-      # service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
+      service.beta.kubernetes.io/aws-load-balancer-ip-address-type: dualstack
       # service.beta.kubernetes.io/aws-load-balancer-scheme: internal # PRIVATE NLB
       service.beta.kubernetes.io/aws-load-balancer-scheme: internal # Private Load Balancer can only be accessed within the VPC # PUBLIC NLB
       service.beta.kubernetes.io/aws-load-balancer-type: external
