@@ -485,7 +485,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "48.1.1"
+    chart_version = "61.6.0"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
