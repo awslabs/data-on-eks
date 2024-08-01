@@ -20,6 +20,9 @@ spec:
   imagePullPolicy: Always
   mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
   sparkVersion: "3.1.1"
+  sparkConf:
+  # IPv6 service address
+    "spark.kubernetes.driver.service.ipFamilies": "IPv6"
   restartPolicy:
     type: OnFailure
     onFailureRetries: 1

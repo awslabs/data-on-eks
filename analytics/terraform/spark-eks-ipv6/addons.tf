@@ -112,7 +112,8 @@ module "eks_blueprints_addons" {
   karpenter_enable_spot_termination = true
   karpenter_node = {
     iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+      AmazonVPCCniIpv6Policy = "arn:aws:iam::${local.account_id}:policy/AmazonEKS_CNI_IPv6_Policy"
     }
   }
   karpenter = {
@@ -122,8 +123,32 @@ module "eks_blueprints_addons" {
   }
 
   enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller = {
-    chart_version = "1.5.4"
+
+  enable_ingress_nginx = true
+  ingress_nginx = {
+    values = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # AWS for FluentBit - DaemonSet
+  #---------------------------------------
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  aws_for_fluentbit = {
+    s3_bucket_arns = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*}"
+    ]
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+      s3_bucket_name       = module.s3_bucket.s3_bucket_id
+      cluster_name         = module.eks.cluster_name
+    })]
   }
 
   #---------------------------------------
