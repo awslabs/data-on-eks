@@ -8,10 +8,12 @@ dnsPolicy: ClusterFirstWithHostNet
 service:
   parsersFiles:
     - /fluent-bit/parsers/parsers.conf
-  # https://github.com/aws/eks-charts/issues/983
+  # IPv6 Change
+  # health checks need to listen on the IPv6 address https://github.com/aws/eks-charts/issues/983
+  # TODO: does this explode in ipv4? 
   extraService: |
     HTTP_Server  On
-    HTTP_Listen  [::]
+    HTTP_Listen  0.0.0.0
     HTTP_PORT    2020
     Health_Check On 
     HC_Errors_Count 5 

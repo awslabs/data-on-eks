@@ -302,7 +302,7 @@ module "eks_data_addons" {
   enable_spark_operator = true
   spark_operator_helm_config = {
     version = "1.4.6"
-    values  = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
+    values  = [templatefile("${path.module}/helm-values/${local.spark_operator_helm_values_file}", {})]
   }
 
   #---------------------------------------------------------------
@@ -415,6 +415,9 @@ module "eks_blueprints_addons" {
   karpenter_node = {
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+      # note this policy will need to be created before the stack can be created.
+      # https://github.com/terraform-aws-modules/terraform-aws-eks/issues/2131
+      # https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html#cni-iam-role-create-ipv6-policy
       AmazonVPCCniIpv6Policy = "arn:aws:iam::463630279612:policy/AmazonEKS_CNI_IPv6_Policy"
     }
   }
@@ -447,7 +450,7 @@ module "eks_blueprints_addons" {
       module.s3_bucket.s3_bucket_arn,
       "${module.s3_bucket.s3_bucket_arn}/*"
     ]
-    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+    values = [templatefile("${path.module}/helm-values/${local.aws_for_fluentbit_helm_values_file}", {
       region               = local.region,
       cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
       s3_bucket_name       = module.s3_bucket.s3_bucket_id
@@ -463,7 +466,7 @@ module "eks_blueprints_addons" {
   enable_ingress_nginx = true
   ingress_nginx = {
     version = "4.11.1"
-    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+    values  = [templatefile("${path.module}/helm-values/${local.nginx_helm_values_file}", {})]
   }
 
   #---------------------------------------
@@ -552,4 +555,18 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
+}
+
+# Configmap for Spark Operator 1.4.6 environment variables.
+# the chart only exposes envFrom until the 2.0.0 release
+resource "kubernetes_config_map" "spark_operator_ipv6_configmap" {
+  count = var.enable_ipv6 ? 1 : 0
+  metadata {
+    name = "spark-operator-envs"
+    namespace = "spark-operator"
+  }
+  data = {
+    _JAVA_OPTIONS  = "-Djava.net.preferIPv6Addresses=true"
+    KUBERNETES_DISABLE_HOSTNAME_VERIFICATION  = "true"
+  }
 }
