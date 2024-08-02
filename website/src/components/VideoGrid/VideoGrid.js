@@ -54,6 +54,13 @@ const videos = [
     linkTo: "https://www.youtube.com/watch?v=pTALAJ2r1uY",
     date: "Nov 6, 2023"
   },
+  {
+    title: "AWS Summit Tel Aviv 2024 - Deploy accelerator-agnostic inference pipelines to Amazon EKS",
+    description: "Optimize costs, enhance resilience, future-proof architecture, and deploy accelerator-agnostic inference applications on Amazon EKS with Karpenter",
+    imageSrc: 'news/video8.png',
+    linkTo: "https://www.youtube.com/watch?v=oF0LKR-SQEY",
+    date: "Jun 26, 2024"
+  },
 ];
 
 const VideoGrid = () => {
