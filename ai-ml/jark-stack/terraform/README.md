@@ -1,6 +1,79 @@
 # JupyterHub, Argo, Ray, Kubernetes
 
-Docs coming soon...
+# Prerequisites
+
+Before we begin, ensure you have all the prerequisites in place to make the deployment process smooth and hassle-free. Ensure that you have installed the following tools on your machine.
+
+- aws cli
+- kubectl
+- terraform
+
+
+./install.sh
+...
+```
+You can find the container image is preloaded into the disk disk.
+
+```
+kubectl describe pod
+
+...
+Events:
+  Type     Reason            Age                From               Message
+  ----     ------            ----               ----               -------
+  Warning  FailedScheduling  41m                default-scheduler  0/8 nodes are available: 1 Insufficient cpu, 3 Insufficient memory, 8 Insufficient nvidia.com/gpu. preemption: 0/8 nodes are available: 8 No preemption victims found for incoming pod.
+  Normal   Nominated         41m                karpenter          Pod should schedule on: nodeclaim/gpu-ljvhl
+  Normal   Scheduled         40m                default-scheduler  Successfully assigned stablediffusion/stablediffusion-raycluster-ms6pl-worker-gpu-85d22 to ip-100-64-136-72.us-west-2.compute.internal
+  Normal   Pulled            40m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
+  Normal   Created           40m                kubelet            Created container wait-gcs-ready
+  Normal   Started           40m                kubelet            Started container wait-gcs-ready
+  Normal   Pulled            39m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
+  Normal   Created           39m                kubelet            Created container worker
+  Normal   Started           38m                kubelet            Started container worker
+  ```
+
+# Deploy
+
+
+
+Clone the repository
+
+```
+git clone https://github.com/awslabs/data-on-eks.git
+```
+
+Navigate into one of the example directories and run install.sh script
+
+Important Note: Ensure that you update the region in the variables.tf file before deploying the blueprint. Additionally, confirm that your local region setting matches the specified region to prevent any discrepancies. For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
+
+## Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS (o)
+
+Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins for downloading and extracting container images from Amazon ECR.
+
+To build snapshots with preloaded container images, refer to [this page](../preload-container-image-ami/README.md) for details. 
+
+# Get the snapshot ID with ./snapshot.sh
+
+export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
+
+```
+cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
+./install.sh
+```
+
+# Verify the resources
+Verify the Amazon EKS Cluster
+
+```
+aws eks --region us-west-2 describe-cluster --name jark-stack
+
+# Creates k8s config file to authenticate with EKS
+aws eks --region us-west-2 update-kubeconfig --name jark-stack
+
+# Output shows the EKS Managed Node group nodes
+kubectl get nodes
+
+```
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
@@ -56,6 +129,7 @@ Docs coming soon...
 | <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
 | <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br>  "100.64.0.0/16"<br>]</pre> | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR. This should be a valid private (RFC 1918) CIDR range | `string` | `"10.1.0.0/21"` | no |
+| <a name="preload-image-bottlerocket-snapshot-id"></a> [preload-image-bottlerocket-snapshot-id](#input\_preload-image-bottlerocket-snapshot-id) | The snapshot ID of bottlerocket that preloads the container image | `string` | | no
 
 ## Outputs
 
