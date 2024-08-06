@@ -609,3 +609,25 @@ resource "kubernetes_config_map" "spark_operator_ipv6_configmap" {
     KUBERNETES_DISABLE_HOSTNAME_VERIFICATION  = "true"
   }
 }
+
+# Spark operator IRSA for pod templates
+module "spark_operator_irsa" {
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0"
+
+  create_release = false
+  create_role    = true
+  role_name      = "${local.name}-spark-operator"
+  create_policy  = false
+  role_policies = {
+    spark_operator_policy = aws_iam_policy.spark.arn
+  }
+
+  oidc_providers = {
+    this = {
+      provider_arn    = module.eks.oidc_provider_arn
+      namespace       = "spark-operator"
+      service_account = "spark-operator"
+    }
+  }
+}
