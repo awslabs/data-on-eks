@@ -6,6 +6,14 @@ webhook:
   # -- Webhook service port
   port: 8080
 
+image:
+  # -- Image repository
+  repository: 463630279612.dkr.ecr.us-east-2.amazonaws.com/spark-operator
+  # -- Image pull policy
+  pullPolicy: Always
+  # -- if set, override the image tag whose default is the chart appVersion.
+  tag: v1beta2-1.6.2-3.5.0-aws-ivy
+
 serviceAccounts:
   spark:
     # -- Create a service account for spark apps
