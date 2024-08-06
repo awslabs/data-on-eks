@@ -1,0 +1,128 @@
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: spark-sleep-init-script
+#   namespace: spark-team-a
+# data:
+#   spark-sleep-init-script.sh: |
+#     #!/bin/bash
+#     sleep 60
+#     echo "Init Script complete."
+
+---
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: spark-sleep
+  namespace: spark-team-a
+  labels:
+    app: spark-sleep
+    applicationId: spark-sleep
+    # Assign the job to a Yunikorn Queue via label.
+    queue: root.test
+spec:
+  image: 463630279612.dkr.ecr.us-east-2.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240619 # apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://rotund-archive-463630279612-us-east-2/spark-sleep/scripts/spark-sleep.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  arguments:
+    - "330" # time to sleep
+  mode: cluster
+  restartPolicy:
+    type: Never
+  sparkVersion: 3.5.1
+  type: Python
+  pythonVersion: "3"
+  sparkConf:
+    # # IPv6 service address
+    # "spark.kubernetes.driver.service.ipFamilies": "IPv6"
+    # K8s configs
+    "spark.kubernetes.driver.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-2/spark-sleep/templates/spark-sleep-test-driver-template.yaml"
+    "spark.kubernetes.executor.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-2/spark-sleep/templates/spark-sleep-test-exec-template.yaml"
+    # "spark.kubernetes.executor.podNamePrefix": "spark-sleep"
+    "spark.kubernetes.memoryOverheadFactor": "0.3"
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/path": "/metrics/executors/prometheus/"
+    "spark.kubernetes.driver.annotation.prometheus.io/port": "4040"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/path": "/metrics/driver/prometheus/"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/port": "4040"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
+    "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
+    # S3 auth settings
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+  
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  
+  driver:
+    coreRequest: "0.1"
+    memory: 128m
+    labels:
+      version: 3.5.1
+    annotations:
+      # yunikorn.apache.org/schedulingPolicyParameters: "placeholderTimeoutSeconds=120 gangSchedulingStyle=Hard"
+      # yunikorn.apache.org/task-group-name: "spark-driver"
+      # # minMember should match with driver and executor instances
+      # # minResource cpu and memory should match with driver and executor cpu and memory
+      # yunikorn.apache.org/task-groups: |-
+      #   [{
+      #       "name": "spark-driver",
+      #       "minMember": 1,
+      #       "minResource": {
+      #         "cpu": "100m",
+      #         "memory": "128Mi"
+      #       },
+      #       "nodeSelector": {
+      #         "NodeGroupType": "SparkBenchmarking"
+      #       },
+      #       "tolerations": [{"key": "spark-benchmarking", "operator": "Exists", "effect": "NoSchedule"}]
+      #     },
+      #     {
+      #       "name": "spark-executor",
+      #       "minMember": 5,
+      #       "minResource": {
+      #         "cpu": "100m",
+      #         "memory": "128Mi"
+      #       },
+      #       "nodeSelector": {
+      #         "NodeGroupType": "SparkBenchmarking"
+      #       },
+      #       "tolerations": [{"key": "spark-benchmarking", "operator": "Exists", "effect": "NoSchedule"}]
+      #   }]      
+    serviceAccount: spark-team-a
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      NodeGroupType: SparkBenchmarking
+    tolerations:
+      - key: "spark-benchmarking"
+        operator: "Exists"
+        effect: "NoSchedule"
+  executor:
+    coreRequest: "0.1"
+    memory: 128m
+    instances: 5
+    labels:
+      version: 3.5.1
+    # annotations:
+    #   yunikorn.apache.org/task-group-name: "spark-executor"      
+    serviceAccount: spark-team-a
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      NodeGroupType: SparkBenchmarking
+    tolerations:
+      - key: "spark-benchmarking"
+        operator: "Exists"
+        effect: "NoSchedule"

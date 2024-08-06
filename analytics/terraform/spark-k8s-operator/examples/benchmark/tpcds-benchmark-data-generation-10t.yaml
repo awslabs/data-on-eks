@@ -6,11 +6,11 @@
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: tpcds-data-generation-3t
+  name: tpcds-data-generation-10t
   namespace: spark-team-a
   labels:
     app: "tpcds-data-generation"
-    applicationId: "tpcds-data-generation-3t"
+    applicationId: "tpcds-data-generation-10t"
     # Assign the job to a Yunikorn Queue via label.
     queue: root.prod
 spec:
@@ -23,15 +23,15 @@ spec:
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
     # TPC-DS data location
-    - "s3a://rotund-archive-463630279612-us-east-2/TPCDS-Data-3T"
+    - "s3a://rotund-archive-463630279612-us-east-2/TPCDS-Data-10T"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
     - "parquet"
     # Scale factor (in GB)
-    - "3000"
+    - "10000"
     # Generate data num partitions
-    - "200"
+    - "700"
     # Create the partitioned fact tables
     - "true"
     # Shuffle to get partitions coalesced into single files.
@@ -93,7 +93,7 @@ spec:
     cores: 11
     # coreLimit: "11.1"
     memory: "15g"
-    instances: 26
+    instances: 50
     serviceAccount: spark-team-a
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
