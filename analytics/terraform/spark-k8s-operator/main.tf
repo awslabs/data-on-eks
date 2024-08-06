@@ -41,9 +41,9 @@ locals {
   partition  = data.aws_partition.current.partition
 
   # using separate values files for ipv4 and ipv6 to follow the variable
-  nginx_helm_values_file = var.enable_ipv6 ? "nginx-ingress-ipv6-values.yaml" : "nginx-ingress-ipv4-values.yaml" 
-  spark_operator_helm_values_file = var.enable_ipv6 ? "spark-operator-ipv6-values.yaml" : "spark-operator-ipv4-values.yaml" 
-  aws_for_fluentbit_helm_values_file = var.enable_ipv6 ? "aws-for-fluentbit-ipv6-values.yaml" : "aws-for-fluentbit-ipv4-values.yaml" 
+  nginx_helm_values_file             = var.enable_ipv6 ? "nginx-ingress-ipv6-values.yaml" : "nginx-ingress-ipv4-values.yaml"
+  spark_operator_helm_values_file    = var.enable_ipv6 ? "spark-operator-ipv6-values.yaml" : "spark-operator-ipv4-values.yaml"
+  aws_for_fluentbit_helm_values_file = var.enable_ipv6 ? "aws-for-fluentbit-ipv6-values.yaml" : "aws-for-fluentbit-ipv4-values.yaml"
 
   tags = {
     Blueprint  = local.name

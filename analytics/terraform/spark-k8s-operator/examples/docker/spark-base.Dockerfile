@@ -13,6 +13,6 @@ USER spark
 RUN cd /opt/spark/ && \
     /opt/spark/install-dep.sh org.apache.hadoop hadoop-yarn-server-web-proxy 3.4.0 && \
     /opt/spark/install-dep.sh org.apache.hadoop hadoop-client-runtime 3.4.0 && \
-    /opt/spark/install-dep.sh org.apache.hadoop hadoop-client-api 3.4.0 && \    
-    /opt/spark/install-dep.sh org.apache.hadoop hadoop-aws 3.4.0 && \    
+    /opt/spark/install-dep.sh org.apache.hadoop hadoop-client-api 3.4.0 && \
+    /opt/spark/install-dep.sh org.apache.hadoop hadoop-aws 3.4.0 && \
     rm -rf /tmp/.ivy/

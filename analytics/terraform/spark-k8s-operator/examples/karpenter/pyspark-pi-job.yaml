@@ -41,7 +41,7 @@ spec:
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
     "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
-    # IPv6 
+    # IPv6
     "spark.kubernetes.driver.service.ipFamilies": "IPv6"
     # Expose Spark metrics for Prometheus
     "spark.ui.prometheus.enabled": "true"

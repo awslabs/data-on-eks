@@ -43,7 +43,7 @@ serviceAccounts:
 # https://github.com/kubernetes/kubernetes/issues/95007#issuecomment-697961411
 # Spark operator v2.0.+
 # controller:
-#   env: 
+#   env:
 #   - name: _JAVA_OPTIONS
 #     value: "-Djava.net.preferIPv6Addresses=true"
 #   - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION

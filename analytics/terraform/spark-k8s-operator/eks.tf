@@ -8,8 +8,8 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  # IPv6 
-  cluster_ip_family          = var.enable_ipv6 ? "ipv6" : "ipv4"
+  # IPv6
+  cluster_ip_family = var.enable_ipv6 ? "ipv6" : "ipv4"
   # Creating the policy here causes duplicate resource issues https://github.com/terraform-aws-modules/terraform-aws-eks/issues/2131
   # create_cni_ipv6_iam_policy = var.enable_ipv6
 

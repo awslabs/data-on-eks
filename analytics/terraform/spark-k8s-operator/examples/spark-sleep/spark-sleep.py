@@ -34,11 +34,11 @@ def main(args):
     logger.info("Starting spark application")
 
     logger.info("Sleeping for %s seconds", sleep_time)
-    
+
     time.sleep(sleep_time)
 
     logger.info("Ending spark application")
-    
+
     # end spark code
     spark.stop()
 

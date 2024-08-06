@@ -601,12 +601,12 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 resource "kubernetes_config_map" "spark_operator_ipv6_configmap" {
   count = var.enable_ipv6 ? 1 : 0
   metadata {
-    name = "spark-operator-envs"
+    name      = "spark-operator-envs"
     namespace = "spark-operator"
   }
   data = {
-    _JAVA_OPTIONS  = "-Djava.net.preferIPv6Addresses=true"
-    KUBERNETES_DISABLE_HOSTNAME_VERIFICATION  = "true"
+    _JAVA_OPTIONS                            = "-Djava.net.preferIPv6Addresses=true"
+    KUBERNETES_DISABLE_HOSTNAME_VERIFICATION = "true"
   }
 }
 

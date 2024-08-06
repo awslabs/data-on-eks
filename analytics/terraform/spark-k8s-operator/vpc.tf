@@ -25,12 +25,12 @@ module "vpc" {
   public_subnets     = var.public_subnets
   enable_nat_gateway = true
   # single_nat_gateway = true
-  single_nat_gateway = false
-  one_nat_gateway_per_az = true 
+  single_nat_gateway     = false
+  one_nat_gateway_per_az = true
   # if IPv6 is enabled, assign two prefixes and enable ipv6 addresses
-  public_subnet_ipv6_prefixes                    = var.enable_ipv6 ? [0, 1] : []
-  public_subnet_assign_ipv6_address_on_creation  = var.enable_ipv6
-  public_subnet_enable_dns64 = false
+  public_subnet_ipv6_prefixes                   = var.enable_ipv6 ? [0, 1] : []
+  public_subnet_assign_ipv6_address_on_creation = var.enable_ipv6
+  public_subnet_enable_dns64                    = false
   #-------------------------------
 
   # ------------------------------
@@ -39,18 +39,18 @@ module "vpc" {
   # if IPv6 is enabled, assign two prefixes and enable ipv6 addresses
   private_subnet_ipv6_prefixes                   = var.enable_ipv6 ? [3, 4] : []
   private_subnet_assign_ipv6_address_on_creation = var.enable_ipv6
-  private_subnet_enable_dns64 = false
+  private_subnet_enable_dns64                    = false
   #-------------------------------
 
   # ------------------------------
   # Private subnets across two AZs for EKS worker nodes and pods
-  database_subnets = var.eks_data_plane_subnet_secondary_cidr
+  database_subnets             = var.eks_data_plane_subnet_secondary_cidr
   create_database_subnet_group = false
-  database_subnet_suffix = "eks"
+  database_subnet_suffix       = "eks"
   # if IPv6 is enabled, assign two prefixes and enable ipv6 addresses
   database_subnet_ipv6_prefixes                   = var.enable_ipv6 ? [5, 6] : []
   database_subnet_assign_ipv6_address_on_creation = var.enable_ipv6
-  database_subnet_enable_dns64 = false
+  database_subnet_enable_dns64                    = false
   #-------------------------------
 
   public_subnet_tags = {
@@ -78,42 +78,42 @@ module "vpc" {
 # TODO: this can probably be a loop in some way
 
 resource "aws_ec2_subnet_cidr_reservation" "eks_cidr_reservation_0_65" {
-  count = var.enable_ipv6 ? 1 : 0
-  cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[0],1, 0)
+  count            = var.enable_ipv6 ? 1 : 0
+  cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[0], 1, 0)
   reservation_type = "prefix"
   subnet_id        = module.vpc.database_subnets[0]
 }
 
 resource "aws_ec2_subnet_cidr_reservation" "eks_cidr_reservation_0_66" {
-  count = var.enable_ipv6 ? 1 : 0
+  count            = var.enable_ipv6 ? 1 : 0
   cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[0], 2, 2)
   reservation_type = "prefix"
   subnet_id        = module.vpc.database_subnets[0]
 }
 
 resource "aws_ec2_subnet_cidr_reservation" "eks_cidr_reservation_0_67" {
-  count = var.enable_ipv6 ? 1 : 0
+  count            = var.enable_ipv6 ? 1 : 0
   cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[0], 3, 6)
   reservation_type = "prefix"
   subnet_id        = module.vpc.database_subnets[0]
 }
 
 resource "aws_ec2_subnet_cidr_reservation" "eks_cidr_reservation_1_65" {
-  count = var.enable_ipv6 ? 1 : 0
-  cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[1],1, 0)
+  count            = var.enable_ipv6 ? 1 : 0
+  cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[1], 1, 0)
   reservation_type = "prefix"
   subnet_id        = module.vpc.database_subnets[1]
 }
 
 resource "aws_ec2_subnet_cidr_reservation" "eks_cidr_reservation_1_66" {
-  count = var.enable_ipv6 ? 1 : 0
+  count            = var.enable_ipv6 ? 1 : 0
   cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[1], 2, 2)
   reservation_type = "prefix"
   subnet_id        = module.vpc.database_subnets[1]
 }
 
 resource "aws_ec2_subnet_cidr_reservation" "eks_cidr_reservation_1_67" {
-  count = var.enable_ipv6 ? 1 : 0
+  count            = var.enable_ipv6 ? 1 : 0
   cidr_block       = cidrsubnet(module.vpc.database_subnets_ipv6_cidr_blocks[1], 3, 6)
   reservation_type = "prefix"
   subnet_id        = module.vpc.database_subnets[1]
@@ -146,19 +146,19 @@ module "vpc_endpoints_sg" {
   # IPv6 rules
   ingress_with_ipv6_cidr_blocks = var.enable_ipv6 ? [
     {
-      rule        = "https-443-tcp"
-      description = "VPC IPv6 CIDR HTTPS"
+      rule             = "https-443-tcp"
+      description      = "VPC IPv6 CIDR HTTPS"
       ipv6_cidr_blocks = module.vpc.vpc_ipv6_cidr_block
     }
   ] : []
   egress_with_ipv6_cidr_blocks = var.enable_ipv6 ? [
     {
-      rule        = "https-443-tcp"
-      description = "All egress v4 HTTPS"
+      rule             = "https-443-tcp"
+      description      = "All egress v4 HTTPS"
       ipv6_cidr_blocks = "::/0"
     }
   ] : []
-  
+
   tags = local.tags
 }
 
