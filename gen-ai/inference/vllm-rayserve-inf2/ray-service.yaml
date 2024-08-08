@@ -66,8 +66,7 @@ spec:
         spec:
           containers:
           - name: head
-            # image: public.ecr.aws/data-on-eks/ray2.22.0-py310-mistral7b-neuron:latest
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.32.0-neuron-vllm:v6
+            image: <image> # replace with your own image. You can build the image use the Dockerfile and applying patch
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
@@ -117,7 +116,7 @@ spec:
         spec:
           containers:
           - name: worker
-            image: 489829964455.dkr.ecr.us-west-2.amazonaws.com/ray2.32.0-neuron-vllm:v6
+            image: <image> # replace with your own image. You can build the image use the Dockerfile and applying patch
             imagePullPolicy: Always # Ensure the image is always pulled when updated
             lifecycle:
               preStop:
