@@ -1,14 +1,27 @@
 ---
 sidebar_position: 3
-sidebar_label: Mounpoint-S3 for Data & ML
+sidebar_label: Mounpoint-S3 for Spark Workloads
 ---
+
 
 # Mountpoint-S3 for Spark Workloads
 
 In this doc, we'll explore different approaches to using Mountpoint-S3 for data and AI/ML workloads on EKS. Specifically, we'll focus on loading external JARs located in S3 to Spark jobs and storing/caching model weights for inference. We'll discuss two main approaches for deploying Mountpoint-S3: using the EKS Managed Addon CSI driver with Persistent Volumes (PV) and Persistent Volume Claims (PVC), and deploying Mountpoint-S3 on the host using either USERDATA or a DaemonSet. We'll also delve into the pros and cons of each approach.
 
 
-## 1. Mountpoint-S3 for Loading External JARs Located in S3 to Spark Jobs 
+## 1. Loading External JARs Located in S3 to Spark Jobs Using Mountpoint-S3
+
+### Problem Statement 
+
+When working iwith SPark Applications jobs managed by the SparkOperator, handling multiple dependancy JAR files can become a hassle. Traditionally, these JAR files are included in the container image, which leads to several issues:
+
+* Increased Build Time: Downloading and adding JAR files during the build process inflates the build time of the container image.
+* Larger Image size: Including JAR files increases the size of the container image, leading to longer download times ehn pulling the image to execute jobs. 
+* Frequent Rebuilds: Any updates or additions to the dependency JAR files necessitates rebuilding and redeploying the container image, further increasing the operational overhead. 
+
+### Solution & Benefits: Mounting S3 Bucket
+
+By mounting an S3 bucket directly to host nodes, the dependent JAR files can be stores and managed externally from the image and loosely couples the JAR files from the SparkApplication jobs. Addtionally storing JARs in S3 that can be consumed by multiple pods can lead to cost savings as S3 provides a cost-effective storage solution comaped to larger container images.  S3 also offers virtually unlimited storage, making it easy to scale and manage dependancies. 
 
 ### Approach 1: Deploy Mountpoint-S3 with EKS Managed Addon CSI Driver and Use PV and PVCs to Mount the Bucket at *Pod* *Level*
 
@@ -28,9 +41,9 @@ For more information on this approach refer to: https://awslabs.github.io/data-o
 
 ### Approach 2:  Deploy Mountpoint-S3 on the Host Using Either USERDATA or DaemonSet and Mount the Bucket at *Node Level*
 
-Mounting a S3 Bucket at a 
+Mounting a S3 Bucket at a Node level can streamline the management of dependancy JAR files for SparkApplications by  reducing build times and speeding up deployment, 
 
-### Approach 2.1: Deploying Using USERDATA with Karpenter or Managed Node Groups
+#### Approach 2.1: Deploying Using USERDATA with Karpenter or Managed Node Groups
 
 This approach is best for new clusters or where auto-scaling is customized to run workloads as the user-data script is run when a Node is initialized. Using the below script, the Node can be updated to have the S3 bucket mounted upon initialization in the EKS cluster that hosts the pods. The below script outlines downloading, installing, and running the Mountpoint S3 Package. There are a couple of arguments that set for this application that can be altered depending on the use case. More information about this arguments can be found here: https://github.com/awslabs/mountpoint-s3/blob/main/doc/CONFIGURATION.md#caching-configuration
 
@@ -222,7 +235,7 @@ Using Mountpoint-S3 to store and cache model weights can significantly enhance t
 
 ### Example Deployment Code:
 
-TO-DO
+To-Do
 
 
 ## Conclusion
