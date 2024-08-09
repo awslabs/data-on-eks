@@ -22,8 +22,8 @@ variable "vpc_cidr" {
   type        = string
 }
 
-variable "enable_amazon_prometheus" {
-  description = "Enable AWS Managed Prometheus service"
-  type        = bool
+variable "enable_yunikorn" {
   default     = true
+  description = "Enable Apache YuniKorn Scheduler"
+  type        = bool
 }

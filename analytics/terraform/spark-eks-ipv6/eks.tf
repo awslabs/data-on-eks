@@ -69,21 +69,7 @@ module "eks" {
       # Not required, but used in the example to access the nodes to inspect mounted volumes
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
-    # NVMe instance store volumes are automatically enumerated and assigned a device
-    pre_bootstrap_user_data = <<-EOT
-      cat <<-EOF > /etc/profile.d/bootstrap.sh
-      #!/bin/sh
-      # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-      # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-      # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-      #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-      #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-      export LOCAL_DISKS='raid0'
-      EOF
-      # Source extra environment variables in bootstrap script
-      sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-    EOT
-    ebs_optimized           = true
+    ebs_optimized = true
     # This block device is used only for root volume. Adjust volume according to your size.
     # NOTE: Don't use this volume for Spark workloads
     block_device_mappings = {

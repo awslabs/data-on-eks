@@ -9,14 +9,24 @@ webhook:
 # -- Set this if running spark jobs in a different namespace than the operator
 #sparkJobNamespace: "spark-team-a"
 
+# IPv6 env variables for Spark operator controllers
+# https://github.com/kubernetes/kubernetes/issues/95007#issuecomment-697961411
+# Spark operator v2.0.+
+# controller:
+#   env:
+#   - name: _JAVA_OPTIONS
+#     value: "-Djava.net.preferIPv6Addresses=true"
+#   - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION
+#     value: "true"
+# Spark operator 1.4.6  https://github.com/kubeflow/spark-operator/blob/spark-operator-chart-1.4.6/charts/spark-operator-chart/values.yaml#L78C1-L79C12
+# -- Pod environment variable sources
+envFrom:
+  - configMapRef:
+      name: "${spark-operator-envs}"
+
+
 # -- Operator concurrency, higher values might increase memory usage
 controllerThreads: 10
-
-env:
-  - name: _JAVA_OPTIONS
-    value: "-Djava.net.preferIPv6Addresses=true"
-  - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION
-    value: "true"
 
 # resources -- Pod resource requests and limits
 # Note, that each job submission will spawn a JVM within the Spark Operator Pod using "/usr/local/openjdk-11/bin/java -Xmx128m".

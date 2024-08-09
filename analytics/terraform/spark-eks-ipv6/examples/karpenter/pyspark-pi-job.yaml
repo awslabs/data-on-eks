@@ -16,12 +16,14 @@ spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  image: "public.ecr.aws/r1l5w1y9/spark-operator:3.2.1-hadoop-3.3.1-java-11-scala-2.12-python-3.8-latest"
+  image: public.ecr.aws/data-on-eks/spark3.5.1-hadoop3.3.4-aws-java-sdk-bundle-1.12.767
   imagePullPolicy: Always
   mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
-  sparkVersion: "3.1.1"
+  mainClass: org.apache.spark.examples.SparkPi
+  sparkVersion: "3.5.1"
   sparkConf:
-  # IPv6 service address
+    "spark.jars.ivy": "/tmp/.ivy"
+    # IPv6 service address
     "spark.kubernetes.driver.service.ipFamilies": "IPv6"
   restartPolicy:
     type: OnFailure
@@ -34,7 +36,7 @@ spec:
     coreLimit: "1200m"
     memory: "512m"
     labels:
-      version: 3.1.1
+      version: 3.5.1
     serviceAccount: spark-team-a
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
@@ -51,7 +53,7 @@ spec:
     memory: "512m"
     serviceAccount: spark-team-a
     labels:
-      version: 3.1.1
+      version: 3.5.1
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
