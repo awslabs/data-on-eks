@@ -34,11 +34,7 @@ aws s3 cp "input/yellow_tripdata_2022-0.parquet" ${INPUT_DATA_S3_PATH}/yellow_tr
 pids=()
 
 # Making duplicate copies to increase the size of the data.
-<<<<<<< HEAD:analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc/taxi-trip-execute.sh
-max=10
-=======
 max=25
->>>>>>> main:analytics/scripts/taxi-trip-execute.sh
 for (( i=1; i <= $max; ++i ))
 do
   aws s3 cp ${INPUT_DATA_S3_PATH}/yellow_tripdata_2022-0.parquet ${INPUT_DATA_S3_PATH}/yellow_tripdata_2022-${i}.parquet &
