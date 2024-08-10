@@ -2,6 +2,9 @@
 sidebar_position: 3
 sidebar_label: Observability Spark on EKS
 ---
+
+import TaxiTripExec from './_taxi_trip_exec.md';
+
 # Observability Spark on EKS
 
 ## Introduction
@@ -15,10 +18,9 @@ We will reuse the previous Spark on Operator example. Please follow [this link](
 let's navigate to one example folder under spark-k8s-operator and run the shell script to upload data and py script to the S3 bucket created by terraform above.
 ```bash
 cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
-
-# replace \<S3_BUCKET\> with your S3 bucket and \<REGION\> with your region, then run
-./taxi-trip-execute.sh
 ```
+
+<TaxiTripExec />
 
 ## Spark Web UI
 When you submit a Spark application, Spark context is created which ideally gives you [Spark Web UI](https://sparkbyexamples.com/spark/spark-web-ui-understanding/) to monitor the execution of the application. Monitoring includes the following.
