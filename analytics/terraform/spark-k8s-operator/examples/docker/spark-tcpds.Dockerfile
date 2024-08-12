@@ -1,6 +1,6 @@
 # // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # // SPDX-License-Identifier: MIT-0
-ARG SPARK_BASE_IMAGE=111111111111.dkr.ecr.us-east-2.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240619
+ARG SPARK_BASE_IMAGE=463630279612.dkr.ecr.us-east-1.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240808
 
 FROM amazonlinux:2 as tpc-toolkit
 
@@ -12,7 +12,7 @@ RUN yum update -y && \
     cd /tmp/tpcds-kit/tools && \
     make OS=LINUX
 
-FROM 111111111111.dkr.ecr.us-east-2.amazonaws.com/sbt-multiarch:1.6.2-openjdk11.0.13 as sbtenv
+FROM 463630279612.dkr.ecr.us-east-1.amazonaws.com/sbt-multiarch:1.6.2-openjdk11.0.13 as sbtenv
 
 # Build the Databricks SQL perf library from the local Spark version
 RUN git clone -b delta https://github.com/aws-samples/emr-on-eks-benchmark.git /tmp/emr-on-eks-benchmark && \

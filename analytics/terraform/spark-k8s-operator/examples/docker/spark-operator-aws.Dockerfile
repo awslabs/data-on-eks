@@ -5,7 +5,7 @@ ENV SPARK_HOME /opt/spark
 RUN rm -rf /opt/spark/jars/hadoop*.jar
 
 RUN cd /opt/spark/ && \
-    echo 'java -jar ./jars/ivy-2.5.1.jar -dependency $@ -cache /tmp/.ivy -retrieve "./jars/[artifact]-[revision](-[classifier]).[ext]" -types jar -confs default' > install-dep.sh && \
+    echo '#!/bin/sh\nset -ex\njava -jar ./jars/ivy-2.5.1.jar -dependency $@ -cache /tmp/.ivy -retrieve "./jars/[artifact]-[revision](-[classifier]).[ext]" -types jar -confs default' > install-dep.sh && \
     chmod +x install-dep.sh
 
 RUN cd /opt/spark/ && \
