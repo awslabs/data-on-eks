@@ -8,7 +8,7 @@ webhook:
 
 image:
   # -- Image repository
-  repository: 463630279612.dkr.ecr.us-east-2.amazonaws.com/spark-operator
+  repository: <SPARK OPERATOR IMAGE>
   # -- Image pull policy
   pullPolicy: Always
   # -- if set, override the image tag whose default is the chart appVersion.
@@ -30,7 +30,7 @@ serviceAccounts:
     # -- Optional annotations for the operator service account
     annotations:
       eks.amazonaws.com/role-arn: ${irsa_role_arn}
-      
+
 # Enable this to monitor only one namespace with this Spark Operator.
 # By default, this operator monitors all namespaces for submitting Spark jobs.
 # Currently, it does not support selecting multiple namespaces to be monitored by each Spark Operator. You can select either one or all namespaces.

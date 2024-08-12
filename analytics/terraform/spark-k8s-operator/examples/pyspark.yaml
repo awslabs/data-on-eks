@@ -4,7 +4,7 @@ metadata:
   name: spark-pi
   namespace: spark-team-a
 spec:
-  image: 463630279612.dkr.ecr.us-east-2.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240619 # apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
+  image: apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
   imagePullPolicy: Always
   mainApplicationFile: local:///opt/spark/examples/jars/spark-examples_2.12-3.5.1.jar
   mainClass: org.apache.spark.examples.SparkPi

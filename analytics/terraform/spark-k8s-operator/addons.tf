@@ -459,7 +459,7 @@ module "eks_blueprints_addons" {
       # note this policy will need to be created before the stack can be created.
       # https://github.com/terraform-aws-modules/terraform-aws-eks/issues/2131
       # https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html#cni-iam-role-create-ipv6-policy
-      AmazonVPCCniIpv6Policy = "arn:aws:iam::463630279612:policy/AmazonEKS_CNI_IPv6_Policy"
+      AmazonVPCCniIpv6Policy = "arn:aws:iam::<ACCOUNT ID>:policy/AmazonEKS_CNI_IPv6_Policy"
     }
   }
   karpenter = {

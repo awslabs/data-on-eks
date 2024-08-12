@@ -28,12 +28,12 @@ spec:
   sparkVersion: "3.2.1"
   pythonVersion: "3"
   mode: cluster
-  image: "463630279612.dkr.ecr.us-east-2.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240619"
+  image: <SPARK BASE IMAGE>
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://rotund-archive-463630279612-us-east-2/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<S3_BUCKET>/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
-    - "s3a://rotund-archive-463630279612-us-east-2/taxi-trip/input/"
-    - "s3a://rotund-archive-463630279612-us-east-2/taxi-trip/output/"
+    - "s3a://<S3_BUCKET>/taxi-trip/input/"
+    - "s3a://<S3_BUCKET>/taxi-trip/output/"
   hadoopConf:
     "fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"

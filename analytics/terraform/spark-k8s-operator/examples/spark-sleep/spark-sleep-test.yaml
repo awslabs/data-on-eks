@@ -21,9 +21,9 @@ metadata:
     # Assign the job to a Yunikorn Queue via label.
     queue: root.test
 spec:
-  image: 463630279612.dkr.ecr.us-east-1.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240808 # apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
+  image: apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://rotund-archive-463630279612-us-east-1/spark-sleep/scripts/spark-sleep.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://<S3_BUCKET>/spark-sleep/scripts/spark-sleep.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
     - "300" # time to sleep
     - "35" # number of tasks to complete
@@ -36,8 +36,8 @@ spec:
     # # IPv6 service address
     # "spark.kubernetes.driver.service.ipFamilies": "IPv6"
     # K8s configs
-    "spark.kubernetes.driver.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-1/spark-sleep/templates/spark-sleep-test-driver-template.yaml"
-    "spark.kubernetes.executor.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-1/spark-sleep/templates/spark-sleep-test-exec-template.yaml"
+    "spark.kubernetes.driver.podTemplateFile": "s3a://<S3_BUCKET>/spark-sleep/templates/spark-sleep-test-driver-template.yaml"
+    "spark.kubernetes.executor.podTemplateFile": "s3a://<S3_BUCKET>/spark-sleep/templates/spark-sleep-test-exec-template.yaml"
     # "spark.kubernetes.executor.podNamePrefix": "spark-sleep"
     "spark.kubernetes.memoryOverheadFactor": "0.3"
     # Expose Spark metrics for Prometheus
@@ -102,9 +102,9 @@ spec:
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: SparkBenchmarkingScale
+      NodeGroupType: "SparkComputeOptimized"
     tolerations:
-      - key: "spark-benchmarking-scale"
+      - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
   executor:
@@ -121,8 +121,8 @@ spec:
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: SparkBenchmarkingScale
+      NodeGroupType: "SparkComputeOptimized"
     tolerations:
-      - key: "spark-benchmarking-scale"
+      - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"

@@ -8,7 +8,7 @@ webhook:
 
 image:
   # -- Image repository
-  repository: 463630279612.dkr.ecr.us-east-2.amazonaws.com/spark-operator
+  repository: <SPARK OPERATOR IMAGE>
   # -- Image pull policy
   pullPolicy: Always
   # -- if set, override the image tag whose default is the chart appVersion.

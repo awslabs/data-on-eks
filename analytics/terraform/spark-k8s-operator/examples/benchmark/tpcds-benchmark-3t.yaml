@@ -17,16 +17,16 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: 463630279612.dkr.ecr.us-east-1.amazonaws.com/spark-tcpds:3.5.1-hadoop3.4.0-20240808
+  image: <SPARK-TCPDS IMAGE>
   imagePullPolicy: IfNotPresent
   sparkVersion: 3.5.1
   mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
     # TPC-DS data location
-    - "s3a://rotund-archive-463630279612-us-east-1/TPCDS-Data-3T"
+    - "s3a://<S3_BUCKET>/TPCDS-Data-3T"
     # results location
-    - "s3a://rotund-archive-463630279612-us-east-1/tcpds-output-3t"
+    - "s3a://<S3_BUCKET>/tcpds-output-3t"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
@@ -78,9 +78,9 @@ spec:
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: spark-benchmarking-ca
+      NodeGroupType: "SparkComputeOptimized"
     tolerations:
-      - key: "spark-benchmarking-ca"
+      - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
   executor:
@@ -95,9 +95,9 @@ spec:
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: spark-benchmarking-ca
+      NodeGroupType: "SparkComputeOptimized"
     tolerations:
-      - key: "spark-benchmarking-ca"
+      - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
   restartPolicy:
