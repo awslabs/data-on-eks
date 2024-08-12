@@ -20,9 +20,9 @@ AppName = "sparkSleep"
 
 def main(args):
 
-    try: 
+    try:
         parallel_range = args[2]
-    except IndexError: 
+    except IndexError:
         logger.info("parallel_range not provided, defaulting to 25")
         parallel_range = 25
 
@@ -39,7 +39,7 @@ def main(args):
     logger.info("Starting spark application")
 
     spark.sparkContext.parallelize(range(parallel_range), parallel_range).map(lambda x: time.sleep(sleep_time)).collect()
-    
+
     logger.info("Stopping spark application")
 
     # end spark code

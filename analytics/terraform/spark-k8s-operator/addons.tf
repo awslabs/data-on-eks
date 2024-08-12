@@ -302,8 +302,8 @@ module "eks_data_addons" {
   enable_spark_operator = true
   spark_operator_helm_config = {
     version = "1.4.6"
-    values  = [templatefile("${path.module}/helm-values/${local.spark_operator_helm_values_file}", {
-      irsa_role_arn               = module.spark_operator_irsa.iam_role_arn
+    values = [templatefile("${path.module}/helm-values/${local.spark_operator_helm_values_file}", {
+      irsa_role_arn = module.spark_operator_irsa.iam_role_arn
     })]
   }
 
