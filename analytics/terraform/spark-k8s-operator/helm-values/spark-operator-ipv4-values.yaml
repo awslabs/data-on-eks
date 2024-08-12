@@ -29,9 +29,7 @@ serviceAccounts:
     name: ""
     # -- Optional annotations for the operator service account
     annotations:
-      # added after the stack stabilized, used the role created by module.spark_operator_irsa
-      # TODO: Parameterize this with templatefile()
-      eks.amazonaws.com/role-arn: arn:aws:iam::463630279612:role/spark-operator-doeks-spark-operator-20240805235922636300000001
+      eks.amazonaws.com/role-arn: ${irsa_role_arn}
 
 # Enable this to monitor only one namespace with this Spark Operator.
 # By default, this operator monitors all namespaces for submitting Spark jobs.
