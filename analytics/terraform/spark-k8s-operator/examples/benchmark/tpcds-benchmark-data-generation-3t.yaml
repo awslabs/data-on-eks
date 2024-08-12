@@ -16,14 +16,14 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: 463630279612.dkr.ecr.us-east-2.amazonaws.com/spark-tcpds:3.5.1-hadoop3.4.0-20240619
+  image: 463630279612.dkr.ecr.us-east-1.amazonaws.com/spark-tcpds:3.5.1-hadoop3.4.0-20240808
   imagePullPolicy: IfNotPresent
   sparkVersion: 3.5.1
   mainClass: com.amazonaws.eks.tpcds.DataGeneration
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
     # TPC-DS data location
-    - "s3a://rotund-archive-463630279612-us-east-2/TPCDS-Data-3T"
+    - "s3a://rotund-archive-463630279612-us-east-1/TPCDS-Data-3T"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format

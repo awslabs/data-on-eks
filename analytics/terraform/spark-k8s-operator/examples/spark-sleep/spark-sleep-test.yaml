@@ -21,23 +21,23 @@ metadata:
     # Assign the job to a Yunikorn Queue via label.
     queue: root.test
 spec:
-  image: 463630279612.dkr.ecr.us-east-2.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240619 # apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
+  image: 463630279612.dkr.ecr.us-east-1.amazonaws.com/spark:3.5.1-hadoop3.4.0-20240808 # apache/spark:3.5.1-scala2.12-java11-python3-ubuntu
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://rotund-archive-463630279612-us-east-2/spark-sleep/scripts/spark-sleep.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  mainApplicationFile: "s3a://rotund-archive-463630279612-us-east-1/spark-sleep/scripts/spark-sleep.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
   arguments:
-    - "330" # time to sleep
+    - "300" # time to sleep
+    - "35" # number of tasks to complete
   mode: cluster
   restartPolicy:
     type: Never
   sparkVersion: 3.5.1
   type: Python
-  pythonVersion: "3"
   sparkConf:
     # # IPv6 service address
     # "spark.kubernetes.driver.service.ipFamilies": "IPv6"
     # K8s configs
-    "spark.kubernetes.driver.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-2/spark-sleep/templates/spark-sleep-test-driver-template.yaml"
-    "spark.kubernetes.executor.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-2/spark-sleep/templates/spark-sleep-test-exec-template.yaml"
+    "spark.kubernetes.driver.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-1/spark-sleep/templates/spark-sleep-test-driver-template.yaml"
+    "spark.kubernetes.executor.podTemplateFile": "s3a://rotund-archive-463630279612-us-east-1/spark-sleep/templates/spark-sleep-test-exec-template.yaml"
     # "spark.kubernetes.executor.podNamePrefix": "spark-sleep"
     "spark.kubernetes.memoryOverheadFactor": "0.3"
     # Expose Spark metrics for Prometheus
@@ -55,17 +55,16 @@ spec:
     "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
     # S3 auth settings
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
-
   restartPolicy:
     type: OnFailure
     onFailureRetries: 3
     onFailureRetryInterval: 10
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
-
   driver:
+    cores: 1
     coreRequest: "0.1"
-    memory: 128m
+    memory: 512m
     labels:
       version: 3.5.1
     annotations:
@@ -82,9 +81,9 @@ spec:
       #         "memory": "128Mi"
       #       },
       #       "nodeSelector": {
-      #         "NodeGroupType": "SparkBenchmarking"
+      #         "NodeGroupType": "SparkBenchmarkingScale"
       #       },
-      #       "tolerations": [{"key": "spark-benchmarking", "operator": "Exists", "effect": "NoSchedule"}]
+      #       "tolerations": [{"key": "spark-benchmarking-scale", "operator": "Exists", "effect": "NoSchedule"}]
       #     },
       #     {
       #       "name": "spark-executor",
@@ -94,35 +93,36 @@ spec:
       #         "memory": "128Mi"
       #       },
       #       "nodeSelector": {
-      #         "NodeGroupType": "SparkBenchmarking"
+      #         "NodeGroupType": "SparkBenchmarkingScale"
       #       },
-      #       "tolerations": [{"key": "spark-benchmarking", "operator": "Exists", "effect": "NoSchedule"}]
-      #   }]
+      #       "tolerations": [{"key": "spark-benchmarking-scale", "operator": "Exists", "effect": "NoSchedule"}]
+      #   }]      
     serviceAccount: spark-team-a
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: SparkBenchmarking
+      NodeGroupType: SparkBenchmarkingScale
     tolerations:
-      - key: "spark-benchmarking"
+      - key: "spark-benchmarking-scale"
         operator: "Exists"
         effect: "NoSchedule"
   executor:
-    coreRequest: "0.1"
-    memory: 128m
-    instances: 5
+    cores: 1
+    coreRequest: "0.5"
+    memory: 512m
+    instances: 35
     labels:
       version: 3.5.1
     # annotations:
-    #   yunikorn.apache.org/task-group-name: "spark-executor"
+    #   yunikorn.apache.org/task-group-name: "spark-executor"      
     serviceAccount: spark-team-a
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: SparkBenchmarking
+      NodeGroupType: SparkBenchmarkingScale
     tolerations:
-      - key: "spark-benchmarking"
+      - key: "spark-benchmarking-scale"
         operator: "Exists"
         effect: "NoSchedule"

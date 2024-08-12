@@ -17,16 +17,16 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: public.ecr.aws/data-on-eks/emr-on-eks-benchmark:3.1.2
+  image: 463630279612.dkr.ecr.us-east-1.amazonaws.com/spark-tcpds:3.5.1-hadoop3.4.0-20240808
   imagePullPolicy: IfNotPresent
-  sparkVersion: 3.1.2
+  sparkVersion: 3.5.1
   mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
     # TPC-DS data location
-    - "s3://blogpost-sparkoneks-us-east-1/blog/BLOG_TPCDS-TEST-3T-partitioned"
+    - "s3a://rotund-archive-463630279612-us-east-1/TPCDS-Data-3T"
     # results location
-    - "s3://<S3_BUCKET>/TPCDS-TEST-3T-RESULT"
+    - "s3a://rotund-archive-463630279612-us-east-1/tcpds-output-3t"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
@@ -38,7 +38,7 @@ spec:
     # Optimize queries with hive tables
     - "false"
     # Filter queries, will run all if empty - "q98-v2.4,q99-v2.4,ss_max-v2.4,q95-v2.4"
-    - ""
+    - "q1-v2.4,q10-v2.4,q11-v2.4,q12-v2.4,q13-v2.4,q14a-v2.4,q14b-v2.4,q15-v2.4,q16-v2.4,q17-v2.4,q18-v2.4,q19-v2.4,q2-v2.4,q20-v2.4,q21-v2.4,q22-v2.4,q23a-v2.4,q23b-v2.4,q24a-v2.4,q24b-v2.4,q25-v2.4,q26-v2.4,q27-v2.4,q28-v2.4,q29-v2.4,q3-v2.4,q30-v2.4,q31-v2.4,q32-v2.4,q33-v2.4,q34-v2.4,q35-v2.4,q36-v2.4,q37-v2.4,q38-v2.4,q39a-v2.4,q39b-v2.4,q4-v2.4,q40-v2.4,q41-v2.4,q42-v2.4,q43-v2.4,q44-v2.4,q45-v2.4,q46-v2.4,q47-v2.4,q48-v2.4,q49-v2.4,q5-v2.4,q50-v2.4,q51-v2.4,q52-v2.4,q53-v2.4,q54-v2.4,q55-v2.4,q56-v2.4,q57-v2.4,q58-v2.4,q59-v2.4,q6-v2.4,q60-v2.4,q61-v2.4,q62-v2.4,q63-v2.4,q64-v2.4,q65-v2.4,q66-v2.4,q67-v2.4,q68-v2.4,q69-v2.4,q7-v2.4,q70-v2.4,q71-v2.4,q72-v2.4,q73-v2.4,q74-v2.4,q75-v2.4,q76-v2.4,q77-v2.4,q78-v2.4,q79-v2.4,q8-v2.4,q80-v2.4,q81-v2.4,q82-v2.4,q83-v2.4,q84-v2.4,q85-v2.4,q86-v2.4,q87-v2.4,q88-v2.4,q89-v2.4,q9-v2.4,q90-v2.4,q91-v2.4,q92-v2.4,q93-v2.4,q94-v2.4,q95-v2.4,q96-v2.4,q97-v2.4,q98-v2.4,q99-v2.4,ss_max-v2.4"
     # Logging set to WARN
     - "true"
   sparkConf:
@@ -49,57 +49,55 @@ spec:
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
     "spark.sql.adaptive.skewJoin.enabled": "true"
-    # "spark.sql.adaptive.logLevel": "WARN"
-    # IRSA for S3 connection
-    "spark.kubernetes.executor.podNamePrefix": "benchmark-exec"
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
-    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
-    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+    # S3 settings
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    # "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-3tb"
     "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
-    # Keep pods in a single AZ
-    # "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "us-west-1b"
-    # "spark.kubernetes.node.selector.eks.amazonaws.com/capacityType": "ON_DEMAND"
-    # -----------------------------------------------------
-    # This block is very critical when you get errors like
-    #     Exception in thread \"main\" io.fabric8.kubernetes.client.KubernetesClientException: An error has occurred
-    #     Caused by: java.net.SocketTimeoutException: timeout
-    # spark.kubernetes.local.dirs.tmpfs: "true" # More details here https://spark.apache.org/docs/latest/running-on-kubernetes.html#using-ram-for-local-storage
-    spark.kubernetes.submission.connectionTimeout: "120000" # milliseconds
-    spark.kubernetes.submission.requestTimeout: "120000"
-    spark.kubernetes.driver.connectionTimeout: "120000"
-    spark.kubernetes.driver.requestTimeout: "120000"
     # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
     # -----------------------------------------------------
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/path": "/metrics/executors/prometheus/"
+    "spark.kubernetes.driver.annotation.prometheus.io/port": "4040"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/path": "/metrics/driver/prometheus/"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/port": "4040"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
+    "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
   driver:
     cores: 4
-    coreLimit: "4.1"
-    memory: "5g"
-    memoryOverhead: "1000"
+    # coreLimit: "4.1"
+    memory: "6g"
+    memoryOverhead: "2g" # memory+memoryOverhead = pod memory limit
     serviceAccount: spark-team-a
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      provisioner: spark-compute-optimized
+      NodeGroupType: spark-benchmarking-ca
     tolerations:
-      - key: "spark-compute-optimized"
+      - key: "spark-benchmarking-ca"
         operator: "Exists"
         effect: "NoSchedule"
   executor:
     cores: 4
-    coreLimit: "4.3"
-    memory: "6g"
-    memoryOverhead: "2g"
-    # 8 executors per node
-    instances: 47 # changed from 47 to 20 for demo
+    coreRequest: "3.5" # fit ~9 pods per node, with kubelet reservations we can't request all 36 cores
+    # coreLimit: "4.3" # removing CPU limit to let the CFS scheduler handle CPU saturation
+    memory: "6g" # memory requested?
+    memoryOverhead: "2g" # memory+memoryOverhead = pod memory request
+    instances: 47 # to match EMR config
     serviceAccount: spark-team-a
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      provisioner: spark-compute-optimized
+      NodeGroupType: spark-benchmarking-ca
     tolerations:
-      - key: "spark-compute-optimized"
+      - key: "spark-benchmarking-ca"
         operator: "Exists"
         effect: "NoSchedule"
   restartPolicy:

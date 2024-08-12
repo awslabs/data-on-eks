@@ -4,8 +4,6 @@ import time
 from datetime import datetime
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql import functions as f
 
 # Logging configuration
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s @ line %(lineno)d: %(message)s')
@@ -22,7 +20,14 @@ AppName = "sparkSleep"
 
 def main(args):
 
-    sleep_time = args[1]
+    try: 
+        parallel_range = args[2]
+    except IndexError: 
+        logger.info("parallel_range not provided, defaulting to 25")
+        parallel_range = 25
+
+    sleep_time = int(args[1])
+    parallel_range = int(parallel_range)
 
     # Create Spark Session
     spark = SparkSession \
@@ -33,11 +38,9 @@ def main(args):
     spark.sparkContext.setLogLevel("INFO")
     logger.info("Starting spark application")
 
-    logger.info("Sleeping for %s seconds", sleep_time)
-
-    time.sleep(sleep_time)
-
-    logger.info("Ending spark application")
+    spark.sparkContext.parallelize(range(parallel_range), parallel_range).map(lambda x: time.sleep(sleep_time)).collect()
+    
+    logger.info("Stopping spark application")
 
     # end spark code
     spark.stop()
@@ -47,8 +50,9 @@ def main(args):
 
 if __name__ == "__main__":
     print(len(sys.argv))
-    if len(sys.argv) != 3:
-        print("Usage: spark-etl [input-folder] [output-folder]")
+    if len(sys.argv) < 2:
+        print("This script expects at least one parameter: sleep_time - the time each executor process should sleep")
+        print("    you can optionally provide: parallel_range - number of processes to create, default: 25")
         sys.exit(0)
 
     main(sys.argv)
