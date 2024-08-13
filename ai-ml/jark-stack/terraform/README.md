@@ -8,16 +8,6 @@ Before we begin, ensure you have all the prerequisites in place to make the depl
 - kubectl
 - terraform
 
-## Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS 
-
-Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins for downloading and extracting container images from Amazon ECR.
-
-To build snapshots with preloaded container images, refer to [this page](../preload-container-image-ami/README.md) for details. 
-
-```
-# Get the snapshot ID with ./snapshot.sh
-
-export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
 
 ./install.sh
 ...
@@ -44,6 +34,8 @@ Events:
 
 # Deploy
 
+
+
 Clone the repository
 
 ```
@@ -53,6 +45,16 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run install.sh script
 
 Important Note: Ensure that you update the region in the variables.tf file before deploying the blueprint. Additionally, confirm that your local region setting matches the specified region to prevent any discrepancies. For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
+
+## Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS (o)
+
+Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins for downloading and extracting container images from Amazon ECR.
+
+To build snapshots with preloaded container images, refer to [this page](../preload-container-image-ami/README.md) for details. 
+
+# Get the snapshot ID with ./snapshot.sh
+
+export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
 
 ```
 cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
