@@ -6,9 +6,10 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 :::info
 
-We are actively enhancing this blueprint to incorporate improvements in observability and logging.
-
+- We are actively enhancing this blueprint to incorporate improvements in observability and logging.
+- To accelerate the deployment of image retrieval on Ray workerss, refer to [Preload container images into Bottlerocket data volumes with Karpenter with EBS Snapshots](../../bestpractices/preload-container-images)
 :::
+
 
 # Deploying Stable Diffusion v2 with GPUs, Ray Serve and Gradio
 This pattern demonstrates how to deploy the [Stable Diffusion V2](https://huggingface.co/stabilityai/stable-diffusion-2-1) model on Amazon EKS, using [GPUs](https://aws.amazon.com/ec2/instance-types/g4/) for accelerated image generation. [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) provides efficient scaling across multiple GPU nodes, while [Karpenter](https://karpenter.sh/) dynamically manages node provisioning.
