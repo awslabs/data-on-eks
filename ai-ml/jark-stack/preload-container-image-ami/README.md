@@ -10,7 +10,7 @@ Usage Example:
 
 ```
 # Using nohup in terminals to avoid disconnections 
-❯ nohup ./snapshot.sh --snapshot-size 150 -r us-west-2 docker.io/rayproject/ray-ml:2.10.0-py310-gpu,public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest & 
+❯ nohup ./snapshot.sh --snapshot-size 200 -r us-west-2 docker.io/rayproject/ray-ml:2.10.0-py310-gpu,public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest,docker.io/rayproject/ray:2.33.0-py311-gpu,public.ecr.aws/lindarr/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu & 
 ❯ tail -f nohup.out 
 
 2024-07-15 17:18:53 I - [1/8] Deploying EC2 CFN stack ...
