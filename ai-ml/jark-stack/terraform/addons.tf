@@ -82,6 +82,10 @@ module "eks_blueprints_addons" {
     vpc-cni = {
       preserve = true
     }
+
+    aws-mountpoint-s3-csi-driver = {
+      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
+    }
   }
 
   #---------------------------------------
@@ -350,6 +354,32 @@ module "data_addons" {
     kubernetes_config_map_v1.notebook
   ]
 }
+
+#---------------------------------------------------------------
+# S3 Mountpoint 
+#---------------------------------------------------------------
+
+#---------------------------------------------------------------
+# IRSA for Mountpoint for Amazon S3 CSI Driver
+#---------------------------------------------------------------
+module "s3_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.34"
+  role_name_prefix      = format("%s-%s-", local.name, "s3-csi-driver")
+  role_policy_arns = {
+    # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
+    s3_csi_driver = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  }
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:s3-csi-driver-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+
 
 
 #---------------------------------------------------------------
