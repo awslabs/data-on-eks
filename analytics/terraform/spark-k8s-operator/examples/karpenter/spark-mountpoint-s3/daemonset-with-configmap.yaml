@@ -11,7 +11,7 @@ data:
 
     # ENVIRONMENT VARIABLES
     LOG_FILE="/var/log/s3-mount.log"
-    S3_BUCKET_NAME="<S3_BUCKET_NAME>"  # Replace with your S3 bucket name
+    S3_BUCKET_NAME="<S3_BUCKET_NAME>"  # Replace with your S3 Bucket Name before applying to EKS cluster
     MOUNT_POINT="/mnt/s3"
     CACHE_DIR="/tmp"
     MOUNT_S3_BIN="/usr/bin/mount-s3"
