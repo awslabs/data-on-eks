@@ -19,13 +19,31 @@ import DaemonSetWithConfig from '!!raw-loader!../../../analytics/terraform/spark
 
 [Mountpoint-S3](https://github.com/awslabs/mountpoint-s3) is an open-source file client developed by AWS that translates file operations into S3 API calls, enabling your applications to interact with [Amazon S3](https://aws.amazon.com/s3/) buckets as if they were local disks. Mountpoint for Amazon S3 is optimized for applications that need high read throughput to large objects, potentially from many clients at once, and to write new objects sequentially from a single client at a time. It offers significant performance gains compared to traditional S3 access methods, making it ideal for data-intensive workloads and AI/ML training. 
 
-For Spark workloads, we'll specifically focus on **loading external JARs located in S3 for Spark Applications**. We’ll examine two primary deployment strategies for Mountpoint-S3: 
-1. Leveraging the EKS Managed Addon CSI driver with Persistent Volumes (PV) and Persistent Volume Claims (PVC) 
-2. Deploying Mountpoint-S3 at the node level using either USERDATA scripts or DaemonSets. 
+For Spark workloads, we'll specifically focus on **loading external JARs located in S3 for Spark Applications**. We’ll examine two primary deployment strategies for Mountpoint-S3; Leveraging the EKS Managed Addon CSI driver with Persistent Volumes (PV) and Persistent Volume Claims (PVC) and Deploying Mountpoint-S3 at the node level using either USERDATA scripts or DaemonSets. The first approach is considered mounting at a Pod level because the PV created is available to individual pods. The second Approach is considered mounting at a Node level because the S3 is mounted on the host itself. Each approach is discussed in detail below, highlighting their respective strengths and considerations to help you determine the most effective solution for your specific use case.
 
-Each approach is discussed in detail, highlighting their respective strengths and considerations to help you determine the most effective solution for your specific use case.
+### Pod Level
+1. **Access Control:**
+    * Provides fine-grained access control through service roles and RBAC, limiting PVC access to specific pods. This is not possible with host-level mounts, where the mounted S3 bucket is accessible to all pods on the node.
+2. **Scalability and Overhead:**
+    * Involves managing individual PVCs, which can increase overhead in large-scale environments.
+3. **Performance Considerations:**
+    * Offers predictable and isolated performance for individual pods.
+4. **Flexibility and Use Cases:**
+    * Best suited for use cases where different pods require access to different datasets or where strict security and compliance controls are necessary.
 
-## Loading External JARs Located in S3 to Spark Jobs Using Mountpoint-S3
+### Node Level 
+1. **Access Control:**
+    * Simplifies configuration but lacks the granular control offered by pod-level mounting.
+2. **Scalability and Overhead:**
+    * Reduces configuration complexity but provides less isolation between pods.
+3. **Performance Considerations:**
+    * May lead to contention if multiple pods on the same node access the same S3 bucket.
+4. **Flexibility and Use Cases:**
+    * Ideal for environments where all pods on a node can share the same dataset, such as when running batch processing jobs or Spark jobs that require common dependencies.
+
+
+
+## Loading External JARs for Spark Workloads Using Mountpoint-S3
 
 When working with SparkApplication Custom Resource Definition (CRD) managed by the SparkOperator, handling multiple dependency JAR files can become a significant challenge. Traditionally, these JAR files are bundled within the container image, leading to several inefficiencies:
 
@@ -102,20 +120,6 @@ echo $S3_BUCKET
 Deploying Mountpoint-S3 at the pod level involves using the EKS Managed Addon CSI driver with Persistent Volumes (PV) and Persistent Volume Claims (PVC) to mount an S3 bucket directly within a pod. This method allows for fine-grained control over which pods can access specific S3 buckets, ensuring that only the necessary workloads have access to the required data.
 
 Once Mountpoint-S3 is enabled and the PV is created, the S3 bucket becomes a cluster-level resource, allowing any pod to request access by creating a PVC that references the PV. To achieve fine-grained control over which pods can access specific PVCs, you can use service roles within namespaces. By assigning specific service accounts to pods and defining Role-Based Access Control (RBAC) policies, you can limit which pods can bind to certain PVCs. This ensures that only authorized pods can mount the S3 bucket, providing tighter security and access control compared to a host-level mount, where the hostPath is accessible to all pods on the node.
-
-However, when comparing this pod-level approach to mounting the S3 bucket at the host level (as in Approach 2), several key differences emerge:
-1. **Granularity of Access Control:**
-    * Pod-Level Mounting: Provides fine-grained access control through service roles and RBAC, limiting PVC access to specific pods. This is not possible with host-level mounts, where the mounted S3 bucket is accessible to all pods on the node.
-    * Host-Level Mounting: Simplifies configuration but lacks the granular control offered by pod-level mounting.
-2. **Scalability and Overhead:**
-    * Pod-Level Mounting: Involves managing individual PVCs, which can increase overhead in large-scale environments.
-    * Host-Level Mounting: Reduces configuration complexity but provides less isolation between pods.
-3. **Performance Considerations:**
-    * Pod-Level Mounting: Offers predictable and isolated performance for individual pods.
-    * Host-Level Mounting: May lead to contention if multiple pods on the same node access the same S3 bucket.
-4. **Flexibility and Use Cases:**
-    * Pod-Level Mounting: Best suited for use cases where different pods require access to different datasets or where strict security and compliance controls are necessary.
-    * Host-Level Mounting: Ideal for environments where all pods on a node can share the same dataset, such as when running batch processing jobs or Spark jobs that require common dependencies.
 
 Using this approach can also be simplified using the EKS managed Addon CSI driver. However, this does not support taints/tolerations and therefore cannot be used with GPUs. Additionally, because the pods are not sharing the mount and therefore not sharing the cache it would lead to more S3 API calls. 
 
@@ -207,4 +211,4 @@ Additionally, when viewing status of the spark-team-a pods, you would notice tha
 
 ## Conclusion
 
-Mountpoint-S3 offers a versatile and powerful way to integrate S3 storage with EKS for data and AI/ML workloads. Whether you choose to deploy it at the pod level using PVs and PVCs, or at the node level using user data scripts or DaemonSets, each approach has its own set of advantages and trade-offs. By understanding these options, you can make informed decisions to optimize your data and AI/ML workflows on EKS.
+Mountpoint-S3 offers a versatile and powerful way to integrate S3 storage with EKS for data and AI/ML workloads. Whether you choose to deploy it at the pod level using PVs and PVCs, or at the node level using USERDATA or DaemonSets, each approach has its own set of advantages and trade-offs. By understanding these options, you can make informed decisions to optimize your data and AI/ML workflows on EKS.
