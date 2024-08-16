@@ -1,0 +1,30 @@
+# Installing LWS
+
+VERSION=v0.3.0
+
+kubectl apply --server-side -f https://github.com/kubernetes-sigs/lws/releases/download/$VERSION/manifests.yaml
+
+
+# OUTPUT
+
+# namespace/lws-system serverside-applied
+# customresourcedefinition.apiextensions.k8s.io/leaderworkersets.leaderworkerset.x-k8s.io serverside-applied
+# serviceaccount/lws-controller-manager serverside-applied
+# role.rbac.authorization.k8s.io/lws-leader-election-role serverside-applied
+# clusterrole.rbac.authorization.k8s.io/lws-manager-role serverside-applied
+# clusterrole.rbac.authorization.k8s.io/lws-metrics-reader serverside-applied
+# clusterrole.rbac.authorization.k8s.io/lws-proxy-role serverside-applied
+# rolebinding.rbac.authorization.k8s.io/lws-leader-election-rolebinding serverside-applied
+# clusterrolebinding.rbac.authorization.k8s.io/lws-manager-rolebinding serverside-applied
+# clusterrolebinding.rbac.authorization.k8s.io/lws-proxy-rolebinding serverside-applied
+# secret/lws-webhook-server-cert serverside-applied
+# service/lws-controller-manager-metrics-service serverside-applied
+# service/lws-webhook-service serverside-applied
+# deployment.apps/lws-controller-manager serverside-applied
+# mutatingwebhookconfiguration.admissionregistration.k8s.io/lws-mutating-webhook-configuration serverside-applied
+# validatingwebhookconfiguration.admissionregistration.k8s.io/lws-validating-webhook-configuration serverside-applied
+
+
+# kubectl get crds
+# NAME                                         CREATED AT
+# ingressclassparams.elbv2.k8s.aws             2024-08-15T05:40:46Z
