@@ -1,6 +1,6 @@
 # Pre-requisite before running this job
 # Replace <S3_BUCKET_NAME> with your S3 bucket created by this blueprint(Check Terraform outputs)
-# Verify that the version for spark matches 
+# Verify that the version for spark matches
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -27,7 +27,7 @@ spec:
   volumes:
     - name: spark-volume
       hostPath:
-        path: /mnt/s3/jars # Mountpoint-S3 Configuration 
+        path: /mnt/s3/jars # Mountpoint-S3 Configuration
         type: Directory
   arguments:
     - "s3a://<S3_BUCKET_NAME>/taxi-trip/input/"

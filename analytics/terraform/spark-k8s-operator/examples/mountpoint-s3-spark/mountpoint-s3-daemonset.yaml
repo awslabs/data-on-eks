@@ -15,7 +15,7 @@ data:
     MOUNT_POINT="/mnt/s3"
     CACHE_DIR="/tmp"
     MOUNT_S3_BIN="/usr/bin/mount-s3"
-    MOUNT_S3_URL="https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.rpm"  
+    MOUNT_S3_URL="https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.rpm"
 
     # Function to install mount-s3
     install_mount_s3() {
@@ -105,7 +105,7 @@ spec:
           mountPropagation: Bidirectional
         securityContext:
           privileged: true
-        command: 
+        command:
         - /bin/bash
         - -c
         - |

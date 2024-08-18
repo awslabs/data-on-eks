@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Spark Variables
-# NOTE: The Spark version needs to have compatible dependancy Hadoop and AWS SDK JAR version files. 
+# NOTE: The Spark version needs to have compatible dependency Hadoop and AWS SDK JAR version files.
 HADOOP_VERSION="3.3.1" # Replace with your desired Hadoop version
 AWS_SDK_VERSION="1.12.647" # Replace with your desired AWS SDK version
 
 # S3 Variables
 S3_BUCKET_NAME="<S3_BUCKET_NAME>"  # Replace with your S3 bucket name
 # The folder name in the S3 bucket where the JAR files will be stored
-FOLDER_NAME="jars"  
+FOLDER_NAME="jars"
 
 # Python SparkApplication
 PYTHON_SCRIPT_NAME="pyspark-taxi-trip.py"
@@ -44,7 +44,7 @@ if [ ! -f "aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar" ]; then
     if [ $? -ne 0 ]; then
         echo "Failed to download aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar. Exit status: $?"
         exit 1
-    else    
+    else
         echo "Downloaded aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar successfully"
     fi
 else
@@ -56,7 +56,7 @@ aws s3 cp "hadoop-aws-${HADOOP_VERSION}.jar" "s3://${S3_BUCKET_NAME}/${FOLDER_NA
 if [ $? -ne 0 ]; then
     echo "Failed to upload hadoop-aws-${HADOOP_VERSION}.jar to S3. Exit status: $?"
     exit 1
-else    
+else
     echo "Uploaded hadoop-aws-${HADOOP_VERSION}.jar to S3 successfully"
 fi
 
@@ -64,7 +64,7 @@ aws s3 cp "aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar" "s3://${S3_BUCKET_NAME}/$
 if [ $? -ne 0 ]; then
     echo "Failed to upload aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar to S3. Exit status: $?"
     exit 1
-else    
+else
     echo "Uploaded aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar to S3 successfully"
 fi
 
@@ -73,7 +73,7 @@ aws s3 cp "${PYTHON_SCRIPT_NAME}" "s3://${S3_BUCKET_NAME}/${FOLDER_NAME}/"
 if [ $? -ne 0 ]; then
     echo "Failed to upload ${PYTHON_SCRIPT_NAME} to S3. Exit status: $?"
     exit 1
-else    
+else
     echo "Uploaded ${PYTHON_SCRIPT_NAME} to S3 successfully"
 fi
 
