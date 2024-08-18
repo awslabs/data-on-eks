@@ -7,7 +7,7 @@ import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 import CodeBlock from '@theme/CodeBlock';
-import DaemonSetWithConfig from '!!raw-loader!../../../analytics/terraform/spark-k8s-operator/examples/karpenter/spark-mountpoint-s3/daemonset-with-configmap.yaml';
+import DaemonSetWithConfig from '!!raw-loader!../../../analytics/terraform/spark-k8s-operator/examples/mountpoint-s3-spark/mountpoint-s3-daemonset.yaml';
 
 <!-- import DaemonSetWithConfig from '!!raw-loader!../../../analytics/terraform/emr-eks-karpenter/karpenter-provisioners/spark-compute-optimized-provisioner.yaml'; -->
 
@@ -159,6 +159,10 @@ The ConfigMap script will run a loop to check the mountPoint every 60 seconds an
 
 The DaemonSet pods will copy the script onto the Node, alter the permissions to allow execution, and then finally run the script. The pod requires the securityContext to be privileged, hostPID, hostIPC, and hostNetwork have to be set to true. The pod installs util-linux in order to have access to nsenter, which allows the pod execute the script in the Node space which allows the S3 Bucket to be mounted on to the Node and not the pod. 
 
+
+
+<TO-DO> exapnd on whay hostPID, hostIPC and network. Also give a disclalimer on the the namespace for buckets and the IRSA for the name sparkc</TO-DO>
+
 <details>
 <summary> To view the DaemonSet, Click to toggle content!</summary>
 
@@ -198,7 +202,7 @@ Lets’ test the scenario using Approach-2 with DaemonSet
     
 
 ## Results
-Once the job is done running you can see in the exec logs that the files are being copied from the local mountpoint-s3 location on the node to the spark pod in order to the processing. 
+Once the job is done running you can see in the exec logs that the files are being copied from the local mountpoint-s3 location on the node to the spark pod in order to do the processing. 
 ```
 24/08/13 00:08:46 INFO Utils: Copying /mnt/s3/jars/hadoop-aws-3.3.1.jar to /var/data/spark-5eae56b3-3999-4c2f-8004-afc46d1c82ba/spark-a433e7ce-db5d-4fd5-b344-abf751f43bd3/-14716855631723507720806_cache
 24/08/13 00:08:46 INFO Utils: Copying /var/data/spark-5eae56b3-3999-4c2f-8004-afc46d1c82ba/spark-a433e7ce-db5d-4fd5-b344-abf751f43bd3/-14716855631723507720806_cache to /opt/spark/work-dir/./hadoop-aws-3.3.1.jar
