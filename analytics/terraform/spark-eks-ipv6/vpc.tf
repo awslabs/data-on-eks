@@ -1,3 +1,5 @@
+# VPC with IPv6 capability
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
@@ -14,6 +16,7 @@ module "vpc" {
   enable_ipv6            = true
   create_egress_only_igw = true
 
+  # IPv6-only subnets config
   public_subnet_ipv6_prefixes                    = [0, 1, 2]
   public_subnet_assign_ipv6_address_on_creation  = true
   private_subnet_ipv6_prefixes                   = [3, 4, 5]
