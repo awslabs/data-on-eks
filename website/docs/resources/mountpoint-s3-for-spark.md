@@ -35,7 +35,7 @@ For Spark workloads, we'll specifically focus on **loading external JARs located
 2. Deploying Mountpoint-S3 at the Node level using either [USERDATA](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) scripts or DaemonSets.
 
 The first approach is considered mounting at a Pod level because the PV created is available to individual pods. The second Approach is considered mounting at a Node level because the S3 is mounted on the host itself. Each approach is discussed in detail below, highlighting their respective strengths and considerations to help you determine the most effective solution for your specific use case.
-
+<!--
 ### Pod Level
 1. **Access Control:**
     * Provides fine-grained access control through service roles and RBAC, limiting PVC access to specific Pods. This is not possible with host-level mounts, where the mounted S3 bucket is accessible to all Pods on the Node.
@@ -54,7 +54,15 @@ The first approach is considered mounting at a Pod level because the PV created 
 3. **Performance Considerations:**
     * May lead to contention if multiple Pods on the same Node access the same S3 bucket.
 4. **Flexibility and Use Cases:**
-    * Ideal for environments where all Pods on a Node can share the same dataset, such as when running batch processing jobs or Spark jobs that require common dependencies.
+    * Ideal for environments where all Pods on a Node can share the same dataset, such as when running batch processing jobs or Spark jobs that require common dependencies. -->
+
+
+| Metric              | Pod Level | Node Level |
+| :----------------: | :------ | :---- |
+| Access Control            |   Provides fine-grained access control through service roles and RBAC, limiting PVC access to specific Pods. This is not possible with host-level mounts, where the mounted S3 bucket is accessible to all Pods on the Node.   | Simplifies configuration but lacks the granular control offered by Pod-level mounting. |
+| Scalabbility and Overhead |   Involves managing individual PVCs, which can increase overhead in large-scale environments.   | Reduces configuration complexity but provides less isolation between Pods. |
+| Performance Considerations|  Offers predictable and isolated performance for individual Pods.   | May lead to contention if multiple Pods on the same Node access the same S3 bucket. |
+| Flexibility and Use Cases |  Best suited for use cases where different Pods require access to different datasets or where strict security and compliance controls are necessary.   | Ideal for environments where all Pods on a Node can share the same dataset, such as when running batch processing jobs or Spark jobs that require common dependencies. |
 
 ## Resource Allocation
 Before being able to implement the Mountpoint-s3 solution provided, AWS cloud resources need to be allocated. To do deploy the Terraform stack following the instructions below. After allocating the resources and setting up the EKS environment, you can explore the two different approaches of utilizing Mountpoint-S3 in detail.
@@ -200,12 +208,12 @@ Lets’ test the scenario using Approach-2 with DaemonSet
 4. View Job Running
     * There are a couple different resources of which we can view logs of as this SparkApplication CRD is running. Each of these logs should be in a separate terminal to view all of the logs simultaneously.
         1. **spark operator**
-            1. ``` kubectl -n spark-operator get Pods```
-            2. copy the name of the spark operator Pod
+            1. ``` kubectl -n spark-operator get pods```
+            2. copy the name of the spark operator pod
             2. ``` kubectl -n spark-operator logs -f <POD_NAME>```
         2. **spark-team-a Pods**
             1. In order to get the logs for the driver and exec Pods for the SparkApplication, we need to first verify that the Pods are running. using wide output we should be able to see the Node that the Pods are running on and using -w we can see the status updates for each of the Pods.
-            2. ``` kubectl -n spark-team-a get Pods -o wide -w ```
+            2. ``` kubectl -n spark-team-a get pods -o wide -w ```
         3. **driver Pod**
             1. Once the driver Pod is in the running state which will be visible in the previous terminal, we can get the logs for the driver Pod
             2. ``` kubectl -n spark-team-a logs -f taxi-trip ```
