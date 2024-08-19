@@ -60,3 +60,4 @@ site
 # node modules
 node_modules
 gen-ai/inference/stable-diffusion-rayserve-gpu/locust/__pycache__/*
+gen-ai/inference/stable-diffusion-rayserve-gpu/stable-diffusion-2/*
