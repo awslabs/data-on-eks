@@ -1,10 +1,10 @@
 ---
-title: Preload container images into Bottlerocket data volumes with Karpenter
+title: Preload container images into data volumes
 sidebar_position: 2
 ---
 import CollapsibleContent from '../../src/components/CollapsibleContent';
 
-# Preload container images into Bottlerocket data volumes with Karpenter with EBS Snapshots
+# Preload container images into data volumes with EBS Snapshots
 
 The purpose of this pattern is to reduce the cold start time of containers with large images by caching the images in the data volume of Bottlerocket OS.
 
@@ -15,8 +15,8 @@ Bottlerocket OS is a Linux-based open-source operating system built by AWS speci
 To demonstrate the process of caching images in EBS snapshots and launching them in an EKS cluster, this sample will use Amazon EKS optimized Bottlerocket AMIs.
 
 For details, refer to the GitHub sample and blog post: 
-https://github.com/aws-samples/bottlerocket-images-cache/tree/main
-https://aws.amazon.com/blogs/containers/reduce-container-startup-time-on-amazon-eks-with-bottlerocket-data-volume/
+- [GitHub - Caching Container Images for AWS Bottlerocket Instances](https://github.com/aws-samples/bottlerocket-images-cache/tree/main)
+- [Blog Post - Reduce container startup time on Amazon EKS with Bottlerocket data volume](https://aws.amazon.com/blogs/containers/reduce-container-startup-time-on-amazon-eks-with-bottlerocket-data-volume/)
 
 ## Overview of this script
 
@@ -91,80 +91,3 @@ spec:
 # End-to-End deployment example
 
 An end-to-end deployment example can be found in [Stable Diffusion on GPU](../gen-ai/inference/stablediffusion-gpus).
-
-### Clone the repository
-
-```
-git clone https://github.com/awslabs/data-on-eks.git
-```
-
-Important Note: Ensure that you update the region in the variables.tf file before deploying the blueprint. Additionally, confirm that your local region setting matches the specified region to prevent any discrepancies. For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired region:
-
-### Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS
-
-Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins (depending on the image size) for downloading and extracting container images from Amazon ECR.
-
-```
-export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
-
-cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
-./install.sh
-```
-
-# Verify the resources
-Verify the Amazon EKS Cluster
-
-```
-aws eks --region us-west-2 describe-cluster --name jark-stack
-
-# Creates k8s config file to authenticate with EKS
-aws eks --region us-west-2 update-kubeconfig --name jark-stack
-
-# Output shows the EKS Managed Node group nodes
-kubectl get nodes
-
-## Deploying the Ray Cluster with Stable Diffusion Model
-Ensure the cluster is configured locally
-
-```bash
-aws eks --region us-west-2 update-kubeconfig --name jark-stack
-```
-
-**Deploy RayServe Cluster**
-
-```bash
-cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
-kubectl apply -f ray-service-stablediffusion.yaml
-```
-
-This deployment establishes a Ray head pod running on an x86 instance and a worker pod on a GPU G5 instance as shown below.
-
-```bash
-kubectl get pods -n stablediffusion
-
-NAME                                                      READY   STATUS
-rservice-raycluster-hb4l4-worker-gpu-worker-group-z8gdw   1/1     Running
-stablediffusion-service-raycluster-hb4l4-head-4kfzz       2/2     Running
-```
-You can find the container image is preloaded into the disk disk.
-
-
-```
-kubectl describe pod
-
-...
-Events:
-  Type     Reason            Age                From               Message
-  ----     ------            ----               ----               -------
-  Warning  FailedScheduling  41m                default-scheduler  0/8 nodes are available: 1 Insufficient cpu, 3 Insufficient memory, 8 Insufficient nvidia.com/gpu. preemption: 0/8 nodes are available: 8 No preemption victims found for incoming pod.
-  Normal   Nominated         41m                karpenter          Pod should schedule on: nodeclaim/gpu-ljvhl
-  Normal   Scheduled         40m                default-scheduler  Successfully assigned stablediffusion/stablediffusion-raycluster-ms6pl-worker-gpu-85d22 to ip-100-64-136-72.us-west-2.compute.internal
-  Normal   Pulled            40m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
-  Normal   Created           40m                kubelet            Created container wait-gcs-ready
-  Normal   Started           40m                kubelet            Started container wait-gcs-ready
-  Normal   Pulled            39m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
-  Normal   Created           39m                kubelet            Created container worker
-  Normal   Started           38m                kubelet            Started container worker
-  ```
-
-TODO: add benchmark results and the time save for downloading container images  
