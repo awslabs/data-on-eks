@@ -6,9 +6,10 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 :::info
 
-We are actively enhancing this blueprint to incorporate improvements in observability and logging.
+- We are actively enhancing this blueprint to incorporate improvements in observability and logging.
 
 :::
+
 
 # Deploying Stable Diffusion v2 with GPUs, Ray Serve and Gradio
 This pattern demonstrates how to deploy the [Stable Diffusion V2](https://huggingface.co/stabilityai/stable-diffusion-2-1) model on Amazon EKS, using [GPUs](https://aws.amazon.com/ec2/instance-types/g4/) for accelerated image generation. [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) provides efficient scaling across multiple GPU nodes, while [Karpenter](https://karpenter.sh/) dynamically manages node provisioning.
@@ -38,12 +39,27 @@ Ensure that you have installed the following tools on your machine.
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
+### (Optional) Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS 
+
+To accelerate the deployment of image retrieval on Ray workers, refer to [Preload container images into Bottlerocket data volumes with Karpenter with EBS Snapshots](../../bestpractices/preload-container-images)
+
+Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins (depending on the image size) for downloading and extracting container images from Amazon ECR.
+
+```
+export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
+```
 ### Deploy
 
 Clone the repository
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
+```
+
+
+```
+cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
+./install.sh
 ```
 
 Navigate into one of the example directories and run `install.sh` script
@@ -109,7 +125,7 @@ Verify the deployment by running the following commands
 
 :::info
 
-The deployment process may take up to 10 to 12 minutes. The Head Pod is expected to be ready within 2 to 3 minutes, while the Ray Serve worker pod may take up to 10 minutes for image retrieval and Model deployment from Huggingface.
+If you did not preload container images into the data volume, the deployment process may take up to 10 to 12 minutes. The Head Pod is expected to be ready within 2 to 3 minutes, while the Ray Serve worker pod may take up to 10 minutes for image retrieval and Model deployment from Huggingface.
 
 :::
 
@@ -122,6 +138,27 @@ NAME                                                      READY   STATUS
 rservice-raycluster-hb4l4-worker-gpu-worker-group-z8gdw   1/1     Running
 stablediffusion-service-raycluster-hb4l4-head-4kfzz       2/2     Running
 ```
+
+If you have preload container images into the data volume, you can find the message showing `Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine` in the output of `kubectl describe pod -n stablediffusion`.
+
+
+```
+kubectl describe pod -n stablediffusion
+
+...
+Events:
+  Type     Reason            Age                From               Message
+  ----     ------            ----               ----               -------
+  Warning  FailedScheduling  41m                default-scheduler  0/8 nodes are available: 1 Insufficient cpu, 3 Insufficient memory, 8 Insufficient nvidia.com/gpu. preemption: 0/8 nodes are available: 8 No preemption victims found for incoming pod.
+  Normal   Nominated         41m                karpenter          Pod should schedule on: nodeclaim/gpu-ljvhl
+  Normal   Scheduled         40m                default-scheduler  Successfully assigned stablediffusion/stablediffusion-raycluster-ms6pl-worker-gpu-85d22 to ip-100-64-136-72.us-west-2.compute.internal
+  Normal   Pulled            40m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
+  Normal   Created           40m                kubelet            Created container wait-gcs-ready
+  Normal   Started           40m                kubelet            Started container wait-gcs-ready
+  Normal   Pulled            39m                kubelet            Container image "public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest" already present on machine
+  Normal   Created           39m                kubelet            Created container worker
+  Normal   Started           38m                kubelet            Started container worker
+  ```
 
 This deployment also sets up a stablediffusion service with multiple ports configured; port `8265` is designated for the Ray dashboard and port `8000` for the Stable Diffusion model endpoint.
 

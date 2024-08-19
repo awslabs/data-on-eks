@@ -61,3 +61,6 @@ site
 node_modules
 gen-ai/inference/stable-diffusion-rayserve-gpu/locust/__pycache__/*
 gen-ai/inference/stable-diffusion-rayserve-gpu/stable-diffusion-2/*
+gen-ai/inference/stable-diffusion-rayserve-gpu/locust/__pycache__/*
+website/package-lock.json
+website/package.json
