@@ -30,9 +30,9 @@ When working with the [SparkApplication](https://www.kubeflow.org/docs/component
  * **Optimized Network Protocols:** The CRT library includes optimized implementations of network protocols, such as HTTP/2, that are specifically tuned for AWS environments. These optimizations ensure rapid data transfer between S3 and your compute instances, which is critical for large-scale Spark workloads.
 
 ## Using Mountpoint-S3 with EKS
-For Spark workloads, we'll specifically focus on **loading external JARs located in S3 for Spark Applications**. We’ll examine two primary deployment strategies for Mountpoint-S3; 
+For Spark workloads, we'll specifically focus on **loading external JARs located in S3 for Spark Applications**. We’ll examine two primary deployment strategies for Mountpoint-S3;
 1. Leveraging the [EKS Managed Addon CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) with Persistent Volumes (PV) and Persistent Volume Claims (PVC)
-2. Deploying Mountpoint-S3 at the Node level using either [USERDATA](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) scripts or DaemonSets. 
+2. Deploying Mountpoint-S3 at the Node level using either [USERDATA](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) scripts or DaemonSets.
 
 The first approach is considered mounting at a Pod level because the PV created is available to individual pods. The second Approach is considered mounting at a Node level because the S3 is mounted on the host itself. Each approach is discussed in detail below, highlighting their respective strengths and considerations to help you determine the most effective solution for your specific use case.
 
@@ -57,7 +57,7 @@ The first approach is considered mounting at a Pod level because the PV created 
     * Ideal for environments where all Pods on a Node can share the same dataset, such as when running batch processing jobs or Spark jobs that require common dependencies.
 
 ## Resource Allocation
-Before being able to implement the Mountpoint-s3 solution provided, AWS cloud resources need to be allocated. To do deploy the Terraform stack following the instructions below. After allocating the resources and setting up the EKS environment, you can explore the two different approaches of utilizing Mountpoint-S3 in detail. 
+Before being able to implement the Mountpoint-s3 solution provided, AWS cloud resources need to be allocated. To do deploy the Terraform stack following the instructions below. After allocating the resources and setting up the EKS environment, you can explore the two different approaches of utilizing Mountpoint-S3 in detail.
 
 <CollapsibleContent header={<h2><span>Deploy Solution Resources</span></h2>}>
 
@@ -122,7 +122,7 @@ Using this approach can also be simplified using the [EKS Managed Addon CSI driv
 
 ## Approach 2:  Deploy Mountpoint-S3 on EKS at *Node level*
 
-Mounting a S3 Bucket at a Node level can streamline the management of dependency JAR files for SparkApplications by  reducing build times and speeding up deployment. It can be implemented using either **USERDATA** or **DaemonSet.** USERDATA is the preferred method for implementing [Mountpoint-S3](https://github.com/awslabs/mountpoint-s3). However, if you have static Nodes in your EKS cluster that you cannot bring down, the DaemonSet approach provides an alternative. Make sure to understand all of the security mechanisms that need to be enabled in order to utilize the DaemonSet approach before implementing it. 
+Mounting a S3 Bucket at a Node level can streamline the management of dependency JAR files for SparkApplications by  reducing build times and speeding up deployment. It can be implemented using either **USERDATA** or **DaemonSet.** USERDATA is the preferred method for implementing [Mountpoint-S3](https://github.com/awslabs/mountpoint-s3). However, if you have static Nodes in your EKS cluster that you cannot bring down, the DaemonSet approach provides an alternative. Make sure to understand all of the security mechanisms that need to be enabled in order to utilize the DaemonSet approach before implementing it.
 
 ### Approach 2.1: Using USERDATA
 
@@ -131,6 +131,8 @@ This approach is recommended for new clusters or where auto-scaling is customize
 * metadata-ttl: this is set to indefinite because the jar files are meant to be used as read only and will not change.
 * allow-others: this is set so that the Node can have access to the mounted volume when using SSM
 * cache: this is set to enable caching and limit the S3 API calls that need to be made by storing the files in cache for consecutive re-reads.
+
+In addition to these arguments that are set by this example, there are also a number of other options for additional logging and debugging. This information  can be found [here](https://github.com/awslabs/mountpoint-s3/blob/main/doc/LOGGING.md)
 
 When autoscaling with [Karpenter](https://karpenter.sh/) this method allows for more flexibility and performance. For example when configuring Karpenter in the terraform code, the user data for different types of Nodes can be unique with different buckets depending on the workload so when Pods are scheduled and need a certain set of dependencies, Taints and Tolerations will allow Karpenter to allocate the specific instance type with the unique user data to ensure the correct bucket with the dependent files is mounted on the Node so that Pods can access is.
 
@@ -153,8 +155,8 @@ The ConfigMap script will run a loop to check the mountPoint every 60 seconds an
 
 The DaemonSet Pods will copy the script onto the Node, alter the permissions to allow execution, and then finally run the script. The Pod installs util-linux in order to have access to [nsenter](https://man7.org/linux/man-pages/man1/nsenter.1.html), which allows the Pod execute the script in the Node space which allows the S3 Bucket to be mounted on to the Node and not the Pod.
 :::danger
-The DaemonSet Pod requires the securityContext to be privileged as well as hostPID, hostIPC, and hostNetwork to be set to true. 
-review below why these are required to be configured for this solution and their security implications. 
+The DaemonSet Pod requires the securityContext to be privileged as well as hostPID, hostIPC, and hostNetwork to be set to true.
+review below why these are required to be configured for this solution and their security implications.
 :::
 1. securityContext: privileged
     * Purpose: privileged mode gives the container full access to all host resources, similar to root access on the host.
@@ -169,7 +171,7 @@ review below why these are required to be configured for this solution and their
     * Purpose: hostNetwork allows the container to use the host’s network namespace, giving the container access to the host’s IP address and network interfaces.
     * During the installation process, the script will likely need to download packages from the internet (e.g., from repositories hosting the mountpoint-s3 package). By enabling hostNetwork, you ensure that the download processes have direct access to the host’s network interface, avoiding issues with network isolation.
 :::warning
-This sample code uses the ```spark-team-a``` namespace to run the job and host the DaemonSet. This is primarily because the Terraform stack already sets up [IRSA](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html) for this namespace and allows the service account to access any S3 bucket. 
+This sample code uses the ```spark-team-a``` namespace to run the job and host the DaemonSet. This is primarily because the Terraform stack already sets up [IRSA](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html) for this namespace and allows the service account to access any S3 bucket.
 When using in production make sure create your own separate namespace, service account, and IAM role that follows the policy of least-privilege permissions and follows [IAM role best practice](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
 :::
 <TO-DO> expand on why hostPID, hostIPC and network. Also give a disclaimer on the the namespace for buckets and the IRSA for the name spark</TO-DO>
