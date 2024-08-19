@@ -6,10 +6,6 @@ targets=(
   "module.eks"
 )
 
-# Get the snapshot ID with ./snapshot.sh
-# Uncomment the command line below and replace the value with the snapshot ID
-# export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0ffe58efdd845d938
-
 # Initialize Terraform
 terraform init -upgrade
 
