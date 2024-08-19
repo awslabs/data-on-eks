@@ -1,23 +1,77 @@
 #!/bin/bash
 
-export MODEL_S3_URL="s3://kaena-nn-models/llama3.1/405b-bf16"
+#------------------------------------------
+#Step1: Copy Model weights from S3 to NVMe SSD Disk
+#------------------------------------------
 mkdir /awscli \
     && wget https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -O /awscli/awscliv2.zip  \
     && unzip /awscli/awscliv2.zip -d /awscli/ \
     && /awscli/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update \
     && rm -rf /awscli
 
-
 # Model is available under S3 bucket 
-
 export MODEL_S3_URL="s3://llama-model-405b-weights/405b-bf16/"
 
 aws configure set default.s3.preferred_transfer_client crt
 aws configure set default.s3.target_bandwidth 100Gb/s
 aws configure set default.s3.max_concurrent_requests 20
 
+# Model weights will be copied here
 mkdir -p /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+# For Model compiled artifacts
+mkdir -p /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/compiled_artifact
+
 /usr/local/bin/aws s3 sync $MODEL_S3_URL /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+
+#------------------------------------------
+#Step2: Copy missing files to S3 bucket
+#------------------------------------------
+tokenizer_config.json
+tokenizer.json
+special_tokens_map.json
+
+#------------------------------------------
+#Step3: Copy missing files to S3 bucket
+#------------------------------------------
+Modify the "config.json" and update the rope scaling as follows
+
+  "rope_scaling": {
+    "factor": 8.0,
+    "type": "linear"
+  },
+
+
+
+root@ip-100-64-119-25 llama-3.1-405b-instruct]# neuron-ls
+instance-type: trn1.32xlarge
+instance-id: i-0dea0ee0e947ab9fd
++--------+--------+--------+---------------+---------+---------+----------------+---------+
+| NEURON | NEURON | NEURON |   CONNECTED   |   PCI   |   PID   |    COMMAND     | RUNTIME |
+| DEVICE | CORES  | MEMORY |    DEVICES    |   BDF   |         |                | VERSION |
++--------+--------+--------+---------------+---------+---------+----------------+---------+
+| 0      | 2      | 32 GB  | 12, 3, 4, 1   | 10:1c.0 | 4177531 | python main.py | 2.0.0   |
+| 1      | 2      | 32 GB  | 13, 0, 5, 2   | 10:1d.0 | 4177531 | python main.py | 2.0.0   |
+| 2      | 2      | 32 GB  | 14, 1, 6, 3   | a0:1c.0 | 4177531 | python main.py | 2.0.0   |
+| 3      | 2      | 32 GB  | 15, 2, 7, 0   | a0:1d.0 | 4177531 | python main.py | 2.0.0   |
+| 4      | 2      | 32 GB  | 0, 7, 8, 5    | 20:1b.0 | 4177531 | python main.py | 2.0.0   |
+| 5      | 2      | 32 GB  | 1, 4, 9, 6    | 20:1c.0 | 4177531 | python main.py | 2.0.0   |
+| 6      | 2      | 32 GB  | 2, 5, 10, 7   | 90:1b.0 | 4177531 | python main.py | 2.0.0   |
+| 7      | 2      | 32 GB  | 3, 6, 11, 4   | 90:1c.0 | 4177531 | python main.py | 2.0.0   |
+| 8      | 2      | 32 GB  | 4, 11, 12, 9  | 20:1d.0 | 4177531 | python main.py | 2.0.0   |
+| 9      | 2      | 32 GB  | 5, 8, 13, 10  | 20:1e.0 | 4177531 | python main.py | 2.0.0   |
+| 10     | 2      | 32 GB  | 6, 9, 14, 11  | 90:1d.0 | 4177531 | python main.py | 2.0.0   |
+| 11     | 2      | 32 GB  | 7, 10, 15, 8  | 90:1e.0 | 4177531 | python main.py | 2.0.0   |
+| 12     | 2      | 32 GB  | 8, 15, 0, 13  | 10:1e.0 | 4177531 | python main.py | 2.0.0   |
+| 13     | 2      | 32 GB  | 9, 12, 1, 14  | 10:1b.0 | 4177531 | python main.py | 2.0.0   |
+| 14     | 2      | 32 GB  | 10, 13, 2, 15 | a0:1e.0 | 4177531 | python main.py | 2.0.0   |
+| 15     | 2      | 32 GB  | 11, 14, 3, 12 | a0:1b.0 | 4177531 | python main.py | 2.0.0   |
++--------+--------+--------+---------------+---------+---------+----------------+---------+
+
+
+Mode size is 764g GB
+
+
+
 
 ##################################################################################
 # It took >5 mins mins to copy the Llama3_405 model weights(764G) from S3 bucket to local SSD using AWS S3 SYNC CRT

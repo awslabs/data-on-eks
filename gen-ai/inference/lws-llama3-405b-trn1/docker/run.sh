@@ -14,5 +14,3 @@ printenv
 
 export RUN_IN_CONTAINER=True
 export RUN_IN_AWS=True
-
-python main.py

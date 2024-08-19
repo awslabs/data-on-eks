@@ -1,15 +1,24 @@
----
 apiVersion: v1
-kind: Namespace
+kind: Service
 metadata:
-  name: llama3_405b_ns
----
+  name: vllm-leader
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    leaderworkerset.sigs.k8s.io/name: llama3-405b-lws
+    role: leader
+  type: ClusterIP
 
+---
 apiVersion: leaderworkerset.x-k8s.io/v1
 kind: LeaderWorkerSet
 metadata:
-  name: llama3_405b_lws
-  namespace: llama3_405b_ns
+  name: llama3-405b-lws
+  namespace: default
   annotations:
     leaderworkerset.sigs.k8s.io/exclusive-topology: eks.amazonaws.com/nodegroup
 spec:
@@ -19,14 +28,20 @@ spec:
         labels:
           role: leader
       spec:
+        terminationGracePeriodSeconds: 90
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
         containers:
         - command:
           - /usr/local/bin/run.sh
           env:
-          - name: AWS_DOEKS_ENDPOINT_NAME
+          - name: AWS_BEDROCK_ENDPOINT_NAME
             value: llama3-1-405b-instruct-v1
           - name: NEURON_RANK_ID
             value: "0"
+          - name: NEURON_CC_FLAGS
+            value: "-O1"
           - name: NEURON_LOCAL_TP
             value: "32"
           - name: FI_EFA_USE_DEVICE_RDMA
@@ -43,15 +58,14 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.annotations['leaderworkerset.sigs.k8s.io/size']
-          - name: AWS_DOEKS_REGION
+          - name: AWS_BEDROCK_REGION
             value: us-west-2
           - name: VLLM_ENGINE_ITERATION_TIMEOUT_S
             value: "600"
           - name: AWS_DEFAULT_REGION
             value: us-west-2
-          - name: AWS_DOEKS_MAX_BATCH_SIZE
+          - name: AWS_BEDROCK_MAX_BATCH_SIZE
             value: "1"
-          # Move NEURON_COMPILE_CACHE_URL to FSx        
           - name: NEURON_COMPILE_CACHE_URL
             value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/compiled_artifact
           - name: NEURON_MODEL_PATH
@@ -77,14 +91,14 @@ spec:
           resources:
             limits:
               aws.amazon.com/neuron: "16"
-              vpc.amazonaws.com/efa: "16"
+              vpc.amazonaws.com/efa: "8"
             requests:
               aws.amazon.com/neuron: "16"
               cpu: "110"
               memory: 350Gi
-              vpc.amazonaws.com/efa: "16"
+              vpc.amazonaws.com/efa: "8"
           volumeMounts:
-          - mountPath: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct
+          - mountPath: /mnt/k8s-disks/0
             name: model-volume
         nodeSelector:
           instance-type: "trn1-32xl"
@@ -99,16 +113,20 @@ spec:
             path: /mnt/k8s-disks/0
             type: DirectoryOrCreate
           name: model-volume
-    restartPolicy: RecreateGroupOnPodRestart
+    restartPolicy: Default
     size: 4
     workerTemplate:
       metadata: {}
       spec:
+        terminationGracePeriodSeconds: 90
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
         containers:
         - command:
           - /usr/local/bin/run.sh
           env:
-          - name: AWS_DOEKS_ENDPOINT_NAME
+          - name: AWS_BEDROCK_ENDPOINT_NAME
             value: llama3-1-405b-instruct-v1
           - name: NEURON_RANK_ID
             valueFrom:
@@ -116,6 +134,8 @@ spec:
                 fieldPath: metadata.labels['leaderworkerset.sigs.k8s.io/worker-index']
           - name: NEURON_LOCAL_TP
             value: "32"
+          - name: NEURON_CC_FLAGS
+            value: "-O1"
           - name: FI_EFA_USE_DEVICE_RDMA
             value: "1"
           - name: FI_PROVIDER
@@ -130,13 +150,13 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.annotations['leaderworkerset.sigs.k8s.io/size']
-          - name: AWS_DOEKS_REGION
+          - name: AWS_BEDROCK_REGION
             value: us-west-2
           - name: VLLM_ENGINE_ITERATION_TIMEOUT_S
             value: "600"
           - name: AWS_DEFAULT_REGION
             value: us-west-2
-          - name: AWS_DOEKS_MAX_BATCH_SIZE
+          - name: AWS_BEDROCK_MAX_BATCH_SIZE
             value: "1"
           - name: NEURON_MODEL_PATH
             value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
@@ -163,14 +183,14 @@ spec:
           resources:
             limits:
               aws.amazon.com/neuron: "16"
-              vpc.amazonaws.com/efa: "16"
+              vpc.amazonaws.com/efa: "8"
             requests:
               aws.amazon.com/neuron: "16"
               cpu: "110"
               memory: 350Gi
-              vpc.amazonaws.com/efa: "16"
+              vpc.amazonaws.com/efa: "8"
           volumeMounts:
-          - mountPath: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct
+          - mountPath: /mnt/k8s-disks/0
             name: model-volume
         nodeSelector:
           instance-type: "trn1-32xl"
@@ -181,10 +201,10 @@ spec:
             value: "true"
             effect: "NoSchedule"
         volumes:
-        - hostPath:
-            path: /mnt/k8s-disks/0
-            type: Directory
-          name: model-volume
+          - hostPath:
+              path: /mnt/k8s-disks/0
+              type: Directory
+            name: model-volume
   replicas: 1
   rolloutStrategy:
     rollingUpdateConfiguration:

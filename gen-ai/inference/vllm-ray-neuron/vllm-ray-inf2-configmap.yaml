@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vllm
+
+---  
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-serve-script
+  namespace: vllm
+data:
+  vllm_serve.py: |
+    import os
+    from typing import Dict, Optional, List
+    import logging
+
+    from fastapi import FastAPI
+    from starlette.requests import Request
+    from starlette.responses import StreamingResponse, JSONResponse
+
+    from ray import serve
+
+    from vllm.engine.arg_utils import AsyncEngineArgs
+    from vllm.engine.async_llm_engine import AsyncLLMEngine
+    from vllm.entrypoints.openai.protocol import (
+        ChatCompletionRequest,
+        ChatCompletionResponse,
+        ErrorResponse,
+    )
+    from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+    from vllm.entrypoints.openai.serving_engine import LoRAModulePath
+    from vllm.transformers_utils.config import get_config
+
+    logger = logging.getLogger("ray.serve")
+
+    app = FastAPI()
+
+    def get_model_config(model_path: str) -> dict:
+        try:
+            config = get_config(model_path)
+            return {
+                "architecture": config.architectures[0] if config.architectures else None,
+                "vocab_size": config.vocab_size,
+                "hidden_size": config.hidden_size,
+                "num_hidden_layers": config.num_hidden_layers,
+                "num_attention_heads": config.num_attention_heads,
+            }
+        except Exception as e:
+            logger.warning(f"Error reading model config: {e}")
+            return {}
+
+    @serve.deployment(name="VLLMDeployment")
+    @serve.ingress(app)
+    class VLLMDeployment:
+        def __init__(
+            self,
+            model: str,
+            tensor_parallel_size: int,
+            max_num_seqs: int,
+            block_size: int,
+            max_model_len: int,
+            response_role: str = "assistant",
+            lora_modules: Optional[List[LoRAModulePath]] = None,
+            chat_template: Optional[str] = None,
+        ):
+            model_config = get_model_config(model)
+            logger.info(f"Model config: {model_config}")
+
+            engine_args = AsyncEngineArgs(
+                model=model,
+                tensor_parallel_size=tensor_parallel_size,
+                max_num_seqs=max_num_seqs,
+                block_size=block_size,
+                max_model_len=max_model_len,
+                disable_log_requests=True,
+                device="neuron",
+                dtype="auto",
+                trust_remote_code=True  # Add this to allow loading custom model code
+            )
+            logger.info(f"Starting with engine args: {engine_args}")
+            self.openai_serving_chat = None
+            self.engine_args = engine_args
+            self.response_role = response_role
+            self.lora_modules = lora_modules
+            self.chat_template = chat_template
+            self.engine = AsyncLLMEngine.from_engine_args(engine_args)
+
+        @app.post("/v1/chat/completions")
+        async def create_chat_completion(
+            self, request: ChatCompletionRequest, raw_request: Request
+        ):
+            if not self.openai_serving_chat:
+                model_config = await self.engine.get_model_config()
+                served_model_names = [self.engine_args.model]
+                self.openai_serving_chat = OpenAIServingChat(
+                    self.engine,
+                    model_config,
+                    served_model_names,
+                    self.response_role,
+                    self.lora_modules,
+                    self.chat_template,
+                )
+            logger.info(f"Request: {request}")
+            generator = await self.openai_serving_chat.create_chat_completion(
+                request, raw_request
+            )
+            if isinstance(generator, ErrorResponse):
+                return JSONResponse(
+                    content=generator.model_dump(), status_code=generator.code
+                )
+            if request.stream:
+                return StreamingResponse(content=generator, media_type="text/event-stream")
+            else:
+                assert isinstance(generator, ChatCompletionResponse)
+                return JSONResponse(content=generator.model_dump())
+
+    deployment = VLLMDeployment.bind(
+        model=os.environ.get('MODEL_ID', 'NousResearch/Meta-Llama-3-8B-Instruct'),
+        tensor_parallel_size=int(os.environ.get('TENSOR_PARALLELISM', '2')),
+        max_num_seqs=int(os.environ.get('MAX_NUM_SEQS', '32')),
+        block_size=int(os.environ.get('BLOCK_SIZE', '4096')),
+        max_model_len=int(os.environ.get('MAX_MODEL_LEN', '4096')),
+    )

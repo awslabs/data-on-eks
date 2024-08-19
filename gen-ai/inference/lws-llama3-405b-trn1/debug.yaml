@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llama3-405b-debug
+  namespace: default
+spec:
+  containers:
+  - name: debug-container
+    image: public.ecr.aws/c4b0z4q6/llama3.1_405b_neuron:latest
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    env:
+    - name: NEURON_MODEL_PATH
+      value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+    - name: NEURON_COMPILE_CACHE_URL
+      value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/compiled_artifact
+    volumeMounts:
+    - mountPath: /mnt/k8s-disks/0
+      name: model-volume
+  nodeSelector:
+    instance-type: "trn1-32xl"
+  tolerations:
+    - key: "aws.amazon.com/neuron"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  volumes:
+  - hostPath:
+      path: /mnt/k8s-disks/0
+      type: Directory
+    name: model-volume

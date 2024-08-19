@@ -107,6 +107,15 @@ module "eks" {
       })
     }
 
+    # Code snippet to copy the Model weights from S3 to NVMe SSD disks all the nodes used in the same nodegroup
+    # This example copies 800Gb model weights under 5 mins to local disk
+    # aws configure set default.s3.preferred_transfer_client crt
+    # aws configure set default.s3.target_bandwidth 100Gb/s
+    # aws configure set default.s3.max_concurrent_requests 20
+    # sudo mkdir -p /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+    # sudo /usr/local/bin/aws s3 sync $MODEL_S3_URL /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+    # sudo chmod -R a+r /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+    
     # Trainium node group creation can take upto 6 mins
     trn1-32xl-ng1 = {
       name        = "trn1-32xl-ng1"
@@ -136,14 +145,6 @@ module "eks" {
         && unzip /awscli/awscliv2.zip -d /awscli/ \
         && /awscli/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update \
         && rm -rf /awscli
-
-        # Code snippet to copy the Model weights from S3 to NVMe SSD disks all the nodes used in the same nodegroup
-        # This example copies 800Gb model weights under 5 mins to local disk
-        # aws configure set default.s3.preferred_transfer_client crt
-        # aws configure set default.s3.target_bandwidth 100Gb/s
-        # aws configure set default.s3.max_concurrent_requests 20
-        # mkdir -p /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
-        # /usr/local/bin/aws s3 sync $MODEL_S3_URL /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
       EOT
 
       min_size     = var.trn1_32xl_min_size
@@ -178,170 +179,170 @@ module "eks" {
     #--------------------------------------------------
     # Trainium node group for Trn1n.32xlarge
     #--------------------------------------------------
-    trn1n-32xl-ng = {
-      name        = "trn1n-32xl-ng"
-      description = "trn1n 32xlarge node group for hosting ML workloads"
-      # All trn1 instances should be launched into the same subnet in the preferred trn1 AZ
-      # The preferred AZ is the first AZ listed in the AZ id <-> region mapping in main.tf.
-      # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
-      #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
-      subnet_ids = [module.vpc.private_subnets[2]]
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
-      # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
-      ami_type       = "AL2_x86_64_GPU" # Contains Neuron driver
-      instance_types = ["trn1n.32xlarge"]
+    # trn1n-32xl-ng = {
+    #   name        = "trn1n-32xl-ng"
+    #   description = "trn1n 32xlarge node group for hosting ML workloads"
+    #   # All trn1 instances should be launched into the same subnet in the preferred trn1 AZ
+    #   # The preferred AZ is the first AZ listed in the AZ id <-> region mapping in main.tf.
+    #   # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
+    #   #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
+    #   subnet_ids = [module.vpc.private_subnets[2]]
+    #   # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+    #   # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
+    #   ami_type       = "AL2_x86_64_GPU" # Contains Neuron driver
+    #   instance_types = ["trn1n.32xlarge"]
 
-      pre_bootstrap_user_data = <<-EOT
-        # Mount instance store volumes in RAID-0 for kubelet and containerd
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
-        /bin/setup-local-disks raid0
+    #   pre_bootstrap_user_data = <<-EOT
+    #     # Mount instance store volumes in RAID-0 for kubelet and containerd
+    #     # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
+    #     /bin/setup-local-disks raid0
 
-        # Install Neuron monitoring tools
-        yum install aws-neuronx-tools-2.* -y
-        export PATH=/opt/aws/neuron/bin:$PATH
-      EOT
+    #     # Install Neuron monitoring tools
+    #     yum install aws-neuronx-tools-2.* -y
+    #     export PATH=/opt/aws/neuron/bin:$PATH
+    #   EOT
 
-      min_size     = var.trn1n_32xl_min_size
-      max_size     = 2
-      desired_size = var.trn1n_32xl_desired_size
+    #   min_size     = var.trn1n_32xl_min_size
+    #   max_size     = 2
+    #   desired_size = var.trn1n_32xl_desired_size
 
-      # This will:
-      # 1. Create a placement group to place the instances close to one another
-      # 2. Ignore subnets that reside in AZs that do not support the instance type
-      # 3. Expose all of the available EFA interfaces on the launch template
-      enable_efa_support = true
+    #   # This will:
+    #   # 1. Create a placement group to place the instances close to one another
+    #   # 2. Ignore subnets that reside in AZs that do not support the instance type
+    #   # 3. Expose all of the available EFA interfaces on the launch template
+    #   enable_efa_support = true
 
-      labels = {
-        instance-type                   = "trn1n-32xl"
-        provisioner                     = "cluster-autoscaler"
-        "vpc.amazonaws.com/efa.present" = "true"
-      }
+    #   labels = {
+    #     instance-type                   = "trn1n-32xl"
+    #     provisioner                     = "cluster-autoscaler"
+    #     "vpc.amazonaws.com/efa.present" = "true"
+    #   }
 
-      taints = [
-        {
-          key    = "aws.amazon.com/neuron",
-          value  = true,
-          effect = "NO_SCHEDULE"
-        }
-      ]
+    #   taints = [
+    #     {
+    #       key    = "aws.amazon.com/neuron",
+    #       value  = true,
+    #       effect = "NO_SCHEDULE"
+    #     }
+    #   ]
 
-      tags = merge(local.tags, {
-        Name = "trn1n-32xl-ng1",
-      })
-    }
+    #   tags = merge(local.tags, {
+    #     Name = "trn1n-32xl-ng1",
+    #   })
+    # }
 
     #--------------------------------------------------
     # Inferentia2 Spot node group
     #--------------------------------------------------
-    inf2-24xl-ng = {
-      name        = "inf2-24xl-ng"
-      description = "inf2 24xl node group for ML inference workloads"
-      # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
-      #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
-      subnet_ids = [module.vpc.private_subnets[2]]
+    # inf2-24xl-ng = {
+    #   name        = "inf2-24xl-ng"
+    #   description = "inf2 24xl node group for ML inference workloads"
+    #   # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
+    #   #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
+    #   subnet_ids = [module.vpc.private_subnets[2]]
 
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
-      # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
-      ami_type       = "AL2_x86_64_GPU"
-      capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
-      instance_types = ["inf2.24xlarge"]
+    #   # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+    #   # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
+    #   ami_type       = "AL2_x86_64_GPU"
+    #   capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
+    #   instance_types = ["inf2.24xlarge"]
 
-      pre_bootstrap_user_data = <<-EOT
-        # Mount instance store volumes in RAID-0 for kubelet and containerd
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
-        /bin/setup-local-disks raid0
+    #   pre_bootstrap_user_data = <<-EOT
+    #     # Mount instance store volumes in RAID-0 for kubelet and containerd
+    #     # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
+    #     /bin/setup-local-disks raid0
 
-        # Install Neuron monitoring tools
-        yum install aws-neuronx-tools-2.* -y
-        export PATH=/opt/aws/neuron/bin:$PATH
-      EOT
+    #     # Install Neuron monitoring tools
+    #     yum install aws-neuronx-tools-2.* -y
+    #     export PATH=/opt/aws/neuron/bin:$PATH
+    #   EOT
 
-      min_size     = var.inf2_24xl_min_size
-      max_size     = 2
-      desired_size = var.inf2_24xl_desired_size
+    #   min_size     = var.inf2_24xl_min_size
+    #   max_size     = 2
+    #   desired_size = var.inf2_24xl_desired_size
 
-      labels = {
-        instanceType    = "inf2-24xl"
-        provisionerType = "cluster-autoscaler"
-      }
+    #   labels = {
+    #     instanceType    = "inf2-24xl"
+    #     provisionerType = "cluster-autoscaler"
+    #   }
 
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 500
-            volume_type = "gp3"
-          }
-        }
-      }
+    #   block_device_mappings = {
+    #     xvda = {
+    #       device_name = "/dev/xvda"
+    #       ebs = {
+    #         volume_size = 500
+    #         volume_type = "gp3"
+    #       }
+    #     }
+    #   }
 
-      taints = [
-        {
-          key    = "aws.amazon.com/neuron",
-          value  = "true",
-          effect = "NO_SCHEDULE"
-        }
-      ]
+    #   taints = [
+    #     {
+    #       key    = "aws.amazon.com/neuron",
+    #       value  = "true",
+    #       effect = "NO_SCHEDULE"
+    #     }
+    #   ]
 
-      tags = merge(local.tags, {
-        Name                     = "inf2-24xl-ng",
-        "karpenter.sh/discovery" = local.name
-      })
-    }
+    #   tags = merge(local.tags, {
+    #     Name                     = "inf2-24xl-ng",
+    #     "karpenter.sh/discovery" = local.name
+    #   })
+    # }
 
-    inf2-48xl-ng = {
-      name        = "inf2-48xl-ng"
-      description = "inf2 48x large node group for ML inference workloads"
-      # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
-      #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
-      subnet_ids = [module.vpc.private_subnets[2]]
+    # inf2-48xl-ng = {
+    #   name        = "inf2-48xl-ng"
+    #   description = "inf2 48x large node group for ML inference workloads"
+    #   # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
+    #   #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
+    #   subnet_ids = [module.vpc.private_subnets[2]]
 
-      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
-      # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
-      ami_type       = "AL2_x86_64_GPU"
-      capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
-      instance_types = ["inf2.48xlarge"]
+    #   # aws ssm get-parameters --names /aws/service/eks/optimized-ami/1.27/amazon-linux-2-gpu/recommended/image_id --region us-west-2
+    #   # ami_id   = "ami-0e0deb7ae582f6fe9" # Use this to pass custom AMI ID and ignore ami_type
+    #   ami_type       = "AL2_x86_64_GPU"
+    #   capacity_type  = "ON_DEMAND" # Use SPOT for Spot instances
+    #   instance_types = ["inf2.48xlarge"]
 
-      pre_bootstrap_user_data = <<-EOT
-        # Mount instance store volumes in RAID-0 for kubelet and containerd
-        # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
-        /bin/setup-local-disks raid0
+    #   pre_bootstrap_user_data = <<-EOT
+    #     # Mount instance store volumes in RAID-0 for kubelet and containerd
+    #     # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
+    #     /bin/setup-local-disks raid0
 
-        # Install Neuron monitoring tools
-        yum install aws-neuronx-tools-2.* -y
-        export PATH=/opt/aws/neuron/bin:$PATH
-      EOT
+    #     # Install Neuron monitoring tools
+    #     yum install aws-neuronx-tools-2.* -y
+    #     export PATH=/opt/aws/neuron/bin:$PATH
+    #   EOT
 
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 500
-            volume_type = "gp3"
-          }
-        }
-      }
+    #   block_device_mappings = {
+    #     xvda = {
+    #       device_name = "/dev/xvda"
+    #       ebs = {
+    #         volume_size = 500
+    #         volume_type = "gp3"
+    #       }
+    #     }
+    #   }
 
-      min_size     = var.inf2_48xl_min_size
-      max_size     = 2
-      desired_size = var.inf2_48xl_desired_size
+    #   min_size     = var.inf2_48xl_min_size
+    #   max_size     = 2
+    #   desired_size = var.inf2_48xl_desired_size
 
-      labels = {
-        instanceType    = "inf2-48xl"
-        provisionerType = "cluster-autoscaler"
-      }
+    #   labels = {
+    #     instanceType    = "inf2-48xl"
+    #     provisionerType = "cluster-autoscaler"
+    #   }
 
-      taints = [
-        {
-          key    = "aws.amazon.com/neuron",
-          value  = true,
-          effect = "NO_SCHEDULE"
-        }
-      ]
+    #   taints = [
+    #     {
+    #       key    = "aws.amazon.com/neuron",
+    #       value  = true,
+    #       effect = "NO_SCHEDULE"
+    #     }
+    #   ]
 
-      tags = merge(local.tags, {
-        Name = "inf2-48xl-ng",
-      })
-    }
+    #   tags = merge(local.tags, {
+    #     Name = "inf2-48xl-ng",
+    #   })
+    # }
   }
 }
