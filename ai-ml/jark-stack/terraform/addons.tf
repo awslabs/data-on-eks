@@ -123,6 +123,9 @@ module "eks_blueprints_addons" {
     chart_version       = "0.37.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
+    source_policy_documents = [
+      data.aws_iam_policy_document.karpenter_controller_policy.json
+    ]
   }
 
   #---------------------------------------
@@ -152,7 +155,7 @@ module "eks_blueprints_addons" {
 
 module "data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.40"   # source  = "aws-ia/eks-data-addons/aws"
+  version = "~> 1.40"
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -412,5 +415,17 @@ resource "kubernetes_config_map_v1" "notebook" {
 
   data = {
     "dogbooth.ipynb" = file("${path.module}/src/notebook/dogbooth.ipynb")
+  }
+}
+
+data "aws_iam_policy_document" "karpenter_controller_policy" {
+  statement {
+    actions = [
+      "ec2:RunInstances",
+      "ec2:CreateLaunchTemplate",
+    ]
+    resources = ["*"]
+    effect    = "Allow"
+    sid       = "KarpenterControllerAdditionalPolicy"
   }
 }
