@@ -12,7 +12,6 @@
 # Step4: python3 openai-client.py
 #-------------------------------------------------------------------
 
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -188,123 +187,123 @@ spec:
         num-cpus: "0"
       template:
         spec:
-          schedulerName: my-scheduler  # Correct placement
+          schedulerName: my-scheduler # Correct placement
           containers:
-            - name: head
-              image: public.ecr.aws/data-on-eks/vllm-ray-neuron-mistral7b:latest
-              imagePullPolicy: Always
-              lifecycle:
-                preStop:
-                  exec:
-                    command: ["/bin/sh", "-c", "ray stop"]
-              ports:
-                - containerPort: 6379
-                  name: gcs
-                - containerPort: 8265
-                  name: dashboard
-                - containerPort: 10001
-                  name: client
-                - containerPort: 8000
-                  name: serve
-              volumeMounts:
-                - mountPath: /tmp/ray
-                  name: ray-logs
-                - name: vllm-script
-                  mountPath: /home/ray/vllm_serve.py
-                  subPath: vllm_serve.py
-              resources:
-                limits:
-                  cpu: "2"
-                  memory: "20G"
-                requests:
-                  cpu: "2"
-                  memory: "20G"
-              env:
-                - name: MODEL_ID
-                  value: "NousResearch/Meta-Llama-3-8B-Instruct"
-                - name: PORT
-                  value: "8000"
-                - name: LD_LIBRARY_PATH
-                  value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
-          volumes:
-            - name: ray-logs
-              emptyDir: {}
+          - name: head
+            image: public.ecr.aws/data-on-eks/vllm-ray-neuron-mistral7b:latest
+            imagePullPolicy: Always
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            ports:
+            - containerPort: 6379
+              name: gcs
+            - containerPort: 8265
+              name: dashboard
+            - containerPort: 10001
+              name: client
+            - containerPort: 8000
+              name: serve
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
             - name: vllm-script
-              configMap:
-                name: vllm-serve-script
+              mountPath: /home/ray/vllm_serve.py
+              subPath: vllm_serve.py
+            resources:
+              limits:
+                cpu: "2"
+                memory: "20G"
+              requests:
+                cpu: "2"
+                memory: "20G"
+            env:
+            - name: MODEL_ID
+              value: "NousResearch/Meta-Llama-3-8B-Instruct"
+            - name: PORT
+              value: "8000"
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+          volumes:
+          - name: ray-logs
+            emptyDir: {}
+          - name: vllm-script
+            configMap:
+              name: vllm-serve-script
           nodeSelector:
             instanceType: mixed-x86
             workload: rayhead
     workerGroupSpecs:
-      - groupName: inf2-group
-        replicas: 1
-        minReplicas: 1
-        maxReplicas: 3
-        rayStartParams:
-          # This setting is critical for inf2/Trn1 node autoscaling with RayServe
-          resources: '"{\"neuron_cores\": 2}"'
-        template:
-          spec:
-            schedulerName: my-scheduler  # Correct placement
-            containers:
-              - name: worker
-                image: public.ecr.aws/data-on-eks/vllm-ray-neuron-mistral7b:latest
-                imagePullPolicy: Always
-                lifecycle:
-                  preStop:
-                    exec:
-                      command: ["/bin/sh", "-c", "ray stop"]
-                resources:
-                  limits: # Repalce this to use inf2.8xlarge; Takes 10 mins 40 secs to load Llama3 8b model with 21.3GB Accelerator memory
-                    cpu: "30"
-                    memory: "110G"
-                    aws.amazon.com/neuron: "1"
-                  requests:
-                    cpu: "30"
-                    memory: "110G"
-                    aws.amazon.com/neuron: "1"
-                  # limits: # Repalce this to use inf2.48xlarge; Takes 3 mins to load Llama3 8b model with 21.3GB Accelerator memory
-                  #   cpu: "90"
-                  #   memory: "360G"
-                  #   aws.amazon.com/neuron: "12"
-                  # requests:
-                  #   cpu: "90"
-                  #   memory: "360G"
-                  #   aws.amazon.com/neuron: "12"
-                env:
-                  - name: MODEL_ID
-                    value: "NousResearch/Meta-Llama-3-8B-Instruct"
-                  - name: PORT
-                    value: "8000"
-                  - name: LD_LIBRARY_PATH
-                    value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
-                  - name: NEURON_RT_LOG_LEVEL
-                    value: "INFO"
-                volumeMounts:
-                  - mountPath: /tmp/ray
-                    name: ray-logs
-                  - mountPath: /dev/shm
-                    name: dshm
-                  - name: vllm-script
-                    mountPath: /home/ray/vllm_serve.py
-                    subPath: vllm_serve.py
-            volumes:
-              - name: dshm
-                emptyDir:
-                  medium: Memory
-              - name: ray-logs
-                emptyDir: {}
-              - name: vllm-script
-                configMap:
-                  name: vllm-serve-script
-            nodeSelector:
-              instanceType: inferentia-inf2
-              provisionerType: Karpenter
-            tolerations:
-              - key: "aws.amazon.com/neuron"
-                operator: "Exists"
-                effect: "NoSchedule"
-              - key: "hub.jupyter.org/dedicated"
-                operator: "Equal"
-                value: "user"
-                effect: "NoSchedule"
+    - groupName: inf2-group
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 3
+      rayStartParams:
+        # This setting is critical for inf2/Trn1 node autoscaling with RayServe
+        resources: '"{\"neuron_cores\": 2}"'
+      template:
+        spec:
+          schedulerName: my-scheduler # Correct placement
+          containers:
+          - name: worker
+            image: public.ecr.aws/data-on-eks/vllm-ray-neuron-mistral7b:latest
+            imagePullPolicy: Always
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            resources:
+              limits: # replace this to use inf2.8xlarge; Takes 10 mins 40 secs to load Llama3 8b model with 21.3GB Accelerator memory
+                cpu: "30"
+                memory: "110G"
+                aws.amazon.com/neuron: "1"
+              requests:
+                cpu: "30"
+                memory: "110G"
+                aws.amazon.com/neuron: "1"
+                # limits: # replace this to use inf2.48xlarge; Takes 3 mins to load Llama3 8b model with 21.3GB Accelerator memory
+                #   cpu: "90"
+                #   memory: "360G"
+                #   aws.amazon.com/neuron: "12"
+                # requests:
+                #   cpu: "90"
+                #   memory: "360G"
+                #   aws.amazon.com/neuron: "12"
+            env:
+            - name: MODEL_ID
+              value: "NousResearch/Meta-Llama-3-8B-Instruct"
+            - name: PORT
+              value: "8000"
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+            - name: NEURON_RT_LOG_LEVEL
+              value: "INFO"
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+            - mountPath: /dev/shm
+              name: dshm
+            - name: vllm-script
+              mountPath: /home/ray/vllm_serve.py
+              subPath: vllm_serve.py
+          volumes:
+          - name: dshm
+            emptyDir:
+              medium: Memory
+          - name: ray-logs
+            emptyDir: {}
+          - name: vllm-script
+            configMap:
+              name: vllm-serve-script
+          nodeSelector:
+            instanceType: inferentia-inf2
+            provisionerType: Karpenter
+          tolerations:
+          - key: "aws.amazon.com/neuron"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "hub.jupyter.org/dedicated"
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
