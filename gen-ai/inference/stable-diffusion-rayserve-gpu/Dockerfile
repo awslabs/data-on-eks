@@ -2,7 +2,7 @@
 # docker buildx build --platform=linux/amd64 -t ray2.24.0-py310-gpu-stablediffusion:v1.0 -f Dockerfile .
 
 # Use Ray base image
-FROM docker.io/rayproject/ray-ml:2.33.0-py311-gpu
+FROM docker.io/rayproject/ray:2.33.0-py311-gpu
 
 # Maintainer label
 LABEL maintainer="DoEKS"
