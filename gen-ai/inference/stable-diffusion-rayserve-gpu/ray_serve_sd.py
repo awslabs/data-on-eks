@@ -41,23 +41,12 @@ class StableDiffusionV2:
 
         model_name = "stabilityai/stable-diffusion-2"
         
-        model_path = os.getenv('MODEL_PATH') 
-        if model_path is None:
-            model_path = "./stable-diffusion-2"
-
-        # Load the model
-        # pipe = StableDiffusionPipeline.from_pretrained(model_name, torch_dtype=torch.float16, cache_dir=model_directory)
-
         model_id = os.getenv('MODEL_ID') 
-        # model_id = "stabilityai/stable-diffusion-2"
-        # model_path = os.getenv('MODEL_PATH')
-        self.pipe = StableDiffusionPipeline.from_pretrained(model_path, torch_dtype=torch.float16)
+        model_path = os.getenv('MODEL_PATH') 
+        if model_path is not None:
+            model_id = model_path
 
-        # scheduler = EulerDiscreteScheduler.from_pretrained(
-        #     model_id, subfolder="scheduler"
-        # )
-        # self.pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, cache_dir=model_path)
-        
+        self.pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
         self.pipe = self.pipe.to("cuda")
 
     def generate(self, prompt: str, img_size: int = 768):
