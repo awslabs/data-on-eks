@@ -15,3 +15,15 @@ index e7f0e887..87564b76 100644
                     "Cache operations are not supported for Neuron backend.")
         assert execute_model_req.num_lookahead_slots == 0, (
             "lookahead not supported for Neuron backend.")
+
+diff --git a/vllm/engine/arg_utils.py b/vllm/engine/arg_utils.py
+index cd29db7..6814348 100644
+--- a/vllm/engine/arg_utils.py
++++ b/vllm/engine/arg_utils.py
+@@ -321,7 +321,6 @@ class EngineArgs:
+         parser.add_argument('--block-size',
+                             type=int,
+                             default=EngineArgs.block_size,
+-                            choices=[8, 16, 32],
+                             help='Token block size for contiguous chunks of '
+                             'tokens.')
