@@ -39,7 +39,7 @@ Ensure that you have installed the following tools on your machine.
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
-### (Optional) Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS 
+### (Optional) Reduce Cold Start Time by Preloading Container Images in Bottlerocket OS
 
 To accelerate the deployment of image retrieval on Ray workers, refer to [Preload container images into Bottlerocket data volumes with Karpenter with EBS Snapshots](../../bestpractices/preload-container-images)
 

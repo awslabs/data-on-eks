@@ -56,5 +56,5 @@ variable "bottlerocket_data_disk_snpashot_id" {
   description = "Bottlerocket Data Disk Snapshot ID"
   type        = string
   default     = ""
-  
+
 }
