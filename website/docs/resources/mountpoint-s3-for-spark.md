@@ -182,7 +182,6 @@ review below why these are required to be configured for this solution and their
 This sample code uses the ```spark-team-a``` namespace to run the job and host the DaemonSet. This is primarily because the Terraform stack already sets up [IRSA](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html) for this namespace and allows the service account to access any S3 bucket.
 When using in production make sure create your own separate namespace, service account, and IAM role that follows the policy of least-privilege permissions and follows [IAM role best practice](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
 :::
-<TO-DO> expand on why hostPID, hostIPC and network. Also give a disclaimer on the the namespace for buckets and the IRSA for the name spark</TO-DO>
 
 <details>
 <summary> To view the DaemonSet, Click to toggle content!</summary>
