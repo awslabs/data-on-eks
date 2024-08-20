@@ -82,10 +82,6 @@ module "eks_blueprints_addons" {
     vpc-cni = {
       preserve = true
     }
-
-    aws-mountpoint-s3-csi-driver = {
-      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
-    }
   }
 
   #---------------------------------------
@@ -359,8 +355,26 @@ module "data_addons" {
 }
 
 #---------------------------------------------------------------
-# S3 Mountpoint 
+# S3 CSI Mountpoint Driver 
 #---------------------------------------------------------------
+
+resource "helm_release" "aws_mountpoint-s3-csi-driver" {
+  repository = "https://github.com/awslabs/mountpoint-s3-csi-driver"
+  name = "aws-mountpoint-s3-csi-driver"
+  namespace = "kube-system"
+  chart = "aws-mountpoint-s3-csi-driver"
+
+  values = [
+    <<-EOT
+    node:
+      serviceAccount:
+        create: false
+      tolerateAllTaints: false
+    EOT
+  ]
+
+  depends_on = [ module.s3_csi_driver_irsa ]
+}
 
 #---------------------------------------------------------------
 # IRSA for Mountpoint for Amazon S3 CSI Driver
