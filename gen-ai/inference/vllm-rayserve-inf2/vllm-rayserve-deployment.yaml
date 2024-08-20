@@ -9,7 +9,8 @@
 # Step1: cd gen-ai/inference/vllm-rayserve-inf2
 # Step2 (Optional): Build a Docker image and push it to ECR and use the image in the yaml
 # Step3: kubectl apply -f vllm-rayserve-deployment.yaml
-# Step4: python3 openai-client.py
+# Step4.a: pip install openai
+# Step 4.b: python3 openai-client.py
 #-------------------------------------------------------------------
 
 apiVersion: v1
@@ -190,7 +191,7 @@ spec:
           schedulerName: my-scheduler # Correct placement
           containers:
           - name: head
-            image: public.ecr.aws/data-on-eks/vllm-ray-neuron-mistral7b:latest
+            image: public.ecr.aws/data-on-eks/vllm-ray2.32.0-inf2-llama3:latest
             imagePullPolicy: Always
             lifecycle:
               preStop:
@@ -247,7 +248,7 @@ spec:
           schedulerName: my-scheduler # Correct placement
           containers:
           - name: worker
-            image: public.ecr.aws/data-on-eks/vllm-ray-neuron-mistral7b:latest
+            image: public.ecr.aws/data-on-eks/vllm-ray2.32.0-inf2-llama3:latest
             imagePullPolicy: Always
             lifecycle:
               preStop:
