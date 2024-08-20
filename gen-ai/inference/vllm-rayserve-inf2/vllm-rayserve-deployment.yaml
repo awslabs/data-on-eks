@@ -6,7 +6,7 @@
 # Step1: Deploy this blueprint https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium
 # Step2: Deploy Neuron Scheduler https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/tutorials/k8s-neuron-scheduler.html
 #-------------------------------------------------------------------
-# Step1: cd gen-ai/inference/vllm-rayserve-inf2 
+# Step1: cd gen-ai/inference/vllm-rayserve-inf2
 # Step2 (Optional): Build a Docker image and push it to ECR and use the image in the yaml
 # Step3: kubectl apply -f vllm-rayserve-deployment.yaml
 # Step4: python3 openai-client.py
@@ -18,7 +18,7 @@ kind: Namespace
 metadata:
   name: vllm
 
----  
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
