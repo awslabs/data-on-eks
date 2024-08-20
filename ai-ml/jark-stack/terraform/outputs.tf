@@ -4,5 +4,5 @@ output "configure_kubectl" {
 }
 
 output "model_s3_bucket" {
-  value = aws_s3_bucket.model_storage.bucket
+  value = length(aws_s3_bucket.model_storage) > 0 ? aws_s3_bucket.model_storage[0].bucket : ""
 }
