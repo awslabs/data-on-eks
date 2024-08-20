@@ -28,4 +28,3 @@ index cd29db7..6814348 100644
 -                       choices=[8, 16, 32],
                         help='Token block size for contiguous chunks of '
                         'tokens.')
-

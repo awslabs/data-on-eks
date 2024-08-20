@@ -123,7 +123,7 @@ This approach is recommended for new clusters or where auto-scaling is customize
 These same arguments can also be used in the DaemonSet approach. In addition to these arguments that are set by this example, there are also a number of other options for additional [logging and debugging](https://github.com/awslabs/mountpoint-s3/blob/main/doc/LOGGING.md)
 :::
 
-When autoscaling with [Karpenter](https://karpenter.sh/), this method allows for more flexibility and performance. For example when configuring Karpenter in the terraform code, the user data for different types of Nodes can be unique with different buckets depending on the workload so when Pods are scheduled and need a certain set of dependencies, Taints and Tolerations will allow Karpenter to allocate the specific instance type with the unique user data to ensure the correct bucket with the dependent files is mounted on the Node so that Pods can access is. Additionally, the user script will depend on the OS that the newly allocated Node is configured with. 
+When autoscaling with [Karpenter](https://karpenter.sh/), this method allows for more flexibility and performance. For example when configuring Karpenter in the terraform code, the user data for different types of Nodes can be unique with different buckets depending on the workload so when Pods are scheduled and need a certain set of dependencies, Taints and Tolerations will allow Karpenter to allocate the specific instance type with the unique user data to ensure the correct bucket with the dependent files is mounted on the Node so that Pods can access is. Additionally, the user script will depend on the OS that the newly allocated Node is configured with.
 
 #### USERDATA script:
 
