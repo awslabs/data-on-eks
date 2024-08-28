@@ -172,7 +172,7 @@ When using in production make sure create your own separate namespace, service a
 
 
 ## Executing Spark Job
-Here are the steps to test the scenario using Approach-2 with DaemonSet:
+Here are the steps to test the scenario using Approach 2 with DaemonSet:
 
 1. Deploy [Spark Operator Resources](#resource-allocation)
 2. Prepare the S3 Bucket
