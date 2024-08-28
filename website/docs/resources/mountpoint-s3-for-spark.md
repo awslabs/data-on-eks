@@ -34,28 +34,7 @@ For Spark workloads, we'll specifically focus on **loading external JARs located
 1. Leveraging the [EKS Managed Addon CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) with Persistent Volumes (PV) and Persistent Volume Claims (PVC)
 2. Deploying Mountpoint-S3 at the Node level using either [USERDATA](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) scripts or DaemonSets.
 
-The first approach is considered mounting at a Pod level because the PV created is available to individual pods. The second Approach is considered mounting at a Node level because the S3 is mounted on the host itself. Each approach is discussed in detail below, highlighting their respective strengths and considerations to help you determine the most effective solution for your specific use case.
-<!--
-### Pod Level
-1. **Access Control:**
-    * Provides fine-grained access control through service roles and RBAC, limiting PVC access to specific Pods. This is not possible with host-level mounts, where the mounted S3 bucket is accessible to all Pods on the Node.
-2. **Scalability and Overhead:**
-    * Involves managing individual PVCs, which can increase overhead in large-scale environments.
-3. **Performance Considerations:**
-    * Offers predictable and isolated performance for individual Pods.
-4. **Flexibility and Use Cases:**
-    * Best suited for use cases where different Pods require access to different datasets or where strict security and compliance controls are necessary.
-
-### Node Level
-1. **Access Control:**
-    * Simplifies configuration but lacks the granular control offered by Pod-level mounting.
-2. **Scalability and Overhead:**
-    * Reduces configuration complexity but provides less isolation between Pods.
-3. **Performance Considerations:**
-    * May lead to contention if multiple Pods on the same Node access the same S3 bucket.
-4. **Flexibility and Use Cases:**
-    * Ideal for environments where all Pods on a Node can share the same dataset, such as when running batch processing jobs or Spark jobs that require common dependencies. -->
-
+The first approach is considered mounting at a *Pod* level because the PV created is available to individual pods. The second Approach is considered mounting at a *Node* level because the S3 is mounted on the host Node itself. Each approach is discussed in detail below, highlighting their respective strengths and considerations to help you determine the most effective solution for your specific use case.
 
 | Metric              | Pod Level | Node Level |
 | :----------------: | :------ | :---- |
@@ -134,17 +113,19 @@ Mounting a S3 Bucket at a Node level can streamline the management of dependency
 
 ### Approach 2.1: Using USERDATA
 
-This approach is recommended for new clusters or where auto-scaling is customized to run workloads as the user-data script is run when a Node is initialized. Using the below script, the Node can be updated to have the S3 bucket mounted upon initialization in the EKS cluster that hosts the Pods. The below script outlines downloading, installing, and running the Mountpoint S3 package. There are a couple of arguments that set for this application that can be altered depending on the use case. More information about this arguments can be found [here](https://github.com/awslabs/mountpoint-s3/blob/main/doc/CONFIGURATION.md#caching-configuration)
+This approach is recommended for new clusters or where auto-scaling is customized to run workloads as the user-data script is run when a Node is initialized. Using the below script, the Node can be updated to have the S3 bucket mounted upon initialization in the EKS cluster that hosts the Pods. The below script outlines downloading, installing, and running the Mountpoint S3 package. There are a couple of arguments that are set for this application and defined below that can be altered depending on the use case. More information about these arguments and others can be found [here](https://github.com/awslabs/mountpoint-s3/blob/main/doc/CONFIGURATION.md#caching-configuration)
 
 * metadata-ttl: this is set to indefinite because the jar files are meant to be used as read only and will not change.
 * allow-others: this is set so that the Node can have access to the mounted volume when using SSM
 * cache: this is set to enable caching and limit the S3 API calls that need to be made by storing the files in cache for consecutive re-reads.
 
-In addition to these arguments that are set by this example, there are also a number of other options for additional logging and debugging. This information  can be found [here](https://github.com/awslabs/mountpoint-s3/blob/main/doc/LOGGING.md)
+:::note
+These same arguments can also be used in the DaemonSet approach. In addition to these arguments that are set by this example, there are also a number of other options for additional [logging and debugging](https://github.com/awslabs/mountpoint-s3/blob/main/doc/LOGGING.md)
+:::
 
-When autoscaling with [Karpenter](https://karpenter.sh/) this method allows for more flexibility and performance. For example when configuring Karpenter in the terraform code, the user data for different types of Nodes can be unique with different buckets depending on the workload so when Pods are scheduled and need a certain set of dependencies, Taints and Tolerations will allow Karpenter to allocate the specific instance type with the unique user data to ensure the correct bucket with the dependent files is mounted on the Node so that Pods can access is.
+When autoscaling with [Karpenter](https://karpenter.sh/), this method allows for more flexibility and performance. For example when configuring Karpenter in the terraform code, the user data for different types of Nodes can be unique with different buckets depending on the workload so when Pods are scheduled and need a certain set of dependencies, Taints and Tolerations will allow Karpenter to allocate the specific instance type with the unique user data to ensure the correct bucket with the dependent files is mounted on the Node so that Pods can access is. Additionally, the user script will depend on the OS that the newly allocated Node is configured with.
 
-#### Userdata:
+#### USERDATA script:
 
 ```
 #!/bin/bash
@@ -159,30 +140,29 @@ yum install -y mount-s3.rpm mkdir -p /mnt/s3
 
 This approach is recommended for existing clusters. This approach is made up of 2 resources, a ConfigMap with a script that maintains the S3 Mount Point package onto the Node and a DaemonSet that runs a Pod on every Node in the cluster which will execute the script on the Node.
 
-The ConfigMap script will run a loop to check the mountPoint every 60 seconds and remount it if there are any issues. There are multiple environment variables that can be altered for the mount location, cache location, S3 bucket name, log file location, and the URL of the package installation and the location of the of the installed package. these variables can be left as default as only the S3 bucket name is required to run.
+The ConfigMap script will run a loop to check the mountPoint every 60 seconds and remount it if there are any issues. There are multiple environment variables that can be altered for the mount location, cache location, S3 bucket name, log file location, and the URL of the package installation and the location of the of the installed package. These variables can be left as default as only the S3 bucket name is required to run.
 
-The DaemonSet Pods will copy the script onto the Node, alter the permissions to allow execution, and then finally run the script. The Pod installs util-linux in order to have access to [nsenter](https://man7.org/linux/man-pages/man1/nsenter.1.html), which allows the Pod execute the script in the Node space which allows the S3 Bucket to be mounted on to the Node and not the Pod.
+The DaemonSet Pods will copy the script onto the Node, alter the permissions to allow execution, and then finally run the script. The Pod installs ```util-linux``` in order to have access to [nsenter](https://man7.org/linux/man-pages/man1/nsenter.1.html), which allows the Pod to execute the script in the Node space which allows the S3 Bucket to be mounted on to the Node directly by the Pod.
 :::danger
-The DaemonSet Pod requires the securityContext to be privileged as well as hostPID, hostIPC, and hostNetwork to be set to true.
-review below why these are required to be configured for this solution and their security implications.
+The DaemonSet Pod requires the ```securityContext``` to be privileged as well as ```hostPID```, ```hostIPC```, and ```hostNetwork``` to be set to true.
+Review below why these are required to be configured for this solution and their security implications.
 :::
-1. securityContext: privileged
-    * Purpose: privileged mode gives the container full access to all host resources, similar to root access on the host.
+1. ```securityContext: privileged```
+    * **Purpose:** privileged mode gives the container full access to all host resources, similar to root access on the host.
     * To install software packages, configure the system, and mount the S3 bucket onto the host, your container will likely need elevated permissions. Without privileged mode, the container might not have sufficient permissions to perform these actions on the host filesystem and network interfaces.
 2. hostPID
-    * Purpose: nsenter allows you to enter various namespaces, including the PID namespace of the host.
+    * **Purpose:** nsenter allows you to enter various namespaces, including the PID namespace of the host.
     * When using nsenter to enter the host’s PID namespace, the container needs access to the host’s PID namespace. Thus, enabling ```hostPID: true``` is necessary to interact with processes on the host, which is crucial for operations like installing packages or running commands that require host-level process visibility like mountpoint-s3.
 3. hostIPC
-    * Purpose: hostIPC enables your container to share the host’s inter-process communication namespace, which includes shared memory.
+    * **Purpose:** hostIPC enables your container to share the host’s inter-process communication namespace, which includes shared memory.
     * If nsenter commands or the script to run involves shared memory or other IPC mechanisms on the host, ```hostIPC: true``` will be necessary. While it’s less common than hostPID, it’s often enabled alongside it when nsenter is involved, especially if the script needs to interact with host processes that rely on IPC.
 4. hostNetwork
-    * Purpose: hostNetwork allows the container to use the host’s network namespace, giving the container access to the host’s IP address and network interfaces.
-    * During the installation process, the script will likely need to download packages from the internet (e.g., from repositories hosting the mountpoint-s3 package). By enabling hostNetwork, you ensure that the download processes have direct access to the host’s network interface, avoiding issues with network isolation.
+    * **Purpose:** hostNetwork allows the container to use the host’s network namespace, giving the container access to the host’s IP address and network interfaces.
+    * During the installation process, the script will likely need to download packages from the internet (e.g., from repositories hosting the mountpoint-s3 package). By enabling hostNetwork with ```hostNetwork: true```, you ensure that the download processes have direct access to the host’s network interface, avoiding issues with network isolation.
 :::warning
 This sample code uses the ```spark-team-a``` namespace to run the job and host the DaemonSet. This is primarily because the Terraform stack already sets up [IRSA](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html) for this namespace and allows the service account to access any S3 bucket.
 When using in production make sure create your own separate namespace, service account, and IAM role that follows the policy of least-privilege permissions and follows [IAM role best practice](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
 :::
-<TO-DO> expand on why hostPID, hostIPC and network. Also give a disclaimer on the the namespace for buckets and the IRSA for the name spark</TO-DO>
 
 <details>
 <summary> To view the DaemonSet, Click to toggle content!</summary>
@@ -192,7 +172,7 @@ When using in production make sure create your own separate namespace, service a
 
 
 ## Executing Spark Job
-Lets’ test the scenario using Approach-2 with DaemonSet
+Here are the steps to test the scenario using Approach 2 with DaemonSet:
 
 1. Deploy [Spark Operator Resources](#resource-allocation)
 2. Prepare the S3 Bucket
@@ -212,13 +192,13 @@ Lets’ test the scenario using Approach-2 with DaemonSet
             2. copy the name of the spark operator pod
             2. ``` kubectl -n spark-operator logs -f <POD_NAME>```
         2. **spark-team-a Pods**
-            1. In order to get the logs for the driver and exec Pods for the SparkApplication, we need to first verify that the Pods are running. using wide output we should be able to see the Node that the Pods are running on and using -w we can see the status updates for each of the Pods.
+            1. In order to get the logs for the driver and exec Pods for the SparkApplication, we need to first verify that the Pods are running. Using wide output we should be able to see the Node that the Pods are running on and using ```-w``` we can see the status updates for each of the Pods.
             2. ``` kubectl -n spark-team-a get pods -o wide -w ```
         3. **driver Pod**
-            1. Once the driver Pod is in the running state which will be visible in the previous terminal, we can get the logs for the driver Pod
+            1. Once the driver Pod is in the running state, which will be visible in the previous terminal, we can get the logs for the driver Pod
             2. ``` kubectl -n spark-team-a logs -f taxi-trip ```
         4. **exec Pod**
-            1. Once the exec Pod is in the running state which will be visible in the previous terminal, we can get the logs for the exec Pod
+            1. Once the exec Pod is in the running state which will be visible in the previous terminal, we can get the logs for the exec Pod. Make sure that the exec-1 is running before getting the logs, otherwise use another exec Pod that is in the running state.
             2. 2. ``` kubectl -n spark-team-a logs -f taxi-trip-exec-1 ```
 
 
