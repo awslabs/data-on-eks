@@ -244,7 +244,12 @@ module "eks_data_addons" {
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin  = true
+
   enable_aws_efa_k8s_device_plugin = true
+  
+  aws_efa_k8s_device_plugin_helm_config = {
+    version = "v0.5.3"
+  }
 
   #---------------------------------------
   # Volcano Scheduler for TorchX used in BERT-Large distributed training example

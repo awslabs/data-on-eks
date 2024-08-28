@@ -94,7 +94,7 @@ data:
         ignorable: false
     leaderElection:
       leaderElect: true
-      resourceNamespace: kube-system    
+      resourceNamespace: kube-system
       resourceName: my-scheduler
 ---
 apiVersion: apps/v1
@@ -155,4 +155,3 @@ spec:
         - name: config-volume
           configMap:
             name: my-scheduler-config
-

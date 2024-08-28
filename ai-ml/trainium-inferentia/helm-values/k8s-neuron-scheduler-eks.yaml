@@ -101,7 +101,7 @@ spec:
           - name: PORT
             value: "12345"
 
-# service.yaml            
+# service.yaml
 ---
 apiVersion: v1
 kind: Service
@@ -119,4 +119,4 @@ spec:
   selector:
     # select app=ingress-nginx pods
     app: neuron-scheduler
-    component: k8s-neuron-scheduler   
+    component: k8s-neuron-scheduler
