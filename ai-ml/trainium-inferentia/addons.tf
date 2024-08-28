@@ -332,7 +332,7 @@ module "eks_data_addons" {
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: [ "on-demand"]
+            values: [ "spot", "on-demand"]
         limits:
           cpu: 1000
         disruption:
@@ -378,7 +378,7 @@ module "eks_data_addons" {
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: ["on-demand"]
+            values: ["spot", "on-demand"]
         limits:
           cpu: 1000
         disruption:
