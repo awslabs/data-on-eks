@@ -243,10 +243,10 @@ module "eks_data_addons" {
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
-  enable_aws_neuron_device_plugin  = true
+  enable_aws_neuron_device_plugin = true
 
   enable_aws_efa_k8s_device_plugin = true
-  
+
   aws_efa_k8s_device_plugin_helm_config = {
     version = "v0.5.3"
   }
@@ -462,4 +462,26 @@ resource "kubectl_manifest" "mpi_operator" {
   for_each   = var.enable_mpi_operator ? data.kubectl_file_documents.mpi_operator_yaml.manifests : {}
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
+}
+
+
+#---------------------------------------------------------------
+# Neuron Scheduler deployment
+#---------------------------------------------------------------
+resource "kubectl_manifest" "neuron_scheduler" {
+  yaml_body = templatefile("${path.module}/helm-values/neuron-scheduler.yaml", {
+  })
+
+  depends_on = [
+    module.eks_blueprints_addons
+  ]
+}
+
+resource "kubectl_manifest" "k8s_neuron_scheduler_eks" {
+  yaml_body = templatefile("${path.module}/helm-values/k8s-neuron-scheduler-eks.yaml", {
+  })
+
+  depends_on = [
+    module.eks_blueprints_addons
+  ]
 }

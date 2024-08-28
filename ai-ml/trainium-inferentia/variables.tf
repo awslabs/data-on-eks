@@ -66,13 +66,13 @@ variable "enable_fsx_for_lustre" {
 variable "trn1_32xl_min_size" {
   description = "trn1 Worker node minimum size"
   type        = number
-  default     = 4
+  default     = 0
 }
 
 variable "trn1_32xl_desired_size" {
   description = "trn1 Worker node desired size"
   type        = number
-  default     = 4
+  default     = 0
 }
 
 variable "trn1n_32xl_min_size" {

@@ -6,7 +6,7 @@ from openai import OpenAI
 
 # Set up the client
 client = OpenAI(
-    base_url="http://localhost:8000/v1", 
+    base_url="http://localhost:8000/v1",
     api_key="dummy-key"  # The key doesn't matter for our custom server, but is required by the SDK
 )
 
