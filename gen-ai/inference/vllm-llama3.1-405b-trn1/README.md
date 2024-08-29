@@ -41,6 +41,9 @@ LWS: LWS is a Kubernetes SIGs project that helps manage leader-follower patterns
 
 Deploy the Llama 3.1 405B model on your EKS cluster using the provided Kubernetes YAML file:
 
+> **Note:**  
+> Please note that this deployment can take up to 20 minutes to compile and load the model across 4 nodes.
+
     kubectl apply -f  llama3-405b-vllm-lws-deployment.yaml
 
 
