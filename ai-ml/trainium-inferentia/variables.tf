@@ -15,7 +15,7 @@ variable "region" {
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   type        = string
-  default     = "1.29"
+  default     = "1.30"
 }
 
 # VPC with 2046 IPs (10.1.0.0/21) and 2 AZs
@@ -35,12 +35,6 @@ variable "secondary_cidr_blocks" {
 
 variable "enable_jupyterhub" {
   description = "Enable JupyterHub deployment"
-  type        = bool
-  default     = false
-}
-
-variable "enable_amazon_prometheus" {
-  description = "Enable AWS Managed Prometheus service"
   type        = bool
   default     = false
 }
@@ -121,18 +115,6 @@ variable "enable_kuberay_operator" {
   description = "Flag to enable kuberay operator"
   type        = bool
   default     = true
-}
-
-variable "aws_auth_roles" {
-  description = "List of role maps to add to the aws-auth configmap"
-  type        = list(any)
-  default     = []
-  # example structure
-  #  {
-  #     rolearn  = "arn:aws:iam::12345678901:role/role1"
-  #     username = "role1"
-  #     groups   = ["system:masters"]
-  #   }
 }
 
 variable "kms_key_admin_roles" {

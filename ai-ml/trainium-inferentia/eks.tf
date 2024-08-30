@@ -3,38 +3,29 @@
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.15"
+  version = "~> 20.17"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
-  cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_endpoint_public_access = true
+
+  enable_efa_support = true
+
+  # Gives Terraform identity admin access to cluster which will
+  # allow deploying resources (Karpenter) into the cluster
+  enable_cluster_creator_admin_permissions = true
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
   substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
 
-
   # Combine root account, current user/role and additinoal roles to be able to access the cluster KMS key - required for terraform updates
   kms_key_administrators = distinct(concat([
     "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"],
     var.kms_key_admin_roles,
     [data.aws_iam_session_context.current.issuer_arn]
-  ))
-
-  manage_aws_auth_configmap = true
-  # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-  aws_auth_roles = distinct(concat([{
-    rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-    username = "system:node:{{EC2PrivateDNSName}}"
-    groups = [
-      "system:bootstrappers",
-      "system:nodes",
-    ]
-    }],
-    var.aws_auth_roles
   ))
 
   #---------------------------------------
@@ -54,25 +45,6 @@ module "eks" {
 
   # security group rule from all ipv4 to nodes for port 22
   node_security_group_additional_rules = {
-    # Critical Security group rule for EFA enabled nodes
-    ingress_efa_self_enabled = {
-      description = "EFA-enabled self-referencing security group Ingress"
-      protocol    = "-1"
-      from_port   = 0
-      to_port     = 0
-      type        = "ingress"
-      self        = true
-    }
-
-    # Critical Security group rule for EFA enabled nodes
-    egress_efa_self_enabled = {
-      description = "EFA-enabled self-referencing security group Egress"
-      protocol    = "-1"
-      from_port   = 0
-      to_port     = 0
-      type        = "egress"
-      self        = true
-    }
     # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
     # This can be restricted further to specific port based on the requirement for each Add-on e.g., coreDNS 53, metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
     # Update this according to your security requirements if needed
@@ -137,6 +109,10 @@ module "eks" {
       })
     }
 
+    # Code snippet to copy the Model weights from S3 to NVMe SSD disks all the nodes used in the same nodegroup
+    # This example copies 800Gb model weights under 5 mins to local disk
+
+
     # Trainium node group creation can take upto 6 mins
     trn1-32xl-ng1 = {
       name        = "trn1-32xl-ng1"
@@ -152,119 +128,36 @@ module "eks" {
       instance_types = ["trn1.32xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
-        cat <<-EOF > /etc/profile.d/bootstrap.sh
-        #!/bin/sh
-
-        # Configure NVMe volumes in RAID0 configuration
-        # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
-        # Mount will be: /mnt/k8s-disks
-        export LOCAL_DISKS='raid0'
+        # Mount instance store volumes in RAID-0 for kubelet and containerd
+        # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
+        /bin/setup-local-disks raid0
 
         # Install Neuron monitoring tools
         yum install aws-neuronx-tools-2.* -y
         export PATH=/opt/aws/neuron/bin:$PATH
 
-        # EFA Setup for Trainium and Inferentia
-        export FI_EFA_USE_DEVICE_RDMA=1
-        export FI_PROVIDER=efa
-        export FI_EFA_FORK_SAFE=1
-
-        curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
-        tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
-        ./efa_installer.sh -y -g
-        /opt/amazon/efa/bin/fi_info -p efa
-        EOF
-
-        # Source extra environment variables in bootstrap script
-        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete. Ready to Go!"
+        # Install latest version of aws cli
+        mkdir /awscli \
+        && wget https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -O /awscli/awscliv2.zip  \
+        && unzip /awscli/awscliv2.zip -d /awscli/ \
+        && /awscli/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update \
+        && rm -rf /awscli
       EOT
 
       min_size     = var.trn1_32xl_min_size
       max_size     = 4
       desired_size = var.trn1_32xl_desired_size
 
-      # EFA Network Interfaces configuration for Trn1.32xlarge
-      network_interfaces = [
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 0
-          network_card_index          = 0
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 1
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 2
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 3
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 4
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 5
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 6
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 7
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        }
-      ]
-
-      # Commented to investigate further as the node group creation is failing with placement group
-      # placement = {
-      #   spread_domain = "cluster"
-      #   groupName     = "trn1-32xl-ng1"
-      # }
+      # This will:
+      # 1. Create a placement group to place the instances close to one another
+      # 2. Ignore subnets that reside in AZs that do not support the instance type
+      # 3. Expose all of the available EFA interfaces on the launch template
+      enable_efa_support = true
 
       labels = {
-        instance-type = "trn1-32xl"
-        provisioner   = "cluster-autoscaler"
+        "vpc.amazonaws.com/efa.present" = "true"
+        instance-type                   = "trn1-32xl"
+        provisioner                     = "cluster-autoscaler"
       }
 
       taints = [
@@ -279,6 +172,7 @@ module "eks" {
         Name = "trn1-32xl-ng1",
       })
     }
+
     #--------------------------------------------------
     # Trainium node group for Trn1n.32xlarge
     #--------------------------------------------------
@@ -296,183 +190,29 @@ module "eks" {
       instance_types = ["trn1n.32xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
-        cat <<-EOF > /etc/profile.d/bootstrap.sh
-        #!/bin/sh
-
-        # Configure NVMe volumes in RAID0 configuration
-        # https://github.com/awslabs/amazon-eks-ami/blob/056e31f8c7477e893424abce468cb32bbcd1f079/files/bootstrap.sh#L35C121-L35C126
-        # Mount will be: /mnt/k8s-disks
-        export LOCAL_DISKS='raid0'
+        # Mount instance store volumes in RAID-0 for kubelet and containerd
+        # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
+        /bin/setup-local-disks raid0
 
         # Install Neuron monitoring tools
         yum install aws-neuronx-tools-2.* -y
         export PATH=/opt/aws/neuron/bin:$PATH
-
-        # EFA Setup for Trainium and Inferentia
-        export FI_EFA_USE_DEVICE_RDMA=1
-        export FI_PROVIDER=efa
-        export FI_EFA_FORK_SAFE=1
-
-        curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
-        tar -xf aws-efa-installer-latest.tar.gz && cd aws-efa-installer
-        ./efa_installer.sh -y -g
-        /opt/amazon/efa/bin/fi_info -p efa
-        EOF
-
-        # Source extra environment variables in bootstrap script
-        sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete. Ready to Go!"
       EOT
 
       min_size     = var.trn1n_32xl_min_size
       max_size     = 2
       desired_size = var.trn1n_32xl_desired_size
 
-      # EFA Network Interfaces configuration for Trn1.32xlarge
-      network_interfaces = [
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 0
-          network_card_index          = 0
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 1
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 2
-          network_card_index          = 2
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 3
-          network_card_index          = 3
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 4
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 5
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 6
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 7
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 8
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 9
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 10
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 11
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 12
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 13
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 14
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-        {
-          description                 = "NetworkInterfaces Configuration For EFA and EKS"
-          delete_on_termination       = true
-          device_index                = 1
-          network_card_index          = 15
-          associate_public_ip_address = false
-          interface_type              = "efa"
-        },
-      ]
-
-      # Commented to investigate further as the node group creation is failing with placement group
-      # placement = {
-      #   spread_domain = "cluster"
-      #   groupName     = "trn1-32xl-ng1"
-      # }
+      # This will:
+      # 1. Create a placement group to place the instances close to one another
+      # 2. Ignore subnets that reside in AZs that do not support the instance type
+      # 3. Expose all of the available EFA interfaces on the launch template
+      enable_efa_support = true
 
       labels = {
-        instance-type = "trn1n-32xl"
-        provisioner   = "cluster-autoscaler"
+        instance-type                   = "trn1n-32xl"
+        provisioner                     = "cluster-autoscaler"
+        "vpc.amazonaws.com/efa.present" = "true"
       }
 
       taints = [
@@ -505,6 +245,10 @@ module "eks" {
       instance_types = ["inf2.24xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
+        # Mount instance store volumes in RAID-0 for kubelet and containerd
+        # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
+        /bin/setup-local-disks raid0
+
         # Install Neuron monitoring tools
         yum install aws-neuronx-tools-2.* -y
         export PATH=/opt/aws/neuron/bin:$PATH
@@ -557,6 +301,10 @@ module "eks" {
       instance_types = ["inf2.48xlarge"]
 
       pre_bootstrap_user_data = <<-EOT
+        # Mount instance store volumes in RAID-0 for kubelet and containerd
+        # https://github.com/awslabs/amazon-eks-ami/blob/master/doc/USER_GUIDE.md#raid-0-for-kubelet-and-containerd-raid0
+        /bin/setup-local-disks raid0
+
         # Install Neuron monitoring tools
         yum install aws-neuronx-tools-2.* -y
         export PATH=/opt/aws/neuron/bin:$PATH
