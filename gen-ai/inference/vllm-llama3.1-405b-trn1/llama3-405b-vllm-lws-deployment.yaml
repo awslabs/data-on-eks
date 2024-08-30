@@ -44,7 +44,7 @@ spec:
           - /usr/local/bin/run.sh
           env:
           - name: SWAP_SPACE
-            value: "2" 
+            value: "2"
           - name: MODEL
             value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
           - name: NEURON_RANK_ID
@@ -141,7 +141,7 @@ spec:
           - name: MODEL
             value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
           - name: SWAP_SPACE
-            value: "2" 
+            value: "2"
           - name: NEURON_RANK_ID
             valueFrom:
               fieldRef:
@@ -229,4 +229,3 @@ spec:
       maxUnavailable: 2
     type: RollingUpdate
   startupPolicy: LeaderCreated
-

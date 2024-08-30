@@ -28,7 +28,7 @@ Run the following commands on all 4 nodes to copy the model weights from S3 to t
         sudo chmod -R a+r /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
 
 
-## 3. Install Leader Worker Set (LWS) 
+## 3. Install Leader Worker Set (LWS)
 
 To manage the distributed model, install the Leader Worker Set (LWS) by running the following command:
 
@@ -37,11 +37,11 @@ LWS: LWS is a Kubernetes SIGs project that helps manage leader-follower patterns
     VERSION=v0.3.0
     kubectl apply --server-side -f https://github.com/kubernetes-sigs/lws/releases/download/$VERSION/manifests.yaml
 
-## 4. Deploy the model 
+## 4. Deploy the model
 
 Deploy the Llama 3.1 405B model on your EKS cluster using the provided Kubernetes YAML file:
 
-> **Note:**  
+> **Note:**
 > Please note that this deployment can take up to 20 minutes to compile and load the model across 4 nodes.
 
     kubectl apply -f  llama3-405b-vllm-lws-deployment.yaml
@@ -51,7 +51,7 @@ Deploy the Llama 3.1 405B model on your EKS cluster using the provided Kubernete
 
 To test the deployed model, first, set up port forwarding for the vllm-leader service, which is running on port 8080 in the default namespace:
 
-  
+
     kubectl port-forward svc/vllm-leader 8080:8080 -n default
 
 
@@ -73,8 +73,21 @@ After setting up port forwarding, you can test the model by running the followin
 ### 5.1 Result
 
 ```
-{"text":["Translate the following English text to French: Hello, world! in French\nHello, world! in French\nComment dire Hello, world! en français ?\nVoici quelques traductions de Hello, world! en français :\nNous espérons que la traduction de Hello, world! en français vous a aidé! Si vous avez d'autres traductions de"]}%          
+{"text":["Translate the following English text to French: Hello, world! in French\nHello, world! in French\nComment dire Hello, world! en français ?\nVoici quelques traductions de Hello, world! en français :\nNous espérons que la traduction de Hello, world! en français vous a aidé! Si vous avez d'autres traductions de"]}%
 ```
 
+### 6. Gradio WebUI Client deployment
+
+6.1 Deploy Gradio using the command below
+
+    kubectl apply -f gradio-llama-deploy.yaml
 
 
+6.2 Port-forward service:
+
+    kubectl port-forward service/gradio-llama-interface 7860:7860
+
+6.3 Access the Gradio Interface:
+Open a web browser and go to:
+
+    http://localhost:7860
