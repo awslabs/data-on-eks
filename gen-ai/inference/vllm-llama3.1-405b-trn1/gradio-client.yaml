@@ -22,25 +22,25 @@ data:
             "top_p": top_p,
             "stream": False
         }
-        
+
         try:
             start_time = time.time()
             response = requests.post(MODEL_API_URL, headers=headers, data=json.dumps(data), timeout=30)
             response.raise_for_status()
             end_time = time.time()
-            
+
             result = response.json()
             generated_text = result["text"][0]
-            
+
             # Calculate tokens per second
             input_tokens = len(prompt.split())
             output_tokens = len(generated_text.split())
             total_tokens = input_tokens + output_tokens
             time_taken = end_time - start_time
             tokens_per_second = total_tokens / time_taken
-            
+
             performance_stats = f"\n\nPerformance Stats:\nTime taken: {time_taken:.2f} seconds\nTokens generated: {output_tokens}\nTokens per second: {tokens_per_second:.2f}"
-            
+
             return generated_text + performance_stats
         except requests.exceptions.RequestException as e:
             return f"An error occurred: {str(e)}"
@@ -49,12 +49,12 @@ data:
     with gr.Blocks(title="Llama 3.1 405B Story Generator") as iface:
         gr.Markdown("# Llama 3.1 405B Story Generator")
         gr.Markdown("Generate creative stories using the Llama 3.1 405B model.")
-        
+
         with gr.Row():
             with gr.Column(scale=2):
                 prompt_input = gr.Textbox(
-                    lines=5, 
-                    label="Enter your prompt", 
+                    lines=5,
+                    label="Enter your prompt",
                     placeholder="Type your story prompt here...",
                     value=DEFAULT_PROMPT
                 )
@@ -62,13 +62,13 @@ data:
                 max_tokens_slider = gr.Slider(minimum=50, maximum=1000, value=500, step=50, label="Max Tokens")
                 temperature_slider = gr.Slider(minimum=0.1, maximum=1.0, value=0.7, step=0.1, label="Temperature")
                 top_p_slider = gr.Slider(minimum=0.1, maximum=1.0, value=0.9, step=0.1, label="Top P")
-        
+
         generate_button = gr.Button("Generate Story")
         output_text = gr.Textbox(lines=10, label="Generated Story")
-        
+
         generate_button.click(
-            generate_story, 
-            inputs=[prompt_input, max_tokens_slider, temperature_slider, top_p_slider], 
+            generate_story,
+            inputs=[prompt_input, max_tokens_slider, temperature_slider, top_p_slider],
             outputs=output_text
         )
 

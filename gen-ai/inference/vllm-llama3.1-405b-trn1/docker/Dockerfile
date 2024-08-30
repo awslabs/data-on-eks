@@ -65,5 +65,5 @@ RUN apt-get update \
     && apt-get clean
 
 
-COPY vllm/examples/neuron_multi_nodel/neuron_multi_node_runner.py /usr/local/bin/neuron_multi_node_runner.py
+COPY neuron_multi_node_runner.py /usr/local/bin/neuron_multi_node_runner.py
 COPY run.sh /usr/local/bin/run.sh
