@@ -117,7 +117,7 @@ To deploy the Mistral-7B-Instruct-v0.2 model, it's essential to configure your H
 
 export HUGGING_FACE_HUB_TOKEN=$(echo -n "Your-Hugging-Face-Hub-Token-Value" | base64)
 
-cd ./../gen-ai/inference/mistral-7b-rayserve-inf2
+cd ../../gen-ai/inference/mistral-7b-rayserve-inf2
 envsubst < ray-service-mistral.yaml| kubectl apply -f -
 ```
 
