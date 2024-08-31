@@ -63,31 +63,32 @@ const videos = [
   },
 ];
 
+
 const VideoGrid = () => {
   const settings = {
     dots: true,
     infinite: true,
     speed: 500,
     slidesToShow: 3,
-    slidesToScroll: 3,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 5000,
+    pauseOnHover: true,
     nextArrow: <SampleNextArrow />,
     prevArrow: <SamplePrevArrow />,
     responsive: [
       {
-        breakpoint: 1024,
+        breakpoint: 1200,
         settings: {
           slidesToShow: 2,
-          slidesToScroll: 2,
-          infinite: true,
-          dots: true
+          slidesToScroll: 1,
         }
       },
       {
-        breakpoint: 600,
+        breakpoint: 768,
         settings: {
           slidesToShow: 1,
           slidesToScroll: 1,
-          initialSlide: 1
         }
       },
     ]
@@ -98,8 +99,9 @@ const VideoGrid = () => {
       <Slider {...settings}>
         {videos.map((video, index) => (
           <div key={index} className={styles.videoCard}>
-            <a href={video.linkTo} target="_blank" rel="noopener noreferrer">
-              <img src={video.imageSrc} alt={video.title} className={styles.thumbnail} />
+            <a href={video.linkTo} target="_blank" rel="noopener noreferrer" className={styles.videoThumbnail}>
+              <img src={video.imageSrc} alt={video.title} />
+              <div className={styles.playButton}>▶</div>
             </a>
             <div className={styles.videoInfo}>
               <h3>{video.title}</h3>
@@ -114,11 +116,10 @@ const VideoGrid = () => {
 };
 
 const SampleNextArrow = (props) => {
-  const { className, style, onClick } = props;
+  const { onClick } = props;
   return (
     <div
-      className={`${className} ${styles.arrow}`}
-      style={{ ...style, display: 'block' }}
+      className={`${styles.arrow} ${styles.nextArrow}`}
       onClick={onClick}
     >
       &#10095;
@@ -127,11 +128,10 @@ const SampleNextArrow = (props) => {
 };
 
 const SamplePrevArrow = (props) => {
-  const { className, style, onClick } = props;
+  const { onClick } = props;
   return (
     <div
-      className={`${className} ${styles.arrow}`}
-      style={{ ...style, display: 'block' }}
+      className={`${styles.arrow} ${styles.prevArrow}`}
       onClick={onClick}
     >
       &#10094;
