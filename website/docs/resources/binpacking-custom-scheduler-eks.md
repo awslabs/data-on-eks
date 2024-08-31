@@ -88,7 +88,7 @@ spec:
 ```
 
 
-## Verfication and Monitor via [eks-node-viewer](https://github.com/awslabs/eks-node-viewer)
+## Verification and Monitor via [eks-node-viewer](https://github.com/awslabs/eks-node-viewer)
 
 Before apply the change in the pod template
 
