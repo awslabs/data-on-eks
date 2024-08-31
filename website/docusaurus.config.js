@@ -93,19 +93,7 @@ const config = {
       },
     }),
 
-  plugins: [
-    require.resolve('docusaurus-lunr-search'),
-    [
-      '@docusaurus/plugin-ideal-image',
-      {
-        quality: 70,
-        max: 1030,
-        min: 640,
-        steps: 2,
-        lazy: true,
-      },
-    ],
-  ],
+    plugins: [require.resolve('docusaurus-lunr-search')],
 };
 
 module.exports = config;
