@@ -1,8 +1,8 @@
 ---
-title: Mistral-7B on Inferentia
-sidebar_position: 2
+title: Mistral-7B on Inferentia2
+sidebar_position: 1
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
 :::danger
 
@@ -160,16 +160,16 @@ kubectl -n mistral port-forward svc/mistral-service 8265:8265
 
 Access the web UI via `http://localhost:8265` . This interface displays the deployment of jobs and actors within the Ray ecosystem.
 
-![RayServe Deployment In Progress](img/ray-dashboard-deploying-mistral-inf2.png)
+![RayServe Deployment In Progress](../img/ray-dashboard-deploying-mistral-inf2.png)
 
 Once the deployment is complete, the Controller and Proxy status should be `HEALTHY` and Application status should be `RUNNING`
 
-![RayServe Deployment Completed](img/ray-dashboard-deployed-mistral-inf2.png)
+![RayServe Deployment Completed](../img/ray-dashboard-deployed-mistral-inf2.png)
 
 
 You can monitor Serve deployment and the Ray Cluster deployment including resource utilization using the Ray Dashboard.
 
-![RayServe Cluster](img/ray-serve-inf2-mistral-cluster.png)
+![RayServe Cluster](../img/ray-serve-inf2-mistral-cluster.png)
 
 ## Deploying the Gradio WebUI App
 
@@ -217,7 +217,7 @@ Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![Gradio WebUI](img/mistral-gradio.png)
+![Gradio WebUI](../img/mistral-gradio.png)
 
 #### Interaction With Mistral Model
 
@@ -225,11 +225,11 @@ You should now be able to interact with the Gradio application from your local m
 
 Below screenshots provide some examples of the model response based on different text prompts.
 
-![Gradio QA](img/mistral-sample-prompt-1.png)
+![Gradio QA](../img/mistral-sample-prompt-1.png)
 
-![Gradio Convo 1](img/mistral-conv-1.png)
+![Gradio Convo 1](../img/mistral-conv-1.png)
 
-![Gradio Convo 2](img/mistral-conv-2.png)
+![Gradio Convo 2](../img/mistral-conv-2.png)
 
 ## Cleanup
 

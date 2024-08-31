@@ -1,8 +1,8 @@
 ---
 title: Stable Diffusion on GPU
-sidebar_position: 4
+sidebar_position: 3
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
 :::info
 
@@ -178,11 +178,11 @@ kubectl port-forward svc/stablediffusion-service 8266:8265 -n stablediffusion
 
 Access the web UI via `http://localhost:8265` . This interface displays the deployment of jobs and actors within the Ray ecosystem.
 
-![RayServe Deployment](img/ray-serve-gpu-sd.png)
+![RayServe Deployment](../img/ray-serve-gpu-sd.png)
 
 The screenshots provided will show the Serve deployment and the Ray Cluster deployment, offering a visual overview of the setup and operational status.
 
-![RayServe Cluster](img/ray-serve-gpu-sd-cluster.png)
+![RayServe Cluster](../img/ray-serve-gpu-sd-cluster.png)
 
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
@@ -228,7 +228,7 @@ Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![Gradio Output](img/gradio-app-gpu.png)
+![Gradio Output](../img/gradio-app-gpu.png)
 
 ### Ray Autoscaling
 The Ray Autoscaling configuration detailed in the `ray-serve-stablediffusion.yaml` file leverages the capabilities of Ray on Kubernetes to dynamically scale applications based on computational needs.

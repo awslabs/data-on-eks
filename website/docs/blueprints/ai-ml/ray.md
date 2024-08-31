@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 sidebar_label: Ray on EKS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
