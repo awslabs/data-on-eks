@@ -1,8 +1,8 @@
 ---
-title: Stable Diffusion on Inferentia
-sidebar_position: 3
+title: Stable Diffusion on Inferentia2
+sidebar_position: 4
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
 :::info
 
@@ -52,7 +52,7 @@ To scale its Stable diffusion image generator, the company can deploy multiple I
 ## Solution Architecture
 In this section, we will delve into the architecture of our solution, which combines Stable diffusion xl model, [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) and [Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) on Amazon EKS.
 
-![Sdxl-inf2](img/excali-draw-sdxl-inf2.png)
+![Sdxl-inf2](../img/excali-draw-sdxl-inf2.png)
 
 ## Deploying the Solution
 To get started with deploying `stable-diffusion-xl-base-1-0` on [Amazon EKS](https://aws.amazon.com/eks/), we will cover the necessary prerequisites and guide you through the deployment process step by step.
@@ -189,7 +189,7 @@ http://localhost:8265/
 
 From this webpage, you will be able to monitor the progress of Model deployment, as shown in the image below:
 
-![Ray Dashboard](img/ray-dashboard-sdxl.png)
+![Ray Dashboard](../img/ray-dashboard-sdxl.png)
 
 ### To Test the Stable Diffusion XL Model
 
@@ -201,7 +201,7 @@ You can use the following URL with a query added at the end of the URL.
 
 You will see an output like this in your browser:
 
-![Prompt Output](img/stable-diffusion-xl-prompt_3.png)
+![Prompt Output](../img/stable-diffusion-xl-prompt_3.png)
 
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
@@ -248,7 +248,7 @@ Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![Gradio Output](img/stable-diffusion-xl-gradio.png)
+![Gradio Output](../img/stable-diffusion-xl-gradio.png)
 
 ## Conclusion
 

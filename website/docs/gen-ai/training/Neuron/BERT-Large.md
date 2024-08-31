@@ -1,6 +1,6 @@
 ---
 title: BERT-Large on Trainium
-sidebar_position: 1
+sidebar_position: 3
 ---
 
 :::info

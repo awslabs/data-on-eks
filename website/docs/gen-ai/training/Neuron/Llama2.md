@@ -1,8 +1,9 @@
 ---
-title: Llama-2 on Trainium
+title: Llama-2 with Nemo-Megatron on Trn1
 sidebar_position: 2
+description: Training a Llama-2 Model using Trainium, Neuronx-Nemo-Megatron and MPI operator
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
 
 :::danger
@@ -57,7 +58,7 @@ In this section, we will delve into the architecture of our solution.
 
 **FSx for Lustre:** A shared, high-performance filesystem which is well suited for workloads such as machine learning, high performance computing (HPC), video processing, and financial modeling. The FSx for Lustre filesystem will be shared across worker pods in the training job, providing a central repository to access the training data and to store model artifacts and logs.
 
-![Llama-2-trn1](img/llama2-trainium.png)
+![Llama-2-trn1](../img/llama2-trainium.png)
 
 ## Deploying the Solution
 
