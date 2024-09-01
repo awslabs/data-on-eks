@@ -4,6 +4,7 @@ sidebar_label: EMR NVIDIA Spark-RAPIDS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
+
 # EMR on EKS NVIDIA RAPIDS Accelerator for Apache Spark
 
 The NVIDIA RAPIDS Accelerator for Apache Spark is a powerful tool that builds on the capabilities of NVIDIA CUDA® - a transformative parallel computing platform designed for enhancing computational processes on NVIDIA's GPU architecture. RAPIDS, a project developed by NVIDIA, comprises a suite of open-source libraries that are hinged upon CUDA, thereby enabling GPU-accelerated data science workflows.
