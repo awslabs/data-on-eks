@@ -4,6 +4,10 @@ sidebar_position: 4
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
+
 :::info
 
 This example blueprint deploys a `stable-diffusion-xl-base-1-0` model on Inferentia2 instance running as a worker node in an EKS cluster. The model is served using `RayServe`.

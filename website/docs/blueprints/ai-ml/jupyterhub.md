@@ -1,8 +1,12 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 sidebar_label: JupyterHub on EKS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
+
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
 
 # JupyterHub on EKS
 
