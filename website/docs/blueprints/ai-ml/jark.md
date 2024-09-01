@@ -139,7 +139,7 @@ kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
 
 ```bash
 kubectl get deployments -A
-                                                                
+
 NAMESPACE              NAME                                                 READY   UP-TO-DATE   AVAILABLE   AGE
 ingress-nginx          ingress-nginx-controller                             1/1     1            1           36h
 jupyterhub             hub                                                  1/1     1            1           36h
@@ -148,7 +148,7 @@ kube-system            aws-load-balancer-controller                         2/2 
 kube-system            coredns                                              2/2     2            2           2d5h
 kube-system            ebs-csi-controller                                   2/2     2            2           2d5h
 kuberay-operator       kuberay-operator                                     1/1     1            1           36h
-nvidia-device-plugin   nvidia-device-plugin-node-feature-discovery-master   1/1     1 
+nvidia-device-plugin   nvidia-device-plugin-node-feature-discovery-master   1/1     1
 ```
 
 :::info
