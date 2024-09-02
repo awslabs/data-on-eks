@@ -49,7 +49,7 @@ In this repository, you'll find a variety of deployment blueprints for creating 
 
 🚀 [JupyterHub on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub) 👈 This blueprint deploys a self-managed JupyterHub on EKS with Amazon Cognito authentication.
 
-🚀 [Generative AI on EKS](https://awslabs.github.io/data-on-eks/docs/gen-ai) 👈 Collection of Generative AI Trianing and Inference LLM deployment patterns
+🚀 [Generative AI on EKS](https://awslabs.github.io/data-on-eks/docs/gen-ai) 👈 Collection of Generative AI Training and Inference LLM deployment patterns
 
 ### 📊 Data
 

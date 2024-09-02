@@ -168,7 +168,7 @@ horizontalpodautoscaler.autoscaling/nim-llm   StatefulSet/nim-llm   1/5       1 
 </details>
 
 :::info
-The ininial deployement of NIM service may take around 10 minutes as it takes time to pull NIM LLM image and download models.
+The ininial deployment of NIM service may take around 10 minutes as it takes time to pull NIM LLM image and download models.
 :::
 
 :::info
