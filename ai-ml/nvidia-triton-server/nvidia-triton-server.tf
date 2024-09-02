@@ -1,12 +1,8 @@
-locals {
-  triton_model = "triton-vllm"
-}
-
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
-module "triton_server_vllm" {
-  count      = var.enable_nvidia_triton_server ? 1 : 0
+module "triton_server" {
+  count      = var.nvidia_triton_server.enable ? 1 : 0
   depends_on = [module.eks_blueprints_addons.kube_prometheus_stack]
   source     = "aws-ia/eks-data-addons/aws"
   version    = "~> 1.32.0" # ensure to update this to the latest/desired version
@@ -24,8 +20,8 @@ module "triton_server_vllm" {
       <<-EOT
       replicaCount: 1
       image:
-        repository: nvcr.io/nvidia/tritonserver
-        tag: "24.06-vllm-python-py3"
+        repository: ${var.nvidia_triton_server.repository}
+        tag: ${var.nvidia_triton_server.tag}
       serviceAccount:
         create: false
         name: ${kubernetes_service_account_v1.triton[count.index].metadata[0].name}
@@ -45,10 +41,12 @@ module "triton_server_vllm" {
           value: "0.8"
         - name: dtype
           value: "auto"
+      %{ if var.nvidia_triton_server.enable_huggingface_token }
       secretEnvironment:
         - name: "HUGGING_FACE_TOKEN"
           secretName: ${kubernetes_secret_v1.huggingface_token[count.index].metadata[0].name}
           key: "HF_TOKEN"
+      %{ endif }
       resources:
         limits:
           cpu: 10
@@ -86,7 +84,7 @@ module "triton_server_vllm" {
 # Replace the value with your Hugging Face token
 #---------------------------------------------------------------
 resource "kubernetes_secret_v1" "huggingface_token" {
-  count = var.enable_nvidia_triton_server ? 1 : 0
+  count = var.nvidia_triton_server.enable_huggingface_token ? 1 : 0
   metadata {
     name      = "huggingface-secret"
     namespace = kubernetes_namespace_v1.triton[count.index].metadata[0].name
@@ -102,11 +100,11 @@ resource "kubernetes_secret_v1" "huggingface_token" {
 #---------------------------------------------------------------
 #tfsec:ignore:*
 module "s3_bucket" {
-  count   = var.enable_nvidia_triton_server ? 1 : 0
+  count   = var.nvidia_triton_server.enable ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "4.1.2"
 
-  bucket_prefix = "${local.name}-${local.triton_model}-"
+  bucket_prefix = "${local.name}-${nvidia_triton_server.triton_model}-"
 
   # For example only - please evaluate for your environment
   force_destroy = true
@@ -124,7 +122,7 @@ module "s3_bucket" {
 
 # Use null_resource to sync local files to the S3 bucket
 resource "null_resource" "sync_local_to_s3" {
-  count = var.enable_nvidia_triton_server ? 1 : 0
+  count = var.nvidia_triton_server.enable ? 1 : 0
   # Re-run the provisioner if the bucket name changes
   triggers = {
     always_run  = uuid(),
@@ -132,7 +130,7 @@ resource "null_resource" "sync_local_to_s3" {
   }
 
   provisioner "local-exec" {
-    command = "aws s3 sync ../../gen-ai/inference/vllm-nvidia-triton-server-gpu/ s3://${module.s3_bucket[count.index].s3_bucket_id}"
+    command = "aws s3 sync ${var.nvidia_triton_server.model_repository_path} s3://${module.s3_bucket[count.index].s3_bucket_id}/model_repository"
   }
 }
 
@@ -140,9 +138,9 @@ resource "null_resource" "sync_local_to_s3" {
 # IAM role for service account (IRSA)
 #---------------------------------------------------------------
 resource "kubernetes_namespace_v1" "triton" {
-  count = var.enable_nvidia_triton_server ? 1 : 0
+  count = var.nvidia_triton_server.enable ? 1 : 0
   metadata {
-    name = local.triton_model
+    name = nvidia_triton_server.triton_model
   }
   timeouts {
     delete = "15m"
@@ -153,9 +151,9 @@ resource "kubernetes_namespace_v1" "triton" {
 # Service account for Triton model
 #---------------------------------------------------------------
 resource "kubernetes_service_account_v1" "triton" {
-  count = var.enable_nvidia_triton_server ? 1 : 0
+  count = var.nvidia_triton_server.enable ? 1 : 0
   metadata {
-    name        = local.triton_model
+    name        = nvidia_triton_server.triton_model
     namespace   = kubernetes_namespace_v1.triton[count.index].metadata[0].name
     annotations = { "eks.amazonaws.com/role-arn" : module.triton_irsa[count.index].iam_role_arn }
   }
@@ -167,9 +165,9 @@ resource "kubernetes_service_account_v1" "triton" {
 # Secret for Triton model
 #---------------------------------------------------------------
 resource "kubernetes_secret_v1" "triton" {
-  count = var.enable_nvidia_triton_server ? 1 : 0
+  count = var.nvidia_triton_server.enable ? 1 : 0
   metadata {
-    name      = "${local.triton_model}-secret"
+    name      = "${nvidia_triton_server.triton_model}-secret"
     namespace = kubernetes_namespace_v1.triton[count.index].metadata[0].name
     annotations = {
       "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.triton[count.index].metadata[0].name
@@ -184,7 +182,7 @@ resource "kubernetes_secret_v1" "triton" {
 # IRSA for Triton model server pods
 #---------------------------------------------------------------
 module "triton_irsa" {
-  count   = var.enable_nvidia_triton_server ? 1 : 0
+  count   = var.nvidia_triton_server.enable ? 1 : 0
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0"
 
@@ -193,7 +191,7 @@ module "triton_irsa" {
 
   # IAM role for service account (IRSA)
   create_role   = true
-  role_name     = "${var.name}-${local.triton_model}"
+  role_name     = "${var.name}-${nvidia_triton_server.triton_model}"
   create_policy = false
   role_policies = {
     triton_policy = aws_iam_policy.triton[count.index].arn
@@ -202,8 +200,8 @@ module "triton_irsa" {
   oidc_providers = {
     this = {
       provider_arn    = module.eks.oidc_provider_arn
-      namespace       = local.triton_model
-      service_account = local.triton_model
+      namespace       = nvidia_triton_server.triton_model
+      service_account = nvidia_triton_server.triton_model
     }
   }
 }
@@ -212,9 +210,9 @@ module "triton_irsa" {
 # Creates IAM policy for IRSA. Provides IAM permissions for Triton model server pods
 #---------------------------------------------------------------
 resource "aws_iam_policy" "triton" {
-  count       = var.enable_nvidia_triton_server ? 1 : 0
+  count       = var.nvidia_triton_server.enable ? 1 : 0
   description = "IAM role policy for Triton models"
-  name        = "${local.name}-${local.triton_model}-irsa"
+  name        = "${local.name}-${nvidia_triton_server.triton_model}-irsa"
   policy      = data.aws_iam_policy_document.triton_model.json
 }
 

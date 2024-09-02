@@ -32,11 +32,26 @@ variable "secondary_cidr_blocks" {
   type        = list(string)
 }
 
-variable "enable_nvidia_triton_server" {
-  description = "Toggle to enable or disable NVIDIA Triton server resource creation"
-  default     = true
-  type        = bool
+# To enable or disable NVIDIA Triton server resources creation
+variable "nvidia_triton_server" {
+  type = object({
+    enable = bool
+    repository: string
+    tag: string
+    model_repository_path = string
+    triton_model = string
+    enable_huggingface_token = bool
+  })
+  default = {
+      enable = true
+      repository: "nvcr.io/nvidia/tritonserver"
+      tag: "24.06-vllm-python-py3"//"23.09-py3"
+      model_repository_path = "../../gen-ai/inference/nvidia-triton-server-gpu/vllm/model_repository"
+      triton_model = "triton-vllm"
+      enable_huggingface_token = true
+    }
 }
+
 
 #-------------------------------------------------------------------
 # Instructions for Securely Setting the Huggingface Token
