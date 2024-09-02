@@ -41,8 +41,8 @@ module "triton_server" {
           value: "0.8"
         - name: dtype
           value: "auto"
-      %{ if var.nvidia_triton_server.enable_huggingface_token }
       secretEnvironment:
+      %{ if var.nvidia_triton_server.enable_huggingface_token }
         - name: "HUGGING_FACE_TOKEN"
           secretName: ${kubernetes_secret_v1.huggingface_token[count.index].metadata[0].name}
           key: "HF_TOKEN"
@@ -104,7 +104,7 @@ module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "4.1.2"
 
-  bucket_prefix = "${local.name}-${nvidia_triton_server.triton_model}-"
+  bucket_prefix = "${local.name}-${var.nvidia_triton_server.triton_model}-"
 
   # For example only - please evaluate for your environment
   force_destroy = true
@@ -140,7 +140,7 @@ resource "null_resource" "sync_local_to_s3" {
 resource "kubernetes_namespace_v1" "triton" {
   count = var.nvidia_triton_server.enable ? 1 : 0
   metadata {
-    name = nvidia_triton_server.triton_model
+    name = var.nvidia_triton_server.triton_model
   }
   timeouts {
     delete = "15m"
@@ -153,7 +153,7 @@ resource "kubernetes_namespace_v1" "triton" {
 resource "kubernetes_service_account_v1" "triton" {
   count = var.nvidia_triton_server.enable ? 1 : 0
   metadata {
-    name        = nvidia_triton_server.triton_model
+    name        = var.nvidia_triton_server.triton_model
     namespace   = kubernetes_namespace_v1.triton[count.index].metadata[0].name
     annotations = { "eks.amazonaws.com/role-arn" : module.triton_irsa[count.index].iam_role_arn }
   }
@@ -167,7 +167,7 @@ resource "kubernetes_service_account_v1" "triton" {
 resource "kubernetes_secret_v1" "triton" {
   count = var.nvidia_triton_server.enable ? 1 : 0
   metadata {
-    name      = "${nvidia_triton_server.triton_model}-secret"
+    name      = "${var.nvidia_triton_server.triton_model}-secret"
     namespace = kubernetes_namespace_v1.triton[count.index].metadata[0].name
     annotations = {
       "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.triton[count.index].metadata[0].name
@@ -191,7 +191,7 @@ module "triton_irsa" {
 
   # IAM role for service account (IRSA)
   create_role   = true
-  role_name     = "${var.name}-${nvidia_triton_server.triton_model}"
+  role_name     = "${var.name}-${var.nvidia_triton_server.triton_model}"
   create_policy = false
   role_policies = {
     triton_policy = aws_iam_policy.triton[count.index].arn
@@ -200,8 +200,8 @@ module "triton_irsa" {
   oidc_providers = {
     this = {
       provider_arn    = module.eks.oidc_provider_arn
-      namespace       = nvidia_triton_server.triton_model
-      service_account = nvidia_triton_server.triton_model
+      namespace       = var.nvidia_triton_server.triton_model
+      service_account = var.nvidia_triton_server.triton_model
     }
   }
 }
@@ -212,7 +212,7 @@ module "triton_irsa" {
 resource "aws_iam_policy" "triton" {
   count       = var.nvidia_triton_server.enable ? 1 : 0
   description = "IAM role policy for Triton models"
-  name        = "${local.name}-${nvidia_triton_server.triton_model}-irsa"
+  name        = "${local.name}-${var.nvidia_triton_server.triton_model}-irsa"
   policy      = data.aws_iam_policy_document.triton_model.json
 }
 
