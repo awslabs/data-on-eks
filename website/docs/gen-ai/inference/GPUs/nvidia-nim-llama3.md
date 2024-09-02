@@ -145,7 +145,7 @@ aws eks --region us-west-2 update-kubeconfig --name nvidia-triton-server
 Check the status of your pods deployed
 
 ```bash
-kubectl get po -n nim
+kubectl get all -n nim
 ```
 
 You should see output similar to the following:
@@ -166,6 +166,10 @@ NAME                                          REFERENCE             TARGETS   MI
 horizontalpodautoscaler.autoscaling/nim-llm   StatefulSet/nim-llm   1/5       1         5         4          107s
 ```
 </details>
+
+:::info
+The ininial deployement of NIM service may take around 10 minutes as it takes time to pull NIM LLM image and download models.
+:::
 
 :::info
 The `Llama3` model deployed is specified in `ai-ml/nvidia-triton-server/helm-values/nim-llm.yaml` with below config. Please visit [this page](https://build.nvidia.com/explore/discover) to explore more. You may simply update this image configuration if you want to change to deploy another model.
