@@ -1,6 +1,6 @@
 # ref: https://github.com/NVIDIA/nim-deploy/blob/main/helm/nim-llm/values.yaml
 image:
-  repository: nvcr.io/nim/meta/llama3-8b-instruct
+  repository: ${nim_llm_image}
   tag: latest
 model:
   ngcAPIKey: ${ngc_api_key}

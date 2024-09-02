@@ -117,8 +117,9 @@ resource "helm_release" "nim_llm" {
     templatefile(
       "${path.module}/helm-values/nim-llm.yaml",
       {
-        ngc_api_key = var.ngc_api_key
-        pvc_name    = kubernetes_persistent_volume_claim_v1.efs_pvc[count.index].metadata[0].name
+        ngc_api_key   = var.ngc_api_key
+        pvc_name      = kubernetes_persistent_volume_claim_v1.efs_pvc[count.index].metadata[0].name
+        nim_llm_image = var.nim_default_llm_image
       }
     )
   ]

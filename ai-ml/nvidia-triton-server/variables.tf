@@ -75,3 +75,9 @@ variable "ngc_api_key" {
   default     = "DUMMY_NGC_API_KEY_REPLACE_ME"
   sensitive   = true
 }
+
+variable "nim_default_llm_image" {
+  description = "The default NIM LLM image"
+  type        = string
+  default     = "nvcr.io/nim/meta/llama3-8b-instruct"
+}
