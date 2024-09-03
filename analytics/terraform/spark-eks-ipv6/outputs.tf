@@ -5,7 +5,12 @@ output "cluster_arn" {
 
 output "cluster_name" {
   description = "The Amazon Resource Name (ARN) of the cluster"
-  value       = module.eks.cluster_id
+  value       = module.eks.cluster_name
+}
+
+output "region" {
+  description = "AWS region were cluster is deployed"
+  value       = local.region
 }
 
 output "configure_kubectl" {
