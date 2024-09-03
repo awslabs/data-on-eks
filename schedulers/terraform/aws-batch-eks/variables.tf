@@ -1,6 +1,6 @@
 variable "eks_cluster_name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "doeks-batch"
+  default     = "doeks-aws-batch"
   type        = string
 }
 
@@ -19,6 +19,7 @@ variable "num_azs" {
     error_message = "The number of Availability Zones must be 2 or more."
   }
 }
+
 variable "eks_cluster_version" {
   description = "EKS Cluster Kubernetes version. AWS Batch recommends version  1.27 and higher."
   type        = string
