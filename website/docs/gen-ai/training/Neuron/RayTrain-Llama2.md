@@ -1,9 +1,12 @@
 ---
-sidebar_position: 4
-sidebar_label: RayTrain Llama2 on Trn1
+sidebar_position: 1
+sidebar_label: Llama-2 with RayTrain on Trn1
 ---
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
 
 :::danger
 
@@ -22,7 +25,7 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 
 This comprehensive guide walks you through pre-training the `Llama2-7B` language model using AWS Trainium (Trn1) instances and the AWS Neuron SDK within a KubeRay cluster on Amazon EKS. This is a tailored version of the original [Llama2 pretraining tutorial](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/libraries/neuronx-distributed/tutorials/training_llama2_7b.html#llama2-7b-tp-zero1-tutorial) optimized for KubeRay's distributed training capabilities.
 
-![Llama2-RayTrain](img/Llama2-RayTrain-Trn1.png)
+![Llama2-RayTrain](../img/Llama2-RayTrain-Trn1.png)
 
 ### What is Llama-2?
 
@@ -337,11 +340,11 @@ To keep tabs on the job's progress:
 **Ray Dashboard**: Head over to the Ray dashboard, accessible via your Ray head pod's IP address and port 8265. You'll see real-time updates on the job's status.
 
 
-![Prepare the Dataset](img/raytrain-testdata-raydash1.png)
+![Prepare the Dataset](../img/raytrain-testdata-raydash1.png)
 
-![Prepare the Dataset](img/raytrain-testdata-raydash2.png)
+![Prepare the Dataset](../img/raytrain-testdata-raydash2.png)
 
-![Prepare the Dataset](img/raytrain-testdata-raydash3.png)
+![Prepare the Dataset](../img/raytrain-testdata-raydash3.png)
 
 Alternatively, you can use the following command in your terminal:
 
@@ -357,7 +360,7 @@ llama2-generate-pretraining-test-data-g6ccl   1/1     Running   0             5m
 
 The following screenshot taken from Lens K8s IDE to show the logs of the pod.
 
-![Prepare the Dataset](img/raytrain-testdata-lens.png)
+![Prepare the Dataset](../img/raytrain-testdata-lens.png)
 
 ## 5. Run Pre-compilation Job (Optimization Step)
 
@@ -419,13 +422,13 @@ To monitor the job's progress and verify that it is running correctly, use the f
 
 **Ray Dashboard:** Access the Ray dashboard via your Ray head pod's IP address and port `8265` to see real-time updates on the job's status.
 
-![Precompilation progress](img/raytrain-precomplilation1.png)
+![Precompilation progress](../img/raytrain-precomplilation1.png)
 
-![Precompilation progress](img/raytrain-precomplilation2.png)
+![Precompilation progress](../img/raytrain-precomplilation2.png)
 
 The following screenshot taken from Lens K8s IDE to show the logs of the pod.
 
-![Precompilation progress](img/raytrain-precomplilation3.png)
+![Precompilation progress](../img/raytrain-precomplilation3.png)
 
 ## 6. Run Distributed Pre-training Job
 
@@ -484,13 +487,13 @@ kubectl apply -f 3-llama2-pretrain-trn1-rayjob.yaml
 
 You can monitor the progress of the training job using the Ray Dashboard or by observing the logs output to your terminal. Look for information like the training loss, learning rate, and other metrics to assess how well the model is learning.
 
-![Training Progress](img/raytrain-training-progress1.png)
+![Training Progress](../img/raytrain-training-progress1.png)
 
 **Ray Dashboard:** Access the Ray dashboard via your Ray head pod's IP address and port 8265 to see real-time updates on the job's status.
 
-![Training Progress Ray Dashboard](img/raytrain-training-progress2.png)
+![Training Progress Ray Dashboard](../img/raytrain-training-progress2.png)
 
-![Training Progress Ray Dashboard](img/raytrain-training-progress3.png)
+![Training Progress Ray Dashboard](../img/raytrain-training-progress3.png)
 
 
 ### Cleaning up

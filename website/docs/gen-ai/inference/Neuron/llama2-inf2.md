@@ -1,9 +1,13 @@
 ---
-title: Llama-2 on Inferentia
-sidebar_position: 1
+title: Llama-2 on Inferentia2
+sidebar_position: 3
+description: Deploy Llama-2 models on AWS Inferentia accelerators for efficient inference.
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
 
 :::danger
 
@@ -77,7 +81,7 @@ To scale its Llama-2 chatbot, the company can deploy multiple Inferentia2 instan
 ## Solution Architecture
 In this section, we will delve into the architecture of our solution, which combines Llama-2 model, [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) and [Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) on Amazon EKS.
 
-![Llama-2-inf2](img/llama2-inf2.png)
+![Llama-2-inf2](../img/llama2-inf2.png)
 
 ## Deploying the Solution
 To get started with deploying `Llama-2-13b chat` on [Amazon EKS](https://aws.amazon.com/eks/), we will cover the necessary prerequisites and guide you through the deployment process step by step.
@@ -226,7 +230,7 @@ kubectl port-forward service/llama2 8265:8265 -n llama2
 
 From this webpage, you will be able to monitor the progress of Model deployment, as shown in the image below:
 
-![RayDashboard](img/rayserve-llama2-13b-dashboard.png)
+![RayDashboard](../img/rayserve-llama2-13b-dashboard.png)
 
 ### Step2: To Test the Llama-2-Chat Model
 Once you see the status of the model deployment is in `running` state then you can start using Llama-2-chat.
@@ -247,7 +251,7 @@ http://localhost:8000/infer?sentence=what is data parallelism and tensor paralle
 
 You will see an output like this in your browser.
 
-![llama2-13b-response](img/llama2-13b-response.png)
+![llama2-13b-response](../img/llama2-13b-response.png)
 
 **Using the NLB**:
 
@@ -261,7 +265,7 @@ http://\<NLB_DNS_NAME\>/serve/infer?sentence=what is data parallelism and tensor
 
 You will see an output like this in your browser:
 
-![Chat Output](img/llama-2-chat-ouput.png)
+![Chat Output](../img/llama-2-chat-ouput.png)
 
 ### Step3: Deploying the Gradio WebUI App
 
@@ -309,7 +313,7 @@ Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![gradio-llama2-13b-chat](img/gradio-llama2-13b-chat.png)
+![gradio-llama2-13b-chat](../img/gradio-llama2-13b-chat.png)
 
 ## Conclusion
 In conclusion, you will have successfully deployed the **Llama-2-13b chat** model on EKS with Ray Serve and created a chatGPT-style chat web UI using Gradio.

@@ -1,8 +1,12 @@
 ---
 title: Ray Serve High Availability
-sidebar_position: 6
+sidebar_position: 5
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
+
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
 
 :::danger
 
@@ -17,9 +21,9 @@ A critical component of a Ray cluster is the head node, which orchestrates the e
 
 To address this, High Availability (HA) for the Ray head node is essential. Global Control Service (GCS) manages cluster-level metadata in a RayCluster. By default, the GCS lacks fault tolerance as it stores all data in-memory, and a failure can cause the entire Ray cluster to fail. To avoid this, one must add fault tolerance to Ray’s Global Control Store (GCS), which allows the Ray Serve application to serve traffic even when the head node crashes. In the event of a GCS restart, it retrieves all the data from the Redis instance and resumes its regular functions.
 
-![Ray-head-worker-redis](img/ray-head-ha-1.png)
+![Ray-head-worker-redis](../img/ray-head-ha-1.png)
 
-![Ray-head-ha](img/ray-head-ha-2.png)
+![Ray-head-ha](../img/ray-head-ha-2.png)
 
 Following sections provide the steps on how to enable GCS fault tolerance and ensure high availability for the Ray head Pod. We're using the `Mistral-7B-Instruct-v0.2` model to demonstrate the Ray head high availability.
 
@@ -169,9 +173,9 @@ pod "mistral-raycluster-rf6l9-head-xxxxx" deleted
 
 We can see that the Ray worker Pod is still running when the Ray head Pod is terminated and auto-restarted. Please see the below screenshots from Lens IDE.
 
-![Head Pod Deletion](img/head-pod-deleted.png)
+![Head Pod Deletion](../img/head-pod-deleted.png)
 
-![Worker Pod Uninterrupted](img/worker-pod-running.png)
+![Worker Pod Uninterrupted](../img/worker-pod-running.png)
 
 #### Test the Mistral AI Gradio App
 
@@ -183,11 +187,11 @@ Now repeat the Ray head Pod crash simulation by deleting the Ray head Pod as sho
 
 While the Ray head Pod is terminated and is recovering, submit questions into the Mistral AI Chat interface. We can see from below screenshots that the chat application is indeed able to serve traffic while the Ray head Pod is deleted and is recovering. This is because the RayServe service points to the Ray worker Pod which in this case is never restarted because of the GCS fault tolerance.
 
-![Gradio App Test HA](img/gradio-test-ft.png)
+![Gradio App Test HA](../img/gradio-test-ft.png)
 
-![Gradio App Test 1](img/answer-1.png)
+![Gradio App Test 1](../img/answer-1.png)
 
-![Gradio App Test Contd](img/answer-1-contd.png)
+![Gradio App Test Contd](../img/answer-1-contd.png)
 
 For a complete guide on enabling end-to-end fault tolerance to your RayServe application, please refer to [Ray Guide](https://docs.ray.io/en/latest/serve/production-guide/fault-tolerance.html#add-end-to-end-fault-tolerance).
 

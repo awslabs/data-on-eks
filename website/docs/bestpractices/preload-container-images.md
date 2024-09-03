@@ -90,4 +90,4 @@ spec:
 
 # End-to-End deployment example
 
-An end-to-end deployment example can be found in [Stable Diffusion on GPU](../gen-ai/inference/stablediffusion-gpus).
+An end-to-end deployment example can be found in [Stable Diffusion on GPU](../gen-ai/inference/GPUs/stablediffusion-gpus).

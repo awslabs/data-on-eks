@@ -1,8 +1,12 @@
 ---
 title: NVIDIA NIM LLM on Amazon EKS
-sidebar_position: 8
+sidebar_position: 4
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
+
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
 
 :::warning
 
@@ -44,7 +48,7 @@ This pattern combines the capabilities of NVIDIA NIM, Amazon Elastic Kubernetes 
 
 By combining these components, our proposed solution delivers a powerful and cost-effective model serving infrastructure tailored for large language models. With NVIDIA NIM's seamless integration, Amazon EKS's scalability with Karpenter, customers can achieve high performance while minimizing infrastructure costs.
 
-![NIM on EKS Architecture](img/nim-on-eks-arch.png)
+![NIM on EKS Architecture](../img/nim-on-eks-arch.png)
 
 ## Deploying the Solution
 
@@ -69,7 +73,7 @@ Before getting started with NVIDIA NIM, ensure you have the following:
     - Ensure that at least "NGC Catalog" is selected from the "Services Included" dropdown
     - Copy and securely store your API key, the key should have a prefix with `nvapi-`
 
-    ![NGC API KEY](./img/nim-ngc-api-key.png)
+    ![NGC API KEY](../img/nim-ngc-api-key.png)
 
 **Validate NGC API Key and Test Image Pull**
 
@@ -120,6 +124,20 @@ Important Note: Ensure that you update the region in the variables.tf file befor
 
 Run the installation script:
 
+:::info
+
+
+This pattern deploys a model called `nvcr.io/nim/meta/llama3-8b-instruct`. You can modify the `nim_models` variable in the `variables.tf` file to add more models. Multiple models can be deployed simultaneously using this pattern.
+:::
+
+:::caution
+
+Ensure you have specified enough GPUs for each model before enabling additional models through these variables. Also, verify that your AWS account has access to sufficient GPUs.
+This pattern uses Karpenter to scale GPU nodes, restricted to G5 instances by default. You can modify the Karpenter node pool to include other instances like p4 and p5 if needed.
+
+:::
+
+
 ```bash
 cd data-on-eks/ai-ml/nvidia-triton-server
 export TF_VAR_enable_nvidia_nim=true
@@ -141,7 +159,7 @@ aws eks --region us-west-2 update-kubeconfig --name nvidia-triton-server
 Check the status of your pods deployed
 
 ```bash
-kubectl get po -n nim
+kubectl get all -n nim
 ```
 
 You should see output similar to the following:
@@ -149,30 +167,22 @@ You should see output similar to the following:
 <summary>Click to expand the deployment details</summary>
 
 ```text
-NAME            READY   STATUS    RESTARTS   AGE
-pod/nim-llm-0   1/1     Running   0          105s
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/nim-llm-llama3-8b-instruct-0   1/1     Running   0          4h2m
 
-NAME              TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-service/nim-llm   ClusterIP   172.20.63.25   <none>        8000/TCP   107s
+NAME                                     TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/nim-llm-llama3-8b-instruct       ClusterIP   172.20.5.230   <none>        8000/TCP   4h2m
+service/nim-llm-llama3-8b-instruct-sts   ClusterIP   None           <none>        8000/TCP   4h2m
 
-NAME                       READY   AGE
-statefulset.apps/nim-llm   1/4     106s
+NAME                                          READY   AGE
+statefulset.apps/nim-llm-llama3-8b-instruct   1/1     4h2m
 
-NAME                                          REFERENCE             TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
-horizontalpodautoscaler.autoscaling/nim-llm   StatefulSet/nim-llm   1/5       1         5         4          107s
+NAME                                                             REFERENCE                                TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/nim-llm-llama3-8b-instruct   StatefulSet/nim-llm-llama3-8b-instruct   2/5       1         5         1          4h2m
 ```
 </details>
 
-:::info
-The `Llama3` model deployed is specified in `ai-ml/nvidia-triton-server/helm-values/nim-llm.yaml` with below config. Please visit [this page](https://build.nvidia.com/explore/discover) to explore more. You may simply update this image configuration if you want to change to deploy another model.
-:::
-
-```yaml
-image:
-  repository: nvcr.io/nim/meta/llama3-8b-instruct
-  tag: latest
-```
-The Llama3 model is deployed with a StatefulSet in nim-llm namespace. As it is running, Karpenter provisioned a GPU
+The `llama3-8b-instruct` model is deployed with a StatefulSet in `nim` namespace. As it is running, Karpenter provisioned a GPU
 Check the Karpenter provisioned node.
 
 ```bash
@@ -189,7 +199,7 @@ ip-100-64-77-39.us-west-2.compute.internal   Ready    <none>   4m46s   v1.30.0-e
 Once all pods in `nim` namespace is ready with `1/1` status, use below command to verify it's ready to serve the traffic. To verify, expose the model serving service with port-forward using kubectl.
 
 ```bash
-kubectl port-forward -n nim svc/nim-llm 8000
+kubectl port-forward -n nim service/nim-llm-llama3-8b-instruct 8000
 ```
 
 Then you can invoke the deployed model with a simple HTTP request with curl command.
@@ -311,6 +321,50 @@ By applying these optimizations, TensorRT can significantly accelerate LLM infer
 ```
 </details>
 
+## Open WebUI Deployment
+
+:::info
+
+[Open WebUI](https://github.com/open-webui/open-webui) is compatible only with models that work with the OpenAI API server and Ollama.
+
+:::
+
+**1. Deploy the WebUI**
+
+Deploy the [Open WebUI](https://github.com/open-webui/open-webui) by running the following command:
+
+```sh
+kubectl apply -f gen-ai/inference/nvidia-nim/openai-webui-deployment.yaml
+```
+
+**2. Port Forward to Access WebUI**
+
+Use kubectl port-forward to access the WebUI locally:
+
+```sh
+kubectl port-forward svc/open-webui 8081:80 -n openai-webui
+```
+
+**3. Access the WebUI**
+
+Open your browser and go to http://localhost:8081
+
+**4. Sign Up**
+
+Sign up using your name, email, and a dummy password.
+
+**5. Start a New Chat**
+
+Click on New Chat and select the model from the dropdown menu, as shown in the screenshot below:
+
+![alt text](../img/openweb-ui-nim-1.png)
+
+**6. Enter Test Prompt**
+
+Enter your prompt, and you will see the streaming results, as shown below:
+
+![alt text](../img/openweb-ui-nim-2.png)
+
 ## Performance Testing with NVIDIA GenAI-Perf Tool
 
 [GenAI-Perf](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/client/src/c%2B%2B/perf_analyzer/genai-perf/README.html) is a command line tool for measuring the throughput and latency of generative AI models as served through an inference server.
@@ -347,7 +401,7 @@ genai-perf \
   --concurrency 10 \
   --measurement-interval 4000 \
   --profile-export-file my_profile_export.json \
-  --url nim-llm.nim:8000
+  --url nim-llm-llama3-8b-instruct.nim:8000
 ```
 
 You should see similar output like the following
@@ -393,10 +447,11 @@ prometheus-adapter                               ClusterIP   172.20.171.163   <n
 prometheus-operated                              ClusterIP   None             <none>        9090/TCP            10m
 ```
 
-The NVIDIA NIM LLM service expose metrics via `/metrics` endpoint from `nim-llm` service at port `8000`. Verify it by running
+The NVIDIA NIM LLM service expose metrics via `/metrics` endpoint from `nim-llm-llama3-8b-instruct` service at port `8000`. Verify it by running
+
 ```bash
 kubectl get svc -n nim
-kubectl port-forward -n nim svc/nim-llm 8000
+kubectl port-forward -n nim svc/nim-llm-llama3-8b-instruct 8000
 
 curl localhost:8000/metrics # run this in another terminal
 ```
@@ -411,7 +466,7 @@ We provides a pre-configured Grafana dashboard to better visualize NIM status. I
 
 You can find more metrics description from this [document](https://docs.nvidia.com/nim/large-language-models/latest/observability.html).
 
-![NVIDIA LLM Server](img/nim-dashboard.png)
+![NVIDIA LLM Server](../img/nim-dashboard.png)
 
 To view the Grafana dashboard to monitor these metrics, follow the steps below:
 

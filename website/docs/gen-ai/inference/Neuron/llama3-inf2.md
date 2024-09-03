@@ -1,8 +1,13 @@
 ---
-title: Llama-3 on Inferentia
-sidebar_position: 1
+title: Llama-3 on Inferentia2
+sidebar_position: 2
+description: Deploy Llama-3 models on AWS Inferentia accelerators for efficient inference.
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
+
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
 
 
 :::danger
@@ -59,7 +64,7 @@ To scale its Llama-3 chatbot, the company can deploy multiple Inferentia2 instan
 
 In this section, we will delve into the architecture of our solution, which combines Llama-3 model, [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) and [Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) on Amazon EKS.
 
-![Llama-3-inf2](img/llama3.png)
+![Llama-3-inf2](../img/llama3.png)
 
 ## Deploying the Solution
 
@@ -198,7 +203,7 @@ http://localhost:8265/
 
 From this webpage, you will be able to monitor the progress of Model deployment, as shown in the image below:
 
-![Ray Dashboard](img/ray-dashboard.png)
+![Ray Dashboard](../img/ray-dashboard.png)
 
 ### To Test the Llama3 Model
 Once you see the status of the model deployment is in `running` state then you can start using Llama-3-instruct.
@@ -209,7 +214,7 @@ You can use the following URL with a query added at the end of the URL.
 
 You will see an output like this in your browser:
 
-![Chat Output](img/llama-2-chat-ouput.png)
+![Chat Output](../img/llama-2-chat-ouput.png)
 
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
@@ -272,7 +277,7 @@ Running on local URL:  http://localhost:7860
 
 You should now be able to interact with the Gradio application from your local machine.
 
-![Gradio Llama-3 AI Chat](img/llama3.png)
+![Gradio Llama-3 AI Chat](../img/llama3.png)
 
 ## Conclusion
 

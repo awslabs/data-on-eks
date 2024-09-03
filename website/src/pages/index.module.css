@@ -42,6 +42,83 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 2.5rem; /* Increased from 1.5rem to 2.5rem */
+  margin-top: 2rem;
+}
+
+.buttonSpinUp,
+.buttonGenAI {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 60px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  text-align: center;
+  line-height: 1.2;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.buttonSpinUp::before,
+.buttonGenAI::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.buttonSpinUp:hover::before,
+.buttonGenAI:hover::before {
+  width: 100%;
+}
+
+.buttonSpinUp {
+  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+}
+
+.buttonGenAI {
+  background: linear-gradient(45deg, #4E54C8, #8F94FB);
+  box-shadow: 0 4px 15px rgba(78, 84, 200, 0.4);
+}
+
+.buttonSpinUp:hover,
+.buttonGenAI:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.buttonSpinUp:active,
+.buttonGenAI:active {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+@media screen and (max-width: 768px) {
+  .buttons {
+    flex-direction: column;
+    gap: 1.5rem; /* Adjust gap for mobile view */
+  }
+
+  .buttonSpinUp,
+  .buttonGenAI {
+    width: 80%; /* Make buttons wider on mobile */
+    max-width: 300px; /* Set a max-width for larger mobile screens */
+  }
 }
 
 .heading {

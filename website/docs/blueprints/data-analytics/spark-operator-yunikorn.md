@@ -374,6 +374,10 @@ Intel Nodepool (AMD): Set the weight of the Intel Nodepool to `50`. This ensures
 
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
+:::caution
+To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
+:::
+
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
@@ -382,7 +386,3 @@ cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
 ```
 
 </CollapsibleContent>
-
-:::caution
-To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
-:::

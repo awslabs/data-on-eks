@@ -1,8 +1,12 @@
 ---
 title: NVIDIA Triton Server with vLLM
-sidebar_position: 5
+sidebar_position: 2
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
+
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
 
 :::caution
 
@@ -15,7 +19,7 @@ In this pattern, we'll explore how to deploy multiple large language models (LLM
 
 NVIDIA Triton Inference Server, when combined with the vLLM backend, offers a robust framework for deploying multiple large language models (LLMs). User applications interact with the inference service via REST API or gRPC, which is managed by NGINX and a Network Load Balancer (NLB) to efficiently distribute incoming requests to the Triton K8s Service. The Triton K8s Service is the core of our deployment, where the Triton Server processes inference requests. For this deployment, we use g5.24xlarge instances, each equipped with 4 GPUs, to run multiple models like Llama2-7b and Mistral7b. The Horizontal Pod Autoscaler (HPA) monitors custom metrics and dynamically scales Triton pods based on demand, ensuring efficient handling of varying loads. Prometheus and Grafana are used to collect and visualize metrics, providing insights into performance and aiding in autoscaling decisions.
 
-![NVIDIA Triton Server](img/triton-architecture.png)
+![NVIDIA Triton Server](../img/triton-architecture.png)
 
 ## What to Expect
 
@@ -71,7 +75,7 @@ The backbone of Triton’s inference capabilities are its various backends, incl
 **[vLLM](https://github.com/vllm-project/vllm)**: vLLM backend is specifically designed to handle various LLM workloads. It offers efficient memory management and execution pipelines tailored for large models. This backend ensures that memory resources are used optimally, allowing for the deployment of very large models without running into memory bottlenecks. vLLM is crucial for applications that need to serve multiple large models simultaneously, providing a robust and scalable solution.
 
 
-![NVIDIA Triton Server](img/triton-internals.png)
+![NVIDIA Triton Server](../img/triton-internals.png)
 
 ### Mistralai/Mistral-7B-Instruct-v0.2
 Mistralai/Mistral-7B-Instruct-v0.2 is a state-of-the-art large language model designed to provide high-quality, instructive responses. Trained on a diverse dataset, it excels in understanding and generating human-like text across a variety of topics. Its capabilities make it suitable for applications requiring detailed explanations, complex queries, and natural language understanding.
@@ -115,9 +119,9 @@ For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired regi
 
 **Step2**: To proceed, ensure you have access to both models using your Huggingface account:
 
-![mistral7b-hg.png](img/mistral7b-hg.png)
+![mistral7b-hg.png](../img/mistral7b-hg.png)
 
-![llma27b-hg.png](img/llma27b-hg.png)
+![llma27b-hg.png](../img/llma27b-hg.png)
 
 **Step3**: Next, set the environment variable TF_VAR_huggingface_token with your Huggingface account token:
   `export TF_VAR_huggingface_token=<your Huggingface token>`.
@@ -493,7 +497,7 @@ In the Grafana dashboard below, you can see several important metrics:
 - **Cumulative Inference Requests**: This graph shows the total number of inference requests processed over time, providing insights into the workload and performance trends.
 - **Queue Time (milliseconds)**: This line graph indicates the time requests spend in the queue before being processed, highlighting potential bottlenecks in the system.
 
-![NVIDIA Triton Server](img/triton-observability.png)
+![NVIDIA Triton Server](../img/triton-observability.png)
 
 To create a new Grafana dashboard to monitor these metrics, follow the steps below:
 
@@ -523,7 +527,7 @@ aws secretsmanager get-secret-value --secret-id <grafana_secret_name_output> --r
 
 You should now see the metrics displayed on your new Grafana dashboard, allowing you to monitor the performance and health of your NVIDIA Triton Inference Server deployment.
 
-![triton-grafana-dash2](img/triton-grafana-dash2.png)
+![triton-grafana-dash2](../img/triton-grafana-dash2.png)
 
 
 ## Conclusion
