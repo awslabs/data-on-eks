@@ -1,6 +1,7 @@
 from ultralytics.utils.checks import check_yaml
 from ultralytics.utils import yaml_load
-import time, os, cv2, numpy as np, tritonclient.http as httpclient
+from sys import argv, exit
+import time, os, cv2, shutil, numpy as np, tritonclient.http as httpclient
 
 model_name = "yolo"
 url = "localhost:8000"
@@ -8,7 +9,6 @@ labels = yaml_load(check_yaml('coco128.yaml'))['names']
 colors = np.random.uniform(0, 255, size=(len(labels), 3))
 model_input_name = "images"
 model_output_name = "output0"
-images_path = "/Users/freschri/Downloads/val2017-2/"
 
 def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
     label = f'{labels[class_id]} ({confidence:.2f})'
@@ -19,9 +19,9 @@ def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
 def load_image_paths(folder):
     image_paths = []
     for file in os.listdir(folder):
-        if file.startswith('.'):
-            continue
-        image_paths.append(os.path.join(folder,file))
+        image_path = os.path.join(folder,file)
+        if not file.startswith('.') and not os.path.isdir(image_path):
+            image_paths.append(image_path)
     return image_paths
 
 def get_image_params(original_image):
@@ -69,38 +69,53 @@ def post_process(inference_results):
             'class_id': class_ids[index],
             'class_name': labels[class_ids[index]],
             'confidence': scores[index],
-            'box': box,
-            'scale': scale}
+            'box': box}
         detections.append(detection)
     return detections
 
-
-
-client = httpclient.InferenceServerClient(url=url)
-for image_path in load_image_paths(images_path):
-    original_image = cv2.imread(image_path)
-    inputs, outputs, scale = get_image_params(original_image)
-    
-    start_time = time.time()
-    inference_results = client.infer(model_name=model_name, inputs=[inputs], outputs=[outputs]).as_numpy(model_output_name)
-    end_time = time.time()
-    
-    inf_time = (end_time - start_time)
-    print(f"inference time: {inf_time*1000:.3f} ms")
-
-    statistics = client.get_inference_statistics(model_name=model_name)
-    print(statistics)
-
-    detections = post_process(inference_results)
-
+def save_result_image(image, result_path, detections, scale):
     for detection in detections:
         class_id = detection["class_id"]
         confidence = detection["confidence"]
         box = detection["box"]
-        scale = detection["scale"]
-        draw_bounding_box(original_image, class_id, confidence, round(box[0] * scale), round(box[1] * scale),
+        draw_bounding_box(image, class_id, confidence, round(box[0] * scale), round(box[1] * scale),
                             round((box[0] + box[2]) * scale), round((box[1] + box[3]) * scale))
 
-    cv2.imshow("Image", original_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv2.imwrite(result_path, image)
+
+def main():
+    try:
+        images_path = argv[1]
+    except:
+        print("Please provide the path of your test images")
+        exit(1)
+    if not os.path.exists(images_path):
+        raise Exception(f'The path at location {images_path} does not exist')
+    
+    results_path = os.path.join(images_path, "results")
+    if os.path.exists(results_path):
+        shutil.rmtree(results_path)
+    os.mkdir(results_path)
+
+    client = httpclient.InferenceServerClient(url=url)
+    
+    for image_path in load_image_paths(images_path):
+        image = cv2.imread(image_path)
+        inputs, outputs, scale = get_image_params(image)
+        
+        start_time = time.time()
+        inference_results = client.infer(model_name=model_name, inputs=[inputs], outputs=[outputs]).as_numpy(model_output_name)
+        end_time = time.time()
+        
+        inf_time = (end_time - start_time)
+        print(f"inference time: {inf_time*1000:.3f} ms")
+
+        statistics = client.get_inference_statistics(model_name=model_name)
+        print(statistics)
+
+        detections = post_process(inference_results)
+        result_path = os.path.join(results_path, os.path.basename(image_path))
+        save_result_image(image, result_path, detections, scale)
+
+if __name__ == "__main__":
+    main()
