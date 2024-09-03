@@ -315,6 +315,50 @@ By applying these optimizations, TensorRT can significantly accelerate LLM infer
 ```
 </details>
 
+## Open WebUI Deployment
+
+:::info
+
+[Open WebUI](https://github.com/open-webui/open-webui) is compatible only with models that work with the OpenAI API server and Ollama.
+
+:::
+
+**1. Deploy the WebUI**
+
+Deploy the [Open WebUI](https://github.com/open-webui/open-webui) by running the following command:
+
+```sh
+kubectl apply -f gen-ai/inference/nvidia-nim/openai-webui-deployment.yaml
+```
+
+**2. Port Forward to Access WebUI**
+
+Use kubectl port-forward to access the WebUI locally:
+
+```sh
+kubectl port-forward svc/open-webui 8080:80 -n openai-webui
+```
+
+**3. Access the WebUI**
+
+Open your browser and go to http://localhost:8080
+
+**4. Sign Up**
+
+Sign up using your name, email, and a dummy password.
+
+**5. Start a New Chat**
+
+Click on New Chat and select the model from the dropdown menu, as shown in the screenshot below:
+
+![alt text](../img/openweb-ui-nim-1.png)
+
+**6. Enter Test Prompt**
+
+Enter your prompt, and you will see the streaming results, as shown below:
+
+![alt text](../img/openweb-ui-nim-2.png)
+
 ## Performance Testing with NVIDIA GenAI-Perf Tool
 
 [GenAI-Perf](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/client/src/c%2B%2B/perf_analyzer/genai-perf/README.html) is a command line tool for measuring the throughput and latency of generative AI models as served through an inference server.

@@ -75,3 +75,33 @@ variable "ngc_api_key" {
   default     = "DUMMY_NGC_API_KEY_REPLACE_ME"
   sensitive   = true
 }
+
+variable "nim_models" {
+  description = "NVIDIA NIM Models"
+  type = list(object({
+    name    = string
+    id      = string
+    enable  = bool
+    num_gpu = string
+  }))
+  # Ensure you check the NVIDIA NIM support matrix for models and the required GPUs:
+  # https://docs.nvidia.com/nim/large-language-models/latest/support-matrix.html#
+  #
+  # For identifying the right EC2 instances with the supported GPUs, refer to:
+  # https://docs.aws.amazon.com/dlami/latest/devguide/gpu.html
+  default = [
+    {
+      name    = "llama-3-1-8b-instruct"
+      num_gpu = "4"
+      id      = "nvcr.io/nim/meta/llama-3.1-8b-instruct"
+      enable  = false
+    },
+    {
+      name    = "llama3-8b-instruct"
+      num_gpu = "1"
+      id      = "nvcr.io/nim/meta/llama3-8b-instruct"
+      enable  = true
+    }
+    # Add more models as needed
+  ]
+}
