@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-# Instrcutions to deploy
+# Deployment Instructions
 # kubectl apply -f gen-ai/inference/nvidia-nim/openai-webui-deployment.yaml
 # kubectl port-forward svc/open-webui 8080:80 -n openai-webui
 # Open WebUi using http://localhost:8080
