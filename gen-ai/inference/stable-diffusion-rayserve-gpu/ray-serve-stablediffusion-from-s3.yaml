@@ -65,7 +65,7 @@ spec:
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
             # Preload Container Image into data volumes for faster new ray worker nodes   
             - name: head
-              image: public.ecr.aws/lindarr/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu
+              image: public.ecr.aws/data-on-eks/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu
               imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
               lifecycle:
                 preStop:
@@ -116,7 +116,7 @@ spec:
             # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
               - name: worker
-                image: public.ecr.aws/lindarr/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu
+                image: public.ecr.aws/data-on-eks/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu
                 imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
                 lifecycle:
                   preStop:
