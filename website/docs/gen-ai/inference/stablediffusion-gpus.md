@@ -43,11 +43,16 @@ Ensure that you have installed the following tools on your machine.
 
 To accelerate the deployment of image retrieval on Ray workers, refer to [Preload container images into Bottlerocket data volumes with Karpenter with EBS Snapshots](../../bestpractices/preload-container-images)
 
-Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins (depending on the image size) for downloading and extracting container images from Amazon ECR.
+Define the variable `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to provision Bottlerocket worker nodes with EBS Snapshots, to reduce cold start for container startup. This will likely to save 10 mins (depending on the image size) for downloading and extracting container images from Amazon ECR.
 
 ```
 export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
 ```
+
+### (Optional) Create S3 Bucket for Model Storage
+
+Define the variable `TF_VAR_create_s3_bucket=true` to create s3 bucket for model storage. 
+
 ### Deploy
 
 Clone the repository
@@ -183,6 +188,15 @@ Access the web UI via `http://localhost:8265` . This interface displays the depl
 The screenshots provided will show the Serve deployment and the Ray Cluster deployment, offering a visual overview of the setup and operational status.
 
 ![RayServe Cluster](img/ray-serve-gpu-sd-cluster.png)
+
+### (Optional) Save and Load Stable Diffusion Model in S3 Bucket    
+
+1. Open `download_models.ipynb` Python notebook and run the cells to download the model from Huggingface and upload model files to Amazon S3.
+2. Open `s3-pv-model-storage.yaml` and replace <ENTER_S3_BUCKET_NAME> with the actual bucket name in `terraform output`
+3. Deploy the PVC and RayService:
+```
+kubectl apply -f s3-pv-model-storage.yaml -f ray-serve-stablediffusion-from-s3.yaml
+```
 
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
