@@ -101,6 +101,22 @@ data:
             self.chat_template = chat_template
             self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
+        @app.get("/v1/models")
+        async def get_models(self):
+            # Return model information for Open WebUI compatibility
+            model_info = {
+                "object": "list",
+                "data": [
+                    {
+                        "id": self.engine_args.model,
+                        "object": "model",
+                        "owned_by": "organization",
+                        "permission": []
+                    }
+                ]
+            }
+            return JSONResponse(content=model_info)
+
         @app.post("/v1/chat/completions")
         async def create_chat_completion(
             self, request: ChatCompletionRequest, raw_request: Request
