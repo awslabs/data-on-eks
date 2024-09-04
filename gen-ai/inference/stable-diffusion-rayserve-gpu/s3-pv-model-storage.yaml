@@ -16,7 +16,7 @@ spec:
     driver: s3.csi.aws.com # required
     volumeHandle: s3-csi-driver-volume
     volumeAttributes:
-      bucketName: ml-model-storage-091550601287 # Replace bucketName with the actual S3 bucket name
+      bucketName: <ENTER_S3_BUCKET_NAME> # Replace bucketName with S3 bucket name created from `terraform output`
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
