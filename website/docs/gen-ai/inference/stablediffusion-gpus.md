@@ -195,8 +195,9 @@ The screenshots provided will show the Serve deployment and the Ray Cluster depl
 2. Open `s3-pv-model-storage.yaml` and replace <ENTER_S3_BUCKET_NAME> with the actual bucket name in `terraform output`
 3. Deploy the PVC and RayService:
 ```
-kubectl apply -f s3-pv-model-storage.yaml -f ray-serve-stablediffusion-from-s3.yaml
+kubectl apply -f ray-serve-stablediffusion-from-s3.yaml
 ```
+
 
 ## Deploying the Gradio WebUI App
 Discover how to create a user-friendly chat interface using [Gradio](https://www.gradio.app/) that integrates seamlessly with deployed models.
