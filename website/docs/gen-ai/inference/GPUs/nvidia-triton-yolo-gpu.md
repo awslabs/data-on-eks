@@ -1,8 +1,8 @@
 ---
 title: NVIDIA Triton Inference Server with YOLO
-sidebar_position: 10
+sidebar_position: 4
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
 # Deploying YOLOv8 with NVIDIA Triton Inference Server 
 This pattern demonstrates how to deploy [YOLO](https://github.com/ultralytics/ultralytics) on Amazon EKS, using [NVIDIA Triton Inference Server](https://developer.nvidia.com/triton-inference-server).
@@ -203,7 +203,7 @@ python3 gradio_ui.py
 
 You can navigate to `http://127.0.0.1:7860`, submit an image via the UI, and inspect the result:
 
-![Gradio UI](img/yolo-gratio-ui.png)
+![Gradio UI](../img/yolo-gratio-ui.png)
 
 ## Observability
 
@@ -244,7 +244,7 @@ You can learn about the metrics exposed by the NVIDIA Triton Inference Server on
 
 Particularly interesting for model performance evaluation are the [Latencies](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/metrics.html#latencies) metrics, which you can explore e.g. by importing the `data-on-eks/gen-ai/inference/nvidia-triton-server-gpu/yolo/observability/triton_latency.json` dashboard into your Grafana instance. An example of the output is:
 
-![YOLO latencies](img/yolo-latencies.png)
+![YOLO latencies](../img/yolo-latencies.png)
 
 ## Scaling
 
@@ -276,11 +276,11 @@ env IMAGES_PATH="<<YOUR DOWNLOADED IMAGES FOLDER>>" locust
 
 You can access the web interface at `http://0.0.0.0:8089` and launch the test by setting the number of users e.g. to 20 (the host is already set to the local port-forward initiated in the previous steps: `http://127.0.0.1:8000`).
 
-![Locust load testing](img/yolo-locust.png)
+![Locust load testing](../img/yolo-locust.png)
 
 And on Grafana, `Triton Inference Server` dashboard, you can see the active Triton instances and average queue time changes, similar to:
 
-![Triton scaling](img/yolo-triton-scaling.png)
+![Triton scaling](../img/yolo-triton-scaling.png)
 
 You can also confirm the behavior by inspecting the HPA events:
 
@@ -329,7 +329,7 @@ Please be conscious of the vCPU limits that you might incur on your account, whi
 
 On the AWS Management Console, you can see the Amazon EC2 instances Karpenter launched, such as:
 
-![Amazon EC2 instances on scaling](img/yolo-ec2-instances.png)
+![Amazon EC2 instances on scaling](../img/yolo-ec2-instances.png)
 
 ## Cleanup
 
