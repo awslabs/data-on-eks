@@ -6,7 +6,7 @@ metadata:
 spec:
   volumes:
     - name: spark-local-dir-1
-      hostPath: 
+      hostPath:
         path: /mnt/k8s-disks/0 # EBS Hostpath creates a directory under root volume. This approach is only for non SSD instances
         type: DirectoryOrCreate
   nodeSelector:
@@ -15,11 +15,11 @@ spec:
   # Don't use "/mnt" path as mountPath with EMR pod Tempaltes as its reserved. You will get the following error.
   # Exception in thread "main" java.lang.IllegalArgumentException: Defined volume mount path on main container must not overlap with reserved mount paths: [/mnt]
   # at org.apache.spark.deploy.k8s.features.EmrInternalPodTemplateFeatureStep$AddVolumeMountsToMainContainerApplier.validate(EmrInternalPodTemplateFeatureStep.scala:447)
-  initContainers:  
+  initContainers:
     - name: volume-permission
       image: public.ecr.aws/docker/library/busybox
-      # grant volume access to hadoop user  
-      command: ['sh', '-c', 'mkdir /data1; chown -R 999:1000 /data1'] 
+      # grant volume access to hadoop user
+      command: ['sh', '-c', 'mkdir /data1; chown -R 999:1000 /data1']
       volumeMounts:
         - name: spark-local-dir-1
           mountPath: /data1
