@@ -33,7 +33,7 @@ In this tutorial, you'll leverage [AWS Neuron](https://aws.amazon.com/machine-le
 
 ### What is vLLM?
 
-[vLLM](https://docs.vllm.ai/en/latest/) is a high-performance library for LLM inference and serving, designed to maximize throughput and minimize latency. At its core, vLLM utilizes PagedAttention, an innovative attention algorithm that dramatically improves memory efficiency, allowing for optimal utilization of GPU resources. This open-source solution offers seamless integration through its Python API and OpenAI-compatible server, enabling developers to deploy and scale large language models like Llama 3 with unprecedented efficiency in production environments.
+[vLLM](https://docs.vllm.ai/en/latest/) is a high-performance library for LLM inference and serving, designed to maximize throughput and minimize latency. At its core, vLLM utilizes [PagedAttention](https://docs.vllm.ai/en/latest/dev/kernel/paged_attention.html), an innovative attention algorithm that dramatically improves memory efficiency, allowing for optimal utilization of GPU resources. This open-source solution offers seamless integration through its Python API and OpenAI-compatible server, enabling developers to deploy and scale large language models like Llama 3 with unprecedented efficiency in production environments.
 
 ### What is RayServe?
 
