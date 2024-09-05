@@ -2,25 +2,23 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: ny-taxi-exec
-  namespace: emr-data-team-a
+  namespace: emr-test-team-a
 
 spec:
   volumes:
-    # This is using the temp storage on the node.
-    # if you are using NVMe SSD then karpenter will configure the RAID0 under /mnt/k8s-disks/0 and copies the shuffle data to this location
     - name: spark-local-dir-1
-      hostPath:
-        path: /mnt/k8s-disks/0
+      hostPath: 
+        path: /mnt/k8s-disks/0 # EBS Hostpath creates a directory under root volume. This approach is only for non SSD instances
         type: DirectoryOrCreate
-
+  
   nodeSelector:
-    provisioner: spark-compute-optimized
+    provisioner: spark-with-ebs # Karpenter provisonser configured to create 100Gb for K8s logs and Spark shuffle data
 #    topology.kubernetes.io/zone: "us-west-2a"
-  initContainers:
+  initContainers:  
     - name: volume-permission
       image: public.ecr.aws/docker/library/busybox
-      # grant volume access to hadoop user
-      command: ['sh', '-c', 'mkdir /data1; chown -R 999:1000 /data1']
+      # grant volume access to hadoop user  
+      command: ['sh', '-c', 'mkdir /data1; chown -R 999:1000 /data1'] 
       volumeMounts:
         - name: spark-local-dir-1
           mountPath: /data1
