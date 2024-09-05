@@ -59,4 +59,7 @@ site
 
 # node modules
 node_modules
+gen-ai/inference/stable-diffusion-rayserve-gpu/locust/__pycache__/*
+website/package-lock.json
+website/package.json
 gen-ai/inference/nvidia-triton-server-gpu/yolo/triton-client/__pycache__

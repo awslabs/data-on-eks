@@ -29,10 +29,14 @@ function HomepageHeader() {
         </p>
         <div className={styles.buttons}>
           <Link
-            className="button button--secondary button--lg button-3d button-sparkles"
-            style={{ padding: '0.5rem 1.5rem', fontSize: '1.0rem' }}
+            className={clsx("button button--lg", styles.buttonSpinUp)}
             to="/docs/introduction/intro">
             Let's Spin Up
+          </Link>
+          <Link
+            className={clsx("button button--lg", styles.buttonGenAI)}
+            to="/docs/gen-ai">
+            Explore Gen AI
           </Link>
         </div>
       </div>

@@ -37,6 +37,7 @@ spec:
         dashboard-host: '0.0.0.0'
       template:
         spec:
+          schedulerName: my-scheduler
           containers:
           - name: head
             image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama3:latest # Image created using the Dockerfile attached in the folder
@@ -65,13 +66,13 @@ spec:
                 cpu: 4
                 memory: 20Gi
             env:
-              - name: HUGGING_FACE_HUB_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: hf-token
-                    key: hf-token
-              - name: LD_LIBRARY_PATH
-                value: "/home/ray/anaconda3/lib"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: hf-token
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib"
           nodeSelector: # This is using Karpenter Nodes with the provisioner label
             instanceType: mixed-x86
             provisionerType: Karpenter
@@ -87,6 +88,7 @@ spec:
       rayStartParams: {}
       template:
         spec:
+          schedulerName: my-scheduler
           containers:
           - name: worker
             image: public.ecr.aws/data-on-eks/ray-serve-inf2-llama3:latest
@@ -105,13 +107,13 @@ spec:
                 memory: "700G"
                 aws.amazon.com/neuron: "12"
             env:
-              - name: LD_LIBRARY_PATH
-                value: /home/ray/anaconda3/lib
-              - name: HUGGING_FACE_HUB_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: hf-token
-                    key: hf-token
+            - name: LD_LIBRARY_PATH
+              value: /home/ray/anaconda3/lib
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: hf-token
           nodeSelector:
             instanceType: inferentia-inf2
             provisionerType: Karpenter

@@ -4,11 +4,12 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'AI/ML',
+    title: 'Generative AI',
     Svg: require('@site/static/img/green-ai.svg').default,
     description: (
       <>
-          Unlocking Best Practices for AI/ML Deployment on EKS with KubeFlow, JupyterHub, and More
+        Explore cutting-edge blueprints and patterns for deploying Generative AI models on EKS.
+        Leverage Ray, JupyterHub, and advanced MLOps practices to streamline your AI/ML workloads.
       </>
     ),
   },

@@ -1,8 +1,13 @@
 ---
-sidebar_position: 5
+sidebar_position: 1
 sidebar_label: Trainium on EKS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
+
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
+
 
 # AWS Trainium on EKS
 [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/) is an advanced ML accelerator that transforms high-performance deep learning(DL) training. `Trn1` instances, powered by AWS Trainium chips, are purpose-built for high-performance DL training of **100B+ parameter** models. Meticulously designed for exceptional performance, Trn1 instances cater specifically to training popular Natual Language Processing(NLP) models on AWS, offering up to  **50% cost savings ** compared to GPU-based EC2 instances. This cost efficiency makes them an attractive option for data scientists and ML practitioners seeking optimized training costs without compromising performance.

@@ -104,21 +104,33 @@ resource "null_resource" "download_nim_deploy" {
   }
 }
 
+#--------------------------------------------------------------------
+# Helm Chart for deploying NIM models
+#--------------------------------------------------------------------
+locals {
+  enabled_models = var.enable_nvidia_nim ? {
+    for model in var.nim_models : model.name => model
+    if model.enable
+  } : {}
+}
 
 resource "helm_release" "nim_llm" {
-  count            = var.enable_nvidia_nim ? 1 : 0
-  name             = "nim-llm"
+  for_each         = local.enabled_models
+  name             = "nim-llm-${each.key}"
   chart            = "${path.module}/nim-llm"
   create_namespace = true
-  namespace        = kubernetes_namespace.nim[count.index].metadata[0].name
+  namespace        = kubernetes_namespace.nim[0].metadata[0].name
   timeout          = 360
   wait             = false
   values = [
     templatefile(
       "${path.module}/helm-values/nim-llm.yaml",
       {
+        model_id    = each.value.id
+        name        = each.value.name
+        num_gpu     = each.value.num_gpu
         ngc_api_key = var.ngc_api_key
-        pvc_name    = kubernetes_persistent_volume_claim_v1.efs_pvc[count.index].metadata[0].name
+        pvc_name    = kubernetes_persistent_volume_claim_v1.efs_pvc[0].metadata[0].name
       }
     )
   ]
