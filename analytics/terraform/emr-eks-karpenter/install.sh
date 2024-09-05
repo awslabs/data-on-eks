@@ -7,7 +7,7 @@ terraform init || echo "\"terraform init\" failed"
 targets=(
   "module.vpc"
   "module.eks"
-)
+  )
 
 # Apply modules in sequence
 for target in "${targets[@]}"

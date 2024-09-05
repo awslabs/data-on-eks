@@ -1,19 +1,21 @@
+#------------------------------------------------------------------------------------------------------------------------------------
+# NOTE: This example uses the EBS root volume for Spark shuffle data. This method is suitable when using non-SSD instance types.
+#------------------------------------------------------------------------------------------------------------------------------------
+---
 apiVersion: v1
 kind: Pod
 metadata:
   name: ny-taxi-driver
-  namespace: emr-data-team-a
+  namespace: emr-test-team-a
 spec:
   volumes:
-    # This is using the temp storage on the node.
-    # if you are using NVMe SSD then karpenter will configure the RAID0 under /mnt/k8s-disks/0 and copies the shuffle data to this location
     - name: spark-local-dir-1
       hostPath:
-        path: /mnt/k8s-disks/0
-        type: Directory
+        path: /mnt/k8s-disks/0 # EBS Hostpath creates a directory under root volume. This approach is only for non SSD instances
+        type: DirectoryOrCreate
   nodeSelector:
-    NodeGroupType: "SparkGravitonMemoryOptimized"
-    topology.kubernetes.io/zone: "us-west-2b"
+    provisioner: spark-with-ebs # Karpenter provisonser configured to create 100Gb for K8s logs and Spark shuffle data
+
   # Don't use "/mnt" path as mountPath with EMR pod Tempaltes as its reserved. You will get the following error.
   # Exception in thread "main" java.lang.IllegalArgumentException: Defined volume mount path on main container must not overlap with reserved mount paths: [/mnt]
   # at org.apache.spark.deploy.k8s.features.EmrInternalPodTemplateFeatureStep$AddVolumeMountsToMainContainerApplier.validate(EmrInternalPodTemplateFeatureStep.scala:447)
@@ -31,8 +33,7 @@ spec:
         - name: spark-local-dir-1
           mountPath: /data1
           readOnly: false
-
-  tolerations:
-    - key: "spark-graviton-memory-optimized"
-      operator: "Exists"
-      effect: "NoSchedule"
+  # tolerations:
+  #   - key: "spark-compute-optimized"
+  #     operator: "Exists"
+  #     effect: "NoSchedule"
