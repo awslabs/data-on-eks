@@ -1,3 +1,7 @@
+#------------------------------------------------------------------------------------------------------------------------------------
+# NOTE: This example uses the EBS root volume for Spark shuffle data. This method is suitable when using non-SSD instance types.
+#------------------------------------------------------------------------------------------------------------------------------------
+---
 apiVersion: v1
 kind: Pod
 metadata:

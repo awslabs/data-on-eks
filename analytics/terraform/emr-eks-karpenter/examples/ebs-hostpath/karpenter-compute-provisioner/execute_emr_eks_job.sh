@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#------------------------------------------------------------------------------------------------------------------------------------
+# NOTE: This example uses the EBS root volume for Spark shuffle data. This method is suitable when using non-SSD instance types.
+#------------------------------------------------------------------------------------------------------------------------------------
 read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
 # read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 # read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
