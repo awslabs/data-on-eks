@@ -27,10 +27,16 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
+  enable_aws_cloudwatch_metrics = false
   aws_cloudwatch_metrics = {
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
+
+  #---------------------------------------
+  # Kubernetes Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  
 
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
