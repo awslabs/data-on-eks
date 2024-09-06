@@ -28,6 +28,10 @@ NIM abstracts away model inference internals such as execution engine and runtim
 
 NIMs are packaged as container images on a per model/model family basis. Each NIM container is with a model, such as `meta/llama3-8b-instruct`. These containers include a runtime that runs on any NVIDIA GPU with sufficient GPU memory, but some model/GPU combinations are optimized. NIM automatically downloads the model from NVIDIA NGC Catalog, leveraging a local filesystem cache if available.
 
+![NIM Architecture](img/nim-architecture.png)
+
+Source: https://docs.nvidia.com/nim/large-language-models/latest/introduction.html#architecture
+
 ## Overview of this deployment pattern on Amazon EKS
 
 This pattern combines the capabilities of NVIDIA NIM, Amazon Elastic Kubernetes Service (EKS), and various AWS services to deliver a high-performance and cost-optimized model serving infrastructure.
@@ -43,8 +47,6 @@ This pattern combines the capabilities of NVIDIA NIM, Amazon Elastic Kubernetes 
 5. Terraform with EKS Blueprints: To streamline the deployment and management of this solution, we leverage Terraform and EKS Blueprints. This infrastructure-as-code approach enables automated provisioning of the entire stack, ensuring consistency, reproducibility, and efficient resource management.
 
 By combining these components, our proposed solution delivers a powerful and cost-effective model serving infrastructure tailored for large language models. With NVIDIA NIM's seamless integration, Amazon EKS's scalability with Karpenter, customers can achieve high performance while minimizing infrastructure costs.
-
-![NIM on EKS Architecture](img/nim-on-eks-arch.png)
 
 ## Deploying the Solution
 
