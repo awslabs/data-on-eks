@@ -28,6 +28,7 @@ spec:
             MODEL_ID: "stabilityai/stable-diffusion-2-1"
           pip:
             - transformers==4.25.1
+            - accelerate==0.30.1
         deployments:
           - name: stable-diffusion-v2
             autoscaling_config:
@@ -44,7 +45,7 @@ spec:
               num_cpus: 3
               num_gpus: 1
   rayClusterConfig:
-    rayVersion: '2.11.0'
+    rayVersion: '2.24.0'
     enableInTreeAutoscaling: true
     headGroupSpec:
       headService:
@@ -63,8 +64,8 @@ spec:
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
             # Preload Container Image into data volumes for faster new ray worker nodes
             - name: head
-              image: public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest
-              imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
+              image: public.ecr.aws/data-on-eks/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu
+              imagePullPolicy: Always # Ensure the image is always pulled when updated
               lifecycle:
                 preStop:
                   exec:
@@ -109,8 +110,8 @@ spec:
             # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
               - name: worker
-                image: public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest
-                imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated
+                image: public.ecr.aws/data-on-eks/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu
+                imagePullPolicy: Always # Ensure the image is always pulled when updated
                 lifecycle:
                   preStop:
                     exec:
