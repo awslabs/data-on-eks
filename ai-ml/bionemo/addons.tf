@@ -58,3 +58,23 @@ module "eks_data_addons" {
   enable_nvidia_device_plugin = true
 
 }
+
+#---------------------------------------------------------------
+# Amazon CloudWatch Observability Addon
+#---------------------------------------------------------------
+resource "aws_eks_addon" "cloudwatch_observability" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "amazon-cloudwatch-observability"
+  addon_version = "v2.0.1-eksbuild.1"  
+}
+
+resource "helm_release" "kubeflow_operator" {
+  name       = "kubeflow-operator"
+  repository = "https://kubeflow.github.io/manifests"
+  chart      = "kubeflow-operator"
+  namespace  = "kubeflow"
+  version    = "1.7.0"  # Specify the desired version
+
+  create_namespace = true
+
+}
