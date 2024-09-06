@@ -7,7 +7,7 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 :::info
 
 - We are actively enhancing this blueprint to incorporate improvements in observability and logging.
-
+git pull origin cache-model-from-s3
 :::
 
 
