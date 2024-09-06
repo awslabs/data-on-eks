@@ -1,0 +1,21 @@
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Apply Inter font to the entire document */
+:root {
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --ifm-heading-font-family: 'Inter', var(--ifm-font-family-base);
+}
+
+/* Adjust font weights */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+}
+
+body {
+  font-weight: 400;
+}
+
+strong {
+  font-weight: 600;
+}

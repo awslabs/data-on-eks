@@ -19,22 +19,27 @@
     "dev": "docusaurus start"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.4.0",
+    "@docusaurus/core": "^3.5.2",
     "@docusaurus/logger": "^3.4.0",
-    "@docusaurus/preset-classic": "^3.4.0",
+    "@docusaurus/plugin-ideal-image": "^3.5.2",
+    "@docusaurus/preset-classic": "^3.5.2",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
-    "docusaurus-lunr-search": "^3.3.1",
+    "docusaurus-lunr-search": "^3.4.0",
     "prism-react-renderer": "^2.3.0",
     "raw-loader": "^4.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-slick": "^0.30.2",
     "serve": "^14.2.3",
-    "slick-carousel": "^1.8.1"
+    "slick-carousel": "^1.8.1",
+    "@babel/core": "^7.22.1",
+    "@babel/plugin-syntax-jsx": "^7.22.5",
+    "@babel/preset-react": "^7.22.5"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.23.3",
+    "@babel/preset-react": "^7.24.7",
     "eslint": "^8.55.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-prettier": "^9.1.0",
@@ -43,7 +48,10 @@
     "eslint-plugin-jsx-a11y": "^6.8.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "front-matter-loader": "^2.0.0",
+    "js-yaml": "^4.1.0",
     "prettier": "^3.1.1",
+    "remark-frontmatter": "^5.0.0",
     "stylelint": "^16.0.2"
   },
   "browserslist": {

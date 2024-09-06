@@ -21,7 +21,7 @@ spec:
   serveConfigV2: |
     applications:
       - name: stable-diffusion-deployment
-        import_path: "ray_serve_sd:entrypoint"  
+        import_path: "ray_serve_sd:entrypoint"
         route_prefix: "/"
         runtime_env:
           env_vars:
@@ -61,7 +61,7 @@ spec:
             # For faster inference scaling, consider building a custom image with only your workload's essential dependencies.
             # Smaller images lead to faster scaling, especially across multiple nodes.
             # Notice that we are using the same image for both the head and worker nodes. You might hit ModuleNotFoundError if you use a different image for head and worker nodes.
-            # Preload Container Image into data volumes for faster new ray worker nodes   
+            # Preload Container Image into data volumes for faster new ray worker nodes
             - name: head
               image: public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest
               imagePullPolicy: IfNotPresent # Ensure the image is always pulled when updated

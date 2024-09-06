@@ -1,20 +1,3 @@
-
-#--------------------------------------------------------------
-# Llama2 Distributed Training pre-requisites
-#--------------------------------------------------------------
-# export TF_VAR_enable_mpi_operator=true
-# export TF_VAR_trn1_32xl_min_size=4
-# export TF_VAR_trn1_32xl_desired_size=4
-#--------------------------------------------------------------
-
-#--------------------------------------------------------------
-# BERT-large Distributed Training pre-requisites
-#--------------------------------------------------------------
-# export TF_VAR_enable_volcano=true
-# export TF_VAR_trn1_32xl_min_size=2
-# export TF_VAR_trn1_32xl_desired_size=2
-#--------------------------------------------------------------
-
 #!/bin/bash
 
 echo "Initializing ..."

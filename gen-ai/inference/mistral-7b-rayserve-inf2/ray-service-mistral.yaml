@@ -64,6 +64,7 @@ spec:
         num-cpus: "0" # this is to ensure no tasks or actors are scheduled on the head Pod
       template:
         spec:
+          schedulerName: my-scheduler
           containers:
           - name: head
             image: public.ecr.aws/data-on-eks/ray2.22.0-py310-mistral7b-neuron:latest
@@ -114,6 +115,7 @@ spec:
       rayStartParams: {}
       template:
         spec:
+          schedulerName: my-scheduler
           containers:
           - name: worker
             image: public.ecr.aws/data-on-eks/ray2.22.0-py310-mistral7b-neuron:latest

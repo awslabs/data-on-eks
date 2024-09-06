@@ -1,0 +1,38 @@
+#------------------------------------------------------------------------------------------------------------------------------------
+# NOTE: This example uses the EBS root volume for Spark shuffle data. This method is suitable when using non-SSD instance types.
+#------------------------------------------------------------------------------------------------------------------------------------
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ny-taxi-exec
+  namespace: emr-test-team-a
+
+spec:
+  volumes:
+    - name: spark-local-dir-1
+      hostPath:
+        path: /mnt/k8s-disks/0 # EBS Hostpath creates a directory under root volume. This approach is only for non SSD instances
+        type: DirectoryOrCreate
+
+  nodeSelector:
+    provisioner: spark-with-ebs # Karpenter provisonser configured to create 100Gb for K8s logs and Spark shuffle data
+#    topology.kubernetes.io/zone: "us-west-2a"
+  initContainers:
+    - name: volume-permission
+      image: public.ecr.aws/docker/library/busybox
+      # grant volume access to hadoop user
+      command: ['sh', '-c', 'mkdir /data1; chown -R 999:1000 /data1']
+      volumeMounts:
+        - name: spark-local-dir-1
+          mountPath: /data1
+  containers:
+    - name: spark-kubernetes-executor # Don't change this name. EMR on EKS looking for this name
+      volumeMounts:
+        - name: spark-local-dir-1
+          mountPath: /data1
+          readOnly: false
+  # tolerations:
+  #   - key: "spark-compute-optimized"
+  #     operator: "Exists"
+  #     effect: "NoSchedule"

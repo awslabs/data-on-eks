@@ -14,7 +14,7 @@ Bottlerocket OS is a Linux-based open-source operating system built by AWS speci
 
 To demonstrate the process of caching images in EBS snapshots and launching them in an EKS cluster, this sample will use Amazon EKS optimized Bottlerocket AMIs.
 
-For details, refer to the GitHub sample and blog post: 
+For details, refer to the GitHub sample and blog post:
 - [GitHub - Caching Container Images for AWS Bottlerocket Instances](https://github.com/aws-samples/bottlerocket-images-cache/tree/main)
 - [Blog Post - Reduce container startup time on Amazon EKS with Bottlerocket data volume](https://aws.amazon.com/blogs/containers/reduce-container-startup-time-on-amazon-eks-with-bottlerocket-data-volume/)
 
@@ -34,11 +34,11 @@ For details, refer to the GitHub sample and blog post:
 git clone https://github.com/aws-samples/bottlerocket-images-cache/
 cd bottlerocket-images-cache/
 
-# Using nohup in terminals to avoid disconnections 
+# Using nohup in terminals to avoid disconnections
 ❯ nohup ./snapshot.sh --snapshot-size 150 -r us-west-2 \
-  docker.io/rayproject/ray-ml:2.10.0-py310-gpu,public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest & 
+  docker.io/rayproject/ray-ml:2.10.0-py310-gpu,public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest &
 
-❯ tail -f nohup.out 
+❯ tail -f nohup.out
 
 2024-07-15 17:18:53 I - [1/8] Deploying EC2 CFN stack ...
 2024-07-15 17:22:07 I - [2/8] Launching SSM .
@@ -48,17 +48,17 @@ cd bottlerocket-images-cache/
 2024-07-15 17:22:10 I - [4/8] Cleanup existing images ..
 2024-07-15 17:22:12 I - Existing images cleaned
 2024-07-15 17:22:12 I - [5/8] Pulling images:
-2024-07-15 17:22:12 I - Pulling docker.io/rayproject/ray-ml:2.10.0-py310-gpu - amd64 ... 
-2024-07-15 17:27:50 I - docker.io/rayproject/ray-ml:2.10.0-py310-gpu - amd64 pulled. 
-2024-07-15 17:27:50 I - Pulling docker.io/rayproject/ray-ml:2.10.0-py310-gpu - arm64 ... 
-2024-07-15 17:27:58 I - docker.io/rayproject/ray-ml:2.10.0-py310-gpu - arm64 pulled. 
-2024-07-15 17:27:58 I - Pulling public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - amd64 ... 
-2024-07-15 17:31:34 I - public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - amd64 pulled. 
-2024-07-15 17:31:34 I - Pulling public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - arm64 ... 
-2024-07-15 17:31:36 I - public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - arm64 pulled. 
-2024-07-15 17:31:36 I - [6/8] Stopping instance ... 
+2024-07-15 17:22:12 I - Pulling docker.io/rayproject/ray-ml:2.10.0-py310-gpu - amd64 ...
+2024-07-15 17:27:50 I - docker.io/rayproject/ray-ml:2.10.0-py310-gpu - amd64 pulled.
+2024-07-15 17:27:50 I - Pulling docker.io/rayproject/ray-ml:2.10.0-py310-gpu - arm64 ...
+2024-07-15 17:27:58 I - docker.io/rayproject/ray-ml:2.10.0-py310-gpu - arm64 pulled.
+2024-07-15 17:27:58 I - Pulling public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - amd64 ...
+2024-07-15 17:31:34 I - public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - amd64 pulled.
+2024-07-15 17:31:34 I - Pulling public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - arm64 ...
+2024-07-15 17:31:36 I - public.ecr.aws/data-on-eks/ray2.11.0-py310-gpu-stablediffusion:latest - arm64 pulled.
+2024-07-15 17:31:36 I - [6/8] Stopping instance ...
 2024-07-15 17:32:25 I - Instance i-07d10182abc8a86e1 stopped
-2024-07-15 17:32:25 I - [7/8] Creating snapshot ... 
+2024-07-15 17:32:25 I - [7/8] Creating snapshot ...
 2024-07-15 17:38:36 I - Snapshot snap-0c6d965cf431785ed generated.
 2024-07-15 17:38:36 I - [8/8] Cleanup.
 2024-07-15 17:38:37 I - Stack deleted.
@@ -90,4 +90,4 @@ spec:
 
 # End-to-End deployment example
 
-An end-to-end deployment example can be found in [Stable Diffusion on GPU](../gen-ai/inference/stablediffusion-gpus).
+An end-to-end deployment example can be found in [Stable Diffusion on GPU](../gen-ai/inference/GPUs/stablediffusion-gpus).
