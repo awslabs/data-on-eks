@@ -60,6 +60,6 @@ variable "bottlerocket_data_disk_snpashot_id" {
 
 variable "create_s3_bucket" {
   description = "Create S3 Bucket for Model Storage"
-  default = false
-  type = bool
+  default     = false
+  type        = bool
 }
