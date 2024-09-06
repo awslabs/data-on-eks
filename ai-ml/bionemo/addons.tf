@@ -27,10 +27,16 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
+  enable_aws_cloudwatch_metrics = false
   aws_cloudwatch_metrics = {
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
+
+  #---------------------------------------
+  # Kubernetes Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+
 
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
@@ -51,4 +57,13 @@ module "eks_data_addons" {
   oidc_provider_arn           = module.eks.oidc_provider_arn
   enable_nvidia_device_plugin = true
 
+}
+
+#---------------------------------------------------------------
+# Amazon CloudWatch Observability Addon
+#---------------------------------------------------------------
+resource "aws_eks_addon" "cloudwatch_observability" {
+  cluster_name  = module.eks.cluster_name
+  addon_name    = "amazon-cloudwatch-observability"
+  addon_version = "v2.0.1-eksbuild.1"
 }

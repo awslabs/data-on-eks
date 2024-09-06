@@ -54,6 +54,8 @@ module "eks" {
     iam_role_additional_policies = {
       # Not required, but used in the example to access the nodes to inspect mounted volumes
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      CloudWatchAgentServerPolicy  = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+
     }
   }
 
@@ -109,12 +111,12 @@ module "eks" {
       )
 
       ami_type            = "AL2_x86_64_GPU"
-      ami_release_version = "1.29.0-20240213"
+      ami_release_version = "1.29.6-20240828"
       min_size            = 2
       max_size            = 3
       desired_size        = 2
 
-      instance_types = ["p3.16xlarge"]
+      instance_types = ["g5.12xlarge"]
       ebs_optimized  = true
       block_device_mappings = {
         xvda = {
