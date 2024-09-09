@@ -9,6 +9,11 @@ module "eks" {
   cluster_name    = var.eks_cluster_name
   cluster_version = var.eks_cluster_version
 
+  # Set the support policy to STANDARD. See https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html for more information on support policies.
+  cluster_upgrade_policy = {
+    support_type = "STANDARD"
+  }
+
   #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing. Set the correct value in your variables file.
   cluster_endpoint_public_access  = var.eks_public_cluster_endpoint
   cluster_endpoint_private_access = var.eks_private_cluster_endpoint
