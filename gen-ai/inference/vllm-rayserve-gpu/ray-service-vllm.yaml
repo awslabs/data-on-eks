@@ -102,6 +102,10 @@ spec:
                 secretKeyRef:
                   name: hf-token
                   key: hf-token
+            - name: RAY_GRAFANA_HOST
+              value: http://kube-prometheus-stack-grafana.kube-prometheus-stack.svc:80
+            - name: RAY_PROMETHEUS_HOST
+              value: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc:9090
           nodeSelector:
             NodeGroupType: x86-cpu-karpenter
             type: karpenter
