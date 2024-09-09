@@ -443,7 +443,7 @@ kubectl port-forward prometheus-kube-prometheus-stack-prometheus-0 -n kube-prome
    - podMonitor/kube-prometheus-stack/ray-workers-monitor/0 (1/1 up)
    - serviceMonitor/kube-prometheus-stack/ray-head-monitor/0 (2/2 up)
 
-![RayServe Prometheus](img/ray-prometheus.png)
+![RayServe Prometheus](../img/ray-prometheus.png)
 
 **Access Grafana**
 
@@ -483,7 +483,7 @@ In the Grafana dashboard below, you can see several metrics:
 - **Scheduler Actor State** illustrates the current number of actors in a particular state.
 - **Active Actors by Name** presents the current number of (live) actors with a particular name.
 
-![RayServe Grafana](img/ray-grafana-dashboard.png)
+![RayServe Grafana](../img/ray-grafana-dashboard.png)
 
 ## Conclusion
 Integrating Ray Serve with a vLLM backend offers numerous benefits for large language model (LLM) inference, particularly in terms of efficiency, scalability, and cost-effectiveness. Ray Serve's ability to handle concurrent requests and dynamically batch them ensures optimal GPU utilization, which is crucial for high-throughput LLM applications. The integration with vLLM enhances this further by enabling continuous batching, which significantly improves throughput and reduces latency compared to static batching. Overall, the combination of Ray Serve and vLLM provides a robust, scalable, and cost-efficient solution for deploying LLMs in production.
