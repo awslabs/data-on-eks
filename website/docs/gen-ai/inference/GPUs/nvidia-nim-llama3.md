@@ -291,6 +291,7 @@ Output for `results.txt` should look like the following
 
 <details>
 <summary>Click to expand the partial output</summary>
+
 ```text
 The key differences between traditional machine learning models and very large language models (vLLM) are:
 
@@ -467,6 +468,10 @@ We provides a pre-configured Grafana dashboard to better visualize NIM status. I
 You can find more metrics description from this [document](https://docs.nvidia.com/nim/large-language-models/latest/observability.html).
 
 ![NVIDIA LLM Server](../img/nim-dashboard.png)
+
+You can monitor metrics such as Time-to-First-Token, Inter-Token-Latency, KV Cache Utilization metrics.
+
+![NVIDIA NIM Metrics](../img/nim-dashboard-2.png)
 
 To view the Grafana dashboard to monitor these metrics, follow the steps below:
 

@@ -1,20 +1,22 @@
+#------------------------------------------------------------------------------------------------------------------------------------
+# NOTE: This example uses the EBS root volume for Spark shuffle data. This method is suitable when using non-SSD instance types.
+#------------------------------------------------------------------------------------------------------------------------------------
+---
 apiVersion: v1
 kind: Pod
 metadata:
   name: ny-taxi-exec
-  namespace: emr-data-team-a
+  namespace: emr-test-team-a
 
 spec:
   volumes:
-    # This is using the temp storage on the node.
-    # if you are using NVMe SSD then karpenter will configure the RAID0 under /mnt/k8s-disks/0 and copies the shuffle data to this location
     - name: spark-local-dir-1
       hostPath:
-        path: /mnt/k8s-disks/0
+        path: /mnt/k8s-disks/0 # EBS Hostpath creates a directory under root volume. This approach is only for non SSD instances
         type: DirectoryOrCreate
 
   nodeSelector:
-    provisioner: spark-compute-optimized
+    provisioner: spark-with-ebs # Karpenter provisonser configured to create 100Gb for K8s logs and Spark shuffle data
 #    topology.kubernetes.io/zone: "us-west-2a"
   initContainers:
     - name: volume-permission
