@@ -55,8 +55,8 @@ This example deploys an EKS Cluster with Kafka into a new VPC.
 
 - Creates a new sample VPC, 3 Private Subnets and 3 Public Subnets.
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets.
-- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with two managed node groups.
-- Deploys Metrics server, Cluster Autoscaler, self-managed ebs-csi-driver, Strimzi Kafka Operator, Grafana Operator.
+- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with one managed node group.
+- Deploys Metrics server, Karpenter, self-managed ebs-csi-driver, Strimzi Kafka Operator, Grafana Operator.
 - Strimzi Kafka Operator is a Kubernetes Operator for Apache Kafka deployed to `strimzi-kafka-operator` namespace. The operator by default watches and handles `kafka` in all namespaces.
 
 ### Prerequisites
@@ -219,7 +219,7 @@ Execute the following command and press enter twice until you see the `>` prompt
 Start typing some random content. This data will be written to the `my-topic`.
 
 ```bash
-kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.42.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic
+kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic
 ```
 
 ### Execute sample Kafka Consumer
@@ -227,7 +227,7 @@ kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.42.0-kaf
 Now, you can verify the data written to `my-topic` by running Kafka consumer pod in another terminal
 
 ```bash
-kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.42.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic --from-beginning
+kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic --from-beginning
 ```
 
 ### Kafka Producer and Consumer output
@@ -270,9 +270,7 @@ Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
 ```bash
 export AWS_REGION="us-west-2" # Select your own region
 export TF_VAR_region=$AWS_REGION
-terraform destroy -target="module.eks_blueprints_kubernetes_addons" -auto-approve
-terraform destroy -target="module.eks_blueprints" -auto-approve
-terraform destroy -target="module.vpc" -auto-approve
+terraform destroy --auto-approve
 ```
 
 Finally, destroy any additional resources that are not in the above modules

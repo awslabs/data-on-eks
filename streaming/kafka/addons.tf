@@ -60,7 +60,7 @@ module "ebs_csi_driver_irsa" {
 
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "1.16.3"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -188,7 +188,7 @@ module "eks_data_addons" {
       operating_system = "linux"
       node_group_type  = "core"
     })],
-    version = "0.42.0"
+    version = "0.43.0"
   }
 }
 

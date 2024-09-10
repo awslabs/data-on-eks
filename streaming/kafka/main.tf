@@ -1,5 +1,5 @@
 data "aws_eks_cluster_auth" "this" {
-  name = module.eks.cluster_name
+  name = local.name
 }
 data "aws_availability_zones" "available" {}
 data "aws_caller_identity" "current" {}
@@ -45,39 +45,15 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
+  create_cloudwatch_log_group              = false
+  create_cluster_security_group            = false
+  create_node_security_group               = false
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
 
-  node_security_group_additional_rules = {
-    ingress_self_all = {
-      description = "Node to node all ports/protocols"
-      protocol    = "-1"
-      from_port   = 0
-      to_port     = 0
-      type        = "ingress"
-      self        = true
-    }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
-    }
-  }
-
-  eks_managed_node_group_defaults = {
-    iam_role_additional_policies = {
-      # Not required, but used in the example to access the nodes to inspect mounted volumes
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-    }
-  }
-
   eks_managed_node_groups = {
     core_node_group = {
-      name        = "core-node-group"
+      name = "core-node-group"
 
       min_size     = 3
       max_size     = 9
