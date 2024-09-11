@@ -16,6 +16,8 @@ module "eks" {
   # allow deploying resources (Karpenter) into the cluster
   enable_cluster_creator_admin_permissions = true
 
+  access_entries = var.access_entries
+
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :

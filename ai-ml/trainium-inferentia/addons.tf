@@ -222,33 +222,10 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
-# Access Entries
-locals {
-  # Default access entry
-  karpenter_access_entry = {
-    karpenter = {
-      principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      type          = "EC2_LINUX"
-    }
-  }
-
-  # Merge var.access_entries with the karpenter_access_entry
-  merged_access_entries = merge(
-    local.karpenter_access_entry,
-    var.access_entries
-  )
-}
-
 resource "aws_eks_access_entry" "this" {
-  for_each = local.merged_access_entries
-
-  cluster_name      = module.eks.cluster_name
-  kubernetes_groups = try(each.value.kubernetes_groups, null)
-  principal_arn     = each.value.principal_arn
-  type              = try(each.value.type, "STANDARD")
-  user_name         = try(each.value.user_name, null)
-
-  tags = merge(try(each.value.tags, {}))
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+  type          = "EC2_LINUX"
 }
 
 #---------------------------------------------------------------
