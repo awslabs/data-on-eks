@@ -1,7 +1,7 @@
 ---
 title: RayServe with vLLM
 sidebar_position: 2
-description: Deploy Llama-3 models on AWS Inferentia accelerators for efficient inference using vLLM.
+description: Deploying Llama-3 Models on AWS Inferentia2 with Ray for Efficient Inference Using vLLM
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
@@ -131,11 +131,11 @@ inferentia-inf2   inferentia-inf2
 Neuron device plugin exposes Neuron cores & devices to kubernetes as a resource. Verify the status of the plugin installed by the blueprint. 
 
 ```bash
-kubectl get ds neuron-device-plugin-daemonset --namespace kube-system
+kubectl get ds neuron-device-plugin --namespace kube-system
 ```
 ```bash
-NAME                             DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
-neuron-device-plugin-daemonset   2         2         2       2            2           <none>          2d2h
+NAME                   DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+neuron-device-plugin   1         1         1       1            1           <none>          15d
 ```
 
 ### Verify Neuron Scheduler 
@@ -155,8 +155,6 @@ my-scheduler-c6fc957d9-hzrf7  1/1     Running   0  2d1h
 In this tutorial, we leverage the KubeRay operator, which extends Kubernetes with custom resource definitions for Ray-specific constructs like RayCluster, RayJob, and RayService. The operator watches for user events related to these resources, automatically creates necessary Kubernetes artifacts to form Ray clusters, and continuously monitors cluster state to ensure the desired configuration matches the actual state. It handles lifecycle management including setup, dynamic scaling of worker groups, and teardown, abstracting away the complexity of managing Ray applications on Kubernetes. 
 
 Each Ray cluster consists of a head node pod and a collection of worker node pods, with optional autoscaling support to size clusters according to workload requirements. KubeRay supports heterogeneous compute nodes (including GPUs) and running multiple Ray clusters with different Ray versions in the same Kubernetes cluster. Additionally, KubeRay can integrate with AWS Inferentia accelerators, enabling efficient deployment of large language models like Llama 3 on specialized hardware, potentially improving performance and cost-effectiveness for machine learning inference tasks.
-
-![ray-on-kubernetes](../img/ray_on_kubernetes.png)
 
 Having deployed the EKS cluster with all the necessary components, we can now proceed with the steps to deploy `NousResearch/Meta-Llama-3-8B-Instruct` using `RayServe` and `vLLM` on AWS Accelerators.
 
