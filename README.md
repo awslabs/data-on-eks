@@ -63,7 +63,7 @@ In this repository, you'll find a variety of deployment blueprints for creating 
 
 🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms/kafka) 👈 This blueprint deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
 
-🚀 [AutoMQ on EKS](streaming/automq/README.md) 👈 This blueprint deploys a self-managed AutoMQ on EKS with Terraform.
+🚀 [AutoMQ on EKS]((https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms/automq) 👈 This blueprint deploys a self-managed AutoMQ on EKS with Terraform.
 
 
 ## 📚 Documentation
