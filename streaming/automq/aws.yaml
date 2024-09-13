@@ -1,0 +1,68 @@
+# Note that you need to set the ${accessKey}, ${secretKey} and ${adminSecret} environment variables。
+kraft:
+  clusterId: "demo_cluster__________"
+extraEnvVars:
+  - name: AUTOMQ_ENABLE_LOCAL_CONFIG
+    value: "true"
+extraConfig: |
+  s3.data.buckets=0@s3://automqs3databucket?region=us-east-1&endpoint=https://s3.amazonaws.com
+  s3.ops.buckets=0@s3://automqs3opsbucket?region=us-east-1&endpoint=https://s3.amazonaws.com
+  s3.wal.buckets=0@s3://automqs3walbucket?region=us-east-1&endpoint=https://s3.amazonaws.com
+  s3.wal.iops=2800
+  s3.stream.allocator.policy=POOLED_DIRECT
+  s3.telemetry.metrics.exporter.uri=rw://?endpoint=https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-56bdcaca-e9e5-468e-8ef2-637ee9c1ec52/api/v1/remote_write&auth=sigv4&region=us-east-1
+  super.users=User:admin
+  metric.reporters=com.automq.enterprise.kafka.autobalancer.metricsreporter.AutoBalancerMetricsReporter
+  autobalancer.reporter.network.in.capacity=104857600
+  autobalancer.reporter.network.out.capacity=104857600
+  autobalancer.controller.enable=true
+  autobalancer.controller.goals=com.automq.enterprise.kafka.autobalancer.goals.PartitionCountCapacityGoal,com.automq.enterprise.kafka.autobalancer.goals.NetworkInCapacityGoal,com.automq.enterprise.kafka.autobalancer.goals.NetworkOutCapacityGoal,com.automq.enterprise.kafka.autobalancer.goals.NetworkInUtilWeightedDistributionGoal,com.automq.enterprise.kafka.autobalancer.goals.NetworkOutUtilWeightedDistributionGoal,com.automq.enterprise.kafka.autobalancer.goals.NetworkOutUtilSlowReadWeightedDistributionGoal,com.automq.enterprise.kafka.autobalancer.goals.ProduceQPSUtilWeightedDistributionGoal,com.automq.enterprise.kafka.autobalancer.goals.FetchQPSUtilWeightedDistributionGoal
+  autobalancer.client.listener.name=INTERNAL
+  autobalancer.client.auth.security.protocol=SASL_PLAINTEXT
+  autobalancer.client.auth.sasl.mechanism=PLAIN
+  autobalancer.client.auth.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
+    username="admin" \
+    password="admin";
+  listener.name.sasl_plaintext.plain.sasl.server.callback.handler.class=com.automq.enterprise.kafka.common.security.plain.AutomqPlainServerCallbackHandler
+sasl:
+  interbroker:
+    user: admin
+    password: "admin"
+  controller:
+    user: admin
+    password: "admin"
+  client:
+    users:
+      - admin
+    passwords: "admin"
+controller:
+  replicaCount: 3
+  heapOpts: "-Xmx6G -Xms6G -XX:MaxDirectMemorySize=6G"
+  minId: 1
+  persistence:
+    size: "20Gi"
+  walPersistence:
+    size: "20Gi"
+  resources:
+    requests:
+      cpu: 2
+      memory: 15360Mi
+    limits:
+      cpu: 2
+      memory: 15360Mi
+broker:
+  replicaCount: 1
+  heapOpts: "-Xmx6G -Xms6G -XX:MaxDirectMemorySize=6G"
+  minId: 1000
+  persistence:
+    size: "20Gi"
+  walPersistence:
+    size: "20Gi"
+  resources:
+    requests:
+      cpu: 2
+      memory: 15360Mi
+    limits:
+      cpu: 2
+      memory: 15360Mi
+

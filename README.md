@@ -9,7 +9,7 @@
 
 Welcome to **Data on EKS**, your gateway to scaling **Data and AI** workloads on Amazon EKS. Unlock the potential of [Gen AI](https://aws.amazon.com/generative-ai/) with a rich collection of Terraform Blueprints featuring best practices for deploying robust solutions with advanced logging and observability.
 
-Explore practical examples and patterns for running Data workloads on EKS using advanced frameworks such as [Apache Spark](https://spark.apache.org/) for distributed data processing, [Apache Flink](https://flink.apache.org/) for real-time stream processing, and [Apache Kafka](https://kafka.apache.org/) for high-throughput distributed messaging. Automate and orchestrate complex workflows with [Apache Airflow](https://airflow.apache.org/) and leverage the robust capabilities of [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to build resilient clusters, seamlessly integrating Kubernetes with big data solutions for enhanced scalability and performance.
+Explore practical examples and patterns for running Data workloads on EKS using advanced frameworks such as [Apache Spark](https://spark.apache.org/) for distributed data processing, [Apache Flink](https://flink.apache.org/) for real-time stream processing, and [Apache Kafka](https://kafka.apache.org/),[AutoMQ](https://github.com/AutoMQ/automq) for high-throughput distributed messaging. Automate and orchestrate complex workflows with [Apache Airflow](https://airflow.apache.org/) and leverage the robust capabilities of [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to build resilient clusters, seamlessly integrating Kubernetes with big data solutions for enhanced scalability and performance.
 
 On the AI/ML front, Explore practical patterns for running AI/ML workloads on EKS, leveraging the power of the [Ray](https://www.ray.io/) ecosystem for distributed computing. Utilize advanced serving solutions like [NVIDIA Triton Server](https://developer.nvidia.com/nvidia-triton-inference-server), [vLLM](https://github.com/vllm-project/vllm) for efficient and scalable model inference, and [TensorRT-LLM](https://developer.nvidia.com/tensorrt) for optimizing deep learning models.
 
@@ -22,7 +22,7 @@ Take advantage of high-performance [NVIDIA GPUs](https://aws.amazon.com/nvidia/)
 ## 🏗️ Architecture
 The diagram below showcases the wide array of open-source data tools, Kubernetes operators, and frameworks used by DoEKS. It also highlights the seamless integration of AWS Data Analytics managed services with the powerful capabilities of DoEKS open-source tools.
 
-<img width="779" alt="image" src="https://user-images.githubusercontent.com/19464259/208900860-a7ccdaeb-158d-4767-baad-fbc76388bc09.png">
+<img width="779" alt="image" src="images/data_on_eks.png">
 
 
 ## 🌟 Features
@@ -62,6 +62,8 @@ In this repository, you'll find a variety of deployment blueprints for creating 
 🚀 [Argo Workflows on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/argo-workflows-eks) 👈 This blueprint sets up a self-managed Argo Workflow on an Amazon EKS cluster, following best practices.
 
 🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms/kafka) 👈 This blueprint deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
+
+🚀 [AutoMQ on EKS](streaming/automq/README.md) 👈 This blueprint deploys a self-managed AutoMQ on EKS with Terraform.
 
 
 ## 📚 Documentation

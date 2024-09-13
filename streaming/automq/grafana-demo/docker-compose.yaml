@@ -1,0 +1,17 @@
+version: '3'
+services:
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    user: '0'
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+    volumes:
+      - ${DATA_PATH}/grafana/data:/var/lib/grafana
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
