@@ -23,14 +23,16 @@ module "eks_blueprints_addons" {
     kube-proxy = {
       preserve = true
     }
+    amazon-cloudwatch-observability = {
+      preserve                 = true
+      service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
+    }
   }
+
   #---------------------------------------
-  # CloudWatch metrics for EKS
+  # ALB Controller
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = false
-  aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
-  }
+  enable_aws_load_balancer_controller = true
 
   #---------------------------------------
   # Kubernetes Metrics Server
@@ -60,10 +62,32 @@ module "eks_data_addons" {
 }
 
 #---------------------------------------------------------------
-# Amazon CloudWatch Observability Addon
+# EKS Amazon CloudWatch Observability Role
 #---------------------------------------------------------------
-resource "aws_eks_addon" "cloudwatch_observability" {
-  cluster_name  = module.eks.cluster_name
-  addon_name    = "amazon-cloudwatch-observability"
-  addon_version = "v2.0.1-eksbuild.1"
+resource "aws_iam_role" "cloudwatch_observability_role" {
+  name = "eks-cloudwatch-agent-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = module.eks.oidc_provider_arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" : "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent",
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" : "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.cloudwatch_observability_role.name
 }
