@@ -1,6 +1,6 @@
 [AutoMQ](https://github.com/AutoMQ/automq) is a Kafka alternative product designed with a cloud-first concept. AutoMQ innovatively redesigns the storage layer of Apache Kafka based on the cloud, and on the basis of 100% compatibility with Kafka, separating persistence to EBS and S3 brings 10x cost reduction and 100x elasticity enhancement, and has better performance than Apache Kafka.
 
-<img src="images/architecture.png">
+<img src="img/automq/architecture.png">
 
 This tutorial will introduce how to fully deploy an AutoMQ cluster on EKS in a few minutes.
 
@@ -33,7 +33,7 @@ terraform apply
 ```
 
 After terraform apply is executed, it can automatically create resources such as EKS clusters, VPC networks, and object storage buckets.
-<img src="images/output.png">
+<img src="img/automq/output.png">
 
 ### Generate kubeconfig
 
@@ -58,7 +58,7 @@ kubectl apply -f storageclass.yaml
 
 This project includes a value yaml [aws.yaml](aws.yaml). Terraform will create an AWS Prometheus Workspace by default. Replace the value of s3.telemetry.metrics.exporter.uri in aws.yaml with the value of automq_prometheus_metrics_uri from the output information after executing terraform apply.
 
-<img src="images/metric_config.png">
+<img src="img/automq/metric_config.png">
 
 ### Install AutoMQ Helm Chart
 
@@ -77,11 +77,11 @@ Each Kafka broker can be accessed by producers via port 9092 on the following DN
 
 Terraform has already created AWS Prometheus by default. Refer to the Readme under grafana-demo in the automq-eks-example  project and use the install.sh script to start a Grafana locally. Open the Grafana console at <http://127.0.0.1:3000> (default username and password are both admin):
 Add the AWS Prometheus data source plugin.
-<img src="images/grafana_connection.png">  
+<img src="img/automq/grafana_connection.png">
 
 #### Add Amazon Managed Service for Prometheus data source
 
-<img src="images/grafana_datasource.png">  
+<img src="img/automq/grafana_datasource.png">
 
 #### Add data source information
 
@@ -108,12 +108,12 @@ The Prometheus server URL required for the data source can be obtained from the 
 ```
 
 Fill in the Access & Secret Key credential information for the newly created user on AWS by selecting Access & Secret Key.
-<img src="images/grafana_config_ds.png">
+<img src="img/automq/grafana_config_ds.png">
 
 #### Verify monitoring data
 
 After the configuration is complete, you can view the monitoring information of AutoMQ through the built-in Grafana template of AutoMQ.
-<img src="images/grafana_check_metric.png">
+<img src="img/automq/grafana_check_metric.png">
 
 ## Send and consume messages
 

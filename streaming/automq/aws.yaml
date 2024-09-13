@@ -65,4 +65,3 @@ broker:
     limits:
       cpu: 2
       memory: 15360Mi
-

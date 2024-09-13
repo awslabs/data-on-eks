@@ -4,11 +4,11 @@
     export DATA_PATH=/tmp/telemetry
     ```
 2. start grafana container
-    ``` Shell 
+    ``` Shell
     ./install.sh start
     ```
 3. direct to Grafana UI
-    ``` 
+    ```
     http://${endpoint}:3000
     ```
 4. Add your Prometheus server as a data source

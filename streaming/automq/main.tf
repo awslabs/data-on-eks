@@ -74,8 +74,6 @@ resource "aws_security_group" "allow_all" {
 }
 
 
-
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.8.5"
@@ -88,7 +86,7 @@ module "eks" {
 
   cluster_addons = {
     aws-ebs-csi-driver = {
-      service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
+      service_account_role_arn = module.irsa_ebs_csi.iam_role_arn
     }
   }
 
@@ -119,7 +117,7 @@ data "aws_iam_policy" "ebs_csi_policy" {
   arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
-module "irsa-ebs-csi" {
+module "irsa_ebs_csi" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version = "5.39.0"
 
@@ -128,17 +126,6 @@ module "irsa-ebs-csi" {
   provider_url                  = module.eks.oidc_provider
   role_policy_arns              = [data.aws_iam_policy.ebs_csi_policy.arn]
   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
-}
-
-
-data "aws_ami" "latest_amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
 }
 
 
@@ -175,11 +162,9 @@ resource "aws_iam_policy" "automq_policy" {
 
 # attach policy to eks auto create role arn (like ec2 instance profile)
 resource "aws_iam_role_policy_attachment" "automq_policy_attachment" {
-  role = module.eks.self_managed_node_groups.automq_asg.iam_role_name
+  role       = module.eks.self_managed_node_groups.automq_asg.iam_role_name
   policy_arn = aws_iam_policy.automq_policy.arn
 }
-
-
 
 
 resource "aws_s3_bucket" "automqs3databucket" {
@@ -187,7 +172,7 @@ resource "aws_s3_bucket" "automqs3databucket" {
   force_destroy = true
 
   tags = {
-    Name      = "automqs3databucket"
+    Name = "automqs3databucket"
   }
 }
 
@@ -196,7 +181,7 @@ resource "aws_s3_bucket" "automqs3opsbucket" {
   force_destroy = true
 
   tags = {
-    Name      = "automqs3opsbucket"
+    Name = "automqs3opsbucket"
   }
 }
 
@@ -205,7 +190,7 @@ resource "aws_s3_bucket" "automqs3walbucket" {
   force_destroy = true
 
   tags = {
-    Name      = "automqs3walbucket"
+    Name = "automqs3walbucket"
   }
 }
 
@@ -215,8 +200,3 @@ module "prometheus" {
 
   workspace_alias = "automq_prometheus"
 }
-
-
-
-
-
