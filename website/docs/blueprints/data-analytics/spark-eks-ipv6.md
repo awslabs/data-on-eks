@@ -23,6 +23,10 @@ Ensure that you have installed the following tools on your machine.
 2. [kubectl](https://Kubernetes.io/docs/tasks/tools/)
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
+
+Before installing the cluster create a EKS IPv6 CNI policy. Follow the instructions from the link bellow:
+[AmazonEKS_CNI_IPv6_Policy ](https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html#cni-iam-role-create-ipv6-policy)
+
 ### Clone the repository
 
 ```bash
@@ -36,7 +40,7 @@ export DOEKS_HOME=$(pwd)
 Navigate into the example directory and run the initialization script `install.sh`.
 
 ```bash
-cd ${DOEKS_HOME}/analytics/spark-eks-ipv6/terraform/
+cd ${DOEKS_HOME}/analytics//terraform/spark-eks-ipv6/
 chmod +x install.sh
 ./install.sh
 ```
@@ -125,7 +129,7 @@ This script will download some example taxi trip data and create duplicates of i
 ${DOEKS_HOME}/analytics/scripts/taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
 ```
 
-Once our sample data is uploaded you can run the Spark job. You will need to replace the <S3_BUCKET> placeholders in this file with the name of the bucket created earlier. You can get that value by running echo $S3_BUCKET.
+Once our sample data is uploaded you can run the Spark job. You will need to replace the `<S3_BUCKET>` placeholders in this file with the name of the bucket created earlier. You can get that value by running echo $S3_BUCKET.
 
 To do this automatically you can run the following, which will create a .old backup file and do the replacement for you.
 

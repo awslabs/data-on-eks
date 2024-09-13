@@ -74,7 +74,7 @@ locals {
   region = var.region
 
   vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 
   account_id = data.aws_caller_identity.current.account_id
   tags = {

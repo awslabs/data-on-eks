@@ -7,8 +7,7 @@ module "eks" {
   cluster_endpoint_public_access = true
 
   # IPV6
-  cluster_ip_family          = "ipv6"
-  create_cni_ipv6_iam_policy = true
+  cluster_ip_family = "ipv6"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets

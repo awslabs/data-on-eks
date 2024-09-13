@@ -75,6 +75,12 @@ module "eks_blueprints_addons" {
     }
     vpc-cni = {
       preserve = true
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
     }
     kube-proxy = {
       preserve = true
