@@ -386,7 +386,8 @@ module "eks_data_addons" {
 # IAM Role for Amazon CloudWatch Observability
 #---------------------------------------------------------------
 resource "aws_iam_role" "cloudwatch_observability_role" {
-  name = "eks-cloudwatch-agent-role"
+  name_prefix = format("%s-%s", local.name, "cloudwatch-agent")
+  description = "The IAM role for amazon-cloudwatch-observability addon"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
