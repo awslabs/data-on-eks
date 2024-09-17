@@ -128,3 +128,10 @@ variable "enable_rayserve_ha_elastic_cache_redis" {
   type        = bool
   default     = false
 }
+
+
+variable "access_entries" {
+  description = "Map of access entries to add to the cluster"
+  type        = any
+  default     = {}
+}

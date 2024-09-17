@@ -222,7 +222,7 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
-resource "aws_eks_access_entry" "karpenter_node_access_entry" {
+resource "aws_eks_access_entry" "this" {
   cluster_name  = module.eks.cluster_name
   principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
   type          = "EC2_LINUX"
