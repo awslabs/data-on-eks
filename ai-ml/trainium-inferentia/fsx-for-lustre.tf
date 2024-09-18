@@ -101,7 +101,7 @@ metadata:
 spec:
   containers:
   - name: app
-    image: public.ecr.aws/aws-cli/aws-cli:2.13.1
+    image: python:3.11
     command: ["/bin/sh", "-c"]
     args: ["while true; do sleep 30; done"]
     volumeMounts:
