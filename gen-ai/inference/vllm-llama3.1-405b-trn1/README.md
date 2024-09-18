@@ -6,14 +6,6 @@ This guide provides step-by-step instructions for deploying the **Llama 3.1 405B
 - Visit the [Meta website](https://llama.meta.com/) and download the Llama 3.1 405B model.
 - Upload the downloaded model and its weights to your own S3 bucket.
 
-### 1.1 Modify the "config.json" and update the rope scaling as follows
-
-After downloading the model, you need to modify the config.json file to update the RoPE (Rotary Positional Embedding) scaling as follows and upload it to s3:
-
-        "rope_scaling": {
-          "factor": 8.0,
-          "type": "linear"
-        },
 
 ## 2. Copy Model weights from S3 to Trn1 SSD Disks
 
@@ -25,8 +17,7 @@ Run the following commands on all 4 nodes to copy the model weights from S3 to t
         aws configure set default.s3.max_concurrent_requests 20
         sudo mkdir -p /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
         sudo /usr/local/bin/aws s3 sync $MODEL_S3_URL /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
-        sudo chmod -R a+r /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
-
+        sudo chmod -R a+rw /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
 
 ## 3. Install Leader Worker Set (LWS)
 
@@ -80,7 +71,7 @@ After setting up port forwarding, you can test the model by running the followin
 
 6.1 Deploy Gradio using the command below
 
-    kubectl apply -f gradio-llama-deploy.yaml
+    kubectl apply -f gradio-client.yaml
 
 
 6.2 Port-forward service:

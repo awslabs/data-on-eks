@@ -25,7 +25,7 @@ data:
 
         try:
             start_time = time.time()
-            response = requests.post(MODEL_API_URL, headers=headers, data=json.dumps(data), timeout=30)
+            response = requests.post(MODEL_API_URL, headers=headers, data=json.dumps(data), timeout=180)
             response.raise_for_status()
             end_time = time.time()
 
@@ -59,7 +59,7 @@ data:
                     value=DEFAULT_PROMPT
                 )
             with gr.Column(scale=1):
-                max_tokens_slider = gr.Slider(minimum=50, maximum=1000, value=500, step=50, label="Max Tokens")
+                max_tokens_slider = gr.Slider(minimum=500, maximum=7692, value=500, step=50, label="Max Tokens")
                 temperature_slider = gr.Slider(minimum=0.1, maximum=1.0, value=0.7, step=0.1, label="Temperature")
                 top_p_slider = gr.Slider(minimum=0.1, maximum=1.0, value=0.9, step=0.1, label="Top P")
 

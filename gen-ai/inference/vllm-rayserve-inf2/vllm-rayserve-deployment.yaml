@@ -8,11 +8,19 @@
 #-------------------------------------------------------------------
 # Step1: cd gen-ai/inference/vllm-rayserve-inf2
 # Step2 (Optional): Build a Docker image and push it to ECR and use the image in the yaml
-# Step3: kubectl apply -f vllm-rayserve-deployment.yaml
-# Step4.a: pip install openai
-# Step 4.b: python3 openai-client.py
+# Step3: Deploy Ray Cluster with Meta-Llama-3-8B-Instruct Model on Inf2 instances
+#   kubectl apply -f vllm-rayserve-deployment.yaml
+# Step4: Deploy OpenWebUI Client
+#   kubectl apply -f openai-webui-deployment.yaml
+#   kubectl port-forward service/openai-webui 7860:7860 -n openai-webui
+# Step5: OpenWebUI Client
+#   http://localhost:7860
 #-------------------------------------------------------------------
 
+#-------------------------------------------------------------------
+# Deployment
+#-------------------------------------------------------------------
+---
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -204,7 +212,7 @@ spec:
         num-cpus: "0"
       template:
         spec:
-          schedulerName: my-scheduler # Correct placement
+          schedulerName: my-scheduler # Neuron Scheduler
           containers:
           - name: head
             image: public.ecr.aws/data-on-eks/vllm-ray2.32.0-inf2-llama3:latest

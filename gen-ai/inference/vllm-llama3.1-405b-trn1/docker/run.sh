@@ -23,9 +23,6 @@ else
     exit 1
 fi
 
-# echo "Waiting for 3000 seconds for debugging only"
-# sleep 3000
-
 # Run the Python script
 python neuron_multi_node_runner.py \
 --model=$NEURON_MODEL_PATH \
