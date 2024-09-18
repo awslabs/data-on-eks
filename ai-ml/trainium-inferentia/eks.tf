@@ -111,10 +111,9 @@ module "eks" {
       })
     }
 
-    # Code snippet to copy the Model weights from S3 to NVMe SSD disks all the nodes used in the same nodegroup
-    # This example copies 800Gb model weights under 5 mins to local disk
-
-
+    #--------------------------------------------------
+    # Trainium node group for Trn1.32xlarge
+    #--------------------------------------------------
     # Trainium node group creation can take upto 6 mins
     trn1-32xl-ng1 = {
       name        = "trn1-32xl-ng1"
