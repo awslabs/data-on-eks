@@ -2,7 +2,7 @@
 # Before deploying this configuration, please ensure the following:
 # 1. **Region and Environment Variables**: Verify that the `AWS_DEFAULT_REGION` and other environment variables are correctly set for your deployment. This YAML is currently configured for the `us-west-2` region.
 # 2. **Pre-requisite**: Check the README.md file for instructions.
-# 3. **Custom Images**: This configuration uses a custom image hosted on ECR (`361112861879.dkr.ecr.us-west-2.amazonaws.com/neuronsdk2.20-vllm0.5.0-neuron-patch:latest`). Ensure that this image is accessible and meets your deployment needs.
+# 3. **Custom Images**: This configuration uses a custom image hosted on ECR (`public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:latest`). Ensure that this image is accessible and meets your deployment needs.
 
 ---
 apiVersion: v1
@@ -99,7 +99,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.annotations['leaderworkerset.sigs.k8s.io/size']
-          image: 361112861879.dkr.ecr.us-west-2.amazonaws.com/neuronsdk2.20-vllm0.5.0-neuron-patch:latest
+          image: public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:latest
           imagePullPolicy: Always
           name: vllm-leader
           ports:
@@ -210,7 +210,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.annotations['leaderworkerset.sigs.k8s.io/size']
-          image: 361112861879.dkr.ecr.us-west-2.amazonaws.com/neuronsdk2.20-vllm0.5.0-neuron-patch:latest
+          image: public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:latest
           imagePullPolicy: Always
           name: vllm-worker
           ports:
