@@ -13,12 +13,12 @@ ENV VLLM_TARGET_DEVICE=neuron
 
 WORKDIR /usr/local/bin
 
-# Internal code
-# TODO: Remove this block once Neuron vLLM code is merged in upstream vLLM project
+# -----------------------------------------------------------------------------------
+# The following local vLLM deployment will soon be replaced with the upstream vLLM code.
+# For now, this https://github.com/aws-neuron/upstreaming-to-vllm/tree/v0.5.0-neuron is used in the Dockerfile from the AWS Neuron vLLM fork.
 COPY vllm /vllm
-
-# Ensure the vllm directory has the right permissions
 RUN chmod -R u+w /vllm
+# -----------------------------------------------------------------------------------
 
 # Install vLLM with --no-deps and other dependencies
 RUN python3 -m pip install --no-cache-dir -e /vllm && \
