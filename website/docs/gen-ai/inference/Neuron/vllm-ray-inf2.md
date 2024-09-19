@@ -1,7 +1,7 @@
 ---
-title: RayServe with vLLM
-sidebar_position: 2
-description: Deploying Llama-3 Models on AWS Inferentia2 with Ray for Efficient Inference Using vLLM
+title: Llama-3-8B with vLLM on Inferentia2
+sidebar_position: 1
+description: Deploying the Meta-Llama-3-8B-Instruct model on AWS Inferentia2 using Ray and vLLM for optimized inference performance.
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 

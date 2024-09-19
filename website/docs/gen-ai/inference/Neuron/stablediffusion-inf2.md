@@ -1,6 +1,6 @@
 ---
 title: Stable Diffusion on Inferentia2
-sidebar_position: 4
+sidebar_position: 5
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
