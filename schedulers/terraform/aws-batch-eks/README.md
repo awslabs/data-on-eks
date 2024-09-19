@@ -27,6 +27,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="module_ebs_csi_irsa_role"></a> [ebs\_csi\_irsa\_role](#module\_ebs\_csi\_irsa\_role) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | >= 5.44 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 20.0 |
 | <a name="module_eks_auth"></a> [eks\_auth](#module\_eks\_auth) | terraform-aws-modules/eks/aws//modules/aws-auth | ~> 20.0 |
+| <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.2 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 5.0 |
 
 ## Resources
@@ -61,7 +62,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="input_aws_batch_max_vcpus"></a> [aws\_batch\_max\_vcpus](#input\_aws\_batch\_max\_vcpus) | The minimum aggregate vCPU for AWS Batch compute environment | `number` | `256` | no |
 | <a name="input_aws_batch_min_vcpus"></a> [aws\_batch\_min\_vcpus](#input\_aws\_batch\_min\_vcpus) | The minimum aggregate vCPU for AWS Batch compute environment | `number` | `0` | no |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region | `string` | `"us-east-1"` | no |
-| <a name="input_eks_cluster_name"></a> [eks\_cluster\_name](#input\_eks\_cluster\_name) | Name of the VPC and EKS Cluster | `string` | `"doeks-batch"` | no |
+| <a name="input_eks_cluster_name"></a> [eks\_cluster\_name](#input\_eks\_cluster\_name) | Name of the VPC and EKS Cluster | `string` | `"doeks-aws-batch"` | no |
 | <a name="input_eks_cluster_version"></a> [eks\_cluster\_version](#input\_eks\_cluster\_version) | EKS Cluster Kubernetes version. AWS Batch recommends version  1.27 and higher. | `string` | `"1.30"` | no |
 | <a name="input_eks_private_cluster_endpoint"></a> [eks\_private\_cluster\_endpoint](#input\_eks\_private\_cluster\_endpoint) | Whether to have a private cluster endpoint for the EKS cluster. | `bool` | `true` | no |
 | <a name="input_eks_public_cluster_endpoint"></a> [eks\_public\_cluster\_endpoint](#input\_eks\_public\_cluster\_endpoint) | Whether to have a public cluster endpoint for the EKS cluster.   #WARNING: Avoid a public endpoint in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing. | `bool` | `true` | no |
