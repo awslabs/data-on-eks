@@ -387,7 +387,6 @@ Enter your prompt, and you will see the streaming results, as shown below:
 
 ![alt text](../img/openweb-ui-ray-vllm-inf2-2.png)
 
-
 ## Performance Benchmarking with LLMPerf Tool
 
 [LLMPerf](https://github.com/ray-project/llmperf/blob/main/README.md) is an open-source tool designed for benchmarking the performance of large language models (LLMs).
