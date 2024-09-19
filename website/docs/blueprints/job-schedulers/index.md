@@ -15,3 +15,4 @@ This section provides deployment patterns for the following tools and examples t
 2. [Amazon Managed Workflows for Apache Airflow (MWAA)](https://docs.aws.amazon.com/mwaa/latest/userguide/what-is-mwaa.html)
 3. [Argo Workflow](https://argoproj.github.io/workflows/)
 4. [Prefect](https://www.prefect.io/)
+5. [AWS Batch](https://aws.amazon.com/batch/)
