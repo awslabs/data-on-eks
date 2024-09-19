@@ -343,6 +343,7 @@ All metrics, including container insights and Neuron metrics such as Neuron Core
 
 ## Open WebUI Deployment
 
+
 :::info
 
 [Open WebUI](https://github.com/open-webui/open-webui) is compatible only with models that work with the OpenAI API server and Ollama.
