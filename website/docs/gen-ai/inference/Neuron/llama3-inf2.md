@@ -1,6 +1,6 @@
 ---
-title: Llama-3 on Inferentia2
-sidebar_position: 2
+title: Llama-3-8B on Inferentia2
+sidebar_position: 3
 description: Deploy Llama-3 models on AWS Inferentia accelerators for efficient inference.
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';

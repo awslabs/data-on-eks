@@ -1,6 +1,6 @@
 ---
 title: Mistral-7B on Inferentia2
-sidebar_position: 1
+sidebar_position: 2
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
