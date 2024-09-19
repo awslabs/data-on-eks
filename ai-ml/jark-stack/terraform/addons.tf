@@ -82,7 +82,17 @@ module "eks_blueprints_addons" {
     vpc-cni = {
       preserve = true
     }
+
+    aws-mountpoint-s3-csi-driver = {
+      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
+      configuration_values     = <<-EOF
+      node:
+        tolerateAllTaints: true
+      EOF
+    }
   }
+
+
 
   #---------------------------------------
   # AWS Load Balancer Controller Add-on
@@ -354,6 +364,28 @@ module "data_addons" {
   ]
 }
 
+#---------------------------------------------------------------
+# IRSA for Mountpoint for Amazon S3 CSI Driver
+#---------------------------------------------------------------
+module "s3_csi_driver_irsa" {
+  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version          = "~> 5.34"
+  role_name_prefix = format("%s-%s-", local.name, "s3-csi-driver")
+  role_policy_arns = {
+    # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
+    s3_csi_driver = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  }
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:s3-csi-driver-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+
+
 
 #---------------------------------------------------------------
 # Additional Resources
@@ -398,4 +430,9 @@ data "aws_iam_policy_document" "karpenter_controller_policy" {
     effect    = "Allow"
     sid       = "KarpenterControllerAdditionalPolicy"
   }
+}
+
+resource "aws_s3_bucket" "model_storage" {
+  count         = var.create_s3_bucket ? 1 : 0
+  bucket_prefix = "model-storage-"
 }

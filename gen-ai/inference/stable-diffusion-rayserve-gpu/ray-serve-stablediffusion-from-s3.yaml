@@ -25,6 +25,7 @@ spec:
         route_prefix: "/"
         runtime_env:
           env_vars:
+            MODEL_PATH: "./stable-diffusion-2"
             MODEL_ID: "stabilityai/stable-diffusion-2-1"
           pip:
             - transformers==4.25.1
@@ -38,7 +39,7 @@ spec:
               look_back_period_s: 2
               downscale_delay_s: 600
               upscale_delay_s: 30
-              target_num_ongoing_requests_per_replica: 1
+              target_ongoing_requests: 1
             graceful_shutdown_timeout_s: 5
             max_concurrent_queries: 100
             ray_actor_options:
@@ -82,6 +83,8 @@ spec:
               volumeMounts:
                 - mountPath: /tmp/ray
                   name: ray-logs
+                - mountPath: /serve_app/stable-diffusion-2
+                  name: cache-dir
               resources:
                 limits:
                   cpu: 2
@@ -95,6 +98,9 @@ spec:
           volumes:
             - name: ray-logs
               emptyDir: {}
+            - name: cache-dir
+              persistentVolumeClaim:
+                claimName: s3-claim
     workerGroupSpecs:
       - groupName: gpu
         # With g5.2xlarge instance, Ray can scale up to 4 nodes, with one pod per node and 1 GPU per pod.
@@ -125,6 +131,9 @@ spec:
                     cpu: "3"
                     memory: "14Gi"
                     nvidia.com/gpu: 1
+                volumeMounts:
+                  - mountPath: /serve_app/stable-diffusion-2
+                    name: cache-dir
             nodeSelector:
               NodeGroupType: g5-gpu-karpenter
               type: karpenter
@@ -132,6 +141,10 @@ spec:
               - key: "nvidia.com/gpu"
                 operator: "Exists"
                 effect: "NoSchedule"
+            volumes:
+              - name: cache-dir
+                persistentVolumeClaim:
+                  claimName: s3-claim
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -164,3 +177,37 @@ spec:
             name: stablediffusion
             port:
               number: 8000
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: s3-pv-model
+spec:
+  capacity:
+    storage: 1200Gi # ignored, required
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  mountOptions:
+    - allow-overwrite
+    - allow-delete
+    - region us-west-2
+    - prefix stable-diffusion-2/
+  csi:
+    driver: s3.csi.aws.com # required
+    volumeHandle: s3-csi-driver-volume
+    volumeAttributes:
+      bucketName: <ENTER_S3_BUCKET_NAME> # Replace bucketName with S3 bucket name created from `terraform output`
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-claim
+  namespace: stablediffusion
+spec:
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  storageClassName: "" # required for static provisioning
+  resources:
+    requests:
+      storage: 1200Gi # ignored, required
+  volumeName: s3-pv-model

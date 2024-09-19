@@ -7,7 +7,6 @@ import ray
 from ray import serve
 
 
-
 app = FastAPI()
 
 
@@ -31,7 +30,8 @@ class APIIngress:
         return Response(content=file_stream.getvalue(), media_type="image/png")
 
 
-@serve.deployment(name="stable-diffusion-v2",
+@serve.deployment(
+    name="stable-diffusion-v2",
     ray_actor_options={"num_gpus": 1},
     autoscaling_config={"min_replicas": 1, "max_replicas": 2},
 )
@@ -39,20 +39,27 @@ class StableDiffusionV2:
     def __init__(self):
         from diffusers import EulerDiscreteScheduler, StableDiffusionPipeline
 
-        model_id = os.getenv('MODEL_ID')
+        model_id = os.getenv("MODEL_ID")
+        model_path = os.getenv("MODEL_PATH")
+        if model_path is not None:
+            model_id = model_path
 
-        scheduler = EulerDiscreteScheduler.from_pretrained(
-            model_id, subfolder="scheduler"
-        )
         self.pipe = StableDiffusionPipeline.from_pretrained(
-            model_id, scheduler=scheduler
+            model_id, torch_dtype=torch.float16
         )
         self.pipe = self.pipe.to("cuda")
 
     def generate(self, prompt: str, img_size: int = 768):
         assert len(prompt), "prompt parameter cannot be empty"
 
-        image = self.pipe(prompt, height=img_size, width=img_size).images[0]
+        image = self.pipe(
+            prompt,
+            height=img_size,
+            width=img_size,
+            negative_prompt="",
+            num_inference_steps=50,
+            guidance_scale=7.0,
+        ).images[0]
         return image
 
 
