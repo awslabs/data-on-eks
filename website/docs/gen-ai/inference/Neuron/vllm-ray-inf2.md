@@ -1,7 +1,7 @@
 ---
 title: Llama-3-8B with vLLM on Inferentia2
 sidebar_position: 1
-description: Deploying the Meta-Llama-3-8B-Instruct model on AWS Inferentia2 using Ray and vLLM for optimized inference performance.
+description: Serving Meta-Llama-3-8B-Instruct model on AWS Inferentia2 using Ray and vLLM for optimized inference performance.
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
@@ -23,7 +23,7 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 :::
 
 
-# Deploying LLMs with RayServe and vLLM on AWS Neuron 
+# Serving LLMs with RayServe and vLLM on AWS Neuron
 
 Welcome to the comprehensive guide on deploying LLMs on Amazon Elastic Kubernetes Service (EKS) using [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) and AWS Neuron.
 
@@ -65,7 +65,7 @@ While Llama-3 can achieve high-performance inference on GPUs, Neuron accelerator
 
 In this section, we will delve into the architecture of our solution, which combines Llama-3 model, [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) and [Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) on Amazon EKS.
 
-![Llama-3-inf2](../img/llama3-inf2-architecture-vllm.png)
+![Llama-3-inf2](../img/ray-vllm-inf2.png)
 
 ## Deploying the Solution
 
@@ -124,11 +124,12 @@ kubectl get nodepools
 NAME              NODECLASS
 default           default
 inferentia-inf2   inferentia-inf2
+trainium-trn1     trainium-trn1
 ```
 
 ### Verify Neuron Plugin
 
-Neuron device plugin exposes Neuron cores & devices to kubernetes as a resource. Verify the status of the plugin installed by the blueprint. 
+Neuron device plugin exposes Neuron cores & devices to kubernetes as a resource. Verify the status of the plugin installed by the blueprint.
 
 ```bash
 kubectl get ds neuron-device-plugin --namespace kube-system
@@ -138,9 +139,9 @@ NAME                   DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE
 neuron-device-plugin   1         1         1       1            1           <none>          15d
 ```
 
-### Verify Neuron Scheduler 
+### Verify Neuron Scheduler
 
-The Neuron scheduler extension is required for scheduling pods that require more than one Neuron core or device resource. Verify the status of the scheduler installed by the blueprint. 
+The Neuron scheduler extension is required for scheduling pods that require more than one Neuron core or device resource. Verify the status of the scheduler installed by the blueprint.
 
 ```bash
 kubectl get pods -n kube-system | grep my-scheduler
@@ -152,7 +153,7 @@ my-scheduler-c6fc957d9-hzrf7  1/1     Running   0  2d1h
 
 ## Deploying the Ray Cluster with Llama3 Model
 
-In this tutorial, we leverage the KubeRay operator, which extends Kubernetes with custom resource definitions for Ray-specific constructs like RayCluster, RayJob, and RayService. The operator watches for user events related to these resources, automatically creates necessary Kubernetes artifacts to form Ray clusters, and continuously monitors cluster state to ensure the desired configuration matches the actual state. It handles lifecycle management including setup, dynamic scaling of worker groups, and teardown, abstracting away the complexity of managing Ray applications on Kubernetes. 
+In this tutorial, we leverage the KubeRay operator, which extends Kubernetes with custom resource definitions for Ray-specific constructs like RayCluster, RayJob, and RayService. The operator watches for user events related to these resources, automatically creates necessary Kubernetes artifacts to form Ray clusters, and continuously monitors cluster state to ensure the desired configuration matches the actual state. It handles lifecycle management including setup, dynamic scaling of worker groups, and teardown, abstracting away the complexity of managing Ray applications on Kubernetes.
 
 Each Ray cluster consists of a head node pod and a collection of worker node pods, with optional autoscaling support to size clusters according to workload requirements. KubeRay supports heterogeneous compute nodes (including GPUs) and running multiple Ray clusters with different Ray versions in the same Kubernetes cluster. Additionally, KubeRay can integrate with AWS Inferentia accelerators, enabling efficient deployment of large language models like Llama 3 on specialized hardware, potentially improving performance and cost-effectiveness for machine learning inference tasks.
 
@@ -162,7 +163,7 @@ Having deployed the EKS cluster with all the necessary components, we can now pr
 This will apply the RayService configuration and deploy the cluster on your EKS setup.
 
 ```bash
-cd data-on-eks/gen-ai/inference/vllm-rayserve-inf2
+cd ../../gen-ai/inference/vllm-rayserve-inf2
 
 kubectl apply -f vllm-rayserve-deployment.yaml
 ```
@@ -171,7 +172,7 @@ kubectl apply -f vllm-rayserve-deployment.yaml
 By default, an `inf2.8xlarge` instance will be provisioned. If you would like to use `inf2.48xlarge`, modify the file `vllm-rayserve-deployment.yaml` to change `resources` section under `worker` container.
 
 ```bash
-limits: 
+limits:
     cpu: "30"
     memory: "110G"
     aws.amazon.com/neuron: "1"
@@ -180,10 +181,10 @@ requests:
     memory: "110G"
     aws.amazon.com/neuron: "1"
 ```
-to the following: 
+to the following:
 
 ```bash
-limits: 
+limits:
     cpu: "90"
     memory: "360G"
     aws.amazon.com/neuron: "12"
@@ -244,7 +245,7 @@ Once the deployment is complete, the Controller and Proxy status should be `HEAL
 
 ### To Test the Llama3 Model
 
-Now it's time to test the `Meta-Llama-3-8B-Instruct` chat model. We'll use a Python client script to send prompts to the RayServe inference endpoint and verify the outputs generated by the model. 
+Now it's time to test the `Meta-Llama-3-8B-Instruct` chat model. We'll use a Python client script to send prompts to the RayServe inference endpoint and verify the outputs generated by the model.
 
 First, execute a port forward to the `vllm-llama3-inf2-serve-svc` Service using kubectl:
 
@@ -330,13 +331,69 @@ Let me know if you have any other requests!
 ```
 </details>
 
+## Observability
+
+### Observability with AWS CloudWatch and Neuron Monitor
+
+This blueprint deploys the CloudWatch Observability Agent as a managed add-on, providing comprehensive monitoring for containerized workloads. It includes container insights for tracking key performance metrics such as CPU and memory utilization. Additionally, the addon utilizes the [Neuron Monitor plugin](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/tools/neuron-sys-tools/neuron-monitor-user-guide.html#neuron-monitor-user-guide) to capture and report Neuron-specific metrics.
+
+All metrics, including container insights and Neuron metrics such as Neuron Core utilization, NeuronCore memory usage are sent to Amazon CloudWatch, where you can monitor and analyze them in real-time. After the deployment is complete, you should be able to access these metrics directly from the CloudWatch console, allowing you to manage and optimize your workloads effectively.
+
+![CloudWatch-neuron-monitor](../img/neuron-monitor-cwci.png)
+
+## Open WebUI Deployment
+
+:::info
+
+[Open WebUI](https://github.com/open-webui/open-webui) is compatible only with models that work with the OpenAI API server and Ollama.
+
+:::
+
+**1. Deploy the WebUI**
+
+Deploy the [Open WebUI](https://github.com/open-webui/open-webui) by running the following command:
+
+```sh
+kubectl apply -f openai-webui-deployment.yaml
+```
+
+**2. Port Forward to Access WebUI**
+
+**Note** If you're running a port forward already to test the inference with python client, then press `ctrl+c` to interrupt that.
+
+Use kubectl port-forward to access the WebUI locally:
+
+```sh
+kubectl port-forward svc/open-webui 8081:80 -n openai-webui
+```
+
+**3. Access the WebUI**
+
+Open your browser and go to http://localhost:8081
+
+**4. Sign Up**
+
+Sign up using your name, email, and a dummy password.
+
+**5. Start a New Chat**
+
+Click on New Chat and select the model from the dropdown menu, as shown in the screenshot below:
+
+![alt text](../img/openweb-ui-ray-vllm-inf2-1.png)
+
+**6. Enter Test Prompt**
+
+Enter your prompt, and you will see the streaming results, as shown below:
+
+![alt text](../img/openweb-ui-ray-vllm-inf2-2.png)
+
 ## Performance Benchmarking with LLMPerf Tool
 
 [LLMPerf](https://github.com/ray-project/llmperf/blob/main/README.md) is an open-source tool designed for benchmarking the performance of large language models (LLMs).
 
 LLMPerf tool connects to the vllm service via port 8000 using the port forwarding setup above done using the command `kubectl -n vllm port-forward svc/vllm-llama3-inf2-serve-svc 8000:8000`.
 
-Execute the commands below in your terminal. 
+Execute the commands below in your terminal.
 
 Clone the LLMPerf repository:
 
@@ -385,7 +442,7 @@ EOF
 
 `--stddev-output-tokens`: specifies the variability in output token lengths introducing diversity in response sizes
 
-`--max-num-completed-requests`: sets the maximum number of requests to process 
+`--max-num-completed-requests`: sets the maximum number of requests to process
 
 `--num-concurrent-requests`: specifies the number of simultaneous requests to simulate parallel workload
 
@@ -508,7 +565,7 @@ You can try generating benchmarking results with multiple concurrent requests to
 
 ### Performance Benchmarking Metrics
 
-You can find the results of the benchmarking script  under `vllm_bench_results` directory in the `llmperf` directory. The results are stored in folders following a date-time naming convention. New folders are created everytime the benchmarking script is executed. 
+You can find the results of the benchmarking script  under `vllm_bench_results` directory in the `llmperf` directory. The results are stored in folders following a date-time naming convention. New folders are created everytime the benchmarking script is executed.
 
 You will find that the results for every execution of the benchmarking script comprise of 2 files in the format below:
 
@@ -520,7 +577,7 @@ Each of these files contain the following Performance Benchmarking Metrics:
 
 ```results_inter_token_latency_s_*```: Also referred to as Token generation latency (TPOT).Inter-Token latency refers to the average time elapsed between generating consecutive output tokens by a large language model (LLM) during the decoding or generation phase
 
-```results_ttft_s_*```: Time taken to generate the first token (TTFT) 
+```results_ttft_s_*```: Time taken to generate the first token (TTFT)
 
 ```results_end_to_end_s_*```: End-to-End latency - total time taken from when a user submits an input prompt to when the complete output response is generated by the LLM
 
