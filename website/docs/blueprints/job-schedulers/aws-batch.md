@@ -15,7 +15,7 @@ This example provides a blueprint for standing up a complete environment for run
 * An EKS cluster for your workloads
 * AWS Batch resources for running jobs on EC2 On-Demand and Spot Instances.
 
-You can find the blueprint [here](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/aws-batch).
+You can find the blueprint [here](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/aws-batch-eks).
 
 ## Considerations
 
