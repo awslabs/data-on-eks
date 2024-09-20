@@ -1,6 +1,6 @@
 # AWS Batch on EKS
 
-Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/job-schedulers/aws-batch-eks) to deploy this pattern and run sample tests.
+Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/aws-batch) to deploy this pattern and run sample tests.
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
