@@ -80,8 +80,16 @@ data:
     except Exception as e:
         logging.error(f"Unexpected error occurred: {e}")
 
-    # NOTICE: since shutil.copytree will call copystat(src, dst), it will generate errors as Amazon S3 does not support modifying metadata.
-    # Anyway, the files will be copied and the error message can be ignored
+    import logging
+
+    notice_message = """
+    NOTICE: shutil.copytree() may generate errors when used with Amazon S3.
+    This is because it calls copystat(src, dst) at:
+        /home/ray/anaconda3/lib/python3.11/shutil.py, line 527, in _copytree
+    Amazon S3 does not support modifying metadata, which causes these errors.
+    """
+
+    logging.warning(notice_message.strip())
 ---
 apiVersion: batch/v1
 kind: Job
