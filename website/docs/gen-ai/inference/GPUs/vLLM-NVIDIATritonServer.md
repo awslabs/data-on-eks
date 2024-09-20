@@ -333,7 +333,7 @@ kubectl -n triton-vllm port-forward svc/nvidia-triton-server-triton-inference-se
 Next, run the Triton client for each model using the same prompts:
 
 ```bash
-cd gen-ai/inference/vllm-nvidia-triton-server-gpu/triton-client
+cd data-on-eks/gen-ai/inference/vllm-nvidia-triton-server-gpu/triton-client
 python3 -m venv .venv
 source .venv/bin/activate
 pip install tritonclient[all]

@@ -238,7 +238,7 @@ You can test with your custom prompts by adding them to the `prompts.txt` file.
 To run the Python client application in a virtual environment, follow these steps:
 
 ```bash
-cd gen-ai/inference/vllm-rayserve-gpu
+cd data-on-eks/gen-ai/inference/vllm-rayserve-gpu
 python3 -m venv .venv
 source .venv/bin/activate
 pip install requests
