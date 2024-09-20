@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stablediffusion
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: s3-pv-model-storage
+spec:
+  capacity:
+    storage: 1200Gi # ignored, required
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  mountOptions:
+    - allow-overwrite
+    - allow-delete
+    - region us-west-2
+    - prefix stable-diffusion-2/
+  csi:
+    driver: s3.csi.aws.com # required
+    volumeHandle: s3-csi-driver-volume
+    volumeAttributes:
+      bucketName: model-storage-091550601287 # Replace bucketName with S3 bucket name created from `terraform output`
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-model-storage-claim
+  namespace: stablediffusion
+spec:
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  storageClassName: "" # required for static provisioning
+  resources:
+    requests:
+      storage: 1200Gi # ignored, required
+  volumeName: s3-pv-model-storage
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shell-script-configmap
+data:
+  download_models.py: | 
+    from diffusers import StableDiffusionPipeline
+    import torch
+
+    # Set the model you want to download
+    model_name = "stabilityai/stable-diffusion-2"
+    model_directory = "/serve_app/temp-stable-diffusion-2"
+
+    # Load the model
+    pipe = StableDiffusionPipeline.from_pretrained(model_name, torch_dtype=torch.float16, cache_dir=model_directory)
+
+    # Save the model to the local directory
+    pipe.save_pretrained(model_directory)
+
+    print(f"Model saved to {model_directory}")
+
+    import shutil
+
+    # Source directory (the one you want to copy)
+    src_dir = model_directory
+
+    # Destination directory (where you want to copy to)
+    dst_dir = "/serve_app/stable-diffusion-2/"
+
+    shutil.rmtree(f"{model_directory}/.locks")
+    shutil.rmtree(f"{model_directory}/models--stabilityai--stable-diffusion-2")
+
+    # Copy the directory recursively
+    shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
+
+    # NOTICE: since shutil.copytree will call copystat(src, dst), it will generate errors as Amazon S3 does not support modifying metadata.
+    # Anyway, the files will be copied and the error message can be ignored
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: shell-script-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: shell-script-container
+        image: public.ecr.aws/data-on-eks/ray-serve-gpu-stablediffusion:2.33.0-py311-gpu
+        command: ["python"]
+        args: ["/scripts/download_models.py"]
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+        - mountPath: /serve_app/stable-diffusion-2
+          name: cache-dir
+      volumes:
+      - name: cache-dir
+        persistentVolumeClaim:
+          claimName: s3-model-storage-claim
+      - name: script-volume
+        configMap:
+          name: shell-script-configmap
+      restartPolicy: Never
+  backoffLimit: 4
