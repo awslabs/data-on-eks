@@ -167,7 +167,7 @@ module "eks_blueprints_addons" {
       }
     ],
   }
-  
+
   #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------

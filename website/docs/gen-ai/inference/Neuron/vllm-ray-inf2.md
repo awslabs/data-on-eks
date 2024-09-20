@@ -163,7 +163,7 @@ Having deployed the EKS cluster with all the necessary components, we can now pr
 This will apply the RayService configuration and deploy the cluster on your EKS setup.
 
 ```bash
-cd ../../gen-ai/inference/vllm-rayserve-inf2
+cd data-on-eks/gen-ai/inference/vllm-rayserve-inf2
 
 kubectl apply -f vllm-rayserve-deployment.yaml
 ```
@@ -258,7 +258,7 @@ kubectl -n vllm port-forward svc/vllm-llama3-inf2-serve-svc 8000:8000
 To run the Python client application in a virtual environment, follow these steps:
 
 ```bash
-cd gen-ai/inference/vllm-rayserve-inf2
+cd data-on-eks/gen-ai/inference/vllm-rayserve-inf2
 python3 -m venv .venv
 source .venv/bin/activate
 pip3 install openai
@@ -588,13 +588,6 @@ Each of these files contain the following Performance Benchmarking Metrics:
 
 ```results_number_output_tokens_*```: Number of output tokens in the requests (Output length)
 
-## Cleanup
-
-To remove all resources created by this deployment, run:
-
-```bash
-./cleanup.sh
-```
 ## Conclusion
 
 In summary, when it comes to deploying and scaling Llama-3, AWS Trn1/Inf2 instances offer a compelling advantage.
@@ -615,7 +608,7 @@ kubectl delete -f vllm-rayserve-deployment.yaml
 Destroy the EKS Cluster and resources
 
 ```bash
-cd ../../../ai-ml/trainium-inferentia/
+cd data-on-eks/ai-ml/trainium-inferentia/
 
 ./cleanup.sh
 ```

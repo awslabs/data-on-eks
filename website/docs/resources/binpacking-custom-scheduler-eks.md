@@ -10,9 +10,9 @@ sidebar_label: Bin packing for Amazon EKS
 In this post, we will show you how to enable a custom scheduler with Amazon EKS when running DoEKS especially for Spark on EKS, including OSS Spark and EMR on EKS. The custom scheduler is a custom Kubernetes scheduler with ```MostAllocated``` strategy running in data plane.
 
 ### Why bin packing
-By default, the [scheduling-plugin](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins) NodeResourcesFit use the ```LeastAllocated``` for score strategies. For the long running workloads, that is good because of high availability. But for batch jobs, like Spark workloads, this would lead high cost. By changing the from ```LeastAllocated``` to ```MostAllocated```, it avoids spreading pods across all running nodes, leading to higher resource utilization and better cost efficiency. 
+By default, the [scheduling-plugin](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins) NodeResourcesFit use the ```LeastAllocated``` for score strategies. For the long running workloads, that is good because of high availability. But for batch jobs, like Spark workloads, this would lead high cost. By changing the from ```LeastAllocated``` to ```MostAllocated```, it avoids spreading pods across all running nodes, leading to higher resource utilization and better cost efficiency.
 
-Batch jobs like Spark are running on demand with limited or predicted time. With ```MostAllocated``` strategy, Spark executors are always bin packing into one node util the node can not host any pods. You can see the following picture shows the 
+Batch jobs like Spark are running on demand with limited or predicted time. With ```MostAllocated``` strategy, Spark executors are always bin packing into one node util the node can not host any pods. You can see the following picture shows the
 
 ```MostAllocated``` in EMR on EKS.
 
@@ -71,12 +71,12 @@ spec:
   volumes:
     - name: spark-local-dir-1
       hostPath:
-        path: /local1  
-  initContainers:  
+        path: /local1
+  initContainers:
   - name: volume-permission
     image: public.ecr.aws/docker/library/busybox
     # grant volume access to hadoop user
-    command: ['sh', '-c', 'if [ ! -d /data1 ]; then mkdir /data1;fi; chown -R 999:1000 /data1']  
+    command: ['sh', '-c', 'if [ ! -d /data1 ]; then mkdir /data1;fi; chown -R 999:1000 /data1']
     volumeMounts:
       - name: spark-local-dir-1
         mountPath: /data1

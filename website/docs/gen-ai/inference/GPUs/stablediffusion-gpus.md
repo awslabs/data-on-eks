@@ -121,7 +121,7 @@ aws eks --region us-west-2 update-kubeconfig --name jark-stack
 **Deploy RayServe Cluster**
 
 ```bash
-cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
+cd data-on-eks/gen-ai/inference/stable-diffusion-rayserve-gpu
 kubectl apply -f ray-service-stablediffusion.yaml
 ```
 
@@ -198,7 +198,7 @@ Let's move forward with setting up the Gradio app as a Docker container running 
 First, lets build the docker container for the client app.
 
 ```bash
-cd ../gradio-ui
+cd data-on-eks/gen-ai/inference/gradio-ui
 docker build --platform=linux/amd64 \
     -t gradio-app:sd \
     --build-arg GRADIO_APP="gradio-app-stable-diffusion.py" \
@@ -263,7 +263,7 @@ docker rmi gradio-app:sd
 **Step2:** Delete Ray Cluster
 
 ```bash
-cd ../stable-diffusion-rayserve-gpu
+cd data-on-eks/gen-ai/inference/stable-diffusion-rayserve-gpu
 kubectl delete -f ray-service-stablediffusion.yaml
 ```
 
@@ -271,6 +271,6 @@ kubectl delete -f ray-service-stablediffusion.yaml
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ../../../ai-ml/jark-stack/
+cd data-on-eks/ai-ml/jark-stack/
 ./cleanup.sh
 ```

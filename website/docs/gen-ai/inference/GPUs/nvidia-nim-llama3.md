@@ -245,7 +245,7 @@ you will see similar output like the following
 It's time to test the Llama3 just deployed. First setup a simple environment for the testing.
 
 ```bash
-cd gen-ai/inference/nvidia-nim/nim-client
+cd data-on-eks/gen-ai/inference/nvidia-nim/nim-client
 python3 -m venv .venv
 source .venv/bin/activate
 pip install openai
@@ -335,7 +335,7 @@ By applying these optimizations, TensorRT can significantly accelerate LLM infer
 Deploy the [Open WebUI](https://github.com/open-webui/open-webui) by running the following command:
 
 ```sh
-kubectl apply -f gen-ai/inference/nvidia-nim/openai-webui-deployment.yaml
+kubectl apply -f data-on-eks/gen-ai/inference/nvidia-nim/openai-webui-deployment.yaml
 ```
 
 **2. Port Forward to Access WebUI**
@@ -373,7 +373,7 @@ Enter your prompt, and you will see the streaming results, as shown below:
 GenAI-Perf can be used as standard tool to benchmark with other models deployed with inference server. But this tool requires a GPU. To make it easier, we provide you a pre-configured manifest `genaiperf-deploy.yaml` to run the tool.
 
 ```bash
-cd gen-ai/inference/nvidia-nim
+cd data-on-eks/gen-ai/inference/nvidia-nim
 kubectl apply -f genaiperf-deploy.yaml
 ```
 
