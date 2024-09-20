@@ -52,6 +52,13 @@ Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to pr
 ```
 export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
 ```
+
+### (Optional) Save Machine Learning Models in Amazon S3 
+Define the TF_VAR_create_s3_bucket to be `true` so that running Terraform module will provision a S3 bucket. 
+```
+export TF_VAR_create_s3_bucket=true
+```
+
 ### Deploy
 
 Clone the repository
@@ -75,15 +82,15 @@ For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired regi
 ```bash
 cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
 ./install.sh
+
+terraform output 
+configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name jark-stack"
+model_s3_bucket = "model-storage-20240820044102407400000001" 
 ```
 
 ### Verify the resources
 
 Verify the Amazon EKS Cluster
-
-```bash
-aws eks --region us-west-2 describe-cluster --name jark-stack
-```
 
 ```bash
 # Creates k8s config file to authenticate with EKS
@@ -118,7 +125,7 @@ Ensure the cluster is configured locally
 aws eks --region us-west-2 update-kubeconfig --name jark-stack
 ```
 
-**Deploy RayServe Cluster**
+**(Approach 1) Deploy RayServe Cluster (Downloading Model from Huggingface)**
 
 ```bash
 cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
@@ -132,6 +139,14 @@ Verify the deployment by running the following commands
 If you did not preload container images into the data volume, the deployment process may take up to 10 to 12 minutes. The Head Pod is expected to be ready within 2 to 3 minutes, while the Ray Serve worker pod may take up to 10 minutes for image retrieval and Model deployment from Huggingface.
 
 :::
+
+**(Approach 2) Deploy RayServe Cluster (Downloading Model from Amazon S3)**
+```bash
+cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
+# edit the file download-models-to-s3 and fill the actual bucket name by running terraform output 
+kubectl apply -f download-models-to-s3.yaml
+kubectl apply -f ray-service-stablediffusion-from-s3.yaml
+```
 
 This deployment establishes a Ray head pod running on an x86 instance and a worker pod on a GPU G5 instance as shown below.
 
