@@ -51,3 +51,30 @@ module "vpc" {
 
   tags = local.tags
 }
+
+
+module "vpc_endpoints" {
+  source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+  version = "~> 5.0"
+
+  # create = var.enable_vpc_endpoints
+
+  create = true
+
+  vpc_id             = module.vpc.vpc_id
+  security_group_ids = [module.vpc_endpoints_sg.security_group_id]
+
+  endpoints = merge({
+    s3 = {
+      service         = "s3"
+      service_type    = "Gateway"
+      route_table_ids = module.vpc.private_route_table_ids
+      tags = {
+        Name = "${local.name}-s3"
+      }
+    }
+    }
+  )
+
+  tags = local.tags
+}
