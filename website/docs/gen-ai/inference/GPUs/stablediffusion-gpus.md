@@ -53,8 +53,8 @@ Define the `TF_VAR_bottlerocket_data_disk_snpashot_id` to enable Karpenter to pr
 export TF_VAR_bottlerocket_data_disk_snpashot_id=snap-0c6d965cf431785ed
 ```
 
-### (Optional) Save Machine Learning Models in Amazon S3 
-Define the TF_VAR_create_s3_bucket to be `true` so that running Terraform module will provision a S3 bucket. 
+### (Optional) Save Machine Learning Models in Amazon S3
+Define the TF_VAR_create_s3_bucket to be `true` so that running Terraform module will provision a S3 bucket.
 ```
 export TF_VAR_create_s3_bucket=true
 ```
@@ -83,9 +83,9 @@ For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired regi
 cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
 ./install.sh
 
-terraform output 
+terraform output
 configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name jark-stack"
-model_s3_bucket = "model-storage-20240820044102407400000001" 
+model_s3_bucket = "model-storage-20240820044102407400000001"
 ```
 
 ### Verify the resources
@@ -143,7 +143,7 @@ If you did not preload container images into the data volume, the deployment pro
 **(Approach 2) Deploy RayServe Cluster (Downloading Model from Amazon S3)**
 ```bash
 cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
-# edit the file download-models-to-s3 and fill the actual bucket name by running terraform output 
+# edit the file download-models-to-s3 and fill the actual bucket name by running terraform output
 kubectl apply -f download-models-to-s3.yaml
 kubectl apply -f ray-service-stablediffusion-from-s3.yaml
 ```

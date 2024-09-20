@@ -42,7 +42,7 @@ kind: ConfigMap
 metadata:
   name: shell-script-configmap
 data:
-  download_models.py: | 
+  download_models.py: |
     from diffusers import StableDiffusionPipeline
     import torch
 

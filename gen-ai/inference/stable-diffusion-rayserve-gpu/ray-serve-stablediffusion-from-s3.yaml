@@ -187,7 +187,7 @@ metadata:
   name: stable-diffusion-script
   namespace: stablediffusion
 data:
-  ray_serve_sd.py: | 
+  ray_serve_sd.py: |
     from io import BytesIO
     from fastapi import FastAPI
     from fastapi.responses import Response
@@ -249,5 +249,5 @@ data:
                 guidance_scale=7.0,
             ).images[0]
             return image
-            
+
     entrypoint = APIIngress.bind(StableDiffusionV2.bind())

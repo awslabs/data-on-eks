@@ -4,5 +4,6 @@ output "configure_kubectl" {
 }
 
 output "model_s3_bucket" {
-  value = length(aws_s3_bucket.model_storage) > 0 ? aws_s3_bucket.model_storage[0].bucket : ""
+  description = "The S3 bucket name for storing ML models"
+  value       = length(aws_s3_bucket.model_storage) > 0 ? aws_s3_bucket.model_storage[0].bucket : ""
 }
