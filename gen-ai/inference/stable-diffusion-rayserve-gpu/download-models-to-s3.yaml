@@ -21,7 +21,7 @@ spec:
     driver: s3.csi.aws.com # required
     volumeHandle: s3-csi-driver-volume
     volumeAttributes:
-      bucketName: model-storage-091550601287 # Replace bucketName with S3 bucket name created from `terraform output`
+      bucketName: <YOUR_BUCKET_NAME> # Replace bucketName with S3 bucket name created from `terraform output`
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -58,7 +58,7 @@ data:
 
     print(f"Model saved to {model_directory}")
 
-    import shutil
+    import shutil, logging
 
     # Source directory (the one you want to copy)
     src_dir = model_directory
@@ -70,7 +70,15 @@ data:
     shutil.rmtree(f"{model_directory}/models--stabilityai--stable-diffusion-2")
 
     # Copy the directory recursively
-    shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
+    try:
+        shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
+        logging.info("Directory copied successfully")
+    except shutil.Error as e:
+        logging.error(f"Error copying directory: {e}")
+    except OSError as e:
+        logging.error(f"OS error occurred: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error occurred: {e}")
 
     # NOTICE: since shutil.copytree will call copystat(src, dst), it will generate errors as Amazon S3 does not support modifying metadata.
     # Anyway, the files will be copied and the error message can be ignored
