@@ -11,7 +11,7 @@ data:
 
     # Configuration
     MODEL_API_URL = "http://vllm-leader:8080/generate"  # Updated to use vllm-leader service
-    DEFAULT_PROMPT = "Write a short story about the American Civil War. Include Abraham Lincoln as a character. Begin your story with \"In the year 1863, ...\"\n\nIn the year 1863,"
+    DEFAULT_PROMPT = "Write a short story about a time traveler who accidentally ends up in the future and has to navigate the changes in technology and society."
 
     def generate_story(prompt, max_tokens, temperature, top_p):
         headers = {"Content-Type": "application/json"}
@@ -116,7 +116,7 @@ spec:
   selector:
     app: gradio-llama-interface
   ports:
-    - protocol: TCP
-      port: 7860
-      targetPort: 7860
+  - protocol: TCP
+    port: 7860
+    targetPort: 7860
   type: ClusterIP
