@@ -108,11 +108,10 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
       )
 
-      ami_type            = "AL2_x86_64_GPU"
-      ami_release_version = "1.29.6-20240828"
-      min_size            = 2
-      max_size            = 3
-      desired_size        = 2
+      ami_type     = "AL2_x86_64_GPU"
+      min_size     = 2
+      max_size     = 3
+      desired_size = 2
 
       instance_types = ["g5.12xlarge"]
       ebs_optimized  = true

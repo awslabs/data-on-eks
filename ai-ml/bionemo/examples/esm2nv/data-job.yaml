@@ -37,8 +37,6 @@ spec:
               ++model.data.train.uf90_datapath=/fsx/esm2nv-train/uniref202104_esm2_qc_test200_val200/ur90_ur50_sampler.fasta \
               ++model.data.train.cluster_mapping_tsv=/fsx/esm2nv-train/uniref202104_esm2_qc_test200_val200/mapping.tsv \
               ++model.data.dataset_path=/fsx/esm2nv-train/uniref202104_esm2_qc_test200_val200
-          - cp -r /fsx/esm2nv-train/uniref202104_esm2_qc_test200_val200/uf50 /fsx/esm2nv-train/results/
-          - cp -r /fsx/esm2nv-train/uniref202104_esm2_qc_test200_val200/uf90 /fsx/esm2nv-train/results/
         volumeMounts:
           - mountPath: "/fsx"
             name: fsx-pv-storage
