@@ -141,10 +141,12 @@ spec:
                 operator: "Exists"
                 effect: "NoSchedule"
             volumes:
+            # mount the serving script
             - name: serve-script
               configMap:
                 name: stable-diffusion-script
                 defaultMode: 0777
+            # mount the model storage on Amazon S3s
             - name: cache-dir
               persistentVolumeClaim:
                 claimName: s3-model-storage-claim
