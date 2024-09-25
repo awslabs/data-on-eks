@@ -6,7 +6,7 @@ spec:
   elasticPolicy:
     rdzvBackend: c10d
     minReplicas: 1
-    maxReplicas: 16
+    maxReplicas: 8
     maxRestarts: 100
     metrics:
       - type: Resource
@@ -15,10 +15,10 @@ spec:
           target:
             type: Utilization
             averageUtilization: 80
-  nprocPerNode: "8"
+  nprocPerNode: "4"
   pytorchReplicaSpecs:
     Worker:
-      replicas: 16
+      replicas: 8
       template:
         metadata:
           annotations:
@@ -62,7 +62,7 @@ spec:
                 - "exp_manager.wandb_logger_kwargs.project=esm1nv_pretraining"
                 - "++exp_manager.wandb_logger_kwargs.offline=False"
                 - "trainer.num_nodes=2"
-                - "trainer.devices=8"
+                - "trainer.devices=4"
                 - "trainer.max_steps=1000000"
                 - "trainer.accumulate_grad_batches=1"
                 - "trainer.val_check_interval=500"
