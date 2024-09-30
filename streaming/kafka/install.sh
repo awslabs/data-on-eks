@@ -30,7 +30,17 @@ done
 
 # Final apply to catch any remaining resources
 echo "Applying remaining resources..."
-apply_output=$(terraform apply -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
+apply_output=""
+max_retry=3
+counter=1
+until apply_output=$(terraform apply -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
+do
+    [[ counter -eq $max_retry ]] && exit 1
+    echo "FAILED: Terraform apply failed, will wait 30 seconds and retry. Try #$counter"
+    sleep 30
+    ((counter++))
+done
+
 if [[ ${PIPESTATUS[0]} -eq 0 && $apply_output == *"Apply complete"* ]]; then
   echo "SUCCESS: Terraform apply of all modules completed successfully"
 else

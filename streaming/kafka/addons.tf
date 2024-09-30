@@ -102,7 +102,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter = true
   karpenter = {
-    chart_version       = "0.37.0"
+    chart_version       = "1.0.3"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -190,6 +190,8 @@ module "eks_data_addons" {
     })],
     version = "0.43.0"
   }
+
+  depends_on = [ module.eks_blueprints_addons ]
 }
 
 #---------------------------------------------------------------

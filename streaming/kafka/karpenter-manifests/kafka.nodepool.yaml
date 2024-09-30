@@ -1,4 +1,4 @@
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: kafka
@@ -9,7 +9,11 @@ spec:
         NodeGroupType: kafka
     spec:
       nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
         name: kafka
+      expireAfter: 336h
+      terminationGracePeriod: 24h
       requirements:
         - key: "kubernetes.io/arch"
           operator: In
@@ -21,5 +25,7 @@ spec:
           operator: In
           values: ["c", "m", "r"]
   disruption:
-    consolidationPolicy: WhenUnderutilized
-    expireAfter: 720h
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 30s
+    budgets:
+    - nodes: 10%
