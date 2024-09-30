@@ -8,8 +8,8 @@ metadata:
     strimzi.io/node-pools: enabled
 spec:
   kafka:
-    version: 3.7.1
-    metadataVersion: 3.7-IV4
+    version: 3.8.0
+    metadataVersion: 3.8-IV0
     listeners:
       - name: plain
         port: 9092
@@ -25,7 +25,6 @@ spec:
       transaction.state.log.min.isr: 2
       default.replication.factor: 3
       min.insync.replicas: 2
-      inter.broker.protocol.version: "3.6"
     resources:
       requests:
         memory: 58Gi
@@ -60,8 +59,27 @@ spec:
                       operator: In
                       values:
                         - kafka
-        podDisruptionBudget:
-          maxUnavailable: 1
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: "strimzi.io/pool-name"
+                  operator: In
+                  values:
+                  - broker
+                  - controller   
+              topologyKey: "kubernetes.io/hostname"          
+        topologySpreadConstraints:
+          - labelSelector:
+              matchExpressions:
+              - key: "strimzi.io/pool-name"
+                operator: In
+                values:
+                  - broker
+                  - controller                
+            maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
     metricsConfig:
       type: jmxPrometheusExporter
       valueFrom:
@@ -266,6 +284,7 @@ spec:
       - id: 0
         type: persistent-claim
         size: 100Gi
+        kraftMetadata: shared
         deleteClaim: false
 ---
 apiVersion: kafka.strimzi.io/v1beta2
