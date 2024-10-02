@@ -67,8 +67,8 @@ spec:
                   operator: In
                   values:
                   - broker
-                  - controller   
-              topologyKey: "kubernetes.io/hostname"          
+                  - controller
+              topologyKey: "kubernetes.io/hostname"
         topologySpreadConstraints:
           - labelSelector:
               matchExpressions:
@@ -76,7 +76,7 @@ spec:
                 operator: In
                 values:
                   - broker
-                  - controller                
+                  - controller
             maxSkew: 1
             topologyKey: topology.kubernetes.io/zone
             whenUnsatisfiable: ScheduleAnyway

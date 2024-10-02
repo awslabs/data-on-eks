@@ -4,7 +4,7 @@ sidebar_position: 4
 ---
 
 # Apache Kafka
-[Apache Kafka](https://kafka.apache.org/) is an open-source distributed event streaming platform used by thousands of companies for high-performance data pipelines, streaming analytics, data integration, and mission-critical applications. This blueprint implements Kafka using **KRaft (Kafka Raft) mode**, a significant architectural improvement that eliminates the need for Zookeeper. 
+[Apache Kafka](https://kafka.apache.org/) is an open-source distributed event streaming platform used by thousands of companies for high-performance data pipelines, streaming analytics, data integration, and mission-critical applications. This blueprint implements Kafka using **KRaft (Kafka Raft) mode**, a significant architectural improvement that eliminates the need for Zookeeper.
 
 ## Why and what's KRaft?
 KRaft mode simplifies Kafka deployments, enhances scalability, and improves overall system performance. By using a built-in consensus protocol, KRaft reduces operational complexity, potentially speeds up broker startup times, and allows for better handling of metadata operations. This architectural shift enables Kafka to manage larger clusters more efficiently, making it an attractive option for organizations looking to streamline their event streaming infrastructure and prepare for future scalability needs.

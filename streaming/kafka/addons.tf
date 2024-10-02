@@ -191,7 +191,7 @@ module "eks_data_addons" {
     version = "0.43.0"
   }
 
-  depends_on = [ module.eks_blueprints_addons ]
+  depends_on = [module.eks_blueprints_addons]
 }
 
 #---------------------------------------------------------------
