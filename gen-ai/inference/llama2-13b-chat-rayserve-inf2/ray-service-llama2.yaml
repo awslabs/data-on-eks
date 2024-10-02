@@ -49,83 +49,85 @@ spec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
       template:
+        schedulerName: my-scheduler
         spec:
           containers:
-            - name: head
-              image: public.ecr.aws/data-on-eks/ray2.22.0-py310-llama2-13b-neuron:latest # Image created using the Dockerfile attached in the folder
-              imagePullPolicy: Always # Ensure the image is always pulled when updated
-              lifecycle:
-                preStop:
-                  exec:
-                    command: ["/bin/sh", "-c", "ray stop"]
-              ports:
-                - containerPort: 6379
-                  name: gcs
-                - containerPort: 8265
-                  name: dashboard
-                - containerPort: 10001
-                  name: client
-                - containerPort: 8000
-                  name: serve
-              volumeMounts:
-                - mountPath: /tmp/ray
-                  name: ray-logs
-              resources:
-                limits:
-                  cpu: 4
-                  memory: 20Gi
-                requests:
-                  cpu: 4
-                  memory: 20Gi
-              env:
-                - name: LD_LIBRARY_PATH
-                  value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+          - name: head
+            image: public.ecr.aws/data-on-eks/ray2.22.0-py310-llama2-13b-neuron:latest # Image created using the Dockerfile attached in the folder
+            imagePullPolicy: Always # Ensure the image is always pulled when updated
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            ports:
+            - containerPort: 6379
+              name: gcs
+            - containerPort: 8265
+              name: dashboard
+            - containerPort: 10001
+              name: client
+            - containerPort: 8000
+              name: serve
+            volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+            resources:
+              limits:
+                cpu: 4
+                memory: 20Gi
+              requests:
+                cpu: 4
+                memory: 20Gi
+            env:
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
           nodeSelector: # This is using Karpenter Nodes with the provisioner label
             instanceType: mixed-x86
             provisionerType: Karpenter
             workload: rayhead
           volumes:
-            - name: ray-logs
-              emptyDir: {}
+          - name: ray-logs
+            emptyDir: {}
     workerGroupSpecs:
-      - groupName: inf2
-        replicas: 1
-        minReplicas: 1
-        maxReplicas: 1
-        rayStartParams: {}
-        template:
-          spec:
-            containers:
-              - name: worker
-                image: public.ecr.aws/data-on-eks/ray2.22.0-py310-llama2-13b-neuron:latest
-                imagePullPolicy: Always # Ensure the image is always pulled when updated
-                lifecycle:
-                  preStop:
-                    exec:
-                      command: ["/bin/sh", "-c", "ray stop"]
-                resources:
-                  limits:
-                    cpu: "180"
-                    memory: "700G"
-                    aws.amazon.com/neuron: "12"
-                  requests:
-                    cpu: "180"
-                    memory: "700G"
-                    aws.amazon.com/neuron: "12"
-                env:
-                  - name: LD_LIBRARY_PATH
-                    value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
-            nodeSelector:
-              instanceType: inferentia-inf2
-              provisionerType: Karpenter
-            tolerations:
-              - key: "aws.amazon.com/neuron"
-                operator: "Exists"
-                effect: "NoSchedule"
-              - key: "hub.jupyter.org/dedicated"
-                operator: "Equal"
-                value: "user"
-                effect: "NoSchedule"
+    - groupName: inf2
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 1
+      rayStartParams: {}
+      template:
+        spec:
+          schedulerName: my-scheduler
+          containers:
+          - name: worker
+            image: public.ecr.aws/data-on-eks/ray2.22.0-py310-llama2-13b-neuron:latest
+            imagePullPolicy: Always # Ensure the image is always pulled when updated
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]
+            resources:
+              limits:
+                cpu: "180"
+                memory: "700G"
+                aws.amazon.com/neuron: "12"
+              requests:
+                cpu: "180"
+                memory: "700G"
+                aws.amazon.com/neuron: "12"
+            env:
+            - name: LD_LIBRARY_PATH
+              value: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
+          nodeSelector:
+            instanceType: inferentia-inf2
+            provisionerType: Karpenter
+          tolerations:
+          - key: "aws.amazon.com/neuron"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "hub.jupyter.org/dedicated"
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -137,21 +139,21 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - http:
-        paths:
-          # Ray Dashboard
-          - path: /dashboard/(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: llama2
-                port:
-                  number: 8265
-          # Ray Serve
-          - path: /serve/(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: llama2
-                port:
-                  number: 8000
+  - http:
+      paths:
+      # Ray Dashboard
+      - path: /dashboard/(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: llama2
+            port:
+              number: 8265
+      # Ray Serve
+      - path: /serve/(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: llama2
+            port:
+              number: 8000

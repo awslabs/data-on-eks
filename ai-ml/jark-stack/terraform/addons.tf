@@ -119,6 +119,9 @@ module "eks_blueprints_addons" {
     chart_version       = "0.37.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
+    source_policy_documents = [
+      data.aws_iam_policy_document.karpenter_controller_policy.json
+    ]
   }
 
   #---------------------------------------
@@ -140,14 +143,48 @@ module "eks_blueprints_addons" {
     values     = [templatefile("${path.module}/helm-values/argo-events-values.yaml", {})]
   }
 
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get sexret name from Terrafrom output: `terraform output grafana_secret_name`
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <REPLACE_WIRTH_SECRET_ID> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [
+      templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
+        storage_class_type = kubernetes_storage_class.default_gp3.id
+      })
+    ]
+    chart_version = "48.1.1"
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+  }
+
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics = {
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+  }
+
 }
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
+
 module "data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.31.4" # ensure to update this to the latest/desired version
+  version = "~> 1.33"
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -182,7 +219,7 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_nvidia_device_plugin = true
   nvidia_device_plugin_helm_config = {
-    version = "v0.14.5"
+    version = "v0.16.1"
     name    = "nvidia-device-plugin"
     values = [
       <<-EOT
@@ -225,12 +262,14 @@ module "data_addons" {
   #---------------------------------------------------------------
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
+
     g5-gpu-karpenter = {
       values = [
         <<-EOT
       name: g5-gpu-karpenter
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
+        amiFamily: Bottlerocket
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[2]}
@@ -238,6 +277,20 @@ module "data_addons" {
           tags:
             Name: ${module.eks.cluster_name}-node
         instanceStorePolicy: RAID0
+        blockDeviceMappings:
+          # Root device
+          - deviceName: /dev/xvda
+            ebs:
+              volumeSize: 50Gi
+              volumeType: gp3
+              encrypted: true
+          # Data device: Container resources such as images and logs
+          - deviceName: /dev/xvdb
+            ebs:
+              volumeSize: 300Gi
+              volumeType: gp3
+              encrypted: true
+              ${var.bottlerocket_data_disk_snpashot_id != null ? "snapshotID: ${var.bottlerocket_data_disk_snpashot_id}" : ""}
 
       nodePool:
         labels:
@@ -276,13 +329,28 @@ module "data_addons" {
       name: x86-cpu-karpenter
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
+        amiFamily: Bottlerocket
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[3]}
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
-        instanceStorePolicy: RAID0
+        # instanceStorePolicy: RAID0
+        blockDeviceMappings:
+          # Root device
+          - deviceName: /dev/xvda
+            ebs:
+              volumeSize: 100Gi
+              volumeType: gp3
+              encrypted: true
+          # Data device: Container resources such as images and logs
+          - deviceName: /dev/xvdb
+            ebs:
+              volumeSize: 300Gi
+              volumeType: gp3
+              encrypted: true
+              ${var.bottlerocket_data_disk_snpashot_id != null ? "snapshotID: ${var.bottlerocket_data_disk_snpashot_id}" : ""}
 
       nodePool:
         labels:
@@ -350,5 +418,43 @@ resource "kubernetes_config_map_v1" "notebook" {
 
   data = {
     "dogbooth.ipynb" = file("${path.module}/src/notebook/dogbooth.ipynb")
+  }
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name_prefix             = "${local.name}-oss-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
+}
+
+data "aws_iam_policy_document" "karpenter_controller_policy" {
+  statement {
+    actions = [
+      "ec2:RunInstances",
+      "ec2:CreateLaunchTemplate",
+    ]
+    resources = ["*"]
+    effect    = "Allow"
+    sid       = "KarpenterControllerAdditionalPolicy"
   }
 }

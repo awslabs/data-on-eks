@@ -37,19 +37,25 @@ resource "kubernetes_storage_class_v1" "default_gp3" {
 }
 
 #---------------------------------------------------------------
-# IRSA for EBS CSI Driver
+# EKS Pod identiity association
 #---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.20"
-  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+
+module "aws_ebs_csi_pod_identity" {
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
+  version = "~> 1.4.0"
+
+  name                      = "aws-ebs-csi"
+  attach_aws_ebs_csi_policy = true
+
+  # Pod Identity Associations
+  associations = {
+    ebs-csi-controller = {
+      namespace       = "kube-system"
+      service_account = "ebs-csi-controller-sa"
+      cluster_name    = module.eks.cluster_name
     }
   }
+
   tags = local.tags
 }
 
@@ -58,7 +64,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "~> 1.16"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -69,35 +75,20 @@ module "eks_blueprints_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
-    coredns = {
-      preserve = true
-    }
-    kube-proxy = {
-      preserve = true
-    }
-    # VPC CNI uses worker node IAM role policies
-    vpc-cni = {
-      preserve = true
+    aws-ebs-csi-driver     = {}
+    coredns                = {}
+    eks-pod-identity-agent = {}
+    kube-proxy             = {}
+    vpc-cni                = {}
+    amazon-cloudwatch-observability = {
+      preserve                 = true
+      service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
     }
   }
 
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
-  #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_cluster_proportional_autoscaler = true
-  cluster_proportional_autoscaler = {
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      target = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
 
   #---------------------------------------
   # Metrics Server
@@ -138,17 +129,9 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.34.0"
+    chart_version       = "0.37.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------
-  # CloudWatch metrics for EKS
-  #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -198,16 +181,8 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
-    values = [
-      var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
-        storage_class_type  = kubernetes_storage_class_v1.default_gp3.id
-        region              = local.region
-        amp_sa              = local.amp_ingest_service_account
-        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
-        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
-        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
-        }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
-        storage_class_type = kubernetes_storage_class_v1.default_gp3.id
+    values = [templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
+      storage_class_type = kubernetes_storage_class_v1.default_gp3.id
       })
     ]
     chart_version = "48.1.1"
@@ -241,9 +216,12 @@ module "eks_blueprints_addons" {
   }
 
   tags = local.tags
+}
 
-  # We are installing Karpenter resources with Helm Chart, see helm-values/
-
+resource "aws_eks_access_entry" "this" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+  type          = "EC2_LINUX"
 }
 
 #---------------------------------------------------------------
@@ -255,8 +233,13 @@ module "eks_data_addons" {
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
-  enable_aws_neuron_device_plugin  = true
+  enable_aws_neuron_device_plugin = true
+
   enable_aws_efa_k8s_device_plugin = true
+
+  aws_efa_k8s_device_plugin_helm_config = {
+    version = "v0.5.3"
+  }
 
   #---------------------------------------
   # Volcano Scheduler for TorchX used in BERT-Large distributed training example
@@ -298,6 +281,58 @@ module "eks_data_addons" {
   # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
   #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
   karpenter_resources_helm_config = {
+    trainium-trn1 = {
+      values = [
+        <<-EOT
+      name: trainium-trn1
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          id: ${module.eks.node_security_group_id}
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        blockDevice:
+          deviceName: /dev/xvda
+          volumeSize: 500Gi
+          volumeType: gp3
+          encrypted: true
+          deleteOnTermination: true
+      nodePool:
+        labels:
+          - instanceType: trainium-trn1
+          - provisionerType: Karpenter
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: aws.amazon.com/neuron
+            value: "true"
+            effect: "NoSchedule"
+          - key: hub.jupyter.org/dedicated # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["trn1"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
     inferentia-inf2 = {
       values = [
         <<-EOT
@@ -339,7 +374,7 @@ module "eks_data_addons" {
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: ["spot", "on-demand"]
+            values: [ "spot", "on-demand"]
         limits:
           cpu: 1000
         disruption:
@@ -397,6 +432,38 @@ module "eks_data_addons" {
       ]
     }
   }
+}
+
+#---------------------------------------------------------------
+# IAM Role for Amazon CloudWatch Observability
+#---------------------------------------------------------------
+resource "aws_iam_role" "cloudwatch_observability_role" {
+  name_prefix = format("%s-%s", local.name, "cloudwatch-agent")
+  description = "The IAM role for amazon-cloudwatch-observability addon"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = module.eks.oidc_provider_arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" : "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent",
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" : "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.cloudwatch_observability_role.name
 }
 
 #---------------------------------------------------------------
@@ -467,6 +534,39 @@ data "kubectl_file_documents" "mpi_operator_yaml" {
 
 resource "kubectl_manifest" "mpi_operator" {
   for_each   = var.enable_mpi_operator ? data.kubectl_file_documents.mpi_operator_yaml.manifests : {}
+  yaml_body  = each.value
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+#---------------------------------------------------------------
+# Neuron Scheduler deployment
+# The YAML manifest contents for Neuron Scheduler will be replaced in future by Neuron Helm Chart
+#---------------------------------------------------------------
+
+data "http" "neuron_scheduler" {
+  url = "https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_downloads/e739253083129abeaf6f6ad1db7ccb21/my-scheduler.yml"
+}
+
+data "kubectl_file_documents" "neuron_scheduler" {
+  content = data.http.neuron_scheduler.response_body
+}
+
+resource "kubectl_manifest" "neuron_scheduler" {
+  for_each   = data.kubectl_file_documents.neuron_scheduler.manifests
+  yaml_body  = each.value
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+data "http" "k8s_neuron_scheduler_eks" {
+  url = "https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_downloads/e518187532701b6660dcd70ea28c2562/k8s-neuron-scheduler-eks.yml"
+}
+
+data "kubectl_file_documents" "k8s_neuron_scheduler_eks" {
+  content = data.http.k8s_neuron_scheduler_eks.response_body
+}
+
+resource "kubectl_manifest" "k8s_neuron_scheduler_eks" {
+  for_each   = data.kubectl_file_documents.k8s_neuron_scheduler_eks.manifests
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }

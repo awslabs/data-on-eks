@@ -50,6 +50,7 @@ spec:
         dashboard-host: '0.0.0.0'
       template:
         spec:
+          schedulerName: my-scheduler
           containers:
           - name: head
             image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:latest
@@ -91,6 +92,7 @@ spec:
       rayStartParams: {}
       template:
         spec:
+          schedulerName: my-scheduler
           containers:
           - name: worker
             image: public.ecr.aws/data-on-eks/ray2.9.0-py310-stablediffusion-neuron:latest
