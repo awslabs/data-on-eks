@@ -12,7 +12,6 @@ targets=(
 )
 
 # Delete Karpenter resources
-kubectl delete --all nodeclaim
 kubectl delete --all nodepool
 kubectl delete --all ec2nodeclass
 

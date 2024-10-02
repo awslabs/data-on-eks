@@ -4,11 +4,15 @@ sidebar_position: 4
 ---
 
 # Apache Kafka
-[Apache Kafka](https://kafka.apache.org/) is an open-source distributed event streaming platform used by thousands of companies for high-performance data pipelines, streaming analytics, data integration, and mission-critical applications.
+[Apache Kafka](https://kafka.apache.org/) is an open-source distributed event streaming platform used by thousands of companies for high-performance data pipelines, streaming analytics, data integration, and mission-critical applications. This blueprint implements Kafka using **KRaft (Kafka Raft) mode**, a significant architectural improvement that eliminates the need for Zookeeper. 
+
+## Why and what's KRaft?
+KRaft mode simplifies Kafka deployments, enhances scalability, and improves overall system performance. By using a built-in consensus protocol, KRaft reduces operational complexity, potentially speeds up broker startup times, and allows for better handling of metadata operations. This architectural shift enables Kafka to manage larger clusters more efficiently, making it an attractive option for organizations looking to streamline their event streaming infrastructure and prepare for future scalability needs.
 
 ## Strimzi for Apache Kafka
-[Strimzi](https://strimzi.io/) provides a way to run an Apache Kafka cluster on Kubernetes in various deployment configurations.
-Strimzi combines security and simple configuration to deploy and manage Kafka on Kubernetes using kubectl and/or GitOps based on the Operator Pattern.
+[Strimzi](https://strimzi.io/) provides a way to run an Apache Kafka cluster on Kubernetes in various deployment configurations. Strimzi combines security and simple configuration to deploy and manage Kafka on Kubernetes using kubectl and/or GitOps based on the Operator Pattern.
+
+As of version `0.32.0`, Strimzi provides full support for deploying Kafka clusters using KRaft, making it easier for organizations to leverage this new architecture. By using Strimzi, you can seamlessly deploy and manage Kafka clusters in KRaft mode on Kubernetes, taking advantage of its custom resource definitions (CRDs) and operators to handle the complexities of configuration and lifecycle management.
 
 ## Architecture
 
@@ -18,7 +22,7 @@ Architecture diagram work in progress
 
 :::
 
-## Managed Alternatives
+<CollapsibleContent header={<h2><span>Managed Alternatives</span></h2>}>
 
 ### Amazon Managed Streaming for Apache Kafka (MSK)
 [Amazon Managed Streaming for Apache Kafka (Amazon MSK)](https://aws.amazon.com/msk/) is a fully managed service that enables you to build and run applications that use Apache Kafka to process streaming data. Amazon MSK provides the control-plane operations, such as those for creating, updating, and deleting clusters. It lets you use Apache Kafka data-plane operations, such as those for producing and consuming data. It runs open-source versions of Apache Kafka. This means existing applications, tooling, and plugins from partners and the Apache Kafka community are supported. You can use Amazon MSK to create clusters that use any of the Apache Kafka versions listed under [Supported Apache Kafka versions](https://docs.aws.amazon.com/msk/latest/developerguide/supported-kafka-versions.html). Amazon MSK offers cluster-based or serverless deployment types.
@@ -26,7 +30,10 @@ Architecture diagram work in progress
 ### Amazon Kinesis Data Streams (KDS)
 [Amazon Kinesis Data Streams (KDS)](https://aws.amazon.com/kinesis/data-streams/) allows users to collect and process large streams of data records in real time. You can create data-processing applications, known as Kinesis Data Streams applications. A typical Kinesis Data Streams application reads data from a data stream as data records. You can send the processed records to dashboards, use them to generate alerts, dynamically change pricing and advertising strategies, or send data to a variety of other AWS services. Kinesis Data Streams support your choice of stream processing framework including Kinesis Client Library (KCL), Apache Flink, and Apache Spark Streaming. It is serverless, and scales automatically.
 
-## Storage considerations when self-managing Kafka
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Storage considerations when self-managing Kafka</span></h2>}>
+
 The most common resource bottlenecks for Kafka clusters are network throughput, storage throughput, and network throughput between brokers and the storage backend for brokers using network attached storage such as [Amazon Elastic Block Store (EBS)](https://aws.amazon.com/ebs/).
 
 ### Advantages to using EBS as persistent storage backend
@@ -47,7 +54,24 @@ and a maximum throughput of 500 MB/s per volume.
 * **st1** is a low-cost HDD option for frequently accessed and throughput intensive workloads with up to 500 IOPS and 500 MiB/s
 * For critical applications such as Zookeeper, provisioned IOPS volumes (**io2 Block Express, io2**) provide higher durability
 
-## Deploying the Solution
+### What about NVMe SSD Instance Storage for performance reasons?
+While EBS provides flexibility and ease of management, some high-performance use cases may benefit from using local NVMe SSD instance storage. This approach can offer significant performance improvements but comes with trade-offs in terms of data persistence and operational complexity.
+
+#### Considerations and challenges with NVMe SSD Instance Storage
+1. **Data Persistence:** Local storage is ephemeral. If an instance fails or is terminated, the data on that storage is lost. This requires careful consideration of your replication strategy and disaster recovery plans, especially if the cluster is big (hundreds of TBs of data).
+2. **Cluster Upgrades:** Upgrading Kafka or EKS becomes more complex, as you need to ensure data is properly migrated or replicated before making changes to nodes with local storage.
+3. **Scaling Complexity:** Scaling the cluster may require data rebalancing, which can be more time-consuming and resource-intensive compared to using network-attached storage.
+4. **Instance Type Lock-in:** Your choice of instance types becomes more limited, as you need to select instances with appropriate local storage options.
+
+#### So, when should you to consider to use Local Storage?
+1. For extremely high-performance requirements where every millisecond of latency matters.
+2. When your use case can tolerate potential data loss on individual node failures, relying on Kafka's replication for data durability.
+
+While local storage can offer performance benefits, it's important to carefully weigh these against the operational challenges, especially in a dynamic environment like EKS. For most use cases, we recommend starting with EBS storage for its flexibility and easier management, and only considering local storage for specific high-performance scenarios where the trade-offs are justified.
+
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
 In this [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/kafka), you will provision the following resources to run Kafka Cluster on EKS.
 
@@ -67,38 +91,24 @@ Ensure that you have installed the following tools on your machine.
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
 ### Deploy
-Clone the repository
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 ```
 
-Navigate into one of the example directories and run `terraform init`
+Navigate into one of the example directories and run `install.sh` script:
 
 ```bash
 cd data-on-eks/streaming/kafka
-terraform init
-```
-
-Run Terraform plan to verify the resources created by this execution.
-
-```bash
-export AWS_REGION="us-west-2" # Select your own region
-export TF_VAR_region=$AWS_REGION
-terraform plan
-```
-
-Deploy the pattern
-
-```bash
-terraform apply -target="module.vpc" --auto-approve
-terraform apply -target="module.eks" --auto-approve
-terraform apply --auto-approve
+chmod +x install.sh
+./install.sh
 ```
 
 :::info
 
-This deployment may take between 20 to 30mins.
+This deployment may take between 20 to 30 mins.
 
 :::
 
@@ -113,86 +123,104 @@ aws eks --region $AWS_REGION update-kubeconfig --name kafka-on-eks
 ```
 
 ### Get nodes
-Check if the deployment has created 6 nodes. 3 nodes for Core Node group and 3 for Kafka brokers across 3 AZs.
+
+Check if the deployment has created around 9 nodes. 3 nodes for Core Node group and 6 for Kafka brokers across 3 AZs.
 
 ```bash
 kubectl get nodes
 ```
-Output
+
+You should see something similar to this:
 
 ```text
-NAME                                       STATUS   ROLES    AGE   VERSION
-ip-10-1-0-144.eu-west-1.compute.internal   Ready    <none>   40m   v1.30.0-eks-036c24b
-ip-10-1-1-131.eu-west-1.compute.internal   Ready    <none>   40m   v1.30.0-eks-036c24b
-ip-10-1-2-126.eu-west-1.compute.internal   Ready    <none>   40m   v1.30.0-eks-036c24b
-ip-10-1-2-19.eu-west-1.compute.internal    Ready    <none>   15m   v1.30.0-eks-036c24b
-ip-10-1-1-144.eu-west-1.compute.internal   Ready    <none>   13m   v1.30.0-eks-036c24b
-ip-10-1-0-214.eu-west-1.compute.internal   Ready    <none>   6m    v1.30.0-eks-036c24b
+NAME                                       STATUS   ROLES    AGE     VERSION
+ip-10-1-0-151.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-0-175.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-0-193.eu-west-1.compute.internal   Ready    <none>   5h32m   v1.31.0-eks-a737599
+ip-10-1-1-104.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-1-106.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-1-231.eu-west-1.compute.internal   Ready    <none>   5h32m   v1.31.0-eks-a737599
+ip-10-1-2-20.eu-west-1.compute.internal    Ready    <none>   5h32m   v1.31.0-eks-a737599
+ip-10-1-2-4.eu-west-1.compute.internal     Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-2-56.eu-west-1.compute.internal    Ready    <none>   62m     v1.31.0-eks-5da6378
 ```
 
-### Verify Kafka Brokers and Zookeeper
+### Verify Kafka Brokers and Controller
 
-Verify the Kafka Broker and Zookeeper pods and the status created by the Strimzi Operator.
+Verify the Kafka Broker and Controller pods and the status created by the Strimzi Operator.
 
 ```bash
 kubectl get strimzipodsets.core.strimzi.io -n kafka
 ```
-Output
 
-    NAME                 PODS   READY PODS   CURRENT PODS   AGE
-    cluster-broker       3      2            3              19h
-    cluster-controller   3      3            3              19h
+You should see something similar to this:
+
+```text
+NAME                 PODS   READY PODS   CURRENT PODS   AGE
+cluster-broker       3      3            3              64m
+cluster-controller   3      3            3              64m
+```
+
+Let's confirm that you have created a Kafka cluster in KRaft mode:
 
 ```bash
 kubectl get kafka.kafka.strimzi.io -n kafka
 ```
-Output
 
-    NAME      DESIRED KAFKA REPLICAS   DESIRED ZK REPLICAS   READY   METADATA STATE   WARNINGS
-    cluster                                                  True    KRaft            True
+You should see an output similar to this:
 
-```bash
-kubectl get kafkatopic.kafka.strimzi.io -n kafka
+```text
+NAME      DESIRED KAFKA REPLICAS   DESIRED ZK REPLICAS   READY   METADATA STATE   WARNINGS
+cluster                                                  True    KRaft            True
 ```
-Output
-
-    NAME                                                                                               CLUSTER   PARTITIONS   REPLICATION FACTOR   READY
-    consumer-offsets---84e7a678d08f4bd226872e5cdd4eb527fadc1c6a                                        cluster   50           3                    True
-    strimzi-store-topic---effb8e3e057afce1ecf67c3f5d8e4e3ff177fc55                                     cluster   1            3                    True
-    strimzi-topic-operator-kstreams-topic-store-changelog---b75e702040b99be8a9263134de3507fc0cc4017b   cluster   1            3                    True
-    strimzi.cruisecontrol.metrics                                                                      cluster   1            3                    True
-    strimzi.cruisecontrol.modeltrainingsamples                                                         cluster   32           2                    True
-    strimzi.cruisecontrol.partitionmetricsamples                                                       cluster   32           2                    True
 
 ### Verify the running Kafka pods
+Let's confirm that the pods for the Kafka cluster are running:
 
 ```bash
 kubectl get pods -n kafka
 ```
-Output
 
-    NAME                                      READY   STATUS    RESTARTS   AGE
-    cluster-broker-0                          1/1     Running   0          24m
-    cluster-broker-1                          1/1     Running   0          15m
-    cluster-broker-2                          1/1     Running   0          8m31s
-    cluster-controller-3                      1/1     Running   0          16m
-    cluster-controller-4                      1/1     Running   0          7m8s
-    cluster-controller-5                      1/1     Running   0          7m48s
-    cluster-cruise-control-74f5977f48-l8pzp   1/1     Running   0          24m
-    cluster-entity-operator-d46598d9c-xgwnh   2/2     Running   0          24m
-    cluster-kafka-exporter-5ff5ff4675-2cz9m   1/1     Running   0          24m
+You should see an output similar to this:
 
+```text
+NAME                                      READY   STATUS    RESTARTS   AGE
+cluster-broker-0                          1/1     Running   0          24m
+cluster-broker-1                          1/1     Running   0          15m
+cluster-broker-2                          1/1     Running   0          8m31s
+cluster-controller-3                      1/1     Running   0          16m
+cluster-controller-4                      1/1     Running   0          7m8s
+cluster-controller-5                      1/1     Running   0          7m48s
+cluster-cruise-control-74f5977f48-l8pzp   1/1     Running   0          24m
+cluster-entity-operator-d46598d9c-xgwnh   2/2     Running   0          24m
+cluster-kafka-exporter-5ff5ff4675-2cz9m   1/1     Running   0          24m
+```
+</CollapsibleContent>
 
-## Create Kafka Topic and run Sample test
+<CollapsibleContent header={<h2><span>Create Kafka Topic and run Sample test</span></h2>}>
+
 We will create one kafka topic and run sample producer script to produce new messages to the kafka topic.
-We can then verify the data in the topic using sample consumer script.
 
 ### Create a kafka Topic
 
-Run this command to create a new topic called `test-topic` under `kafka` namespace
+Run this command to create a new topic called `test-topic` under `kafka` namespace:
+
 ```bash
 cd streaming/kafka/examples/
 kubectl apply -f kafka-topics.yaml
+```
+
+Confirm that the topic has been created:
+
+```bash
+kubectl get kafkatopic.kafka.strimzi.io -n kafka
+```
+
+You should see an output similar to this:
+
+```text
+NAME         CLUSTER   PARTITIONS   REPLICATION FACTOR   READY
+test-topic   cluster   12           3                    True
 ```
 
 Verify the status of the `test-topic` topic.
@@ -200,41 +228,39 @@ Verify the status of the `test-topic` topic.
 ```bash
 kubectl exec -it cluster-broker-0 -c kafka -n kafka -- /bin/bash -c "/opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092"
 ```
-Output
 
-    __consumer_offsets
-    __strimzi-topic-operator-kstreams-topic-store-changelog
-    __strimzi_store_topic
-    my-topic
-    my-topic-reversed
-    strimzi.cruisecontrol.metrics
-    strimzi.cruisecontrol.modeltrainingsamples
-    strimzi.cruisecontrol.partitionmetricsamples
+You should see an output similar to this:
+
+```text
+strimzi.cruisecontrol.metrics
+strimzi.cruisecontrol.modeltrainingsamples
+strimzi.cruisecontrol.partitionmetricsamples
+test-topic
+```
 
 ### Execute sample Kafka Producer
 
-Open two terminals one for Kafka producer and one for Kafka Consumer.
-
-Execute the following command and press enter twice until you see the `>` prompt.
-Start typing some random content. This data will be written to the `my-topic`.
+Open two terminals one for Kafka producer and one for Kafka Consumer. Execute the following command and press enter twice until you see the `>` prompt. Start typing some random content. This data will be written to the `test-topic`.
 
 ```bash
-kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic
+kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic
 ```
 
 ### Execute sample Kafka Consumer
 
-Now, you can verify the data written to `my-topic` by running Kafka consumer pod in another terminal
+Now, you can verify the data written to `test-topic` by running Kafka consumer pod in another terminal
 
 ```bash
-kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.7.1 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic my-topic --from-beginning
+kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic --from-beginning
 ```
 
 ### Kafka Producer and Consumer output
 
 ![img.png](img/kafka-consumer.png)
 
-## Grafana Dashboard for Kafka
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Grafana Dashboard for Kafka</span></h2>}>
 
 ### Login to Grafana
 Login to Grafana dashboard by running the following command.
@@ -252,35 +278,27 @@ aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $A
 
 ### Open Strimzi Kafka Dashboard
 
-The below are builtin Kafka dashboards which created during the deployment.
+Go to the `Dashboards` page at `http://localhost:8080/dashboards`, then click on `General`, and then on `Strimizi Kafka`.
+
+You should see the below builtin Kafka dashboards which was created during the deployment:
 
 ![Kafka Brokers Dashboard](img/kafka-brokers.png)
 
-### Open Strimzi Kafka Exporter
-You can verify the `my-topic` with three partitions below.
+</CollapsibleContent>
 
-![img.png](img/kafka-exporter.png)
+<CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
-## Cleanup
-
-To clean up your environment, destroy the Terraform modules in reverse order with `--target` option to avoid destroy failures.
-
-Destroy the Kubernetes Add-ons, EKS cluster with Node groups and VPC
+To clean up your environment, run the following commands and enter the same region you used when creating the EKS cluster:
 
 ```bash
-export AWS_REGION="us-west-2" # Select your own region
-export TF_VAR_region=$AWS_REGION
-terraform destroy --auto-approve
+cd data-on-eks/streaming/kafka
+chmod +x cleanup.sh
+./cleanup.sh
 ```
 
-Finally, destroy any additional resources that are not in the above modules
+:::info
 
-```bash
-terraform destroy -auto-approve
-```
-:::caution
+This may take between 20 to 30 mins.
 
-To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
-
-ex. Delete kafka-on-eks EBS volumes
 :::
+</CollapsibleContent>
