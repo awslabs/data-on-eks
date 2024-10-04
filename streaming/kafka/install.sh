@@ -13,7 +13,7 @@ targets=(
 )
 
 # Initialize Terraform
-terraform init -upgrade
+terraform init --upgrade
 
 # Apply modules in sequence
 for target in "${targets[@]}"

@@ -125,7 +125,7 @@ aws eks --region $AWS_REGION update-kubeconfig --name kafka-on-eks
 
 ### Get nodes
 
-Check if the deployment has created around 9 nodes. 3 nodes for Core Node group and 6 for Kafka brokers across 3 AZs.
+Check if the deployment has created around 3 nodes for Core Node group:
 
 ```bash
 kubectl get nodes
@@ -135,13 +135,53 @@ You should see something similar to this:
 
 ```text
 NAME                                       STATUS   ROLES    AGE     VERSION
-ip-10-1-0-151.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
-ip-10-1-0-175.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
 ip-10-1-0-193.eu-west-1.compute.internal   Ready    <none>   5h32m   v1.31.0-eks-a737599
-ip-10-1-1-104.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
-ip-10-1-1-106.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
 ip-10-1-1-231.eu-west-1.compute.internal   Ready    <none>   5h32m   v1.31.0-eks-a737599
 ip-10-1-2-20.eu-west-1.compute.internal    Ready    <none>   5h32m   v1.31.0-eks-a737599
+```
+</CollapsibleContent>
+
+<CollapsibleContent header={<h2><span>Create a Kafka cluster</span></h2>}>
+
+## Deploy the Kafka cluster manifests
+
+Create a namespace dedicated to the Kafka cluster:
+
+```bash
+kubectl create namespace kafka
+```
+
+Deploy the Kafka cluster manifests:
+
+```bash
+kubectl apply -f kafka-manifests/
+```
+
+Deploy the Strimzi Kafka dashboards in Grafana:
+
+```bash
+kubectl apply -f monitoring-manifests/
+```
+
+### Check nodes provsioned by Karpenter
+
+Check if you now see around 9 nodes, 3 nodes for Core Node group and 6 for Kafka brokers across 3 AZs:
+
+```bash
+kubectl get nodes
+```
+
+You should see something similar to this:
+
+```text
+NAME                                       STATUS   ROLES    AGE     VERSION
+ip-10-1-1-231.eu-west-1.compute.internal   Ready    <none>   5h32m   v1.31.0-eks-a737599
+ip-10-1-2-20.eu-west-1.compute.internal    Ready    <none>   5h32m   v1.31.0-eks-a737599
+ip-10-1-0-193.eu-west-1.compute.internal   Ready    <none>   5h32m   v1.31.0-eks-a737599
+ip-10-1-0-151.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-0-175.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-1-104.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
+ip-10-1-1-106.eu-west-1.compute.internal   Ready    <none>   62m     v1.31.0-eks-5da6378
 ip-10-1-2-4.eu-west-1.compute.internal     Ready    <none>   62m     v1.31.0-eks-5da6378
 ip-10-1-2-56.eu-west-1.compute.internal    Ready    <none>   62m     v1.31.0-eks-5da6378
 ```
@@ -207,8 +247,7 @@ We will create one kafka topic and run sample producer script to produce new mes
 Run this command to create a new topic called `test-topic` under `kafka` namespace:
 
 ```bash
-cd streaming/kafka/examples/
-kubectl apply -f kafka-topics.yaml
+kubectl apply -f examples/kafka-topics.yaml
 ```
 
 Confirm that the topic has been created:

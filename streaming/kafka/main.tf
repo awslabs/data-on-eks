@@ -15,10 +15,7 @@ locals {
 
   cluster_version = var.eks_cluster_version
 
-  kafka_namespace = "kafka"
-
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs = slice(data.aws_availability_zones.available.names, 0, 3)
 
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
@@ -27,80 +24,4 @@ locals {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
   }
-}
-
-################################################################################
-# Cluster
-################################################################################
-
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "20.8.3"
-
-  cluster_name    = local.name
-  cluster_version = local.cluster_version
-  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
-  cluster_endpoint_public_access = true
-
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-
-  create_cloudwatch_log_group              = false
-  create_cluster_security_group            = false
-  create_node_security_group               = false
-  authentication_mode                      = "API_AND_CONFIG_MAP"
-  enable_cluster_creator_admin_permissions = true
-
-  eks_managed_node_groups = {
-    core_node_group = {
-      name = "core-node-group"
-
-      min_size     = 3
-      max_size     = 9
-      desired_size = 3
-
-      instance_types = ["m6g.xlarge", "m6gd.xlarge", "m7g.xlarge", "c6g.xlarge", "c6gd.xlarge", "c7g.xlarge"]
-      ami_type       = "AL2_ARM_64"
-
-      ebs_optimized = true
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 1000
-            volume_type = "gp3"
-          }
-        }
-      }
-      labels = {
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "core"
-      }
-      tags = {
-        Name = "core-node-grp"
-      }
-    }
-  }
-
-  tags = merge(local.tags, {
-    "karpenter.sh/discovery" = local.name
-  })
-}
-
-module "aws_auth" {
-  source  = "terraform-aws-modules/eks/aws//modules/aws-auth"
-  version = "20.17.2"
-
-  manage_aws_auth_configmap = true
-
-  aws_auth_roles = [
-    {
-      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups = [
-        "system:bootstrappers",
-        "system:nodes",
-      ]
-    }
-  ]
 }

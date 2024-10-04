@@ -1,26 +1,28 @@
 #!/bin/bash
+set -o errexit
+set -o pipefail
 
 read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
-# List of Terraform modules to apply in sequence
+echo "Deleting EC2 instances created ..."
+aws ec2 describe-instances \
+  --filters "Name=tag:karpenter.sh/nodepool,Values=kafka" "Name=instance-state-name,Values=running" \
+  --query "Reservations[*].Instances[*].InstanceId" \
+  --output text | \
+xargs -n 1 aws ec2 terminate-instances --instance-ids
+
 targets=(
   "module.eks_data_addons"
   "module.eks_blueprints_addons"
   "module.eks"
-  "module.vpc"
 )
 
-# Delete Karpenter resources
-kubectl delete --all nodepool
-kubectl delete --all ec2nodeclass
-
-# Destroy modules in sequence
 for target in "${targets[@]}"
 do
-  echo "Destroying module $target..."
-  destroy_output=$(terraform destroy -target="$target" -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
-  if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
+  terraform destroy -target="$target" -auto-approve
+  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1)
+  if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else
     echo "FAILED: Terraform destroy of $target failed"
@@ -28,12 +30,20 @@ do
   fi
 done
 
-## Final destroy to catch any remaining resources
-echo "Destroying remaining resources..."
-destroy_output=$(terraform destroy -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
-if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
-  echo "SUCCESS: Terraform destroy of all modules completed successfully"
+echo "Deleting any remaining EC2 resources ..."
+
+aws ec2 describe-security-groups \
+  --filters "Name=tag:kubernetes.io/cluster/kafka-on-eks,Values=owned" \
+  --query "SecurityGroups[*].GroupId" \
+  --output text | \
+xargs -n 1 aws ec2 delete-security-group --group-id
+
+echo "Deleting any remaining resources ..."
+terraform destroy -auto-approve
+destroy_output=$(terraform destroy -auto-approve 2>&1)
+if [[ $? -eq 0 && $destroy_output == *"Destroy complete!"* ]]; then
+  echo "SUCCESS: Terraform destroy of all targets completed successfully"
 else
-  echo "FAILED: Terraform destroy of all modules failed"
+  echo "FAILED: Terraform destroy of all targets failed"
   exit 1
 fi
