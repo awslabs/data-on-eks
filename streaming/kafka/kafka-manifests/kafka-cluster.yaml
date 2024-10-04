@@ -3,10 +3,13 @@ kind: Kafka
 metadata:
   name: cluster
   namespace: kafka
+  annotations:
+    strimzi.io/kraft: enabled
+    strimzi.io/node-pools: enabled
 spec:
   kafka:
-    version: 3.6.0
-    replicas: 4
+    version: 3.8.0
+    metadataVersion: 3.8-IV0
     listeners:
       - name: plain
         port: 9092
@@ -16,15 +19,12 @@ spec:
         port: 9093
         type: internal
         tls: true
-        authentication:
-          type: tls
     config:
       offsets.topic.replication.factor: 3
       transaction.state.log.replication.factor: 3
       transaction.state.log.min.isr: 2
       default.replication.factor: 3
       min.insync.replicas: 2
-      inter.broker.protocol.version: "3.6"
     resources:
       requests:
         memory: 58Gi
@@ -59,6 +59,27 @@ spec:
                       operator: In
                       values:
                         - kafka
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: "strimzi.io/pool-name"
+                  operator: In
+                  values:
+                  - broker
+                  - controller
+              topologyKey: "kubernetes.io/hostname"
+        topologySpreadConstraints:
+          - labelSelector:
+              matchExpressions:
+              - key: "strimzi.io/pool-name"
+                operator: In
+                values:
+                  - broker
+                  - controller
+            maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
     metricsConfig:
       type: jmxPrometheusExporter
       valueFrom:
@@ -67,19 +88,6 @@ spec:
           key: kafka-metrics-config.yml
     rack:
       topologyKey: topology.kubernetes.io/zone
-  zookeeper:
-    replicas: 3
-    storage:
-      type: persistent-claim
-      size: 10Gi
-      class: gp3
-      deleteClaim: false
-    metricsConfig:
-      type: jmxPrometheusExporter
-      valueFrom:
-        configMapKeyRef:
-          name: kafka-metrics
-          key: zookeeper-metrics-config.yml
   entityOperator:
     topicOperator: {}
     userOperator: {}
@@ -87,7 +95,6 @@ spec:
   kafkaExporter:
     topicRegex: ".*"
     groupRegex: ".*"
-
 ---
 kind: ConfigMap
 apiVersion: v1
@@ -259,3 +266,43 @@ data:
     - pattern: kafka.cruisecontrol<name=(.+)><>(\w+)
       name: kafka_cruisecontrol_$1_$2
       type: GAUGE
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: controller
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: cluster
+spec:
+  replicas: 3
+  roles:
+    - controller
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 100Gi
+        kraftMetadata: shared
+        deleteClaim: false
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: broker
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: cluster
+spec:
+  replicas: 3
+  roles:
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 100Gi
+        kraftMetadata: shared
+        deleteClaim: false

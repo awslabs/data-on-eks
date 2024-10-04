@@ -58,6 +58,9 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
+#---------------------------------------------------------------
+# EKS Blueprints Addons
+#---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.2"
@@ -88,20 +91,6 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Kubernetes Add-ons
   #---------------------------------------
-
-  #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_cluster_proportional_autoscaler = true
-  cluster_proportional_autoscaler = {
-    timeout = "300"
-    values = [templatefile("${path.module}/helm-values/coredns-autoscaler-values.yaml", {
-      target = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
-  }
-
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
@@ -115,16 +104,21 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Cluster Autoscaler
+  # Karpenter Autoscaler for EKS Cluster
   #---------------------------------------
-  enable_cluster_autoscaler = true
-  cluster_autoscaler = {
-    timeout     = "300"
-    create_role = true
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = local.region,
-      eks_cluster_id = module.eks.cluster_name
-    })]
+  enable_karpenter = true
+  karpenter = {
+    chart_version       = "1.0.5"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+  karpenter_enable_spot_termination          = true
+  karpenter_enable_instance_profile_creation = true
+  karpenter_node = {
+    iam_role_use_name_prefix = false
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
   }
 
   #---------------------------------------
@@ -191,7 +185,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "1.34.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------------------------------
@@ -202,56 +196,98 @@ module "eks_data_addons" {
     values = [templatefile("${path.module}/helm-values/strimzi-kafka-values.yaml", {
       operating_system = "linux"
       node_group_type  = "core"
-    })]
-  }
-}
-
-#---------------------------------------------------------------
-# Install Kafka cluster
-# NOTE: Kafka Zookeeper and Broker pod creation may to 2 to 3 mins
-#---------------------------------------------------------------
-
-resource "kubernetes_namespace" "kafka_namespace" {
-  metadata {
-    name = local.kafka_namespace
+    })],
+    version = "0.43.0"
   }
 
-  depends_on = [module.eks.cluster_name]
-}
-
-data "kubectl_path_documents" "kafka_cluster" {
-  pattern = "${path.module}/kafka-manifests/kafka-cluster.yaml"
-}
-
-resource "kubectl_manifest" "kafka_cluster" {
-  for_each  = toset(data.kubectl_path_documents.kafka_cluster.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_data_addons]
-}
-
-#---------------------------------------------------------------
-# Deploy Strimzi Kafka and Zookeeper dashboards in Grafana
-#---------------------------------------------------------------
-
-data "kubectl_path_documents" "podmonitor_metrics" {
-  pattern = "${path.module}/monitoring-manifests/podmonitor-*.yaml"
-}
-
-resource "kubectl_manifest" "podmonitor_metrics" {
-  for_each  = toset(data.kubectl_path_documents.podmonitor_metrics.documents)
-  yaml_body = each.value
-
-  depends_on = [module.eks_blueprints_addons]
-}
-
-data "kubectl_path_documents" "grafana_strimzi_dashboard" {
-  pattern = "${path.module}/monitoring-manifests/grafana-strimzi-*-dashboard.yaml"
-}
-
-resource "kubectl_manifest" "grafana_strimzi_dashboard" {
-  for_each  = toset(data.kubectl_path_documents.grafana_strimzi_dashboard.documents)
-  yaml_body = each.value
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    default = {
+      values = [
+        <<-EOT
+      name: default
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        amiFamily: Bottlerocket
+        amiSelectorTerms:
+          - alias: "bottlerocket@latest"
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: apps
+        requirements:
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: [ "amd64", "arm64"]
+          - key: karpenter.sh/capacity-type
+            operator: In
+            values: ["spot", "on-demand"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c", "m", "r"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 30s
+          budgets:
+          - nodes: 10%
+      EOT
+      ]
+    }
+    kafka = {
+      values = [
+        <<-EOT
+      name: kafka
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        amiFamily: Bottlerocket
+        amiSelectorTerms:
+          - alias: "bottlerocket@latest"
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: kafka
+        requirements:
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: [ "arm64"]
+          - key: karpenter.sh/capacity-type
+            operator: In
+            values: ["on-demand"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c", "m", "r"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 30s
+          budgets:
+          - nodes: 10%
+      EOT
+      ]
+    }
+  }
 
   depends_on = [module.eks_blueprints_addons]
 }
