@@ -65,7 +65,7 @@ module "spark_team_irsa" {
 
 resource "aws_iam_policy" "spark" {
   description = "IAM role policy for Spark Job execution"
-  name        = "${local.name}-spark-irsa"
+  name_prefix = "${local.name}-spark-irsa"
   policy      = data.aws_iam_policy_document.spark_operator.json
 }
 
