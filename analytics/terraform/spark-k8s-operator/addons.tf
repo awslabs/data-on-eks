@@ -417,7 +417,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.34.0"
+    chart_version       = "1.0.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
