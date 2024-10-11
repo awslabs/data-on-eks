@@ -143,6 +143,39 @@ module "eks_blueprints_addons" {
     values     = [templatefile("${path.module}/helm-values/argo-events-values.yaml", {})]
   }
 
+  #---------------------------------------
+  # Prommetheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get sexret name from Terrafrom output: `terraform output grafana_secret_name`
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <REPLACE_WIRTH_SECRET_ID> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [
+      templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
+        storage_class_type = kubernetes_storage_class.default_gp3.id
+      })
+    ]
+    chart_version = "48.1.1"
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+  }
+
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics = {
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+  }
+
 }
 
 #---------------------------------------------------------------
@@ -151,7 +184,7 @@ module "eks_blueprints_addons" {
 
 module "data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.33"
+  version = "1.33.0"
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -386,6 +419,32 @@ resource "kubernetes_config_map_v1" "notebook" {
   data = {
     "dogbooth.ipynb" = file("${path.module}/src/notebook/dogbooth.ipynb")
   }
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name_prefix             = "${local.name}-oss-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
 }
 
 data "aws_iam_policy_document" "karpenter_controller_policy" {

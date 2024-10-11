@@ -80,6 +80,10 @@ module "eks_blueprints_addons" {
     eks-pod-identity-agent = {}
     kube-proxy             = {}
     vpc-cni                = {}
+    amazon-cloudwatch-observability = {
+      preserve                 = true
+      service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
+    }
   }
 
   #---------------------------------------
@@ -128,14 +132,6 @@ module "eks_blueprints_addons" {
     chart_version       = "0.37.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------
-  # CloudWatch metrics for EKS
-  #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -222,7 +218,7 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
-resource "aws_eks_access_entry" "karpenter_node_access_entry" {
+resource "aws_eks_access_entry" "this" {
   cluster_name  = module.eks.cluster_name
   principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
   type          = "EC2_LINUX"
@@ -233,7 +229,7 @@ resource "aws_eks_access_entry" "karpenter_node_access_entry" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.30" # ensure to update this to the latest/desired version
+  version = "1.33.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -285,6 +281,58 @@ module "eks_data_addons" {
   # We use index 2 to select the subnet in AZ1 with the 100.x CIDR:
   #   module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
   karpenter_resources_helm_config = {
+    trainium-trn1 = {
+      values = [
+        <<-EOT
+      name: trainium-trn1
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          id: ${module.eks.node_security_group_id}
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        blockDevice:
+          deviceName: /dev/xvda
+          volumeSize: 500Gi
+          volumeType: gp3
+          encrypted: true
+          deleteOnTermination: true
+      nodePool:
+        labels:
+          - instanceType: trainium-trn1
+          - provisionerType: Karpenter
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: aws.amazon.com/neuron
+            value: "true"
+            effect: "NoSchedule"
+          - key: hub.jupyter.org/dedicated # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["trn1"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
     inferentia-inf2 = {
       values = [
         <<-EOT
@@ -384,6 +432,38 @@ module "eks_data_addons" {
       ]
     }
   }
+}
+
+#---------------------------------------------------------------
+# IAM Role for Amazon CloudWatch Observability
+#---------------------------------------------------------------
+resource "aws_iam_role" "cloudwatch_observability_role" {
+  name_prefix = format("%s-%s", local.name, "cloudwatch-agent")
+  description = "The IAM role for amazon-cloudwatch-observability addon"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = module.eks.oidc_provider_arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" : "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent",
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" : "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.cloudwatch_observability_role.name
 }
 
 #---------------------------------------------------------------

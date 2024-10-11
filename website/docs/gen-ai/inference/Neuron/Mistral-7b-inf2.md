@@ -1,6 +1,6 @@
 ---
 title: Mistral-7B on Inferentia2
-sidebar_position: 1
+sidebar_position: 2
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
@@ -15,7 +15,7 @@ To generate a token in HuggingFace, log in using your HuggingFace account and cl
 
 :::
 
-# Deploying Mistral-7B-Instruct-v0.2 on Inferentia2, Ray Serve, Gradio
+# Serving Mistral-7B-Instruct-v0.2 using Inferentia2, Ray Serve, Gradio
 This pattern outlines the deployment of the [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) model on Amazon EKS, utilizing [AWS Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) for enhanced text generation performance. [Ray Serve](https://docs.ray.io/en/latest/serve/index.html) ensures efficient scaling of Ray Worker nodes, while [Karpenter](https://karpenter.sh/) dynamically manages the provisioning of AWS Inferentia2 nodes. This setup optimizes for high-performance and cost-effective text generation applications in a scalable cloud environment.
 
 Through this pattern, you will accomplish the following:
@@ -121,7 +121,7 @@ To deploy the Mistral-7B-Instruct-v0.2 model, it's essential to configure your H
 
 export HUGGING_FACE_HUB_TOKEN=$(echo -n "Your-Hugging-Face-Hub-Token-Value" | base64)
 
-cd ../../gen-ai/inference/mistral-7b-rayserve-inf2
+cd data-on-eks/gen-ai/inference/mistral-7b-rayserve-inf2
 envsubst < ray-service-mistral.yaml| kubectl apply -f -
 ```
 
@@ -190,7 +190,7 @@ The following YAML script (`gen-ai/inference/mistral-7b-rayserve-inf2/gradio-ui.
 To deploy this, execute:
 
 ```bash
-cd gen-ai/inference/mistral-7b-rayserve-inf2/
+cd data-on-eks/gen-ai/inference/mistral-7b-rayserve-inf2/
 kubectl apply -f gradio-ui.yaml
 ```
 
@@ -242,7 +242,7 @@ Finally, we'll provide instructions for cleaning up and deprovisioning the resou
 **Step1:** Delete Gradio App and mistral Inference deployment
 
 ```bash
-cd gen-ai/inference/mistral-7b-rayserve-inf2
+cd data-on-eks/gen-ai/inference/mistral-7b-rayserve-inf2
 kubectl delete -f gradio-ui.yaml
 kubectl delete -f ray-service-mistral.yaml
 ```
@@ -251,6 +251,6 @@ kubectl delete -f ray-service-mistral.yaml
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ../../../ai-ml/trainium-inferentia/
+cd data-on-eks/ai-ml/trainium-inferentia/
 ./cleanup.sh
 ```

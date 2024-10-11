@@ -238,7 +238,7 @@ You can test with your custom prompts by adding them to the `prompts.txt` file.
 To run the Python client application in a virtual environment, follow these steps:
 
 ```bash
-cd gen-ai/inference/vllm-rayserve-gpu
+cd data-on-eks/gen-ai/inference/vllm-rayserve-gpu
 python3 -m venv .venv
 source .venv/bin/activate
 pip install requests
@@ -379,6 +379,111 @@ In summary, the theory of relativity is a groundbreaking theory in physics that 
 ```
 </details>
 
+## Observability
+
+As part of this blueprint, we have also deployed the Kube Prometheus stack, which provides Prometheus server and Grafana deployments for monitoring and observability.
+
+First, let's verify the services deployed by the Kube Prometheus stack:
+
+```bash
+kubectl get svc -n kube-prometheus-stack
+```
+
+You should see output similar to this:
+
+```text
+kubectl get svc -n kube-prometheus-stack
+NAME                                             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+kube-prometheus-stack-grafana                    ClusterIP   172.20.252.10    <none>        80/TCP              11d
+kube-prometheus-stack-kube-state-metrics         ClusterIP   172.20.34.181    <none>        8080/TCP            11d
+kube-prometheus-stack-operator                   ClusterIP   172.20.186.93    <none>        443/TCP             11d
+kube-prometheus-stack-prometheus                 ClusterIP   172.20.147.64    <none>        9090/TCP,8080/TCP   11d
+kube-prometheus-stack-prometheus-node-exporter   ClusterIP   172.20.171.165   <none>        9100/TCP            11d
+prometheus-operated                              ClusterIP   None             <none>        9090/TCP            11d
+```
+
+After verifying the Kube Prometheus stack services, we need to configure Prometheus to monitor our Ray cluster comprehensively.
+This requires deploying both ServiceMonitor and PodMonitor resources:
+
+ - **ServiceMonitor** is used to collect metrics from the Ray head node, which has a Kubernetes Service exposing its metrics endpoint.
+ - **PodMonitor** is necessary because KubeRay operator does not create a Kubernetes service for the Ray worker Pods. Therefore, we cannot use a ServiceMonitor to scrape metrics from worker Pods and must use PodMonitors CRD instead.
+
+```bash
+cd data-on-eks/ai-ml/jark-stack/terraform/monitoring
+```
+```bash
+kubectl apply -f serviceMonitor.yaml
+kubectl apply -f podMonitor.yaml
+```
+
+**Grafana and Prometheus Integration**
+
+To integrate Grafana and Prometheus with the Ray Dashboard, we set specific environment variables in the Ray cluster configuration:
+
+```text
+env:
+  - name: RAY_GRAFANA_HOST
+    value: http://kube-prometheus-stack-grafana.kube-prometheus-stack.svc:80
+  - name: RAY_PROMETHEUS_HOST
+    value: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc:9090
+```
+
+These environment variables are crucial for enabling the embedding of Grafana panels within the Ray Dashboard and for proper communication between Ray, Grafana, and Prometheus:
+
+ - **RAY_GRAFANA_HOST** defines the internal Kubernetes service URL for Grafana. The Ray head pod uses this for backend health checks and communication within the cluster.
+ - **RAY_PROMETHEUS_HOST** specifies the internal Kubernetes service URL for Prometheus, allowing Ray to query metrics when needed.
+
+**Access Prometheus Web UI**
+
+```bash
+# Forward the port of Prometheus Web UI in the Prometheus server Pod.
+kubectl port-forward prometheus-kube-prometheus-stack-prometheus-0 -n kube-prometheus-stack 9090:9090
+```
+ - Go to (YOUR_IP):9090/targets (e.g. 127.0.0.1:9090/targets). You should be able to see:
+   - podMonitor/kube-prometheus-stack/ray-workers-monitor/0 (1/1 up)
+   - serviceMonitor/kube-prometheus-stack/ray-head-monitor/0 (2/2 up)
+
+![RayServe Prometheus](../img/ray-prometheus.png)
+
+**Access Grafana**
+
+```bash
+- Port-forward Grafana service:
+
+kubectl port-forward deployment/kube-prometheus-stack-grafana -n kube-prometheus-stack 3000:3000
+
+# Check (YOUR_IP):3000/login for the Grafana login page (e.g. 127.0.0.1:3000/login).
+
+- Grafana Admin user
+admin
+
+- Get secret name from Terraform output
+terraform output grafana_secret_name
+
+- Get admin user password
+aws secretsmanager get-secret-value --secret-id <grafana_secret_name_output> --region $AWS_REGION --query "SecretString" --output text
+```
+`Note:` kubectl port-forward is not recommended for production use. Refer to [this Grafana document](https://grafana.com/tutorials/run-grafana-behind-a-proxy/) for exposing Grafana behind a reverse proxy.
+
+**Import Open Source Grafana Dashboards**
+
+- Create new dashboard by importing JSON file via Dashboards menu.
+- Click 'Dashboards' icon in left panel, 'New', 'Import', then 'Upload JSON file'.
+- Choose a JSON file.
+   - `Case 1:` If you are using Ray 2.24.0, you can use the sample config files in [GitHub repository](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/jark-stack/terraform/monitoring/ray-dashboards). The file names have a pattern of xxx_grafana_dashboard.json.
+   - `Case 2:` Otherwise, you should import the JSON files from `/tmp/ray/session_latest/metrics/grafana/dashboards/` in the head Pod. You can use `kubectl cp` to copy the files from the head Pod to your local machine.
+- Click “Import”.
+```text
+TODO: Note that importing the dashboard manually is not ideal. We should find a way to import the dashboard automatically.
+```
+In the Grafana dashboard below, you can see several metrics:
+
+- **Scheduler Task State** displays the current number of tasks in a particular state.
+- **Active Tasks by Name** shows the current number of (live) tasks with a particular name.
+- **Scheduler Actor State** illustrates the current number of actors in a particular state.
+- **Active Actors by Name** presents the current number of (live) actors with a particular name.
+
+![RayServe Grafana](../img/ray-grafana-dashboard.png)
 
 ## Conclusion
 Integrating Ray Serve with a vLLM backend offers numerous benefits for large language model (LLM) inference, particularly in terms of efficiency, scalability, and cost-effectiveness. Ray Serve's ability to handle concurrent requests and dynamically batch them ensures optimal GPU utilization, which is crucial for high-throughput LLM applications. The integration with vLLM enhances this further by enabling continuous batching, which significantly improves throughput and reduces latency compared to static batching. Overall, the combination of Ray Serve and vLLM provides a robust, scalable, and cost-efficient solution for deploying LLMs in production.
@@ -393,6 +498,12 @@ Delete the RayCluster
 cd data-on-eks/gen-ai/inference/vllm-rayserve-gpu
 
 kubectl delete -f ray-service-vllm.yaml
+```
+```bash
+cd data-on-eks/ai-ml/jark-stack/terraform/monitoring
+
+kubectl delete -f serviceMonitor.yaml
+kubectl delete -f podMonitor.yaml
 ```
 
 Destroy the EKS Cluster and resources

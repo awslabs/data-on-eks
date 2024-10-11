@@ -333,7 +333,7 @@ kubectl -n triton-vllm port-forward svc/nvidia-triton-server-triton-inference-se
 Next, run the Triton client for each model using the same prompts:
 
 ```bash
-cd gen-ai/inference/vllm-nvidia-triton-server-gpu/triton-client
+cd data-on-eks/gen-ai/inference/vllm-nvidia-triton-server-gpu/triton-client
 python3 -m venv .venv
 source .venv/bin/activate
 pip install tritonclient[all]
@@ -452,7 +452,13 @@ PASS: vLLM example
 
 ## Observability
 
-As part of this blueprint, we have also deployed the Kube Prometheus stack, which provides Prometheus server and Grafana deployments for monitoring and observability.
+### Observability with AWS CloudWatch and Neuron Monitor
+
+This blueprint deploys the CloudWatch Observability Agent as a managed add-on, providing comprehensive monitoring for containerized workloads. It includes container insights for tracking key performance metrics such as CPU and memory utilization. Additionally, the blueprint integrates GPU metrics using NVIDIA's DCGM plugin, which is essential for monitoring high-performance GPU workloads. For machine learning models running on AWS Inferentia or Trainium, the [Neuron Monitor plugin](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/tools/neuron-sys-tools/neuron-monitor-user-guide.html#neuron-monitor-user-guide) is added to capture and report Neuron-specific metrics.
+
+All metrics, including container insights, GPU performance, and Neuron metrics, are sent to Amazon CloudWatch, where you can monitor and analyze them in real-time. After the deployment is complete, you should be able to access these metrics directly from the CloudWatch console, allowing you to manage and optimize your workloads effectively.
+
+In addition to deploying CloudWatch EKS addon, we have also deployed the Kube Prometheus stack, which provides Prometheus server and Grafana deployments for monitoring and observability.
 
 First, let's verify the services deployed by the Kube Prometheus stack:
 

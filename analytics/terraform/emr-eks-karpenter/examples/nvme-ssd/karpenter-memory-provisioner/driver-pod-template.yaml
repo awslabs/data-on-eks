@@ -17,7 +17,7 @@ spec:
     karpenter.sh/capacity-type: "on-demand"
     topology.kubernetes.io/zone: "us-west-2b"
 
-  # Don't use "/mnt" path as mountPath with EMR pod Tempaltes as its reserved. You will get the following error.
+  # Don't use "/mnt" path as mountPath with EMR pod Templates as its reserved. You will get the following error.
   # Exception in thread "main" java.lang.IllegalArgumentException: Defined volume mount path on main container must not overlap with reserved mount paths: [/mnt]
   # at org.apache.spark.deploy.k8s.features.EmrInternalPodTemplateFeatureStep$AddVolumeMountsToMainContainerApplier.validate(EmrInternalPodTemplateFeatureStep.scala:447)
   initContainers:

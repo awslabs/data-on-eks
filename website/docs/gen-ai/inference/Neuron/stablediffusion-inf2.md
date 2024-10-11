@@ -1,6 +1,6 @@
 ---
 title: Stable Diffusion on Inferentia2
-sidebar_position: 4
+sidebar_position: 5
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
@@ -14,7 +14,7 @@ This example blueprint deploys a `stable-diffusion-xl-base-1-0` model on Inferen
 
 :::
 
-# Deploying Stable Diffusion XL Base  Model with Inferentia, Ray Serve and Gradio
+# Serving Stable Diffusion XL Base  Model with Inferentia, Ray Serve and Gradio
 Welcome to the comprehensive guide on deploying the [Stable Diffusion XL Base](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) model on Amazon Elastic Kubernetes Service (EKS) using [Ray Serve](https://docs.ray.io/en/latest/serve/index.html).
 In this tutorial, you will not only learn how to harness the power of Stable Diffusion models, but also gain insights into the intricacies of deploying large language models (LLMs) efficiently, particularly on [trn1/inf2](https://aws.amazon.com/machine-learning/neuron/) (powered by AWS Trainium and Inferentia) instances, such as `inf2.24xlarge` and `inf2.48xlarge`,
 which are optimized for deploying and scaling large language models.
@@ -135,7 +135,7 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 **Deploy RayServe Cluster**
 
 ```bash
-cd ../../gen-ai/inference/stable-diffusion-xl-base-rayserve-inf2
+cd data-on-eks/gen-ai/inference/stable-diffusion-xl-base-rayserve-inf2
 kubectl apply -f ray-service-stablediffusion.yaml
 ```
 
@@ -217,7 +217,7 @@ Let's move forward with setting up the Gradio app as a Docker container running 
 First, lets build the docker container for the client app.
 
 ```bash
-cd ../gradio-ui
+cd data-on-eks/gen-ai/inference/gradio-ui
 docker build --platform=linux/amd64 \
     -t gradio-app:sd \
     --build-arg GRADIO_APP="gradio-app-stable-diffusion.py" \
@@ -276,7 +276,7 @@ docker rmi gradio-app:sd
 **Step2:** Delete Ray Cluster
 
 ```bash
-cd ../stable-diffusion-xl-base-rayserve-inf2
+cd data-on-eks/gen-ai/inference/stable-diffusion-xl-base-rayserve-inf2
 kubectl delete -f ray-service-stablediffusion.yaml
 ```
 
@@ -284,6 +284,6 @@ kubectl delete -f ray-service-stablediffusion.yaml
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ../../../ai-ml/trainium-inferentia/
+cd data-on-eks/ai-ml/trainium-inferentia/
 ./cleanup.sh
 ```

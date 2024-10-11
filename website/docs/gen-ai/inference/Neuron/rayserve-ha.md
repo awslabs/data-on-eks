@@ -1,6 +1,6 @@
 ---
 title: Ray Serve High Availability
-sidebar_position: 5
+sidebar_position: 6
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
@@ -66,7 +66,7 @@ export TF_VAR_enable_rayserve_ha_elastic_cache_redis=true
 Then, run the `install.sh` script to install the EKS cluster with KubeRay operator and other add-ons.
 
 ```bash
-cd ai-ml/trainimum-inferentia
+cd data-on-eks/ai-ml/trainimum-inferentia
 ./install.sh
 ```
 
@@ -135,7 +135,7 @@ With the above `RayService` configuration, we have enabled GCS fault tolerance f
 Let's apply the above `RayService` configuration and check the behavior.
 
 ```bash
-cd ../../gen-ai/inference/
+cd data-on-eks/gen-ai/inference/
 envsubst < mistral-7b-rayserve-inf2/ray-service-mistral-ft.yaml| kubectl apply -f -
 ```
 
@@ -202,7 +202,7 @@ Finally, we'll provide instructions for cleaning up and deprovisioning the resou
 **Step1:** Delete Gradio App and mistral Inference deployment
 
 ```bash
-cd gen-ai/inference/mistral-7b-rayserve-inf2
+cd data-on-eks/gen-ai/inference/mistral-7b-rayserve-inf2
 kubectl delete -f gradio-ui.yaml
 kubectl delete -f ray-service-mistral-ft.yaml
 ```
@@ -211,6 +211,6 @@ kubectl delete -f ray-service-mistral-ft.yaml
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ../../../ai-ml/trainium-inferentia/
+cd data-on-eks/ai-ml/trainium-inferentia/
 ./cleanup.sh
 ```

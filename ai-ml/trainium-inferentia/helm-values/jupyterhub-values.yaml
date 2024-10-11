@@ -29,7 +29,7 @@ singleuser:
                 image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: trainium-trn1
+          karpenter.sh/nodepool: trainium-trn1 # Label is added by the karpenter to the nodes. `trainium-trn1` is the nodepool name created by this blueprint
           hub.jupyter.org/node-purpose: user
         tolerations:
           - key: aws.amazon.com/neuroncore
@@ -67,7 +67,7 @@ singleuser:
                 image: public.ecr.aws/data-on-eks/tensorflow-neuronx:latest
       kubespawner_override:
         node_selector:
-          karpenter.sh/provisioner-name: inferentia-inf2
+          karpenter.sh/nodepool: inferentia-inf2 # Label is added by the karpenter to the nodes. `inferentia-inf2` is the nodepool name created by this blueprint
           hub.jupyter.org/node-purpose: user
         tolerations:
           - key: aws.amazon.com/neuroncore

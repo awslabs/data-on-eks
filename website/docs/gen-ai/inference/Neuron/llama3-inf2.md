@@ -1,7 +1,7 @@
 ---
-title: Llama-3 on Inferentia2
-sidebar_position: 2
-description: Deploy Llama-3 models on AWS Inferentia accelerators for efficient inference.
+title: Llama-3-8B on Inferentia2
+sidebar_position: 3
+description: Serve Llama-3 models on AWS Inferentia accelerators for efficient inference.
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
@@ -23,7 +23,7 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 :::
 
 
-# Deploying Llama-3-8B Instruct Model with Inferentia, Ray Serve and Gradio
+# Serving Llama-3-8B Instruct Model with Inferentia, Ray Serve and Gradio
 
 Welcome to the comprehensive guide on deploying the [Meta Llama-3-8B Instruct](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using [Ray Serve](https://docs.ray.io/en/latest/serve/index.html).
 
@@ -158,7 +158,7 @@ To deploy the llama3-8B-Instruct model, it's essential to configure your Hugging
 
 export  HUGGING_FACE_HUB_TOKEN=<Your-Hugging-Face-Hub-Token-Value>
 
-cd ./../gen-ai/inference/llama3-8b-rayserve-inf2
+cd data-on-eks/gen-ai/inference/llama3-8b-rayserve-inf2
 envsubst < ray-service-llama3.yaml| kubectl apply -f -
 ```
 
@@ -244,7 +244,7 @@ Let's move forward with setting up the Gradio app as a Docker container running 
 First, lets build the docker container for the client app.
 
 ```bash
-cd ../gradio-ui
+cd data-on-eks/gen-ai/inference/gradio-ui
 docker build --platform=linux/amd64 \
     -t gradio-app:llama \
     --build-arg GRADIO_APP="gradio-app-llama.py" \
@@ -298,7 +298,7 @@ docker rmi gradio-app:llama
 **Step2:** Delete Ray Cluster
 
 ```bash
-cd ../llama3-8b-instruct-rayserve-inf2
+cd data-on-eks/gen-ai/inference/llama3-8b-instruct-rayserve-inf2
 kubectl delete -f ray-service-llama3.yaml
 ```
 
@@ -306,6 +306,6 @@ kubectl delete -f ray-service-llama3.yaml
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ../../../ai-ml/trainium-inferentia/
+cd data-on-eks/ai-ml/trainium-inferentia/
 ./cleanup.sh
 ```

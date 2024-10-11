@@ -1,0 +1,65 @@
+# NOTE: This example requires the following prerequisites before executing the jobs
+# 1. Ensure spark-team-a name space exists
+
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: pyspark-pi-karpenter
+  namespace: spark-team-a
+  labels:
+    app: "pyspark-pi"
+    applicationId: "pyspark-pi-karpenter"
+    # Assign the job to a Yunikorn Queue via label.
+    queue: root.test
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: public.ecr.aws/data-on-eks/spark3.5.1-hadoop3.3.4-aws-java-sdk-bundle-1.12.767
+  imagePullPolicy: Always
+  mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
+  mainClass: org.apache.spark.examples.SparkPi
+  sparkVersion: "3.5.1"
+  sparkConf:
+    "spark.jars.ivy": "/tmp/.ivy"
+    # IPv6 service address
+    "spark.kubernetes.driver.service.ipFamilies": "IPv6"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 1
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "512m"
+    labels:
+      version: 3.5.1
+    serviceAccount: spark-team-a
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
+  executor:
+    cores: 1
+    instances: 2
+    memory: "512m"
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.5.1
+    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
+    # we do not need to leverage a hostPath mount or volume to leverage that storage.
+    # ephemeral-storage requests and limits can be used to manage the storage utilization
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"

@@ -18,6 +18,10 @@ terraform {
       source  = "gavinbunney/kubectl"
       version = ">= 1.14"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.0" # Replace with the appropriate version of the random provider
+    }
   }
 
   # ##  Used for end-to-end testing on project; update to suit your needs

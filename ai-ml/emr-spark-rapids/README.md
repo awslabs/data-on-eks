@@ -30,7 +30,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.34 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.21 |
 | <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.2 |
-| <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | aws-ia/eks-data-addons/aws | ~> 1.30 |
+| <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | aws-ia/eks-data-addons/aws | 1.33.0 |
 | <a name="module_emr_containers"></a> [emr\_containers](#module\_emr\_containers) | terraform-aws-modules/emr/aws//modules/virtual-cluster | ~> 1.0 |
 | <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 5.0 |
@@ -61,7 +61,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="input_enable_nvidia_gpu_operator"></a> [enable\_nvidia\_gpu\_operator](#input\_enable\_nvidia\_gpu\_operator) | Enable NVIDIA GPU Operator | `bool` | `false` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"emr-spark-rapids"` | no |
 | <a name="input_region"></a> [region](#input\_region) | Region | `string` | `"us-west-2"` | no |
-| <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br>  "100.64.0.0/16"<br>]</pre> | no |
+| <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br/>  "100.64.0.0/16"<br/>]</pre> | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Default tags | `map(string)` | `{}` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR. This should be a valid private (RFC 1918) CIDR range | `string` | `"10.1.0.0/21"` | no |
 

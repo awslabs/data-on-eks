@@ -1,0 +1,114 @@
+#---------------------------------------------------------------
+# EKS Cluster
+#---------------------------------------------------------------
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "20.8.3"
+
+  cluster_name    = local.name
+  cluster_version = local.cluster_version
+
+  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
+  cluster_endpoint_public_access = true
+
+  vpc_id = module.vpc.vpc_id
+  # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
+  subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+    substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+  )
+
+  create_cloudwatch_log_group              = false
+  authentication_mode                      = "API_AND_CONFIG_MAP"
+  enable_cluster_creator_admin_permissions = true
+
+  #---------------------------------------
+  # Note: This can further restricted to specific required for each Add-on and your application
+  #---------------------------------------
+  # Extend cluster security group rules
+  cluster_security_group_additional_rules = {
+    ingress_nodes_ephemeral_ports_tcp = {
+      description                = "Nodes on ephemeral ports"
+      protocol                   = "tcp"
+      from_port                  = 1025
+      to_port                    = 65535
+      type                       = "ingress"
+      source_node_security_group = true
+    }
+  }
+
+  # Extend node-to-node security group rules
+  node_security_group_additional_rules = {
+    ingress_self_all = {
+      description = "Node to node all ports/protocols"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+    # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
+    # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
+    # Change this according to your security requirements if needed
+    ingress_cluster_to_node_all_traffic = {
+      description                   = "Cluster API to Nodegroup all traffic"
+      protocol                      = "-1"
+      from_port                     = 0
+      to_port                       = 0
+      type                          = "ingress"
+      source_cluster_security_group = true
+    }
+  }
+
+  eks_managed_node_groups = {
+    core_node_group = {
+      name = "core-node-group"
+
+      min_size     = 3
+      max_size     = 9
+      desired_size = 3
+
+      instance_types = ["m6g.xlarge", "m6gd.xlarge", "m7g.xlarge", "c6g.xlarge", "c6gd.xlarge", "c7g.xlarge"]
+      ami_type       = "AL2023_ARM_64_STANDARD"
+
+      ebs_optimized = true
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 1000
+            volume_type = "gp3"
+          }
+        }
+      }
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core"
+      }
+      tags = {
+        Name = "core-node-grp"
+      }
+    }
+  }
+
+  tags = merge(local.tags, {
+    "karpenter.sh/discovery" = local.name
+  })
+}
+
+module "aws_auth" {
+  source  = "terraform-aws-modules/eks/aws//modules/aws-auth"
+  version = "20.17.2"
+
+  manage_aws_auth_configmap = true
+
+  aws_auth_roles = [
+    {
+      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+      username = "system:node:{{EC2PrivateDNSName}}"
+      groups = [
+        "system:bootstrappers",
+        "system:nodes",
+      ]
+    }
+  ]
+}

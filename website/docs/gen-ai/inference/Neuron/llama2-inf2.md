@@ -1,7 +1,7 @@
 ---
 title: Llama-2 on Inferentia2
-sidebar_position: 3
-description: Deploy Llama-2 models on AWS Inferentia accelerators for efficient inference.
+sidebar_position: 4
+description: Serve Llama-2 models on AWS Inferentia accelerators for efficient inference.
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
@@ -23,7 +23,7 @@ We are actively enhancing this blueprint to incorporate improvements in observab
 :::
 
 
-# Deploying Llama-2-13b Chat Model with Inferentia, Ray Serve and Gradio
+# Serving Llama-2-13b Chat Model with Inferentia, Ray Serve and Gradio
 Welcome to the comprehensive guide on deploying the [Meta Llama-2-13b chat](https://ai.meta.com/llama/#inside-the-model) model on Amazon Elastic Kubernetes Service (EKS) using [Ray Serve](https://docs.ray.io/en/latest/serve/index.html).
 In this tutorial, you will not only learn how to harness the power of Llama-2, but also gain insights into the intricacies of deploying large language models (LLMs) efficiently, particularly on [trn1/inf2](https://aws.amazon.com/machine-learning/neuron/) (powered by AWS Trainium and Inferentia) instances, such as `inf2.24xlarge` and `inf2.48xlarge`,
 which are optimized for deploying and scaling large language models.
@@ -158,7 +158,7 @@ aws eks --region us-west-2 update-kubeconfig --name trainium-inferentia
 **Deploy RayServe Cluster**
 
 ```bash
-cd gen-ai/inference/llama2-13b-chat-rayserve-inf2
+cd data-on-eks/gen-ai/inference/llama2-13b-chat-rayserve-inf2
 kubectl apply -f ray-service-llama2.yaml
 ```
 
@@ -282,7 +282,7 @@ The following YAML script (`gen-ai/inference/llama2-13b-chat-rayserve-inf2/gradi
 To deploy this, execute:
 
 ```bash
-cd gen-ai/inference/llama2-13b-chat-rayserve-inf2/
+cd data-on-eks/gen-ai/inference/llama2-13b-chat-rayserve-inf2/
 kubectl apply -f gradio-ui.yaml
 ```
 
@@ -330,7 +330,7 @@ Finally, we'll provide instructions for cleaning up and deprovisioning the resou
 **Step1:** Delete Gradio App and Llama2 Inference deployment
 
 ```bash
-cd gen-ai/inference/llama2-13b-chat-rayserve-inf2
+cd data-on-eks/gen-ai/inference/llama2-13b-chat-rayserve-inf2
 kubectl delete -f gradio-ui.yaml
 kubectl delete -f ray-service-llama2.yaml
 ```
@@ -339,6 +339,6 @@ kubectl delete -f ray-service-llama2.yaml
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ai-ml/trainium-inferentia
+cd data-on-eks/ai-ml/trainium-inferentia
 ./cleanup.sh
 ```
