@@ -566,7 +566,7 @@ You can try generating benchmarking results with multiple concurrent requests to
 
 ### Performance Benchmarking Metrics
 
-You can find the results of the benchmarking script  under `vllm_bench_results` directory in the `llmperf` directory. The results are stored in folders following a date-time naming convention. New folders are created everytime the benchmarking script is executed.
+You can find the results of the benchmarking script  under `vllm_bench_results` directory in the `llmperf` directory. The results are stored in folders following a date-time naming convention. New folders are created every time the benchmarking script is executed.
 
 You will find that the results for every execution of the benchmarking script comprise of 2 files in the format below:
 

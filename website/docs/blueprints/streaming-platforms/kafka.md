@@ -163,7 +163,7 @@ Deploy the Strimzi Kafka dashboards in Grafana:
 kubectl apply -f monitoring-manifests/
 ```
 
-### Check nodes provsioned by Karpenter
+### Check nodes provisioned by Karpenter
 
 Check if you now see around 9 nodes, 3 nodes for Core Node group and 6 for Kafka brokers across 3 AZs:
 
