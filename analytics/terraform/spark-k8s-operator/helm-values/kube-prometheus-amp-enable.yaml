@@ -22,7 +22,7 @@ prometheus:
         metadata:
           name: data
         spec:
-          storageClassName: gp2
+          storageClassName: gp3
           accessModes:
             - ReadWriteOnce
           resources:
