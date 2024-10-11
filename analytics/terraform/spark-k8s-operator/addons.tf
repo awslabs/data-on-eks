@@ -45,8 +45,10 @@ module "eks_data_addons" {
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
   enable_karpenter_resources = true
-
   karpenter_resources_helm_config = {
     spark-compute-optimized = {
       values = [
@@ -339,7 +341,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "1.4.2"
+    version = "1.4.6"
     values  = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
   }
 
@@ -348,8 +350,9 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
+    version = "1.6.0"
     values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.2.0"
+      image_version = "1.6.0"
     })]
   }
 
@@ -424,13 +427,49 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
+  #---------------------------------------
+  # Kubernetes Add-ons
+  #---------------------------------------
+  #---------------------------------------
+  # AWS for FluentBit - DaemonSet
+  #---------------------------------------
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  aws_for_fluentbit = {
+    s3_bucket_arns = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*"
+    ]
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+      s3_bucket_name       = module.s3_bucket.s3_bucket_id
+      cluster_name         = module.eks.cluster_name
+    })]
+  }
 
   #---------------------------------------
-  # Metrics Server
+  # AWS Load Balancer Controller
   #---------------------------------------
-  enable_metrics_server = true
-  metrics_server = {
-    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  enable_aws_load_balancer_controller = true
+  aws_load_balancer_controller = {
+    chart_version = "1.5.4"
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
+
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics = {
+    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -461,44 +500,16 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # CloudWatch metrics for EKS
+  # Metrics Server
   #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+  enable_metrics_server = true
+  metrics_server = {
+    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
-  # AWS for FluentBit - DaemonSet
+  # Nginx Ingress Controller
   #---------------------------------------
-  enable_aws_for_fluentbit = true
-  aws_for_fluentbit_cw_log_group = {
-    use_name_prefix   = false
-    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
-    retention_in_days = 30
-  }
-  aws_for_fluentbit = {
-    s3_bucket_arns = [
-      module.s3_bucket.s3_bucket_arn,
-      "${module.s3_bucket.s3_bucket_arn}/*"
-    ]
-    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = local.region,
-      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
-      s3_bucket_name       = module.s3_bucket.s3_bucket_id
-      cluster_name         = module.eks.cluster_name
-    })]
-  }
-
-  enable_aws_load_balancer_controller = true
-  aws_load_balancer_controller = {
-    chart_version = "1.5.4"
-    set = [{
-      name  = "enableServiceMutatorWebhook"
-      value = "false"
-    }]
-  }
-
   enable_ingress_nginx = true
   ingress_nginx = {
     version = "4.5.2"
@@ -506,7 +517,7 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Prommetheus and Grafana stack
+  # Prometheus and Grafana stack
   #---------------------------------------
   #---------------------------------------------------------------
   # Install Kafka Monitoring Stack with Prometheus and Grafana
@@ -525,7 +536,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "48.1.1"
+    chart_version = "65.1.1"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
