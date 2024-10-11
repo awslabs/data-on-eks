@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.34" # ensure to update this to the latest/desired version
+  version = "1.34.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -417,7 +417,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "1.0.0"
+    chart_version       = "1.0.6"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
