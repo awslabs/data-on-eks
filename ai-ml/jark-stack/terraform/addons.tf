@@ -184,7 +184,7 @@ module "eks_blueprints_addons" {
 
 module "data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.33"
+  version = "1.33.0"
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 

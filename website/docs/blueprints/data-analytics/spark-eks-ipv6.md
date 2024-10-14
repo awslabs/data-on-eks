@@ -24,7 +24,7 @@ Ensure that you have installed the following tools on your machine.
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
 
-Before installing the cluster create a EKS IPv6 CNI policy. Follow the instructions from the link bellow:
+Before installing the cluster create a EKS IPv6 CNI policy. Follow the instructions from the link below:
 [AmazonEKS_CNI_IPv6_Policy ](https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html#cni-iam-role-create-ipv6-policy)
 
 ### Clone the repository

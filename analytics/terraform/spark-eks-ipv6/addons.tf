@@ -41,7 +41,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.30" # ensure to update this to the latest/desired version
+  version = "1.34.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
