@@ -366,6 +366,7 @@ module "eks_data_addons" {
   # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = true
   spark_history_server_helm_config = {
+    version = "1.2.0"
     values = [
       <<-EOT
       sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
@@ -378,6 +379,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
+    version = "2.3.3"
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -451,6 +453,7 @@ module "eks_blueprints_addons" {
     retention_in_days = 30
   }
   aws_for_fluentbit = {
+    chart_version = "0.1.34"
     s3_bucket_arns = [
       module.s3_bucket.s3_bucket_arn,
       "${module.s3_bucket.s3_bucket_arn}/*"
@@ -468,7 +471,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.5.4"
+    chart_version = "1.9.0"
     set = [{
       name  = "enableServiceMutatorWebhook"
       value = "false"
@@ -480,6 +483,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
+    chart_version = "0.0.11"
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
@@ -488,6 +492,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
+    chart_version = "9.43.0"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -516,6 +521,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server = {
+    chart_version = "3.12.2"
     values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
@@ -524,7 +530,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_ingress_nginx = true
   ingress_nginx = {
-    version = "4.5.2"
+    version = "4.11.2"
     values = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
@@ -611,6 +617,10 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_string = random_password.grafana.result
 }
 
+
+#---------------------------------------------------------------
+# Spark Operator IPv6 config
+#---------------------------------------------------------------
 # This is a ConfigMap designed for the Spark Operator version 1.4.6, enabling the exposure of environment variables in an Amazon EKS cluster configured with IPv6.
 # The current Helm values file only supports the 'envFrom' parameter. Starting from the 2.0.0 release, the Helm chart will introduce support for the 'env' parameter, allowing for more flexible configuration options.
 resource "kubernetes_namespace_v1" "spark_operator" {
