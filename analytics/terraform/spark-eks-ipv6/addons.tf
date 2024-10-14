@@ -377,14 +377,8 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Kubecost Add-on
   #---------------------------------------------------------------
-  enable_kubecost = true
-  kubecost_helm_config = {
-    version = "2.3.3"
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
+  # Kubecost doesn't support IPv6 https://github.com/kubecost/features-bugs/issues/27
+  enable_kubecost = false
 }
 
 #---------------------------------------------------------------
