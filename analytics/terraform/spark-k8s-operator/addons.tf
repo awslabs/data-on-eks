@@ -341,7 +341,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "1.4.6"
+    version = "2.0.2"
     values  = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
   }
 

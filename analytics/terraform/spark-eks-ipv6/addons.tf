@@ -341,12 +341,8 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "1.4.6"
-    values = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {
-      create_namespace    = false
-      namespace           = kubernetes_namespace_v1.spark_operator.metadata[0].name
-      spark-operator-envs = kubernetes_config_map.spark_operator_ipv6_configmap.metadata[0].name
-    })]
+    version = "2.0.2"
+    values = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
   }
 
   #---------------------------------------------------------------
@@ -609,30 +605,4 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
-}
-
-
-#---------------------------------------------------------------
-# Spark Operator IPv6 config
-#---------------------------------------------------------------
-# This is a ConfigMap designed for the Spark Operator version 1.4.6, enabling the exposure of environment variables in an Amazon EKS cluster configured with IPv6.
-# The current Helm values file only supports the 'envFrom' parameter. Starting from the 2.0.0 release, the Helm chart will introduce support for the 'env' parameter, allowing for more flexible configuration options.
-resource "kubernetes_namespace_v1" "spark_operator" {
-  metadata {
-    name = "spark-operator"
-  }
-  timeouts {
-    delete = "15m"
-  }
-}
-
-resource "kubernetes_config_map" "spark_operator_ipv6_configmap" {
-  metadata {
-    name      = "spark-operator-envs"
-    namespace = kubernetes_namespace_v1.spark_operator.metadata[0].name
-  }
-  data = {
-    _JAVA_OPTIONS                            = "-Djava.net.preferIPv6Addresses=true"
-    KUBERNETES_DISABLE_HOSTNAME_VERIFICATION = "true"
-  }
 }
