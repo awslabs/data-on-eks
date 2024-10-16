@@ -58,6 +58,7 @@ clusterController:
   image:
     repository: public.ecr.aws/kubecost/cluster-controller
 
+
 # Set this to false if you're bringing your own service account.
 #serviceAccount:
 #  create: false

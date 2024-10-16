@@ -36,175 +36,14 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   depends_on = [kubernetes_annotations.gp2_default]
 }
 
-
-#---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.34"
-  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-module "eks_blueprints_addons" {
-  source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
-
-  cluster_name      = module.eks.cluster_name
-  cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_version   = module.eks.cluster_version
-  oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------
-  eks_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      preserve = true
-      configuration_values = jsonencode({
-        env = {
-          ENABLE_PREFIX_DELEGATION = "true"
-          WARM_PREFIX_TARGET       = "1"
-        }
-      })
-    }
-    kube-proxy = {
-      preserve = true
-    }
-  }
-
-  #---------------------------------------
-  # Kubernetes Add-ons
-  #---------------------------------------
-
-  #---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
-  enable_karpenter                  = true
-  karpenter_enable_spot_termination = true
-  karpenter_node = {
-    iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
-      AmazonVPCCniIpv6Policy       = "arn:aws:iam::${local.account_id}:policy/AmazonEKS_CNI_IPv6_Policy"
-    }
-  }
-  karpenter = {
-    chart_version       = "0.37.0"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  enable_ingress_nginx = true
-  ingress_nginx = {
-    values = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
-  }
-
-  #---------------------------------------
-  # AWS for FluentBit - DaemonSet
-  #---------------------------------------
-  enable_aws_for_fluentbit = true
-  aws_for_fluentbit_cw_log_group = {
-    use_name_prefix   = false
-    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
-    retention_in_days = 30
-  }
-  aws_for_fluentbit = {
-    s3_bucket_arns = [
-      module.s3_bucket.s3_bucket_arn,
-      "${module.s3_bucket.s3_bucket_arn}/*}"
-    ]
-    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-      region               = local.region,
-      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
-      s3_bucket_name       = module.s3_bucket.s3_bucket_id
-      cluster_name         = module.eks.cluster_name
-    })]
-  }
-
-  #---------------------------------------
-  # Prommetheus and Grafana stack
-  #---------------------------------------
-  #---------------------------------------------------------------
-  # Install monitoring stack with Prometheus and Grafana
-  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
-  # 2- Grafana Admin user: admin
-  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
-  #---------------------------------------------------------------
-  enable_kube_prometheus_stack = true
-  kube_prometheus_stack = {
-    values = [templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
-      storage_class_type = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
-    })]
-    chart_version = "61.6.0"
-    set_sensitive = [
-      {
-        name  = "grafana.adminPassword"
-        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
-      }
-    ],
-  }
-
-  tags = local.tags
-}
-
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.33.0" # ensure to update this to the latest/desired version
+  version = "1.34.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------------------------------
-  # Spark Operator Add-on
-  #---------------------------------------------------------------
-  enable_spark_operator = true
-  spark_operator_helm_config = {
-    values = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {
-      create_namespace    = false
-      namespace           = kubernetes_namespace_v1.spark_operator.metadata[0].name
-      spark-operator-envs = kubernetes_config_map.spark_operator_ipv6_configmap.metadata[0].name
-    })]
-  }
-
-  #---------------------------------------------------------------
-  # Apache YuniKorn Add-on
-  #---------------------------------------------------------------
-  enable_yunikorn = var.enable_yunikorn
-  yunikorn_helm_config = {
-    version = "1.5.1"
-    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.5.1"
-    })]
-  }
-
-  #---------------------------------------------------------------
-  # Spark History Server Add-on
-  #---------------------------------------------------------------
-  # Spark history server is required only when EMR Spark Operator is enabled
-  enable_spark_history_server = true
-  spark_history_server_helm_config = {
-    values = [
-      <<-EOT
-      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
-      EOT
-    ]
-  }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
@@ -431,7 +270,7 @@ module "eks_data_addons" {
             aws ec2 attach-volume --volume-id $VOLUME_ID --instance-id $INSTANCE_ID --device /dev/xvdb --region $REGION
 
             # Update the state to delete the volume when the node is terminated
-            aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --block-device-mappings "[{\"DeviceName\": \"/dev/xvdb\",\"Ebs\":{\"DeleteOnTermination\":true}}]" --region $REGI
+            aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --block-device-mappings "[{\"DeviceName\": \"/dev/xvdb\",\"Ebs\":{\"DeleteOnTermination\":true}}]" --region $REGION
 
             # Wait for the volume to be attached
             while [ "$(aws ec2 describe-volumes --volume-ids $VOLUME_ID --region $REGION --query "Volumes[*].Attachments[*].State" --output text)" != "attached" ]; do
@@ -496,7 +335,221 @@ module "eks_data_addons" {
       ]
     }
   }
+
+  #---------------------------------------------------------------
+  # Spark Operator Add-on
+  #---------------------------------------------------------------
+  enable_spark_operator = true
+  spark_operator_helm_config = {
+    version = "2.0.2"
+    values  = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
+  }
+
+  #---------------------------------------------------------------
+  # Apache YuniKorn Add-on
+  #---------------------------------------------------------------
+  enable_yunikorn = var.enable_yunikorn
+  yunikorn_helm_config = {
+    version = "1.6.0"
+    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
+      image_version = "1.6.0"
+    })]
+  }
+
+  #---------------------------------------------------------------
+  # Spark History Server Add-on
+  #---------------------------------------------------------------
+  # Spark history server is required only when EMR Spark Operator is enabled
+  enable_spark_history_server = true
+  spark_history_server_helm_config = {
+    version = "1.2.0"
+    values = [
+      <<-EOT
+      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
+      EOT
+    ]
+  }
+
+  #---------------------------------------------------------------
+  # Kubecost Add-on
+  #---------------------------------------------------------------
+  # Kubecost doesn't support IPv6 https://github.com/kubecost/features-bugs/issues/27
+  enable_kubecost = false
 }
+
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.34"
+  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# EKS Blueprints Addons
+#---------------------------------------------------------------
+module "eks_blueprints_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.2"
+
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  eks_addons = {
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    coredns = {
+      preserve = true
+    }
+    vpc-cni = {
+      preserve = true
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+    kube-proxy = {
+      preserve = true
+    }
+  }
+
+  #---------------------------------------
+  # Kubernetes Add-ons
+  #---------------------------------------
+  #---------------------------------------
+  # AWS for FluentBit - DaemonSet
+  #---------------------------------------
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  aws_for_fluentbit = {
+    chart_version = "0.1.34"
+    s3_bucket_arns = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*"
+    ]
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+      s3_bucket_name       = module.s3_bucket.s3_bucket_id
+      cluster_name         = module.eks.cluster_name
+    })]
+  }
+
+  #---------------------------------------
+  # AWS Load Balancer Controller
+  #---------------------------------------
+  enable_aws_load_balancer_controller = true
+  aws_load_balancer_controller = {
+    chart_version = "1.9.0"
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
+
+  #---------------------------------------
+  # CloudWatch metrics for EKS
+  #---------------------------------------
+  enable_aws_cloudwatch_metrics = true
+  aws_cloudwatch_metrics = {
+    chart_version = "0.0.11"
+    values        = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # Cluster Autoscaler
+  #---------------------------------------
+  enable_cluster_autoscaler = true
+  cluster_autoscaler = {
+    chart_version = "9.43.0"
+    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
+      aws_region     = var.region,
+      eks_cluster_id = module.eks.cluster_name
+    })]
+  }
+
+  #---------------------------------------
+  # Karpenter Autoscaler for EKS Cluster
+  #---------------------------------------
+  enable_karpenter                  = true
+  karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+      AmazonVPCCniIpv6Policy       = "arn:aws:iam::${local.account_id}:policy/AmazonEKS_CNI_IPv6_Policy"
+    }
+  }
+  karpenter = {
+    chart_version       = "1.0.6"
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  metrics_server = {
+    chart_version = "3.12.2"
+    values        = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # Nginx Ingress Controller
+  #---------------------------------------
+  enable_ingress_nginx = true
+  ingress_nginx = {
+    version = "4.11.2"
+    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # Prometheus and Grafana stack
+  #---------------------------------------
+  #---------------------------------------------------------------
+  # Install monitoring stack with Prometheus and Grafana
+  # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
+  # 2- Grafana Admin user: admin
+  # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
+  #---------------------------------------------------------------
+  enable_kube_prometheus_stack = true
+  kube_prometheus_stack = {
+    values = [templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
+      storage_class_type = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
+    })]
+    chart_version = "65.1.1"
+    set_sensitive = [
+      {
+        name  = "grafana.adminPassword"
+        value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
+      }
+    ],
+  }
+
+  tags = local.tags
+}
+
 
 #---------------------------------------------------------------
 # S3 bucket for Spark Event Logs and Example Data
@@ -552,26 +605,4 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
-}
-
-# This is a ConfigMap designed for the Spark Operator version 1.4.6, enabling the exposure of environment variables in an Amazon EKS cluster configured with IPv6.
-# The current Helm values file only supports the 'envFrom' parameter. Starting from the 2.0.0 release, the Helm chart will introduce support for the 'env' parameter, allowing for more flexible configuration options.
-resource "kubernetes_namespace_v1" "spark_operator" {
-  metadata {
-    name = "spark-operator"
-  }
-  timeouts {
-    delete = "15m"
-  }
-}
-
-resource "kubernetes_config_map" "spark_operator_ipv6_configmap" {
-  metadata {
-    name      = "spark-operator-envs"
-    namespace = kubernetes_namespace_v1.spark_operator.metadata[0].name
-  }
-  data = {
-    _JAVA_OPTIONS                            = "-Djava.net.preferIPv6Addresses=true"
-    KUBERNETES_DISABLE_HOSTNAME_VERIFICATION = "true"
-  }
 }

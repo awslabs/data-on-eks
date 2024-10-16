@@ -173,39 +173,5 @@ module "eks" {
         NodeGroupType = "spark-on-demand-ca"
       }
     }
-
-    # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
-    # This command will give you the list of the instances with similar vcpus for arm64 dense instances
-    spark_spot_x86_48cpu = {
-      name        = "spark-spot-48cpu"
-      description = "Spark Spot node group for executor workloads"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
-
-      min_size     = 0
-      max_size     = 12
-      desired_size = 0
-
-      instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
-
-      labels = {
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark-spot-ca"
-      }
-
-      taints = [{
-        key    = "spark-spot-ca"
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
-
-      tags = {
-        Name          = "spark-node-grp"
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark"
-      }
-    }
   }
 }
