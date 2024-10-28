@@ -1,8 +1,8 @@
 # Important Notice:
 # Before deploying this configuration, please ensure the following:
-# 1. **Region and Environment Variables**: Verify that the `AWS_DEFAULT_REGION` and other environment variables are correctly set for your deployment. This YAML is currently configured for the `us-west-2` region.
-# 2. **Pre-requisite**: Check the README.md file for instructions.
-# 3. **Custom Images**: This configuration uses a custom image hosted on ECR (`public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:latest`). Ensure that this image is accessible and meets your deployment needs.
+# 1. Region and Environment Variables: Verify that the `AWS_DEFAULT_REGION` and other environment variables are correctly set for your deployment. This YAML is currently configured for the `us-west-2` region.
+# 2. Pre-requisite: Check the README.md file for instructions.
+# 3. Custom Images: This configuration uses a custom image hosted on ECR (`public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:v8`). Ensure that this image is accessible and meets your deployment needs.
 
 ---
 apiVersion: v1
@@ -75,15 +75,23 @@ spec:
             value: us-west-2
           - name: NEURON_MODEL_PATH
             value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+          # - name: NEURON_CONTEXT_LENGTH_BUCKETS # not working
+          #   value: "1024,2048,4096,8192,16384,32768,65536,131072"
+          # - name: NEURON_TOKEN_GEN_BUCKETS # not working
+          #   value: "1024,2048,4096,8192,16384,32768,65536,131072"
           - name: NEURON_CONTEXT_LENGTH_ESTIMATE
             value: '[''1024'',''2048'',''4096'',''8192'',''16384'',''32768'',''65536'',''131072'']'
-          - name: MAX_MODEL_LENGTH
+          - name: MAX_MODEL_LEN
             value: "8192"
           - name: BLOCK_SIZE
             value: "8192"
-          - name: MAX_NUM_SEQ
+          - name: MAX_NUM_SEQS
             value: "2"
-          - name: NEURON_QUANT
+          - name: NEURON_CC_PIPELINE_FACTOR
+            value: "4"
+          - name: NEURON_COMPILE_CACHE_URL
+            value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/compiled_artifact
+          - name: NEURON_QUANT # not in the vllm code
             value: "False"
           - name: NEURON_SEQUENCE_PARALLEL
             value: "True"
@@ -99,7 +107,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.annotations['leaderworkerset.sigs.k8s.io/size']
-          image: public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:latest
+          image: public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:v8
           imagePullPolicy: Always
           name: vllm-leader
           ports:
@@ -186,14 +194,22 @@ spec:
             value: us-west-2
           - name: NEURON_MODEL_PATH
             value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/
+          # - name: NEURON_CONTEXT_LENGTH_BUCKETS # not working
+          #   value: "1024,2048,4096,8192,16384,32768,65536,131072"
+          # - name: NEURON_TOKEN_GEN_BUCKETS # not working
+          #   value: "1024,2048,4096,8192,16384,32768,65536,131072"
           - name: NEURON_CONTEXT_LENGTH_ESTIMATE
             value: '[''1024'',''2048'',''4096'',''8192'',''16384'',''32768'',''65536'',''131072'']'
-          - name: MAX_MODEL_LENGTH
+          - name: MAX_MODEL_LEN
             value: "8192"
           - name: BLOCK_SIZE
             value: "8192"
-          - name: MAX_NUM_SEQ
+          - name: MAX_NUM_SEQS
             value: "2"
+          - name: NEURON_CC_PIPELINE_FACTOR # not required
+            value: "4"
+          - name: NEURON_COMPILE_CACHE_URL
+            value: /mnt/k8s-disks/0/checkpoints/llama-3.1-405b-instruct/compiled_artifact
           - name: NEURON_QUANT
             value: "False"
           - name: NEURON_SEQUENCE_PARALLEL
@@ -210,7 +226,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.annotations['leaderworkerset.sigs.k8s.io/size']
-          image: public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:latest
+          image: public.ecr.aws/data-on-eks/neuron-sdk2.20-vllm0.5.0-neuron:v8
           imagePullPolicy: Always
           name: vllm-worker
           ports:

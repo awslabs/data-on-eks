@@ -26,8 +26,8 @@ fi
 # Run the Python script
 python neuron_multi_node_runner.py \
 --model=$NEURON_MODEL_PATH \
---max-num-seqs=$MAX_NUM_SEQ \
---max-model-len=$MAX_MODEL_LENGTH \
+--max-num-seqs=$MAX_NUM_SEQS \
+--max-model-len=$MAX_MODEL_LEN \
 --block-size=$BLOCK_SIZE \
 --tensor-parallel-size=$GLOBAL_TP \
 --port=$VLLM_LEADER_SERVICE_PORT \

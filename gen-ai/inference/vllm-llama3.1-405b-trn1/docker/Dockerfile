@@ -7,7 +7,7 @@
 # 1. The line "COPY neuron_artifacts/. /neuron_artifacts/" will be replaced or removed once Neuron SDK 2.20 is released.
 # 2. The line "COPY vllm /vllm" will be replaced or removed once Neuron SDK 2.20 is released, and the Neuron team upstreams the changes to the vLLM project.
 # -----------------------------------------------------------------------------------
-FROM public.ecr.aws/neuron/pytorch-inference-neuronx:2.1.2-neuronx-py310-sdk2.20.0-ubuntu20.04-0
+FROM public.ecr.aws/neuron/pytorch-inference-neuronx:2.1.2-neuronx-py310-sdk2.20.0-ubuntu20.04
 
 ENV VLLM_TARGET_DEVICE=neuron
 
