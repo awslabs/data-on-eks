@@ -1,7 +1,7 @@
 # NOTE: This example requires the following prerequisites before executing the jobs
-# 1. Ensure spark-team-a name space exists
-# 2. replace <S3_BUCKET> with your bucket name
-# 3. Ensure you run "analytics/spark-k8s-operator/spark-samples/tpcds-benchmark-data-generation-1t.yaml"  which generates 3 TB input data
+# 1. Create an S3 bucket to store the generated data
+# 2. Ensure spark-team-a name space exists
+# 3. replace <S3_BUCKET> with your bucket name
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -9,30 +9,29 @@ kind: SparkApplication
 metadata:
   name: tpcds-benchmark-3tb
   namespace: spark-team-a
-  labels:
-    app: "tpcds-benchmark"
-    applicationId: "tpcds-benchmark-3t"
-    # Assign the job to a Yunikorn Queue via label.
-    queue: root.prod
+
 spec:
+  # batchScheduler: yunikorn
+  # batchSchedulerOptions:
+  #   queue: root.default
   type: Scala
   mode: cluster
-  image: public.ecr.aws/data-on-eks/emr-on-eks-benchmark:3.1.2
+  image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
   imagePullPolicy: IfNotPresent
-  sparkVersion: 3.1.2
+  sparkVersion: 3.5.3
   mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
     # TPC-DS data location
-    - "s3://blogpost-sparkoneks-us-east-1/blog/BLOG_TPCDS-TEST-3T-partitioned"
+    - "s3a://<S3_BUCKET>/TPCDS-TEST-1TB"
     # results location
-    - "s3://<S3_BUCKET>/TPCDS-TEST-3T-RESULT"
+    - "s3a://<S3_BUCKET>/TPCDS-TEST-1T-RESULT"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
     - "parquet"
     # Scale factor (in GB)
-    - "3000" # changed from 3000 to 100gb for demo
+    - "1000" # changed from 3000 to 100gb for demo
     # Number of iterations
     - "1"
     # Optimize queries with hive tables
@@ -49,16 +48,25 @@ spec:
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
     "spark.sql.adaptive.skewJoin.enabled": "true"
-    # "spark.sql.adaptive.logLevel": "WARN"
-    # IRSA for S3 connection
     "spark.kubernetes.executor.podNamePrefix": "benchmark-exec"
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+   # S3 Optimizations
+    # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # This is using AWS SDK V1 in maintenance mode
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"  # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/tmp/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M" # Good for large files
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+
     "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
     "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
-    # Keep pods in a single AZ
-    # "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "us-west-1b"
-    # "spark.kubernetes.node.selector.eks.amazonaws.com/capacityType": "ON_DEMAND"
+    # "spark.hadoop.fs.s3a.readahead.range": "256K"
+
     # -----------------------------------------------------
     # This block is very critical when you get errors like
     #     Exception in thread \"main\" io.fabric8.kubernetes.client.KubernetesClientException: An error has occurred
@@ -70,37 +78,51 @@ spec:
     spark.kubernetes.driver.requestTimeout: "120000"
     # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
     # -----------------------------------------------------
+    # S3 Optimizations
+    "spark.hadoop.fs.s3a.multipart.size": "67108864"           # 64 MB part size for S3 uploads
+    "spark.hadoop.fs.s3a.threads.max": "40"                     # Limit S3 threads for optimized throughput
+    "spark.hadoop.fs.s3a.connection.maximum": "100"             # Set max connections for S3
+
+    # Data writing and shuffle tuning
+    "spark.shuffle.file.buffer": "1m"                           # Increase shuffle buffer for better disk I/O
+    "spark.reducer.maxSizeInFlight": "48m"                      # Increase reducer buffer size in-flight data
+
+    # Optional: Tuning multipart upload threshold
+    "spark.hadoop.fs.s3a.multipart.purge": "true"               # Automatically clear failed multipart uploads
+    "spark.hadoop.fs.s3a.multipart.threshold": "134217728"      # 128 MB threshold to start multi-part upload
   driver:
     cores: 4
     coreLimit: "4.1"
     memory: "5g"
-    memoryOverhead: "1000"
+    memoryOverhead: "1g"
     serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      provisioner: spark-compute-optimized
-    tolerations:
-      - key: "spark-compute-optimized"
-        operator: "Exists"
-        effect: "NoSchedule"
+      NodeGroupType: SparkGravitonBenchmark
   executor:
     cores: 4
     coreLimit: "4.3"
     memory: "6g"
     memoryOverhead: "2g"
     # 8 executors per node
-    instances: 47 # changed from 47 to 20 for demo
+    instances: 47
     serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      provisioner: spark-compute-optimized
-    tolerations:
-      - key: "spark-compute-optimized"
-        operator: "Exists"
-        effect: "NoSchedule"
+      NodeGroupType: SparkGravitonBenchmark
   restartPolicy:
     type: Never

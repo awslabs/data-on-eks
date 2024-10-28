@@ -41,7 +41,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.33.0" # ensure to update this to the latest/desired version
+  version = "1.34" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -54,6 +54,9 @@ module "eks_data_addons" {
       name: spark-compute-optimized
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
@@ -93,9 +96,8 @@ module "eks_data_addons" {
         limits:
           cpu: 1000
         disruption:
-          consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
-          expireAfter: 720h
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 5m
         weight: 100
       EOT
       ]
@@ -106,6 +108,9 @@ module "eks_data_addons" {
       name: spark-graviton-memory-optimized
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
@@ -144,10 +149,64 @@ module "eks_data_addons" {
         limits:
           cpu: 1000
         disruption:
-          consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
-          expireAfter: 720h
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
         weight: 50
+      EOT
+      ]
+    }
+    spark-graviton-benchmark = {
+      values = [
+        <<-EOT
+      name: spark-graviton-benchmark
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+        blockDeviceMappings:
+          - deviceName: /dev/xvda
+            ebs:
+              volumeSize: 300Gi
+              volumeType: gp3
+              encrypted: true
+              deleteOnTermination: true
+      nodePool:
+        labels:
+          - NodeGroupType: SparkGravitonBenchmark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["arm64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["r"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["r6g", "r6gd", "r7g", "r7gd", "r8g"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["8xlarge", "12xlarge", "16xlarge"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 2000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
       EOT
       ]
     }
@@ -157,6 +216,9 @@ module "eks_data_addons" {
       name: spark-memory-optimized
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
@@ -195,9 +257,8 @@ module "eks_data_addons" {
         limits:
           cpu: 1000
         disruption:
-          consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
-          expireAfter: 720h
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 5m
         weight: 100
       EOT
       ]
@@ -208,6 +269,9 @@ module "eks_data_addons" {
       name: spark-vertical-ebs-scale
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
@@ -217,9 +281,9 @@ module "eks_data_addons" {
             Name: ${module.eks.cluster_name}-node
         userData: |
           MIME-Version: 1.0
-          Content-Type: multipart/mixed; boundary="BOUNDARY"
+          Content-Type: multipart/mixed; boundary="//"
 
-          --BOUNDARY
+          --//
           Content-Type: text/x-shellscript; charset="us-ascii"
 
           #!/bin/bash
@@ -303,7 +367,7 @@ module "eks_data_addons" {
             /usr/bin/chown -hR +999:+1000 /mnt/k8s-disks
           fi
 
-          --BOUNDARY--
+          --//--
 
       nodePool:
         labels:
@@ -325,9 +389,8 @@ module "eks_data_addons" {
         limits:
           cpu: 1000
         disruption:
-          consolidationPolicy: WhenEmpty
-          consolidateAfter: 30s
-          expireAfter: 720h
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 5m
         weight: 100
       EOT
       ]
@@ -336,11 +399,34 @@ module "eks_data_addons" {
 
   #---------------------------------------------------------------
   # Spark Operator Add-on
+  # Add this to enable YuniKorn as Default Scheduler
+  #    controller:
+  #      batchScheduler:
+  #        enable: true
+  #        default: "yunikorn"
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "1.4.2"
-    values  = [templatefile("${path.module}/helm-values/spark-operator-values.yaml", {})]
+    version = "2.0.2"
+    values = [
+      <<-EOT
+        spark:
+          # -- List of namespaces where to run spark jobs.
+          # If empty string is included, all namespaces will be allowed.
+          # Make sure the namespaces have already existed.
+          jobNamespaces:
+            - default
+            - spark-team-a
+            - spark-team-b
+            - spark-team-c
+          serviceAccount:
+            # -- Specifies whether to create a service account for the controller.
+            create: false
+          rbac:
+            # -- Specifies whether to create RBAC resources for the controller.
+            create: false
+      EOT
+    ]
   }
 
   #---------------------------------------------------------------
@@ -455,7 +541,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.34.0"
+    chart_version       = "1.0.6"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }

@@ -174,6 +174,45 @@ module "eks" {
       }
     }
 
+    spark_graviton_bench = {
+      name        = "spark-graviton-bench"
+      description = "Spark managed node group for Graviton Benchmarks"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
+
+      ami_type = "AL2023_ARM_64_STANDARD"
+
+      min_size     = 0
+      max_size     = 8
+      desired_size = 0
+      # This storage is used as a shuffle for non NVMe SSD instances. e.g., r8g instances
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size           = 300
+            volume_type           = "gp3"
+            iops                  = 3000
+            encrypted             = true
+            delete_on_termination = true
+          }
+        }
+      }
+
+      instance_types = ["r8g.12xlarge"] # Change Instance type to run the benchmark with various instance types
+
+      labels = {
+        NodeGroupType = "spark-graviton-benchmark-mng"
+      }
+
+      tags = {
+        Name          = "spark-graviton-benchmark-mng"
+        NodeGroupType = "spark-graviton-benchmark-mng"
+      }
+    }
+
     # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
     # This command will give you the list of the instances with similar vcpus for arm64 dense instances
     spark_spot_x86_48cpu = {
