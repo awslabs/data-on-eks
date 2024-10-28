@@ -9,9 +9,9 @@ metadata:
   name: tpcds-data-generation-1tb
   namespace: spark-team-a
 spec:
-  # batchScheduler: yunikorn
-  # batchSchedulerOptions:
-  #   queue: root.default
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.default
   type: Scala
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
@@ -21,7 +21,7 @@ spec:
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
     # TPC-DS data location
-    - "s3a://<S3_BUCKET>/TPCDS-TEST-1TB"
+    - "s3a://<S3_BUCKET>/TPCDS-TEST-1TB-YUNIKORN"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
@@ -89,9 +89,12 @@ spec:
   restartPolicy:
     type: Never
   driver:
-    cores: 10
-    coreLimit: "10.1"
-    memory: "10g"
+    cores: 11
+    coreLimit: "11"
+    # The maximum memory size of the container to the running executor is determined by the sum of
+    #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
+    #  memory: "15g" converts to 16896Mi MemoryOverhead added by the YuniKorn
+    memory: "15g" 
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -112,9 +115,12 @@ spec:
       NodeGroupType: SparkComputeOptimized
   executor:
     cores: 11
-    coreLimit: "11.1"
-    memory: "15g"
-    instances: 26
+    coreLimit: "11"
+    # The maximum memory size of the container to the running executor is determined by the sum of
+    #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
+    #  memory: "15g" converts to 16896Mi MemoryOverhead added by the YuniKorn
+    memory: "15g" 
+    instances: 4
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185

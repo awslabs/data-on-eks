@@ -1,19 +1,21 @@
-# NOTE: This example requires the following prerequisites before executing the jobs
-# 1. Create an S3 bucket to store the generated data
-# 2. Ensure spark-team-a name space exists
-# 3. replace <S3_BUCKET> with your bucket name
+# > **Note:** Before running these jobs, make sure the following prerequisites are completed:
+
+# 1. Set up an S3 bucket to store the generated data.
+# 2. Update the `eks.tf` file to modify `min_size=6` and `desired_size=6` for the managed node group `"spark_graviton_r6g"`, then run `terraform apply`.
+# 3. Confirm that the `"spark-team-a"` namespace exists.
+# 4. Replace `<S3_BUCKET>` in the configuration with your actual bucket name.
+# 5. Run `kubectl apply -f <filename>` to apply the configuration.
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: tpcds-benchmark-3tb
+  name: tpcds-benchmark-1tb-r6g
   namespace: spark-team-a
-
 spec:
-  # batchScheduler: yunikorn
-  # batchSchedulerOptions:
-  #   queue: root.default
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.default
   type: Scala
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
@@ -48,7 +50,7 @@ spec:
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
     "spark.sql.adaptive.skewJoin.enabled": "true"
-    "spark.kubernetes.executor.podNamePrefix": "benchmark-exec"
+    "spark.kubernetes.executor.podNamePrefix": "benchmark-exec-r6g-"
    # S3 Optimizations
     # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # This is using AWS SDK V1 in maintenance mode
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
@@ -101,11 +103,8 @@ spec:
     env:
       - name: JAVA_HOME
         value: "/opt/java/openjdk"
-    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
-    # we do not need to leverage a hostPath mount or volume to leverage that storage.
-    # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: SparkGravitonBenchmark
+      NodeGroupType: spark-graviton-benchmark-mng-r6g
   executor:
     cores: 4
     coreLimit: "4.3"
@@ -119,10 +118,7 @@ spec:
     env:
       - name: JAVA_HOME
         value: "/opt/java/openjdk"
-    # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
-    # we do not need to leverage a hostPath mount or volume to leverage that storage.
-    # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodeGroupType: SparkGravitonBenchmark
+      NodeGroupType: spark-graviton-benchmark-mng-r6g
   restartPolicy:
     type: Never

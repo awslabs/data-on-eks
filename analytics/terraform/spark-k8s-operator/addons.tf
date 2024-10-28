@@ -84,9 +84,9 @@ module "eks_data_addons" {
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
             values: ["c5d"]
-          - key: "karpenter.k8s.aws/instance-cpu"
+          - key: "karpenter.k8s.aws/instance-size"
             operator: In
-            values: ["4", "8", "16", "36"]
+            values: ["4xlarge", "9xlarge", "12xlarge", "18xlarge", "24xlarge"]
           - key: "karpenter.k8s.aws/instance-hypervisor"
             operator: In
             values: ["nitro"]
@@ -97,7 +97,7 @@ module "eks_data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmptyOrUnderutilized
-          consolidateAfter: 5m
+          consolidateAfter: 1m
         weight: 100
       EOT
       ]
@@ -185,7 +185,7 @@ module "eks_data_addons" {
         requirements:
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: ["spot", "on-demand"]
+            values: ["on-demand"]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["arm64"]
@@ -258,7 +258,7 @@ module "eks_data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmptyOrUnderutilized
-          consolidateAfter: 5m
+          consolidateAfter: 1m
         weight: 100
       EOT
       ]
@@ -390,7 +390,7 @@ module "eks_data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmptyOrUnderutilized
-          consolidateAfter: 5m
+          consolidateAfter: 1m
         weight: 100
       EOT
       ]
@@ -410,6 +410,10 @@ module "eks_data_addons" {
     version = "2.0.2"
     values = [
       <<-EOT
+        controller:
+          batchScheduler:
+            enable: true
+            default: "yunikorn"
         spark:
           # -- List of namespaces where to run spark jobs.
           # If empty string is included, all namespaces will be allowed.
@@ -435,7 +439,7 @@ module "eks_data_addons" {
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
     values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.2.0"
+      image_version = "1.6.0"
     })]
   }
 
