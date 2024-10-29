@@ -438,9 +438,8 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
-    values = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {
-      image_version = "1.6.0"
-    })]
+    version = "1.6.0"
+    values  = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {})]
   }
 
   #---------------------------------------------------------------

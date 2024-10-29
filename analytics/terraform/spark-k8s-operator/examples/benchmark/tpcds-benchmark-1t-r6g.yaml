@@ -94,7 +94,7 @@ spec:
     "spark.hadoop.fs.s3a.multipart.threshold": "134217728"      # 128 MB threshold to start multi-part upload
   driver:
     cores: 4
-    coreLimit: "4.1"
+    coreLimit: "4.3"
     memory: "5g"
     memoryOverhead: "1g"
     serviceAccount: spark-team-a

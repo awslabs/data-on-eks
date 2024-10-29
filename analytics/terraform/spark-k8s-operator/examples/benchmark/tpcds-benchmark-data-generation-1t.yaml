@@ -41,20 +41,23 @@ spec:
     "spark.driverEnv.JAVA_HOME": "/opt/java/openjdk"
     "spark.network.timeout": "2000s"
     "spark.executor.heartbeatInterval": "300s"
-    "spark.kubernetes.memoryOverheadFactor": "0.3"
+    # Bug: memoryOverheadFactor is not calculated correctly with Spark Operator when used with YuniKorn Gang Scheduling. Just use memoryOverhead for driver and executor instead.
+    # "spark.kubernetes.memoryOverheadFactor": "0.3"
     # AQE
     "spark.sql.adaptive.enabled": "true"
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
     "spark.sql.adaptive.skewJoin.enabled": "true"
-    # "spark.kubernetes.memoryOverheadFactor": "0.35" # Optional tweak for memory-intensive jobs
     "spark.sql.files.maxRecordsPerFile": "30000000"
     "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
+
     # S3 Optimizations
-    # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # This is using AWS SDK V1 in maintenance mode
-    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"  # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    # AWS SDK V1 is in maintenance mode hence commented and enabled AWS SDK V2 Class with S3 CRT support
+    # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+    # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
     "spark.hadoop.fs.s3a.fast.upload": "true"
     "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
@@ -66,26 +69,22 @@ spec:
     "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
     "spark.kubernetes.executor.podNamePrefix": "oss-data-gen"
     "spark.sql.shuffle.partitions": "2000"  # Adjust according to your job size
-
     # "spark.hadoop.fs.s3a.committer.staging.conflict-mode": "append"
     # Data writing and shuffle tuning
     "spark.shuffle.file.buffer": "1m"
     "spark.reducer.maxSizeInFlight": "128m"
     # Java options for driver and executor
-    # Other existing configurations
     "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseG1GC"
     "spark.driver.defaultJavaOptions": "-XX:+UseG1GC"
     # -----------------------------------------------------
     # This block is very critical when you get errors like
     #     Exception in thread \"main\" io.fabric8.kubernetes.client.KubernetesClientException: An error has occurred
     #     Caused by: java.net.SocketTimeoutException: timeout
-    # spark.kubernetes.local.dirs.tmpfs: "true"
     # Timeout settings for large data generation
     spark.kubernetes.submission.connectionTimeout: "60000000"
     spark.kubernetes.submission.requestTimeout: "60000000"
     spark.kubernetes.driver.connectionTimeout: "60000000"
     spark.kubernetes.driver.requestTimeout: "60000000"
-    # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
   restartPolicy:
     type: Never
   driver:
@@ -93,8 +92,8 @@ spec:
     coreLimit: "11"
     # The maximum memory size of the container to the running executor is determined by the sum of
     #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
-    #  memory: "15g" converts to 16896Mi MemoryOverhead added by the YuniKorn
-    memory: "15g" 
+    memory: "15g"
+    memoryOverhead: "4g"
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -118,9 +117,9 @@ spec:
     coreLimit: "11"
     # The maximum memory size of the container to the running executor is determined by the sum of
     #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
-    #  memory: "15g" converts to 16896Mi MemoryOverhead added by the YuniKorn
-    memory: "15g" 
-    instances: 4
+    memory: "15g"
+    memoryOverhead: "4g"
+    instances: 26
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
