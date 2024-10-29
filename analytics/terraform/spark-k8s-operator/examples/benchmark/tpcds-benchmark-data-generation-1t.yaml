@@ -9,9 +9,9 @@ metadata:
   name: tpcds-data-generation-1tb
   namespace: spark-team-a
 spec:
-  # batchScheduler: yunikorn
-  # batchSchedulerOptions:
-  #   queue: root.default
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.default
   type: Scala
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
@@ -89,7 +89,6 @@ spec:
     type: Never
   driver:
     cores: 11
-    coreLimit: "11"
     # The maximum memory size of the container to the running executor is determined by the sum of
     #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
     memory: "15g"
@@ -114,7 +113,6 @@ spec:
       NodeGroupType: SparkComputeOptimized
   executor:
     cores: 11
-    coreLimit: "11"
     # The maximum memory size of the container to the running executor is determined by the sum of
     #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
     memory: "15g"
