@@ -9,12 +9,10 @@ kind: SparkApplication
 metadata:
   name: "taxi-trip"
   namespace: spark-team-a
-  labels:
-    app: "taxi-trip"
-    applicationId: "taxi-trip-yunikorn"
-    # Assign the job to a Yunikorn Queue via label.
-    queue: root.test
 spec:
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.default
 #  To create Ingress object for Spark driver.
 #  Ensure Spark Operator Helm Chart deployed with Ingress enabled to use this feature
 #  sparkUIOptions:
@@ -98,36 +96,6 @@ spec:
         effect: "NoSchedule"
     labels:
       version: 3.2.1
-    annotations:
-      yunikorn.apache.org/schedulingPolicyParameters: "placeholderTimeoutSeconds=30 gangSchedulingStyle=Hard"
-      yunikorn.apache.org/task-group-name: "spark-driver"
-      # minMember should match with driver and executor instances
-      # minResource cpu and memory should match with driver and executor cpu and memory
-      yunikorn.apache.org/task-groups: |-
-        [{
-            "name": "spark-driver",
-            "minMember": 1,
-            "minResource": {
-              "cpu": "1200m",
-              "memory": "14Gi"
-            },
-            "nodeSelector": {
-              "NodeGroupType": "SparkComputeOptimized"
-            },
-            "tolerations": [{"key": "spark-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
-          },
-          {
-            "name": "spark-executor",
-            "minMember": 4,
-            "minResource": {
-              "cpu": "1200m",
-              "memory": "14Gi"
-            },
-            "nodeSelector": {
-              "NodeGroupType": "SparkComputeOptimized"
-            },
-            "tolerations": [{"key": "spark-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
-        }]
   executor:
     cores: 1
     coreLimit: "1200m"
