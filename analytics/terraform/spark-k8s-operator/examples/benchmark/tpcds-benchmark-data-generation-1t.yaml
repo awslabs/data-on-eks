@@ -9,9 +9,9 @@ metadata:
   name: tpcds-data-generation-1tb
   namespace: spark-team-a
 spec:
-  batchScheduler: yunikorn
-  batchSchedulerOptions:
-    queue: root.default
+  # batchScheduler: yunikorn
+  # batchSchedulerOptions:
+  #   queue: root.default
   type: Scala
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
@@ -21,7 +21,7 @@ spec:
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
     # TPC-DS data location
-    - "s3a://<S3_BUCKET>/TPCDS-TEST-1TB-YUNIKORN"
+    - "s3a://<S3_BUCKET>/TPCDS-TEST-1TB"
     # Path to kit in the docker image
     - "/opt/tpcds-kit/tools"
     # Data Format
