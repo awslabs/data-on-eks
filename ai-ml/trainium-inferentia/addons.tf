@@ -190,12 +190,6 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
-#resource "aws_eks_access_entry" "this" {
-#  cluster_name  = module.eks.cluster_name
-#  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-#  type          = "EC2_LINUX"
-#}
-
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
@@ -203,7 +197,7 @@ module "eks_data_addons" {
   #source  = "aws-ia/eks-data-addons/aws"
   #version = "1.33.0" # ensure to update this to the latest/desired version
 
-  source = "github.com/aws-ia/terraform-aws-eks-data-addons?ref=neuron-helm-chart"
+  source            = "github.com/aws-ia/terraform-aws-eks-data-addons?ref=neuron-helm-chart"
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin = true

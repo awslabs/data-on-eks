@@ -58,7 +58,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="input_aws_batch_doeks_jd_name"></a> [aws\_batch\_doeks\_jd\_name](#input\_aws\_batch\_doeks\_jd\_name) | The AWS Batch example job definition name | `string` | `"doeks-hello-world"` | no |
 | <a name="input_aws_batch_doeks_jq_name"></a> [aws\_batch\_doeks\_jq\_name](#input\_aws\_batch\_doeks\_jq\_name) | The AWS Batch EKS namespace | `string` | `"doeks-JQ1"` | no |
 | <a name="input_aws_batch_doeks_namespace"></a> [aws\_batch\_doeks\_namespace](#input\_aws\_batch\_doeks\_namespace) | The AWS Batch EKS namespace | `string` | `"doeks-aws-batch"` | no |
-| <a name="input_aws_batch_instance_types"></a> [aws\_batch\_instance\_types](#input\_aws\_batch\_instance\_types) | The set of instance types to launch for AWS Batch jobs. | `list(string)` | <pre>[<br>  "optimal"<br>]</pre> | no |
+| <a name="input_aws_batch_instance_types"></a> [aws\_batch\_instance\_types](#input\_aws\_batch\_instance\_types) | The set of instance types to launch for AWS Batch jobs. | `list(string)` | <pre>[<br/>  "optimal"<br/>]</pre> | no |
 | <a name="input_aws_batch_max_vcpus"></a> [aws\_batch\_max\_vcpus](#input\_aws\_batch\_max\_vcpus) | The minimum aggregate vCPU for AWS Batch compute environment | `number` | `256` | no |
 | <a name="input_aws_batch_min_vcpus"></a> [aws\_batch\_min\_vcpus](#input\_aws\_batch\_min\_vcpus) | The minimum aggregate vCPU for AWS Batch compute environment | `number` | `0` | no |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region | `string` | `"us-east-1"` | no |
@@ -67,8 +67,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="input_eks_private_cluster_endpoint"></a> [eks\_private\_cluster\_endpoint](#input\_eks\_private\_cluster\_endpoint) | Whether to have a private cluster endpoint for the EKS cluster. | `bool` | `true` | no |
 | <a name="input_eks_public_cluster_endpoint"></a> [eks\_public\_cluster\_endpoint](#input\_eks\_public\_cluster\_endpoint) | Whether to have a public cluster endpoint for the EKS cluster.   #WARNING: Avoid a public endpoint in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing. | `bool` | `true` | no |
 | <a name="input_num_azs"></a> [num\_azs](#input\_num\_azs) | The number of Availability Zones to deploy subnets to. Must be 2 or more | `number` | `2` | no |
-| <a name="input_private_subnets"></a> [private\_subnets](#input\_private\_subnets) | Private Subnets CIDRs. 32766 Subnet1 and 16382 Subnet2 IPs per Subnet | `list(string)` | <pre>[<br>  "10.1.0.0/17",<br>  "10.1.128.0/18"<br>]</pre> | no |
-| <a name="input_public_subnets"></a> [public\_subnets](#input\_public\_subnets) | Public Subnets CIDRs. 62 IPs per Subnet | `list(string)` | <pre>[<br>  "10.1.255.128/26",<br>  "10.1.255.192/26"<br>]</pre> | no |
+| <a name="input_private_subnets"></a> [private\_subnets](#input\_private\_subnets) | Private Subnets CIDRs. 32766 Subnet1 and 16382 Subnet2 IPs per Subnet | `list(string)` | <pre>[<br/>  "10.1.0.0/17",<br/>  "10.1.128.0/18"<br/>]</pre> | no |
+| <a name="input_public_subnets"></a> [public\_subnets](#input\_public\_subnets) | Public Subnets CIDRs. 62 IPs per Subnet | `list(string)` | <pre>[<br/>  "10.1.255.128/26",<br/>  "10.1.255.192/26"<br/>]</pre> | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Default tags | `map(string)` | `{}` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR | `string` | `"10.1.0.0/16"` | no |
 
