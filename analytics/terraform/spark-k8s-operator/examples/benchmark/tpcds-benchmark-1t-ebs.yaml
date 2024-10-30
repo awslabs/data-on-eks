@@ -6,7 +6,7 @@
 # 4. Replace `<S3_BUCKET>` in the configuration with your actual bucket name.
 # 5. Run `kubectl apply -f <filename>` to apply the configuration.
 
-# If you are repeating the tests to re-runw tih diffrent isntance types then make sure you update the following
+# If you are repeating the tests to re-runw tih different instance types then make sure you update the following
 # 1/ Joba name to match with instance type e.g., name: tpcds-benchmark-1tb-ebs-r6g
 
 ---
