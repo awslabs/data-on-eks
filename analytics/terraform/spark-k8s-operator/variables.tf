@@ -72,21 +72,6 @@ variable "enable_yunikorn" {
   type        = bool
 }
 
-variable "aws_auth_roles" {
-  description = "additional aws auth roles"
-  type = list(
-    object(
-      {
-        rolearn  = string
-        username = string
-        groups = list(string
-        )
-      }
-    )
-  )
-  default = []
-}
-
 variable "kms_key_admin_roles" {
   description = "list of role ARNs to add to the KMS policy"
   type        = list(string)

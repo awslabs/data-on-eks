@@ -3,13 +3,17 @@
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.15"
+  version = "~> 20.26"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
   #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
+
+  # Add the IAM identity that terraform is using as a cluster admin
+  authentication_mode                      = "API_AND_CONFIG_MAP"
+  enable_cluster_creator_admin_permissions = true
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
@@ -23,19 +27,6 @@ module "eks" {
     var.kms_key_admin_roles,
     [data.aws_iam_session_context.current.issuer_arn]
 
-  ))
-
-  manage_aws_auth_configmap = true
-  aws_auth_roles = distinct(concat([{
-    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-    rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-    username = "system:node:{{EC2PrivateDNSName}}"
-    groups = [
-      "system:bootstrappers",
-      "system:nodes",
-    ]
-    }],
-    var.aws_auth_roles
   ))
 
   #---------------------------------------
@@ -81,23 +72,6 @@ module "eks" {
       # Not required, but used in the example to access the nodes to inspect mounted volumes
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
-
-    # NVMe instance store volumes are automatically enumerated and assigned a device
-    pre_bootstrap_user_data = <<-EOT
-      cat <<-EOF > /etc/profile.d/bootstrap.sh
-      #!/bin/sh
-
-      # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-      # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-      # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-      #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-      #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-      export LOCAL_DISKS='raid0'
-      EOF
-
-      # Source extra environment variables in bootstrap script
-      sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-    EOT
 
     ebs_optimized = true
     # This block device is used only for root volume. Adjust volume according to your size.
