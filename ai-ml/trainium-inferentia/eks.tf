@@ -343,4 +343,68 @@ module "eks" {
       })
     }
   }
+
+  tags = merge(local.tags, {
+    # NOTE - if creating multiple security groups with this module, only tag the
+    # security group that Karpenter should utilize with the following tag
+    # (i.e. - at most, only one security group should have this tag in your account)
+    "karpenter.sh/discovery" = local.name
+  })
+}
+
+
+################################################################################
+# Karpenter Controller & Node IAM roles, SQS Queue, Eventbridge Rules
+################################################################################
+
+module "karpenter" {
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "~> 20.24"
+
+  cluster_name          = module.eks.cluster_name
+  enable_v1_permissions = true
+
+  # Use Pod Identity
+  enable_pod_identity             = true
+  create_pod_identity_association = true
+
+  # Used to attach additional IAM policies to the Karpenter node IAM role
+  node_iam_role_additional_policies = {
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+
+  tags = local.tags
+}
+
+################################################################################
+# Karpenter Helm chart
+################################################################################
+
+resource "helm_release" "karpenter" {
+  name                = "karpenter"
+  namespace           = "kube-system"
+  create_namespace    = true
+  repository          = "oci://public.ecr.aws/karpenter"
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+  chart               = "karpenter"
+  version             = "1.0.6"
+  wait                = true
+
+  values = [
+    <<-EOT
+    settings:
+      clusterName: ${module.eks.cluster_name}
+      clusterEndpoint: ${module.eks.cluster_endpoint}
+      interruptionQueue: ${module.karpenter.queue_name}
+    serviceAccount:
+      name: ${module.karpenter.service_account}
+    EOT
+  ]
+
+  lifecycle {
+    ignore_changes = [
+      repository_password
+    ]
+  }
 }

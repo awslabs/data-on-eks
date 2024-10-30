@@ -79,9 +79,9 @@
 | <a name="input_huggingface_token"></a> [huggingface\_token](#input\_huggingface\_token) | Hugging Face Secret Token | `string` | `"DUMMY_TOKEN_REPLACE_ME"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"nvidia-triton-server"` | no |
 | <a name="input_ngc_api_key"></a> [ngc\_api\_key](#input\_ngc\_api\_key) | NGC API Key | `string` | `"DUMMY_NGC_API_KEY_REPLACE_ME"` | no |
-| <a name="input_nim_models"></a> [nim\_models](#input\_nim\_models) | NVIDIA NIM Models | <pre>list(object({<br>    name    = string<br>    id      = string<br>    enable  = bool<br>    num_gpu = string<br>  }))</pre> | <pre>[<br>  {<br>    "enable": false,<br>    "id": "nvcr.io/nim/meta/llama-3.1-8b-instruct",<br>    "name": "llama-3-1-8b-instruct",<br>    "num_gpu": "4"<br>  },<br>  {<br>    "enable": true,<br>    "id": "nvcr.io/nim/meta/llama3-8b-instruct",<br>    "name": "llama3-8b-instruct",<br>    "num_gpu": "1"<br>  }<br>]</pre> | no |
+| <a name="input_nim_models"></a> [nim\_models](#input\_nim\_models) | NVIDIA NIM Models | <pre>list(object({<br/>    name    = string<br/>    id      = string<br/>    enable  = bool<br/>    num_gpu = string<br/>  }))</pre> | <pre>[<br/>  {<br/>    "enable": false,<br/>    "id": "nvcr.io/nim/meta/llama-3.1-8b-instruct",<br/>    "name": "llama-3-1-8b-instruct",<br/>    "num_gpu": "4"<br/>  },<br/>  {<br/>    "enable": true,<br/>    "id": "nvcr.io/nim/meta/llama3-8b-instruct",<br/>    "name": "llama3-8b-instruct",<br/>    "num_gpu": "1"<br/>  }<br/>]</pre> | no |
 | <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
-| <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br>  "100.64.0.0/16"<br>]</pre> | no |
+| <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br/>  "100.64.0.0/16"<br/>]</pre> | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR. This should be a valid private (RFC 1918) CIDR range | `string` | `"10.1.0.0/21"` | no |
 
 ## Outputs

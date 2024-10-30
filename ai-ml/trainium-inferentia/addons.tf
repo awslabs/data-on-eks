@@ -107,34 +107,6 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
-  # NOTE: Karpenter Upgrade
-  # This Helm Chart addon will only install the CRD during the first installation of the helm chart.
-  #  Subsequent Helm Chart chart upgrades will not add or remove CRDs, even if the CRDs have changed.
-  #  If you need to upgrade the CRDs, you will need to manually run the following commands and ensure that the CRDs are updated before upgrading the Helm Chart.
-  #  READ the guide before applying the CRDs: https://karpenter.sh/preview/upgrade-guide/
-  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.sh_provisioners.yaml
-  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.sh_machines.yaml
-  # kubectl apply -f https://raw.githubusercontent.com/aws/karpenter/main/pkg/apis/crds/karpenter.k8s.aws_awsnodetemplates.yaml
-  #---------------------------------------
-  #---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
-  enable_karpenter                  = true
-  karpenter_enable_spot_termination = true
-  karpenter_node = {
-    iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-    }
-  }
-  karpenter = {
-    chart_version       = "0.37.0"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
   enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
@@ -218,22 +190,38 @@ module "eks_blueprints_addons" {
   tags = local.tags
 }
 
-resource "aws_eks_access_entry" "this" {
-  cluster_name  = module.eks.cluster_name
-  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-  type          = "EC2_LINUX"
-}
-
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.33.0" # ensure to update this to the latest/desired version
+  version = "1.35.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin = true
+
+  aws_neuron_device_plugin_helm_config = {
+    # Enable default scheduler
+    values = [
+      <<-EOT
+      devicePlugin:
+        tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+        - key: hub.jupyter.org/dedicated
+          operator: Exists
+          effect: NoSchedule
+      scheduler:
+        enabled: true
+      npd:
+        enabled: false
+      EOT
+    ]
+  }
 
   enable_aws_efa_k8s_device_plugin = true
 
@@ -287,7 +275,7 @@ module "eks_data_addons" {
       name: trainium-trn1
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        karpenterRole: ${module.karpenter.node_iam_role_name}
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
@@ -300,6 +288,8 @@ module "eks_data_addons" {
           volumeType: gp3
           encrypted: true
           deleteOnTermination: true
+        amiSelectorTerms:
+          - alias: al2023@v20241024
       nodePool:
         labels:
           - instanceType: trainium-trn1
@@ -339,7 +329,7 @@ module "eks_data_addons" {
       name: inferentia-inf2
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        karpenterRole: ${module.karpenter.node_iam_role_name}
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
@@ -352,6 +342,8 @@ module "eks_data_addons" {
           volumeType: gp3
           encrypted: true
           deleteOnTermination: true
+        amiSelectorTerms:
+          - alias: al2023@v20241024
       nodePool:
         labels:
           - instanceType: inferentia-inf2
@@ -374,7 +366,7 @@ module "eks_data_addons" {
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: [ "spot", "on-demand"]
+            values: [ "on-demand"]
         limits:
           cpu: 1000
         disruption:
@@ -390,19 +382,21 @@ module "eks_data_addons" {
         <<-EOT
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        karpenterRole: ${module.karpenter.node_iam_role_name}
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[2]}
         securityGroupSelectorTerms:
           id: ${module.eks.node_security_group_id}
           tags:
             Name: ${module.eks.cluster_name}-node
-          blockDevice:
-            deviceName: /dev/xvda
-            volumeSize: 200Gi
-            volumeType: gp3
-            encrypted: true
-            deleteOnTermination: true
+        blockDevice:
+          deviceName: /dev/xvda
+          volumeSize: 200Gi
+          volumeType: gp3
+          encrypted: true
+          deleteOnTermination: true
+        amiSelectorTerms:
+          - alias: al2023@v20241024
       nodePool:
         labels:
           - instanceType: mixed-x86
@@ -534,39 +528,6 @@ data "kubectl_file_documents" "mpi_operator_yaml" {
 
 resource "kubectl_manifest" "mpi_operator" {
   for_each   = var.enable_mpi_operator ? data.kubectl_file_documents.mpi_operator_yaml.manifests : {}
-  yaml_body  = each.value
-  depends_on = [module.eks.eks_cluster_id]
-}
-
-#---------------------------------------------------------------
-# Neuron Scheduler deployment
-# The YAML manifest contents for Neuron Scheduler will be replaced in future by Neuron Helm Chart
-#---------------------------------------------------------------
-
-data "http" "neuron_scheduler" {
-  url = "https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_downloads/e739253083129abeaf6f6ad1db7ccb21/my-scheduler.yml"
-}
-
-data "kubectl_file_documents" "neuron_scheduler" {
-  content = data.http.neuron_scheduler.response_body
-}
-
-resource "kubectl_manifest" "neuron_scheduler" {
-  for_each   = data.kubectl_file_documents.neuron_scheduler.manifests
-  yaml_body  = each.value
-  depends_on = [module.eks.eks_cluster_id]
-}
-
-data "http" "k8s_neuron_scheduler_eks" {
-  url = "https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_downloads/e518187532701b6660dcd70ea28c2562/k8s-neuron-scheduler-eks.yml"
-}
-
-data "kubectl_file_documents" "k8s_neuron_scheduler_eks" {
-  content = data.http.k8s_neuron_scheduler_eks.response_body
-}
-
-resource "kubectl_manifest" "k8s_neuron_scheduler_eks" {
-  for_each   = data.kubectl_file_documents.k8s_neuron_scheduler_eks.manifests
   yaml_body  = each.value
   depends_on = [module.eks.eks_cluster_id]
 }
