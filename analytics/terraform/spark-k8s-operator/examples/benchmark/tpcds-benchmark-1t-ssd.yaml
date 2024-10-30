@@ -1,21 +1,25 @@
-# > **Note:** Please complete the following prerequisites before executing these jobs:
+# > **Note:** Before running these jobs, make sure the following prerequisites are completed:
 
-# 1. Create an S3 bucket to store the generated data.
-# 2. Set up a managed node group with `c7gd` instances in the `eks.tf` file, configuring it with 6 instances. Use the existing node group as a reference.
-# 3. Confirm that the `"spark-team-a"` namespace is present.
-# 4. Replace `<S3_BUCKET>` with your actual S3 bucket name in the configuration.
-# 5. Run `kubectl apply -f <filename>` to deploy.
+# 1. Set up an S3 bucket to store the generated data.
+# 2. Update the `eks.tf` file to modify `min_size=6` and `desired_size=6` for the managed node group `"spark_benchmark_ssd"`, then run `terraform apply`.
+# 3. Confirm that the `"spark-team-a"` namespace exists.
+# 4. Replace `<S3_BUCKET>` in the configuration with your actual bucket name.
+# 5. Run `kubectl apply -f <filename>` to apply the configuration.
+
+# If you are repeating the tests to re-runw tih different instance types then make sure you update the following
+# 1/ Joba name to match with instance type e.g., name: tpcds-benchmark-1tb-ebs-r6g
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: tpcds-benchmark-1tb-c7gd
+  name: tpcds-benchmark-1tb-ssd
   namespace: spark-team-a
 spec:
-  batchScheduler: yunikorn
-  batchSchedulerOptions:
-    queue: root.default
+  # Temporarily commented out until the YuniKorn issue is resolved; falls back to the default Kubernetes scheduler
+  # batchScheduler: yunikorn
+  # batchSchedulerOptions:
+  #   queue: root.default
   type: Scala
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
@@ -50,7 +54,7 @@ spec:
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
     "spark.sql.adaptive.skewJoin.enabled": "true"
-    "spark.kubernetes.executor.podNamePrefix": "benchmark-exec-c7gd-"
+    "spark.kubernetes.executor.podNamePrefix": "benchmark-exec-ssd"
    # S3 Optimizations
     # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # This is using AWS SDK V1 in maintenance mode
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
@@ -59,7 +63,7 @@ spec:
     "spark.hadoop.fs.s3a.fast.upload": "true"
     "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
-    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
+    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a" # Using SSD disk
     "spark.hadoop.fs.s3a.multipart.size": "128M" # Good for large files
     "spark.hadoop.fs.s3a.multipart.threshold": "256M"
     "spark.hadoop.fs.s3a.threads.max": "50"
@@ -93,10 +97,9 @@ spec:
     "spark.hadoop.fs.s3a.multipart.purge": "true"               # Automatically clear failed multipart uploads
     "spark.hadoop.fs.s3a.multipart.threshold": "134217728"      # 128 MB threshold to start multi-part upload
   driver:
-    cores: 4
-    coreLimit: "4.3"
-    memory: "5g"
-    memoryOverhead: "1g"
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -114,14 +117,13 @@ spec:
       - name: JAVA_HOME
         value: "/opt/java/openjdk"
     nodeSelector:
-      NodeGroupType: spark-graviton-benchmark-mng-c7gd # Create a node group with this label in eks.tf
+      NodeGroupType: spark_benchmark_ssd
   executor:
-    cores: 4
-    coreLimit: "4.3"
-    memory: "6g"
-    memoryOverhead: "2g"
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
     # 8 executors per node
-    instances: 47
+    instances: 36 # 6 pods per node; 6 nodes with EKS Managed Node group
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -139,7 +141,7 @@ spec:
       - name: JAVA_HOME
         value: "/opt/java/openjdk"
     nodeSelector:
-      NodeGroupType: spark-graviton-benchmark-mng-c7gd # Create a node group with this label in eks.tf
+      NodeGroupType: spark_benchmark_ssd
   restartPolicy:
     type: Never
   volumes:

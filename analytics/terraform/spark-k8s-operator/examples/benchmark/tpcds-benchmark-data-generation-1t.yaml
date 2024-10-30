@@ -9,9 +9,10 @@ metadata:
   name: tpcds-data-generation-1tb
   namespace: spark-team-a
 spec:
-  batchScheduler: yunikorn
-  batchSchedulerOptions:
-    queue: root.default
+  # Temporarily commented out until the YuniKorn issue is resolved; falls back to the default Kubernetes scheduler
+  # batchScheduler: yunikorn
+  # batchSchedulerOptions:
+  #   queue: root.default
   type: Scala
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2

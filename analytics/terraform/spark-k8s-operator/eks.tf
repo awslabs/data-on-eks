@@ -142,86 +142,25 @@ module "eks" {
       }
     }
 
-    spark_ondemand_r5d = {
-      name        = "spark-ondemand-r5d"
-      description = "Spark managed node group for Driver pods"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
-
-      min_size     = 0
-      max_size     = 20
-      desired_size = 0
-
-      instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
-
-      labels = {
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark-on-demand-ca"
-      }
-
-      taints = [{
-        key    = "spark-on-demand-ca",
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
-
-      tags = {
-        Name          = "spark-ondemand-r5d"
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark-on-demand-ca"
-      }
-    }
-
-    # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
-    # This command will give you the list of the instances with similar vcpus for arm64 dense instances
-    spark_spot_x86_48cpu = {
-      name        = "spark-spot-48cpu"
-      description = "Spark Spot node group for executor workloads"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
-
-      min_size     = 0
-      max_size     = 12
-      desired_size = 0
-
-      instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
-
-      labels = {
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark-spot-ca"
-      }
-
-      taints = [{
-        key    = "spark-spot-ca"
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
-
-      tags = {
-        Name          = "spark-node-grp"
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark"
-      }
-    }
-
     # The following Node groups are a placeholder to create Node groups for running Spark TPC-DS benchmarks
-    spark_graviton_r8g = {
-      name        = "spark-graviton-r8g"
-      description = "Spark managed node group for Graviton Benchmarks"
+    spark_benchmark_ebs = {
+      name        = "spark_benchmark_ebs"
+      description = "Managed node group for Spark Benchmarks with EBS using x86 or ARM"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      ami_type = "AL2023_ARM_64_STANDARD"
+      # Change ami_type= AL2023_x86_64_STANDARD for x86 instances
+      ami_type = "AL2023_ARM_64_STANDARD" # arm64
 
+      # Node group will be created with zero instances when you deploy the blueprint.
+      # You can change the min_size and desired_size to 6 instances
+      # desired_size might not be applied through terrafrom once the node group is created so this needs to be adjusted in AWS Console.
       min_size     = 0 # Change min and desired to 6 for running benchmarks
       max_size     = 8
-      desired_size = 0
+      desired_size = 0 # Change min and desired to 6 for running benchmarks
+
       # This storage is used as a shuffle for non NVMe SSD instances. e.g., r8g instances
       block_device_mappings = {
         xvda = {
@@ -236,55 +175,62 @@ module "eks" {
         }
       }
 
+      # Change the instance type as you desire and match with ami_type
       instance_types = ["r8g.12xlarge"] # Change Instance type to run the benchmark with various instance types
 
       labels = {
-        NodeGroupType = "spark-graviton-benchmark-mng-r8g"
+        NodeGroupType = "spark_benchmark_ebs"
       }
 
       tags = {
-        Name          = "spark-graviton-benchmark-mng-r8g"
-        NodeGroupType = "spark-graviton-benchmark-mng-r8g"
+        Name          = "spark_benchmark_ebs"
+        NodeGroupType = "spark_benchmark_ebs"
       }
     }
 
-    spark_graviton_r6g = {
-      name        = "spark-graviton-r6g"
-      description = "Spark managed node group for Graviton Benchmarks"
+    spark_benchmark_ssd = {
+      name        = "spark_benchmark_ssd"
+      description = "Managed node group for Spark Benchmarks with NVMEe SSD using x86 or ARM"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      ami_type = "AL2023_ARM_64_STANDARD"
+      ami_type = "AL2023_x86_64_STANDARD" # x86
 
-      min_size     = 0
+      # Node group will be created with zero instances when you deploy the blueprint.
+      # You can change the min_size and desired_size to 6 instances
+      # desired_size might not be applied through terrafrom once the node group is created so this needs to be adjusted in AWS Console.
+      min_size     = 0 # Change min and desired to 6 for running benchmarks
       max_size     = 8
-      desired_size = 0
-      # This storage is used as a shuffle for non NVMe SSD instances. e.g., r8g instances
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size           = 300
-            volume_type           = "gp3"
-            iops                  = 3000
-            encrypted             = true
-            delete_on_termination = true
-          }
-        }
-      }
+      desired_size = 0 # Change min and desired to 6 for running benchmarks
 
-      instance_types = ["r6g.12xlarge"] # Change Instance type to run the benchmark with various instance types
+      instance_types = ["c5d.12xlarge"] # c5d.12xlarge = 2 x 900 NVMe SSD
+
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content      = <<-EOT
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              instance:
+                localStorage:
+                  strategy: RAID0
+          EOT
+        }
+      ]
 
       labels = {
-        NodeGroupType = "spark-graviton-benchmark-mng-r6g"
+        NodeGroupType = "spark_benchmark_ssd"
       }
 
       tags = {
-        Name          = "spark-graviton-benchmark-mng-r6g"
-        NodeGroupType = "spark-graviton-benchmark-mng-r6g"
+        Name          = "spark_benchmark_ssd"
+        NodeGroupType = "spark_benchmark_ssd"
       }
     }
+
   }
 }
