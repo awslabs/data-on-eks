@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gradio-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gradio-app
+  template:
+    metadata:
+      labels:
+        app: gradio-app
+    spec:
+      containers:
+      - name: gradio-app
+        image: public.ecr.aws/j5k9c6o6/doeks-genai-workshop-gradio:latest
+        ports:
+        - containerPort: 7860
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 7860
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 7860
+          initialDelaySeconds: 60
+          periodSeconds: 15
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gradio-app
+spec:
+  selector:
+    app: gradio-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 7860
+  type: ClusterIP
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gradio-app-ingress
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '10'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '9'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '10'
+    alb.ingress.kubernetes.io/success-codes: '200-302'
+    alb.ingress.kubernetes.io/load-balancer-name: gradio-app-ingress
+  labels:
+    app: gradio-app-ingress
+spec:
+  ingressClassName: alb
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gradio-app
+            port: 
+              number: 80
+

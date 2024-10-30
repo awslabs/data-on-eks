@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-service
+  template:
+    metadata:
+      labels:
+        app: rag-service
+    spec:
+      containers:
+      - name: rag-service
+        image: public.ecr.aws/r5m2h0c9/rag-service-riv:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: QDRANT_URL
+          value: "http://qdrant.default.svc.cluster.local:6333"
+        - name: VLLM_URL
+          value: "http://vllm-mistral-inf2-serve-svc.default.svc.cluster.local:8000/v1/chat/completions"
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-service
+spec:
+  selector:
+    app: rag-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000

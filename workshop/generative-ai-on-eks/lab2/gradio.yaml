@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gradio-app
+  labels:
+    app: gradio-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gradio-app
+  template:
+    metadata:
+      labels:
+        app: gradio-app
+    spec:
+      containers:
+      - name: gradio-app
+        image: public.ecr.aws/r5m2h0c9/gradio-riv:latest
+        ports:
+        - name: http
+          containerPort: 7860
+        env:
+        - name: RAG_SERVICE_URL
+          value: "http://rag-service.default.svc.cluster.local/v1/chat/completions"
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gradio-app-service
+spec:
+  selector:
+    app: gradio-app
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 7860
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gradio-app-ingress
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: alb
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gradio-app-service
+            port: 
+              number: 80

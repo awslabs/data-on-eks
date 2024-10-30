@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minio-webhook-config
+data:
+  webhook.py: |
+    from flask import Flask, request, jsonify
+    from kubernetes import client, config
+    import os
+    import traceback
+    import sys
+    import re
+
+    app = Flask(__name__)
+
+    # Load Kubernetes configuration
+    config.load_incluster_config()
+    batch_v1 = client.BatchV1Api()
+
+    @app.route('/webhook', methods=['POST'])
+    def webhook():
+        try:
+            print("Received webhook event", file=sys.stderr)
+            event = request.json
+            print(f"Event data: {event}", file=sys.stderr)
+            bucket_name = event['Records'][0]['s3']['bucket']['name']
+            pdf_key = event['Records'][0]['s3']['object']['key']
+            print(f"Bucket: {bucket_name}, Key: {pdf_key}", file=sys.stderr)
+            
+            # Create a Kubernetes Job
+            job = create_pdf_processing_job(bucket_name, pdf_key)
+            print(f"Created job: {job}", file=sys.stderr)
+            result = batch_v1.create_namespaced_job(namespace="default", body=job)
+            print(f"Job creation result: {result}", file=sys.stderr)
+            
+            return jsonify({"message": "Job created successfully"}), 200
+        except Exception as e:
+            print(f"Error in webhook: {str(e)}", file=sys.stderr)
+            print(f"Traceback: {traceback.format_exc()}", file=sys.stderr)
+            return jsonify({"error": str(e)}), 500
+
+    def create_pdf_processing_job(bucket_name, pdf_key):
+        job_name = f"pdf-processor-{re.sub(r'[^a-z0-9-]', '-', pdf_key.lower())}"
+        job_name = job_name[:63].strip('-')
+        
+        return client.V1Job(
+            api_version="batch/v1",
+            kind="Job",
+            metadata=client.V1ObjectMeta(name=job_name, namespace="default"),
+            spec=client.V1JobSpec(
+                template=client.V1PodTemplateSpec(
+                    spec=client.V1PodSpec(
+                        containers=[client.V1Container(
+                            name="pdf-processor",
+                            image="public.ecr.aws/r5m2h0c9/pdf-processor-riv:latest",
+                            env=[
+                                client.V1EnvVar(name="BUCKET_NAME", value=bucket_name),
+                                client.V1EnvVar(name="PDF_KEY", value=pdf_key),
+                                client.V1EnvVar(name="MINIO_ENDPOINT", value="http://minio.default.svc.cluster.local:9000"),
+                                client.V1EnvVar(name="QDRANT_URL", value="http://qdrant.default.svc.cluster.local:6333"),
+                                client.V1EnvVar(name="COLLECTION_NAME", value="pdf_embeddings"),
+                                client.V1EnvVar(
+                                    name="MINIO_ROOT_USER",
+                                    value_from=client.V1EnvVarSource(
+                                        secret_key_ref=client.V1SecretKeySelector(
+                                            name="minio-creds",
+                                            key="root-user"
+                                        )
+                                    )
+                                ),
+                                client.V1EnvVar(
+                                    name="MINIO_ROOT_PASSWORD",
+                                    value_from=client.V1EnvVarSource(
+                                        secret_key_ref=client.V1SecretKeySelector(
+                                            name="minio-creds",
+                                            key="root-password"
+                                        )
+                                    )
+                                )
+                            ],
+                            resources=client.V1ResourceRequirements(
+                                requests={
+                                    "cpu": "500m",
+                                    "memory": "1Gi"
+                                },
+                                limits={
+                                    "cpu": "1",
+                                    "memory": "2Gi"
+                                }
+                            )
+                        )],
+                        restart_policy="Never"
+                    )
+                ),
+                backoff_limit=4
+            )
+        )
+
+    @app.route('/health', methods=['GET'])
+    def health_check():
+        return jsonify({"status": "healthy"}), 200
+
+    if __name__ == '__main__':
+        app.run(host='0.0.0.0', port=5000)
