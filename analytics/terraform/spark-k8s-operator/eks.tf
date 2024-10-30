@@ -161,9 +161,6 @@ module "eks" {
       max_size     = 8
       desired_size = 0 # Change min and desired to 6 for running benchmarks
 
-      # add `--local-disks raid0` for NVMe auto-mapping: https://github.com/awslabs/amazon-eks-ami/pull/1171
-      bootstrap_extra_args = "--local-disks raid0"
-
       # This storage is used as a shuffle for non NVMe SSD instances. e.g., r8g instances
       block_device_mappings = {
         xvda = {
@@ -209,6 +206,21 @@ module "eks" {
       desired_size = 0 # Change min and desired to 6 for running benchmarks
 
       instance_types = ["c5d.12xlarge"] # c5d.12xlarge = 2 x 900 NVMe SSD
+
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content      = <<-EOT
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              instance:
+                localStorage:
+                  strategy: RAID0
+          EOT
+        }
+      ]
 
       labels = {
         NodeGroupType = "spark_benchmark_ssd"
