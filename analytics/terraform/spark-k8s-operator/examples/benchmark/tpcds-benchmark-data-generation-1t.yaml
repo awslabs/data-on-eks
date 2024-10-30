@@ -9,7 +9,7 @@ metadata:
   name: tpcds-data-generation-1tb
   namespace: spark-team-a
 spec:
-  # Commented until the YuniKorn issue is fixed and it falls back default k8s scheduler
+  # Temporarily commented out until the YuniKorn issue is resolved; falls back to the default Kubernetes scheduler
   # batchScheduler: yunikorn
   # batchSchedulerOptions:
   #   queue: root.default
