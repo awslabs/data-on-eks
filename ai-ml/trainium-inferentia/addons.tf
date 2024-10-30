@@ -194,10 +194,9 @@ module "eks_blueprints_addons" {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  #source  = "aws-ia/eks-data-addons/aws"
-  #version = "1.33.0" # ensure to update this to the latest/desired version
+  source  = "aws-ia/eks-data-addons/aws"
+  version = "1.35.0" # ensure to update this to the latest/desired version
 
-  source            = "github.com/aws-ia/terraform-aws-eks-data-addons?ref=neuron-helm-chart"
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_aws_neuron_device_plugin = true
