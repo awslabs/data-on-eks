@@ -161,6 +161,9 @@ module "eks" {
       max_size     = 8
       desired_size = 0 # Change min and desired to 6 for running benchmarks
 
+      # add `--local-disks raid0` for NVMe auto-mapping: https://github.com/awslabs/amazon-eks-ami/pull/1171
+      bootstrap_extra_args = "--local-disks raid0"
+
       # This storage is used as a shuffle for non NVMe SSD instances. e.g., r8g instances
       block_device_mappings = {
         xvda = {
@@ -196,7 +199,7 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      ami_type = "AL2023_x86_64_STANDARD" # arm64
+      ami_type = "AL2023_x86_64_STANDARD" # x86
 
       # Node group will be created with zero instances when you deploy the blueprint.
       # You can change the min_size and desired_size to 6 instances
