@@ -37,6 +37,15 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
 }
 
 #---------------------------------------------------------------
+# Karpenter Node instance role Access Entry
+#---------------------------------------------------------------
+resource "aws_eks_access_entry" "karpenter_nodes" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+  type          = "EC2_LINUX"
+}
+
+#---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
