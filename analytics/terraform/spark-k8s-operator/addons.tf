@@ -418,7 +418,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    chart_version = "2.3.3"
+    chart_version       = "2.3.3"
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -479,7 +479,7 @@ module "eks_blueprints_addons" {
   enable_metrics_server = true
   metrics_server = {
     chart_version = "3.12.2"
-    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    values        = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -516,7 +516,7 @@ module "eks_blueprints_addons" {
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
     chart_version = "0.0.11"
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+    values        = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
