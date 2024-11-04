@@ -54,7 +54,7 @@ module "vpc_endpoints_sg" {
     {
       rule        = "https-443-tcp"
       description = "VPC CIDR HTTPS"
-      cidr_blocks = join(",", module.vpc.private_subnets_cidr_blocks)
+      cidr_blocks = join(",", [module.vpc.vpc_cidr_block], module.vpc.vpc_secondary_cidr_blocks)
     },
   ]
 
@@ -82,7 +82,7 @@ module "vpc_endpoints" {
     s3 = {
       service         = "s3"
       service_type    = "Gateway"
-      route_table_ids = module.vpc.private_route_table_ids
+      route_table_ids = concat(module.vpc.public_route_table_ids, module.vpc.private_route_table_ids)
       tags = {
         Name = "${local.name}-s3"
       }
