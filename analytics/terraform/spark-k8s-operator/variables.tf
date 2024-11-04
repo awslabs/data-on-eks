@@ -79,13 +79,13 @@ variable "kms_key_admin_roles" {
 }
 
 variable "spark_benchmark_ssd_min_size" {
-  description = "Minimum size for nodegroup of c5d 12xlarge instances to run data genereation for Spark benchmark"
+  description = "Minimum size for nodegroup of c5d 12xlarge instances to run data generation for Spark benchmark"
   type        = number
   default     = 0
 }
 
 variable "spark_benchmark_ssd_desired_size" {
-  description = "Desired size for nodegroup of c5d 12xlarge instances to run data genereation for Spark benchmark"
+  description = "Desired size for nodegroup of c5d 12xlarge instances to run data generation for Spark benchmark"
   type        = number
   default     = 0
 }

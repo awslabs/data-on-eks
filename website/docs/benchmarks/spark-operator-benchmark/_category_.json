@@ -1,5 +1,5 @@
 {
-  "label": "Spark Operator Benchmarks on EKS",
+  "label": "Spark Benchmarks",
   "position": 2,
   "link": {
     "type": "generated-index"

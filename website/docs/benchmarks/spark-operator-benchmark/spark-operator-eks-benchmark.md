@@ -1,6 +1,6 @@
 ---
 sidebar_position: 1
-sidebar_label: Spark Operator Benchmark on EKS
+sidebar_label: Spark Benchmarks
 ---
 
 # Spark Benchmark Tests on Amazon EKS 🚀
