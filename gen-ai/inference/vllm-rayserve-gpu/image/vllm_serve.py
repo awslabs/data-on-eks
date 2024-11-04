@@ -16,10 +16,7 @@ from huggingface_hub import login
 # Environment and configuration setup
 logger = logging.getLogger("ray.serve")
 
-@serve.deployment(name="mistral-deployment", route_prefix="/vllm",
-    ray_actor_options={"num_gpus": 1},
-    autoscaling_config={"min_replicas": 1, "max_replicas": 2},
-)
+@serve.deployment
 class VLLMDeployment:
     def __init__(self, **kwargs):
         hf_token = os.getenv("HUGGING_FACE_HUB_TOKEN")
@@ -41,8 +38,8 @@ class VLLMDeployment:
             tokenizer_pool_size=4,  # Number of tokenizer instances to handle concurrent requests efficiently.
             tokenizer_pool_type="ray",  # Pool type for tokenizers; 'ray' uses Ray for distributed processing.
             max_parallel_loading_workers=2,  # Number of parallel workers to load the model concurrently.
-            pipeline_parallel_size=1,  # Number of pipeline parallelism stages; typically set to 1 unless using model parallelism.
-            tensor_parallel_size=1,  # Number of tensor parallelism stages; typically set to 1 unless using model parallelism.
+            pipeline_parallel_size=int(os.getenv("NUM_OF_NODES", "1")),  # Number of pipeline parallelism stages; typically set to 1 unless using model parallelism.
+            tensor_parallel_size=int(os.getenv("NUM_OF_GPU", "1")),  # Number of tensor parallelism stages; typically set to 1 unless using model parallelism.
             enable_prefix_caching=True,  # Enable prefix caching to improve performance for similar prompt prefixes.
             enforce_eager=True,
             disable_log_requests=True,
