@@ -1,9 +1,9 @@
 ---
 sidebar_position: 1
-sidebar_label: Spark Benchmarks
+sidebar_label: Introduction to Spark Benchmarks
 ---
 
-# Spark Benchmark Tests on Amazon EKS 🚀
+# Introduction to Spark Benchmarks on Amazon EKS 🚀
 
 This guide walks you through running Apache Spark benchmark tests on Amazon EKS, AWS's managed Kubernetes service. Benchmark tests help evaluate and optimize Spark workloads on EKS comparing benchmark results run across different EC2 instance families of Graviton instances, especially when scaling for performance, cost efficiency, and reliability.
 Key Features 📈

@@ -2,6 +2,9 @@
 sidebar_position: 2
 sidebar_label: Data Generation
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Data Generation for Running Spark Benchmark Tests on Amazon EKS
 
