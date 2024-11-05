@@ -67,4 +67,3 @@ echo $S3_BUCKET
 ```
 
 </CollapsibleContent>
-
