@@ -69,14 +69,6 @@ spec:
 </Tabs>
 </CollapsibleContent>
 
-<CollapsibleContent header={<h2><span>Spark workloads with ClusterAutoscaler and Managed NodeGroups</span></h2>}>
-
-The second option leverages Cluster Autoscaler as an alternative design utilizing Cluster Autoscaler with Managed Node Groups for scaling Spark workloads. Spark Driver pods are scaled using On-Demand Node Groups, while Spot Node Groups are utilized for Executor pods. The Cluster Autoscaler ensures that the EKS cluster size adapts to the demands of the Spark applications, while Managed Node Groups provide the underlying infrastructure for the Driver and Executor pods. This design allows for a seamless scaling experience, adjusting resources based on workload requirements while minimizing costs.
-
-![img.png](img/eks-spark-operator-ca.png)
-
-</CollapsibleContent>
-
 <CollapsibleContent header={<h2><span>NVMe SSD Instance Storage for Spark Shuffle data</span></h2>}>
 
 It is important to note that both options in the EKS Cluster design utilize NVMe SSD instance storage for each node to serve as shuffle storage for Spark workloads. These high-performance storage options are available with all "d" type instances.
@@ -237,117 +229,6 @@ Now that the bucket name is in place you can create the Spark job.
 kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
 ```
 
-</CollapsibleContent>
-
-<CollapsibleContent header={<h2><span>Execute Sample Spark job with Cluster Autoscaler and Managed Node groups</span></h2>}>
-
-Navigate to example directory and submit the Spark job.
-
-```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler
-kubectl apply -f pyspark-pi-job.yaml
-```
-
-Monitor the job status using the below command.
-You should see the new nodes triggered by the karpenter and the YuniKorn will schedule one driver pod and 2 executor pods on this node.
-
-```bash
-kubectl get pods -n spark-team-a -w
-```
-
-## NVMe Ephemeral SSD disk for Spark shuffle storage
-
-Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
-
-```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
-```
-
-<TaxiTripExecute />
-
-<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
-<ReplaceS3BucketPlaceholders />
-```bash
-sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-ephemeral-storage.yaml
-```
-
-Now that the bucket name is in place you can create the Spark job.
-
-```bash
-kubectl apply -f nvme-ephemeral-storage.yaml
-```
-
-## EBS Dynamic PVC for shuffle storage
-Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
-
-```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/ebs-storage-dynamic-pvc
-```
-
-<TaxiTripExecute />
-
-<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
-<ReplaceS3BucketPlaceholders />
-```bash
-sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./ebs-storage-dynamic-pvc.yaml
-```
-
-Now that the bucket name is in place you can create the Spark job.
-
-```bash
-kubectl apply -f ebs-storage-dynamic-pvc.yaml
-```
-
-## Apache YuniKorn Gang Scheduling with NVMe based SSD disk for shuffle storage
-Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
-
-```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-yunikorn-gang-scheduling
-```
-
-<TaxiTripExecute />
-
-<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
-<ReplaceS3BucketPlaceholders />
-```bash
-sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-storage-yunikorn-gang-scheduling.yaml
-```
-
-Now that the bucket name is in place you can create the Spark job.
-
-```bash
-kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
-```
-
-</CollapsibleContent>
-
-<CollapsibleContent header={<h2><span>Example for TPCDS Benchmark test</span></h2>}>
-
-Be sure that the S3_BUCKET variable is set in the terminal session. If it is
-not, see the Deployment documentation above.
-
-```bash
-if [ -z "$S3_BUCKET" ] ; then
-  printf "\nS3_BUCKET is NOT set."
-else
-  printf "\nS3_BUCKET is set, rock on."
-fi
-```
-
-If *S3_BUCKET* is set we can proceed into our example.
-
-```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
-```
-
-```bash
-kubectl apply -f tpcds-benchmark-data-generation-3t.yaml
-```
-Step2: Execute Benchmark test
-
-```bash
-kubectl apply -f tpcds-benchmark-3t.yaml
-```
 </CollapsibleContent>
 
 <CollapsibleContent header={<h2><span>Karpenter Nodepool weights with Graviton and Intel</span></h2>}>
