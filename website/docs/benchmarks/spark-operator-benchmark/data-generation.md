@@ -129,7 +129,6 @@ Data generated at s3a://spark-operator-doeks-spark-logs-xxx/TPCDS-TEST-1TB
 24/11/01 15:29:42 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
 24/11/01 15:29:42 INFO SparkContext: Successfully stopped SparkContext
 ```
-
 </CollapsibleContent>
 
 ## Cost Considerations
