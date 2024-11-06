@@ -13,4 +13,3 @@ Key Features 📈
 - Benchmark Results
 - Customizable Benchmarks to suit your workloads
 - Autoscaling and Cost Optimization Strategies
-  
