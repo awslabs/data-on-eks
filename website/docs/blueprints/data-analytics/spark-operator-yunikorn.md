@@ -244,13 +244,13 @@ kubectl apply -f nvme-storage-yunikorn-gang-scheduling.yaml
 
 <CollapsibleContent header={<h2><span>Karpenter Nodepool weights with Graviton and Intel</span></h2>}>
 
-### Using Karpenter Nodepool weights for running Spark Jobs on both AWS Graviton and Intel EC2 Instances
+## Using Karpenter Nodepool weights for running Spark Jobs on both AWS Graviton and Intel EC2 Instances
 
-Customers often seek to leverage AWS Graviton instances for running Spark jobs due to their cost savings and performance improvements over traditional Intel instances. However, a common challenge is the availability of Graviton instances in specific regions or availability zones, especially during times of high demand. To address this, a fallback strategy to equivalent Intel instances is desirable.
+Customers often seek to leverage AWS Graviton instances for running Spark jobs due to their cost savings and performance improvements over traditional Intel instances. However, a common challenge is the availability of Graviton instances in specific regions or availability zones, especially during times of high demand. To address this, a [fallback strategy](https://karpenter.sh/docs/concepts/scheduling/#weighted-nodepools) to equivalent Intel instances is desirable.
 
 #### Solution
 **Step 1: Create a Multi-Architecture Spark Docker Image**
-First, ensure that your Spark job can run on both AWS Graviton (ARM architecture) and Intel (AMD architecture) instances by creating a multi-architecture Docker image. You can find a sample [Dockerfile](../../../../analytics/terraform/spark-k8s-operator/examples/docker/Dockerfile) and instructions for building and pushing this image to Amazon Elastic Container Registry (ECR) here.
+First, ensure that your Spark job can run on both AWS Graviton (ARM architecture) and Intel (AMD architecture) instances by creating a multi-architecture Docker image. You can find a sample [Dockerfile](../../../../analytics/terraform/spark-k8s-operator/examples/docker/Dockerfile) and [instructions for building and pushing this image to Amazon Elastic Container Registry (ECR) in the examples directory](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator/examples/docker).
 
 **Step 2: Deploy Two Karpenter Nodepools with weights**
 Deploy two separate Karpenter Nodepools: one configured for Graviton instances and the other for Intel instances.
@@ -259,7 +259,37 @@ Graviton Nodepool (ARM): Set the weight of the Graviton Nodepool to `100`. This 
 
 Intel Nodepool (AMD): Set the weight of the Intel Nodepool to `50`. This ensures that Karpenter will fall back to the Intel Nodepool when Graviton instances are either unavailable or reach their maximum CPU capacity.
 
-<ComputeOptimizedNodepool />
+The memory optimized Karpenter NodePools are configured with these weights.
+
+<Tabs>
+<TabItem value="spark-memory-optimized" label="spark-memory-optimized">
+
+<details>
+<summary> To view Karpenter Nodepool for `amd64` memory optimized instances, Click to toggle content!</summary>
+
+<MemoryOptimizedNodepool />
+
+</details>
+</TabItem>
+
+<TabItem value="spark-graviton-memory-optimized" label="spark-graviton-memory-optimized">
+
+<details>
+<summary> To view Karpenter Nodepool for Graviton (`arm64`) memory optimized instances, Click to toggle content!</summary>
+
+<GravitonNodepool />
+
+</details>
+</TabItem>
+</Tabs>
+
+**Step 3: Use a label selector that targets both Nodepools**
+Since both nodepools have the label `multiArch: Spark` we can configure our Spark job with a NodeSelector that matches that label. This will allow Karpenter to provision nodes from both of memory-optimized nodepools, and it will start with the Graviton instances due to the weights configured above.
+
+```yaml
+    nodeSelector:
+      multiArch: Spark
+```
 
 </CollapsibleContent>
 
