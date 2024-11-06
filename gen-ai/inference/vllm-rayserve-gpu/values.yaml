@@ -1,0 +1,14 @@
+modelConfig:
+  maxModelLen: 8192
+  maxConcurrency: 4
+  numOfGPU: 1
+  numOfCPU: 3
+
+service:
+  backend: "vLLM"
+  openAICompatible: true
+  minReplica: 1
+  maxReplica: 4
+  gpu: "g5"
+
+

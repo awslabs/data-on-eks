@@ -1,0 +1,4 @@
+name: mistral7b
+modelID: "mistralai/Mistral-7B-Instruct-v0.2"
+
+# use default for all other values
