@@ -1,6 +1,7 @@
 ---
 sidebar_position: 2
 sidebar_label: Spark Operator with YuniKorn
+hide_table_of_contents: true
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
