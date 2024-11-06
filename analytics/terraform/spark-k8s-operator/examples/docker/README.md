@@ -3,11 +3,11 @@
 In order to run Spark on Graviton instances the container images need to be built with support for the arm64 architecture. We launched an Ec2 instance and connected to that instance via SSM to build the images used in our examples.
 
 ## Pre-requisites
-### 1. Install Docker and Buildx 
-You will need an environment able to build container images, we used an EC2 instance and [installed Docker and buildx](https://docs.docker.com/engine/install/) using the commands below:  
+### 1. Install Docker and Buildx
+You will need an environment able to build container images, we used an EC2 instance and [installed Docker and buildx](https://docs.docker.com/engine/install/) using the commands below:
 ```bash
 sudo yum install -y docker
-sudo systemctl start docker 
+sudo systemctl start docker
 ```
 
 You may need to add your user to the docker group:
@@ -40,13 +40,13 @@ default      docker
   default    default                     running v0.12.5  linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/amd64/v4, linux/386
 ```
 
-### 3. Create an ECR repository 
+### 3. Create an ECR repository
 We will use an ECR repo to store the images, if you don't have a repository you can use the command below to [create a Private ECR repo](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html).
 ```bash
 aws ecr create-repository --repository-name spark --region us-east-1
 ```
 
-We should be ready to build the image now. 
+We should be ready to build the image now.
 
 
 ## Building the image
@@ -57,7 +57,7 @@ We will use the Dockerfiles in the Data on EKS repo as an example, we copied the
 wget https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/examples/docker/Dockerfile
 ```
 
-### 2. Check the Spark/Dependency versions 
+### 2. Check the Spark/Dependency versions
 The Spark base image and dependencies like hadoop and the AWS SDK are defined at the top of the dockerfile, if you need to adjust them you can edit the file before building.
 
 ```dockerfile

@@ -34,7 +34,7 @@ The blueprint configures the Karpenter Nodepools and Ec2 classes in the tabs bel
 <Tabs>
 <TabItem value="spark-memory-optimized" label="spark-memory-optimized">
 
-This NodePool uses the r5d instance type, from xlarge to 8xlarge sizes, which are great for Spark jobs require more memory. 
+This NodePool uses the r5d instance type, from xlarge to 8xlarge sizes, which are great for Spark jobs require more memory.
 <details>
 <summary> To view Karpenter Nodepool for memory optimized instances, Click to toggle content!</summary>
 
@@ -57,7 +57,7 @@ This NodePool uses the r6g, r6gd, r7g, r7gd, and r8g instance type, from 4xlarge
 
 <TabItem value="spark-compute-optimized" label="spark-compute-optimized">
 
-This NodePool uses the C5d instance type, from 4xlarge to 24xlarge sizes, which are great for Spark jobs require more CPU time. 
+This NodePool uses the C5d instance type, from 4xlarge to 24xlarge sizes, which are great for Spark jobs require more CPU time.
 <details>
 <summary> To view Karpenter Nodepool for compute optimized instances, Click to toggle content!</summary>
 
@@ -68,7 +68,7 @@ This NodePool uses the C5d instance type, from 4xlarge to 24xlarge sizes, which 
 
 <TabItem value="spark-vertical-ebs-scale" label="spark-vertical-ebs-scale">
 
-This NodePool uses a broad range of EC2 instance types, and in the bootstrapping the instances create and mount a secondary EBS volume. This volume size is scaled based on the number of cores on the Ec2 instance.  
+This NodePool uses a broad range of EC2 instance types, and in the bootstrapping the instances create and mount a secondary EBS volume. This volume size is scaled based on the number of cores on the Ec2 instance.
 This provides a secondary storage location that can be used for Spark workloads, reducing the load on the root volume of the instance and avoiding impact to system daemons or the kubelet. As larger nodes can accept more pods the bootstrapping creates a larger volume for the larger instances.
 <details>
 <summary> To view Karpenter Nodepool for these instances, Click to toggle content!</summary>
@@ -115,7 +115,7 @@ This example deploys an EKS Cluster running the Spark K8s Operator into a new VP
 
 - Creates a new sample VPC, 2 Private Subnets, 2 Public Subnets, and 2 subnets in the RFC6598 space (100.64.0.0/10) for EKS Pods.
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
-- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with Managed Node Groups for benchmarking and core services, and Karpenter NodePools for Spark workloads. 
+- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with Managed Node Groups for benchmarking and core services, and Karpenter NodePools for Spark workloads.
 - Deploys Metrics server, Spark-operator, Apache Yunikorn, Karpenter, Cluster Autoscaler, Grafana, AMP and Prometheus server.
 
 ### Prerequisites
