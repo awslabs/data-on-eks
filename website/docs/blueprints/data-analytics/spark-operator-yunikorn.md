@@ -173,18 +173,24 @@ You should see the new nodes triggered by the karpenter and the YuniKorn will sc
 kubectl get pods -n spark-team-a -w
 ```
 
+You can check the status of the SparkApplication if the pods are already completed:
+```bash
+kubectl kubectl describe sparkapplication pyspark-pi-karpenter -n spark-team-a
+```
+
 You can try the following examples to leverage multiple Karpenter Nodepools, EBS as Dynamic PVC instead of SSD and YuniKorn Gang Scheduling.
+
+## Put sample data in S3
+
+<TaxiTripExecute />
 
 ## NVMe Ephemeral SSD disk for Spark shuffle storage
 
 Example PySpark job that uses NVMe based ephemeral SSD disk for Driver and Executor shuffle storage
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-ephemeral-storage/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/
 ```
-
-<TaxiTripExecute />
-
 <!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
 <ReplaceS3BucketPlaceholders filename="./nvme-ephemeral-storage.yaml" />
 ```bash
@@ -201,11 +207,8 @@ kubectl apply -f nvme-ephemeral-storage.yaml
 Example PySpark job that uses EBS ON_DEMAND volumes using Dynamic PVCs for Driver and Executor shuffle storage
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/ebs-storage-dynamic-pvc
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/
 ```
-
-<TaxiTripExecute />
-
 <!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
 <ReplaceS3BucketPlaceholders filename="./ebs-storage-dynamic-pvc.yaml" />
 ```bash
@@ -223,13 +226,10 @@ kubectl apply -f ebs-storage-dynamic-pvc.yaml
 Gang Scheduling Spark jobs using Apache YuniKorn and Spark Operator
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/nvme-yunikorn-gang-scheduling/
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter/
 ```
-
-<TaxiTripExecute />
-
 <!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
-<ReplaceS3BucketPlaceholders filename="./ebs-storage-dynamic-pvc.yaml" />
+<ReplaceS3BucketPlaceholders filename="./nvme-storage-yunikorn-gang-scheduling.yaml" />
 ```bash
 sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./nvme-storage-yunikorn-gang-scheduling.yaml
 ```
