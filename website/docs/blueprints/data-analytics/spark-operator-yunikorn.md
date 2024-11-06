@@ -7,11 +7,6 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
-import GravitonNodepool from './_graviton_nodepool.md'
-import MemoryOptimizedNodepool from './_memory_optimized_nodepool.md'
-import ComputeOptimizedNodepool from './_compute_optimized_nodepool.md'
-import VerticalEbsNodepool from './_vertical_ebs_nodepool.md'
-
 import TaxiTripExecute from './_taxi_trip_exec.md'
 import ReplaceS3BucketPlaceholders from './_replace_s3_bucket_placeholders.mdx';
 
@@ -35,47 +30,31 @@ The blueprint configures the Karpenter Nodepools and Ec2 classes in the tabs bel
 <TabItem value="spark-memory-optimized" label="spark-memory-optimized">
 
 This NodePool uses the r5d instance type, from xlarge to 8xlarge sizes, which are great for Spark jobs require more memory.
-<details>
-<summary> To view Karpenter Nodepool for memory optimized instances, Click to toggle content!</summary>
 
-<MemoryOptimizedNodepool />
-
-</details>
+To view the Karpenter configuration [review the `addons.tf` file here](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf#L177-L223)
 </TabItem>
 
 <TabItem value="spark-graviton-memory-optimized" label="spark-graviton-memory-optimized">
 
 This NodePool uses the r6g, r6gd, r7g, r7gd, and r8g instance type, from 4xlarge to 16xlarge sizes
-<details>
-<summary> To view Karpenter Nodepool for Graviton memory optimized instances, Click to toggle content!</summary>
 
-<GravitonNodepool />
-
-</details>
+To view the Karpenter configuration [review the `addons.tf` file here](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf#L117-L170)
 </TabItem>
 
 
 <TabItem value="spark-compute-optimized" label="spark-compute-optimized">
 
 This NodePool uses the C5d instance type, from 4xlarge to 24xlarge sizes, which are great for Spark jobs require more CPU time.
-<details>
-<summary> To view Karpenter Nodepool for compute optimized instances, Click to toggle content!</summary>
 
-<ComputeOptimizedNodepool />
-
-</details>
+To view the Karpenter configuration [review the `addons.tf` file here](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf#L63-L110)
 </TabItem>
 
 <TabItem value="spark-vertical-ebs-scale" label="spark-vertical-ebs-scale">
 
 This NodePool uses a broad range of EC2 instance types, and in the bootstrapping the instances create and mount a secondary EBS volume. This volume size is scaled based on the number of cores on the Ec2 instance.
 This provides a secondary storage location that can be used for Spark workloads, reducing the load on the root volume of the instance and avoiding impact to system daemons or the kubelet. As larger nodes can accept more pods the bootstrapping creates a larger volume for the larger instances.
-<details>
-<summary> To view Karpenter Nodepool for these instances, Click to toggle content!</summary>
 
-<VerticalEbsNodepool />
-
-</details>
+To view the Karpenter configuration [review the `addons.tf` file here](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf#L230-L355)
 </TabItem>
 
 </Tabs>
@@ -265,22 +244,16 @@ The memory optimized Karpenter NodePools are configured with these weights.
 <Tabs>
 <TabItem value="spark-memory-optimized" label="spark-memory-optimized">
 
-<details>
-<summary> To view Karpenter Nodepool for `amd64` memory optimized instances, Click to toggle content!</summary>
+This NodePool uses the r5d instance type, from xlarge to 8xlarge sizes, which are great for Spark jobs require more memory.
 
-<MemoryOptimizedNodepool />
-
-</details>
+To view the Karpenter configuration [review the `addons.tf` file here](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf#L177-L223)
 </TabItem>
 
 <TabItem value="spark-graviton-memory-optimized" label="spark-graviton-memory-optimized">
 
-<details>
-<summary> To view Karpenter Nodepool for Graviton (`arm64`) memory optimized instances, Click to toggle content!</summary>
+This NodePool uses the r6g, r6gd, r7g, r7gd, and r8g instance type, from 4xlarge to 16xlarge sizes
 
-<GravitonNodepool />
-
-</details>
+To view the Karpenter configuration [review the `addons.tf` file here](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf#L117-L170)
 </TabItem>
 </Tabs>
 
