@@ -58,3 +58,4 @@ To minimize costs, we recommend terminating the `C5d` instances once the benchma
 ## 🔗 Additional Resources
 
 [TPCDS Specification](https://www.tpc.org/tpcds/default5.asp)
+
