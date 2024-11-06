@@ -5,5 +5,12 @@ it in order to increase the size a bit. This will take a bit of time and will
 require a relatively fast internet connection.
 
 ```bash
-${DOEKS_HOME}/analytics/scripts/taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
+cd ${DOEKS_HOME}/analytics/scripts/
+chmod +x taxi-trip-execute.sh
+taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
+```
+
+You can return to the blueprint directory and continue with the example
+```bash
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
 ```
