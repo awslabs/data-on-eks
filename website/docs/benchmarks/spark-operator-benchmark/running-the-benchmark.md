@@ -61,8 +61,8 @@ echo $S3_BUCKET
 
 
 ### Create the Test Dataset for Running the TPCDS Benchmark
-The Benchmark requires an S3 bucket with input data to query and save the results back to. 
-If you don't have a data set in S3 you can use this same cluster to [run the Data Generation job](./data-generation.md) to create one. 
+The Benchmark requires an S3 bucket with input data to query and save the results back to.
+If you don't have a data set in S3 you can use this same cluster to [run the Data Generation job](./data-generation.md) to create one.
 
 Once you have an S3 bucket with the example data set, you can run the benchmark Job
 
@@ -75,7 +75,7 @@ For these benchmarks we are not measuring the scaling speed but are focusing on 
 The blueprint [creates two Managed Node Groups](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/eks.tf#L120-L207) that we use for these benchmarks:
 - `spark_benchmark_ebs` - This nodegroup is configured for instances without NVMe storage such as r6g or c5
 - `spark_benchmark_ssd` - This nodegroup will setup a RAID over NVMe devices available on the instances. This is perfect for instances with NVMe storage like r6gd, and c5d.
-These nodegroups are scaled to 0 by default to save on costs, but you can configure the instance type you would like to benchmark on and then set the `min_size` and `desired_size` for the node group. 
+These nodegroups are scaled to 0 by default to save on costs, but you can configure the instance type you would like to benchmark on and then set the `min_size` and `desired_size` for the node group.
 
 :::tip
 The number of nodes required varies based on the size of the instance and the resource requests of the executot Pods used in the benchmark. Currently the benchmark requests 36 executors, each requesting 5vCPU and 26Gi memory, for a total of 180vCPU and 936Gi memory. This will fit on six r6g.12xlarge instances. You can compare the benchmark manifest against the instance types you'd like to use to find the required number of EC2 instances.
@@ -121,7 +121,7 @@ tpcds-benchmark-1tb-ebs-driver   1/1     Running   0          2m33s   100.64.228
 
 The benchmark is also configured to export metrics and logs so you can review the benchmark using the [Spark Observability tools explained here](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/observability-spark-on-eks#spark-history-server).
 
-To get an idea how far along the benchmark is, you can use the Spark Web UI to review which query is currently being executed. 
+To get an idea how far along the benchmark is, you can use the Spark Web UI to review which query is currently being executed.
 Port forward to the Benchmark Driver to see the UI:
 ```bash
 kubectl port-forward -n spark-team-a service/tpcds-benchmark-1tb-ebs-ui-svc 4040:4040
@@ -147,14 +147,14 @@ When you enter the results directory you will see a list of folders which corres
 ![S3 bucket showing timestamp directories for results](./img/results-s3-timestamps.png)
 
 You can find the latest result by selecting the timestamp thats largest, or find the folder that corresponds to the time of your test.
-Inside this folder you will see a file with a name like `part-00000-000000000-0000-0000-0000-000000000-0000.json`, this file includes the full spark configuration used for the job. 
+Inside this folder you will see a file with a name like `part-00000-000000000-0000-0000-0000-000000000-0000.json`, this file includes the full spark configuration used for the job.
 ![S3 bucket showing results files](./img/results-s3-result-folder.png)
 
 Inside the subfolder named `summary.csv`, the `part-00000-000000000-0000-0000-0000-000000000-0000.csv` file includes the results of the benchmark.
 ![S3 bucket showing results files](./img/results-s3-csv.png)
 
 If you open this csv file you will see 4 columns of data which show the time taken to process each query. The file does not include column headers, the columns from left to right are:
-- the TPCDS Query number 
+- the TPCDS Query number
 - the median time that it took to process that query
 - the minimum time that it took to process that query
 - the maximum time that it took to process that query
@@ -180,4 +180,3 @@ This script will cleanup the environment using `-target` option to ensure all th
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
 ./cleanup.sh
 ```
-
