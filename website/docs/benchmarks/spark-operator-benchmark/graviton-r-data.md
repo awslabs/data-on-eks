@@ -14,7 +14,7 @@ import RSeriesDockerfile from './_r_series_dockerfile.md'
 # TPCDS Spark Benchmark Results for Graviton R6g, R7g, and R8g
 This page has the results of our benchmarking tests on R-series Graviton instances, demonstrating up to a 1.6x faster runtime on newer generation instances.
 
-These benchmarks were executed using the steps defined in the [Running the Benchmark](./running-the-benchmark.md) section. We used the same EKS cluster, the same data set, the same number of nodes, and the same addons and configuration for all of these tests. We simply changed the instance types that were used for each run.
+These benchmarks were executed using the steps defined in the [Running the Benchmark](./running-the-benchmark.md) section across 1TB of data. We used the same EKS cluster, the same data set, the same number of nodes, and the same addons and configuration for all of these tests. We simply changed the instance types that were used for each run.
 The full configuration details are below:
 
 <details>
@@ -40,7 +40,16 @@ The full configuration details are below:
 
 
 ## Results
-In the table below we have taken the Median times from the output for each instance type from a benchmark with 3 iterations of the queries. You can view the [raw output data in the `raw_data` folder here](https://github.com/awslabs/data-on-eks/blob/main/website/docs/benchmarks/spark-operator-benchmark/raw_data).
+When reviewing the results for the TPCDS benchmark we are interested in the time it takes for the Spark SQL queries to complete, the faster those queries complete the better.
+The graph below shows the cumulative runtime in seconds for all of the queries for each instance type we tested:
+
+[![Total runtimes for the benchmarks per instance type](./img/r-series-total-runtime.png)](https://github.com/awslabs/data-on-eks/blob/main/website/docs/benchmarks/spark-operator-benchmark/img/r-series-total-runtime.png)
+
+We can similarly display the time for each query per instance, you can see the improvements in runtime for the newer generations.:
+
+[![Total runtimes for the benchmarks per instance type](./img/r-series-per-query.png)](https://github.com/awslabs/data-on-eks/blob/main/website/docs/benchmarks/spark-operator-benchmark/img/r-series-per-query.png)
+
+In the table below we have taken the Median times from the output for each instance type from a benchmark with 3 iterations of the queries and calculated the performance gained. You can view the [raw output data in the `raw_data` folder here](https://github.com/awslabs/data-on-eks/blob/main/website/docs/benchmarks/spark-operator-benchmark/raw_data).
 
 To calculate the performance increase we are calculating a ratio of the query times. For example, to determine how much faster the r8g instances were compared to the r6g instances:
 - Find the times corresponding to each query, using `q20-v2.4` as an example the r6g.12xlarge took `2.81s` and the r8g.12xlarge took `1.69s`.
