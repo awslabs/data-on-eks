@@ -5,6 +5,7 @@ sidebar_label: Data Generation
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import ReplaceS3BucketPlaceholders from './_replace_s3_bucket_placeholders.mdx';
 
 # Data Generation for Running Spark Benchmark Tests on Amazon EKS
 
@@ -16,10 +17,10 @@ In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/ter
 
 This example deploys an EKS Cluster running the Spark K8s Operator into a new VPC.
 
-- Creates a new sample VPC, 2 Private Subnets and 2 Public Subnets
+- Creates a new sample VPC, 2 Private Subnets, 2 Public Subnets, and 2 subnets in the RFC6598 space (100.64.0.0/10) for EKS Pods.
 - Creates Internet gateway for Public Subnets and NAT Gateway for Private Subnets
-- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with core managed node group, on-demand node group and Spot node group for Spark workloads.
-- Deploys Metrics server, Cluster Autoscaler, Spark-k8s-operator, Karpenter, Grafana, AMP and Prometheus server.
+- Creates EKS Cluster Control plane with public endpoint (for demo reasons only) with Managed Node Groups for benchmarking and core services, and Karpenter NodePools for Spark workloads.
+- Deploys Metrics server, Spark-operator, Apache Yunikorn, Karpenter, Cluster Autoscaler, Grafana, AMP and Prometheus server.
 
 ### Prerequisites
 
@@ -70,10 +71,19 @@ echo $S3_BUCKET
 
 ## Generating Test Dataset for Running the TPCDS Benchmark
 
-In order to generate the dataset for TPCDS benchmark tests, navigate to the following directory and execute the below commands.
+In order to generate the dataset for TPCDS benchmark tests, you will need to configure the S3 bucket name in the data generation manifest.
 
+<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+<ReplaceS3BucketPlaceholders filename="./tpcds-benchmark-data-generation-1t.yaml" />
 ```bash
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./tpcds-benchmark-data-generation-1t.yaml
+```
+
+Then to begin the data generation execute the command below
+
+```bash
+
 kubectl apply -f tpcds-benchmark-data-generation-1t.yaml
 ```
 
@@ -134,3 +144,14 @@ Data generated at s3a://spark-operator-doeks-spark-logs-xxx/TPCDS-TEST-1TB
 ## Cost Considerations
 
 When utilizing c5d instances for data generation, it's important to keep cost implications in mind. These compute-optimized instances with local NVMe storage offer high performance but can be more expensive than standard c5 instances. To optimize costs, it's crucial to carefully monitor usage and scale resources appropriately. The local NVMe storage provides fast I/O, but data persistence is not guaranteed, so you should factor in the cost of data transfer and backup solutions. Spot instances can offer significant savings for interruptible workloads. Additionally, reserving instances for long-term, predictable usage can lead to substantial discounts. Also, it's essential to terminate these instances when they're no longer needed by adjusting the nodegroup's minimum and desired size to 0. This practice helps avoid unnecessary costs from idle resources.
+
+:::caution
+To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
+:::
+
+This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
+
+```bash
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
+./cleanup.sh
+```
