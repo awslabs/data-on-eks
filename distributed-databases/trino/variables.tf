@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.29"
+  default     = "1.31"
   type        = string
 }
 
@@ -20,10 +20,4 @@ variable "vpc_cidr" {
   description = "VPC CIDR"
   default     = "10.1.0.0/16"
   type        = string
-}
-
-variable "enable_amazon_prometheus" {
-  description = "Enable AWS Managed Prometheus service"
-  type        = bool
-  default     = false
 }

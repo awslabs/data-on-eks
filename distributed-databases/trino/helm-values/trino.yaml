@@ -1,3 +1,20 @@
+# Worker node
+# Container Memory (resources.memory): 110Gi
+# ├── JVM Heap (maxHeapSize): 88G (~80%)
+# │   ├── Query Memory (maxMemoryPerNode): 70GB (~80% of heap)
+# │   └── Other Heap Usage: ~18GB (GC, internal caches)
+# ├── Off-Heap Memory: ~14Gi
+# └── System Reserved: ~8Gi
+
+# Co-ordinator Node
+# Container Memory (resources.memory): 40Gi
+# ├── JVM Heap (maxHeapSize): 32G (~80%)
+# │   ├── Query Memory (maxMemoryPerNode): 25GB (~80% of heap)
+# │   └── Other Heap Usage: ~7GB
+# ├── Off-Heap Memory: ~5Gi
+# └── System Reserved: ~3Gi
+
+---
 image:
   tag: "427"
 server:
@@ -10,41 +27,110 @@ server:
     targetCPUUtilizationPercentage: 70
   config:
     query:
-      maxMemory: "40GB"
+      maxMemory: "85GB"  # Total memory across cluster for queries
+      initialHashPartitions: 100  # Improved parallel processing
+      maxStageRetries: 3
+      maxExecutionTime: "24h"
+      clientTimeout: "2h"
 service:
   type: ClusterIP
   port: 8080
+
 coordinator:
   jvm:
-    maxHeapSize: "8G"
+    maxHeapSize: "32G"  # ~80% of container memory
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
   config:
     query:
-      maxMemoryPerNode: "4GB"
+      maxMemoryPerNode: "25GB"  # ~80% of maxHeapSize
+      minWorkers: 1
+      initialHashPartitions: 100
+  resources:
+    requests:
+      cpu: "12000m"
+      memory: 40Gi
+    limits:
+      cpu: "14000m"
+      memory: 40Gi
   nodeSelector:
     NodePool: trino-karpenter
     karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: coordinator
+
 worker:
   jvm:
-    maxHeapSize: "8G"
+    maxHeapSize: "88G"  # ~80% of container memory (110Gi)
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
   config:
     query:
-      maxMemoryPerNode: "4GB"
+      maxMemoryPerNode: "70GB"  # ~80% of maxHeapSize
+      spillMemoryThreshold: "60GB"  # ~85% of maxMemoryPerNode
   resources:
     requests:
-      cpu: 2000m
-      memory: 10Gi
+      cpu: "13000m"  # Leave ~2090m for system
+      memory: 110Gi  # Leave ~19Gi for system
+    limits:
+      cpu: "14000m"
+      memory: 110Gi
   nodeSelector:
     NodePool: trino-karpenter
-    karpenter.sh/capacity-type: spot
+    karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: worker
+
 additionalConfigProperties:
   - "retry-policy=TASK"
   - "exchange.compression-enabled=true"
-  - "query.low-memory-killer.delay=0s"
   - "query.remote-task.max-error-duration=1m"
-  - "query.hash-partition-count=50"
+  - "query.max-hash-partition-count=100"   # Updated from query.hash-partition-count
+  - "spill-enabled=true"                   # Updated from experimental.spill-enabled
+  - "spiller-spill-path=/tmp/spill"        # Chagne this to SSD mount for faster
+  - "spill.compression.enabled=true"
+  # - "max-spill-per-node=100GB"           # value should be based on your available disk space.
+  # - "spiller-threads=15"
+  # - "query.max-spill-per-node=100GB"
+  - "memory.heap-headroom-per-node=10GB"
+  - "optimizer.join-reordering-strategy=AUTOMATIC"  # Updated from join-reordering-strategy
+  - "query.max-history=100"
+  - "query.client.timeout=30m"
+  - "sink.max-buffer-size=1GB"
+  - "node-scheduler.max-splits-per-node=100"  # Updated from spill.node-scheduler.max-splits-per-node
+  - "query.max-memory-per-node=68GB"  # Slightly less than maxMemoryPerNode
+  - "query.max-total-memory-per-node=70GB"  # Equal to maxMemoryPerNode
+
 additionalExchangeManagerProperties:
+  - "exchange-manager.name=filesystem"
+  - "exchange.base-directories=s3://${exchange_bucket_id}"
   - "exchange.s3.region=${region}"
   - "exchange.s3.iam-role=${irsa_arn}"
+  - "exchange.s3.max-error-retries=10"
+  - "exchange.s3.upload.part-size=64MB"
+
 additionalCatalogs:
   hive: |-
     connector.name=hive

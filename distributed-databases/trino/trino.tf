@@ -22,7 +22,7 @@ module "s3_bucket" {
 }
 
 #---------------------------------------------------------------
-# Trino S3 Bucket
+# Trino S3 Bucket for Data
 #---------------------------------------------------------------
 module "trino_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -103,7 +103,7 @@ module "trino_addon" {
   version = "~> 1.1.1" #ensure to update this to the latest/desired version
 
   chart            = "trino"
-  chart_version    = "0.13.0"
+  chart_version    = "0.33.0"
   repository       = "https://trinodb.github.io/charts"
   description      = "Trino Helm Chart deployment"
   namespace        = local.trino_namespace
