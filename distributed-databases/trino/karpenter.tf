@@ -69,6 +69,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
     metadata:
       name: trino-karpenter
     spec:
+      amiFamily: AL2023
       amiSelectorTerms:
         - alias: al2023@latest
       blockDeviceMappings:

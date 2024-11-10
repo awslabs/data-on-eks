@@ -95,10 +95,15 @@ module "eks" {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "doeks"
       }
-
-      tags = {
-        Name = "core-node-grp"
-      }
     }
   }
+
+  node_security_group_tags = merge(local.tags, {
+    # NOTE - if creating multiple security groups with this module, only tag the
+    # security group that Karpenter should utilize with the following tag
+    # (i.e. - at most, only one security group should have this tag in your account)
+    "karpenter.sh/discovery" = local.name
+  })
+
+  tags = local.tags
 }
