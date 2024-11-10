@@ -1,18 +1,20 @@
-# Worker node
-# Container Memory (resources.memory): 110Gi
-# ├── JVM Heap (maxHeapSize): 88G (~80%)
-# │   ├── Query Memory (maxMemoryPerNode): 70GB (~80% of heap)
-# │   └── Other Heap Usage: ~18GB (GC, internal caches)
-# ├── Off-Heap Memory: ~14Gi
-# └── System Reserved: ~8Gi
+# Coordinator Node Memory:
+# JVM Heap (maxHeapSize): 32G
+# ├── Query Memory (maxMemoryPerNode): 20GB
+# ├── Heap Headroom: 8GB
+# └── Other Heap Usage: ~4GB
 
-# Co-ordinator Node
-# Container Memory (resources.memory): 40Gi
-# ├── JVM Heap (maxHeapSize): 32G (~80%)
-# │   ├── Query Memory (maxMemoryPerNode): 25GB (~80% of heap)
-# │   └── Other Heap Usage: ~7GB
-# ├── Off-Heap Memory: ~5Gi
-# └── System Reserved: ~3Gi
+# Verification:
+# 20GB (maxMemoryPerNode) + 8GB (heap headroom) = 28GB < 32GB (maxHeapSize) ✓
+
+# Worker Node Memory
+# JVM Heap (maxHeapSize): 89G
+# ├── Query Memory (maxMemoryPerNode): 71GB
+# ├── Heap Headroom: 8GB
+# └── Other Heap Usage: ~10GB
+
+# Verification:
+# 71GB (maxMemoryPerNode) + 8GB (heap headroom) = 79GB < 89GB (maxHeapSize) ✓
 
 ---
 image:
@@ -24,10 +26,12 @@ server:
   autoscaling:
     enabled: true
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
+    # Add advanced scaling behavior from https://github.com/trinodb/charts/blob/4630167a839e6730c04cecc2af09ff038f522903/charts/trino/values.yaml#L94
   config:
     query:
-      maxMemory: "85GB"  # Total memory across cluster for queries
+      maxMemory: "280GB"  # Total memory across cluster for queries
       initialHashPartitions: 100  # Improved parallel processing
       maxStageRetries: 3
       maxExecutionTime: "24h"
@@ -49,15 +53,15 @@ coordinator:
       - "-XX:+UseContainerSupport"
   config:
     query:
-      maxMemoryPerNode: "25GB"  # ~80% of maxHeapSize
+      maxMemoryPerNode: "20GB"  # ~80% of maxHeapSize
       minWorkers: 1
       initialHashPartitions: 100
   resources:
     requests:
-      cpu: "12000m"
-      memory: 40Gi
+      cpu: "4000m"     # Reduced CPU request
+      memory: 40Gi     # Reduced memory request
     limits:
-      cpu: "14000m"
+      cpu: "6000m"     # Higher limit for spikes
       memory: 40Gi
   nodeSelector:
     NodePool: trino-sql-karpenter
@@ -72,7 +76,7 @@ coordinator:
 
 worker:
   jvm:
-    maxHeapSize: "88G"  # ~80% of container memory (110Gi)
+    maxHeapSize: "89G"  # ~80% of container memory (110Gi)
     extraArguments:
       - "-XX:+UseG1GC"
       - "-XX:G1HeapRegionSize=32M"
@@ -83,15 +87,14 @@ worker:
       - "-XX:+UseContainerSupport"
   config:
     query:
-      maxMemoryPerNode: "70GB"  # ~80% of maxHeapSize
-      spillMemoryThreshold: "60GB"  # ~85% of maxMemoryPerNode
+      maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
   resources:
     requests:
-      cpu: "13000m"  # Leave ~2090m for system
-      memory: 110Gi  # Leave ~19Gi for system
+      cpu: "12000m"  # Leave 3000m for system/DaemonSets
+      memory: 112Gi  # Leave 16Gi for system/DaemonSets
     limits:
       cpu: "14000m"
-      memory: 110Gi
+      memory: 112Gi
   nodeSelector:
     NodePool: trino-sql-karpenter
     karpenter.sh/capacity-type: on-demand
@@ -110,18 +113,11 @@ additionalConfigProperties:
   - "query.max-hash-partition-count=100"   # Updated from query.hash-partition-count
   - "spill-enabled=true"                   # Updated from experimental.spill-enabled
   - "spiller-spill-path=/tmp/spill"        # Chagne this to SSD mount for faster
-  - "spill.compression.enabled=true"
-  # - "max-spill-per-node=100GB"           # value should be based on your available disk space.
-  # - "spiller-threads=15"
-  # - "query.max-spill-per-node=100GB"
-  - "memory.heap-headroom-per-node=10GB"
+  - "memory.heap-headroom-per-node=8GB"
   - "optimizer.join-reordering-strategy=AUTOMATIC"  # Updated from join-reordering-strategy
   - "query.max-history=100"
   - "query.client.timeout=30m"
   - "sink.max-buffer-size=1GB"
-  - "node-scheduler.max-splits-per-node=100"  # Updated from spill.node-scheduler.max-splits-per-node
-  - "query.max-memory-per-node=68GB"  # Slightly less than maxMemoryPerNode
-  - "query.max-total-memory-per-node=70GB"  # Equal to maxMemoryPerNode
 
 additionalExchangeManagerProperties:
   - "exchange-manager.name=filesystem"

@@ -128,13 +128,10 @@ resource "kubectl_manifest" "karpenter_node_pool" {
               values: ["r6g", "r7g", "r8g"]
             - key: "karpenter.k8s.aws/instance-size"
               operator: In
-              values: ["4xlarge"]
-            - key: "topology.kubernetes.io/zone"
-              operator: In
-              values: [${local.region}a]
+              values: ["2xlarge", "4xlarge"]
       disruption:
         consolidationPolicy: WhenEmptyOrUnderutilized
-        consolidateAfter: 300s
+        consolidateAfter: 60s
       limits:
         cpu: "1000"
         memory: 1000Gi
