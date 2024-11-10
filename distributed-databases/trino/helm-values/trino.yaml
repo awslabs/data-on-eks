@@ -1,21 +1,14 @@
 # Coordinator Node Memory:
-# JVM Heap (maxHeapSize): 32G
-# ├── Query Memory (maxMemoryPerNode): 20GB
-# ├── Heap Headroom: 8GB
-# └── Other Heap Usage: ~4GB
-
-# Verification:
-# 20GB (maxMemoryPerNode) + 8GB (heap headroom) = 28GB < 32GB (maxHeapSize) ✓
+# JVM Heap (maxHeapSize): 32G (100%)
+# ├── Query Memory (maxMemoryPerNode): 22GB (~70%)
+# ├── Heap Headroom: 9.6GB (30%)
+# └── Total: 31.6GB < 32GB ✓
 
 # Worker Node Memory
-# JVM Heap (maxHeapSize): 89G
-# ├── Query Memory (maxMemoryPerNode): 71GB
-# ├── Heap Headroom: 8GB
-# └── Other Heap Usage: ~10GB
-
-# Verification:
-# 71GB (maxMemoryPerNode) + 8GB (heap headroom) = 79GB < 89GB (maxHeapSize) ✓
-
+# JVM Heap (maxHeapSize): 89G (100%)
+# ├── Query Memory (maxMemoryPerNode): 71GB (~70%)
+# ├── Heap Headroom: 9.6GB
+# └── Total: 80.6GB < 89GB ✓
 ---
 image:
   tag: "427"
@@ -53,7 +46,8 @@ coordinator:
       - "-XX:+UseContainerSupport"
   config:
     query:
-      maxMemoryPerNode: "20GB"  # ~80% of maxHeapSize
+      #maxMemoryPerNode + (maxHeapSize * 0.3) < maxHeapSize
+      maxMemoryPerNode: "22GB"  # ~70% of maxHeapSize
       minWorkers: 1
       initialHashPartitions: 100
   resources:
@@ -113,7 +107,7 @@ additionalConfigProperties:
   - "query.max-hash-partition-count=100"   # Updated from query.hash-partition-count
   - "spill-enabled=true"                   # Updated from experimental.spill-enabled
   - "spiller-spill-path=/tmp/spill"        # Chagne this to SSD mount for faster
-  - "memory.heap-headroom-per-node=8GB"
+  - "memory.heap-headroom-per-node=9.6GB"
   - "optimizer.join-reordering-strategy=AUTOMATIC"  # Updated from join-reordering-strategy
   - "query.max-history=100"
   - "query.client.timeout=30m"
