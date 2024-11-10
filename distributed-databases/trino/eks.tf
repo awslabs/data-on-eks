@@ -5,8 +5,13 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_public_access           = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+
+  # Gives Terraform identity admin access to cluster which will
+  # allow deploying resources (Karpenter) into the cluster
   enable_cluster_creator_admin_permissions = true
+
+  access_entries = var.access_entries
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -33,24 +38,18 @@ module "eks" {
     }
   }
 
-  # Extend node-to-node security group rules
+  # security group rule from all ipv4 to nodes for port 22
   node_security_group_additional_rules = {
-    ingress_self_all = {
-      description = "Node to node all ports/protocols"
-      protocol    = "-1"
-      from_port   = 0
-      to_port     = 0
-      type        = "ingress"
-      self        = true
-    }
-    egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type             = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
+    # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
+    # This can be restricted further to specific port based on the requirement for each Add-on e.g., coreDNS 53, metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
+    # Update this according to your security requirements if needed
+    ingress_cluster_to_node_all_traffic = {
+      description                   = "Cluster API to Nodegroup all traffic"
+      protocol                      = "-1"
+      from_port                     = 0
+      to_port                       = 0
+      type                          = "ingress"
+      source_cluster_security_group = true
     }
   }
 

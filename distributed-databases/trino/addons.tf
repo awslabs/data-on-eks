@@ -37,19 +37,24 @@ resource "kubernetes_storage_class" "default_gp3" {
 }
 
 #---------------------------------------------------------------
-# IRSA for EBS CSI Driver
+# EKS Pod identiity association
 #---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.14"
-  role_name             = format("%s-%s", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+module "aws_ebs_csi_pod_identity" {
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
+  version = "~> 1.4.0"
+
+  name                      = "aws-ebs-csi"
+  attach_aws_ebs_csi_policy = true
+
+  # Pod Identity Associations
+  associations = {
+    ebs-csi-controller = {
+      namespace       = "kube-system"
+      service_account = "ebs-csi-controller-sa"
+      cluster_name    = module.eks.cluster_name
     }
   }
+
   tags = local.tags
 }
 
@@ -69,19 +74,11 @@ module "eks_blueprints_addons" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   eks_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
+    aws-ebs-csi-driver     = {}
     eks-pod-identity-agent = {}
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      preserve = true
-    }
-    kube-proxy = {
-      preserve = true
-    }
+    coredns                = {}
+    vpc-cni                = {}
+    kube-proxy             = {}
     amazon-cloudwatch-observability = {
       preserve                 = true
       service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
@@ -100,6 +97,14 @@ module "eks_blueprints_addons" {
   # Adding AWS Load Balancer Controller
   #---------------------------------------
   enable_aws_load_balancer_controller = true
+  # turn off the mutating webhook for services because we are using
+  # service.beta.kubernetes.io/aws-load-balancer-type: external
+  aws_load_balancer_controller = {
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
