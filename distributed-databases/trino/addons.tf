@@ -53,7 +53,6 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
-
 #---------------------------------------------------------------
 # EKS Blueprints Addons
 #---------------------------------------------------------------
@@ -73,6 +72,7 @@ module "eks_blueprints_addons" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
+    eks-pod-identity-agent = {}
     coredns = {
       preserve = true
     }
@@ -89,10 +89,6 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Kubernetes Add-ons
-  #---------------------------------------
-
-  #---------------------------------------
   # Metrics Server
   #---------------------------------------
   enable_metrics_server = true
@@ -101,26 +97,9 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
-  enable_karpenter                  = true
-  karpenter_enable_spot_termination = true
-  karpenter_node = {
-    iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-    }
-  }
-  karpenter = {
-    chart_version       = "1.0.6"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------
   # Adding AWS Load Balancer Controller
   #---------------------------------------
   enable_aws_load_balancer_controller = true
-
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
@@ -203,98 +182,6 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attac
   role       = aws_iam_role.cloudwatch_observability_role.name
 }
 
-
-# Define an EC2NodeClass for AL2023 node instances
-resource "kubectl_manifest" "karpenter_node_class" {
-  yaml_body = <<-YAML
-    apiVersion: karpenter.sh/v1
-    kind: EC2NodeClass
-    metadata:
-      name: trino-karpenter
-    spec:
-      amiFamily: AL2023
-      amiSelectorTerms:
-        - alias: al2023@latest # Amazon Linux 2023
-      blockDeviceMappings:
-        - deviceName: /dev/xvda
-          ebs:
-            volumeSize: 200Gi # This storage used for Trino Spill data
-            volumeType: gp3
-            encrypted: true
-            deleteOnTermination: true
-      # Optional, use instance-store volumes for node ephemeral-storage
-      instanceStorePolicy: RAID0
-
-      role: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-      subnetSelectorTerms:
-        tags:
-          Name: "${module.eks.cluster_name}-private*"
-      securityGroupSelectorTerms:
-        tags:
-          Name: ${module.eks.cluster_name}-node
-      tags:
-        KarpenerNodeClassName: "trino-karpenter"
-        NodeType: "trino-eks-karpenter"
-  YAML
-
-  depends_on = [
-    module.eks_blueprints_addons.karpenter
-  ]
-}
-
-# Create a Karpenter NodePool using the AL2023 NodeClass
-resource "kubectl_manifest" "karpenter_node_pool" {
-  yaml_body = <<-YAML
-    apiVersion: karpenter.sh/v1
-    kind: NodePool
-    metadata:
-      name: trino-karpenter
-    spec:
-      template:
-        metadata:
-          labels:
-            NodePool: trino-karpenter
-        spec:
-          # References the Cloud Provider's NodeClass resource, see your cloud provider specific documentation
-          nodeClassRef:
-            group: karpenter.k8s.aws  # Updated since only a single version will be served
-            kind: EC2NodeClass
-            name: trino-karpenter
-          requirements:
-            - key: "karpenter.sh/capacity-type"
-              operator: In
-              values: ["on-demand"]
-            - key: "kubernetes.io/arch"
-              operator: In
-              values: ["arm64"]
-            - key: "karpenter.k8s.aws/instance-category"
-              operator: In
-              values: ["r"]
-            - key: "karpenter.k8s.aws/instance-family"
-              operator: In
-              values: ["r6g", "r7g", "r8g"]
-            - key: "karpenter.k8s.aws/instance-size"
-              operator: In
-              values: ["4xlarge"]
-          nodeClassRef:
-            apiVersion: karpenter.k8s.aws/v1beta1
-            kind: EC2NodeClass
-            name: trino-karpenter
-      disruption:
-        consolidationPolicy: WhenEmpty
-        consolidateAfter: 300s
-        expireAfter: 720h
-      limits:
-        cpu: "1000"
-        memory: 1000Gi
-      weight: 10
-  YAML
-
-  depends_on = [
-    kubectl_manifest.karpenter_node_class
-  ]
-}
-
 #---------------------------------------------------------------
 # Grafana Admin credentials resources
 #---------------------------------------------------------------
@@ -318,13 +205,4 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
-}
-
-#---------------------------------------------------------------
-# Karpenter Node instance role Access Entry
-#---------------------------------------------------------------
-resource "aws_eks_access_entry" "karpenter_nodes" {
-  cluster_name  = module.eks.cluster_name
-  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-  type          = "EC2_LINUX"
 }

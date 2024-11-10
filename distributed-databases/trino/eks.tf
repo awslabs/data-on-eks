@@ -1,16 +1,22 @@
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.0"
+  version = "~> 20.24"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
-  cluster_endpoint_public_access = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  cluster_endpoint_public_access           = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
+  enable_cluster_creator_admin_permissions = true
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  enable_cluster_creator_admin_permissions = true
+  # Combine root account, current user/role and additinoal roles to be able to access the cluster KMS key - required for terraform updates
+  kms_key_administrators = distinct(concat([
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"],
+    var.kms_key_admin_roles,
+    [data.aws_iam_session_context.current.issuer_arn]
+  ))
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
@@ -53,7 +59,21 @@ module "eks" {
       # Not required, but used in the example to access the nodes to inspect mounted volumes
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
+
+    ebs_optimized = true
+    # This block device is used only for root volume. Adjust volume according to your size.
+    # NOTE: Don't use this volume for ML workloads
+    block_device_mappings = {
+      xvda = {
+        device_name = "/dev/xvda"
+        ebs = {
+          volume_size = 100
+          volume_type = "gp3"
+        }
+      }
+    }
   }
+
   eks_managed_node_groups = {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
@@ -68,19 +88,9 @@ module "eks" {
       max_size     = 9
       desired_size = 2
 
-      force_update_version = true
-      instance_types       = ["m5.xlarge"]
-
-      ebs_optimized = true
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size = 100
-            volume_type = "gp3"
-          }
-        }
-      }
+      # aws ssm get-parameters --names /aws/service/eks/optimized-ami/${var.eks_cluster_version}/amazon-linux-2023/x86_64/standard/recommended/release_version --region us-west-2
+      ami_type       = "AL2023_x86_64_STANDARD" # Use this for Graviton AL2023_ARM_64_STANDARD
+      instance_types = ["m5.xlarge"]
 
       labels = {
         WorkerType    = "ON_DEMAND"
@@ -92,23 +102,4 @@ module "eks" {
       }
     }
   }
-}
-
-module "eks_aws_auth" {
-  source  = "terraform-aws-modules/eks/aws//modules/aws-auth"
-  version = "~> 20.0"
-
-  manage_aws_auth_configmap = true
-
-  aws_auth_roles = [
-    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-    {
-      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups = [
-        "system:bootstrappers",
-        "system:nodes",
-      ]
-    }
-  ]
 }
