@@ -8,7 +8,7 @@ export default function FooterWrapper(props) {
       <script
         defer
         src='https://static.cloudflareinsights.com/beacon.min.js'
-        data-cf-beacon='{"token": "7fbc7ab02fae4767b1af2588eba0cdf2"}
+        data-cf-beacon='{"token": "7fbc7ab02fae4767b1af2588eba0cdf2"}'
       ></script>
     </>
   );
