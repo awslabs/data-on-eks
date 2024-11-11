@@ -236,3 +236,55 @@ You will need to create the service linked role in the AWS account you're using 
 ```sh
 aws iam create-service-linked-role --aws-service-name spot.amazonaws.com
 ```
+
+## Error: AmazonEKS_CNI_IPv6_Policy does not exist
+If you encounter the error below when deploying a solution that supports IPv6:
+
+```sh
+│ Error: attaching IAM Policy (arn:aws:iam::1234567890:policy/AmazonEKS_CNI_IPv6_Policy) to IAM Role (core-node-group-eks-node-group-20241111182906854800000003): operation error IAM: AttachRolePolicy, https response error StatusCode: 404, RequestID: 9c99395a-ce3d-4a05-b119-538470a3a9f7, NoSuchEntity: Policy arn:aws:iam::1234567890:policy/AmazonEKS_CNI_IPv6_Policy does not exist or is not attachable.
+```
+
+### Issue Description:
+The Amazon VPC CNI plugin requires IAM permission to assign IPv6 addresses so you must create an IAM policy and associate it with the role that the CNI will use. However, each IAM policy name must be unique in the same AWS account. This causes a conflict if the policy is created as part of the terraform stack and it is deployed multiple times.
+
+To resolve this error you will need to create the Policy with the commands below. You should only need to do this once per AWS account.
+
+### Solution:
+
+1. Copy the following text and save it to a file named vpc-cni-ipv6-policy.json.
+
+```sh
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:AssignIpv6Addresses",
+                "ec2:DescribeInstances",
+                "ec2:DescribeTags",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeInstanceTypes"
+            ],
+            "Resource": ""
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateTags"
+            ],
+            "Resource": [
+                "arn:aws:ec2::*:network-interface/*"
+            ]
+        }
+    ]
+}
+```
+
+2. Create the IAM policy.
+
+```sh
+aws iam create-policy --policy-name AmazonEKS_CNI_IPv6_Policy --policy-document file://vpc-cni-ipv6-policy.json
+```
+
+3. Re-run the `install.sh` script for the blueprint
