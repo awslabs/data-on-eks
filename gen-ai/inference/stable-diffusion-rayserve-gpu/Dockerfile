@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=non-interactive
 USER $USER
 
 # Install Ray Serve and other Python packages with specific versions
-RUN pip install --no-cache-dir requests torch "diffusers==0.29.2" "transformers==4.42.4" "accelerate==0.30.1"
+RUN pip install --no-cache-dir requests torch "diffusers==0.29.2" "transformers==4.25.1" "accelerate==0.30.1"
 
 # Set a working directory
 WORKDIR /serve_app
