@@ -57,8 +57,6 @@ module "vpc_endpoints" {
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
   version = "~> 5.0"
 
-  # create = var.enable_vpc_endpoints
-
   create = true
 
   vpc_id             = module.vpc.vpc_id
