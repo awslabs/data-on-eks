@@ -18,9 +18,6 @@ spec:
           env_vars:
             MODEL_PATH: "./stable-diffusion-2"
             MODEL_ID: "stabilityai/stable-diffusion-2-1"
-          pip:
-            - transformers==4.25.1
-            - accelerate==0.30.1
         deployments:
           - name: stable-diffusion-v2
             autoscaling_config:
