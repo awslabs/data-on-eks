@@ -281,12 +281,10 @@ To resolve this error you will need to create the Policy with the commands below
 }
 ```
 
-1. Create the IAM policy.
+2. Create the IAM policy.
 
 ```sh
 aws iam create-policy --policy-name AmazonEKS_CNI_IPv6_Policy --policy-document file://vpc-cni-ipv6-policy.json
 ```
 
-1. Re-run the `install.sh` script for the blueprint
-
-
+3. Re-run the `install.sh` script for the blueprint
