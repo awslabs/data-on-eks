@@ -129,7 +129,7 @@ aws eks --region us-west-2 update-kubeconfig --name jark-stack
 
 ```bash
 cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
-kubectl apply -f ray-service-stablediffusion.yaml
+kubectl apply -f ray-serve-stablediffusion.yaml
 ```
 
 Verify the deployment by running the following commands
@@ -145,7 +145,7 @@ If you did not preload container images into the data volume, the deployment pro
 cd ./../gen-ai/inference/stable-diffusion-rayserve-gpu
 # edit the file download-models-to-s3 and fill the actual bucket name by running terraform output
 kubectl apply -f download-models-to-s3.yaml
-kubectl apply -f ray-service-stablediffusion-from-s3.yaml
+kubectl apply -f ray-serve-stablediffusion-from-s3.yaml
 ```
 
 This deployment establishes a Ray head pod running on an x86 instance and a worker pod on a GPU G5 instance as shown below.

@@ -41,6 +41,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: shell-script-configmap
+  namespace: stablediffusion
 data:
   download_models.py: |
     from diffusers import StableDiffusionPipeline
@@ -95,6 +96,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: shell-script-job
+  namespace: stablediffusion
 spec:
   template:
     spec:
