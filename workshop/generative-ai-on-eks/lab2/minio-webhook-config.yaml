@@ -4,51 +4,77 @@ metadata:
   name: minio-webhook-config
 data:
   webhook.py: |
-    from flask import Flask, request, jsonify
+    from fastapi import FastAPI, HTTPException, Request
     from kubernetes import client, config
-    import os
-    import traceback
-    import sys
+    import logging
     import re
+    import sys
 
-    app = Flask(__name__)
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        stream=sys.stderr
+    )
+    logger = logging.getLogger(__name__)
+
+    app = FastAPI()
 
     # Load Kubernetes configuration
     config.load_incluster_config()
     batch_v1 = client.BatchV1Api()
 
-    @app.route('/webhook', methods=['POST'])
-    def webhook():
+    @app.post("/webhook")
+    async def webhook(request: Request):
         try:
-            print("Received webhook event", file=sys.stderr)
-            event = request.json
-            print(f"Event data: {event}", file=sys.stderr)
+            logger.info("Received webhook event")
+            event = await request.json()
+            logger.info(f"Event data: {event}")
+            
             bucket_name = event['Records'][0]['s3']['bucket']['name']
             pdf_key = event['Records'][0]['s3']['object']['key']
-            print(f"Bucket: {bucket_name}, Key: {pdf_key}", file=sys.stderr)
+            event_name = event['Records'][0]['eventName']
+            logger.info(f"Bucket: {bucket_name}, Key: {pdf_key}, Event: {event_name}")
             
-            # Create a Kubernetes Job
-            job = create_pdf_processing_job(bucket_name, pdf_key)
-            print(f"Created job: {job}", file=sys.stderr)
-            result = batch_v1.create_namespaced_job(namespace="default", body=job)
-            print(f"Job creation result: {result}", file=sys.stderr)
-            
-            return jsonify({"message": "Job created successfully"}), 200
+            if "ObjectCreated" in event_name:
+                # Create a Kubernetes Job
+                job = create_pdf_processing_job(bucket_name, pdf_key)
+                logger.info(f"Creating job for PDF processing")
+                result = batch_v1.create_namespaced_job(namespace="default", body=job)
+                logger.info(f"Job created: {result.metadata.name}")
+                return {"message": "Job created successfully", "job_name": result.metadata.name}
+                
+            elif "ObjectRemoved" in event_name:
+                # Cleanup job if exists
+                cleanup_job(pdf_key)
+                return {"message": "Cleanup completed successfully"}
+                
+            else:
+                logger.warning(f"Unhandled event type: {event_name}")
+                return {"message": f"Unhandled event type: {event_name}"}
+                
         except Exception as e:
-            print(f"Error in webhook: {str(e)}", file=sys.stderr)
-            print(f"Traceback: {traceback.format_exc()}", file=sys.stderr)
-            return jsonify({"error": str(e)}), 500
+            logger.error(f"Error in webhook: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
 
-    def create_pdf_processing_job(bucket_name, pdf_key):
+    def create_pdf_processing_job(bucket_name: str, pdf_key: str) -> client.V1Job:
+        """Create a Kubernetes Job for PDF processing."""
         job_name = f"pdf-processor-{re.sub(r'[^a-z0-9-]', '-', pdf_key.lower())}"
         job_name = job_name[:63].strip('-')
         
         return client.V1Job(
             api_version="batch/v1",
             kind="Job",
-            metadata=client.V1ObjectMeta(name=job_name, namespace="default"),
+            metadata=client.V1ObjectMeta(
+                name=job_name,
+                namespace="default",
+                labels={"app": "pdf-processor"}
+            ),
             spec=client.V1JobSpec(
                 template=client.V1PodTemplateSpec(
+                    metadata=client.V1ObjectMeta(
+                        labels={"app": "pdf-processor"}
+                    ),
                     spec=client.V1PodSpec(
                         containers=[client.V1Container(
                             name="pdf-processor",
@@ -56,7 +82,7 @@ data:
                             env=[
                                 client.V1EnvVar(name="BUCKET_NAME", value=bucket_name),
                                 client.V1EnvVar(name="PDF_KEY", value=pdf_key),
-                                client.V1EnvVar(name="MINIO_ENDPOINT", value="http://minio.default.svc.cluster.local:9000"),
+                                client.V1EnvVar(name="MINIO_ENDPOINT", value="minio.default.svc.cluster.local:9000"),
                                 client.V1EnvVar(name="QDRANT_URL", value="http://qdrant.default.svc.cluster.local:6333"),
                                 client.V1EnvVar(name="COLLECTION_NAME", value="pdf_embeddings"),
                                 client.V1EnvVar(
@@ -92,13 +118,35 @@ data:
                         restart_policy="Never"
                     )
                 ),
-                backoff_limit=4
+                backoff_limit=4,
+                ttl_seconds_after_finished=3600  # Clean up completed jobs after 1 hour
             )
         )
 
-    @app.route('/health', methods=['GET'])
-    def health_check():
-        return jsonify({"status": "healthy"}), 200
+    def cleanup_job(pdf_key: str):
+        """Clean up the job associated with a PDF."""
+        job_name = f"pdf-processor-{re.sub(r'[^a-z0-9-]', '-', pdf_key.lower())}"
+        job_name = job_name[:63].strip('-')
+        
+        try:
+            batch_v1.delete_namespaced_job(
+                name=job_name,
+                namespace="default",
+                body=client.V1DeleteOptions(propagation_policy="Background")
+            )
+            logger.info(f"Deleted job: {job_name}")
+        except client.exceptions.ApiException as e:
+            if e.status != 404:  # Ignore if job doesn't exist
+                logger.error(f"Error deleting job {job_name}: {e}")
+                raise
 
-    if __name__ == '__main__':
-        app.run(host='0.0.0.0', port=5000)
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint."""
+        try:
+            # Check Kubernetes API
+            batch_v1.get_api_resources()
+            return {"status": "healthy"}
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
+            raise HTTPException(status_code=503, detail="Service unhealthy")
