@@ -176,6 +176,27 @@ module "eks_blueprints_addons" {
     values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
+  #---------------------------------------
+  # Enable Fluentbit logging
+  #---------------------------------------
+  enable_aws_for_fluentbit = true
+  aws_for_fluentbit_cw_log_group = {
+    use_name_prefix   = false
+    name              = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+    retention_in_days = 30
+  }
+  aws_for_fluentbit = {
+    s3_bucket_arns = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*"
+    ]
+    values = [templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+      region               = local.region,
+      cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+      s3_bucket_name       = module.s3_bucket.s3_bucket_id
+      cluster_name         = module.eks.cluster_name
+    })]
+  }
 }
 
 #---------------------------------------------------------------
@@ -457,4 +478,28 @@ data "aws_iam_policy_document" "karpenter_controller_policy" {
     effect    = "Allow"
     sid       = "KarpenterControllerAdditionalPolicy"
   }
+}
+
+#---------------------------------------------------------------
+# S3 bucket for Logs and Example Data
+#---------------------------------------------------------------
+#tfsec:ignore:*
+module "s3_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 3.0"
+
+  bucket_prefix = "${local.name}-jark-logs-"
+
+  # For example only - please evaluate for your environment
+  force_destroy = true
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  tags = local.tags
 }
