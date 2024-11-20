@@ -1270,7 +1270,7 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "${datasource}",
-            "description": "Error QPS for each deplyoment.",
+            "description": "Error QPS for each deployment.",
             "fieldConfig": {
                 "defaults": {},
                 "overrides": []

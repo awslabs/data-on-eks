@@ -37,6 +37,15 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
 }
 
 #---------------------------------------------------------------
+# Karpenter Node instance role Access Entry
+#---------------------------------------------------------------
+resource "aws_eks_access_entry" "karpenter_nodes" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+  type          = "EC2_LINUX"
+}
+
+#---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
@@ -158,7 +167,7 @@ module "eks_data_addons" {
         disruption:
           consolidationPolicy: WhenEmptyOrUnderutilized
           consolidateAfter: 1m
-        weight: 50
+        weight: 100
       EOT
       ]
     }
@@ -211,7 +220,7 @@ module "eks_data_addons" {
         disruption:
           consolidationPolicy: WhenEmptyOrUnderutilized
           consolidateAfter: 1m
-        weight: 100
+        weight: 50
       EOT
       ]
     }
@@ -396,6 +405,7 @@ module "eks_data_addons" {
   # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = true
   spark_history_server_helm_config = {
+    chart_version = "1.2.0"
     values = [
       <<-EOT
       sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
@@ -408,6 +418,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
+    chart_version       = "2.3.3"
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -467,7 +478,8 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_metrics_server = true
   metrics_server = {
-    values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
+    chart_version = "3.12.2"
+    values        = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -475,6 +487,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
+    chart_version = "9.43.1"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -502,7 +515,8 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
   aws_cloudwatch_metrics = {
-    values = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
+    chart_version = "0.0.11"
+    values        = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -515,6 +529,7 @@ module "eks_blueprints_addons" {
     retention_in_days = 30
   }
   aws_for_fluentbit = {
+    chart_version = "0.1.34"
     s3_bucket_arns = [
       module.s3_bucket.s3_bucket_arn,
       "${module.s3_bucket.s3_bucket_arn}/*"
@@ -529,7 +544,7 @@ module "eks_blueprints_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.5.4"
+    chart_version = "1.9.2"
     set = [{
       name  = "enableServiceMutatorWebhook"
       value = "false"
@@ -538,7 +553,7 @@ module "eks_blueprints_addons" {
 
   enable_ingress_nginx = true
   ingress_nginx = {
-    version = "4.5.2"
+    version = "4.11.3"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
@@ -562,7 +577,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "48.1.1"
+    chart_version = "65.5.1"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"

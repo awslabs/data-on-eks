@@ -25,8 +25,13 @@ prometheus:
       create: false
   kubeStateMetrics:
     enabled: false
-
-#imageVersion: prod-1.96.0 # commented to use the latest
+  server:
+    image:
+      repository: public.ecr.aws/kubecost/prometheus
+  configmapReload:
+    prometheus:
+      image:
+        repository: public.ecr.aws/kubecost/prometheus-config-reloader
 
 kubecostFrontend:
   image: public.ecr.aws/kubecost/frontend
@@ -46,6 +51,18 @@ kubecostModel:
       cpu: "500m"
       memory: "512Mi"
 
+forecasting:
+  fullImageName: public.ecr.aws/kubecost/kubecost-modeling:v0.1.18
+
+networkCosts:
+  image:
+    repository: public.ecr.aws/kubecost/kubecost-network-costs
+    tag: v0.17.6
+
+clusterController:
+  image:
+    repository: public.ecr.aws/kubecost/cluster-controller
+
 # Set this to false if you're bringing your own service account.
 #serviceAccount:
 #  create: false
@@ -60,3 +77,6 @@ persistentVolume:
   enabled: true # Note that setting this to false means configurations will be wiped out on pod restart.
   storageClass: gp3
   # existingClaim: kubecost-cost-analyzer # a claim in the same namespace as kubecost
+
+reporting:
+  productAnalytics: false
