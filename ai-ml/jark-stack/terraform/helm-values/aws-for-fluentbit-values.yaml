@@ -84,21 +84,6 @@ additionalOutputs: |
       upload_timeout                  10m
       log_key                         log
 
-  [OUTPUT]
-      Name                            s3
-      Match                           ray.*
-      region                          ${region}
-      bucket                          ${s3_bucket_name}
-      total_file_size                 5M
-      s3_key_format                   /${cluster_name}/ray-logs/%H%M%S_$UUID.log
-      s3_key_format_tag_delimiters    ..
-      store_dir                       /home/ec2-user/buffer
-      upload_timeout                  5m
-      log_key                         log
-
-
-
-
 # Resource config for large clusters
 resources:
   limits:
