@@ -295,6 +295,7 @@ module "eks_data_addons" {
           - instanceType: trainium-trn1
           - provisionerType: Karpenter
           - hub.jupyter.org/node-purpose: user
+          - karpenterVersion: ${resource.helm_release.karpenter.version}
         taints:
           - key: aws.amazon.com/neuron
             value: "true"
@@ -349,6 +350,7 @@ module "eks_data_addons" {
           - instanceType: inferentia-inf2
           - provisionerType: Karpenter
           - hub.jupyter.org/node-purpose: user
+          - karpenterVersion: ${resource.helm_release.karpenter.version}
         taints:
           - key: aws.amazon.com/neuron
             value: "true"
@@ -402,6 +404,7 @@ module "eks_data_addons" {
           - instanceType: mixed-x86
           - provisionerType: Karpenter
           - workload: rayhead
+          - karpenterVersion: ${resource.helm_release.karpenter.version}
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In

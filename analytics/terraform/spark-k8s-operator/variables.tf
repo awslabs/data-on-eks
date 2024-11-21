@@ -72,23 +72,20 @@ variable "enable_yunikorn" {
   type        = bool
 }
 
-variable "aws_auth_roles" {
-  description = "additional aws auth roles"
-  type = list(
-    object(
-      {
-        rolearn  = string
-        username = string
-        groups = list(string
-        )
-      }
-    )
-  )
-  default = []
-}
-
 variable "kms_key_admin_roles" {
   description = "list of role ARNs to add to the KMS policy"
   type        = list(string)
   default     = []
+}
+
+variable "spark_benchmark_ssd_min_size" {
+  description = "Minimum size for nodegroup of c5d 12xlarge instances to run data generation for Spark benchmark"
+  type        = number
+  default     = 0
+}
+
+variable "spark_benchmark_ssd_desired_size" {
+  description = "Desired size for nodegroup of c5d 12xlarge instances to run data generation for Spark benchmark"
+  type        = number
+  default     = 0
 }
