@@ -27,18 +27,6 @@ input:
     multiline.parser  docker, cri
     Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
 
-additionalInputs: |
-  [INPUT]
-      Name                ray
-      Tag                 ray
-      Path                /var/log/containers/ray/*
-      DB                  /var/log/flb_ray.db
-      multiline.parser    docker, cri
-      Mem_Buf_Limit       5MB
-      Skip_Long_Lines     On
-      Refresh_Interval    5
-      Tag_Regex           (?<spark_app_id>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)-(?<driver_or_executor>(?:driver|exec-[\d]+))_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log
-
 
 # NOTE: extraFilters config for using Kubelet to get the Metadata instead of talking to API server for large clusters
 filter:
