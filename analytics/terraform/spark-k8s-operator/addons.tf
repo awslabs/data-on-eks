@@ -167,7 +167,7 @@ module "eks_data_addons" {
         disruption:
           consolidationPolicy: WhenEmptyOrUnderutilized
           consolidateAfter: 1m
-        weight: 50
+        weight: 100
       EOT
       ]
     }
@@ -220,7 +220,7 @@ module "eks_data_addons" {
         disruption:
           consolidationPolicy: WhenEmptyOrUnderutilized
           consolidateAfter: 1m
-        weight: 100
+        weight: 50
       EOT
       ]
     }

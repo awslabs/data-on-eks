@@ -175,9 +175,9 @@ module "eks" {
       # Node group will be created with zero instances when you deploy the blueprint.
       # You can change the min_size and desired_size to 6 instances
       # desired_size might not be applied through terrafrom once the node group is created so this needs to be adjusted in AWS Console.
-      min_size     = 0 # Change min and desired to 6 for running benchmarks
+      min_size     = var.spark_benchmark_ssd_min_size # Change min and desired to 6 for running benchmarks
       max_size     = 8
-      desired_size = 0 # Change min and desired to 6 for running benchmarks
+      desired_size = var.spark_benchmark_ssd_desired_size # Change min and desired to 6 for running benchmarks
 
       instance_types = ["c5d.12xlarge"] # c5d.12xlarge = 2 x 900 NVMe SSD
 

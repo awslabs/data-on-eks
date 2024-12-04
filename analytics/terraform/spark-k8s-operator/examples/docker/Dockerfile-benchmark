@@ -1,5 +1,5 @@
 # Use the official Spark base image with Java 17 and Python 3
-FROM apache/spark:3.5.3-scala2.12-java17-python3-ubuntu as tpc-toolkit
+FROM apache/spark:3.5.3-scala2.12-java17-python3-ubuntu
 
 # Arguments for version control
 ARG HADOOP_VERSION=3.4.1
