@@ -175,8 +175,8 @@ jmx:
           - "ClassPath"
           - "SystemProperties"
       rules:
-      - pattern: ".*"        
-    resources: 
+      - pattern: ".*"
+    resources:
       limits:
         cpu: 200m
         memory: 512Mi
@@ -189,7 +189,7 @@ serviceMonitor:
   labels:
     prometheus: kube-prometheus
   interval: "30s"
-  coordinator: 
+  coordinator:
     enabled: true
     labels:
       prometheus: kube-prometheus
@@ -197,4 +197,3 @@ serviceMonitor:
     enabled: true
     labels:
       prometheus: kube-prometheus
-
