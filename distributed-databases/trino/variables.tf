@@ -25,5 +25,5 @@ variable "vpc_cidr" {
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
   type        = bool
-  default     = false
+  default     = true
 }

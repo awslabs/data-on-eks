@@ -123,7 +123,12 @@ module "eks_blueprints_addons" {
   # Adding AWS Load Balancer Controller
   #---------------------------------------
   enable_aws_load_balancer_controller = true
-
+  aws_load_balancer_controller = {
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
 
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
@@ -174,6 +179,17 @@ module "eks_blueprints_addons" {
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
     ],
+  }
+
+  helm_releases = {
+    keda = {
+      chart             = "keda"
+      chart_version     = "2.16.0"
+      repository        = "https://kedacore.github.io/charts"
+      description       = "Keda helm Chart deployment"
+      namespace         = "keda"
+      create_namespace  = true
+    }
   }
 
   tags = local.tags
