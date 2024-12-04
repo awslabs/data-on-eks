@@ -15,6 +15,7 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
+    serviceMonitorSelectorNilUsesHelmValues: false
 alertmanager:
   enabled: false
 

@@ -10,7 +10,7 @@ echo "The name of your bucket is: ${BUCKET}"
 echo "Now copying the 2022 NY Taxi data into the S3 bucket..."
 
 ## Copy the 2022 NY Taxi data into the S3 bucket
-aws s3 cp "s3://nyc-tlc/trip data/" s3://$BUCKET/hive/  --exclude "*"  --include  "yellow_tripdata_2022*" --recursive
+aws s3 cp "s3://aws-data-analytics-workshops/shared_datasets/tripdata/" s3://$BUCKET/hive/ --recursive
 
 sleep 2
 echo "Now we create the Glue Database..."
