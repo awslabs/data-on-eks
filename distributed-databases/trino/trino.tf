@@ -149,6 +149,10 @@ resource "aws_iam_policy" "trino_exchange_bucket_policy" {
 # Trino Helm Add-on
 #---------------------------------------
 module "trino_addon" {
+  depends_on = [
+    module.eks_blueprints_addons,
+  ]
+
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.1.1" #ensure to update this to the latest/desired version
 
