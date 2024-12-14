@@ -1,0 +1,129 @@
+```yaml
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-benchmark-1tb-ebs # Change for each test with instancetype etc,
+  namespace: spark-team-a
+spec:
+  # Temporarily commented out until the YuniKorn issue is resolved; falls back to the default Kubernetes scheduler
+  # batchScheduler: yunikorn
+  # batchSchedulerOptions:
+  #   queue: root.default
+  type: Scala
+  mode: cluster
+  image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
+  imagePullPolicy: IfNotPresent
+  sparkVersion: 3.5.3
+  mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
+  mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
+  arguments:
+    # TPC-DS data location
+    - "s3a://<S3_BUCKET>/TPCDS-TEST-1TB"
+    # results location
+    - "s3a://<S3_BUCKET>/TPCDS-TEST-1T-RESULT"
+    # Path to kit in the docker image
+    - "/opt/tpcds-kit/tools"
+    # Data Format
+    - "parquet"
+    # Scale factor (in GB)
+    - "1000" # changed from 3000 to 100gb for demo
+    # Number of iterations
+    - "1"
+    # Optimize queries with hive tables
+    - "false"
+    # Filter queries, will run all if empty - "q98-v2.4,q99-v2.4,ss_max-v2.4,q95-v2.4"
+    - ""
+    # Logging set to WARN
+    - "true"
+  sparkConf:
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    # AQE
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+    "spark.kubernetes.executor.podNamePrefix": "benchmark-exec-ebs"
+   # S3 Optimizations
+    # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # This is using AWS SDK V1 in maintenance mode
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"  # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/tmp/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M" # Good for large files
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
+    # "spark.hadoop.fs.s3a.readahead.range": "256K"
+
+    # -----------------------------------------------------
+    # This block is very critical when you get errors like
+    #     Exception in thread \"main\" io.fabric8.kubernetes.client.KubernetesClientException: An error has occurred
+    #     Caused by: java.net.SocketTimeoutException: timeout
+    # spark.kubernetes.local.dirs.tmpfs: "true" # More details here https://spark.apache.org/docs/latest/running-on-kubernetes.html#using-ram-for-local-storage
+    spark.kubernetes.submission.connectionTimeout: "120000" # milliseconds
+    spark.kubernetes.submission.requestTimeout: "120000"
+    spark.kubernetes.driver.connectionTimeout: "120000"
+    spark.kubernetes.driver.requestTimeout: "120000"
+    # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
+    # -----------------------------------------------------
+    # S3 Optimizations
+    "spark.hadoop.fs.s3a.multipart.size": "67108864"           # 64 MB part size for S3 uploads
+    "spark.hadoop.fs.s3a.threads.max": "40"                     # Limit S3 threads for optimized throughput
+    "spark.hadoop.fs.s3a.connection.maximum": "100"             # Set max connections for S3
+
+    # Data writing and shuffle tuning
+    "spark.shuffle.file.buffer": "1m"                           # Increase shuffle buffer for better disk I/O
+    "spark.reducer.maxSizeInFlight": "48m"                      # Increase reducer buffer size in-flight data
+
+    # Optional: Tuning multipart upload threshold
+    "spark.hadoop.fs.s3a.multipart.purge": "true"               # Automatically clear failed multipart uploads
+    "spark.hadoop.fs.s3a.multipart.threshold": "134217728"      # 128 MB threshold to start multi-part upload
+  driver:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
+    nodeSelector:
+      NodeGroupType: spark_benchmark_ebs
+  executor:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    # 8 executors per node
+    instances: 36 # 6 pods per node; 6 nodes with EKS Managed Node group
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
+    nodeSelector:
+      NodeGroupType: spark_benchmark_ebs
+  restartPolicy:
+    type: Never
+```

@@ -7,7 +7,6 @@ export AWS_DEFAULT_REGION=$region
 
 targets=(
   "module.trino_addon"
-  "kubectl_manifest.karpenter_resources"
   "module.eks_blueprints_addons"
   "module.eks"
   "module.vpc"
