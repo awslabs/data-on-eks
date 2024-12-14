@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lora-finetune-app 
+spec:
+  containers:
+    - name: app
+      image: 411317953072.dkr.ecr.us-east-2.amazonaws.com/optimum_neuron_lora_sql:latest
+      command: ["/bin/sh", "-c"]
+      args: ["while true; do sleep 30; done"]
+      volumeMounts:
+        - name: persistent-storage
+          mountPath: /shared
+        - name: dshm
+          mountPath: /dev/shm
+            #resources:
+            #limits:
+            #aws.amazon.com/neuron: 16
+      resources:
+        limits:
+          aws.amazon.com/neuron: "16"
+          vpc.amazonaws.com/efa: "8"
+        requests:
+          aws.amazon.com/neuron: "16"
+          vpc.amazonaws.com/efa: "8"
+  volumes:
+    - name: persistent-storage
+      persistentVolumeClaim:
+        claimName: fsx-claim
+    - name: dshm
+      emptyDir:
+        medium: Memory
+  restartPolicy: Never
+  nodeSelector:
+    provisioner: cluster-autoscaler # To be used with Managed nodegroups with Cluster Autoscaler
+    instance-type: trn1-32xl
+  tolerations:
+    - key: "aws.amazon.com/neuron"
+      value: "true"
+      effect: "NoSchedule"
