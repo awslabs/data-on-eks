@@ -147,7 +147,7 @@ kubectl get pods
 Once the pod is ‘Running’, connect to it using the following command:
 
 ```bash
-kubectl exec -it lora-finetune-app -cmd-shell -- /bin/bash
+kubectl exec -it lora-finetune-app -- /bin/bash
 ```
 
 Before running the launch script `01__launch_training.sh`, you need to set an environment variable with your HuggingFace token. The access token is found under Settings → Access Tokens on the Hugging Face website.

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-export HF_TOKEN="" # Required for gated models like llama3-8b
 export BASE_DIR="/shared/finetuned_models"
 export OUTPUT_DIR=`date "+%Y%m%d_%H%M%S"`
 

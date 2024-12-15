@@ -74,5 +74,5 @@ aws ecr get-login-password --region "$region" | docker login --username AWS --pa
 
 echo -e "\nBuilding llama finetuning trn1 docker image" \
   && docker build . -t $ECR_REPO_URI:latest \
-  && docker push $ECR_REPO_URI:latest \ 
+  && docker push $ECR_REPO_URI:latest \
   && echo -e "\nImage successfully pushed to ECR"
