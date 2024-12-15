@@ -4,8 +4,17 @@ from transformers import (
     AutoTokenizer,
 )
 import subprocess
+from argparse import ArgumentParser
 
-MODEL_PATH = "./new_model"  # point to your new pretrained model that includes merged LoRA adapters
+parser = ArgumentParser()
+parser.add_argument(
+    "-m",
+    "--model",
+    help="path to the fine-tuned model that includes merged LoRA adapters",
+    required=True,
+)
+
+args = parser.parse_args()
 MODEL_ORIG_PATH = "meta-llama/Meta-Llama-3-8B"
 TOKENIZER_PATH = "meta-llama/Meta-Llama-3-8B-Instruct"
 
@@ -34,7 +43,7 @@ tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
 tokenizer.pad_token = tokenizer.eos_token
 
 model_orig = AutoModelForCausalLM.from_pretrained(MODEL_ORIG_PATH)
-model = AutoModelForCausalLM.from_pretrained(MODEL_PATH)
+tuned_model = AutoModelForCausalLM.from_pretrained(args.model())
 
 for n in [94, 99, 123]:
     example = tokenizer.apply_chat_template(eval_dataset
@@ -42,7 +51,7 @@ for n in [94, 99, 123]:
     example_tokenized = tokenizer.apply_chat_template(eval_dataset
                                                     [n]['messages'][0:-1], tokenize=True, add_generation_prompt=True, return_tensors="pt")
     prompt_len = len(example_tokenized[0])
-    outputs = model.generate(example_tokenized, max_new_tokens=50, pad_token_id=128001)
+    outputs = tuned_model.generate(example_tokenized, max_new_tokens=50, pad_token_id=128001)
     outputs_orig = model_orig.generate(example_tokenized, max_new_tokens=50, pad_token_id=128001)
 
     subprocess.run("clear")

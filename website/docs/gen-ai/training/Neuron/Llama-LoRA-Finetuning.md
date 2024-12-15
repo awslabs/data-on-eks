@@ -160,18 +160,17 @@ export HF_TOKEN=<your-huggingface-token>
 
 Once the script is complete, you can verify the training progress by checking the logs of the training job.
 
-Next, run the `02__consolidate_adapter_shards_and_merge_model.sh` script to consolidate the adapter shards and merge the model.
-
+Next, we need to consolidate the adapter shards and merge the model. For this we run the python script `02__consolidate_adapter_shards_and_merge_model.py` by passing in the location of the checkpoint and providing the location where you want to save the consolidated model.
 ```
-./02__consolidate_adapter_shards_and_merge_model.sh
+python3 ./02__consolidate_adapter_shards_and_merge_model.py -i <path-to-checkpoint> -o <path-to-save-model>
 ```
 
-Once the script is complete, we can test the fine-tuned model by running the following command:
+Once the script is complete, we can test the fine-tuned model by running the `03__test_model.py` by passing in the tuned model.
 ```bash
-./03__test_model.py
+./03__test_model.py -m <path-to-tuned-model>
 ```
 
-You can exit from the pod once you are done testing the model.
+You can exit from the interactive terminal of the pod once you are done testing the model.
 
 ### Cleaning up
 
