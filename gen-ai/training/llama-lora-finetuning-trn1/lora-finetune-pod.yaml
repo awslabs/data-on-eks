@@ -5,7 +5,7 @@ metadata:
 spec:
   containers:
     - name: app
-      image: 411317953072.dkr.ecr.us-east-2.amazonaws.com/optimum_neuron_lora_sql:latest
+      image: 411317953072.dkr.ecr.us-east-2.amazonaws.com/llama-finetuning-trn1:latest
       command: ["/bin/sh", "-c"]
       args: ["while true; do sleep 30; done"]
       volumeMounts:

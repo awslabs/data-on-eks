@@ -17,7 +17,7 @@
 # For more help, reach out to Perplexity or Google.
 
 # Replace with your desired repository name
-ECR_REPO_NAME="llama_finetuning_trn1"
+ECR_REPO_NAME="llama-finetuning-trn1"
 
 # Check that we are running on an x86_64 instance to avoid issues with docker build
 arch=$(uname -m)
