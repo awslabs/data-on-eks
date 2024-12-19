@@ -7,9 +7,9 @@ export GLUE_DB_NAME=taxi_hive_database
 export CRAWLER_NAME=taxi-data-crawler
 echo "The name of your bucket is: ${BUCKET}"
 
-echo "Now copying the 2022 NY Taxi data into the S3 bucket..."
+echo "Now copying sample data into the S3 bucket..."
 
-## Copy the 2022 NY Taxi data into the S3 bucket
+## Copy sample data into the S3 bucket. Later on, we'd replace sample data with a more robust dataset.
 aws s3 cp "s3://aws-data-analytics-workshops/shared_datasets/tripdata/" s3://$BUCKET/hive/ --recursive
 
 sleep 2
