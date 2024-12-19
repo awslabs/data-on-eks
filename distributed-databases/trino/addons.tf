@@ -153,6 +153,17 @@ module "eks_blueprints_addons" {
     ],
   }
 
+  helm_releases = {
+    keda = {
+      chart            = "keda"
+      chart_version    = "2.16.0"
+      repository       = "https://kedacore.github.io/charts"
+      description      = "Keda helm Chart deployment"
+      namespace        = "keda"
+      create_namespace = true
+    }
+  }
+
   tags = local.tags
 }
 
