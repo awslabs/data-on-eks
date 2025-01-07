@@ -23,7 +23,7 @@ def main(args):
     Main function to execute the S3 table job.
     """
     if len(args) != 3:
-        logger.error("Usage: spark-etl [input-csv-path] [s3-bucket-name]")
+        logger.error("Usage: spark-etl [input-csv-path] [s3table-arn]")
         sys.exit(1)
 
     # Input parameters
@@ -64,7 +64,6 @@ def main(args):
 
     logger.info("Source data count:")
     employee_df.count()
-    spark.sql(f"select count(*) as source_count from {full_table_name}").show()
 
     # Step 3: Create or replace table and write data in one operation
     logger.info(f"Creating/Replacing and writing data to table: {full_table_name}")
@@ -82,6 +81,16 @@ def main(args):
     # Count records using both DataFrame API and SQL
     logger.info("Total records in Iceberg table (DataFrame API):")
     print(f"DataFrame count: {iceberg_data_df.count()}")
+
+    # List the table snapshots
+    logger.info("List the s3table snaphot versions:")
+    spark.sql(f"SELECT * FROM {full_table_name}.history LIMIT 10").show()
+
+    # Add new column to the table and insert data and display
+
+
+    # Update data for existing row and display
+
 
     # Stop Spark session
     logger.info("Stopping Spark Session")
