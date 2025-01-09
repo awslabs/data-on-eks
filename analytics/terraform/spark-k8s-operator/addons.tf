@@ -652,7 +652,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 resource "aws_iam_policy" "s3tables_policy" {
   name_prefix = "${local.name}-s3tables"
   path        = "/"
-  description = "S3Tables Metdata access for Nodes"
+  description = "S3Tables Metadata access for Nodes"
 
   policy = jsonencode({
     Version = "2012-10-17"

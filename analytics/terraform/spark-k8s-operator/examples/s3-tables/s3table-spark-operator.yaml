@@ -1,6 +1,6 @@
 # Pre-requisite before running this job
 # Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
-# REPLACE <S3TABLE_ARN> with actaul S3 Table ARN
+# REPLACE <S3TABLE_ARN> with actual S3 Table ARN
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -14,6 +14,11 @@ spec:
   type: Python
   sparkVersion: "3.5.3"
   mode: cluster
+  # CAUTION: Unsupported test image
+  # This image is created solely for testing and reference purposes.
+  # Before use, please:
+  # 1. Review the Dockerfile used to create this image
+  # 2. Create your own image that meets your organization's security requirements
   image: "public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu-s3table0.1.3-iceberg1.6.1"
   imagePullPolicy: IfNotPresent
   mainApplicationFile: "s3a://<S3_BUCKET>/s3table-example/scripts/s3table-iceberg-pyspark.py"

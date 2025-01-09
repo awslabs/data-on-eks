@@ -85,7 +85,7 @@ def main(args):
     print(f"DataFrame count: {iceberg_data_df.count()}")
 
     # List the table snapshots
-    logger.info("List the s3table snaphot versions:")
+    logger.info("List the s3table snapshot versions:")
     spark.sql(f"SELECT * FROM {full_table_name}.history LIMIT 10").show()
 
     # Stop Spark session
