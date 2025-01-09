@@ -502,6 +502,7 @@ module "eks_blueprints_addons" {
   karpenter_node = {
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      S3TableAccess                = aws_iam_policy.s3tables_policy.arn
     }
   }
   karpenter = {
@@ -643,4 +644,45 @@ resource "aws_secretsmanager_secret" "grafana" {
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
+}
+
+#---------------------------------------------------------------
+# S3Table IAM policy for Karpenter nodes
+#---------------------------------------------------------------
+resource "aws_iam_policy" "s3tables_policy" {
+  name_prefix = "${local.name}-s3tables"
+  path        = "/"
+  description = "S3Tables Metdata access for Nodes"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "VisualEditor0"
+        Effect = "Allow"
+        Action = [
+          "s3tables:UpdateTableMetadataLocation",
+          "s3tables:GetNamespace",
+          "s3tables:GetTableBucket",
+          "s3tables:GetTableBucketMaintenanceConfiguration",
+          "s3tables:GetTableBucketPolicy"
+        ]
+        Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*"
+      },
+      {
+        Sid    = "VisualEditor1"
+        Effect = "Allow"
+        Action = [
+          "s3tables:GetTableMaintenanceJobStatus",
+          "s3tables:GetTablePolicy",
+          "s3tables:GetTable",
+          "s3tables:GetTableMetadataLocation",
+          "s3tables:UpdateTableMetadataLocation",
+          "s3tables:GetTableData",
+          "s3tables:GetTableMaintenanceConfiguration"
+        ]
+        Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*/table/*"
+      }
+    ]
+  })
 }

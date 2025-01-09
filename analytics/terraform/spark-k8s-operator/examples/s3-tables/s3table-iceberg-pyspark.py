@@ -39,6 +39,7 @@ def main(args):
              .config("spark.sql.catalog.s3tablesbucket", "org.apache.iceberg.spark.SparkCatalog")
              .config("spark.sql.catalog.s3tablesbucket.catalog-impl", "software.amazon.s3tables.iceberg.S3TablesCatalog")
              .config("spark.sql.catalog.s3tablesbucket.warehouse", s3table_arn)
+             .config("spark.sql.defaultCatalog", "s3tablesbucket")
              .getOrCreate())
 
     spark.sparkContext.setLogLevel("INFO")
@@ -85,12 +86,6 @@ def main(args):
     # List the table snapshots
     logger.info("List the s3table snaphot versions:")
     spark.sql(f"SELECT * FROM {full_table_name}.history LIMIT 10").show()
-
-    # Add new column to the table and insert data and display
-
-
-    # Update data for existing row and display
-
 
     # Stop Spark session
     logger.info("Stopping Spark Session")
