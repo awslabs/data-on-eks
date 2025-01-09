@@ -39,6 +39,7 @@ def main(args):
              .config("spark.sql.catalog.s3tablesbucket", "org.apache.iceberg.spark.SparkCatalog")
              .config("spark.sql.catalog.s3tablesbucket.catalog-impl", "software.amazon.s3tables.iceberg.S3TablesCatalog")
              .config("spark.sql.catalog.s3tablesbucket.warehouse", s3table_arn)
+             .config('spark.hadoop.fs.s3.impl', "org.apache.hadoop.fs.s3a.S3AFileSystem")
              .config("spark.sql.defaultCatalog", "s3tablesbucket")
              .getOrCreate())
 
