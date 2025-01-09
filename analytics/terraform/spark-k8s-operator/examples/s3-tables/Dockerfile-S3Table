@@ -16,6 +16,7 @@ FROM apache/spark:3.5.3-scala2.12-java17-python3-ubuntu
 
 # Arguments for version control
 ARG HADOOP_VERSION=3.4.1
+ARG PREV_HADOOP_VERSION=3.3.4
 ARG AWS_SDK_VERSION=2.29.45
 ARG ICEBERG_VERSION=1.6.1
 ARG S3_TABLES_VERSION=0.1.3
@@ -33,11 +34,11 @@ RUN rm -f ${SPARK_HOME}/jars/hadoop-client-* && \
 
 # Add Hadoop AWS connector and related Hadoop dependencies
 RUN cd ${SPARK_HOME}/jars && \
-    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar && \
-    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar && \
-    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar && \
-    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar && \
-    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-yarn-server-web-proxy/${HADOOP_VERSION}/hadoop-yarn-server-web-proxy-${HADOOP_VERSION}.jar
+    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar -O hadoop-aws-${PREV_HADOOP_VERSION}.jar && \
+    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar -O hadoop-client-api-${PREV_HADOOP_VERSION}.jar && \
+    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar -O hadoop-client-runtime-${PREV_HADOOP_VERSION}.jar && \
+    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar -O hadoop-common-${PREV_HADOOP_VERSION}.jar && \
+    wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-yarn-server-web-proxy/${HADOOP_VERSION}/hadoop-yarn-server-web-proxy-${HADOOP_VERSION}.jar -O hadoop-yarn-server-web-proxy-${PREV_HADOOP_VERSION}.jar
 
 # Add Iceberg, AWS SDK bundle, and S3 Tables Catalog for Iceberg runtime
 RUN cd ${SPARK_HOME}/jars && \
