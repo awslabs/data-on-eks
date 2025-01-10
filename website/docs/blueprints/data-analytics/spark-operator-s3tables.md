@@ -1,6 +1,6 @@
 ---
-sidebar_position: 2
-sidebar_label: Spark Operator with S3 Tables
+sidebar_position: 3
+sidebar_label: S3 Tables on EKS
 hide_table_of_contents: true
 ---
 import Tabs from '@theme/Tabs';
@@ -12,48 +12,29 @@ import ReplaceS3BucketPlaceholders from './_replace_s3_bucket_placeholders.mdx';
 
 import CodeBlock from '@theme/CodeBlock';
 
-# Amazon S3 Tables and Spark Operator on Kubernetes
+# S3 Tables on Amazon EKS with Spark Operator
 
 ## Introduction
 
-This README provides an overview of Amazon S3 Tables, their integration with Apache Spark, and how to use Spark Operator to manage Spark applications on Kubernetes while leveraging Amazon S3 Tables.
+This document provides an overview of Amazon S3 Tables, its integration with Apache Spark, and how to use Spark Operator to manage Spark applications on Kubernetes while leveraging Amazon S3 Tables.
 
-<CollapsibleContent header={<h2><span>Spark Operator</span></h2>}>
-
-The Kubernetes Operator for Apache Spark aims to make specifying and running Spark applications as easy and idiomatic as running other workloads on Kubernetes.
-
-* a SparkApplication controller that watches events of creation, updates, and deletion of SparkApplication objects and acts on the watch events,
-* a submission runner that runs spark-submit for submissions received from the controller,
-* a Spark pod monitor that watches for Spark pods and sends pod status updates to the controller,
-* a Mutating Admission Webhook that handles customizations for Spark driver and executor pods based on the annotations on the pods added by the controller,
-* and also a command-line tool named sparkctl for working with the operator.
-
-The following diagram shows how different components of Spark Operator add-on interact and work together.
-
-![img.png](img/spark-operator.png)
-
-</CollapsibleContent>
-
-<CollapsibleContent header={<h2><span>Amazon S3 Tables</span></h2>}>
 Amazon S3 Tables allow you to store and query data directly on Amazon S3 in tabular formats such as Parquet, ORC, or CSV. They are commonly used in data lake architectures and are often paired with query engines like Apache Spark, Hive, or Presto.
 
-Key Benefits:
+## Key Benefits:
 
 - Purpose-built storage for tables
   
-S3 table buckets are specifically designed for tables. Table buckets provide higher transactions per second (TPS) and better query throughput compared to self-managed tables in S3 general purpose buckets. Table buckets deliver the same durability, availability, and scalability as other Amazon S3 bucket types.
+  S3 table buckets are specifically designed for tables. Table buckets provide higher transactions per second (TPS) and better query throughput compared to self-managed tables in S3 general purpose buckets. Table buckets deliver the same durability, availability, and scalability as other Amazon S3 bucket types.
 
 - Built-in support for Apache Iceberg
 
-Tables in Amazon S3 table buckets are stored in Apache Iceberg format. You can query these tables using standard SQL in query engines that support Iceberg. Iceberg has a variety of features to optimize query performance, including schema evolution and partition evolution.
+  Tables in Amazon S3 table buckets are stored in Apache Iceberg format. You can query these tables using standard SQL in query engines that support Iceberg. Iceberg has a variety of features to optimize query performance, including schema evolution and partition evolution.
 
-With Iceberg, you can change how your data is organized so that it can evolve over time without requiring you to rewrite your queries or rebuild your data structures. Iceberg is designed to help ensure data consistency and reliability through its support for transactions. To help you correct issues or perform time travel queries, you can track how data changes over time and roll back to historical versions.
+  With Iceberg, you can change how your data is organized so that it can evolve over time without requiring you to rewrite your queries or rebuild your data structures. Iceberg is designed to help ensure data consistency and reliability through its support for transactions. To help you correct issues or perform time travel queries, you can track how data changes over time and roll back to historical versions.
 
 - Automated table optimization
   
-To optimize your tables for querying, S3 continuously performs automatic maintenance operations, such as compaction, snapshot management, and unreferenced file removal. These operations increase table performance by compacting smaller objects into fewer, larger files. Maintenance operations also reduce your storage costs by cleaning up unused objects. This automated maintenance streamlines the operation of data lakes at scale by reducing the need for manual table maintenance. For each table and table bucket, you can customize maintenance configurations.
-
-</CollapsibleContent>
+  To optimize your tables for querying, S3 continuously performs automatic maintenance operations, such as compaction, snapshot management, and unreferenced file removal. These operations increase table performance by compacting smaller objects into fewer, larger files. Maintenance operations also reduce your storage costs by cleaning up unused objects. This automated maintenance streamlines the operation of data lakes at scale by reducing the need for manual table maintenance. For each table and table bucket, you can customize maintenance configurations.
 
 <CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
@@ -106,13 +87,13 @@ echo $S3_BUCKET
 
 </CollapsibleContent>
 
-<CollapsibleContent header={<h2><span>Execute Sample Spark job</span></h2>}>
+## Execute Sample Spark job
 
-## Step 1: Create the S3 Tables compatible Apache Spark Docker Image
+### Step 1: Create the S3 Tables compatible Apache Spark Docker Image
 
 For the purposes of this blueprint, we've already provided a docker image that's available in public [ECR repository](public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu-s3table0.1.3-iceberg1.6.1)
 
-## Step 2: Create Test Data for the job
+### Step 2: Create Test Data for the job
 
 Navigate to the example directory and Generate sample data:
 
@@ -123,7 +104,7 @@ cd analytics/terraform/spark-k8s-operator/examples/s3-tables
 
 This will create a file called employee_data.csv locally with 100 records. Modify the script to adjust the number of records as needed.
 
-## Step 3: Upload Test Input data to Amazon S3 Bucket
+### Step 3: Upload Test Input data to Amazon S3 Bucket
 
 Replace "\<YOUR_S3_BUCKET>" with the name of the S3 bucket created by your blueprint and run the below command.
 
@@ -131,7 +112,7 @@ Replace "\<YOUR_S3_BUCKET>" with the name of the S3 bucket created by your bluep
 aws s3 cp employee_data.csv s3://<S3_BUCKET>/s3table-example/input/
 ```
 
-## Step 4: Upload PySpark Script to S3 Bucket
+### Step 4: Upload PySpark Script to S3 Bucket
 
 Replace S3_BUCKET with the name of the S3 bucket created by your blueprint and run the below command to upload sample Spark job to S3 buckets.
 
@@ -139,18 +120,20 @@ aws s3 cp s3table-iceberg-pyspark.py s3://S3_BUCKET>/s3table-example/scripts/
 
 Navigate to example directory and submit the Spark job.
 
-## Step 5: Create Amazon S3 Table
+### Step 5: Create Amazon S3 Table
 
 Replace and "\<S3TABLE_BUCKET_NAME>" with desired names.
 Replace `REGION` with your AWS region.
 
+```bash
 aws s3tables create-table-bucket \
     --region "\<REGION>" \
     --name "\<S3TABLE_BUCKET_NAME>"
+```
 
 Make note of the S3TABLE ARN generated by this command.
 
-## Step 6: Update Spark Operator YAML File
+### Step 6: Update Spark Operator YAML File
 
 Update the Spark Operator YAML file as below:
 
@@ -158,7 +141,7 @@ Update the Spark Operator YAML file as below:
 - Replace "\<S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs). S3 Bucket is the place where you copied test data and sample spark job in the above steps.
 - REPLACE "\<S3TABLE_ARN> with your S3 Table ARN.
 
-## Step 7: Execute Spark Job
+### Step 7: Execute Spark Job
 
 Apply the updated YAML file to your Kubernetes cluster to submit the Spark Job.
 
@@ -167,15 +150,15 @@ cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/s3-tables
 kubectl apply -f s3table-spark-operator.yaml
 ```
 
-## Step 8: Verify the Spark Driver log for the output
+### Step 8: Verify the Spark Driver log for the output
 
 Check the Spark driver logs to verify job progress and output:
 
-```
+```bash
 kubectl logs <spark-driver-pod-name> -n spark-team-a
 ```
 
-## Step 9: Verify the S3Table using S3Table API
+### Step 9: Verify the S3Table using S3Table API
 
 Use the S3Table API to confirm the table was created successfully. Just replace the "\<ACCOUNT_ID> and run the command.
 
@@ -206,13 +189,15 @@ Output looks like below.
 }
 ```
 
-## Step 10: Monitor the table maintenance job status:
+### Step 10: Monitor the table maintenance job status:
 
+```bash
 aws s3tables get-table-maintenance-job-status --table-bucket-arn arn:aws:s3tables:us-west-2:"\<ACCOUNT_ID>:bucket/doeks-spark-on-eks-s3table --namespace doeks_namespace --name employee_s3_table
+```
 
 This command provides information about Iceberg compaction, snapshot management, and unreferenced file removal processes.
 
-```text
+```json
 {
     "tableARN": "arn:aws:s3tables:us-west-2:<ACCOUNT_ID>:bucket/doeks-spark-on-eks-s3table/table/55511111-7a03-4513-b921-e372b0030daf",
     "status": {
@@ -230,9 +215,8 @@ This command provides information about Iceberg compaction, snapshot management,
         }
     }
 }
-```
 
-</CollapsibleContent>
+```
 
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
