@@ -87,7 +87,7 @@ echo $S3_BUCKET
 
 ### Step 1: Create the S3 Tables compatible Apache Spark Docker Image
 
-For the purposes of this blueprint, we've already provided a docker image that's available in public [ECR repository](public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu-s3table0.1.3-iceberg1.6.1)
+For the purposes of this blueprint, we've already provided a docker image that's publicly available.
 
 ### Step 2: Create Test Data for the job
 
