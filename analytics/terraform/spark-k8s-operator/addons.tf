@@ -424,6 +424,16 @@ module "eks_data_addons" {
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
+  #---------------------------------------------------------------
+  # JupyterHub Add-on
+  #---------------------------------------------------------------
+  enable_jupyterhub = true
+  jupyterhub_helm_config = {
+    values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
+      jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+    })]
+    version = "3.3.8"
+  }
 }
 
 #---------------------------------------------------------------
@@ -665,7 +675,9 @@ resource "aws_iam_policy" "s3tables_policy" {
           "s3tables:GetNamespace",
           "s3tables:GetTableBucket",
           "s3tables:GetTableBucketMaintenanceConfiguration",
-          "s3tables:GetTableBucketPolicy"
+          "s3tables:GetTableBucketPolicy",
+          "s3tables:CreateNamespace",
+          "s3tables:CreateTable"
         ]
         Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*"
       },
