@@ -2,12 +2,14 @@
 # JupyterHub Single User IRSA Configuration
 #-----------------------------------------------------------------------------------------
 resource "kubernetes_namespace" "jupyterhub" {
+  count = var.enable_jupyterhub ? 1 : 0
   metadata {
     name = "jupyterhub"
   }
 }
 
 module "jupyterhub_single_user_irsa" {
+  count  = var.enable_jupyterhub ? 1 : 0
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
   role_name = "${module.eks.cluster_name}-jupyterhub-single-user-sa"
@@ -26,6 +28,7 @@ module "jupyterhub_single_user_irsa" {
 }
 
 resource "kubernetes_service_account_v1" "jupyterhub_single_user_sa" {
+  count = var.enable_jupyterhub ? 1 : 0
   metadata {
     name        = "${module.eks.cluster_name}-jupyterhub-single-user"
     namespace   = kubernetes_namespace.jupyterhub.metadata[0].name
@@ -36,6 +39,7 @@ resource "kubernetes_service_account_v1" "jupyterhub_single_user_sa" {
 }
 
 resource "kubernetes_secret_v1" "jupyterhub_single_user" {
+  count = var.enable_jupyterhub ? 1 : 0
   metadata {
     name      = "${module.eks.cluster_name}-jupyterhub-single-user-secret"
     namespace = kubernetes_namespace.jupyterhub.metadata[0].name
