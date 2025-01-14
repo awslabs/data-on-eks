@@ -9,7 +9,7 @@ const config = {
   title: 'Data on EKS',
   tagline: 'Supercharge your Data and AI/ML Journey with Amazon EKS',
   url: 'https://awslabs.github.io',
-  baseUrl: '/',
+  baseUrl: '/data-on-eks/',
   trailingSlash: false,
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
