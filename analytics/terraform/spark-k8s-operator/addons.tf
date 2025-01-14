@@ -658,6 +658,8 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 
 #---------------------------------------------------------------
 # S3Table IAM policy for Karpenter nodes
+# The S3 tables library does not fully support IRSA and Pod Identity as of this writing.
+# We give the node role access to S3tables to work around this limitation.
 #---------------------------------------------------------------
 resource "aws_iam_policy" "s3tables_policy" {
   name_prefix = "${local.name}-s3tables"
