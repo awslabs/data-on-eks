@@ -22,7 +22,7 @@ module "jupyterhub_single_user_irsa" {
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["${kubernetes_namespace.jupyterhub.metadata[0].name}:${module.eks.cluster_name}-jupyterhub-single-user"]
+      namespace_service_accounts = ["${kubernetes_namespace.jupyterhub[0].metadata[0].name}:${module.eks.cluster_name}-jupyterhub-single-user"]
     }
   }
 }
@@ -31,8 +31,8 @@ resource "kubernetes_service_account_v1" "jupyterhub_single_user_sa" {
   count = var.enable_jupyterhub ? 1 : 0
   metadata {
     name        = "${module.eks.cluster_name}-jupyterhub-single-user"
-    namespace   = kubernetes_namespace.jupyterhub.metadata[0].name
-    annotations = { "eks.amazonaws.com/role-arn" : module.jupyterhub_single_user_irsa.iam_role_arn }
+    namespace   = kubernetes_namespace.jupyterhub[0].metadata[0].name
+    annotations = { "eks.amazonaws.com/role-arn" : module.jupyterhub_single_user_irsa[0].iam_role_arn }
   }
 
   automount_service_account_token = true
@@ -42,10 +42,10 @@ resource "kubernetes_secret_v1" "jupyterhub_single_user" {
   count = var.enable_jupyterhub ? 1 : 0
   metadata {
     name      = "${module.eks.cluster_name}-jupyterhub-single-user-secret"
-    namespace = kubernetes_namespace.jupyterhub.metadata[0].name
+    namespace = kubernetes_namespace.jupyterhub[0].metadata[0].name
     annotations = {
-      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
-      "kubernetes.io/service-account.namespace" = kubernetes_namespace.jupyterhub.metadata[0].name
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name
+      "kubernetes.io/service-account.namespace" = kubernetes_namespace.jupyterhub[0].metadata[0].name
     }
   }
 

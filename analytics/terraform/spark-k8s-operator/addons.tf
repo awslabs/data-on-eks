@@ -430,7 +430,7 @@ module "eks_data_addons" {
   enable_jupyterhub = var.enable_jupyterhub
   jupyterhub_helm_config = {
     values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
-      jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      jupyter_single_user_sa_name = "${var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "no-tused"}"
     })]
     version = "3.3.8"
   }
