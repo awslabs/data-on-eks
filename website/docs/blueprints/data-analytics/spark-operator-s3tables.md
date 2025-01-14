@@ -393,6 +393,56 @@ Please note that these policies can further be adjusted and make it more granula
 
 :::
 
+
+<CollapsibleContent header={<h2><span>Using S3 Tables with JupyterLab </span></h2>}>
+
+If you'd like to use JupyterLab to work with S3 Tables interactively, this blueprint allows you to deploy JupyterLab single user instances to your cluster.
+
+> :warning: JupyterHub configurations available here are for testing purposes only.
+>
+> :warning: Review the configuration and make necessary changes to meet your security standards.
+
+### Update Terraform variable and apply
+
+```bash
+cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
+
+echo 'enable_jupyterhub = true' >> spark-operator.tfvars
+terraform apply -var-file spark-operator.tfvars
+```
+
+### Ensure you have test data available in your S3 bucket
+
+```bash
+cd analytics/terraform/spark-k8s-operator/examples/s3-tables
+./input-data-gen.sh
+aws s3 cp employee_data.csv s3://${S3_BUCKET}/s3table-example/input/
+```
+
+### Access JupyterHub UI and provision a JupyterLab server
+
+1. Port forward proxy service to your local machine.
+
+    ```bash
+    kubectl port-forward svc/proxy-public 8888:80 -n jupyterhub
+    ```
+
+1. Go to [`http://localhost:8888`](http://localhost:8888). Enter any username, leave the password field empty, then click "Sign in".
+
+   ![sign in](./img/s3tables-jupyter-signin.png)
+
+1. Click start. You can also select the upstream PySpark NoteBook image from the drop down list, if you'd like to customize it yourself.
+
+    ![select](./img/s3tables-jupyter-select.png)
+
+1. Copy examples from the [example Jupyter Notebook](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/examples/s3-tables/s3table-iceberg-pyspark.ipynb) as a starting point to test S3 Tables features interactively.
+
+    **Be sure to update `S3_BUCKET` and `s3table_arn` values in the notebook**
+
+    ![notebook](./img/s3tables-jupyter-notebook.png)
+
+</CollapsibleContent>
+
 <CollapsibleContent header={<h2><span>Cleanup</span></h2>}>
 
 :::caution
@@ -423,6 +473,15 @@ aws s3tables delete-table-bucket \
   --region "<REGION>" \
   --table-bucket-arn ${S3TABLE_ARN}
 ```
+
+## Delete the Jupyter Notebook server
+
+If you created a Jupyter notebook server
+
+```bash
+kubectl delete pods -n jupyterhub -l component=singleuser-server
+```
+
 
 ## Delete the EKS cluster
 

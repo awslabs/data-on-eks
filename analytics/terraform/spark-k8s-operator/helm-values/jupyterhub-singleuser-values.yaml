@@ -1,0 +1,75 @@
+hub:
+  db:
+    pvc:
+      storage: 50Gi
+      storageClassName: gp3
+  authenticatePrometheus: false
+
+proxy:
+  https:
+    enabled: false
+    type: offload
+  service:
+    type: ClusterIP
+
+singleuser:
+  profileList:
+    - display_name: Data Engineering (CPU)
+      description: "PySpark Notebooks | Karpenter AutoScaling"
+      profile_options:
+        image:
+          display_name: "Image"
+          choices:
+            pyspark350:
+              # CAUTION: Unsupported test image
+              # This image is created solely for testing and reference purposes.
+              # Before use, please:
+              # 1. Review the Dockerfile used to create this image (Dockerfile-S3Table-notebook)
+              # 2. Create your own image that meets your organization's security requirements
+              display_name: "PySpark 3.5.3 with S3 Tables support"
+              default: true
+              kubespawner_override:
+                image: public.ecr.aws/data-on-eks/spark:pyspark-notebook-3.5.3-s3table0.1.3
+            pyspark341: # Use this if you'd like to customize the base image yourself.
+              display_name: "PySpark 3.5.3"
+              kubespawner_override:
+                image: quay.io/jupyter/pyspark-notebook:spark-3.5.3
+      kubespawner_override:
+        extra_pod_config:
+          dns_policy: ClusterFirst
+        node_selector:
+          NodeGroupType: "SparkComputeOptimized"
+          karpenter.sh/capacity-type: "on-demand"
+        cpu_guarantee: 2
+        mem_guarantee: 8G
+        cpu_limit: 4
+        mem_limit: 8G
+      cmd: null
+  serviceAccountName: ${jupyter_single_user_sa_name}
+  uid: 0
+  cloudMetadata:
+    # CAUTION: This should be set to true for almost all cases.
+    # This is set to false for s3-tables-catalog to assume the node role, because there is an issue with credentials injections through IRSA in the s3 tables catalog library.
+    blockWithIptables: false
+  extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
+    securityContext:
+        fsGroup: 100
+
+# Optimizations configured according to this doc https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+scheduling:
+  userScheduler:
+    enabled: true
+  podPriority:
+    enabled: true
+  userPlaceholder:
+    enabled: false
+    replicas: 1
+prePuller:
+  hook:
+    enabled: false
+  continuous:
+    # NOTE: if used with Karpenter, also add user-placeholders
+    enabled: false
+
+global:
+  safeToShowValues: false

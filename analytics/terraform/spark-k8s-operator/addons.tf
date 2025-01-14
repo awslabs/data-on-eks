@@ -424,6 +424,16 @@ module "eks_data_addons" {
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
+  #---------------------------------------------------------------
+  # JupyterHub Add-on
+  #---------------------------------------------------------------
+  enable_jupyterhub = var.enable_jupyterhub
+  jupyterhub_helm_config = {
+    values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
+      jupyter_single_user_sa_name = var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "no-tused"
+    })]
+    version = "3.3.8"
+  }
 }
 
 #---------------------------------------------------------------
@@ -648,6 +658,8 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 
 #---------------------------------------------------------------
 # S3Table IAM policy for Karpenter nodes
+# The S3 tables library does not fully support IRSA and Pod Identity as of this writing.
+# We give the node role access to S3tables to work around this limitation.
 #---------------------------------------------------------------
 resource "aws_iam_policy" "s3tables_policy" {
   name_prefix = "${local.name}-s3tables"
@@ -665,7 +677,9 @@ resource "aws_iam_policy" "s3tables_policy" {
           "s3tables:GetNamespace",
           "s3tables:GetTableBucket",
           "s3tables:GetTableBucketMaintenanceConfiguration",
-          "s3tables:GetTableBucketPolicy"
+          "s3tables:GetTableBucketPolicy",
+          "s3tables:CreateNamespace",
+          "s3tables:CreateTable"
         ]
         Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*"
       },
