@@ -53,7 +53,7 @@ In the table below we have taken the Median times from the output for each insta
 
 To calculate the performance increase we are calculating a ratio of the query times. For example, to determine how much faster the r8g instances were compared to the r6g instances:
 - Find the times corresponding to each query, using `q20-v2.4` as an example the r6g.12xlarge took `2.81s` and the r8g.12xlarge took `1.69s`.
-- We then divide r5g.12xlarge/r8g.12xlarge, for q20-v2.4 thats `2.81s/1.69s = 1.66`. So for this query the r8g.12xlarge was able to complete the queries 1.66 times faster (or a ~66% percent improvement)
+- We then divide r5g.12xlarge/r8g.12xlarge, for q20-v2.4 that's `2.81s/1.69s = 1.66`. So for this query the r8g.12xlarge was able to complete the queries 1.66 times faster (or a ~66% percent improvement)
 
 The data has been sorted by the last column, showing the performance increase r8g.12xlarge has over the r6g.12xlarge.
 <div class="benchmark-results">

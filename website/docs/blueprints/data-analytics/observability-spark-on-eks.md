@@ -1,6 +1,6 @@
 ---
-sidebar_position: 3
-sidebar_label: Observability Spark on EKS
+sidebar_position: 5
+sidebar_label: Spark Observability on EKS
 ---
 
 import TaxiTripExec from './_taxi_trip_exec.md';
