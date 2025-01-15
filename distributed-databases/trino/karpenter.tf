@@ -25,8 +25,6 @@ resource "helm_release" "karpenter" {
   namespace           = "kube-system"
   name                = "karpenter"
   repository          = "oci://public.ecr.aws/karpenter"
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
   chart               = "karpenter"
   version             = "1.0.6"
   wait                = false
@@ -61,7 +59,6 @@ resource "helm_release" "karpenter" {
   ]
 }
 
-# Define an EC2NodeClass for AL2023 node instances
 resource "kubectl_manifest" "karpenter_node_class" {
   yaml_body = <<-YAML
     apiVersion: karpenter.k8s.aws/v1
@@ -92,7 +89,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
   YAML
 
   depends_on = [
-    helm_release.karpenter
+    module.eks_blueprints_addons
   ]
 }
 
