@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
 sidebar_label: Llama-2 with RayTrain on Trn1
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
