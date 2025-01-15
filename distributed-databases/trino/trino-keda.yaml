@@ -6,7 +6,8 @@ metadata:
 spec:
   scaleTargetRef:
     name: trino-worker
-  minReplicaCount: 3
+  idleReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: 15
   pollingInterval: 30  # Seconds
   cooldownPeriod: 600 # Seconds
@@ -32,6 +33,7 @@ spec:
   - type: cpu
     metricType: Utilization
     metadata:
+      activationThreshold: '5'
       value: '80'  # Target CPU utilization percentage
   - type: prometheus
     metricType: Value
@@ -39,4 +41,11 @@ spec:
       serverAddress: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090
       threshold: '1'
       metricName: queued_queries
-      query: sum by (job) (avg_over_time(trino_execution_QueryManager_QueuedQueries{job="trino"}[1m]))
+      query: sum by (service) (avg_over_time(trino_execution_QueryManager_QueuedQueries{service="trino"}[30s]))
+  - type: prometheus
+    metricType: Value
+    metadata:
+      serverAddress: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090
+      threshold: '1'
+      metricName: required_workers
+      query: sum by (service) (avg_over_time(trino_execution_ClusterSizeMonitor_RequiredWorkers{service="trino"}[30s]))
