@@ -72,6 +72,12 @@ variable "enable_yunikorn" {
   type        = bool
 }
 
+variable "enable_jupyterhub" {
+  default     = false
+  description = "Enable Jupyter Hub"
+  type        = bool
+}
+
 variable "kms_key_admin_roles" {
   description = "list of role ARNs to add to the KMS policy"
   type        = list(string)

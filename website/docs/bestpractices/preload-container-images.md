@@ -84,7 +84,7 @@ spec:
       ebs:
         volumeSize: 150Gi
         volumeType: gp3
-        kmsKeyID: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab" # Specify KMS ID if you use custom KMS key
+        kmsKeyID: "arn:aws:kms:<REGION>:<ACCOUNT_ID>:key/1234abcd-12ab-34cd-56ef-1234567890ab" # Specify KMS ID if you use custom KMS key
         snapshotID: snap-0123456789 # Specify your snapshot ID here
 ```
 
