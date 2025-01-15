@@ -87,9 +87,12 @@ Clone the repository
 ```bash
 git clone https://github.com/awslabs/data-on-eks.git
 ```
+:::info
+If you are using profile for authentication
+set your `export AWS_PROFILE="<PROFILE_name>"` to the desired profile name
+:::
 
 Navigate into one of the example directories and run `install.sh` script
-
 
 :::info
 Ensure that you update the region in the `variables.tf` file before deploying the blueprint.
@@ -99,7 +102,7 @@ For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired regi
 
 
 ```bash
-cd data-on-eks/ai-ml/jark-stack/ && chmod +x install.sh
+cd data-on-eks/ai-ml/jark-stack/terraform && chmod +x install.sh
 ./install.sh
 ```
 
@@ -168,7 +171,7 @@ To avoid unwanted charges to your AWS account, delete all the AWS resources crea
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd data-on-eks/ai-ml/jark-stack/ && chmod +x cleanup.sh
+cd data-on-eks/ai-ml/jark-stack/terraform && chmod +x cleanup.sh
 ```
 
 </CollapsibleContent>

@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.30"
+  default     = "1.31"
   type        = string
 }
 
@@ -67,8 +67,14 @@ variable "enable_amazon_prometheus" {
 }
 
 variable "enable_yunikorn" {
-  default     = true
+  default     = false
   description = "Enable Apache YuniKorn Scheduler"
+  type        = bool
+}
+
+variable "enable_jupyterhub" {
+  default     = false
+  description = "Enable Jupyter Hub"
   type        = bool
 }
 
