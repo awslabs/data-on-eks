@@ -1,3 +1,6 @@
+#---------------------------------------------------------------
+# Providers
+#---------------------------------------------------------------
 provider "aws" {
   region = local.region
 }
@@ -29,25 +32,4 @@ provider "kubectl" {
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
   load_config_file       = false
   token                  = data.aws_eks_cluster_auth.this.token
-}
-
-data "aws_availability_zones" "available" {}
-
-data "aws_eks_cluster_auth" "this" {
-  name = module.eks.cluster_name
-}
-
-#---------------------------------------------------------------
-# Local variables
-#---------------------------------------------------------------
-locals {
-  name     = var.name
-  region   = var.region
-  vpc_cidr = var.vpc_cidr
-  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
-
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/awslabs/data-on-eks"
-  }
 }

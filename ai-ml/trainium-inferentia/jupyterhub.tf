@@ -1,14 +1,3 @@
-#-----------------------------------------------------------------------------------------
-# JupyterHub Single User IRSA, maybe that block could be incorporated in add-on registry
-#-----------------------------------------------------------------------------------------
-resource "kubernetes_namespace_v1" "jupyterhub" {
-  count = var.enable_jupyterhub ? 1 : 0
-
-  metadata {
-    name = "jupyterhub"
-  }
-}
-
 module "jupyterhub_single_user_irsa" {
   count = var.enable_jupyterhub ? 1 : 0
 
@@ -25,6 +14,17 @@ module "jupyterhub_single_user_irsa" {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["${kubernetes_namespace_v1.jupyterhub[0].metadata[0].name}:jupyterhub-single-user"]
     }
+  }
+}
+
+#-----------------------------------------------------------------------------------------
+# JupyterHub Single User IRSA, maybe that block could be incorporated in add-on registry
+#-----------------------------------------------------------------------------------------
+resource "kubernetes_namespace_v1" "jupyterhub" {
+  count = var.enable_jupyterhub ? 1 : 0
+
+  metadata {
+    name = "jupyterhub"
   }
 }
 
