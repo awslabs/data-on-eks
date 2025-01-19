@@ -9,10 +9,6 @@ data "aws_ecrpublic_authorization_token" "token" {
   provider = aws.ecr
 }
 
-locals {
-  cognito_custom_domain = var.cognito_custom_domain
-}
-
 #---------------------------------------------------------------
 # GP3 Encrypted Storage Class
 #---------------------------------------------------------------

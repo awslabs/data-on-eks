@@ -104,16 +104,6 @@ resource "null_resource" "download_nim_deploy" {
   }
 }
 
-#--------------------------------------------------------------------
-# Helm Chart for deploying NIM models
-#--------------------------------------------------------------------
-locals {
-  enabled_models = var.enable_nvidia_nim ? {
-    for model in var.nim_models : model.name => model
-    if model.enable
-  } : {}
-}
-
 resource "helm_release" "nim_llm" {
   for_each         = local.enabled_models
   name             = "nim-llm-${each.key}"
