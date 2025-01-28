@@ -155,9 +155,13 @@ module "eks_blueprints_addons" {
   enable_kube_prometheus_stack = var.enable_kube_prometheus_stack
   kube_prometheus_stack = {
     values = [
-      templatefile("${path.module}/helm-values/kube-prometheus.yaml", {
-        storage_class_type = kubernetes_storage_class.default_gp3.id
-      })
+        var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
+        region              = local.region
+        amp_sa              = local.amp_ingest_service_account
+        amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
+        amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
+        amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
+      }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {storage_class_type = kubernetes_storage_class.default_gp3.id})
     ]
     chart_version = "48.1.1"
     set_sensitive = [
@@ -640,7 +644,7 @@ resource "kubectl_manifest" "dcgm" {
   yaml_body = file("${path.module}/monitoring/dcgm.yaml")
 }
 
-resource "kubectl_manifest" "dcgm" {
+resource "kubectl_manifest" "dcgm_service" {
   yaml_body = file("${path.module}/monitoring/dcgm-service.yaml")
 }
 

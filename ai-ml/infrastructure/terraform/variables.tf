@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "ai-stack"
+  default     = "ml-stack"
   type        = string
 }
 
@@ -57,7 +57,16 @@ variable "deploy_fsx_volume" {
   type        = bool
   default     = false
 }
-
+variable "enable_amazon_prometheus" {
+  description = "Enable Amazon Prometheus"
+  type        = bool
+  default     = false
+}
+variable "enable_amazon_emr" {
+  description = "Enable Amazon EMR"
+  type        = bool
+  default     = false
+}
 # Addon Variables
 variable "enable_kube_prometheus_stack" {
   description = "Enable Kube Prometheus addon"

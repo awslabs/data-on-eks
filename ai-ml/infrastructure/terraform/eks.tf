@@ -29,7 +29,13 @@ module "eks" {
         "system:bootstrappers",
         "system:nodes",
       ]
-    }
+    },
+    {
+      # Required for EMR on EKS virtual cluster
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSServiceRoleForAmazonEMRContainers"
+      username = "emr-containers"
+      groups   = []
+    },
   ]
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
