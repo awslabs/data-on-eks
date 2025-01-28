@@ -92,7 +92,7 @@ variable "enable_jupyterhub" {
 variable "enable_volcano" {
   description = "Enable Volcano"
   type        = bool
-  default     = false
+  default     = true
 }
 variable "enable_kuberay_operator" {
   description = "Enable KubeRay Operator"

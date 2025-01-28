@@ -640,6 +640,10 @@ resource "kubectl_manifest" "dcgm" {
   yaml_body = file("${path.module}/monitoring/dcgm.yaml")
 }
 
+resource "kubectl_manifest" "dcgm" {
+  yaml_body = file("${path.module}/monitoring/dcgm-service.yaml")
+}
+
 data "aws_iam_policy_document" "karpenter_controller_policy" {
   statement {
     actions = [
