@@ -9,11 +9,17 @@ targets=(
 # Initialize Terraform
 terraform init -upgrade
 
+TERRAFORM_COMMAND="terraform apply -auto-approve"
+# Check if blueprint.tfvars exists
+if [ -f "blueprint.tfvars" ]; then
+  TERRAFORM_COMMAND="$TERRAFORM_COMMAND -var-file=blueprint.tfvars"
+fi
+
 # Apply modules in sequence
 for target in "${targets[@]}"
 do
   echo "Applying module $target..."
-  apply_output=$(terraform apply -target="$target" -auto-approve 2>&1 | tee /dev/tty)
+  apply_output=$( $TERRAFORM_COMMAND -target="$target" 2>&1 | tee /dev/tty)
   if [[ ${PIPESTATUS[0]} -eq 0 && $apply_output == *"Apply complete"* ]]; then
     echo "SUCCESS: Terraform apply of $target completed successfully"
   else
@@ -24,7 +30,7 @@ done
 
 # Final apply to catch any remaining resources
 echo "Applying remaining resources..."
-apply_output=$(terraform apply -auto-approve 2>&1 | tee /dev/tty)
+apply_output=$( $TERRAFORM_COMMAND 2>&1 | tee /dev/tty)
 if [[ ${PIPESTATUS[0]} -eq 0 && $apply_output == *"Apply complete"* ]]; then
   echo "SUCCESS: Terraform apply of all modules completed successfully"
 else
