@@ -21,10 +21,10 @@ spec:
   # 2. Create your own image that meets your organization's security requirements
   image: "public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu-s3table0.1.3-iceberg1.6.1"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://<S3_BUCKET>/s3table-example/scripts/s3table-iceberg-pyspark.py"
+  mainApplicationFile: "s3a://spark-operator-doeks-spark-logs-20250124172618948800000007/s3table-example/scripts/s3table-iceberg-pyspark.py"
   arguments:
-    - "s3a://<S3_BUCKET>/s3table-example/input/"
-    - "<S3TABLE_ARN>"
+  - "s3a://spark-operator-doeks-spark-logs-20250124172618948800000007/s3table-example/input/"
+  - "arn:aws:s3tables:us-west-2:489829964455:bucket/spark-operator-tb"
   sparkConf:
     "spark.app.name": "s3table-example"
     "spark.kubernetes.driver.pod.name": "s3table-example"
@@ -39,7 +39,7 @@ spec:
     "spark.hadoop.fs.s3a.readahead.range": "256K"
     "spark.hadoop.fs.s3a.input.fadvise": "random"
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"  # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider" # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
 
   restartPolicy:
     type: OnFailure
