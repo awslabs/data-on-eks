@@ -3,9 +3,9 @@ sidebar_position: 1
 sidebar_label: Overview
 ---
 
-# Generative AI on EKS
+# AI on EKS
 
-Welcome to generative AI on [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/), your gateway to harnessing the power of Large Language Models (LLMs) for a wide range of applications. This introduction page serves as your starting point to explore our offerings for Training, Fine-tuning, and Inference using various LLMs, including BERT-Large, Llama2, Stable Diffusion, and more.
+Welcome to AI on [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/), your gateway to harnessing the power of Large Language Models (LLMs) for a wide range of applications. This introduction page serves as your starting point to explore our offerings for Training, Fine-tuning, and Inference using various LLMs, including BERT-Large, Llama2, Stable Diffusion, and more.
 
 Our platform provides multiple patterns for users to scale their generative AI workloads on EKS using a comprehensive suite of open-source ML tools/frameworks.
 
@@ -28,4 +28,4 @@ Unlock the potential of LLMs for powerful inference tasks. Our Inference resourc
 ## Storage and Data Management
 Efficient data storage and management are fundamental to successful AI/ML operations. Our platform integrates with AWS storage solutions such as S3, EBS, EFS, and FSx to ensure scalable and reliable data handling. Utilize MLflow for model registry and versioning, and manage container images with Amazon ECR. This ensures a seamless workflow from model development to deployment, with robust data management practices to support your ML lifecycle.
 
-Whether you're an experienced practitioner or new to the field, our generative AI on EKS capabilities empower you to harness the latest advancements in language modeling. Dive into each section to begin your journey, and explore how you can leverage these tools and frameworks to build, fine-tune, and deploy powerful AI models on Amazon EKS.
+Whether you're an experienced practitioner or new to the field, our AI on EKS capabilities empower you to harness the latest advancements in language modeling. Dive into each section to begin your journey, and explore how you can leverage these tools and frameworks to build, fine-tune, and deploy powerful AI models on Amazon EKS.
