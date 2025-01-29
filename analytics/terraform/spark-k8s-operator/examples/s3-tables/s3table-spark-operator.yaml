@@ -23,8 +23,8 @@ spec:
   imagePullPolicy: IfNotPresent
   mainApplicationFile: "s3a://spark-operator-doeks-spark-logs-20250124172618948800000007/s3table-example/scripts/s3table-iceberg-pyspark.py"
   arguments:
-  - "s3a://spark-operator-doeks-spark-logs-20250124172618948800000007/s3table-example/input/"
-  - "arn:aws:s3tables:us-west-2:489829964455:bucket/spark-operator-tb"
+  - "s3a://<S3_BUCKET>/s3table-example/input/"
+  - "<S3TABLE_ARN>"
   sparkConf:
     "spark.app.name": "s3table-example"
     "spark.kubernetes.driver.pod.name": "s3table-example"

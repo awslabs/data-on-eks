@@ -197,7 +197,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_flink_operator = true
   flink_operator_helm_config = {
-    # version = "1.10.0"
+    version = "1.10.0"
     values = [templatefile("${path.module}/helm-values/flink-operator-values.yaml", {})]
   }
 
