@@ -1,5 +1,0 @@
-apiVersion: v2
-name: efs
-description: Helm chart for efs options on the cluster
-version: 0.0.1
-appVersion: 0.0.1
