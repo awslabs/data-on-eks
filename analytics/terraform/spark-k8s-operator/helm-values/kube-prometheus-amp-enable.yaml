@@ -28,6 +28,11 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
+    # Find monitors in all namespaces 
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
     # Scrape Cost metrics for Karpenter and Yunikorn add-ons
     additionalScrapeConfigs:
       - job_name: yunikorn
