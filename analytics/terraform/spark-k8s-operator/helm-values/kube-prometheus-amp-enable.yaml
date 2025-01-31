@@ -48,9 +48,11 @@ prometheus:
             names:
             - karpenter
         relabel_configs:
-        - source_labels: [__meta_kubernetes_endpoint_port_name]
-          regex: http-metrics
+        - source_labels:
+          - __meta_kubernetes_endpoints_name
+          - __meta_kubernetes_endpoint_port_name
           action: keep
+          regex: karpenter;http-metrics
   # Monitors for Spark Jobs
   additionalPodMonitors:
     - name: "spark-job-monitoring"
