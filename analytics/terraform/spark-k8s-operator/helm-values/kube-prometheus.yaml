@@ -66,3 +66,23 @@ alertmanager:
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      karpenter-capacity-dashboard:
+        url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-capacity-dashboard.json
+      karpenter-performance-dashboard:
+        url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
+      spark-job-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/emr-eks-karpenter/emr-grafana-dashboard/emr-eks-grafana-dashboard.json
