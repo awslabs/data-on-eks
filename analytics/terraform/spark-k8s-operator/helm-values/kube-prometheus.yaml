@@ -15,7 +15,7 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
-    # Find monitors in all namespaces 
+    # Find monitors in all namespaces
     podMonitorSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
