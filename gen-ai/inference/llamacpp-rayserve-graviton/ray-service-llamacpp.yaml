@@ -6,6 +6,104 @@ metadata:
 stringData:
   hf-token: $HUGGING_FACE_HUB_TOKEN
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llama-app-code
+data:
+  app.py: |
+    import multiprocessing
+    import os
+    import logging
+    import time
+    from fastapi import FastAPI
+    from starlette.requests import Request
+    from starlette.responses import StreamingResponse, JSONResponse
+    from ray import serve
+    from llama_cpp import Llama
+
+    logger = logging.getLogger("ray.serve")
+    app = FastAPI()
+
+    @serve.deployment(
+        name="LLamaCPPDeployment", 
+        ray_actor_options={"num_cpus": 29}, 
+        autoscaling_config={
+            "min_replicas": 10, 
+            "max_replicas": 10, 
+            "initial_replicas": 10, 
+            "upscale_delay_s": 5
+        }, 
+        max_ongoing_requests=100, 
+        graceful_shutdown_timeout_s=600
+    )
+    @serve.ingress(app)
+    class LLamaCPPDeployment:
+        def __init__(self, parallelism: str):
+            os.environ["OMP_NUM_THREADS"] = parallelism
+            self.model_id = os.getenv("MODEL_ID", default="SanctumAI/Llama-3.2-1B-Instruct-GGUF")
+            self.filename = os.getenv("MODEL_FILENAME", default="*Q4_0.gguf")
+            self.n_ctx = int(os.getenv("N_CTX"))
+            self.n_threads = int(os.getenv("N_THREADS"))
+            self.llm = Llama.from_pretrained(
+                repo_id=self.model_id,
+                filename=self.filename,
+                n_ctx=self.n_ctx,
+                n_threads=self.n_threads
+            )
+            print("__init__ Complete")
+
+        @app.post("/v1/chat/completions")
+        async def call_llama(self, request: Request):
+            try:
+                body = await request.json()
+                messages = body.get("messages", [])
+                prompt = ""
+                if messages:
+                    for message in messages:
+                        if message.get("role") == "user":
+                            prompt = message.get("content", "")
+                            break
+                
+                if not prompt:
+                    return JSONResponse(
+                        status_code=400,
+                        content={"error": "prompt is required"}
+                    )
+
+                output = self.llm(
+                    "Q: " + prompt + " A: ",
+                    max_tokens=body.get("max_tokens", 32)
+                )        
+                
+                return JSONResponse(content={
+                    "id": "cmpl-" + os.urandom(12).hex(),
+                    "object": "text_completion",
+                    "created": int(time.time()),
+                    "model": self.model_id,
+                    "choices": [{
+                        "text": output["choices"][0]["text"],
+                        "index": 0,
+                        "finish_reason": "stop"
+                    }],
+                    "usage": {
+                        "prompt_tokens": len(prompt.split()),
+                        "completion_tokens": len(output["choices"][0]["text"].split()),
+                        "total_tokens": len(prompt.split()) + len(output["choices"][0]["text"].split())
+                    }
+                })
+                
+            except Exception as e:
+                logger.error(f"Error: {str(e)}")
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": str(e)}
+                )
+
+    host_cpu_count = multiprocessing.cpu_count()
+
+    model = LLamaCPPDeployment.bind("host_cpu_count")
+---
 apiVersion: ray.io/v1
 kind: RayService
 metadata:
@@ -15,18 +113,17 @@ spec:
     applications:
     - name: llmcpp-arm
       route_prefix: /
-      import_path: llamacpp-serve:model
+      import_path: app:model
       deployments:
       - name: LLamaCPPDeployment
         ray_actor_options:
           num_cpus: 29
       runtime_env:
-        working_dir: "https://github.com/ddynwzh1992/ray-llm/archive/refs/heads/main.zip"
-        pip: ["llama_cpp_python", "transformers==4.46.0"]
+        pip: ["llama_cpp_python", "transformers"]
         env_vars:
           LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
-          MODEL_ID: "bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF"
-          MODEL_FILENAME: "DeepSeek-R1-Distill-Llama-8B-Q4_0.gguf"
+          MODEL_ID: "bartowski/Llama-3.2-3B-Instruct-GGUF"
+          MODEL_FILENAME: "Llama-3.2-3B-Instruct-Q4_0.gguf"
           N_CTX: "0"
           N_THREADS : "32"
           FORCE_CMAKE: "1"
@@ -36,12 +133,9 @@ spec:
           CXX: "/usr/bin/g++"  
           CC: "/usr/bin/gcc" 
           PYTHONPATH: "/home/ray/anaconda3/lib/python3.11/site-packages:$PYTHONPATH" 
-
-
   rayClusterConfig:
     rayVersion: '2.33.0'
     enableInTreeAutoscaling: true
-    #rayVersion: 3.0.0.dev0
     headGroupSpec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
@@ -50,7 +144,6 @@ spec:
         metadata:
           labels:
             ray-control-plane: "true"
-
         spec:
           nodeSelector:
             ray-control-plane: "false"
@@ -60,7 +153,6 @@ spec:
               operator: "Equal"
               value: "cpu-arm"
               effect: "NoSchedule"
-
           affinity:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
@@ -70,32 +162,14 @@ spec:
                         operator: In
                         values:
                           - "cpu-arm"            
-
-          # nodeSelector:
-          #   ray-control-plane: "true"
-
-          # tolerations:
-          #   - key: "ray-control-plane"
-          #     operator: "Equal"
-          #     value: "true"
-          #     effect: "NoSchedule"
-
-          # affinity:
-          #   nodeAffinity:
-          #     requiredDuringSchedulingIgnoredDuringExecution:
-          #       nodeSelectorTerms:
-          #         - matchExpressions:
-          #             - key: ray-control-plane
-          #               operator: In
-          #               values:
-          #                 - "true"
-
           restartPolicy: Always
           containers:
           - name: ray-head
-            # image: rayproject/ray:nightly-py311-cpu
-            #image: 412381761882.dkr.ecr.us-west-2.amazonaws.com/kuberay-system/ray-graviton:latest
             image: rayproject/ray:2.39.0-py312-cpu-aarch64
+            volumeMounts:
+              - name: app-code
+                mountPath: /home/ray/app.py
+                subPath: app.py
             resources:
               limits:
                 cpu: "30"
@@ -121,14 +195,11 @@ spec:
             - name: RAY_enable_autoscaler_v2
               value: "1"
             - name: RAY_num_heartbeats_timeout
-              value: "300"
-            # - name: VLLM_ATTENTION_BACKEND
-            #   value: "TORCH_SDPA"  
-
-              # valueFrom:
-              #   secretKeyRef:
-              #     name: hf-secret
-              #     key: hf_api_token
+              value: "300" 
+          volumes:
+              - name: app-code
+                configMap:
+                  name: llama-app-code
     workerGroupSpecs:
     - replicas: 10
       minReplicas: 10
@@ -146,7 +217,6 @@ spec:
               operator: "Equal"
               value: "cpu-arm"
               effect: "NoSchedule"
-
           affinity:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
@@ -156,20 +226,15 @@ spec:
                         operator: In
                         values:
                           - "cpu-arm"            
-
-
           restartPolicy: Always
           containers:
           - name: llm
-            # image: rayproject/ray-ml:2.33.0.914af0-py311
-            #image: 412381761882.dkr.ecr.us-west-2.amazonaws.com/kuberay-system/ray-graviton:latest
             image: rayproject/ray:2.39.0-py312-cpu-aarch64
+            volumeMounts:
+              - name: app-code
+                mountPath: /home/ray/app.py
+                subPath: app.py           
             env:
-            # - name: HUGGING_FACE_HUB_TOKEN
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: hf-secret
-            #       key: hf_api_token
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -181,34 +246,20 @@ spec:
               value: "/usr/bin/gcc"   
             - name: "CXX"
               value: "/usr/bin/g++"   
-            # - name: RAY_num_heartbeats_timeout
-            #   value: "300"
             - name: CMAKE_CXX_COMPILER
               value: "/usr/bin/g++"  
             - name: CMAKE_C_COMPILER
               value: "/usr/bin/gcc" 
             - name: PYTHONPATH
               value: "/home/ray/anaconda3/lib/python3.11/site-packages:$PYTHONPATH" 
-            # - name: VLLM_ATTENTION_BACKEND
-            #   value: "TORCH_SDPA"  
-
-
-            # ports:
-            # - containerPort: 8000
-            #   name: serve
-
             resources:
               limits:
                 cpu: "30"
-                memory: "55Gi"
-         
+                memory: "55Gi"        
               requests:
                 cpu: "30"
                 memory: "55Gi"
-                # nvidia.com/gpu: "2"
-
-          # Please add the following taints to the GPU node.
-            # tolerations:
-            #   - key: "nvidia.com/gpu"
-            #     operator: "Exists"
-            #     effect: "NoSchedule"
+          volumes:
+              - name: app-code
+                configMap:
+                  name: llama-app-code

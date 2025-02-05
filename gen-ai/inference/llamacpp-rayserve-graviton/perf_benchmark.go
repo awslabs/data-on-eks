@@ -7,8 +7,8 @@ import (
     "io/ioutil"
     "net/http"
     "strings"
-	"os"           // Add this import
-    "strconv" 
+	"os"          
+    "strconv"
     "time"
 )
 
@@ -60,18 +60,18 @@ func readPromptsFromFile(filename string) ([]string, error) {
     if err != nil {
         return nil, fmt.Errorf("error reading file: %v", err)
     }
-    
+
     var prompts []string
     for _, line := range strings.Split(string(content), "\n") {
         if trimmed := strings.TrimSpace(line); trimmed != "" {
             prompts = append(prompts, trimmed)
         }
     }
-    
+
     if len(prompts) == 0 {
         return nil, fmt.Errorf("no prompts found in file")
     }
-    
+
     return prompts, nil
 }
 
@@ -89,7 +89,7 @@ func makeRequest(config RequestConfig, results chan<- Result) {
         N:         1,
         Stream:    false,
     }
-    
+
     jsonData, err := json.Marshal(reqBody)
     if err != nil {
         results <- Result{duration: 0, totalTokens: 0, err: fmt.Errorf("error marshaling JSON: %v", err)}
@@ -99,7 +99,7 @@ func makeRequest(config RequestConfig, results chan<- Result) {
     client := &http.Client{
         Timeout: 30 * time.Second,
     }
-    
+
     req, err := http.NewRequest("POST", config.URL, bytes.NewBuffer(jsonData))
     if err != nil {
         results <- Result{duration: 0, totalTokens: 0, err: fmt.Errorf("error creating request: %v", err)}
@@ -108,22 +108,22 @@ func makeRequest(config RequestConfig, results chan<- Result) {
 
     req.Header.Set("Content-Type", "application/json")
     req.Header.Set("Accept", "application/json")
-    
+
     // Reset timer immediately before the request
     start := time.Now()
-    
+
     resp, err := client.Do(req)
     if err != nil {
         results <- Result{duration: 0, totalTokens: 0, err: fmt.Errorf("error making request: %v", err)}
         return
     }
     defer resp.Body.Close()
-    
+
     body, err := ioutil.ReadAll(resp.Body)
-    
+
     // Calculate duration immediately after reading the response body
     duration := time.Since(start)
-    
+
     if err != nil {
         results <- Result{duration: 0, totalTokens: 0, err: fmt.Errorf("error reading response: %v", err)}
         return
@@ -140,9 +140,9 @@ func makeRequest(config RequestConfig, results chan<- Result) {
         return
     }
 
-    fmt.Printf("Request completed - Duration: %v, Tokens: %d\n", 
+    fmt.Printf("Request completed - Duration: %v, Tokens: %d\n",
         duration, responseBody.Usage.TotalTokens)
-    
+
     results <- Result{
         duration:    duration,
         totalTokens: responseBody.Usage.TotalTokens,
@@ -152,16 +152,16 @@ func makeRequest(config RequestConfig, results chan<- Result) {
 
 func calculateAverageResponseTime(config RequestConfig, numRequests int) (time.Duration, float64, error) {
     results := make(chan Result, numRequests)
-    
+
     for i := 0; i < numRequests; i++ {
         go makeRequest(config, results)
         time.Sleep(500 * time.Millisecond)
     }
-    
+
     var totalDuration time.Duration
     var totalTokens int
     var successfulRequests int
-    
+
     for i := 0; i < numRequests; i++ {
         result := <-results
         if result.err != nil {
@@ -171,32 +171,32 @@ func calculateAverageResponseTime(config RequestConfig, numRequests int) (time.D
         totalDuration += result.duration
         totalTokens += result.totalTokens
         successfulRequests++
-        
-        fmt.Printf("Request %d/%d - Duration: %v, Tokens: %d\n", 
+
+        fmt.Printf("Request %d/%d - Duration: %v, Tokens: %d\n",
             i+1, numRequests, result.duration, result.totalTokens)
     }
-    
+
     if successfulRequests == 0 {
         return 0, 0, fmt.Errorf("no successful requests")
     }
-    
+
     avgDuration := totalDuration / time.Duration(successfulRequests)
     tokensPerSecond := float64(totalTokens) / totalDuration.Seconds()
-    
+
     return avgDuration, tokensPerSecond, nil
 }
 
 func warmup(config RequestConfig, numWarmupRequests int) error {
     fmt.Printf("\n=== Warming up with %d requests ===\n", numWarmupRequests)
     results := make(chan Result, numWarmupRequests)
-    
+
     for i := 0; i < numWarmupRequests; i++ {
         go makeRequest(config, results)
         time.Sleep(500 * time.Millisecond)
-        
+
         fmt.Printf("Warmup request %d/%d completed\n", i+1, numWarmupRequests)
     }
-    
+
     var successfulWarmups int
     for i := 0; i < numWarmupRequests; i++ {
         result := <-results
@@ -206,12 +206,12 @@ func warmup(config RequestConfig, numWarmupRequests int) error {
         }
         successfulWarmups++
     }
-    
+
     if successfulWarmups == 0 {
         return fmt.Errorf("all warmup requests failed")
     }
-    
-    fmt.Printf("Warmup completed successfully with %d/%d requests\n", 
+
+    fmt.Printf("Warmup completed successfully with %d/%d requests\n",
         successfulWarmups, numWarmupRequests)
     return nil
 }
@@ -256,19 +256,19 @@ func main() {
         Prompt:    prompts[0],
         MaxTokens: 200,
     }
-    
+
     fmt.Printf("\n=== Benchmark Configuration ===\n")
     fmt.Printf("URL: %s\n", url)
     fmt.Printf("Number of prompts: %d\n", len(prompts))
     fmt.Printf("Requests per prompt: %d\n", requestsPerPrompt)
     fmt.Printf("Warmup requests: %d\n", numWarmupRequests)
     fmt.Printf("Total requests planned: %d\n", len(prompts)*requestsPerPrompt+numWarmupRequests)
-    
+
     if err := warmup(warmupConfig, numWarmupRequests); err != nil {
         fmt.Printf("Warmup failed: %v\n", err)
         return
     }
-    
+
     fmt.Println("\nWaiting 2 seconds before starting benchmark...")
     time.Sleep(2 * time.Second)
 
@@ -285,10 +285,10 @@ func main() {
             Prompt:    prompt,
             MaxTokens: 200,
         }
-        
+
         fmt.Printf("\n--- Prompt %d/%d ---\n", i+1, len(prompts))
         fmt.Printf("Prompt: %s\n", prompt)
-            
+
         avgTime, tokensPerSec, err := calculateAverageResponseTime(config, requestsPerPrompt)
         if err != nil {
             fmt.Printf("Error calculating average: %v\n", err)
@@ -297,14 +297,14 @@ func main() {
 
         promptTotalDuration := avgTime * time.Duration(requestsPerPrompt)
         promptTotalTokens := int(tokensPerSec * avgTime.Seconds()) * requestsPerPrompt
-        
+
         overallTotalDuration += promptTotalDuration
         overallTotalTokens += promptTotalTokens
         totalSuccessfulRequests += requestsPerPrompt
-        
+
         fmt.Printf("Prompt Average Response Time: %v\n", avgTime)
         fmt.Printf("Prompt Tokens per Second: %.2f\n\n", tokensPerSec)
-        
+
         //time.Sleep(1 * time.Second)
     }
 
@@ -321,12 +321,12 @@ func main() {
         fmt.Printf("Total Successful Requests: %d\n", totalSuccessfulRequests)
         fmt.Printf("Overall Average Latency: %v\n", overallAvgLatency)
         fmt.Printf("Overall Average Tokens/Second: %.2f\n", overallTokensPerSec)
-        
+
         // Add detailed timing breakdown
         fmt.Printf("\n=== Timing Breakdown ===\n")
         fmt.Printf("Total wall clock time: %v\n", totalBenchmarkDuration)
         fmt.Printf("Total processing time: %v\n", overallTotalDuration)
-        fmt.Printf("Overhead time (includes delays): %v\n", 
+        fmt.Printf("Overhead time (includes delays): %v\n",
             totalBenchmarkDuration-overallTotalDuration)
     }
 }
