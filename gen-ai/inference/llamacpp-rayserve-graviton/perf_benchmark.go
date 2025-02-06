@@ -225,11 +225,7 @@ func main() {
         return
     }
 
-    // url := "http://localhost:8000/v1/chat/completions"
-    // requestsPerPrompt := 50
-    // numWarmupRequests := 3
-
-	// Read configuration from environment variables with defaults
+    // Read configuration from environment variables with defaults
     url := os.Getenv("URL")
     if url == "" {
         url = "http://localhost:8000/v1/chat/completions" // default value
@@ -303,7 +299,6 @@ func main() {
         fmt.Printf("Prompt Average Response Time: %v\n", avgTime)
         fmt.Printf("Prompt Tokens per Second: %.2f\n\n", tokensPerSec)
 
-        //time.Sleep(1 * time.Second)
     }
 
     // Calculate total benchmark duration
