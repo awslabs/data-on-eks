@@ -1,16 +1,16 @@
-# Cost effective and scalable Model Inference on AWS Graviton with Ray on EKS
+# Cost effective and Scalable Model Inference on AWS Graviton with Ray on EKS
 
 ## Overview
 The solution implements a scalable ML inference architecture using Amazon EKS, leveraging Graviton processors. The system utilizes Ray Serve for model serving, deployed as containerized workloads within a Kubernetes environment. 
 
-How do we deploy
 
 ## Prerequisites
  
-1, EKS cluster with Ray operater installed
-2, Karpenter node pool is setup for Graviton instance, the node pool label is model-inferencing:cpu-arm in this example
-3, Make sure running following command under the llamacpp-rayserve-graviton directory
+1. EKS cluster with Ray operater installed
+2. Karpenter node pool is setup for Graviton instance, the node pool label is model-inferencing:cpu-arm in this example
+3. Make sure running following command under the llamacpp-rayserve-graviton directory
 
+## Deployment
 
 ### 1. Deploy Ray Service
 Deploy an elastic Ray service hosting llama 3.2 3B model on Graviton, remember to fill in your hugging face token for env HUGGING_FACE_HUB_TOKEN.
@@ -55,3 +55,4 @@ Run the performance test golang script and you can find the results from the out
 ```bash
 go run perf_benchmark.go
 ```
+
