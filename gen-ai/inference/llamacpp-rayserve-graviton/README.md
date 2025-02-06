@@ -56,3 +56,19 @@ Run the performance test golang script and you can find the results from the out
 go run perf_benchmark.go
 ```
 
+## Result
+
+Let us see a benchmark result with above steps
+
+### Performance
+
+You have an average latency reduction of 22% with Graviton as compared to Intel. Further more, you can find out Graviton performance is more sustainable, even under high concurrency, the latency performance is keeping stable.
+
+![Performance](/gen-ai/inference/llamacpp-rayserve-graviton/images/performance.png)
+
+
+### Cost
+
+The fleet we use consists of 10 4x large machines for worker pods. Using simple AWS calculator the cost for Intel is 0.888 hourly and Graviton is 0.7549 hourly. We calculate the cost based on the benchmark duration, then figure out the data in following chart,  Graviton clearly has a benefit of 30% over intel while also leading in the performance benchmarks, and from the trend you can see the more requests, the more cost saving from Graviton. We are using these numbers for comparison between Intel and Graviton, naturally there are AWS savings such as savings plan can be applied to further reduce cost for both.
+
+![Cost](/gen-ai/inference/llamacpp-rayserve-graviton/images/cost.png)
