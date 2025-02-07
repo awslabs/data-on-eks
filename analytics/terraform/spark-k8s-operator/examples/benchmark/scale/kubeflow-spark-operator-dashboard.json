@@ -101,13 +101,13 @@
           "x": 0,
           "y": 1
         },
-        "id": 37,
+        "id": 32,
         "options": {
           "legend": {
             "calcs": [],
             "displayMode": "list",
             "placement": "bottom",
-            "showLegend": true
+            "showLegend": false
           },
           "tooltip": {
             "mode": "single",
@@ -121,14 +121,14 @@
               "uid": "prometheus"
             },
             "editorMode": "code",
-            "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"spark-operator\"}[5m])) by (pod)",
+            "expr": "sum(sum by(namespace, pod, container) (irate(container_cpu_usage_seconds_total{image!=\"\", namespace=\"spark-operator\"}[5m])) * on(namespace, pod) group_left(node) topk by(namespace, pod) (1, max by(namespace, pod, node) (kube_pod_info{node!=\"\"}))) by (container)",
             "instant": false,
             "legendFormat": "__auto",
             "range": true,
             "refId": "A"
           }
         ],
-        "title": "Network Receive Bytes",
+        "title": "CPU Usage:",
         "type": "timeseries"
       },
       {
@@ -236,10 +236,12 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
+        "description": "Admission Webhook Admission Duration Seconds bucket",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "palette-classic"
+              "fixedColor": "dark-purple",
+              "mode": "fixed"
             },
             "custom": {
               "axisBorderShow": false,
@@ -250,15 +252,15 @@
               "barAlignment": 0,
               "barWidthFactor": 0.6,
               "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
+              "fillOpacity": 1,
+              "gradientMode": "scheme",
               "hideFrom": {
                 "legend": false,
                 "tooltip": false,
                 "viz": false
               },
               "insertNulls": false,
-              "lineInterpolation": "linear",
+              "lineInterpolation": "smooth",
               "lineWidth": 1,
               "pointSize": 5,
               "scaleDistribution": {
@@ -289,22 +291,7 @@
               ]
             }
           },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byFrameRefID",
-                "options": "A"
-              },
-              "properties": [
-                {
-                  "id": "color",
-                  "value": {
-                    "mode": "continuous-GrYlRd"
-                  }
-                }
-              ]
-            }
-          ]
+          "overrides": []
         },
         "gridPos": {
           "h": 6,
@@ -312,13 +299,13 @@
           "x": 16,
           "y": 1
         },
-        "id": 35,
+        "id": 27,
         "options": {
           "legend": {
             "calcs": [],
-            "displayMode": "table",
-            "placement": "bottom",
-            "showLegend": true
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
           },
           "tooltip": {
             "mode": "single",
@@ -332,15 +319,14 @@
               "uid": "prometheus"
             },
             "editorMode": "code",
-            "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\", namespace=\"spark-operator\" }[5m])) without (container)",
-            "format": "time_series",
+            "expr": "avg(rate(apiserver_admission_webhook_admission_duration_seconds_bucket[5m]))*1000",
             "instant": false,
             "legendFormat": "__auto",
             "range": true,
             "refId": "A"
           }
         ],
-        "title": "CPU Usage (in core-seconds)",
+        "title": "Admission Webhook Admission Duration",
         "type": "timeseries"
       },
       {
@@ -410,13 +396,13 @@
           "x": 0,
           "y": 7
         },
-        "id": 32,
+        "id": 37,
         "options": {
           "legend": {
             "calcs": [],
             "displayMode": "list",
             "placement": "bottom",
-            "showLegend": false
+            "showLegend": true
           },
           "tooltip": {
             "mode": "single",
@@ -430,14 +416,14 @@
               "uid": "prometheus"
             },
             "editorMode": "code",
-            "expr": "sum(sum by(namespace, pod, container) (irate(container_cpu_usage_seconds_total{image!=\"\", namespace=\"spark-operator\"}[5m])) * on(namespace, pod) group_left(node) topk by(namespace, pod) (1, max by(namespace, pod, node) (kube_pod_info{node!=\"\"}))) by (container)",
+            "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"spark-operator\"}[5m])) by (pod)",
             "instant": false,
             "legendFormat": "__auto",
             "range": true,
             "refId": "A"
           }
         ],
-        "title": "CPU Usage:",
+        "title": "Network Receive Bytes",
         "type": "timeseries"
       },
       {
@@ -545,11 +531,10 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "description": "P90 API server latency for all request types",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "continuous-YlBl"
+              "mode": "palette-classic"
             },
             "custom": {
               "axisBorderShow": false,
@@ -559,9 +544,9 @@
               "axisPlacement": "auto",
               "barAlignment": 0,
               "barWidthFactor": 0.6,
-              "drawStyle": "bars",
-              "fillOpacity": 60,
-              "gradientMode": "scheme",
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
               "hideFrom": {
                 "legend": false,
                 "tooltip": false,
@@ -599,7 +584,22 @@
               ]
             }
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byFrameRefID",
+                "options": "A"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "continuous-GrYlRd"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
           "h": 6,
@@ -607,20 +607,19 @@
           "x": 16,
           "y": 7
         },
-        "id": 24,
+        "id": 35,
         "options": {
           "legend": {
             "calcs": [],
-            "displayMode": "hidden",
-            "placement": "right",
-            "showLegend": false
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
           },
           "tooltip": {
             "mode": "single",
             "sort": "none"
           }
         },
-        "pluginVersion": "11.2.2+security-01",
         "targets": [
           {
             "datasource": {
@@ -628,14 +627,15 @@
               "uid": "prometheus"
             },
             "editorMode": "code",
-            "expr": "histogram_quantile(0.9, sum(rate(apiserver_request_duration_seconds_bucket[5m])) \n  by (le))",
+            "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\", namespace=\"spark-operator\" }[5m])) without (container)",
+            "format": "time_series",
             "instant": false,
             "legendFormat": "__auto",
             "range": true,
             "refId": "A"
           }
         ],
-        "title": "P90 API server latency for all request types",
+        "title": "CPU Usage (in core-seconds)",
         "type": "timeseries"
       },
       {
@@ -839,12 +839,11 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "description": "Admission Webhook Admission Duration Seconds bucket",
+        "description": "P90 API server latency for all request types",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "fixedColor": "dark-purple",
-              "mode": "fixed"
+              "mode": "continuous-YlBl"
             },
             "custom": {
               "axisBorderShow": false,
@@ -854,8 +853,8 @@
               "axisPlacement": "auto",
               "barAlignment": 0,
               "barWidthFactor": 0.6,
-              "drawStyle": "line",
-              "fillOpacity": 1,
+              "drawStyle": "bars",
+              "fillOpacity": 60,
               "gradientMode": "scheme",
               "hideFrom": {
                 "legend": false,
@@ -863,7 +862,7 @@
                 "viz": false
               },
               "insertNulls": false,
-              "lineInterpolation": "smooth",
+              "lineInterpolation": "linear",
               "lineWidth": 1,
               "pointSize": 5,
               "scaleDistribution": {
@@ -902,7 +901,7 @@
           "x": 16,
           "y": 13
         },
-        "id": 27,
+        "id": 24,
         "options": {
           "legend": {
             "calcs": [],
@@ -915,6 +914,7 @@
             "sort": "none"
           }
         },
+        "pluginVersion": "11.2.2+security-01",
         "targets": [
           {
             "datasource": {
@@ -922,14 +922,14 @@
               "uid": "prometheus"
             },
             "editorMode": "code",
-            "expr": "avg(rate(apiserver_admission_webhook_admission_duration_seconds_bucket[5m]))*1000",
+            "expr": "histogram_quantile(0.9, sum(rate(apiserver_request_duration_seconds_bucket[5m])) \n  by (le))",
             "instant": false,
             "legendFormat": "__auto",
             "range": true,
             "refId": "A"
           }
         ],
-        "title": "Admission Webhook Admission Duration",
+        "title": "P90 API server latency for all request types",
         "type": "timeseries"
       },
       {
@@ -999,8 +999,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1082,8 +1081,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             }
@@ -1275,8 +1273,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1373,8 +1370,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1481,8 +1477,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1596,8 +1591,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1741,8 +1735,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1889,8 +1882,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1993,8 +1985,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -2082,8 +2073,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -2179,8 +2169,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -2289,8 +2278,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -2347,13 +2335,13 @@
       "list": []
     },
     "time": {
-      "from": "now-5m",
+      "from": "now-30m",
       "to": "now"
     },
     "timepicker": {},
     "timezone": "browser",
     "title": "Spark-K8s-Operator-Scale-Test-Dashboard",
     "uid": "febroq9t3nhmoa",
-    "version": 31,
+    "version": 32,
     "weekStart": ""
   }
