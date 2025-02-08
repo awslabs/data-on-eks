@@ -63,7 +63,6 @@ data:
         ):
             logger.info("VLLMDeployment is initializing...")
 
-            # Fix: Use the correct `task="generate"` (not `text-generation`)
             self.model_config = ModelConfig(
                 model=model,
                 task="generate",  # Corrected to match supported tasks
@@ -75,7 +74,6 @@ data:
                 max_model_len=max_model_len,  # Already provided
             )
 
-            # Fix: Correct OpenAIServingModels Initialization
             self.models = OpenAIServingModels(
                 engine_client=None,  # Ensure it initializes later
                 model_config=self.model_config,
@@ -157,7 +155,6 @@ data:
                 assert isinstance(generator, ChatCompletionResponse)
                 return JSONResponse(content=generator.model_dump())
 
-    # Fix: Ray Serve deployment should now work!
     deployment = VLLMDeployment.bind(
         model=os.environ.get('MODEL_ID', 'deepseek-ai/DeepSeek-R1-Distill-Llama-8B'),
         tensor_parallel_size=int(os.environ.get('TENSOR_PARALLEL_SIZE', '1')),
