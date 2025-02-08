@@ -265,9 +265,9 @@ spec:
             - name: vllm-script
               configMap:
                 name: vllm-serve-script
-          # nodeSelector:
-          #   NodeGroupType: x86-cpu-karpenter
-          #   type: karpenter
+          nodeSelector:
+            NodeGroupType: x86-cpu-karpenter
+            type: karpenter
 
     workerGroupSpecs:
       - replicas: 1
@@ -322,9 +322,8 @@ spec:
                 configMap:
                   name: vllm-serve-script
             nodeSelector:
-              NodeGroupType: deepseek
-              # NodeGroupType: g5-gpu-karpenter
-              # type: karpenter
+              NodeGroupType: g5-gpu-karpenter
+              type: karpenter
             tolerations:
               - key: "nvidia.com/gpu"
                 operator: "Exists"
