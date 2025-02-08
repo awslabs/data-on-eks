@@ -35,7 +35,7 @@ Our tech stack includes:
 
 - [Ray](https://docs.ray.io/en/latest/serve/getting_started.html) – An open-source distributed computing framework that enables scalable and efficient execution of machine learning inference workloads.
 
-- [vLLM](https://github.com/vllm-project/vllm) – A high-throughput and memory-efficient inference and serving engine for large language models (LLMs), optimized for GPU execution. 
+- [vLLM](https://github.com/vllm-project/vllm) – A high-throughput and memory-efficient inference and serving engine for large language models (LLMs), optimized for GPU execution.
 AWSLABS.GITHUB.IO
 
 - [Karpenter](https://karpenter.sh/) – An open-source Kubernetes cluster autoscaler that dynamically provisions and manages compute resources, such as G5 instances, to improve application availability and cluster efficiency
@@ -235,7 +235,7 @@ Note: The image pull process may take up to 8 minutes on the first deployment. S
 :::
 
 
-```text                
+```text
 NAME                                           READY   STATUS            RESTARTS   AGE
 vllm-raycluster-7qwlm-head-vkqsc               2/2     Running           0          8m47s
 vllm-raycluster-7qwlm-worker-gpu-group-vh2ng   0/1     PodInitializing   0          8m47s
@@ -281,7 +281,7 @@ Model deploymen takes around 4 mins
 
 ## Test the DeepSeek-R1 Model
 
-Now it's time to test the DeepSeek-R1-Distill-Llama-8B chat model. 
+Now it's time to test the DeepSeek-R1-Distill-Llama-8B chat model.
 
 First, execute a port forward to the `vllm-serve-svc` Service using kubectl:
 
@@ -302,7 +302,7 @@ curl -X POST http://localhost:8000/v1/chat/completions -H "Content-Type: applica
 **Response:**
 
 ```
-{"id":"chatcmpl-b86feed9-1482-4d1c-981d-085651d12813","object":"chat.completion","created":1739001265,"model":"deepseek-ai/DeepSeek-R1-Distill-Llama-8B","choices":[{"index":0,"message":{"role":"assistant","content":"<think>\n\n</think>\n\nDeepSeek is a powerful AI search engine developed by the Chinese Company DeepSeek Inc. It is designed to solve complex STEM (Science, Technology, Engineering, and Mathematics) problems through precise reasoning and efficient computation. The model works bymidtTeX, combining large-scale dataset and strong reasoning capabilities to provide accurate and reliable answers.\n\n### Key Features:\n1. **AI-powered Search**: DeepSeek uses advanced AI techniques to understand and analyze vast amounts of data, providing more accurate and relevant search results compared to traditional search engines.\n2. **Reasoning and Problem-solving**: The model is equipped with strong reasoning capabilities, enabling it to solve complex STEM problems, answer research-level questions, and assist in decision-making.\n3. **Customization**: DeepSeek can be tailored to specific domains or industries, allowing it to be adapted for various use cases such as academic research, business analysis, and technical problem-solving.\n4. **Efficiency**: The model is highly efficient, fast, and scalable, making it suitable for a wide range of applications and handling large-scale data processing tasks.\n5. **Domain Expertise**: It can be trained on domain-specific data and knowledge, making it highly specialized in particular fields like mathematics, programming, or engineering.\n\n### Applications:\n- **Education and Research**: Assisting students and researchers with complex STEM problems and research questions.\n- **Business Analysis**: aiding in market research, data analysis, and strategic decision-making.\n- **Technical Support**: solving technical issues and providing troubleshooting assistance.\n- **Custom Problem Solving**: addressing specific challenges in various fields by leveraging domain-specific knowledge.\n\nDeepSeek is a valuable tool for any individual or organizationengaged in STEM fields or requires advanced AI-powered search and reasoning capabilities.","tool_calls":[]},"logprobs":null,"finish_reason":"stop","stop_reason":null}],"usage":{"prompt_tokens":10,"total_tokens":359,"completion_tokens":349,"prompt_tokens_details":null},"prompt_logprobs":null}%    
+{"id":"chatcmpl-b86feed9-1482-4d1c-981d-085651d12813","object":"chat.completion","created":1739001265,"model":"deepseek-ai/DeepSeek-R1-Distill-Llama-8B","choices":[{"index":0,"message":{"role":"assistant","content":"<think>\n\n</think>\n\nDeepSeek is a powerful AI search engine developed by the Chinese Company DeepSeek Inc. It is designed to solve complex STEM (Science, Technology, Engineering, and Mathematics) problems through precise reasoning and efficient computation. The model works bymidtTeX, combining large-scale dataset and strong reasoning capabilities to provide accurate and reliable answers.\n\n### Key Features:\n1. **AI-powered Search**: DeepSeek uses advanced AI techniques to understand and analyze vast amounts of data, providing more accurate and relevant search results compared to traditional search engines.\n2. **Reasoning and Problem-solving**: The model is equipped with strong reasoning capabilities, enabling it to solve complex STEM problems, answer research-level questions, and assist in decision-making.\n3. **Customization**: DeepSeek can be tailored to specific domains or industries, allowing it to be adapted for various use cases such as academic research, business analysis, and technical problem-solving.\n4. **Efficiency**: The model is highly efficient, fast, and scalable, making it suitable for a wide range of applications and handling large-scale data processing tasks.\n5. **Domain Expertise**: It can be trained on domain-specific data and knowledge, making it highly specialized in particular fields like mathematics, programming, or engineering.\n\n### Applications:\n- **Education and Research**: Assisting students and researchers with complex STEM problems and research questions.\n- **Business Analysis**: aiding in market research, data analysis, and strategic decision-making.\n- **Technical Support**: solving technical issues and providing troubleshooting assistance.\n- **Custom Problem Solving**: addressing specific challenges in various fields by leveraging domain-specific knowledge.\n\nDeepSeek is a valuable tool for any individual or organizationengaged in STEM fields or requires advanced AI-powered search and reasoning capabilities.","tool_calls":[]},"logprobs":null,"finish_reason":"stop","stop_reason":null}],"usage":{"prompt_tokens":10,"total_tokens":359,"completion_tokens":349,"prompt_tokens_details":null},"prompt_logprobs":null}%
 ```
 
 ## Deploy Open Web Ui
@@ -360,12 +360,12 @@ After submitting a request, you can monitor the GPU and CPU usage returning to n
   - Once deployed, the model automatically detects CUDA and initializes its execution environment.
   - GPU memory is allocated dynamically, with 90% utilization reserved for model weights (14.99 GiB), activation memory (0.85 GiB), and KV Cache (4.17 GiB).
   - Expect some initial delay during the first model load, as weights are fetched and optimized for inference.
- 
+
  **2. Inference Execution & Optimization**
    - The model supports multiple tasks but defaults to text generation (generate).
    - Flash Attention is enabled, reducing memory overhead and improving inference speed.
    - CUDA Graph Capture is applied, allowing for faster repeated inferences—but if OOM issues arise, decreasing gpu_memory_utilization or enabling eager execution can help.
- 
+
  **3. Token Generation & Performance Metrics**
   - The model will initially show 0 tokens/sec for prompt throughput, as it waits for input.
   - Once inference starts, token generation throughput stabilizes at ~29 tokens/sec.
