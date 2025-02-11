@@ -23,7 +23,7 @@ fi
 #--------------------------------------------
 # INPUT VARIABLES
 #--------------------------------------------
-EMR_EMR_VIRTUAL_CLUSTER_ID=$1 # Terraform output variable is `emrcontainers_virtual_cluster_id`
+EMR_VIRTUAL_CLUSTER_ID=$1 # Terraform output variable is `emrcontainers_virtual_cluster_id`
 EMR_JOB_EXECUTION_ROLE_ARN=$2 # Terraform output variable is emr_on_eks_role_arn
 JOB_NAME='pi'
 EMR_EKS_RELEASE_LABEL='emr-6.8.0-latest'
