@@ -2,13 +2,13 @@
 
 if [ $# -eq 0 ];
 then
-  echo "$0: Missing arguments ENTER_EMR_EMR_VIRTUAL_CLUSTER_ID and EMR_JOB_EXECUTION_ROLE_ARN"
-  echo "USAGE: ./basic-pyspark-job '<ENTER_EMR_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
+  echo "$0: Missing arguments ENTER_EMR_VIRTUAL_CLUSTER_ID and EMR_JOB_EXECUTION_ROLE_ARN"
+  echo "USAGE: ./basic-pyspark-job '<ENTER_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
   exit 1
 elif [ $# -gt 3 ];
 then
   echo "$0: Too many arguments: $@"
-  echo "Usage example-> ./basic-pyspark-job '<ENTER_EMR_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
+  echo "Usage example-> ./basic-pyspark-job '<ENTER_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
   exit 1
 else
   echo "We got some argument(s)"
