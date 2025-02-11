@@ -31,7 +31,7 @@ EMR_EKS_RELEASE_LABEL='emr-6.8.0-latest'
 #--------------------------------------------
 # DERIVED VARIABLES
 #--------------------------------------------
-EMR_VIRTUAL_CLUSTER_NAME=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?id=='${EMR_EMR_VIRTUAL_CLUSTER_ID}' && state=='RUNNING'].name" --output text)
+EMR_VIRTUAL_CLUSTER_NAME=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?id=='${EMR_VIRTUAL_CLUSTER_ID}' && state=='RUNNING'].name" --output text)
 
 # Execute Spark job
 if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then
