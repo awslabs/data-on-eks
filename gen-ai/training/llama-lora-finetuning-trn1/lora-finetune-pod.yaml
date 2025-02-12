@@ -5,7 +5,7 @@ metadata:
 spec:
   containers:
     - name: app
-      image: 411317953072.dkr.ecr.us-east-2.amazonaws.com/llama-finetuning-trn1:latest
+      image: <account-id>.dkr.ecr.<region>.amazonaws.com/llm-finetune/llama-finetuning-trn:latest
       command: ["/bin/sh", "-c"]
       args: ["while true; do sleep 30; done"]
       volumeMounts:

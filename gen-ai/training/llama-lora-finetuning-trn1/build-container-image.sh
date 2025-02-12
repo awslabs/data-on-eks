@@ -17,7 +17,7 @@
 # For more help, reach out to Perplexity or Google.
 
 # Replace with your desired repository name
-ECR_REPO_NAME="llama-finetuning-trn1"
+ECR_REPO_NAME="llm-finetune/llama-finetuning-trn"
 
 # Check that we are running on an x86_64 instance to avoid issues with docker build
 arch=$(uname -m)
@@ -73,6 +73,6 @@ echo -e "\nLogging in to ECR"
 aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin $ECR_REPO_URI
 
 echo -e "\nBuilding llama finetuning trn1 docker image" \
-  && docker build . -t $ECR_REPO_URI:latest \
+  && docker build . --no-cache -t $ECR_REPO_URI:latest \
   && docker push $ECR_REPO_URI:latest \
   && echo -e "\nImage successfully pushed to ECR"
