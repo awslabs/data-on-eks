@@ -43,7 +43,7 @@ tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
 tokenizer.pad_token = tokenizer.eos_token
 
 model_orig = AutoModelForCausalLM.from_pretrained(MODEL_ORIG_PATH)
-tuned_model = AutoModelForCausalLM.from_pretrained(args.model())
+tuned_model = AutoModelForCausalLM.from_pretrained(args.model)
 
 for n in [94, 99, 123]:
     example = tokenizer.apply_chat_template(eval_dataset
