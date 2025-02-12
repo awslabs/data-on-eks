@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    release: kube-prometheus-stack
+  name: dcgm-exporter
+  namespace: nvidia-device-plugin
+spec:
+  endpoints:
+    - honorLabels: false
+      interval: 15s
+      path: /metrics
+      port: metrics
+      relabelings:
+        - action: replace
+          sourceLabels:
+            - __meta_ec2_instance_id
+          targetLabel: instance
+  namespaceSelector:
+    matchNames:
+      - kube-system
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: dcgm-exporter
+      app.kubernetes.io/instance: dcgm-exporter
+      app.kubernetes.io/name: dcgm-exporter

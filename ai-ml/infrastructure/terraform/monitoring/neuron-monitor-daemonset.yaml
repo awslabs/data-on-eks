@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: neuron-monitor
+  namespace: kube-system
+  labels:
+    app: neuron-monitor
+    version: v1
+spec:
+  selector:
+    matchLabels:
+      app: neuron-monitor
+  template:
+    metadata:
+      labels:
+        app: neuron-monitor
+        version: v1
+    spec:
+      containers:
+        - name: neuron-monitor
+          image: public.ecr.aws/neuron/neuron-monitor:1.1.0
+          ports:
+            - containerPort: 8000
+          command:
+             - "/opt/bin/entrypoint.sh"
+          args: 
+            - "--port"
+            - "8000"  
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 256m
+              memory: 128Mi
+          env:
+          - name: GOMEMLIMIT
+            value: 160MiB
+          securityContext:
+            privileged: true
+      nodeSelector:
+        accelerator: neuron
