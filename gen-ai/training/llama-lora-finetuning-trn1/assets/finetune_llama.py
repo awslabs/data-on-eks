@@ -46,20 +46,21 @@ def training_function(script_args, training_args):
         model = AutoModelForCausalLM.from_pretrained("meta-llama/Meta-Llama-3-8B")
 
     config = LoraConfig(
-        r=16,
-        lora_alpha=32,
+        r=8,
+        lora_alpha=64,
         lora_dropout=0.05,
         target_modules=[
             "q_proj",
-            "gate_proj",
+            "k_proj",
             "v_proj",
             "o_proj",
-            "k_proj",
+            "gate_proj",
             "up_proj",
             "down_proj",
         ],
         bias="none",
         task_type="CAUSAL_LM",
+        use_rslora=True,
     )
 
     args = training_args.to_dict()
@@ -82,6 +83,9 @@ def training_function(script_args, training_args):
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
     )
+
+    print(trainer.model)
+    trainer.model.print_trainable_parameters()
 
     # Start training
     trainer.train()
