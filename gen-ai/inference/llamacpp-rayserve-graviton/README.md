@@ -36,8 +36,6 @@ kubectl get svc
 
 Our client program will generate 20 different prompts with different concurrency for each run. Every run will have common GenAI related prompts and assemble them into standard HTTP requests, and concurrency calls will keep increasing until the maximum CPU usage reaches to nearly 100%. We capture the total time from when a HTTP request is initiated to when a HTTP response is received as the latency metric of model performance. We also capture output token generated per second as throughput. The test aims to reach maximum CPU utilization on the worker pods to assess the concurrency performance.
 
-With 10 pods allocated to Ray cluster, the cluster will use 10 8xlarge instance for worker pods and one EC2 for head pod. c7g.8xlarge EC2 instance runs the Graviton3 benchmark and c8g.8xlarge for Graviton4 benchmark.
-
 Follow this guidance if you want to set it up and replicate the experiment
 
 ### 1. Launch load generator instance
