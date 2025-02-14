@@ -1,10 +1,9 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: hf-token
-  namespace: kuberay-system
+  name: token
 stringData:
-  hf-token: $HUGGING_FACE_HUB_TOKEN
+  token: $HUGGING_FACE_HUB_TOKEN
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -107,7 +106,7 @@ data:
 apiVersion: ray.io/v1
 kind: RayService
 metadata:
-  name: llama-3-8b-cpu-llama-arm
+  name: ray-service-llamacpp
 spec:
   serveConfigV2: |
     applications:
@@ -122,8 +121,8 @@ spec:
         pip: ["llama_cpp_python", "transformers"]
         env_vars:
           LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
-          MODEL_ID: "bartowski/Llama-3.2-3B-Instruct-GGUF"
-          MODEL_FILENAME: "Llama-3.2-3B-Instruct-Q4_0.gguf"
+          MODEL_ID: "bartowski/Llama-3.2-1B-Instruct-GGUF" 
+          MODEL_FILENAME: "Llama-3.2-1B-Instruct-Q4_0.gguf"
           N_CTX: "0"
           N_THREADS : "32"
           FORCE_CMAKE: "1"
@@ -152,7 +151,7 @@ spec:
             - key: "model-inferencing"
               operator: "Equal"
               value: "cpu-arm"
-              effect: "NoSchedule"
+              effect: "NoSchedule" 
           affinity:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
@@ -190,8 +189,8 @@ spec:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: hf-token
-                  key: hf-token
+                  name: token
+                  key: token
             - name: RAY_enable_autoscaler_v2
               value: "1"
             - name: RAY_num_heartbeats_timeout
@@ -238,8 +237,8 @@ spec:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: hf-token
-                  key: hf-token
+                  name: token
+                  key: token
             - name: CMAKE_ARGS
               value: "-DCMAKE_CXX_FLAGS=-fopenmp"  
             - name: "CC"
