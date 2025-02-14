@@ -124,7 +124,7 @@ spec:
           MODEL_ID: "bartowski/Llama-3.2-1B-Instruct-GGUF" 
           MODEL_FILENAME: "Llama-3.2-1B-Instruct-Q4_0.gguf"
           N_CTX: "0"
-          N_THREADS : "32"
+          N_THREADS : "16"
           FORCE_CMAKE: "1"
           CMAKE_ARGS: "-DCMAKE_CXX_FLAGS='-mcpu=native -fopenmp' -DCMAKE_C_FLAGS='-mcpu=native -fopenmp'"
           CMAKE_CXX_COMPILER: "/usr/bin/g++"  
