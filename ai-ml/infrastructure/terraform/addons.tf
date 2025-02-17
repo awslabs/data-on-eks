@@ -186,7 +186,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Enable FSx for Lustre CSI Driver
   #---------------------------------------
-  enable_aws_fsx_csi_driver = var.enable_aws_efa_k8s_device_plugin
+  enable_aws_fsx_csi_driver = var.enable_aws_fsx_csi_driver
 
   tags = local.tags
 

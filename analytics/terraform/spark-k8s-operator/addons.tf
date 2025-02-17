@@ -386,6 +386,26 @@ module "eks_data_addons" {
           rbac:
             # -- Specifies whether to create RBAC resources for the controller.
             create: false
+        prometheus:
+          metrics:
+            enable: true
+            port: 8080
+            portName: metrics
+            endpoint: /metrics
+            prefix: ""
+          # Prometheus pod monitor for controller pods
+          # Note: The kube-prometheus-stack addon must deploy before the PodMonitor CRD is available.
+          #       This can cause the terraform apply to fail since the addons are deployed in parallel
+          # podMonitor:
+          #   # -- Specifies whether to create pod monitor.
+          #   create: true
+          #   labels: {}
+          #   # -- The label to use to retrieve the job name from
+          #   jobLabel: spark-operator-podmonitor
+          #   # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
+          #   podMetricsEndpoint:
+          #     scheme: http
+          #     interval: 5s
       EOT
     ]
   }
