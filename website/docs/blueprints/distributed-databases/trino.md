@@ -107,7 +107,7 @@ Now, lets access the Trino UI at `http://localhost:8080` through web browser and
 
 Trino Web UI will show 0 active worker:  
 
-![Trino UI](./img/trino-ui.png)
+![Trino UI](./img/trino-ui.PNG)
 
 
 
@@ -453,7 +453,7 @@ exit
 ```
 
 With below steps, we will now test fault-tolerant execution by running a `select` query and terminate few Trino workers when query is still running.
-- Let's create a `trino_select_query_iceberg.sql` file in the location where Trino CLI is installed and paste below SQL commands:
+- Find the file `trino_select_query_iceberg.sql` file in the `examples` folder, which contains the SQL commands below:
 ```bash
 with inv as
 (select w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy
@@ -482,7 +482,7 @@ order by inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean,inv1.cov,inv2.d
 ```
 - Let's now run select query first
 ```bash
-./trino --file 'trino_select_query_iceberg.sql' --server http://localhost:8080 --user admin --ignore-errors
+./trino --file 'examples/trino_select_query_iceberg.sql' --server http://localhost:8080 --user admin --ignore-errors
 ```
 - Immediately after above command, when above query is still running, open another terminal and scale down worker pods to just 1 worker, terminating all other workers with command below:
 ```bash
@@ -510,9 +510,9 @@ Also you can see different number of active workers depending upon worker pods s
 
 1. Let's open Trino CLI
 ```bash
-export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
-./trino --server ${TRINO_UI_DNS} --user admin
+./trino http://127.0.0.1:8080 --user admin
 ```
+
 2. Now, let's delete Iceberg tables and schema by running below SQL commands on Trino CLI:
  ```bash
 drop table iceberg.iceberg_schema.warehouse;
