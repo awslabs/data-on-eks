@@ -604,6 +604,23 @@ module "eks_data_addons" {
 }
 
 #---------------------------------------------------------------
+# ETCD for TorchX
+#---------------------------------------------------------------
+data "http" "torchx_etcd_yaml" {
+  url = "https://raw.githubusercontent.com/pytorch/torchx/main/resources/etcd.yaml"
+}
+
+data "kubectl_file_documents" "torchx_etcd_yaml" {
+  content = data.http.torchx_etcd_yaml.response_body
+}
+
+resource "kubectl_manifest" "torchx_etcd" {
+  for_each   = var.enable_torchx_etcd ? data.kubectl_file_documents.torchx_etcd_yaml.manifests : {}
+  yaml_body  = each.value
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+#---------------------------------------------------------------
 # Grafana Admin credentials resources
 # Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------

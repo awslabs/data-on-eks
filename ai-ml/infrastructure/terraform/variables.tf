@@ -119,6 +119,17 @@ variable "huggingface_token" {
   default     = "DUMMY_TOKEN_REPLACE_ME"
   sensitive   = true
 }
+variable "enable_rayserve_ha_elastic_cache_redis" {
+  description = "Flag to enable Ray Head High Availability with Elastic Cache for Redis"
+  type        = bool
+  default     = false
+}
+
+variable "enable_torchx_etcd" {
+  description = "Flag to enable etcd deployment for torchx"
+  type        = bool
+  default     = false
+}
 
 # Jupyterhub Specific Variables
 
