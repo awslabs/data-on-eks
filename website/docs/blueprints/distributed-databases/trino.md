@@ -70,15 +70,14 @@ aws eks update-kubeconfig --name trino-on-eks --region us-west-2
 First, let's verify that we have worker nodes provisioned by Karpenter in the cluster. Let's also see their availability zone and capacity type (on-demand or spot)
 
 ```bash
-kubectl get nodes --selector=karpenter.sh/nodepool=trino-karpenter -L topology.kubernetes.io/zone -L karpenter.sh/capacity-type -L node.kubernetes.io/instance-type
+kubectl get nodes --selector=karpenter.sh/nodepool=trino-sql-karpenter -L topology.kubernetes.io/zone -L karpenter.sh/capacity-type -L node.kubernetes.io/instance-type
 ```
 #### Output
 ```bash
 NAME                                        STATUS   ROLES    AGE   VERSION               ZONE         CAPACITY-TYPE   INSTANCE-TYPE
-ip-10-1-11-131.us-west-2.compute.internal   Ready    <none>   23m   v1.29.0-eks-5e0fdde   us-west-2b   spot            is4gen.2xlarge
 ip-10-1-11-49.us-west-2.compute.internal    Ready    <none>   24m   v1.29.0-eks-5e0fdde   us-west-2b   on-demand       t4g.medium
 ```
-We can see above that Karpenter provisioned on-demand node for running Trino coordinator and spot node for running Trino workers in the same availability zone.
+We can see above that Karpenter provisioned on-demand node for running Trino coordinator.
 :::info
 
 For a distributed Big Data query engine like Trino which runs on a massively parallel processing cluster, it is recommended to deploy the cluster in same availability zone to avoid incurring high Inter-AZ Data Transfer costs. That's why Karpenter NodePool has been configured to launch EKS nodes in same AZ
@@ -106,9 +105,9 @@ Now, lets access the Trino UI at `http://localhost:8080` through web browser and
 
 ![Trino UI Login](./img/trino-ui-login.PNG)
 
-Example of Trino Web UI showing 3 active workers:  
+Trino Web UI will show 0 active worker:  
 
-![Trino UI](./img/trino-ui.PNG)
+![Trino UI](./img/trino-ui.png)
 
 
 
@@ -405,7 +404,7 @@ keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 0/1 + 1 more.
 ```
 You can see HPA scaling from initial 0 workers to 2 workers with increasing query load and average cpu utilization of workerss:
 
-![Trino Scaling](./img/trino-workers-scaling.PNG)
+![Trino Scaling](./img/trino-workers-scaling.png)
 
 ### Example #3 (Optional): Fault-tolerant execution in Trino
 [Fault-tolerant execution](https://trino.io/docs/current/admin/fault-tolerant-execution.html) is an opt-in mechanism in Trino that was implemented using [Project Tardigrade](https://trino.io/blog/2022/05/05/tardigrade-launch.html#what-is-project-tardigrade). Without fault-tolerant configuration, Trino query fails whenever any of the component tasks of the query fails due to any reason (for example, a worker node failure or termination). These failed queries have to be restarted from scratch resulting in longer execution time, compute wastage, and spend, especially for long-running queries.

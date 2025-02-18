@@ -35,7 +35,7 @@ service:
 
 coordinator:
   jvm:
-    maxHeapSize: "32G"  # ~80% of container memory
+    maxHeapSize: "32GB"  # ~80% of container memory
     extraArguments:
       - "-XX:+UseG1GC"
       - "-XX:G1HeapRegionSize=32M"
@@ -61,6 +61,7 @@ coordinator:
     karpenter.sh/do-not-disrupt: "true"
   nodeSelector:
     NodePool: trino-sql-karpenter
+    karpenter.sh/capacity-type: on-demand
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname
@@ -92,6 +93,7 @@ worker:
       memory: 112Gi
   nodeSelector:
     NodePool: trino-sql-karpenter
+    karpenter.sh/capacity-type: on-demand
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname

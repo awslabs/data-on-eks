@@ -26,7 +26,7 @@ resource "helm_release" "karpenter" {
   name                = "karpenter"
   repository          = "oci://public.ecr.aws/karpenter"
   chart               = "karpenter"
-  version             = "1.0.6"
+  version             = "1.1.1"
   wait                = false
 
   values = [
@@ -113,7 +113,7 @@ resource "kubectl_manifest" "karpenter_node_pool" {
           requirements:
             - key: "karpenter.sh/capacity-type"
               operator: In
-              values: ["on-demand"]
+              values: ["on-demand", "spot"]
             - key: "kubernetes.io/arch"
               operator: In
               values: ["arm64"]
