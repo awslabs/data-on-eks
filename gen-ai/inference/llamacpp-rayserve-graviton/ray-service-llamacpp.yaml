@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: token
 stringData:
-  token: $HUGGING_FACE_HUB_TOKEN
+  token: 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
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -145,22 +145,16 @@ spec:
             ray-control-plane: "true"
         spec:
           nodeSelector:
-            ray-control-plane: "false"
-            model-inferencing: "cpu-arm"
-          tolerations:
-            - key: "model-inferencing"
-              operator: "Equal"
-              value: "cpu-arm"
-              effect: "NoSchedule" 
+            kubernetes.io/arch: arm64
           affinity:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
                 nodeSelectorTerms:
-                  - matchExpressions:
-                      - key: model-inferencing
-                        operator: In
-                        values:
-                          - "cpu-arm"            
+                - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                    - arm64           
           restartPolicy: Always
           containers:
           - name: ray-head
@@ -209,22 +203,16 @@ spec:
       template:
         spec:
           nodeSelector:
-            ray-control-plane: "false"
-            model-inferencing: "cpu-arm"
-          tolerations:
-            - key: "model-inferencing"
-              operator: "Equal"
-              value: "cpu-arm"
-              effect: "NoSchedule"
+            kubernetes.io/arch: arm64
           affinity:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
                 nodeSelectorTerms:
-                  - matchExpressions:
-                      - key: model-inferencing
-                        operator: In
-                        values:
-                          - "cpu-arm"            
+                - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                    - arm64           
           restartPolicy: Always
           containers:
           - name: llm

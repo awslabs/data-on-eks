@@ -20,7 +20,7 @@ You may notice the example model used in this blueprint is formatted as GGUF whi
 N_THREADS is the number of threads to use for inference, best practice is to set it as same as the number of vCPU of host EC2 instance for optimized performance.
 CMAKE_ARGS are the C/C++ compile flags when compiling llama.cpp.(please refer [this](https://github.com/aws/aws-graviton-getting-started/blob/main/c-c++.md) for more details about C/C++ compile flags for Graviton)
 
-After setting up all variables, run this command to create the kubenetes service 
+After setting up all variables, run this command to create the kubernetes service 
 
 ```bash
 kubectl create -f ray-service-llamacpp.yaml 
@@ -44,7 +44,7 @@ Launch an EC2 instance as the client in the same AZ with the Ray cluster(For opt
 ### 2. Execute port forward for the ray service
 
 ```bash
-kubectl port-forward svc/ray-service-llamacpp 8000:8000
+kubectl port-forward service/ray-service-llamacpp-serve-svc 8000:8000
 ```
 
 ### 2. Configure environment
