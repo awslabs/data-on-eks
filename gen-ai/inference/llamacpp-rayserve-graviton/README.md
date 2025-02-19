@@ -7,7 +7,7 @@ The solution implements a scalable ML inference architecture using Amazon EKS, l
 ## Prerequisites
  
 1. EKS cluster with Ray operater installed
-2. Karpenter node pool is setup for Graviton instance, the node pool label is model-inferencing:cpu-arm in this example
+2. Karpenter node pool is setup for Graviton instance, the node pool label is "kubernetes.io/arch: arm64" in this example
 3. Make sure running following command under the llamacpp-rayserve-graviton directory
 
 ## Deployment
