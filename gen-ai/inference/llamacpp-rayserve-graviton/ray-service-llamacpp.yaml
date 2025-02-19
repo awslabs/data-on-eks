@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: token
 stringData:
-  token: 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
+  token: HUGGING_FACE_HUB_TOKEN
 ---
 apiVersion: v1
 kind: ConfigMap
