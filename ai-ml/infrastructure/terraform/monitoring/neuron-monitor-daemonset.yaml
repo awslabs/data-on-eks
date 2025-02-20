@@ -38,5 +38,9 @@ spec:
             value: 160MiB
           securityContext:
             privileged: true
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
       nodeSelector:
         accelerator: neuron

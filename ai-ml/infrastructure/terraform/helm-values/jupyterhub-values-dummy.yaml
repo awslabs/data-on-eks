@@ -204,9 +204,6 @@ scheduling:
   userPlaceholder:
     enabled: false
     replicas: 1
-#  userPods:
-#    nodeAffinity:
-#      matchNodePurpose: require # This will force single-user pods to use an specific karpenter provisioner
 
 prePuller:
   hook:
