@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: "dcgm-exporter"
+  namespace: nvidia-device-plugin
+  labels:
+    app.kubernetes.io/name: "dcgm-exporter"
+    app.kubernetes.io/version: "3.6.1"
+spec:
+  selector:
+    app.kubernetes.io/name: "dcgm-exporter"
+    app.kubernetes.io/version: "3.6.1"
+  ports:
+    - name: "metrics"
+      port: 9400

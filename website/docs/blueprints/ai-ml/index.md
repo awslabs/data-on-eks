@@ -32,15 +32,8 @@ By choosing Amazon EKS, you gain access to a robust infrastructure that can hand
 
 ## Deploying Generative AI Models on Amazon EKS
 
-Deploying Generative AI models on Amazon EKS is supported through two major blueprints:
+Deploying an AI stack on EKS starts with infrastructure [JARK stack blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark). This blueprint provides a customizable environment on which to build an AI platform. For task specific workloads, AI on EKS has a few blueprints that preconfigures the environment:
 
-- **For GPUs**: Use the [JARK stack blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark).
-- **For Neuron**: Start with the [Trainium on EKS blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium).
-
-In addition to these, this section provides other valuable ML blueprints:
-
+- **For Ray**: Use the [JARK stack blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark).
 - **NVIDIA Spark RAPIDS**: For Spark on GPU workloads, refer to the [NVIDIA Spark RAPIDS blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/emr-spark-rapids).
-
-- **JupyterHub on EKS**: Explore the [JupyterHub blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub), which showcases Time Slicing and MIG features, as well as multi-tenant configurations with profiles. This is ideal for deploying large-scale JupyterHub platforms on EKS.
-
 - **Additional Patterns**: For other patterns using NVIDIA Triton server, NVIDIA NGC, and more, refer to the [Gen AI page](https://awslabs.github.io/data-on-eks/docs/gen-ai).

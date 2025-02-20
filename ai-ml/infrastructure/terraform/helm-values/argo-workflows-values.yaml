@@ -1,0 +1,4 @@
+server:
+  autoscaling:
+    enabled: true
+    minReplicas: 1

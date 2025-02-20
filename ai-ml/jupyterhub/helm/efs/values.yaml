@@ -1,5 +1,0 @@
-pv:
-  name: efs-persist
-  dnsName:
-pvc:
-  name: efs-persist
