@@ -47,8 +47,8 @@ Launch an EC2 instance as the client in the same AZ with the Ray cluster(For opt
 kubectl port-forward service/ray-service-llamacpp-serve-svc 8000:8000
 ```
 
-### 2. Configure environment
-Install golang environment in the client EC2 instance(please refer [this](https://go.dev/doc/install) for the golang installation guidance), specify the environment variables as test configuration.
+### 3. Configure environment
+Install Golang environment in the client EC2 instance (please refer [this](https://go.dev/doc/install) for the Golang installation guidance). Specify the environment variables as the test configuration.
 
 ```bash
 export URL=http://localhost:8000/v1/chat/completions
@@ -56,7 +56,7 @@ export REQUESTS_PER_PROMPT=<The_number_of_concurrent_calls>
 export NUM_WARMUP_REQUESTS=<The_number_of_warmup_requests>
 ```
 
-### 3. Run test
+### 4. Run test
 Run the performance test golang script and you can find the results from the output. 
 
 ```bash

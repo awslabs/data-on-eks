@@ -165,11 +165,11 @@ spec:
                 subPath: app.py
             resources:
               limits:
-                cpu: "30"
-                memory: "55Gi"
+                cpu: "10"
+                memory: "20Gi"
               requests:
-                cpu: "30"
-                memory: "55Gi"
+                cpu: "10"
+                memory: "20Gi"
             ports:
             - containerPort: 6379
               name: gcs-server
