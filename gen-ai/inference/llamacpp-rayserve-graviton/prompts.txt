@@ -1,0 +1,20 @@
+In about 150 tokens, explain how generative AI models create new content from training data.
+Using approximately 150 tokens, describe the key differences between GPT-3 and GPT-4 architectures.
+In around 150 tokens, explain how temperature affects AI model output diversity.
+Describe, in about 150 tokens, the role attention mechanisms play in transformer models.
+In approximately 150 tokens, outline the process of fine-tuning a language model.
+Using about 150 tokens, explain how RAG improves AI model accuracy and knowledge.
+In roughly 150 tokens, discuss the main challenges in prompt engineering.
+Explain the concept of zero-shot learning in AI models, using about 150 tokens.
+In approximately 150 tokens, describe how embeddings represent text in vector space.
+Discuss the significance of context length in LLMs, using about 150 tokens.
+In around 150 tokens, describe the token limitation problem in language models.
+Explain how few-shot learning works in generative AI, using approximately 150 tokens.
+In about 150 tokens, outline the benefits of model quantization.
+Using roughly 150 tokens, explain the concept of knowledge distillation in AI.
+In approximately 150 tokens, describe how RLHF improves AI model outputs.
+Discuss the key metrics for evaluating GenAI models, using about 150 tokens.
+In around 150 tokens, describe the challenges of AI model hallucination.
+Explain how prompt injection affects model security, using approximately 150 tokens.
+In about 150 tokens, discuss the role of tokenization in language models.
+Using approximately 150 tokens, explain the concept of model alignment in AI.
