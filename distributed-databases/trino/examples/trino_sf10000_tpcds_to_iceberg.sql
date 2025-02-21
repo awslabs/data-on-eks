@@ -2,7 +2,7 @@ use tpcds.sf10000;
 select * from tpcds.sf10000.item limit 10;
 select * from tpcds.sf10000.warehouse limit 10;
 
-/* 
+/*
 
 drop schema iceberg.iceberg_schema;
 drop table iceberg.iceberg_schema.warehouse;
