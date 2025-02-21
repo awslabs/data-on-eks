@@ -1,6 +1,6 @@
 ---
 title: Llama-2 with Nemo-Megatron on Trn1
-sidebar_position: 2
+sidebar_position: 3
 description: Training a Llama-2 Model using Trainium, Neuronx-Nemo-Megatron and MPI operator
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
