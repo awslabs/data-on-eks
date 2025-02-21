@@ -105,7 +105,7 @@ Now, lets access the Trino UI at `http://localhost:8080` through web browser and
 
 ![Trino UI Login](./img/trino-ui-login.PNG)
 
-Trino Web UI will show 0 active worker:  
+Trino Web UI will show 0 active worker:
 
 ![Trino UI](./img/trino-ui.PNG)
 
