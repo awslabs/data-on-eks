@@ -11,9 +11,9 @@ The solution implements a scalable ML inference architecture using Amazon EKS, l
 ## Deployment
 Deploy an elastic Ray service hosting llama 3.2 model on Graviton:
 
-1. Edit your Hugging Face token for env `HUGGING_FACE_HUB_TOKEN` in the secret section of `ray-service-llamacpp.yaml`
+### 1. Edit your Hugging Face token for env `HUGGING_FACE_HUB_TOKEN` in the secret section of `ray-service-llamacpp.yaml`
 
-2. Configure model and inference parameters in the yaml file:
+### 2. Configure model and inference parameters in the yaml file:
    - `MODEL_ID`: Hugging Face model repository
    - `MODEL_FILENAME`: Model file name in the Hugging Face repo
    - `N_THREADS`: Number of threads for inference (recommended: match host EC2 instance vCPU count)
@@ -21,12 +21,12 @@ Deploy an elastic Ray service hosting llama 3.2 model on Graviton:
 
 > Note: The example model uses GGUF format, optimized for llama.cpp. See [GGUF documentation](https://huggingface.co/docs/hub/en/gguf) for details.
 
-3. Create the Kubernetes service:
+### 3. Create the Kubernetes service:
 ```bash
 kubectl create -f ray-service-llamacpp.yaml 
 ```
 
-4.Get the Kubernetes service name:
+### 4.Get the Kubernetes service name:
 ```bash   
 kubectl get svc 
 ```
