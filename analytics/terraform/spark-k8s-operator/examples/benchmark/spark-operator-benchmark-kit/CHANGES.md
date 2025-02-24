@@ -12,7 +12,7 @@ in `addons.tf`:
 ```
 
 ### Run spark-operator and webhook on a dedicated node with Taints/Tolerations
-Spark-operator consumes a lot of CPU, and the system nodes were small by default. 
+Spark-operator consumes a lot of CPU, and the system nodes were small by default.
 We reused the `spark_benchmark_ssd` node group in `eks.tf`, updated the instance type and added taints. For our testing we manually scaled this Autoscaling group up and down to accomodate the Spark operator pods.
 
 **Note**: We also saw the Prometheus server in our cluster failing with OOM events due to the amount of metrics being collected. We moved the prometheus pods to a dedicated node using the same selectors/tolerations and disabled the `"spark-job-monitoring"` scrape config in `helm-values/kube-prometheus.yaml` or `helm-values/kube-prometheus-amp-enable.yaml`
@@ -49,8 +49,8 @@ in `eks.tf`:
           effect   = "NO_SCHEDULE"
           operator = "EXISTS"
         }
-      }      
-      
+      }
+
       tags = {
         Name          = "spark_benchmark_ssd"
         NodeGroupType = "spark_benchmark_ssd"
@@ -120,9 +120,9 @@ in `addons.tf` (the spark-operator values)
   }
 ```
 
-This may cause creation issues as there is not an explicit dependency between the spark-operator and the kube-prometheus-stack. The Spark-operator chart may try to create the PodMonitor before the CRD is registered. 
+This may cause creation issues as there is not an explicit dependency between the spark-operator and the kube-prometheus-stack. The Spark-operator chart may try to create the PodMonitor before the CRD is registered.
 
-To avoid that we've added a module to the install script to ensure the CRD is available when we install the data addons 
+To avoid that we've added a module to the install script to ensure the CRD is available when we install the data addons
 
 in `install.sh`
 ```sh
@@ -139,7 +139,7 @@ targets=(
 )
 ```
 
-## EKS 
+## EKS
 
 ### Enable Prefix Delegation
 To increase the pod density on the nodes we enabled Prefix delegation in the VPC CNI.
@@ -181,8 +181,3 @@ module "eks" {
     }
   }
 ```
-
-
-
-
-

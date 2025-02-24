@@ -1,7 +1,7 @@
 # Spark-Operator Benchmark kit
 
 ## Getting started
-Locust creates User processes that execute Tasks based on the configuration in the `locustfile.py` file. This allows us to create SparkApplication CRDs at a consistent rate and scale.  
+Locust creates User processes that execute Tasks based on the configuration in the `locustfile.py` file. This allows us to create SparkApplication CRDs at a consistent rate and scale.
 
 ### Install locust
 ```
@@ -12,14 +12,14 @@ pip install -r requirements.txt
 
 ### Run locust
 #### Web UI
-Running locust without parameters will launch a webui at [http://0.0.0.0:8089](http://0.0.0.0:8089):  
+Running locust without parameters will launch a webui at [http://0.0.0.0:8089](http://0.0.0.0:8089):
 ```bash
 locust
 ```
 From there you can configure the parameters in the web form and start the test.
 
 #### Without GUI/Headless
-Providing the `--headless` option disables the webui and instead runs automatically with the default parameters:  
+Providing the `--headless` option disables the webui and instead runs automatically with the default parameters:
 ```bash
 locust --headless --only-summary -u 1 -r 1
 ```
@@ -63,11 +63,11 @@ This runs 6000 jobs over three namespaces ('`spark-team-a`, `spark-team-b`, `spa
   --only-summary        Disable periodic printing of request stats during --headless run
 ```
 
-When determining the load to apply, the number of users and job submission rate are multiplicative. i.e.: 
+When determining the load to apply, the number of users and job submission rate are multiplicative. i.e.:
 ```
 Num Users * Jobs per Min = total submission rate
 ```
-and 
+and
 ```
 Num Users * Jobs Limit = total number of jobs
 ```
@@ -77,7 +77,7 @@ To submit 50 Jobs as fast as possible with a single process:
 ```bash
 locust --headless --only-summary -u 1 -r 1 --jobs-per-min -1 --jobs-limit 50
 ```
-You can increase the rate at which calls are made by increasing the number of users spawned (concurrency). 
+You can increase the rate at which calls are made by increasing the number of users spawned (concurrency).
 ```bash
 locust --headless --only-summary -u 1 -r 1 --jobs-per-min -1 --jobs-limit 50
 ```
@@ -86,7 +86,7 @@ Submit 30 jobs a minute, until 100 jobs are submitted with both of these command
 ```bash
 locust --headless --only-summary -u 1 -r 1 --jobs-per-min 30 --jobs-limit 100
 ```
-or 
+or
 ```bash
 locust --headless --only-summary -u 2 -r 1 --jobs-per-min 15 --jobs-limit 50
 ```
@@ -100,7 +100,7 @@ USERS=1
 RATE=1
 
 sleep 240
-locust --headless --only-summary -u $USERS -r $RATE -t $TIMEOUT --jobs-per-min $JOBS_MIN --jobs-limit $JOBS_LIMIT 2>&1 | tee -a load-test-$(date -u +"%Y-%m-%dT%H:%M:%SZ").log 
+locust --headless --only-summary -u $USERS -r $RATE -t $TIMEOUT --jobs-per-min $JOBS_MIN --jobs-limit $JOBS_LIMIT 2>&1 | tee -a load-test-$(date -u +"%Y-%m-%dT%H:%M:%SZ").log
 
 echo "\n~~~~~~~~~~~~~~~~~~~~~~~Sleeping for 3min to separate tests~~~~~~~~~~~~~~~~~~~~~~\n"
 sleep 240
@@ -113,7 +113,7 @@ sleep 240
 locust --headless --only-summary -u $USERS -r $RATE -t $TIMEOUT --jobs-per-min $JOBS_MIN --jobs-limit $JOBS_LIMIT 2>&1 | tee -a load-test-$(date -u +"%Y-%m-%dT%H:%M:%SZ").log
 ```
 
-to delete all of the nodes in the Spark ASG and start fresh you can run: 
+to delete all of the nodes in the Spark ASG and start fresh you can run:
 ```bash
 for ID in $(aws autoscaling describe-auto-scaling-instances --output text \
 --query "AutoScalingInstances[?AutoScalingGroupName=='eks-spark_benchmark_ebs-20250203215338743800000001-aeca66e7-0385-19a7-a895-d021a5f67933'].InstanceId");
@@ -125,5 +125,3 @@ done
 ## Test Spark Application
 
 Source code and steps to build the the Spark Application used for testing are available [here](./spark-pi-sleep).
-
-
