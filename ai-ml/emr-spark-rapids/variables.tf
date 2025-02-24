@@ -48,3 +48,9 @@ variable "enable_nvidia_gpu_operator" {
   default     = false
   type        = bool
 }
+
+variable "kms_key_admin_roles" {
+  description = "list of role ARNs to add to the KMS policy"
+  type        = list(string)
+  default     = []
+}
