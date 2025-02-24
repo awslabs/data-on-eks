@@ -16,7 +16,7 @@ terraform {
     }
     random = {
       source  = "hashicorp/random"
-      version = "3.1.0" # Replace with the appropriate version of the random provider
+      version = ">= 3.1.0" # Replace with the appropriate version of the random provider
     }
 
     archive = {
