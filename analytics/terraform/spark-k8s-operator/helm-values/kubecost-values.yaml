@@ -58,7 +58,7 @@ forecasting:
   image: public.ecr.aws/kubecost/kubecost-modeling:v0.1.19
 
 networkCosts:
-  # enable networking costs daemonset 
+  # enable networking costs daemonset
   enabled: true
   config:
     services:
