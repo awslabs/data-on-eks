@@ -438,7 +438,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    chart_version       = "2.3.3"
+    chart_version       = "2.6.2"
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
