@@ -9,23 +9,25 @@ The solution implements a scalable ML inference architecture using Amazon EKS, l
 3. Make sure running following command under the llamacpp-rayserve-graviton directory
 
 ## Deployment
-Deploy an elastic Ray service hosting llama 3.2 model on Graviton, remember to edit your hugging face token for env HUGGING_FACE_HUB_TOKEN in the secret of the 'ray-service-llamacpp.yaml' file.
-You can change the model and parameters for inference with llama.cpp, they are configured in [these lines](/gen-ai/inference/llamacpp-rayserve-graviton/ray-service-llamacpp.yaml#L121-L134).
--MODEL_ID is the place to change the hugging_face model repo
--MODEL_FILENAME is is the place to change the model file in a hugging_face repo 
-You may notice the example model used in this blueprint is formatted as GGUF which is optimized for llama.cpp (please refer [this](https://huggingface.co/docs/hub/en/gguf) for more details)
--N_THREADS is the number of threads to use for inference, best practice is to set it as same as the number of vCPU of host EC2 instance for optimized performance.
--CMAKE_ARGS are the C/C++ compile flags when compiling llama.cpp.(please refer [this](https://github.com/aws/aws-graviton-getting-started/blob/main/c-c++.md) for more details about C/C++ compile flags for Graviton)
+Deploy an elastic Ray service hosting llama 3.2 model on Graviton:
 
-After setting up all variables, run this command to create the kubernetes service 
+1. Edit your Hugging Face token for env `HUGGING_FACE_HUB_TOKEN` in the secret section of `ray-service-llamacpp.yaml`
 
+2. Configure model and inference parameters in the yaml file:
+   - `MODEL_ID`: Hugging Face model repository
+   - `MODEL_FILENAME`: Model file name in the Hugging Face repo
+   - `N_THREADS`: Number of threads for inference (recommended: match host EC2 instance vCPU count)
+   - `CMAKE_ARGS`: C/C++ compile flags for llama.cpp on Graviton
+
+> Note: The example model uses GGUF format, optimized for llama.cpp. See [GGUF documentation](https://huggingface.co/docs/hub/en/gguf) for details.
+
+3. Create the Kubernetes service:
 ```bash
 kubectl create -f ray-service-llamacpp.yaml 
 ```
 
-KubeRay will create a Kubernetes service that will accept HTTP traffic for inferencing API. Get the name of the Kubernetes service created, which will be used to route traffic for our benchmark.
-
-```bash
+4.Get the Kubernetes service name:
+```bash   
 kubectl get svc 
 ```
 
