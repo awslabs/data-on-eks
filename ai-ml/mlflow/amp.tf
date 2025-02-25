@@ -1,11 +1,6 @@
 #------------------------------------------
 # Amazon Prometheus
 #------------------------------------------
-locals {
-  amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
-  amp_namespace              = "kube-prometheus-stack"
-}
-
 resource "aws_prometheus_workspace" "amp" {
   count = var.enable_amazon_prometheus ? 1 : 0
 
