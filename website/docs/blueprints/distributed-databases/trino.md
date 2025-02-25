@@ -70,15 +70,14 @@ aws eks update-kubeconfig --name trino-on-eks --region us-west-2
 First, let's verify that we have worker nodes provisioned by Karpenter in the cluster. Let's also see their availability zone and capacity type (on-demand or spot)
 
 ```bash
-kubectl get nodes --selector=karpenter.sh/nodepool=trino-karpenter -L topology.kubernetes.io/zone -L karpenter.sh/capacity-type -L node.kubernetes.io/instance-type
+kubectl get nodes --selector=karpenter.sh/nodepool=trino-sql-karpenter -L topology.kubernetes.io/zone -L karpenter.sh/capacity-type -L node.kubernetes.io/instance-type
 ```
 #### Output
 ```bash
 NAME                                        STATUS   ROLES    AGE   VERSION               ZONE         CAPACITY-TYPE   INSTANCE-TYPE
-ip-10-1-11-131.us-west-2.compute.internal   Ready    <none>   23m   v1.29.0-eks-5e0fdde   us-west-2b   spot            is4gen.2xlarge
 ip-10-1-11-49.us-west-2.compute.internal    Ready    <none>   24m   v1.29.0-eks-5e0fdde   us-west-2b   on-demand       t4g.medium
 ```
-We can see above that Karpenter provisioned on-demand node for running Trino coordinator and spot node for running Trino workers in the same availability zone.
+We can see above that Karpenter provisioned on-demand node for running Trino coordinator.
 :::info
 
 For a distributed Big Data query engine like Trino which runs on a massively parallel processing cluster, it is recommended to deploy the cluster in same availability zone to avoid incurring high Inter-AZ Data Transfer costs. That's why Karpenter NodePool has been configured to launch EKS nodes in same AZ
@@ -94,26 +93,19 @@ kubectl get pods --namespace=trino
 ```bash
 NAME                                 READY   STATUS    RESTARTS   AGE
 trino-coordinator-5cfd685c8f-mchff   1/1     Running   0          37m
-trino-worker-6c896d96d6-kr895        1/1     Running   0          37m
-trino-worker-6c896d96d6-llp9j        1/1     Running   0          37m
-trino-worker-6c896d96d6-zpglv        1/1     Running   0          37m
-```
-Next, we will retrieve the Application Load Balancer DNS fronting Trino service from Ingress object
-
-```bash
-export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
-echo $TRINO_UI_DNS
-```
-#### Output
-```bash
-http://k8s-trino-trinocoo-f64c9587b5-1488329710.us-west-2.elb.amazonaws.com
 ```
 
-Now, lets access the Trino UI by pasting above Load Balancer DNS in a web browser and login with username `admin` in the login window as shown below:
+Next, we will port-forward the trino service so it can be accessed locally
+
+```bash
+kubectl -n trino port-forward service/trino 8080:8080
+```
+
+Now, lets access the Trino UI at `http://localhost:8080` through web browser and login with username `admin` in the login window as shown below:
 
 ![Trino UI Login](./img/trino-ui-login.PNG)
 
-We can see Trino Web UI showing 3 active workers
+Trino Web UI will show 0 active worker:
 
 ![Trino UI](./img/trino-ui.PNG)
 
@@ -141,10 +133,9 @@ You will see some outputs to show progress, and if successful, will see the name
 #### Running the queries
 You should have the Trino CLI installed as part of the prerequisite. The blueprint has the Hive Connector configured with the bucket we set up in the previous section, so you should be able to query the data source without additional settings.
 
-First, port-forward your trino coordinator pod to access it locally:
+First, port-forward your trino service to access it locally, if you have closed the session from previous section:
 ```
-COORDINATOR_POD=$(kubectl get pods -l "app=trino,release=trino,component=coordinator" -o name -n trino)
-kubectl port-forward $COORDINATOR_POD -n trino 8080:8080
+kubectl -n trino port-forward service/trino 8080:8080
 ```
 
 While the port-forward is running, open another terminal tab where you have Trino CLI and run the following command to access the coordinator:
@@ -152,7 +143,7 @@ While the port-forward is running, open another terminal tab where you have Trin
 ./trino http://127.0.0.1:8080 --user admin
 ```
 
-Once successful, you will be able to get a prompt to execute commands. You can use `help` command to see a list of supported commands.
+Once successful, you will be able to get a prompt to execute commands. You can use `help` command to see a list of supported commands.  The first command you run will trigger the auto-scaling of trino workers from 0 to 1, and take a couple minutes to complete.
 
 For example:
 
@@ -240,8 +231,8 @@ echo $BUCKET
 trino-data-bucket-20240215180855515400000001
 ```
 
-- Let’s now create an Iceberg schema with tables populated with data from sf10000 schema tables of [TPCDS](https://trino.io/docs/current/connector/tpcds.html). We will use CREATE TABLE AS SELECT (CTAS) statements. For that, open a new terminal where you have Trino CLI installed and create a SQL file `trino_sf10000_tpcds_to_iceberg.sql` by copying below SQL statements
-##### (Don't forget to replace S3 bucket name for LOCATION below with your bucket from above command):
+- Let’s now create an Iceberg schema with tables populated with data from sf10000 schema tables of [TPCDS](https://trino.io/docs/current/connector/tpcds.html). We will use CREATE TABLE AS SELECT (CTAS) statements. The SQL file `examples/trino_sf10000_tpcds_to_iceberg.sql` has the below SQL statements:
+
 ```bash
 use tpcds.sf10000;
 select * from tpcds.sf10000.item limit 10;
@@ -386,36 +377,34 @@ order by inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean,inv1.cov,inv2.d
 
 - Let's now execute above SQL commands using Trino CLI:
 ```bash
-export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
-./trino --file 'trino_sf10000_tpcds_to_iceberg.sql' --server ${TRINO_UI_DNS} --user admin --ignore-errors
+envsubst < examples/trino_sf10000_tpcds_to_iceberg.sql > examples/iceberg.sql
+./trino --file 'examples/iceberg.sql' --server http://localhost:8080 --user admin --ignore-errors
 ```
 
 - You can see completed and running SQL queries in Trino UI web monitor as below:
 
 ![Trino Queries](./img/trino-queries.PNG)
 
-- Let’s open another terminal and see how Horizontal Pod Autoscaler (HPA) is scaling Trino worker pods, when above SQL commands are running:
+- Let’s open another terminal and see how KEDA is scaling Trino worker pods, when above SQL commands are running:
 ```bash
 kubectl get hpa -n trino -w
 ```
 #### Output
 ```bash
-NAME           REFERENCE                 TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
-trino-worker   Deployment/trino-worker   0%/70%    3         20        3          3d2h
-trino-worker   Deployment/trino-worker   0%/70%    3         20        3          3d2h
-trino-worker   Deployment/trino-worker   170%/70%   3         20        3          3d2h
-trino-worker   Deployment/trino-worker   196%/70%   3         20        6          3d2h
-trino-worker   Deployment/trino-worker   197%/70%   3         20        9          3d2h
-trino-worker   Deployment/trino-worker   197%/70%   3         20        9          3d2h
-trino-worker   Deployment/trino-worker   197%/70%   3         20        9          3d2h
-trino-worker   Deployment/trino-worker   125%/70%   3         20        9          3d2h
-trino-worker   Deployment/trino-worker   43%/70%    3         20        9          3d2h
-trino-worker   Deployment/trino-worker   152%/70%   3         20        9          3d2h
-trino-worker   Deployment/trino-worker   179%/70%   3         20        9          3d2h
+NAME                                REFERENCE                 TARGETS                MINPODS   MAXPODS   REPLICAS   AGE
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   <unknown>/1, <unknown>/1 + 1 more...   1         15        0          37m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 1/1 + 1 more...                   1         15        1          38m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 500m/1 + 1 more...                1         15        1          40m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 0/1 + 1 more...                   1         15        1          40m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 0/1 + 1 more...                   1         15        1          40m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 0/1 + 1 more...                   1         15        1          40m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 0/1 + 1 more...                   1         15        2          41m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 0/1 + 1 more...                   1         15        2          41m
+keda-hpa-keda-scaler-trino-worker   Deployment/trino-worker   0/1, 0/1 + 1 more...                   1         15        2          41m
 ```
-You can see HPA scaling from initial 3 workers to 9 workers running in Trino UI with increasing query load and average cpu utilization of workerss:
+You can see HPA scaling from initial 0 workers to 2 workers with increasing query load and average cpu utilization of workerss:
 
-![Trino Scaling](./img/trino-workers-scaling.PNG)
+![Trino Scaling](./img/trino-workers-scaling.png)
 
 ### Example #3 (Optional): Fault-tolerant execution in Trino
 [Fault-tolerant execution](https://trino.io/docs/current/admin/fault-tolerant-execution.html) is an opt-in mechanism in Trino that was implemented using [Project Tardigrade](https://trino.io/blog/2022/05/05/tardigrade-launch.html#what-is-project-tardigrade). Without fault-tolerant configuration, Trino query fails whenever any of the component tasks of the query fails due to any reason (for example, a worker node failure or termination). These failed queries have to be restarted from scratch resulting in longer execution time, compute wastage, and spend, especially for long-running queries.
@@ -428,7 +417,7 @@ A **TASK retry policy** instructs Trino to retry individual tasks in the event o
 :::
 - This blueprint has deployed Trino cluster with fault-tolerant configuration with a `TASK` retry policy in **`config.properties`** file in coordinator and worker pods. Let's verify that by opening a bash command shell inside coordinator pod:
 ```bash
-COORDINATOR_POD=$(kubectl get pods -l "app=trino,release=trino,component=coordinator" -o name -n trino)
+COORDINATOR_POD=$(kubectl get pods -l "app.kubernetes.io/instance=trino,app.kubernetes.io/component=coordinator" -o name -n trino)
 kubectl exec --stdin --tty $COORDINATOR_POD -n trino -- /bin/bash
 cat /etc/trino/config.properties
 ```
@@ -437,8 +426,8 @@ cat /etc/trino/config.properties
 coordinator=true
 node-scheduler.include-coordinator=false
 http-server.http.port=8080
-query.max-memory=40GB
-query.max-memory-per-node=4GB
+query.max-memory=280GB
+query.max-memory-per-node=22GB
 discovery.uri=http://localhost:8080
 retry-policy=TASK
 exchange.compression-enabled=true
@@ -464,7 +453,7 @@ exit
 ```
 
 With below steps, we will now test fault-tolerant execution by running a `select` query and terminate few Trino workers when query is still running.
-- Let's create a `trino_select_query_iceberg.sql` file in the location where Trino CLI is installed and paste below SQL commands:
+- Find the file `trino_select_query_iceberg.sql` file in the `examples` folder, which contains the SQL commands below:
 ```bash
 with inv as
 (select w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy
@@ -493,8 +482,7 @@ order by inv1.w_warehouse_sk,inv1.i_item_sk,inv1.d_moy,inv1.mean,inv1.cov,inv2.d
 ```
 - Let's now run select query first
 ```bash
-export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
-./trino --file 'trino_select_query_iceberg.sql' --server ${TRINO_UI_DNS} --user admin --ignore-errors
+./trino --file 'examples/trino_select_query_iceberg.sql' --server http://localhost:8080 --user admin --ignore-errors
 ```
 - Immediately after above command, when above query is still running, open another terminal and scale down worker pods to just 1 worker, terminating all other workers with command below:
 ```bash
@@ -522,9 +510,9 @@ Also you can see different number of active workers depending upon worker pods s
 
 1. Let's open Trino CLI
 ```bash
-export TRINO_UI_DNS=$(kubectl describe ingress --namespace=trino | grep Address: | awk '{ print "http://"$2 }')
-./trino --server ${TRINO_UI_DNS} --user admin
+./trino http://127.0.0.1:8080 --user admin
 ```
+
 2. Now, let's delete Iceberg tables and schema by running below SQL commands on Trino CLI:
  ```bash
 drop table iceberg.iceberg_schema.warehouse;
