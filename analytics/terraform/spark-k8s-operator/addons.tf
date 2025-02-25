@@ -368,7 +368,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "2.0.2"
+    version = "2.1.0"
     values = [
       <<-EOT
         spark:
@@ -415,7 +415,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
-    version = "1.6.0"
+    version = "1.6.1"
     values  = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {})]
   }
 
@@ -491,15 +491,19 @@ module "eks_blueprints_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+      most_recent = true
     }
     coredns = {
       preserve = true
+      most_recent = true
     }
     vpc-cni = {
       preserve = true
+      most_recent = true
     }
     kube-proxy = {
       preserve = true
+      most_recent = true
     }
   }
 
@@ -517,7 +521,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_cluster_autoscaler = true
   cluster_autoscaler = {
-    chart_version = "9.43.1"
+    chart_version = "9.46.2"
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = var.region,
       eks_cluster_id = module.eks.cluster_name
@@ -536,7 +540,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "1.0.6"
+    chart_version       = "1.2.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -575,7 +579,7 @@ module "eks_blueprints_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.9.2"
+    chart_version = "1.11.0"
     set = [{
       name  = "enableServiceMutatorWebhook"
       value = "false"
@@ -584,7 +588,7 @@ module "eks_blueprints_addons" {
 
   enable_ingress_nginx = true
   ingress_nginx = {
-    version = "4.11.3"
+    version = "4.12.0"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
@@ -608,7 +612,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "65.5.1"
+    chart_version = "69.5.2"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
