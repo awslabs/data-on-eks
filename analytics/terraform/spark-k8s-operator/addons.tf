@@ -491,18 +491,18 @@ module "eks_blueprints_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      most_recent = true
+      most_recent              = true
     }
     coredns = {
-      preserve = true
+      preserve    = true
       most_recent = true
     }
     vpc-cni = {
-      preserve = true
+      preserve    = true
       most_recent = true
     }
     kube-proxy = {
-      preserve = true
+      preserve    = true
       most_recent = true
     }
   }
