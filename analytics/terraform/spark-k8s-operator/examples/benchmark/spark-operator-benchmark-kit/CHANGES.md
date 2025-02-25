@@ -13,7 +13,7 @@ in `addons.tf`:
 
 ### Run spark-operator and webhook on a dedicated node with Taints/Tolerations
 Spark-operator consumes a lot of CPU, and the system nodes were small by default.
-We reused the `spark_benchmark_ssd` node group in `eks.tf`, updated the instance type and added taints. For our testing we manually scaled this Autoscaling group up and down to accomodate the Spark operator pods.
+We reused the `spark_benchmark_ssd` node group in `eks.tf`, updated the instance type and added taints. For our testing we manually scaled this Autoscaling group up and down to accommodate the Spark operator pods.
 
 **Note**: We also saw the Prometheus server in our cluster failing with OOM events due to the amount of metrics being collected. We moved the prometheus pods to a dedicated node using the same selectors/tolerations and disabled the `"spark-job-monitoring"` scrape config in `helm-values/kube-prometheus.yaml` or `helm-values/kube-prometheus-amp-enable.yaml`
 
