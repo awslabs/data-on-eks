@@ -64,7 +64,7 @@ cd data-on-eks/ai-ml/bionemo
 
 #### Run the install script
 
-Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-west-2` region. Update `variables.tf` to change the region. This is also the time to update any other input variables or make any other changes to the terraform template.
+Use the provided helper script `install.sh` to run the terraform init and apply commands. By default the script deploys EKS cluster to `us-east-1` region. Update `variables.tf` to change the region. This is also the time to update any other input variables or make any other changes to the terraform template.
 
 
 ```bash
@@ -95,12 +95,9 @@ First, lets verify that we have worker nodes running in the cluster.
 kubectl get nodes
 ```
 ```bash
-NAME                                           STATUS   ROLES    AGE   VERSION
-ip-100-64-180-114.us-west-2.compute.internal   Ready    <none>   17m   v1.29.0-eks-5e0fdde
-ip-100-64-19-70.us-west-2.compute.internal     Ready    <none>   16m   v1.29.0-eks-5e0fdde
-ip-100-64-205-93.us-west-2.compute.internal    Ready    <none>   17m   v1.29.0-eks-5e0fdde
-ip-100-64-235-15.us-west-2.compute.internal    Ready    <none>   16m   v1.29.0-eks-5e0fdde
-ip-100-64-34-75.us-west-2.compute.internal     Ready    <none>   17m   v1.29.0-eks-5e0fdde
+NAME                            STATUS   ROLES    AGE   VERSION
+ip-100-64-229-12.ec2.internal   Ready    <none>   20m   v1.30.9-eks-5d632ec
+ip-100-64-89-235.ec2.internal   Ready    <none>   20m   v1.30.9-eks-5d632ec
 ...
 ```
 
@@ -111,42 +108,30 @@ kubectl get pods -A
 ```
 
 ```bash
-NAMESPACE              NAME                                                              READY   STATUS    RESTARTS   AGE
-amazon-cloudwatch      aws-cloudwatch-metrics-4g9dm                                      1/1     Running   0          15m
-amazon-cloudwatch      aws-cloudwatch-metrics-4ktjc                                      1/1     Running   0          15m
-amazon-cloudwatch      aws-cloudwatch-metrics-5hj96                                      1/1     Running   0          15m
-amazon-cloudwatch      aws-cloudwatch-metrics-k84p5                                      1/1     Running   0          15m
-amazon-cloudwatch      aws-cloudwatch-metrics-rkt8f                                      1/1     Running   0          15m
-kube-system            aws-node-4pnpr                                                    2/2     Running   0          15m
-kube-system            aws-node-jrksf                                                    2/2     Running   0          15m
-kube-system            aws-node-lv7vn                                                    2/2     Running   0          15m
-kube-system            aws-node-q7cp9                                                    2/2     Running   0          14m
-kube-system            aws-node-zplq5                                                    2/2     Running   0          14m
-kube-system            coredns-86bd649884-8kwn9                                          1/1     Running   0          15m
-kube-system            coredns-86bd649884-bvltg                                          1/1     Running   0          15m
-kube-system            fsx-csi-controller-85d9ddfbff-7hgmn                               4/4     Running   0          16m
-kube-system            fsx-csi-controller-85d9ddfbff-lp28p                               4/4     Running   0          16m
-kube-system            fsx-csi-node-2tfgq                                                3/3     Running   0          16m
-kube-system            fsx-csi-node-jtdd6                                                3/3     Running   0          16m
-kube-system            fsx-csi-node-kj6tz                                                3/3     Running   0          16m
-kube-system            fsx-csi-node-pwp5x                                                3/3     Running   0          16m
-kube-system            fsx-csi-node-rl59r                                                3/3     Running   0          16m
-kube-system            kube-proxy-5nbms                                                  1/1     Running   0          15m
-kube-system            kube-proxy-dzjxz                                                  1/1     Running   0          15m
-kube-system            kube-proxy-j9bnp                                                  1/1     Running   0          15m
-kube-system            kube-proxy-p8xwq                                                  1/1     Running   0          15m
-kube-system            kube-proxy-pgqbb                                                  1/1     Running   0          15m
-kubeflow               training-operator-64c768746c-l5fbq                                1/1     Running   0          24s
-nvidia-device-plugin   neuron-device-plugin-gpu-feature-discovery-g4xx9                  1/1     Running   0          15m
-nvidia-device-plugin   neuron-device-plugin-gpu-feature-discovery-ggwjm                  1/1     Running   0          15m
-nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-master-68bc46c9dbw8   1/1     Running   0          16m
-nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-6b94s          1/1     Running   0          16m
-nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-7jzsn          1/1     Running   0          16m
-nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-kt9fd          1/1     Running   0          16m
-nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-vlpdp          1/1     Running   0          16m
-nvidia-device-plugin   neuron-device-plugin-node-feature-discovery-worker-wwnk6          1/1     Running   0          16m
-nvidia-device-plugin   neuron-device-plugin-nvidia-device-plugin-mslxx                   1/1     Running   0          15m
-nvidia-device-plugin   neuron-device-plugin-nvidia-device-plugin-phw2j                   1/1     Running   0          15m
+NAMESPACE              NAME                                                              READY   STATUS    RESTARTS      AGE
+amazon-guardduty       aws-guardduty-agent-8tn88                                         1/1     Running   2 (21m ago)   21m
+amazon-guardduty       aws-guardduty-agent-vsdmc                                         1/1     Running   1 (19m ago)   21m
+ingress-nginx          ingress-nginx-controller-6c4dd4ddcc-jz7q4                         1/1     Running   1             19m
+karpenter              karpenter-64db88475b-nwhbz                                        1/1     Running   0             22m
+karpenter              karpenter-64db88475b-qp7np                                        1/1     Running   1 (19m ago)   22m
+kube-system            aws-load-balancer-controller-6bdc9bc5cf-c6snh                     1/1     Running   0             19m
+kube-system            aws-load-balancer-controller-6bdc9bc5cf-p5l5f                     1/1     Running   0             19m
+kube-system            aws-node-92266                                                    2/2     Running   0             19m
+kube-system            aws-node-xmpdc                                                    2/2     Running   0             19m
+kube-system            coredns-6885b74c4d-6vj7d                                          1/1     Running   0             19m
+kube-system            coredns-6885b74c4d-j5h74                                          1/1     Running   0             19m
+kube-system            ebs-csi-controller-759d79666-45jnz                                6/6     Running   0             19m
+kube-system            ebs-csi-controller-759d79666-tsrlz                                6/6     Running   0             19m
+kube-system            ebs-csi-node-tfh2t                                                3/3     Running   0             19m
+kube-system            ebs-csi-node-x2j9n                                                3/3     Running   0             19m
+kube-system            fsx-csi-controller-64dcfcbfcb-qtwmp                               4/4     Running   0             19m
+kube-system            fsx-csi-controller-64dcfcbfcb-zr2qk                               4/4     Running   0             19m
+kube-system            fsx-csi-node-78mc6                                                3/3     Running   0             19m
+kube-system            fsx-csi-node-q7947                                                3/3     Running   0             19m
+kube-system            kube-proxy-f45kr                                                  1/1     Running   0             19m
+kube-system            kube-proxy-ffk5d                                                  1/1     Running   0             19m
+kubeflow               training-operator-66d8d6745f-4nr4r                                1/1     Running   0             58s
+nvidia-device-plugin   nvidia-device-plugin-node-feature-discovery-master-695f7b9gk2s6   1/1     Running   0             19m
 ...
 ```
 :::info
@@ -164,7 +149,7 @@ Once you've ensured that all components are functioning properly, you can procee
 
 The first task, named the `uniref50-job.yaml`, involves downloading and partitioning the data to enhance processing efficiency. This task specifically retrieves the `uniref50 dataset` and organizes it within the FSx for Lustre Filesystem. This structured layout is designed for training, testing, and validation purposes. You can learn more about the uniref dataset [here](https://www.uniprot.org/help/uniref).
 
-To execute this job, navigate to the `examples\training` directory and deploy the `uniref50-job.yaml` manifest using the following commands:
+To execute this job, navigate to the `examples\esm1nv` directory and deploy the `uniref50-job.yaml` manifest using the following commands:
 
 ```bash
 cd examples/training
@@ -226,29 +211,20 @@ kubectl get pods
 
 ```bash
 NAME                           READY   STATUS    RESTARTS   AGE
-esm1nv-pretraining-worker-0    1/1     Running   0          13m
-esm1nv-pretraining-worker-1    1/1     Running   0          13m
-esm1nv-pretraining-worker-10   1/1     Running   0          13m
-esm1nv-pretraining-worker-11   1/1     Running   0          13m
-esm1nv-pretraining-worker-12   1/1     Running   0          13m
-esm1nv-pretraining-worker-13   1/1     Running   0          13m
-esm1nv-pretraining-worker-14   1/1     Running   0          13m
-esm1nv-pretraining-worker-15   1/1     Running   0          13m
-esm1nv-pretraining-worker-2    1/1     Running   0          13m
-esm1nv-pretraining-worker-3    1/1     Running   0          13m
-esm1nv-pretraining-worker-4    1/1     Running   0          13m
-esm1nv-pretraining-worker-5    1/1     Running   0          13m
-esm1nv-pretraining-worker-6    1/1     Running   0          13m
-esm1nv-pretraining-worker-7    1/1     Running   0          13m
-esm1nv-pretraining-worker-8    1/1     Running   0          13m
-esm1nv-pretraining-worker-9    1/1     Running   0          13m
+esm1nv-pretraining-worker-0   1/1     Running   0          11m
+esm1nv-pretraining-worker-1   1/1     Running   0          11m
+esm1nv-pretraining-worker-2   1/1     Running   0          11m
+esm1nv-pretraining-worker-3   1/1     Running   0          11m
+esm1nv-pretraining-worker-4   1/1     Running   0          11m
+esm1nv-pretraining-worker-5   1/1     Running   0          11m
+esm1nv-pretraining-worker-6   1/1     Running   0          11m
+esm1nv-pretraining-worker-7   1/1     Running   0          11m
 ```
 
-We should see 16 pods running. We chose p3.16xlarge instances and each instance has 8 GPUs. In the pod definition we specified each job will leverage 1 gpu.
-Since we set up "nprocPerNode" to "8", each node will be responsible for 8 jobs. Since we have 2 nodes, total of 16 pods will start. For more details around distributed pytorch training see [pytorch docs](https://pytorch.org/docs/stable/distributed.html).
+We should see 8 pods running. In the pod definition we have specified 8 worker replicas with 1 gpu limit for each. Karpenter provisioned 2 g5.12xlarge instance with 4 GPUs each. Since we set up "nprocPerNode" to "4", each node will be responsible for 4 jobs. For more details around distributed pytorch training see [pytorch docs](https://pytorch.org/docs/stable/distributed.html).
 
 :::info
-This training job can run for at least 3-4 days with 2 p3.16xlarge nodes.
+This training job can run for at least 3-4 days with g5.12xlarge nodes.
 :::
 
 This configuration utilizes Kubeflow's PyTorch training Custom Resource Definition (CRD). Within this manifest, various parameters are available for customization. For detailed insights into each parameter and guidance on fine-tuning, you can refer to [BioNeMo's documentation](https://docs.nvidia.com/bionemo-framework/latest/notebooks/model_training_esm1nv.html).
@@ -265,65 +241,29 @@ kubectl logs esm1nv-pretraining-worker-0
 Epoch 0:   7%|▋         | 73017/1017679 [00:38<08:12, 1918.0%
 ```
 
-Additionally, to monitor the usage of the GPUs, you have the option to connect to your nodes through the EC2 console using Session Manager and run `nvidia-smi` command. If you want to have a more robust observability, you can refer to the [DCGM Exporter](https://docs.nvidia.com/datacenter/cloud-native/gpu-telemetry/latest/dcgm-exporter.html).
+Additionally, get a snapshot of the GPU status for a specific worker node by running `nvidia-smi` command inside a Kubernetes pod running in that node. If you want to have a more robust observability, you can refer to the [DCGM Exporter](https://docs.nvidia.com/datacenter/cloud-native/gpu-telemetry/latest/dcgm-exporter.html).
 
 
 ```bash
-sh-4.2$ nvidia-smi
-Thu Mar  7 16:31:01 2024
+kubectl exec esm1nv-pretraining-worker-0 -- nvidia-smi
+Mon Feb 24 18:51:35 2025       
 +---------------------------------------------------------------------------------------+
-| NVIDIA-SMI 535.129.03             Driver Version: 535.129.03   CUDA Version: 12.2     |
+| NVIDIA-SMI 535.230.02             Driver Version: 535.230.02   CUDA Version: 12.2     |
 |-----------------------------------------+----------------------+----------------------+
 | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
 | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
 |                                         |                      |               MIG M. |
 |=========================================+======================+======================|
-|   0  Tesla V100-SXM2-16GB           On  | 00000000:00:17.0 Off |                    0 |
-| N/A   51C    P0              80W / 300W |   3087MiB / 16384MiB |    100%      Default |
+|   0  NVIDIA A10G                    On  | 00000000:00:1E.0 Off |                    0 |
+|  0%   33C    P0             112W / 300W |   3032MiB / 23028MiB |     95%      Default |
 |                                         |                      |                  N/A |
 +-----------------------------------------+----------------------+----------------------+
-|   1  Tesla V100-SXM2-16GB           On  | 00000000:00:18.0 Off |                    0 |
-| N/A   44C    P0              76W / 300W |   3085MiB / 16384MiB |    100%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
-|   2  Tesla V100-SXM2-16GB           On  | 00000000:00:19.0 Off |                    0 |
-| N/A   43C    P0              77W / 300W |   3085MiB / 16384MiB |    100%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
-|   3  Tesla V100-SXM2-16GB           On  | 00000000:00:1A.0 Off |                    0 |
-| N/A   52C    P0              77W / 300W |   3085MiB / 16384MiB |    100%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
-|   4  Tesla V100-SXM2-16GB           On  | 00000000:00:1B.0 Off |                    0 |
-| N/A   49C    P0              79W / 300W |   3085MiB / 16384MiB |    100%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
-|   5  Tesla V100-SXM2-16GB           On  | 00000000:00:1C.0 Off |                    0 |
-| N/A   44C    P0              74W / 300W |   3085MiB / 16384MiB |    100%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
-|   6  Tesla V100-SXM2-16GB           On  | 00000000:00:1D.0 Off |                    0 |
-| N/A   44C    P0              78W / 300W |   3085MiB / 16384MiB |    100%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
-|   7  Tesla V100-SXM2-16GB           On  | 00000000:00:1E.0 Off |                    0 |
-| N/A   50C    P0              79W / 300W |   3085MiB / 16384MiB |    100%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
-
+                                                                                         
 +---------------------------------------------------------------------------------------+
 | Processes:                                                                            |
 |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
 |        ID   ID                                                             Usage      |
 |=======================================================================================|
-|    0   N/A  N/A   1552275      C   /usr/bin/python3                           3084MiB |
-|    1   N/A  N/A   1552277      C   /usr/bin/python3                           3082MiB |
-|    2   N/A  N/A   1552278      C   /usr/bin/python3                           3082MiB |
-|    3   N/A  N/A   1552280      C   /usr/bin/python3                           3082MiB |
-|    4   N/A  N/A   1552279      C   /usr/bin/python3                           3082MiB |
-|    5   N/A  N/A   1552274      C   /usr/bin/python3                           3082MiB |
-|    6   N/A  N/A   1552273      C   /usr/bin/python3                           3082MiB |
-|    7   N/A  N/A   1552276      C   /usr/bin/python3                           3082MiB |
 +---------------------------------------------------------------------------------------+
 ```
 
