@@ -22,8 +22,6 @@ spec:
     # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
   restartPolicy:
     type: Never
-  # 8vCPU / 0.1 = 80 pods per node on m6i.2xlarge
-  # 32GiB / 0.5GiB = 64 pods per node on m6i.2xlarge
   driver:
     cores: 1
     coreRequest: "0.1"
@@ -31,9 +29,9 @@ spec:
     memoryOverhead: 0m
     serviceAccount: spark-team-a
     nodeSelector:
-      NodeGroupType: spark_benchmark_ebs
+      NodeGroupType: spark-operator-benchmark-ng
     tolerations:
-      - key: spark-benchmark
+      - key: spark-operator-benchmark-ng
         operator: Exists
         effect: NoSchedule
   executor:
@@ -43,8 +41,8 @@ spec:
     memory: 256m
     memoryOverhead: 0m
     nodeSelector:
-      NodeGroupType: spark_benchmark_ebs
+      NodeGroupType: spark-operator-benchmark-ng
     tolerations:
-      - key: spark-benchmark
+      - key: spark-operator-benchmark-ng
         operator: Exists
         effect: NoSchedule

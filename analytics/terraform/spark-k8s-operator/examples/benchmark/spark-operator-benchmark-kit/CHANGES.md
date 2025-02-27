@@ -34,7 +34,7 @@ in `eks.tf`:
       # You can change the min_size and desired_size to 6 instances
       # desired_size might not be applied through terrafrom once the node group is created so this needs to be adjusted in AWS Console.
       min_size     = var.spark_benchmark_ssd_min_size # Change min and desired to 6 for running benchmarks
-      max_size     = 8
+      max_size     = 200
       desired_size = var.spark_benchmark_ssd_desired_size # Change min and desired to 6 for running benchmarks
 
       instance_types = ["c5.9xlarge"] # 36vCPU and 72GiB
@@ -90,7 +90,7 @@ in `addons.tf`:
     ...
 ```
 
-### Enable the PodMonitor for Spark Operator
+<!-- ### Enable the PodMonitor for Spark Operator
 In the Spark operator helm config we enabled the PodMonitor object so the kube-prometheus-stack is able to scrape the metrics from the operator.
 
 in `addons.tf` (the spark-operator values)
@@ -118,7 +118,7 @@ in `addons.tf` (the spark-operator values)
       EOT
     ]
   }
-```
+``` -->
 
 This may cause creation issues as there is not an explicit dependency between the spark-operator and the kube-prometheus-stack. The Spark-operator chart may try to create the PodMonitor before the CRD is registered.
 

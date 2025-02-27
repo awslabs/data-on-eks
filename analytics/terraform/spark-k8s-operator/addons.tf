@@ -356,21 +356,93 @@ module "eks_data_addons" {
       EOT
       ]
     }
+    spark-operator-benchmark = {
+      values = [
+        <<-EOT
+      name: spark-operator-benchmark
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-operator-benchmark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["8", "36"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
   }
 
   #---------------------------------------------------------------
   # Spark Operator Add-on
-  # Add this to enable YuniKorn as Default Scheduler
-  #    controller:
-  #      batchScheduler:
-  #        enable: true
-  #        default: "yunikorn"
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
     version = "2.1.0"
+    timeout = "120"
     values = [
       <<-EOT
+        controller:
+          # -- Number of replicas of controller.
+          replicas: 1
+          # -- Reconcile concurrency, higher values might increase memory usage.
+          workers: 10
+          # Change this to True when YuniKorn is deployed
+          batchScheduler:
+            enable: false
+            # default: "yunikorn"
+          nodeSelector:
+            NodeGroupType: spark-operator-benchmark
+          resources:
+            limits:
+              cpu: 33000m
+              memory: 50Gi
+            requests:
+              cpu: 33000m
+              memory: 50Gi
+        webhook:
+          nodeSelector:
+            NodeGroupType: spark-operator-benchmark
+          resources:
+            limits:
+              cpu: 500m
+              memory: 300Mi
+            requests:
+              cpu: 500m
+              memory: 300Mi
         spark:
           # -- List of namespaces where to run spark jobs.
           # If empty string is included, all namespaces will be allowed.
@@ -396,16 +468,16 @@ module "eks_data_addons" {
           # Prometheus pod monitor for controller pods
           # Note: The kube-prometheus-stack addon must deploy before the PodMonitor CRD is available.
           #       This can cause the terraform apply to fail since the addons are deployed in parallel
-          # podMonitor:
-          #   # -- Specifies whether to create pod monitor.
-          #   create: true
-          #   labels: {}
-          #   # -- The label to use to retrieve the job name from
-          #   jobLabel: spark-operator-podmonitor
-          #   # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
-          #   podMetricsEndpoint:
-          #     scheme: http
-          #     interval: 5s
+          podMonitor:
+            # -- Specifies whether to create pod monitor.
+            create: true
+            labels: {}
+            # -- The label to use to retrieve the job name from
+            jobLabel: spark-operator-podmonitor
+            # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
+            podMetricsEndpoint:
+              scheme: http
+              interval: 5s
       EOT
     ]
   }
@@ -457,23 +529,6 @@ module "eks_data_addons" {
 }
 
 #---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.52"
-  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
 # EKS Blueprints Addons
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
@@ -484,49 +539,6 @@ module "eks_blueprints_addons" {
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------
-  eks_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      most_recent              = true
-    }
-    coredns = {
-      preserve    = true
-      most_recent = true
-    }
-    vpc-cni = {
-      preserve    = true
-      most_recent = true
-    }
-    kube-proxy = {
-      preserve    = true
-      most_recent = true
-    }
-  }
-
-  #---------------------------------------
-  # Metrics Server
-  #---------------------------------------
-  enable_metrics_server = true
-  metrics_server = {
-    chart_version = "3.12.2"
-    values        = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
-  }
-
-  #---------------------------------------
-  # Cluster Autoscaler
-  #---------------------------------------
-  enable_cluster_autoscaler = true
-  cluster_autoscaler = {
-    chart_version = "9.46.2"
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = var.region,
-      eks_cluster_id = module.eks.cluster_name
-    })]
-  }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
@@ -543,15 +555,6 @@ module "eks_blueprints_addons" {
     chart_version       = "1.2.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------
-  # CloudWatch metrics for EKS
-  #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics = {
-    chart_version = "0.0.11"
-    values        = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
