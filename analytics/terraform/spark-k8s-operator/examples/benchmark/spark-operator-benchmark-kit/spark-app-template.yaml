@@ -22,6 +22,7 @@ spec:
     # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
   restartPolicy:
     type: Never
+  timeToLiveSeconds: 60  # Time to live for the pod after completion (in seconds)
   driver:
     cores: 1
     coreRequest: "0.1"

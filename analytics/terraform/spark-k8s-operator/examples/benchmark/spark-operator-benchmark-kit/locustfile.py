@@ -23,7 +23,7 @@ class Configuration:
         self.template_path= parsed.spark_template
         self.name_prefix = parsed.spark_name_prefix
         self.name_suffix_length = parsed.spark_name_length
-        self.max_jobs = parsed.job_limit
+        self.max_jobs = parsed.job_limit_per_user
         self.max_failures = parsed.jobs_max_failures
         self.submission_rate = parsed.jobs_per_min
         self.namespaces = parsed.spark_namespaces.split(",")
@@ -85,7 +85,7 @@ def on_parser_init(parser):
         default=8
     )
     parser.add_argument(
-        "--job-limit",
+        "--job-limit-per-user",
         type=int,
         help="Maximum number of applications to submit per user",
         env_var="LOAD_TEST_JOB_SIZE",
@@ -232,9 +232,10 @@ class SparkLoadTest(HttpUser):
             self.environment.runner.quit()
             return
 
-        if self.application_count >= self.config.max_jobs - 1:
+        if self.application_count >= self.config.max_jobs:
             self.logger.info("Maximum job count reached")
             self.stop()
+            return
 
         submission_start_time = time.time()
         batch_failures = 0
