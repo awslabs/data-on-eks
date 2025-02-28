@@ -13,7 +13,7 @@ variable "region" {
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   type        = string
-  default     = "1.29"
+  default     = "1.31"
 }
 
 variable "tags" {
@@ -47,4 +47,10 @@ variable "enable_nvidia_gpu_operator" {
   description = "Enable NVIDIA GPU Operator"
   default     = false
   type        = bool
+}
+
+variable "kms_key_admin_roles" {
+  description = "list of role ARNs to add to the KMS policy"
+  type        = list(string)
+  default     = []
 }
