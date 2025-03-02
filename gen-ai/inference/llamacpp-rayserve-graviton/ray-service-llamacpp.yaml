@@ -25,15 +25,15 @@ data:
     app = FastAPI()
 
     @serve.deployment(
-        name="LLamaCPPDeployment", 
-        ray_actor_options={"num_cpus": 29}, 
+        name="LLamaCPPDeployment",
+        ray_actor_options={"num_cpus": 29},
         autoscaling_config={
-            "min_replicas": 10, 
-            "max_replicas": 10, 
-            "initial_replicas": 10, 
+            "min_replicas": 10,
+            "max_replicas": 10,
+            "initial_replicas": 10,
             "upscale_delay_s": 5
-        }, 
-        max_ongoing_requests=100, 
+        },
+        max_ongoing_requests=100,
         graceful_shutdown_timeout_s=600
     )
     @serve.ingress(app)
@@ -63,7 +63,7 @@ data:
                         if message.get("role") == "user":
                             prompt = message.get("content", "")
                             break
-                
+
                 if not prompt:
                     return JSONResponse(
                         status_code=400,
@@ -73,8 +73,8 @@ data:
                 output = self.llm(
                     "Q: " + prompt + " A: ",
                     max_tokens=body.get("max_tokens", 32)
-                )        
-                
+                )
+
                 return JSONResponse(content={
                     "id": "cmpl-" + os.urandom(12).hex(),
                     "object": "text_completion",
@@ -91,7 +91,7 @@ data:
                         "total_tokens": len(prompt.split()) + len(output["choices"][0]["text"].split())
                     }
                 })
-                
+
             except Exception as e:
                 logger.error(f"Error: {str(e)}")
                 return JSONResponse(
@@ -121,17 +121,17 @@ spec:
         pip: ["llama_cpp_python", "transformers"]
         env_vars:
           LD_LIBRARY_PATH: "/home/ray/anaconda3/lib:$LD_LIBRARY_PATH"
-          MODEL_ID: "bartowski/Llama-3.2-1B-Instruct-GGUF" 
+          MODEL_ID: "bartowski/Llama-3.2-1B-Instruct-GGUF"
           MODEL_FILENAME: "Llama-3.2-1B-Instruct-Q4_0.gguf"
           N_CTX: "0"
           N_THREADS : "16"
           FORCE_CMAKE: "1"
           CMAKE_ARGS: "-DCMAKE_CXX_FLAGS='-mcpu=native -fopenmp' -DCMAKE_C_FLAGS='-mcpu=native -fopenmp'"
-          CMAKE_CXX_COMPILER: "/usr/bin/g++"  
-          CMAKE_C_COMPILER: "/usr/bin/gcc"  
-          CXX: "/usr/bin/g++"  
-          CC: "/usr/bin/gcc" 
-          PYTHONPATH: "/home/ray/anaconda3/lib/python3.11/site-packages:$PYTHONPATH" 
+          CMAKE_CXX_COMPILER: "/usr/bin/g++"
+          CMAKE_C_COMPILER: "/usr/bin/gcc"
+          CXX: "/usr/bin/g++"
+          CC: "/usr/bin/gcc"
+          PYTHONPATH: "/home/ray/anaconda3/lib/python3.11/site-packages:$PYTHONPATH"
   rayClusterConfig:
     rayVersion: '2.33.0'
     enableInTreeAutoscaling: true
@@ -154,7 +154,7 @@ spec:
                   - key: kubernetes.io/arch
                     operator: In
                     values:
-                    - arm64           
+                    - arm64
           restartPolicy: Always
           containers:
           - name: ray-head
@@ -188,7 +188,7 @@ spec:
             - name: RAY_enable_autoscaler_v2
               value: "1"
             - name: RAY_num_heartbeats_timeout
-              value: "300" 
+              value: "300"
           volumes:
               - name: app-code
                 configMap:
@@ -198,7 +198,7 @@ spec:
       minReplicas: 10
       maxReplicas: 10
       groupName: cpu-group
-      rayStartParams: 
+      rayStartParams:
         num-cpus: "29"
       template:
         spec:
@@ -212,7 +212,7 @@ spec:
                   - key: kubernetes.io/arch
                     operator: In
                     values:
-                    - arm64           
+                    - arm64
           restartPolicy: Always
           containers:
           - name: llm
@@ -220,7 +220,7 @@ spec:
             volumeMounts:
               - name: app-code
                 mountPath: /home/ray/app.py
-                subPath: app.py           
+                subPath: app.py
             env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
@@ -228,21 +228,21 @@ spec:
                   name: token
                   key: token
             - name: CMAKE_ARGS
-              value: "-DCMAKE_CXX_FLAGS=-fopenmp"  
+              value: "-DCMAKE_CXX_FLAGS=-fopenmp"
             - name: "CC"
-              value: "/usr/bin/gcc"   
+              value: "/usr/bin/gcc"
             - name: "CXX"
-              value: "/usr/bin/g++"   
+              value: "/usr/bin/g++"
             - name: CMAKE_CXX_COMPILER
-              value: "/usr/bin/g++"  
+              value: "/usr/bin/g++"
             - name: CMAKE_C_COMPILER
-              value: "/usr/bin/gcc" 
+              value: "/usr/bin/gcc"
             - name: PYTHONPATH
-              value: "/home/ray/anaconda3/lib/python3.11/site-packages:$PYTHONPATH" 
+              value: "/home/ray/anaconda3/lib/python3.11/site-packages:$PYTHONPATH"
             resources:
               limits:
                 cpu: "30"
-                memory: "55Gi"        
+                memory: "55Gi"
               requests:
                 cpu: "30"
                 memory: "55Gi"
