@@ -419,30 +419,27 @@ module "eks_data_addons" {
           # -- Number of replicas of controller.
           replicas: 1
           # -- Reconcile concurrency, higher values might increase memory usage.
-          workers: 10
-          # Change this to True when YuniKorn is deployed
+          # -- Increased from 10 to 20 to leverage more cores from the instance
+          workers: 20
+          # -- Change this to True when YuniKorn is deployed
           batchScheduler:
             enable: false
             # default: "yunikorn"
-          nodeSelector:
-            NodeGroupType: spark-operator-benchmark
-          resources:
-            limits:
-              cpu: 33000m
-              memory: 50Gi
-            requests:
-              cpu: 33000m
-              memory: 50Gi
-        webhook:
-          nodeSelector:
-            NodeGroupType: spark-operator-benchmark
-          resources:
-            limits:
-              cpu: 500m
-              memory: 300Mi
-            requests:
-              cpu: 500m
-              memory: 300Mi
+        #   -- Uncomment this for Spark Operator scale test
+        #   -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
+        #   nodeSelector:
+        #     NodeGroupType: spark-operator-benchmark
+        #   resources:
+        #     requests:
+        #       cpu: 33000m
+        #       memory: 50Gi
+        # webhook:
+        #   nodeSelector:
+        #     NodeGroupType: spark-operator-benchmark
+        #   resources:
+        #     requests:
+        #       cpu: 1000m
+        #       memory: 10Gi
         spark:
           # -- List of namespaces where to run spark jobs.
           # If empty string is included, all namespaces will be allowed.

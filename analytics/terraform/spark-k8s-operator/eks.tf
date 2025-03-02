@@ -246,11 +246,26 @@ module "eks" {
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      ami_type = "AL2023_x86_64_STANDARD" # "AL2023_ARM_64_STANDARD" arm64
+      ami_type = "AL2023_x86_64_STANDARD"
 
-      min_size     = 1
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content      = <<-EOT
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              kubelet:
+                config:
+                  maxPods: 220
+          EOT
+        }
+      ]
+
+      min_size     = 0
       max_size     = 200
-      desired_size = 1
+      desired_size = 0
 
       instance_types = ["m6a.4xlarge"]
 
