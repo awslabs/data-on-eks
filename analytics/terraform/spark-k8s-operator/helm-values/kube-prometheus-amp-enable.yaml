@@ -33,8 +33,8 @@ prometheus:
     probeSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
-    # Scrape Cost metrics for Karpenter and Yunikorn add-ons
     additionalScrapeConfigs:
+      # Scrape metrics for Yunikorn
       - job_name: yunikorn
         honor_labels: true
         scrape_interval: 15s
@@ -46,6 +46,7 @@ prometheus:
               - yunikorn-service.yunikorn.svc
             type: 'A'
             port: 9080
+      # Scrape metrics for Karpenter
       - job_name: karpenter
         kubernetes_sd_configs:
         - role: endpoints
@@ -58,6 +59,7 @@ prometheus:
           - __meta_kubernetes_endpoint_port_name
           action: keep
           regex: karpenter;http-metrics
+      # Additional EKS Control plane metrics
   # Monitors for Spark Jobs
   additionalPodMonitors:
     - name: "spark-job-monitoring"
