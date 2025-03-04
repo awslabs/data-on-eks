@@ -26,8 +26,6 @@ AIBrix is an open-source initiative designed to provide essential building block
 Before deploying this blueprint, it is important to be cognizant of the costs associated with the utilization of GPU Instances.
 :::
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/emr-spark-rapids), you will provision the following resources required to run AIBrix and a deepseek distill model.
-
 This example deploys the following resources
 
 - Creates a new sample VPC, 2 Private Subnets and 2 Public Subnets
@@ -61,6 +59,7 @@ Navigate into one of the example directories and run `install.sh` script
 ```bash
 cd data-on-eks/ai-ml/aibrix/ && chmod +x install.sh
 ./install.sh
+cd ..
 ```
 
 ### Verify the resources
