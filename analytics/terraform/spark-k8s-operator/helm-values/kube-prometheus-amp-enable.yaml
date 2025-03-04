@@ -1,4 +1,9 @@
 prometheus:
+  # The ClusterRole for Prometheus needs additional permissions for the EKS scheduler/controller metrics https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+  additionalRulesForClusterRole:
+  - apiGroups: [ "metrics.eks.amazonaws.com" ]
+    resources: [ "kcm/metrics", "ksh/metrics" ]
+    verbs: [ "get" ]
   serviceAccount:
     create: true
     name: ${amp_sa}
@@ -60,6 +65,45 @@ prometheus:
           action: keep
           regex: karpenter;http-metrics
       # Additional EKS Control plane metrics
+      # NOTE: you will need to patch the service account for prometheus as described here:  https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+      # Scheduler metrics
+      - job_name: 'ksh-metrics'
+        kubernetes_sd_configs:
+        - role: endpoints
+        metrics_path: /apis/metrics.eks.amazonaws.com/v1/ksh/container/metrics
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels:
+            [
+              __meta_kubernetes_namespace,
+              __meta_kubernetes_service_name,
+              __meta_kubernetes_endpoint_port_name,
+            ]
+          action: keep
+          regex: default;kubernetes;https
+      # Controller Manager metrics
+      - job_name: 'kcm-metrics'
+        kubernetes_sd_configs:
+        - role: endpoints
+        metrics_path: /apis/metrics.eks.amazonaws.com/v1/kcm/container/metrics
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels:
+            [
+              __meta_kubernetes_namespace,
+              __meta_kubernetes_service_name,
+              __meta_kubernetes_endpoint_port_name,
+            ]
+          action: keep
+          regex: default;kubernetes;https
   # Monitors for Spark Jobs
   additionalPodMonitors:
     - name: "spark-job-monitoring"
