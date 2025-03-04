@@ -26,7 +26,7 @@ AIBrix is an open-source initiative designed to provide essential building block
 Before deploying this blueprint, it is important to be cognizant of the costs associated with the utilization of GPU Instances.
 :::
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/emr-spark-rapids), you will provision the following resources required to run XGBoost Spark RAPIDS Accelerator job with [Fannie Mae’s Single-Family Loan Performance Data](https://capitalmarkets.fanniemae.com/credit-risk-transfer/single-family-credit-risk-transfer/fannie-mae-single-family-loan-performance-data).
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/emr-spark-rapids), you will provision the following resources required to run AIBrix and a deepseek distill model.
 
 This example deploys the following resources
 
