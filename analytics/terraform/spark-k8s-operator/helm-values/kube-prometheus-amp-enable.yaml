@@ -173,3 +173,5 @@ grafana:
         url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
       spark-job-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/emr-eks-karpenter/emr-grafana-dashboard/emr-eks-grafana-dashboard.json
+      spark-operator-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/kubeflow-spark-operator-dashboard.json
