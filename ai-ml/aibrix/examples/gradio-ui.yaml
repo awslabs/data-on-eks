@@ -68,13 +68,13 @@ data:
     import os
     import gradio as gr
     from openai import OpenAI
-    
-    
+
+
     client = OpenAI(
     base_url="http://envoy-aibrix-system-aibrix-eg-903790dc.envoy-gateway-system.svc.cluster.local/v1/",
     api_key="dummy"
     )
-    
+
     def predict(message, history,model):
       history.append({"role": "user", "content": message})
       try:
@@ -82,7 +82,7 @@ data:
         return completion.choices[0].message.content
       except Exception as e:
           return f"Error in generating chat completion: {str(e)}"
-    
+
     model_prompt = gr.Textbox("deepseek-r1-distill-llama-8b", label="Model Name")
     demo = gr.ChatInterface(predict, type="messages",additional_inputs=[model_prompt])
     demo.launch()

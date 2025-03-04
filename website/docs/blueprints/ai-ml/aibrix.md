@@ -23,7 +23,7 @@ AIBrix is an open-source initiative designed to provide essential building block
 <CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
 :::warning
-Before deploying this blueprint, it is important to be cognizant of the costs associated with the utilization of GPU Instances. 
+Before deploying this blueprint, it is important to be cognizant of the costs associated with the utilization of GPU Instances.
 :::
 
 In this [example](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/emr-spark-rapids), you will provision the following resources required to run XGBoost Spark RAPIDS Accelerator job with [Fannie Mae’s Single-Family Loan Performance Data](https://capitalmarkets.fanniemae.com/credit-risk-transfer/single-family-credit-risk-transfer/fannie-mae-single-family-loan-performance-data).
@@ -109,7 +109,7 @@ We will now run Deepseek-Distill-llama-8b model using AIBrix on EKS.
 Please run the below command. if you want to run the model on inferentia accelerator, please use deepseek-distill-neuron.yaml file for the below command.
 
 ```bash
-kubectl apply -f examples/deepseek-distill.yaml 
+kubectl apply -f examples/deepseek-distill.yaml
 ```
 
 This will deploy the model on deepseek-aibrix namespace. Wait for few minutes and run
