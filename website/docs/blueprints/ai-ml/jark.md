@@ -11,7 +11,7 @@ Deployment of ML models on EKS requires access to GPUs or Neuron instances. If y
 :::
 
 :::info
-These instructions only deploy the JARK cluster as a base. If you are looking to deploy specific models for inference or training, please refer to this [Gen AI](https://awslabs.github.io/data-on-eks/docs/gen-ai) page for end-to-end instructions.
+These instructions only deploy the JARK cluster as a base. If you are looking to deploy specific models for inference or training, please refer to this [AI](https://awslabs.github.io/data-on-eks/docs/ai) page for end-to-end instructions.
 :::
 
 ### What is JARK?
@@ -158,7 +158,7 @@ nvidia-device-plugin   nvidia-device-plugin-node-feature-discovery-master   1/1 
 
 :::info
 
-Please refer to [Gen AI](https://awslabs.github.io/data-on-eks/docs/gen-ai) page for deploying Gen AI models on EKS.
+Please refer to [AI](https://awslabs.github.io/data-on-eks/docs/ai) page for deploying AI models on EKS.
 
 :::
 
