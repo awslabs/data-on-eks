@@ -102,7 +102,7 @@ For example, set your `export AWS_DEFAULT_REGION="<REGION>"` to the desired regi
 
 
 ```bash
-cd data-on-eks/ai-ml/jark-stack/terraform && chmod +x install.sh
+cd data-on-eks/ai-ml/jark-stack && chmod +x install.sh
 ./install.sh
 ```
 
@@ -142,7 +142,9 @@ kuberay-operator-7b5c85998-vfsjr   1/1     Running   1 (1h37m ago)   1h
 
 ```bash
 kubectl get deployments -A
+```
 
+```bash
 NAMESPACE              NAME                                                 READY   UP-TO-DATE   AVAILABLE   AGE
 ingress-nginx          ingress-nginx-controller                             1/1     1            1           36h
 jupyterhub             hub                                                  1/1     1            1           36h
