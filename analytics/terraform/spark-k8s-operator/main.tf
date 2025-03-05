@@ -114,6 +114,7 @@ data "aws_iam_policy_document" "s3tables_policy" {
       "s3tables:DeleteTableBucket",
       "s3tables:CreateNamespace",
       "s3tables:ListNamespaces",
+      "s3tables:ListTableBuckets",
       "s3tables:GetTableBucket",
       "s3tables:DeleteNamespace",
       "s3tables:GetTableBucketMaintenanceConfiguration",
