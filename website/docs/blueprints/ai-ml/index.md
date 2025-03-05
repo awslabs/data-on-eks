@@ -32,7 +32,7 @@ By choosing Amazon EKS, you gain access to a robust infrastructure that can hand
 
 ## Deploying Generative AI Models on Amazon EKS
 
-Deploying an AI stack on EKS starts with infrastructure. 
+Deploying an AI stack on EKS starts with infrastructure.
 
 - **Reference AI Stack**: [JARK stack blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark). This blueprint provides a customizable environment on which to build an AI platform.
 - **NVIDIA Spark RAPIDS**: For Spark on GPU workloads, refer to the [NVIDIA Spark RAPIDS blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/emr-spark-rapids).

@@ -16,7 +16,7 @@ Before we dive in, let's take a look at the tools available in the environment:
 ## [Infrastructure](https://awslabs.github.io/data-on-eks/docs/category/infrastructure)
 At its core, AIoEKS is a set of modules that can be composed to create the environment in which you want to work. We have some blueprints that will enable you to quickly start using the environment for either experimentation, training or inference. We intend to add more as they come up, but we also enable you to compose the environment however you would like. This allows you to build the environment you want to use on EKS.
 
-If you're ready to deploy your first EKS cluster, check out the infrastructure section. 
+If you're ready to deploy your EKS cluster, check out the infrastructure section. 
 
 ## [Training](https://awslabs.github.io/data-on-eks/docs/category/training-on-eks)
 Training in the generative AI world involves teaching a model to understand and generate human-like text by learning from vast amounts of data. This process is crucial as it forms the foundation upon which models like BERT-Large and Llama2 are built, enabling them to perform a wide range of tasks such as text summarization, translation, and more. Effective training ensures that the model can understand complex patterns and generate coherent, contextually appropriate responses.
