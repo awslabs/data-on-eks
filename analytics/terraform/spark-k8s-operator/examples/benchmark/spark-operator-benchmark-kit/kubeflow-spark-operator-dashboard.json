@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 45,
+  "id": 44,
   "links": [],
   "panels": [
     {
@@ -341,8 +341,7 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "scheduled-spark-application-controller",
-                  "scheduled-spark-application-controller",
+                  "spark-application-controller",
                   "spark-application-controller"
                 ],
                 "prefix": "All except:",
@@ -721,7 +720,7 @@
         "type": "prometheus",
         "uid": "${DATA_SOURCE}"
       },
-      "description": "Work items Work Duration in P99 and P90 and P50 percentiles",
+      "description": "How long in seconds processing an item from workqueue takes, broken down by percentiles 99%, 90%, and 50%",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -810,7 +809,7 @@
             "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99,max(rate(workqueue_work_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
+          "expr": "histogram_quantile(0.99,sum(rate(workqueue_work_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
           "instant": false,
           "legendFormat": "{{name}} P99",
           "range": true,
@@ -822,7 +821,7 @@
             "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90,max(rate(workqueue_work_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
+          "expr": "histogram_quantile(0.90,sum(rate(workqueue_work_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
           "hide": false,
           "instant": false,
           "legendFormat": "{{name}} P90",
@@ -835,7 +834,7 @@
             "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50,max(rate(workqueue_work_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
+          "expr": "histogram_quantile(0.50,sum(rate(workqueue_work_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
           "hide": false,
           "instant": false,
           "legendFormat": "{{name}} P50",
@@ -851,7 +850,7 @@
         "type": "prometheus",
         "uid": "${DATA_SOURCE}"
       },
-      "description": "Work items Queue Duration in P99 and P90 and P50 percentiles",
+      "description": "How long in seconds an item stays in workqueue before being requested in percentiles 99%, 95%, and 50%",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -940,9 +939,9 @@
             "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99,max(rate(workqueue_queue_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
+          "expr": "histogram_quantile(0.99,sum(rate(workqueue_queue_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
           "instant": false,
-          "legendFormat": "{{name}} P99",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         },
@@ -952,7 +951,7 @@
             "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90,max(rate(workqueue_queue_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
+          "expr": "histogram_quantile(0.90,sum(rate(workqueue_queue_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
           "hide": false,
           "instant": false,
           "legendFormat": "{{name}} P90",
@@ -965,7 +964,7 @@
             "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50,max(rate(workqueue_queue_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
+          "expr": "histogram_quantile(0.50,sum(rate(workqueue_queue_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
           "hide": false,
           "instant": false,
           "legendFormat": "{{name}} P50",
@@ -981,7 +980,7 @@
         "type": "prometheus",
         "uid": "${DATA_SOURCE}"
       },
-      "description": "Work Queue Total Retries",
+      "description": "Total number of retries handled by work queue.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1083,7 +1082,7 @@
         "type": "prometheus",
         "uid": "${DATA_SOURCE}"
       },
-      "description": "Longest Running Controller Thread",
+      "description": "How many seconds has the longest running processor for workqueue been running.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1181,16 +1180,15 @@
           "refId": "A"
         }
       ],
-      "title": "Longest Running Controller Thread",
+      "title": "Work Queue - Longest Running Controller Thread",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "Unfinished Work in Seconds",
+      "description": "How many seconds of work has been done that is in progress and hasn’t been observed by work_duration. Large values indicate stuck threads.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1274,7 +1272,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "expr": "sum(increase(workqueue_unfinished_work_seconds{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name) > 0",
@@ -1285,7 +1283,7 @@
           "refId": "A"
         }
       ],
-      "title": "Unfinished Work",
+      "title": "Work Queue - Unfinished Work",
       "type": "timeseries"
     },
     {
@@ -1303,11 +1301,10 @@
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "Start Latency Percentiles",
+      "description": "Start latency of SparkApplication, broken down by percentiles 99%, 90%, and 50%",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1339,7 +1336,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "always",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1363,12 +1360,13 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
         "x": 0,
         "y": 34
@@ -1378,7 +1376,7 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "right",
+          "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
@@ -1392,74 +1390,61 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "histogram_quantile(0.99, sum(rate(spark_application_start_latency_seconds_histogram_bucket{container=\"spark-operator-controller\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(spark_application_start_latency_seconds_histogram_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (pod,le))",
           "format": "time_series",
           "instant": false,
           "interval": "",
-          "legendFormat": "P99",
+          "legendFormat": "{{pod}} P99",
           "range": true,
           "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(spark_application_start_latency_seconds_histogram_bucket{container=\"spark-operator-controller\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(spark_application_start_latency_seconds_histogram_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (pod,le))",
           "format": "time_series",
           "hide": false,
           "instant": false,
-          "legendFormat": "P95",
+          "legendFormat": "{{pod}} P90",
           "range": true,
           "refId": "B"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(spark_application_start_latency_seconds_histogram_bucket{container=\"spark-operator-controller\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(spark_application_start_latency_seconds_histogram_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (pod,le))",
           "hide": false,
           "instant": false,
-          "legendFormat": "P50",
+          "legendFormat": "{{pod}} P50",
           "range": true,
           "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "D"
         }
       ],
-      "title": "Start Latency Percentiles (in sec)",
+      "title": "Start Latency Percentiles",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "Spark Jobs (Submitted and Running)",
+      "description": "Counters for spark jobs, these are cumulative over the lifetime of the spark-operator pod",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "continuous-GrYlRd"
           },
+          "fieldMinMax": false,
           "mappings": [],
           "noValue": "0",
           "thresholds": {
@@ -1475,7 +1460,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
         "x": 8,
         "y": 34
@@ -1494,17 +1479,20 @@
         },
         "showThresholdLabels": false,
         "showThresholdMarkers": false,
-        "sizing": "auto"
+        "sizing": "auto",
+        "text": {
+          "titleSize": 12
+        }
       },
       "pluginVersion": "11.5.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "spark_application_count",
+          "expr": "sum(spark_application_count) by (pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "Total Spark Jobs Created",
@@ -1514,10 +1502,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "spark_application_failure_count",
+          "expr": "sum(spark_application_failure_count) by (pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "Total Failed Spark Jobs",
@@ -1527,10 +1515,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "spark_application_success_count",
+          "expr": "sum(spark_application_success_count) by (pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "Total Succesful Spark Jobs",
@@ -1540,10 +1528,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "spark_application_running_count",
+          "expr": "sum(spark_application_running_count) by (pod)",
           "instant": false,
           "legendFormat": "Spark Jobs Running",
           "range": true,
@@ -1552,16 +1540,16 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(increase(spark_application_submit_count[1m]))",
+          "expr": "sum(increase(spark_application_submit_count[5m])) by (pod)",
           "format": "time_series",
           "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "Total Number of Submitted Jobs in last 1 minute",
+          "legendFormat": "Jobs Submitted in Last 5min",
           "range": true,
           "refId": "B"
         }
@@ -1571,11 +1559,10 @@
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "Spark Executor Health",
+      "description": "Total number of successful and failed executors",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1593,57 +1580,61 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
+        "h": 8,
+        "w": 4,
         "x": 16,
         "y": 34
       },
       "id": 18,
+      "maxPerRow": 2,
       "options": {
         "displayLabels": [
           "percent"
         ],
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "right",
-          "showLegend": false,
-          "values": []
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "values": [
+            "value"
+          ]
         },
         "pieType": "pie",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "max"
           ],
           "fields": "",
           "values": false
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
       "pluginVersion": "11.5.2",
+      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "exemplar": false,
           "expr": "sum(spark_executor_success_count)",
           "format": "time_series",
           "instant": false,
-          "legendFormat": "Executors Running Count",
+          "legendFormat": "Executor Success Count",
           "range": true,
           "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1662,11 +1653,213 @@
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "Spark Job Success Rate Percentage",
+      "description": "Total number of SparkApplication spark-submitted by the Operator ",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "light-blue",
+            "mode": "shades"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 20,
+        "y": 34
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DATA_SOURCE}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(spark_application_submit_count[1m])) by (pod)",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Spark-submit rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DATA_SOURCE}"
+      },
+      "description": "Percentage of Spark jobs with Running status out of the total submitted jobs.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "shades"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 42
+      },
+      "id": 45,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DATA_SOURCE}"
+          },
+          "editorMode": "code",
+          "expr": "sum(spark_application_running_count) / sum(spark_application_submit_count) ",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "% of Jobs Running",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Job Running Rate ",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DATA_SOURCE}"
+      },
+      "description": "Percentage of Spark jobs with Success status out of the total submitted jobs.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1719,15 +1912,16 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 8,
-        "x": 0,
-        "y": 40
+        "x": 8,
+        "y": 42
       },
       "id": 16,
       "options": {
@@ -1748,14 +1942,14 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(spark_application_success_count[5m]))) / (sum(rate(spark_application_submit_count[5m]))) * 100",
+          "expr": "sum(spark_application_success_count) / sum(spark_application_submit_count) ",
           "format": "time_series",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "% of Jobs completed Successfully",
           "range": true,
           "refId": "A"
         }
@@ -1765,113 +1959,14 @@
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "Spark Job Failure Rate Percentage",
+      "description": "Percentage of Spark jobs with Failed status out of the total submitted jobs.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "semi-dark-red",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "hue",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 40
-      },
-      "id": 17,
-      "options": {
-        "barRadius": 0,
-        "barWidth": 0.27,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "orientation": "vertical",
-        "showValue": "always",
-        "stacking": "none",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 200
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "(sum(rate(spark_application_failure_count[5m]))) / (sum(rate(spark_application_submit_count[5m]))) * 100",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Job Failure Rate ",
-      "type": "barchart"
-    },
-    {
-      "datasource": {
-        "default": true,
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Job Failure Trend",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "semi-dark-red",
+            "fixedColor": "red",
             "mode": "shades"
           },
           "custom": {
@@ -1884,20 +1979,20 @@
             "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
-            "gradientMode": "hue",
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "always",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1920,23 +2015,24 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 8,
         "x": 16,
-        "y": 40
+        "y": 42
       },
-      "id": 20,
+      "id": 17,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
@@ -1949,17 +2045,18 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(spark_application_failure_count[5m]))",
+          "expr": "sum(spark_application_failure_count) / sum(spark_application_submit_count) ",
+          "hide": false,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "% of Jobs Failed",
           "range": true,
-          "refId": "A"
+          "refId": "B"
         }
       ],
-      "title": "Job Failure Trend",
+      "title": "Job Failure Rate ",
       "type": "timeseries"
     },
     {
@@ -1968,7 +2065,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 49
       },
       "id": 21,
       "panels": [],
@@ -2041,7 +2138,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 47
+        "y": 50
       },
       "id": 24,
       "options": {
@@ -2142,7 +2239,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 47
+        "y": 50
       },
       "id": 23,
       "options": {
@@ -2243,7 +2340,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 47
+        "y": 50
       },
       "id": 27,
       "options": {
@@ -2356,7 +2453,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 53
+        "y": 56
       },
       "id": 25,
       "options": {
@@ -2456,7 +2553,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 53
+        "y": 56
       },
       "id": 22,
       "options": {
@@ -2555,7 +2652,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 53
+        "y": 56
       },
       "id": 39,
       "options": {
@@ -2654,7 +2751,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 59
+        "y": 62
       },
       "id": 41,
       "options": {
@@ -2753,7 +2850,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 59
+        "y": 62
       },
       "id": 40,
       "options": {
@@ -2796,8 +2893,8 @@
     "list": [
       {
         "current": {
-          "text": "Prometheus",
-          "value": "prometheus"
+          "text": "AMP",
+          "value": "PD476F800710936AE"
         },
         "description": "Prometheus data source to use for dashboard",
         "label": "Data Source",
@@ -2811,13 +2908,13 @@
     ]
   },
   "time": {
-    "from": "2025-03-04T19:13:15.760Z",
-    "to": "2025-03-04T21:11:29.099Z"
+    "from": "2025-03-04T15:58:33.088Z",
+    "to": "2025-03-06T17:05:49.075Z"
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Spark-K8s-Operator-Scale-Test-Dashboard-tmp",
-  "uid": "febroq9t3nhmoa-tmp",
-  "version": 34,
+  "title": "Spark-K8s-Operator-Scale-Test-Dashboard",
+  "uid": "febroq9t3nhmoa",
+  "version": 25,
   "weekStart": ""
 }
