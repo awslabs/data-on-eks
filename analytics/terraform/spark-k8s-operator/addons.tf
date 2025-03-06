@@ -699,6 +699,8 @@ resource "aws_iam_policy" "s3tables_policy" {
         Action = [
           "s3tables:UpdateTableMetadataLocation",
           "s3tables:GetNamespace",
+          "s3tables:ListTableBuckets",
+          "s3tables:ListNamespaces",
           "s3tables:GetTableBucket",
           "s3tables:GetTableBucketMaintenanceConfiguration",
           "s3tables:GetTableBucketPolicy",
