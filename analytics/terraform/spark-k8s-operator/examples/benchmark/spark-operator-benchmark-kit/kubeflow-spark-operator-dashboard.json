@@ -1,4 +1,47 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.5.2"
+    },
+    {
+      "type": "panel",
+      "id": "piechart",
+      "name": "Pie chart",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -18,7 +61,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 44,
+  "id": null,
   "links": [],
   "panels": [
     {
@@ -120,7 +163,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(sum by(namespace, pod, container) (irate(container_cpu_usage_seconds_total{image!=\"\", namespace=\"spark-operator\"}[5m])) * on(namespace, pod) group_left(node) topk by(namespace, pod) (1, max by(namespace, pod, node) (kube_pod_info{node!=\"\"}))) by (pod) > 0",
@@ -220,7 +263,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(container_memory_working_set_bytes{container!=\"\", namespace=\"spark-operator\"}) by (pod) > 0",
@@ -362,7 +405,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(workqueue_depth{container=\"spark-operator-controller\"}) by (name) > 0",
@@ -392,7 +435,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Amount of data transmitted via the network for the spark operator and webhook",
       "fieldConfig": {
@@ -492,7 +535,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Amount of data received via the network for the spark operator and webhook",
       "fieldConfig": {
@@ -592,7 +635,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Rate of additions to the work queue per min",
       "fieldConfig": {
@@ -694,7 +737,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "How long in seconds processing an item from workqueue takes, broken down by percentiles 99%, 90%, and 50%",
       "fieldConfig": {
@@ -794,7 +837,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90,sum(rate(workqueue_work_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
@@ -824,7 +867,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "How long in seconds an item stays in workqueue before being requested in percentiles 99%, 95%, and 50%",
       "fieldConfig": {
@@ -924,7 +967,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90,sum(rate(workqueue_queue_duration_seconds_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (name, le)) > 0",
@@ -954,7 +997,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Total number of retries handled by work queue.",
       "fieldConfig": {
@@ -1056,7 +1099,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "How many seconds has the longest running processor for workqueue been running.",
       "fieldConfig": {
@@ -1162,7 +1205,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "How many seconds of work has been done that is in progress and hasn’t been observed by work_duration. Large values indicate stuck threads.",
       "fieldConfig": {
@@ -1278,7 +1321,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Start latency of SparkApplication, broken down by percentiles 99%, 90%, and 50%",
       "fieldConfig": {
@@ -1381,7 +1424,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.90, sum(rate(spark_application_start_latency_seconds_histogram_bucket{job=\"spark-operator/spark-operator-podmonitor\"}[5m])) by (pod,le))",
@@ -1412,7 +1455,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Counters for spark jobs, these are cumulative over the lifetime of the spark-operator pod",
       "fieldConfig": {
@@ -1476,7 +1519,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(spark_application_failure_count) by (pod)",
@@ -1502,7 +1545,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(spark_application_running_count) by (pod)",
@@ -1534,7 +1577,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DATA_SOURCE}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Total number of successful and failed executors",
       "fieldConfig": {
@@ -1589,7 +1632,6 @@
         }
       },
       "pluginVersion": "11.5.2",
-      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
@@ -1608,7 +1650,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1714,7 +1756,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(increase(spark_application_submit_count[1m])) by (pod)",
@@ -1816,7 +1858,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(spark_application_running_count) / sum(spark_application_submit_count) ",
@@ -1918,7 +1960,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -2021,7 +2063,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(spark_application_failure_count) / sum(spark_application_submit_count) ",
@@ -2098,8 +2140,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -2132,7 +2173,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\"}[5m])) by (le, instance)) > 0",
@@ -2195,8 +2236,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2233,7 +2273,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\"}[5m])) by (le, verb)) > 0",
@@ -2296,8 +2336,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           }
@@ -2329,7 +2368,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(rate(apiserver_request_total{verb!~\"CONNECT|WATCH\"}[5m])) by (verb,code) > 0",
@@ -2392,8 +2431,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2455,7 +2493,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket[5m])) by (le, operation, name)) > 0",
@@ -2518,8 +2556,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2556,7 +2593,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket[5m])) by (le)) > 0",
@@ -2618,8 +2655,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2656,7 +2692,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "max(apiserver_storage_size_bytes)",
@@ -2718,8 +2754,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2755,7 +2790,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "max(apiserver_storage_objects{resource=\"sparkapplications.sparkoperator.k8s.io\"})",
@@ -2817,8 +2852,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2854,7 +2888,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "max(apiserver_storage_objects{resource=\"pods\"})",
@@ -2916,8 +2950,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2953,7 +2986,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DATA_SOURCE}"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "max(apiserver_storage_objects{resource=\"nodes\"})",
@@ -2967,17 +3000,13 @@
       "type": "timeseries"
     }
   ],
-  "preload": false,
   "refresh": "10s",
   "schemaVersion": 40,
   "tags": [],
   "templating": {
     "list": [
       {
-        "current": {
-          "text": "Prometheus",
-          "value": "prometheus"
-        },
+        "current": {},
         "description": "Prometheus data source to use for dashboard",
         "label": "Data Source",
         "name": "DATA_SOURCE",
@@ -2995,8 +3024,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Spark-K8s-Operator-Scale-Test-Dashboard",
+  "title": "Spark-Operator Scale Test Dashboard",
   "uid": "febroq9t3nhmoa",
-  "version": 83,
+  "version": 2,
   "weekStart": ""
 }
