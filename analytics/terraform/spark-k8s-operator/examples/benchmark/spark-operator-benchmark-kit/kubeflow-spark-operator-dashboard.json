@@ -17,7 +17,7 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": 44,
   "links": [],
   "panels": [
@@ -111,8 +111,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -190,7 +190,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -210,8 +211,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -222,7 +223,7 @@
             "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "sum(container_memory_working_set_bytes{container!=\"\", namespace=\"spark-operator\"}) by (pod) / 1e9  > 0",
+          "expr": "sum(container_memory_working_set_bytes{container!=\"\", namespace=\"spark-operator\"}) by (pod) > 0",
           "format": "time_series",
           "instant": false,
           "legendFormat": "__auto",
@@ -230,7 +231,7 @@
           "refId": "A"
         }
       ],
-      "title": "Memory Usage (in GB)",
+      "title": "Memory Usage",
       "type": "timeseries"
     },
     {
@@ -238,7 +239,7 @@
         "type": "prometheus",
         "uid": "${DATA_SOURCE}"
       },
-      "description": "Bars show the work queue depth, the red line shows the rate of change per min",
+      "description": "Bars show the number of items in the work, the red line shows the rate of change in the queue depth per min",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -333,31 +334,6 @@
                 "value": 0
               }
             ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "spark-application-controller",
-                  "spark-application-controller"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
           }
         ]
       },
@@ -377,8 +353,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -405,7 +381,7 @@
           "expr": "sum(rate(workqueue_depth{container=\"spark-operator-controller\"}[1m])) by (name) > 0",
           "hide": false,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "1m rate {{name}}",
           "range": true,
           "refId": "A"
         }
@@ -491,8 +467,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -591,8 +567,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -692,8 +668,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -712,7 +688,7 @@
           "refId": "A"
         }
       ],
-      "title": "Rate of Work Queue Total Adds",
+      "title": "Work Queue - Add Rate",
       "type": "timeseries"
     },
     {
@@ -797,8 +773,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -927,8 +903,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -1381,8 +1357,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -1480,9 +1456,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": false,
         "sizing": "auto",
-        "text": {
-          "titleSize": 12
-        }
+        "text": {}
       },
       "pluginVersion": "11.5.2",
       "targets": [
@@ -1611,7 +1585,7 @@
         "tooltip": {
           "hideZeros": false,
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -1656,7 +1630,7 @@
         "type": "prometheus",
         "uid": "${DATA_SOURCE}"
       },
-      "description": "Total number of SparkApplication spark-submitted by the Operator ",
+      "description": "Total number of SparkApplication spark-submitted by the Operator per min",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1722,7 +1696,9 @@
       "id": 20,
       "options": {
         "legend": {
-          "calcs": [],
+          "calcs": [
+            "max"
+          ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -1749,7 +1725,7 @@
           "refId": "A"
         }
       ],
-      "title": "Spark-submit rate",
+      "title": "Spark-submit Rate",
       "type": "timeseries"
     },
     {
@@ -1827,7 +1803,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "hideZeros": false,
@@ -1929,7 +1905,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "hideZeros": false,
@@ -2032,7 +2008,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "hideZeros": false,
@@ -2074,15 +2050,15 @@
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "P90 API server latency for all request types",
+      "description": "99th percentile of Kubernetes API server latency  summed by API server instance",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-YlBl"
+            "mode": "continuous-BlYlRd",
+            "seriesBy": "last"
           },
           "custom": {
             "axisBorderShow": false,
@@ -2124,18 +2100,15 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
-          }
+          },
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
         "x": 0,
         "y": 50
@@ -2144,13 +2117,13 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "right",
-          "showLegend": false
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2159,7 +2132,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\"}[5m])) by (le, instance)) > 0",
@@ -2169,16 +2142,15 @@
           "refId": "A"
         }
       ],
-      "title": "P90 API server latency for all request types",
+      "title": "P99 API Server Latency",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "API Server Request Duration by Verb (seconds)",
+      "description": "99th percentile of Kubernetes API server latency  summed by Verb.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2194,7 +2166,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 1,
+            "fillOpacity": 4,
             "gradientMode": "scheme",
             "hideFrom": {
               "legend": false,
@@ -2231,12 +2203,13 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
         "x": 8,
         "y": 50
@@ -2245,13 +2218,13 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "right",
-          "showLegend": false
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2260,31 +2233,126 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, max(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\"}[5m])) by (le, verb)) > 0",
+          "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\"}[5m])) by (le, verb)) > 0",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "API Server Request Duration (sec)",
+      "title": "P99 API Server Latency by Verb",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "Admission Webhook Admission Duration Seconds bucket",
+      "description": "Kubernetes API server request counts aggregated by verb and response code. ",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "dark-purple",
-            "mode": "fixed"
+            "mode": "palette-classic",
+            "seriesBy": "last"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": -1,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "id": 46,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DATA_SOURCE}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(apiserver_request_total{verb!~\"CONNECT|WATCH\"}[5m])) by (verb,code) > 0",
+          "instant": false,
+          "legendFormat": "{{verb}}-{{code}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "API Server Request Count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DATA_SOURCE}"
+      },
+      "description": "99th percentile of Kubernetes API server Admission Webhook Latency summed by webhook name and action.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "shades"
           },
           "custom": {
             "axisBorderShow": false,
@@ -2296,7 +2364,7 @@
             "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 1,
-            "gradientMode": "scheme",
+            "gradientMode": "hue",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -2332,28 +2400,54 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "s"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "vnode.vpc.k8s.aws-UPDATE"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 50
+        "x": 0,
+        "y": 58
       },
       "id": 27,
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "right",
-          "showLegend": false
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -2361,39 +2455,26 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "avg(rate(apiserver_admission_webhook_admission_duration_seconds_bucket[5m]))*1000",
-          "hide": true,
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket[5m])) by (le, operation, name)) > 0",
           "hide": false,
           "instant": false,
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{name}}-{{operation}}",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Admission Webhook Admission Duration (sec)",
+      "title": "P99 Admission Webhook Latency",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
+      "description": "99th Percentile of request latency between the Kubernetes API servers and etcd",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2445,15 +2526,16 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 56
+        "x": 8,
+        "y": 58
       },
       "id": 25,
       "options": {
@@ -2465,8 +2547,8 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "11.5.2",
@@ -2474,26 +2556,25 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket[5m])) \n  by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket[5m])) by (le)) > 0",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{operation}} {{type}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "ETCD P99 Latency(seconds)",
+      "title": "P99 ETCD Request Latency",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
-      "description": "API Server Total DB Size (in GiB)",
+      "description": "Size of the etcd database file physically allocated in bytes",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2545,15 +2626,16 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "decbytes"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
-        "x": 8,
-        "y": 56
+        "x": 16,
+        "y": 58
       },
       "id": 22,
       "options": {
@@ -2574,25 +2656,25 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
-          "expr": "max(apiserver_storage_size_bytes{storage_cluster_id=\"etcd-0\"}) / 1e9",
+          "expr": "max(apiserver_storage_size_bytes)",
           "instant": false,
-          "legendFormat": "Total Etcd DB Size (GiB)",
+          "legendFormat": "ETCD DB Size",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "API Server Total DB Size (GiB)",
+      "title": "API Server Total DB Size ",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
+      "description": "The total number of SparkApplication CRDs in the cluster",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2607,7 +2689,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -2649,10 +2731,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 56
+        "x": 0,
+        "y": 66
       },
       "id": 39,
       "options": {
@@ -2673,12 +2755,12 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "expr": "max(apiserver_storage_objects{resource=\"sparkapplications.sparkoperator.k8s.io\"})",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "sparkapplications.sparkoperator.k8s.io",
           "range": true,
           "refId": "A"
         }
@@ -2688,10 +2770,10 @@
     },
     {
       "datasource": {
-        "default": true,
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DATA_SOURCE}"
       },
+      "description": "The total number of Pods in the cluster",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2706,7 +2788,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -2748,12 +2830,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 62
+        "x": 8,
+        "y": 66
       },
-      "id": 41,
+      "id": 47,
       "options": {
         "legend": {
           "calcs": [],
@@ -2772,7 +2854,106 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DATA_SOURCE}"
+          },
+          "editorMode": "code",
+          "expr": "max(apiserver_storage_objects{resource=\"pods\"})",
+          "instant": false,
+          "legendFormat": "pods",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Pod Object Count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DATA_SOURCE}"
+      },
+      "description": "The total number of Nodes in the cluster",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 66
+      },
+      "id": 48,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DATA_SOURCE}"
           },
           "editorMode": "code",
           "expr": "max(apiserver_storage_objects{resource=\"nodes\"})",
@@ -2782,106 +2963,7 @@
           "refId": "A"
         }
       ],
-      "title": "Spark Application Object Count",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "default": true,
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 62
-      },
-      "id": 40,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "max(apiserver_storage_objects{resource=\"pods\"})",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Pod Object Count",
+      "title": "Node Object Count",
       "type": "timeseries"
     }
   ],
@@ -2893,8 +2975,8 @@
     "list": [
       {
         "current": {
-          "text": "AMP",
-          "value": "PD476F800710936AE"
+          "text": "Prometheus",
+          "value": "prometheus"
         },
         "description": "Prometheus data source to use for dashboard",
         "label": "Data Source",
@@ -2908,13 +2990,13 @@
     ]
   },
   "time": {
-    "from": "2025-03-04T15:58:33.088Z",
-    "to": "2025-03-06T17:05:49.075Z"
+    "from": "now-3h",
+    "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "Spark-K8s-Operator-Scale-Test-Dashboard",
   "uid": "febroq9t3nhmoa",
-  "version": 25,
+  "version": 83,
   "weekStart": ""
 }
