@@ -71,7 +71,7 @@ Llama-3 is a state-of-the-art large language model (LLM) designed for various na
 
 :::info
 
-    **NOTE:** As of 2024/01/04 Trainium instances only available in us-west-2, us-east-1, and us-east-2 regions.
+    **NOTE:** Trainium instances are available in select regions, and the user can determine this list of regions using the commands outlined [here](https://repost.aws/articles/ARmXIF-XS3RO27p0Pd1dVZXQ/what-regions-have-aws-inferentia-and-trainium-instances) on re:Post.
 
 :::
 
@@ -114,6 +114,8 @@ Llama-3 is a state-of-the-art large language model (LLM) designed for various na
 ## 2. Build the Docker Image (Optional Step)
 
 To simplify the blueprint deployment, we have already built the Docker image and made it available under the public ECR. If you want to customize the Docker image, you can update the `Dockerfile` and follow the optional step to build the Docker image. Please note that you will also need to modify the YAML file, `lora-finetune-pod.yaml`, with the newly created image using your own private ECR.
+
+Execute the below commands after ensuring you are in the root folder of the data-on-eks repository.
 
 ```bash
 cd gen-ai/training/llama-lora-finetuning-trn1
@@ -160,21 +162,21 @@ export HF_TOKEN=<your-huggingface-token>
 
 Once the script is complete, you can verify the training progress by checking the logs of the training job.
 
-Next, we need to consolidate the adapter shards and merge the model. For this we run the python script `02__consolidate_adapter_shards_and_merge_model.py` by passing in the location of the checkpoint and providing the location where you want to save the consolidated model.
+Next, we need to consolidate the adapter shards and merge the model. For this we run the python script `02__consolidate_adapter_shards_and_merge_model.py` by passing in the location of the checkpoint using the '-i' parameter and providing the location where you want to save the consolidated model using the '-o' parameter.
 ```
-python3 ./02__consolidate_adapter_shards_and_merge_model.py -i <path-to-checkpoint> -o <path-to-save-model>
+python3 ./02__consolidate_adapter_shards_and_merge_model.py -i /shared/finetuned_models/20250220_170215/checkpoint-250/ -o /shared/tuned_model/20250220_170215
 ```
 
-Once the script is complete, we can test the fine-tuned model by running the `03__test_model.py` by passing in the tuned model.
+Once the script is complete, we can test the fine-tuned model by running the `03__test_model.py` by passing in the location of the tuned model using the '-m' parameter.
 ```bash
-./03__test_model.py -m <path-to-tuned-model>
+./03__test_model.py -m /shared/tuned_model/20250220_170215
 ```
 
 You can exit from the interactive terminal of the pod once you are done testing the model.
 
 ### Cleaning up
 
-To remove the resources created using this solution, run the cleanup script:
+To remove the resources created using this solution, execute the below commands after ensuring you are in the root folder of the data-on-eks repository.:
 
 ```bash
 # Delete the Kubernetes Resources:
@@ -182,6 +184,6 @@ cd gen-ai/training/llama-lora-finetuning-trn1
 kubectl delete -f lora-finetune-pod.yaml
 
 # Clean Up the EKS Cluster and Associated Resources:
-cd data-on-eks/ai-ml/trainium-inferentia
+cd ../../../ai-ml/trainium-inferentia
 ./cleanup.sh
 ```
