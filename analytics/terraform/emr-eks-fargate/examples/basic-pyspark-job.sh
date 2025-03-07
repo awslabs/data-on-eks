@@ -2,13 +2,13 @@
 
 if [ $# -eq 0 ];
 then
-  echo "$0: Missing arguments ENTER_EMR_EMR_VIRTUAL_CLUSTER_ID and EMR_JOB_EXECUTION_ROLE_ARN"
-  echo "USAGE: ./basic-pyspark-job '<ENTER_EMR_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
+  echo "$0: Missing arguments ENTER_EMR_VIRTUAL_CLUSTER_ID and EMR_JOB_EXECUTION_ROLE_ARN"
+  echo "USAGE: ./basic-pyspark-job '<ENTER_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
   exit 1
 elif [ $# -gt 3 ];
 then
   echo "$0: Too many arguments: $@"
-  echo "Usage example-> ./basic-pyspark-job '<ENTER_EMR_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
+  echo "Usage example-> ./basic-pyspark-job '<ENTER_EMR_VIRTUAL_CLUSTER_ID>' '<EMR_JOB_EXECUTION_ROLE_ARN>'"
   exit 1
 else
   echo "We got some argument(s)"
@@ -23,7 +23,7 @@ fi
 #--------------------------------------------
 # INPUT VARIABLES
 #--------------------------------------------
-EMR_EMR_VIRTUAL_CLUSTER_ID=$1 # Terraform output variable is `emrcontainers_virtual_cluster_id`
+EMR_VIRTUAL_CLUSTER_ID=$1 # Terraform output variable is `emrcontainers_virtual_cluster_id`
 EMR_JOB_EXECUTION_ROLE_ARN=$2 # Terraform output variable is emr_on_eks_role_arn
 JOB_NAME='pi'
 EMR_EKS_RELEASE_LABEL='emr-6.8.0-latest'
@@ -31,7 +31,7 @@ EMR_EKS_RELEASE_LABEL='emr-6.8.0-latest'
 #--------------------------------------------
 # DERIVED VARIABLES
 #--------------------------------------------
-EMR_VIRTUAL_CLUSTER_NAME=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?id=='${EMR_EMR_VIRTUAL_CLUSTER_ID}' && state=='RUNNING'].name" --output text)
+EMR_VIRTUAL_CLUSTER_NAME=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?id=='${EMR_VIRTUAL_CLUSTER_ID}' && state=='RUNNING'].name" --output text)
 
 # Execute Spark job
 if [[ $EMR_VIRTUAL_CLUSTER_ID != "" ]]; then

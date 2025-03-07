@@ -146,7 +146,7 @@ When you enter the results directory you will see a list of folders which corres
 
 ![S3 bucket showing timestamp directories for results](./img/results-s3-timestamps.png)
 
-You can find the latest result by selecting the timestamp thats largest, or find the folder that corresponds to the time of your test.
+You can find the latest result by selecting the timestamp that's largest, or find the folder that corresponds to the time of your test.
 Inside this folder you will see a file with a name like `part-00000-000000000-0000-0000-0000-000000000-0000.json`, this file includes the full spark configuration used for the job.
 ![S3 bucket showing results files](./img/results-s3-result-folder.png)
 

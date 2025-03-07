@@ -82,7 +82,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "v0.33.1"
+    chart_version       = "v0.37.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -99,7 +99,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # AWS for FluentBit - DaemonSet
   #---------------------------------------
-  enable_aws_for_fluentbit = true
+  enable_aws_for_fluentbit = false
   aws_for_fluentbit_cw_log_group = {
     create            = true
     use_name_prefix   = false
@@ -120,19 +120,25 @@ module "eks_blueprints_addons" {
     })]
   }
 
+  #---------------------------------------
+  # AWS Load Balancer Controller Add-on
+  #---------------------------------------
   enable_aws_load_balancer_controller = true
+  # turn off the mutating webhook for services because we are using
+  # service.beta.kubernetes.io/aws-load-balancer-type: external
   aws_load_balancer_controller = {
-    values = [
-      <<-EOT
-          clusterName: ${module.eks.cluster_name}
-      EOT
-    ]
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
   }
 
+  #---------------------------------------
+  # Ingress Nginx Add-on
+  #---------------------------------------
   enable_ingress_nginx = true
   ingress_nginx = {
-    timeout = "300"
-    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+    values = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
   # Required Flink Deployment
@@ -182,9 +188,8 @@ module "eks_blueprints_addons" {
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
-
+  source            = "aws-ia/eks-data-addons/aws"
+  version           = "~> 1.0" # ensure to update this to the latest/desired version
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
@@ -192,7 +197,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_flink_operator = true
   flink_operator_helm_config = {
-    version = "1.7.0"
+    version = "1.10.0"
     values  = [templatefile("${path.module}/helm-values/flink-operator-values.yaml", {})]
   }
 

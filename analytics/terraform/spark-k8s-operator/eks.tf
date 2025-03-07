@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.26"
+  version = "~> 20.33"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -14,6 +14,38 @@ module "eks" {
   # Add the IAM identity that terraform is using as a cluster admin
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
+
+  #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  cluster_addons = {
+    coredns                = {}
+    eks-pod-identity-agent = {}
+    vpc-cni = {
+      before_compute = true
+      preserve       = true
+      most_recent    = true # To ensure access to the latest settings provided
+      configuration_values = jsonencode({
+        env = {
+          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+
+    kube-proxy = {}
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+      most_recent              = true
+    }
+
+    metrics-server = {}
+    amazon-cloudwatch-observability = {
+      preserve                 = true
+      service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
+    }
+  }
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
@@ -206,5 +238,101 @@ module "eks" {
       }
     }
 
+    spark_operator_bench = {
+      name        = "spark_operator_bench"
+      description = "Managed node group for Spark Operator Benchmarks with EBS using x86 or ARM"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
+
+      ami_type = "AL2023_x86_64_STANDARD"
+
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content      = <<-EOT
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              kubelet:
+                config:
+                  maxPods: 220
+          EOT
+        }
+      ]
+
+      min_size     = 0
+      max_size     = 200
+      desired_size = 0
+
+      instance_types = ["m6a.4xlarge"]
+
+      labels = {
+        NodeGroupType = "spark-operator-benchmark-ng"
+      }
+
+      taints = {
+        benchmark = {
+          key      = "spark-operator-benchmark-ng"
+          effect   = "NO_SCHEDULE"
+          operator = "EXISTS"
+        }
+      }
+
+      tags = {
+        Name          = "spark-operator-benchmark-ng"
+        NodeGroupType = "spark-operator-benchmark-ng"
+      }
+    }
   }
+}
+
+#---------------------------------------------------------------
+# EKS Amazon CloudWatch Observability Role
+#---------------------------------------------------------------
+resource "aws_iam_role" "cloudwatch_observability_role" {
+  name = "${local.name}-eks-cw-agent-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = module.eks.oidc_provider_arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" : "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent",
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" : "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.cloudwatch_observability_role.name
+}
+
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.52"
+  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
 }

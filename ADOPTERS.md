@@ -13,3 +13,4 @@ If you are open to others contacting you about your use of Data on EKS on Slack,
 | --- | --- | --- |
 | Adobe Inc. | Used EMR on EKS with Karpenter templates in PoC, DEV, QE | `@srikaanthpenugonda` |
 | Cotiviti | Used Jhub/Elyra on EKS with Karpenter templates in PoC | `@halilmr` |
+| Securonix | Used Spark on EKS with Karpenter templates in Prod | `@sagar` |

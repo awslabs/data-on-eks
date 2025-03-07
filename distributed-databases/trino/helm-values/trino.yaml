@@ -11,16 +11,16 @@
 # └── Total: 80.6GB < 89GB ✓
 ---
 image:
-  tag: "427"
+  repository: trinodb/trino
+  tag: 447
+  pullPolicy: IfNotPresent
 server:
-  workers: 3
+  workers: 1
   exchangeManager:
+    name: filesystem
     baseDir: "s3://${exchange_bucket_id}"
   autoscaling:
-    enabled: true
-    maxReplicas: 20
-    targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 80
+    enabled: false
     # Add advanced scaling behavior from https://github.com/trinodb/charts/blob/4630167a839e6730c04cecc2af09ff038f522903/charts/trino/values.yaml#L94
   config:
     query:
@@ -57,6 +57,8 @@ coordinator:
     limits:
       cpu: "6000m"     # Higher limit for spikes
       memory: 40Gi
+  annotations:
+    karpenter.sh/do-not-disrupt: "true"
   nodeSelector:
     NodePool: trino-sql-karpenter
     karpenter.sh/capacity-type: on-demand
@@ -146,3 +148,50 @@ serviceAccount:
   name: ${sa}
 ingress:
   enabled: false
+jmx:
+  enabled: true
+  registryPort: 9080
+  serverPort: 9081
+  exporter:
+    # jmx.exporter.enabled -- Set to true to export JMX Metrics via HTTP for [Prometheus](https://github.com/prometheus/jmx_exporter) consumption
+    enabled: true
+    image: bitnami/jmx-exporter:latest
+    pullPolicy: Always
+    port: 5556
+    configProperties: |-
+      hostPort: localhost:{{- .Values.jmx.registryPort }}
+      startDelaySeconds: 0
+      ssl: false
+      lowercaseOutputName: false
+      lowercaseOutputLabelNames: false
+      whitelistObjectNames: ["trino.execution:name=QueryManager","trino.execution:name=ClusterSizeMonitor","trino.execution:name=SqlTaskManager","trino.execution.executor:name=TaskExecutor","trino.memory:name=ClusterMemoryManager","java.lang:type=Runtime","trino.memory:type=ClusterMemoryPool,name=general","java.lang:type=Memory","trino.memory:type=MemoryPool,name=general"]
+      autoExcludeObjectNameAttributes: true
+      excludeObjectNameAttributes:
+        "java.lang:type=OperatingSystem":
+          - "ObjectName"
+        "java.lang:type=Runtime":
+          - "ClassPath"
+          - "SystemProperties"
+      rules:
+      - pattern: ".*"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+serviceMonitor:
+  enabled: true
+  labels:
+    prometheus: kube-prometheus
+  interval: "15s"
+  coordinator:
+    enabled: true
+    labels:
+      prometheus: kube-prometheus
+  worker:
+    enabled: true
+    labels:
+      prometheus: kube-prometheus

@@ -44,7 +44,7 @@ module "spark_team_irsa" {
   for_each = toset(local.teams)
 
   source  = "aws-ia/eks-blueprints-addon/aws"
-  version = "~> 1.0"
+  version = "~> 1.1"
 
   create_release = false
   create_role    = true
@@ -52,6 +52,7 @@ module "spark_team_irsa" {
   create_policy  = false
   role_policies = {
     spark_team_policy = aws_iam_policy.spark.arn
+    s3tables_policy   = aws_iam_policy.s3tables.arn
   }
 
   oidc_providers = {
@@ -67,6 +68,12 @@ resource "aws_iam_policy" "spark" {
   description = "IAM role policy for Spark Job execution"
   name_prefix = "${local.name}-spark-irsa"
   policy      = data.aws_iam_policy_document.spark_operator.json
+}
+
+resource "aws_iam_policy" "s3tables" {
+  description = "IAM role policy for S3 Tables Access from Spark Job execution"
+  name_prefix = "${local.name}-s3tables-irsa"
+  policy      = data.aws_iam_policy_document.s3tables_policy.json
 }
 
 resource "kubernetes_cluster_role" "spark_role" {

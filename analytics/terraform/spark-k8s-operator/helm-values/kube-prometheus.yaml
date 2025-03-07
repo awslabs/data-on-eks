@@ -15,6 +15,11 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
+    # Find monitors in all namespaces
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
     # Scrape Cost metrics for Karpenter and Yunikorn add-ons
     additionalScrapeConfigs:
       - job_name: yunikorn
@@ -35,9 +40,11 @@ prometheus:
             names:
             - karpenter
         relabel_configs:
-        - source_labels: [__meta_kubernetes_endpoint_port_name]
-          regex: http-metrics
+        - source_labels:
+          - __meta_kubernetes_endpoints_name
+          - __meta_kubernetes_endpoint_port_name
           action: keep
+          regex: karpenter;http-metrics
   # Monitors for Spark Jobs
   additionalPodMonitors:
     - name: "spark-job-monitoring"
@@ -64,3 +71,23 @@ alertmanager:
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      karpenter-capacity-dashboard:
+        url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-capacity-dashboard.json
+      karpenter-performance-dashboard:
+        url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
+      spark-job-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/emr-eks-karpenter/emr-grafana-dashboard/emr-eks-grafana-dashboard.json

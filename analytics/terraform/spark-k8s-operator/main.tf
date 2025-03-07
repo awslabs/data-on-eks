@@ -94,3 +94,64 @@ data "aws_iam_policy_document" "spark_operator" {
     ]
   }
 }
+
+#---------------------------------------------------------------------
+# Example IAM policy for s3 Tables access from Spark Jobs.
+# Please modify this policy according to your security requirements.
+#---------------------------------------------------------------------
+data "aws_iam_policy_document" "s3tables_policy" {
+  version = "2012-10-17"
+
+  statement {
+    sid    = "VisualEditor0"
+    effect = "Allow"
+
+    actions = [
+      "s3tables:CreateTableBucket",
+      "s3tables:ListTables",
+      "s3tables:CreateTable",
+      "s3tables:GetNamespace",
+      "s3tables:DeleteTableBucket",
+      "s3tables:CreateNamespace",
+      "s3tables:ListNamespaces",
+      "s3tables:ListTableBuckets",
+      "s3tables:GetTableBucket",
+      "s3tables:DeleteNamespace",
+      "s3tables:GetTableBucketMaintenanceConfiguration",
+      "s3tables:PutTableBucketMaintenanceConfiguration",
+      "s3tables:GetTableBucketPolicy"
+    ]
+
+    resources = ["arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*"]
+  }
+
+  statement {
+    sid    = "VisualEditor1"
+    effect = "Allow"
+
+    actions = [
+      "s3tables:GetTableMaintenanceJobStatus",
+      "s3tables:GetTablePolicy",
+      "s3tables:GetTable",
+      "s3tables:GetTableMetadataLocation",
+      "s3tables:UpdateTableMetadataLocation",
+      "s3tables:DeleteTable",
+      "s3tables:PutTableData",
+      "s3tables:RenameTable",
+      "s3tables:PutTableMaintenanceConfiguration",
+      "s3tables:GetTableData",
+      "s3tables:GetTableMaintenanceConfiguration"
+    ]
+
+    resources = ["arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*/table/*"]
+  }
+
+  statement {
+    sid    = "VisualEditor2"
+    effect = "Allow"
+
+    actions = ["s3tables:ListTableBuckets"]
+
+    resources = ["*"]
+  }
+}

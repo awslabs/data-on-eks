@@ -1,6 +1,6 @@
 ---
-title: Spark Operator running on Amazon EKS IPv6
-sidebar_position: 6
+title: Spark Operator on EKS with IPv6
+sidebar_position: 3
 ---
 
 This example showcases the usage of Spark Operator running on Amazon EKS in IPv6 mode. the idea is to show and demonstarte running spark workloads on EKS IPv6 cluster.
