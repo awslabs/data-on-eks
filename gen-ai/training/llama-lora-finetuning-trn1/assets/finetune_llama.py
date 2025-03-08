@@ -89,7 +89,6 @@ def training_function(script_args, training_args):
 
     # Start training
     trainer.train()
-    trainer.save_model()
 
 
 @dataclass

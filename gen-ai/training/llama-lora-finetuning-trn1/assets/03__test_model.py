@@ -62,3 +62,4 @@ for n in [94, 99, 123]:
     print()
     print(f"######### FINETUNED MODEL OUTPUT:\n\n{tokenizer.decode(outputs[0][prompt_len:])}")
     print()
+    _ = input("Press <ENTER> to continue")

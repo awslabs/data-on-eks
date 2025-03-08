@@ -70,7 +70,8 @@ echo $ECR_REPO_URI > .ecr_repo_uri
 
 # Login to ECR
 echo -e "\nLogging in to ECR"
-aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin $ECR_REPO_URI
+aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin $ECR_REPO_URI # User's ECR
+aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin 763104351884.dkr.ecr.${region}.amazonaws.com # DLC's ECR
 
 echo -e "\nBuilding llama finetuning trn1 docker image" \
   && docker build . --no-cache -t $ECR_REPO_URI:latest \
