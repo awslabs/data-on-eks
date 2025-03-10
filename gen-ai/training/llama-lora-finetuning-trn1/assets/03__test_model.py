@@ -51,12 +51,18 @@ for n in [94, 99, 123]:
     example_tokenized = tokenizer.apply_chat_template(eval_dataset
                                                     [n]['messages'][0:-1], tokenize=True, add_generation_prompt=True, return_tensors="pt")
     prompt_len = len(example_tokenized[0])
-    outputs = tuned_model.generate(example_tokenized, max_new_tokens=50, pad_token_id=128001)
-    outputs_orig = model_orig.generate(example_tokenized, max_new_tokens=50, pad_token_id=128001)
 
     subprocess.run("clear")
     print(f"######### PROMPT:\n\n{example}")
     print()
+    print()
+    print("Generating output for the prompt using the base model and the new fine-tuned model. Please wait...")
+    print()
+    print()
+
+    outputs = tuned_model.generate(example_tokenized, max_new_tokens=50, pad_token_id=128001)
+    outputs_orig = model_orig.generate(example_tokenized, max_new_tokens=50, pad_token_id=128001)
+
     print(f"######### BASE MODEL OUTPUT:\n\n{tokenizer.decode(outputs_orig[0][prompt_len:])}")
     print()
     print()
