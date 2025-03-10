@@ -37,11 +37,11 @@ Llama-3 is a state-of-the-art large language model (LLM) designed for various na
 
 <CollapsibleContent header={<h2><span>Prerequisites</span></h2>}>
     Before we begin, ensure you have all the prerequisites in place to make the deployment process smooth and hassle-free.
-    Ensure that you have installed the following tools on your EC2 or Cloud9 instance.
+    Ensure that you have installed the following tools on your EC2 instance.
 
 :::info
 
-    * [EC2 Instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html) or [Cloud9 instance](https://docs.aws.amazon.com/cloud9/latest/user-guide/tutorial-create-environment.html) → Ensure you have 100GB+ of storage for both options. This is crucial for creating a Docker image with x86 architecture and having the right amount of storage.
+    * [EC2 Instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html) → Ensure you have 100GB+ of storage for both options. This is crucial for creating a Docker image with x86 architecture and having the right amount of storage.
 
     If you are using a local Windows machine or Mac, ensure you have Docker installed locally with builder storage above 100GB and the image is created with x86 architecture.
 
