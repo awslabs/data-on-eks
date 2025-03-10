@@ -13,9 +13,6 @@ spec:
           mountPath: /shared
         - name: dshm
           mountPath: /dev/shm
-            #resources:
-            #limits:
-            #aws.amazon.com/neuron: 16
       resources:
         limits:
           aws.amazon.com/neuron: "16"
