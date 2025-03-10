@@ -15,10 +15,6 @@ torchrun \
     --max_steps 250 \
     --logging_steps 10 \
     --learning_rate 1e-5 \
-    --dataloader_drop_last True \
-    # --do_eval True \
-    # --eval_strategy steps \
-    # --eval_steps 100 \
-    # --per_device_eval_batch_size 8
+    --dataloader_drop_last True
 
 echo "Output dir = $BASE_DIR/$OUTPUT_DIR"
