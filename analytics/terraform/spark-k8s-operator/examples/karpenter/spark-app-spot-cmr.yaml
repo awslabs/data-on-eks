@@ -43,7 +43,7 @@ spec:
   resources:
     requests:
       storage: 5Gi # ignored, required
-  volumeName: spark-s3-mount-spotcmr-pv 
+  volumeName: spark-s3-mount-spotcmr-pv
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -74,7 +74,7 @@ spec:
     "spark.kubernetes.driver.pod.name": "order"
     "spark.kubernetes.executor.podNamePrefix": "order"
     "spark.local.dir": "/data2"
-    "spark.driver.extraJavaOptions": "-Divy.cache.dir=/tmp -Divy.home=/tmp" 
+    "spark.driver.extraJavaOptions": "-Divy.cache.dir=/tmp -Divy.home=/tmp"
     "spark.kubernetes.file.upload.path": "/data1/spark-upload"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"

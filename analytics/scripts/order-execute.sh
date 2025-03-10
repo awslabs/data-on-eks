@@ -27,4 +27,3 @@ aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key scripts/pyspark-order
 
 # Copy Test Input data to S3 bucket
 aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key order/input/order.parquet --body order.parquet --region ${REGION}
-

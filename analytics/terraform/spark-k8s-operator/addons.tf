@@ -699,9 +699,9 @@ module "ebs_csi_driver_irsa" {
 # IRSA for Mountpoint S3 CSI Driver
 #---------------------------------------------------------------
 module "s3_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.34"
-  role_name_prefix      = format("%s-%s-", local.name, "s3-csi-driver")
+  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version          = "~> 5.34"
+  role_name_prefix = format("%s-%s-", local.name, "s3-csi-driver")
   role_policy_arns = {
     # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
     s3_access = aws_iam_policy.s3_irsa_access_policy.arn
