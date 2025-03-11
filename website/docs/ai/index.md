@@ -5,13 +5,18 @@ sidebar_label: Overview
 
 # AI on EKS
 
-Welcome to AI on [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/), your gateway to harnessing the power of Large Language Models (LLMs) for a wide range of applications. This introduction page serves as your starting point to explore our offerings for Training, Fine-tuning, and Inference using various LLMs, including BERT-Large, Llama2, Stable Diffusion, and more.
+Welcome to AI on [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/), your gateway to harnessing the power of Large Language Models (LLMs) for a wide range of applications. This introduction page serves as your starting point to explore our architectural patterns and blueprints for Training, Fine-tuning, and Inference using the latest LLMs.
 
-Our platform provides multiple patterns for users to scale their generative AI workloads on EKS using a comprehensive suite of open-source ML tools/frameworks.
+AIoEKS aims to be a composable environment that can support the deployment of blueprints, as well as becoming your go-to environment for experimentation in the world of AI. 
 
-Below is the architecture diagram that illustrates the integration of these tools within EKS:
+Before we dive in, let's take a look at the tools available in the environment:
 
 ![OSS ML Platforms on EKS](ml-platforms-eks.png)
+
+## [Infrastructure](https://awslabs.github.io/data-on-eks/docs/category/infrastructure)
+At its core, AIoEKS is a set of modules that can be composed to create the environment in which you want to work. We have some blueprints that will enable you to quickly start using the environment for either experimentation, training or inference. We intend to add more as they come up, but we also enable you to compose the environment however you would like. This allows you to build the environment you want to use on EKS.
+
+If you're ready to deploy your EKS cluster, check out the infrastructure section. 
 
 ## [Training](https://awslabs.github.io/data-on-eks/docs/category/training-on-eks)
 Training in the generative AI world involves teaching a model to understand and generate human-like text by learning from vast amounts of data. This process is crucial as it forms the foundation upon which models like BERT-Large and Llama2 are built, enabling them to perform a wide range of tasks such as text summarization, translation, and more. Effective training ensures that the model can understand complex patterns and generate coherent, contextually appropriate responses.
