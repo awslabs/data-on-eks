@@ -1,4 +1,9 @@
 prometheus:
+  # The ClusterRole for Prometheus needs additional permissions for the EKS scheduler/controller metrics https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+  additionalRulesForClusterRole:
+  - apiGroups: [ "metrics.eks.amazonaws.com" ]
+    resources: [ "kcm/metrics", "ksh/metrics" ]
+    verbs: [ "get" ]
   prometheusSpec:
     retention: 5h
     scrapeInterval: 30s
@@ -20,8 +25,8 @@ prometheus:
     probeSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
-    # Scrape Cost metrics for Karpenter and Yunikorn add-ons
     additionalScrapeConfigs:
+      # Scrape metrics for Yunikorn
       - job_name: yunikorn
         honor_labels: true
         scrape_interval: 15s
@@ -33,6 +38,7 @@ prometheus:
               - yunikorn-service.yunikorn.svc
             type: 'A'
             port: 9080
+      # Scrape metrics for Karpenter
       - job_name: karpenter
         kubernetes_sd_configs:
         - role: endpoints
@@ -45,6 +51,46 @@ prometheus:
           - __meta_kubernetes_endpoint_port_name
           action: keep
           regex: karpenter;http-metrics
+      # Additional EKS Control plane metrics
+      # NOTE: you will need to patch the service account for prometheus as described here:  https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+      # Scheduler metrics
+      - job_name: 'ksh-metrics'
+        kubernetes_sd_configs:
+        - role: endpoints
+        metrics_path: /apis/metrics.eks.amazonaws.com/v1/ksh/container/metrics
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels:
+            [
+              __meta_kubernetes_namespace,
+              __meta_kubernetes_service_name,
+              __meta_kubernetes_endpoint_port_name,
+            ]
+          action: keep
+          regex: default;kubernetes;https
+      # Controller Manager metrics
+      - job_name: 'kcm-metrics'
+        kubernetes_sd_configs:
+        - role: endpoints
+        metrics_path: /apis/metrics.eks.amazonaws.com/v1/kcm/container/metrics
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels:
+            [
+              __meta_kubernetes_namespace,
+              __meta_kubernetes_service_name,
+              __meta_kubernetes_endpoint_port_name,
+            ]
+          action: keep
+          regex: default;kubernetes;https
   # Monitors for Spark Jobs
   additionalPodMonitors:
     - name: "spark-job-monitoring"
@@ -64,6 +110,13 @@ prometheus:
         - port: "spark-ui"
           interval: 30s
           path: /metrics/executors/prometheus/
+
+# add ethtool metrics to node-exporter https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-network-performance-ena.html
+prometheus-node-exporter:
+  extraArgs:
+    - --collector.ethtool
+    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+    - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
 
 alertmanager:
   enabled: false
@@ -91,3 +144,5 @@ grafana:
         url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
       spark-job-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/emr-eks-karpenter/emr-grafana-dashboard/emr-eks-grafana-dashboard.json
+      spark-operator-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/kubeflow-spark-operator-dashboard.json
