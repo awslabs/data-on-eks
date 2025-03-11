@@ -25,14 +25,14 @@ By conducting these tests, you can ensure that the Spark Operator is capable of 
 ### Prerequisites
 
 - Before running the benchmark tests, ensure you have deployed the **Spark Operator** EKS cluster by following the instructions [here](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/spark-operator-yunikorn#deploy).
-- Access to the necessary AWS resources and permissions to modify EKS configurations. 
+- Access to the necessary AWS resources and permissions to modify EKS configurations.
 - Familiarity with **Terraform**, **Kubernetes**, and **Locust** for load testing.
 
 ### Updates to the Cluster
 
 To prepare the cluster for benchmark testing, apply the following modifications:
 
-**Step 1: Update Spark Operator Helm Configuration** 
+**Step 1: Update Spark Operator Helm Configuration**
 
 Uncomment the specified Spark Operator Helm values in the file [analytics/terraform/spark-k8s-operator/addons.tf](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf) (from the `-- Start` to `-- End` section). Then, run terraform apply to apply the changes.
 
@@ -54,13 +54,13 @@ enable_spark_operator = true
           replicas: 1
           # -- Reconcile concurrency, higher values might increase memory usage.
           # -- Increased from 10 to 20 to leverage more cores from the instance
-          workers: 20 
+          workers: 20
           # -- Change this to True when YuniKorn is deployed
           batchScheduler:
             enable: false
             # default: "yunikorn"
 #  -- Start: Uncomment this section in the code for Spark Operator scale test
-          # -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions 
+          # -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
           nodeSelector:
             NodeGroupType: spark-operator-benchmark
           resources:
@@ -107,9 +107,9 @@ enable_spark_operator = true
 **Step 2: Prometheus Best practices for Large scale clusters**
 
 - To efficiently monitor 32,000+ pods across 200 nodes, Prometheus should run on a dedicated node with increased CPU and memory allocation. Ensure Prometheus is deployed on core node groups using NodeSelectors in the Prometheus Helm chart. This prevents interference from workload pods.
-- At scale, **Prometheus** can consume significant CPU and memory, so running it on dedicated infrastructure ensures it doesn’t compete with your apps. It’s common to dedicate a node or node pool solely to monitoring components (Prometheus, Grafana, etc.) using node selectors or taints. 
+- At scale, **Prometheus** can consume significant CPU and memory, so running it on dedicated infrastructure ensures it doesn’t compete with your apps. It’s common to dedicate a node or node pool solely to monitoring components (Prometheus, Grafana, etc.) using node selectors or taints.
 - Prometheus is memory-intensive and, when monitoring hundreds or thousands of pods, will also demand substantial CPU​
-- Allocating dedicated resources (and even using Kubernetes priority classes or QoS to favor Prometheus) helps keep your monitoring reliable under stress. 
+- Allocating dedicated resources (and even using Kubernetes priority classes or QoS to favor Prometheus) helps keep your monitoring reliable under stress.
 - Please note that full observability stack (metrics, logs, tracing) might consume roughly one-third of your infrastructure resources at scale​, so plan capacity accordingly.
 - Allocate ample memory and CPU from the start, and prefer requests without strict low limits for Prometheus. For example, if you estimate Prometheus needs `~8 GB`, don’t cap it at `4 GB`. It’s better to reserve an entire node or a large chunk of one for Prometheus.
 
@@ -142,7 +142,7 @@ We have created a dedicated Managed node group called **spark_operator_bench** f
 spark_operator_bench = {
   name        = "spark_operator_bench"
   description = "Managed node group for Spark Operator Benchmarks with EBS using x86 or ARM"
-  
+
   min_size     = 0
   max_size     = 200
   desired_size = 0
