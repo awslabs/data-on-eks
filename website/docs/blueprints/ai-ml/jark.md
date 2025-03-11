@@ -15,7 +15,7 @@ These instructions only deploy the JARK cluster as a base. If you are looking to
 :::
 
 ### What is JARK?
-JARK is a powerful stack composed of [JupyterHub](https://jupyter.org/hub), [Argo Workflows](https://github.com/argoproj/argo-workflows), [Ray](https://github.com/ray-project/ray), and [Kubernetes](https://kubernetes.io/), designed to streamline the deployment and management of Generative AI models on Amazon EKS. This stack brings together some of the most effective tools in the AI and Kubernetes ecosystem, offering a robust solution for training, fine-tuning, and inference large Gen AI models.
+JARK is a powerful stack composed of [JupyterHub](https://jupyter.org/hub), [Argo Workflows](https://github.com/argoproj/argo-workflows), [Ray](https://github.com/ray-project/ray), and [Kubernetes](https://kubernetes.io/), designed to streamline the deployment and management of Generative AI models on Amazon EKS. This stack brings together some of the most effective tools in the AI and Kubernetes ecosystem, offering a robust solution for training, fine-tuning, and inference large AI models.
 
 ### Key Features and Benefits
 [JupyterHub](https://jupyter.org/hub): Provides a collaborative environment for running notebooks, crucial for model development and prompt engineering.

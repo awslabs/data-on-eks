@@ -7,7 +7,7 @@
 
 ### Build, Scale, and Optimize Data & AI/ML Platforms on [Amazon EKS](https://aws.amazon.com/eks/) 🚀
 
-Welcome to **Data on EKS**, your gateway to scaling **Data and AI** workloads on Amazon EKS. Unlock the potential of [Gen AI](https://aws.amazon.com/generative-ai/) with a rich collection of Terraform Blueprints featuring best practices for deploying robust solutions with advanced logging and observability.
+Welcome to **Data on EKS**, your gateway to scaling **Data and AI** workloads on Amazon EKS. Unlock the potential of [AI](https://aws.amazon.com/generative-ai/) with a rich collection of Terraform Blueprints featuring best practices for deploying robust solutions with advanced logging and observability.
 
 Explore practical examples and patterns for running Data workloads on EKS using advanced frameworks such as [Apache Spark](https://spark.apache.org/) for distributed data processing, [Apache Flink](https://flink.apache.org/) for real-time stream processing, and [Apache Kafka](https://kafka.apache.org/) for high-throughput distributed messaging. Automate and orchestrate complex workflows with [Apache Airflow](https://airflow.apache.org/) and leverage the robust capabilities of [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to build resilient clusters, seamlessly integrating Kubernetes with big data solutions for enhanced scalability and performance.
 
@@ -43,7 +43,7 @@ In this repository, you'll find a variety of deployment blueprints for creating 
 
 ### 🧠 AI
 
-🚀 [Trainium-Inferentia on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium) 👈 This blueprint used for running Gen AI models on [AWS Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/) accelerators.
+🚀 [Trainium-Inferentia on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium) 👈 This blueprint used for running AI models on [AWS Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/) accelerators.
 
 🚀 [JARK-Stack on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark) 👈 This blueprint deploys JARK stack for AI workloads with NVIDIA GPUs.
 
