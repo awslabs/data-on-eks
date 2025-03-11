@@ -356,6 +356,54 @@ module "eks_data_addons" {
       EOT
       ]
     }
+    spark-operator-benchmark = {
+      values = [
+        <<-EOT
+      name: spark-operator-benchmark
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-operator-benchmark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["8", "36"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
     spark-compute-ondemand = {
       values = [
         <<-EOT
@@ -700,70 +748,6 @@ module "eks_data_addons" {
 }
 
 #---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.34"
-  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for Mountpoint S3 CSI Driver
-#---------------------------------------------------------------
-module "s3_csi_driver_irsa" {
-  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version          = "~> 5.34"
-  role_name_prefix = format("%s-%s-", local.name, "s3-csi-driver")
-  role_policy_arns = {
-    # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
-    s3_access = aws_iam_policy.s3_irsa_access_policy.arn
-    #kms_access = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
-  }
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:s3-csi-driver-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-resource "aws_iam_policy" "s3_irsa_access_policy" {
-  name        = "${local.name}-S3Access"
-  path        = "/"
-  description = "S3 Access for Nodes"
-
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  # checkov:skip=CKV_AWS_288: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_290: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_289: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_355: Demo purpose IAM policy
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:*",
-          "s3express:*"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
-}
-
-#---------------------------------------------------------------
 # EKS Blueprints Addons
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
@@ -937,6 +921,8 @@ resource "aws_iam_policy" "s3tables_policy" {
         Action = [
           "s3tables:UpdateTableMetadataLocation",
           "s3tables:GetNamespace",
+          "s3tables:ListTableBuckets",
+          "s3tables:ListNamespaces",
           "s3tables:GetTableBucket",
           "s3tables:GetTableBucketMaintenanceConfiguration",
           "s3tables:GetTableBucketPolicy",
