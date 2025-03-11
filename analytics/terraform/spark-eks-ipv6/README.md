@@ -9,7 +9,7 @@
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.34 |
 | <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.4.1 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.2 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6.2 |
 
 ## Providers
 
@@ -18,7 +18,7 @@
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.34 |
 | <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | >= 5.34 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.6.2 |
+| <a name="provider_random"></a> [random](#provider\_random) | >= 3.6.2 |
 
 ## Modules
 
@@ -49,7 +49,7 @@
 | [kubernetes_secret_v1.spark_team_a](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/secret_v1) | resource |
 | [kubernetes_service_account_v1.spark_team_a](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/service_account_v1) | resource |
 | [kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/storage_class) | resource |
-| [random_password.grafana](https://registry.terraform.io/providers/hashicorp/random/3.6.2/docs/resources/password) | resource |
+| [random_password.grafana](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_ecrpublic_authorization_token.token](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ecrpublic_authorization_token) | data source |

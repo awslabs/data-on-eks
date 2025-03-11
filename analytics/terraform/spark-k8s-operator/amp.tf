@@ -118,7 +118,7 @@ module "amp_ingest_irsa" {
   count = var.enable_amazon_prometheus ? 1 : 0
 
   source         = "aws-ia/eks-blueprints-addon/aws"
-  version        = "~> 1.0"
+  version        = "~> 1.1"
   create_release = false
   create_role    = true
   create_policy  = false
