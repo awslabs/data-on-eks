@@ -48,10 +48,10 @@ spec:
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: "order"
+  name: "order-spot-cmr"
   namespace: spark-s3-express
   labels:
-    app: "order"
+    app: "order-spot-cmr"
     applicationId: "order-ebs"
     queue: root.test
 spec:
@@ -70,9 +70,9 @@ spec:
     "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "mapreduce.fileoutputcommitter.algorithm.version": "2"
   sparkConf:
-    "spark.app.name": "order"
-    "spark.kubernetes.driver.pod.name": "order"
-    "spark.kubernetes.executor.podNamePrefix": "order"
+    "spark.app.name": "order-spot-cmr"
+    "spark.kubernetes.driver.pod.name": "order-spot-cmr-driver"
+    "spark.kubernetes.executor.podNamePrefix": "order-spot-cmr-executor"
     "spark.local.dir": "/data2"
     "spark.driver.extraJavaOptions": "-Divy.cache.dir=/tmp -Divy.home=/tmp"
     "spark.kubernetes.file.upload.path": "/data1/spark-upload"
