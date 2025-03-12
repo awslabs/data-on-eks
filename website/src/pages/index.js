@@ -4,6 +4,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
+import VideoGrid from '@site/src/components/VideoGrid/VideoGrid';
 import styles from './index.module.css';
 
 function HomepageHeader() {
@@ -15,7 +16,7 @@ function HomepageHeader() {
         <img
           src="img/light-logo.png"
           alt="Header image"
-          className={styles.logoImage} // Add this line
+          className={styles.logoImage}
         />
         <p
           className='hero__subtitle'
@@ -28,14 +29,26 @@ function HomepageHeader() {
         </p>
         <div className={styles.buttons}>
           <Link
-            className="button button--secondary button--lg button-3d button-sparkles"
-            style={{ padding: '0.5rem 1.5rem', fontSize: '1.0rem' }}
+            className={clsx("button button--lg", styles.buttonSpinUp)}
             to="/docs/introduction/intro">
             Let's Spin Up
+          </Link>
+          <Link
+            className={clsx("button button--lg", styles.buttonGenAI)}
+            to="/docs/gen-ai">
+            Explore Gen AI
           </Link>
         </div>
       </div>
     </header>
+  );
+}
+
+function DataOnEKSHeader() {
+  return (
+    <div className={styles.dataOnEKSHeader}>
+      <h2>In the Spotlight 🎥</h2>
+    </div>
   );
 }
 
@@ -47,7 +60,11 @@ export default function Home() {
       description="Description will go into a meta tag in <head />">
       <HomepageHeader />
       <main>
-        <HomepageFeatures />
+        <div className="container">
+          <HomepageFeatures />
+          <DataOnEKSHeader />
+          <VideoGrid />
+        </div>
       </main>
     </Layout>
   );

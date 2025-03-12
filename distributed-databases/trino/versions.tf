@@ -1,10 +1,10 @@
 terraform {
-  required_version = ">= 1.3.0"
+  required_version = ">= 1.5.0"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 3.72"
+      version = ">= 5.61"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -12,15 +12,15 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.4.1"
+      version = ">= 2.7"
     }
     kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = ">= 1.14"
+      source  = "alekc/kubectl"
+      version = ">= 2.0"
     }
     random = {
       source  = "hashicorp/random"
-      version = "3.4.3"
+      version = ">= 3.6.0"
     }
   }
 
@@ -28,6 +28,6 @@ terraform {
   # backend "s3" {
   #   bucket = "terraform-ssp-github-actions-state"
   #   region = "us-west-2"
-  #   key    = "e2e/cnpg-on-eks/terraform.tfstate"
+  #   key    = "e2e/trino-on-eks/terraform.tfstate"
   # }
 }

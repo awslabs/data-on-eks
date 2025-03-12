@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.15"
+  version = "~> 20.33"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -11,24 +11,55 @@ module "eks" {
   #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
   cluster_endpoint_public_access = true
 
+  # Add the IAM identity that terraform is using as a cluster admin
+  authentication_mode                      = "API_AND_CONFIG_MAP"
+  enable_cluster_creator_admin_permissions = true
+
+  #---------------------------------------
+  # Amazon EKS Managed Add-ons
+  #---------------------------------------
+  cluster_addons = {
+    coredns                = {}
+    eks-pod-identity-agent = {}
+    vpc-cni = {
+      before_compute = true
+      preserve       = true
+      most_recent    = true # To ensure access to the latest settings provided
+      configuration_values = jsonencode({
+        env = {
+          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+
+    kube-proxy = {}
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+      most_recent              = true
+    }
+
+    metrics-server = {}
+    amazon-cloudwatch-observability = {
+      preserve                 = true
+      service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
+    }
+  }
+
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
     substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
   )
 
-  manage_aws_auth_configmap = true
-  aws_auth_roles = [
-    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-    {
-      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups = [
-        "system:bootstrappers",
-        "system:nodes",
-      ]
-    }
-  ]
+  # Combine root account, current user/role and additinoal roles to be able to access the cluster KMS key - required for terraform updates
+  kms_key_administrators = distinct(concat([
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"],
+    var.kms_key_admin_roles,
+    [data.aws_iam_session_context.current.issuer_arn]
+
+  ))
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
@@ -74,23 +105,6 @@ module "eks" {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     }
 
-    # NVMe instance store volumes are automatically enumerated and assigned a device
-    pre_bootstrap_user_data = <<-EOT
-      cat <<-EOF > /etc/profile.d/bootstrap.sh
-      #!/bin/sh
-
-      # Configure the NVMe volumes in RAID0 configuration in the bootstrap.sh call.
-      # https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L35
-      # This will create a RAID volume and mount it at /mnt/k8s-disks/0
-      #   then mount that volume to /var/lib/kubelet, /var/lib/containerd, and /var/log/pods
-      #   this allows the container daemons and pods to write to the RAID0 by default without needing PersistentVolumes
-      export LOCAL_DISKS='raid0'
-      EOF
-
-      # Source extra environment variables in bootstrap script
-      sed -i '/^set -o errexit/a\\nsource /etc/profile.d/bootstrap.sh' /etc/eks/bootstrap.sh
-    EOT
-
     ebs_optimized = true
     # This block device is used only for root volume. Adjust volume according to your size.
     # NOTE: Don't use this volume for Spark workloads
@@ -134,70 +148,191 @@ module "eks" {
       }
     }
 
-    spark_ondemand_r5d = {
-      name        = "spark-ondemand-r5d"
-      description = "Spark managed node group for Driver pods"
+    # The following Node groups are a placeholder to create Node groups for running Spark TPC-DS benchmarks
+    spark_benchmark_ebs = {
+      name        = "spark_benchmark_ebs"
+      description = "Managed node group for Spark Benchmarks with EBS using x86 or ARM"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      min_size     = 0
-      max_size     = 20
-      desired_size = 0
+      # Change ami_type= AL2023_x86_64_STANDARD for x86 instances
+      ami_type = "AL2023_ARM_64_STANDARD" # arm64
 
-      instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
+      # Node group will be created with zero instances when you deploy the blueprint.
+      # You can change the min_size and desired_size to 6 instances
+      # desired_size might not be applied through terrafrom once the node group is created so this needs to be adjusted in AWS Console.
+      min_size     = 0 # Change min and desired to 6 for running benchmarks
+      max_size     = 8
+      desired_size = 0 # Change min and desired to 6 for running benchmarks
 
-      labels = {
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark-on-demand-ca"
+      # This storage is used as a shuffle for non NVMe SSD instances. e.g., r8g instances
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size           = 300
+            volume_type           = "gp3"
+            iops                  = 3000
+            encrypted             = true
+            delete_on_termination = true
+          }
+        }
       }
 
-      taints = [{
-        key    = "spark-on-demand-ca",
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
+      # Change the instance type as you desire and match with ami_type
+      instance_types = ["r8g.12xlarge"] # Change Instance type to run the benchmark with various instance types
+
+      labels = {
+        NodeGroupType = "spark_benchmark_ebs"
+      }
 
       tags = {
-        Name          = "spark-ondemand-r5d"
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark-on-demand-ca"
+        Name          = "spark_benchmark_ebs"
+        NodeGroupType = "spark_benchmark_ebs"
       }
     }
 
-    # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
-    # This command will give you the list of the instances with similar vcpus for arm64 dense instances
-    spark_spot_x86_48cpu = {
-      name        = "spark-spot-48cpu"
-      description = "Spark Spot node group for executor workloads"
+    spark_benchmark_ssd = {
+      name        = "spark_benchmark_ssd"
+      description = "Managed node group for Spark Benchmarks with NVMEe SSD using x86 or ARM"
       # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
       subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
         substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
       ]
 
-      min_size     = 0
-      max_size     = 12
-      desired_size = 0
+      ami_type = "AL2023_x86_64_STANDARD" # x86
 
-      instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
+      # Node group will be created with zero instances when you deploy the blueprint.
+      # You can change the min_size and desired_size to 6 instances
+      # desired_size might not be applied through terrafrom once the node group is created so this needs to be adjusted in AWS Console.
+      min_size     = var.spark_benchmark_ssd_min_size # Change min and desired to 6 for running benchmarks
+      max_size     = 8
+      desired_size = var.spark_benchmark_ssd_desired_size # Change min and desired to 6 for running benchmarks
+
+      instance_types = ["c5d.12xlarge"] # c5d.12xlarge = 2 x 900 NVMe SSD
+
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content      = <<-EOT
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              instance:
+                localStorage:
+                  strategy: RAID0
+          EOT
+        }
+      ]
 
       labels = {
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark-spot-ca"
+        NodeGroupType = "spark_benchmark_ssd"
       }
 
-      taints = [{
-        key    = "spark-spot-ca"
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
+      tags = {
+        Name          = "spark_benchmark_ssd"
+        NodeGroupType = "spark_benchmark_ssd"
+      }
+    }
+
+    spark_operator_bench = {
+      name        = "spark_operator_bench"
+      description = "Managed node group for Spark Operator Benchmarks with EBS using x86 or ARM"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
+
+      ami_type = "AL2023_x86_64_STANDARD"
+
+      cloudinit_pre_nodeadm = [
+        {
+          content_type = "application/node.eks.aws"
+          content      = <<-EOT
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              kubelet:
+                config:
+                  maxPods: 220
+          EOT
+        }
+      ]
+
+      min_size     = 0
+      max_size     = 200
+      desired_size = 0
+
+      instance_types = ["m6a.4xlarge"]
+
+      labels = {
+        NodeGroupType = "spark-operator-benchmark-ng"
+      }
+
+      taints = {
+        benchmark = {
+          key      = "spark-operator-benchmark-ng"
+          effect   = "NO_SCHEDULE"
+          operator = "EXISTS"
+        }
+      }
 
       tags = {
-        Name          = "spark-node-grp"
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark"
+        Name          = "spark-operator-benchmark-ng"
+        NodeGroupType = "spark-operator-benchmark-ng"
       }
     }
   }
+}
+
+#---------------------------------------------------------------
+# EKS Amazon CloudWatch Observability Role
+#---------------------------------------------------------------
+resource "aws_iam_role" "cloudwatch_observability_role" {
+  name = "${local.name}-eks-cw-agent-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = module.eks.oidc_provider_arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" : "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent",
+            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" : "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.cloudwatch_observability_role.name
+}
+
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.52"
+  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
 }

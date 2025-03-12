@@ -1,0 +1,109 @@
+# This script is used to run the spark-consumer application on EKS,
+# users need to replace MY_BUCKET_NAME and MY_KAFKA_BROKERS_ADRESS to match your environment.
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: spark-consumer
+  namespace: spark-team-a
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/consumer-spark-streaming-3.3.2-kafka:1" # You can build your own image using the Dockerfile in this folder
+  mainApplicationFile: "local:///app/app.py"
+  sparkVersion: "3.3.2"
+  deps:
+    jars:
+      - "local:///app/jars/commons-logging-1.1.3.jar"
+      - "local:///app/jars/commons-pool2-2.11.1.jar"
+      - "local:///app/jars/hadoop-client-api-3.3.2.jar"
+      - "local:///app/jars/hadoop-client-runtime-3.3.2.jar"
+      - "local:///app/jars/jsr305-3.0.0.jar"
+      - "local:///app/jars/kafka-clients-2.8.1.jar"
+      - "local:///app/jars/lz4-java-1.7.1.jar"
+      - "local:///app/jars/scala-library-2.12.15.jar"
+      - "local:///app/jars/slf4j-api-1.7.30.jar"
+      - "local:///app/jars/snappy-java-1.1.8.1.jar"
+      - "local:///app/jars/spark-sql-kafka-0-10_2.12-3.3.2.jar"
+      - "local:///app/jars/spark-tags_2.12-3.3.2.jar"
+      - "local:///app/jars/spark-token-provider-kafka-0-10_2.12-3.3.2.jar"
+      - "local:///app/jars/iceberg-spark-runtime-3.3_2.12-1.0.0.jar"
+      - "local:///app/jars/hadoop-aws-3.3.2.jar"
+      - "local:///app/jars/aws-java-sdk-bundle-1.11.1026.jar"
+      - "local:///app/jars/wildfly-openssl-1.0.7.Final.jar"
+      - "local:///app/jars/parquet-avro-1.12.3.jar"
+  sparkConf:
+    "spark.app.name": "KafkaToIceberg"
+    "spark.jars.repositories": "https://repo1.maven.org/maven2/"
+    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+    "spark.sql.catalog.local": "org.apache.iceberg.spark.SparkCatalog"
+    "spark.sql.catalog.local.type": "hadoop"
+    "spark.sql.catalog.local.warehouse": "s3a://__MY_BUCKET_NAME__/iceberg/warehouse/" # Replace bucket name with your S3 bucket name: s3_bucket_id_iceberg_bucket
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.DefaultAWSCredentialsProviderChain"
+    "spark.sql.warehouse.dir": "s3a://__MY_BUCKET_NAME__/iceberg/warehouse/" # Replace bucket name with your S3 bucket name: s3_bucket_id_iceberg_bucket
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics"
+    "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master"
+    "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications"
+    "spark.ui.prometheus.enabled": "true"
+    "spark.ui.prometheus.port": "4040"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 2
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 3
+    onSubmissionFailureRetryInterval: 20
+  dynamicAllocation:
+    enabled: true
+    initialExecutors: 3
+    minExecutors: 3
+    maxExecutors: 10
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "1024m"
+    labels:
+      version: "3.3.2"
+      app: spark
+    annotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: /metrics
+      prometheus.io/port: '4040'
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
+    env:
+      - name: S3_BUCKET_NAME
+        value: "__MY_BUCKET_NAME__" # Replace with your S3 bucket name: s3_bucket_id_iceberg_bucket
+      - name: KAFKA_ADDRESS
+        value: "__MY_KAFKA_BROKERS_ADRESS__" # Replace with your Kafka brokers address: bootstrap_brokers
+        # value: "b-1.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092,b-2.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092"
+  executor:
+    cores: 2
+    memory: "1024m"
+    labels:
+      version: "3.3.2"
+      app: spark
+    annotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: /metrics
+      prometheus.io/port: '4040'
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
+    env:
+      - name: S3_BUCKET_NAME
+        value: "__MY_BUCKET_NAME__" # Replace with your S3 bucket name: s3_bucket_id_iceberg_bucket
+      - name: KAFKA_ADDRESS
+        value: "__MY_KAFKA_BROKERS_ADRESS__" # Replace with your Kafka brokers address: bootstrap_brokers
+        # value: "b-1.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092,b-2.kafkademospark.mkjcj4.c12.kafka.us-west-2.amazonaws.com:9092"

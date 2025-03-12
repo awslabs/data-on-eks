@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-delete-topic-script
+  namespace: default
+data:
+  delete_topic.py: |
+    from kafka.admin import KafkaAdminClient
+
+    def delete_topic(bootstrap_servers, topic_name):
+        """Delete a Kafka topic."""
+        client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
+        try:
+            client.delete_topics([topic_name])
+            print(f"Topic {topic_name} deleted successfully.")
+        except Exception as e:
+            print(f"Failed to delete topic {topic_name}: {e}")
+
+    # Configuration
+    import os
+    bootstrap_servers = os.getenv('BOOTSTRAP_BROKERS', 'localhost:9092')  # Replace with your Kafka broker address
+    topic_name = os.getenv('TOPIC_NAME', 'security-topic')  # Replace with your topic name
+
+    # Delete Kafka topic
+    delete_topic(bootstrap_servers, topic_name)
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-delete-topic-pod
+  namespace: default
+spec:
+  containers:
+  - name: delete-topic
+    image: public.ecr.aws/data-on-eks/producer-kafka:1 # Use an appropriate Python image
+    command: ["python", "/scripts/delete_topic.py"]
+    env:
+      - name: BOOTSTRAP_BROKERS
+        value: "__MY_KAFKA_BROKERS__"  # Replace with your Kafka broker address
+      - name: TOPIC_NAME
+        value: "security-topic"  # Replace with your topic name
+    volumeMounts:
+    - name: script-volume
+      mountPath: /scripts
+  restartPolicy: Never
+  volumes:
+  - name: script-volume
+    configMap:
+      name: kafka-delete-topic-script

@@ -1,21 +1,26 @@
 ![Data on EKS](website/static/img/doeks-logo-green.png)
 # [Data on Amazon EKS (DoEKS)](https://awslabs.github.io/data-on-eks/)
-(pronounce Do.eks)
+*(Pronounced: "Do.eks")*
+> 💡 **Optimized Solutions for Data and AI on EKS**
 
 
-[![plan-examples](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml/badge.svg?branch=main)](https://github.com/awslabs/data-on-eks/actions/workflows/plan-examples.yml)
 
 ### Build, Scale, and Optimize Data & AI/ML Platforms on [Amazon EKS](https://aws.amazon.com/eks/) 🚀
 
-Welcome to the **Data on EKS** repository, a comprehensive resource for scaling your data and machine learning workloads on Amazon EKS and unlocking the power of [Gen AI](https://aws.amazon.com/generative-ai/). Harness the capabilities of [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/), [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) and [NVIDIA GPUs](https://aws.amazon.com/nvidia/) to scale and optimize your Gen AI workloads with ease.
+Welcome to **Data on EKS**, your gateway to scaling **Data and AI** workloads on Amazon EKS. Unlock the potential of [Gen AI](https://aws.amazon.com/generative-ai/) with a rich collection of Terraform Blueprints featuring best practices for deploying robust solutions with advanced logging and observability.
 
-This open-source tool offers a comprehensive collection of Terraform Blueprints, featuring industry best practices, to effortlessly deploy end-to-end solutions on Amazon EKS with advanced logging and observability. Dive into a diverse range of practical examples, showcasing the potential and flexibility of running AI/ML workloads on EKS, including [Apache Spark](https://spark.apache.org/), [PyTorch](https://pytorch.org/), [Tensorflow](https://www.tensorflow.org/), [XGBoost](https://xgboost.readthedocs.io/en/stable/), and more. Unlock valuable insights from benchmark reports and access expert guidance to optimize your data solutions. Discover how to effortlessly create robust clusters for [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html), [Apache Spark](https://spark.apache.org/), [Apache Flink](https://flink.apache.org/), [Apache Kafka](https://kafka.apache.org/), and [Apache Airflow](https://airflow.apache.org/), while exploring cutting-edge machine learning platforms like [Ray](https://www.ray.io/), [Kubeflow](https://awslabs.github.io/kubeflow-manifests/), [Jupyterhub](https://jupyter.org/hub), [NVIDIA GPUs](https://aws.amazon.com/nvidia/), [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/), and [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) on EKS.
+Explore practical examples and patterns for running Data workloads on EKS using advanced frameworks such as [Apache Spark](https://spark.apache.org/) for distributed data processing, [Apache Flink](https://flink.apache.org/) for real-time stream processing, and [Apache Kafka](https://kafka.apache.org/) for high-throughput distributed messaging. Automate and orchestrate complex workflows with [Apache Airflow](https://airflow.apache.org/) and leverage the robust capabilities of [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to build resilient clusters, seamlessly integrating Kubernetes with big data solutions for enhanced scalability and performance.
+
+On the AI/ML front, Explore practical patterns for running AI/ML workloads on EKS, leveraging the power of the [Ray](https://www.ray.io/) ecosystem for distributed computing. Utilize advanced serving solutions like [NVIDIA Triton Server](https://developer.nvidia.com/nvidia-triton-inference-server), [vLLM](https://github.com/vllm-project/vllm) for efficient and scalable model inference, and [TensorRT-LLM](https://developer.nvidia.com/tensorrt) for optimizing deep learning models.
+
+Take advantage of high-performance [NVIDIA GPUs](https://aws.amazon.com/nvidia/) for intensive computational tasks and leverage AWS’s specialized hardware, including [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/) for efficient model training and [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) for cost-effective model inference at scale.
 
 
-> **Note**: DoEKS is actively being developed for various patterns. To see what features are in progress, please check out the [issues](https://github.com/awslabs/data-on-eks/issues) section of our repository.
+> **Note:** DoEKS is in active development. For upcoming features and enhancements, check out the [issues](https://github.com/awslabs/data-on-eks/issues) section.
+
 
 ## 🏗️ Architecture
-The diagram below showcases the wide array of open-source data tools, Kubernetes operators, and frameworks supported by DoEKS. It also highlights the seamless integration of AWS Data Analytics managed services with the powerful capabilities of DoEKS open-source tools.
+The diagram below showcases the wide array of open-source data tools, Kubernetes operators, and frameworks used by DoEKS. It also highlights the seamless integration of AWS Data Analytics managed services with the powerful capabilities of DoEKS open-source tools.
 
 <img width="779" alt="image" src="https://user-images.githubusercontent.com/19464259/208900860-a7ccdaeb-158d-4767-baad-fbc76388bc09.png">
 
@@ -25,7 +30,7 @@ Data on EKS(DoEKS) solution is categorized into the following focus areas.
 
 🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics) on EKS
 
-🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml) on EKS
+🎯  [AI/ML](https://awslabs.github.io/data-on-eks/docs/gen-ai) on EKS
 
 🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms) on EKS
 
@@ -36,11 +41,17 @@ Data on EKS(DoEKS) solution is categorized into the following focus areas.
 ## 🏃‍♀️Getting Started
 In this repository, you'll find a variety of deployment blueprints for creating Data/ML platforms with Amazon EKS clusters. These examples are just a small selection of the available blueprints - visit the [DoEKS website](https://awslabs.github.io/data-on-eks/) for the complete list of options.
 
+### 🧠 AI
+
+🚀 [Trainium-Inferentia on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium) 👈 This blueprint used for running Gen AI models on [AWS Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/) accelerators.
+
+🚀 [JARK-Stack on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark) 👈 This blueprint deploys JARK stack for AI workloads with NVIDIA GPUs.
+
 🚀 [JupyterHub on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub) 👈 This blueprint deploys a self-managed JupyterHub on EKS with Amazon Cognito authentication.
 
-🚀 [Ray on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/ray) 👈 This blueprint deploys Ray Operator on EKS with sample scripts.
+🚀 [Generative AI on EKS](https://awslabs.github.io/data-on-eks/docs/gen-ai) 👈 Collection of Generative AI Training and Inference LLM deployment patterns
 
-🚀 [Trainium/Inferentia with TorchX and Volcano on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium) 👈 This blueprint deploys Gen AI blueprint on EKS with sample Training scripts.
+### 📊 Data
 
 🚀 [EMR-on-EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-karpenter)  👈 Start here if you are new to EMR on EKS. This blueprint deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
 
@@ -53,8 +64,7 @@ In this repository, you'll find a variety of deployment blueprints for creating 
 🚀 [Kafka on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms/kafka) 👈 This blueprint deploys a self-managed Kafka on EKS using the popular Strimzi Kafka operator.
 
 
-
-## 🗂️ Documentation
+## 📚 Documentation
 For instructions on how to deploy Data on EKS patterns and run sample tests, visit the [DoEKS website](https://awslabs.github.io/data-on-eks/).
 
 ## 🏆 Motivation

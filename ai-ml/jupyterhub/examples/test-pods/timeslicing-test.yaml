@@ -15,7 +15,7 @@ spec:
         app: time-slicing-verification
     spec:
       nodeSelector:
-        provisioner: gpu-ts
+        NodePool: gpu-ts
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists

@@ -1,8 +1,13 @@
 ---
-sidebar_position: 5
+sidebar_position: 1
 sidebar_label: Trainium on EKS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
+
+:::warning
+Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
+:::
+
 
 # AWS Trainium on EKS
 [AWS Trainium](https://aws.amazon.com/machine-learning/trainium/) is an advanced ML accelerator that transforms high-performance deep learning(DL) training. `Trn1` instances, powered by AWS Trainium chips, are purpose-built for high-performance DL training of **100B+ parameter** models. Meticulously designed for exceptional performance, Trn1 instances cater specifically to training popular Natual Language Processing(NLP) models on AWS, offering up to  **50% cost savings ** compared to GPU-based EC2 instances. This cost efficiency makes them an attractive option for data scientists and ML practitioners seeking optimized training costs without compromising performance.
@@ -87,6 +92,10 @@ git clone https://github.com/awslabs/data-on-eks.git
 Navigate into one of the example directories and run `install.sh` script
 
 ```bash
+export TF_VAR_enable_fsx_for_lustre=true
+export TF_VAR_enable_torchx_etcd=true
+export TF_VAR_enable_volcano=true
+
 cd data-on-eks/ai-ml/trainium-inferentia/ && chmod +x install.sh
 ./install.sh
 ```
@@ -109,6 +118,11 @@ kubectl get nodes # Output shows the EKS Managed Node group nodes
 
 </CollapsibleContent>
 
+### Observability with AWS CloudWatch and Neuron Monitor
+
+This blueprint deploys the CloudWatch Observability Agent as a managed add-on, providing comprehensive monitoring for containerized workloads. It includes container insights for tracking key performance metrics such as CPU and memory utilization. Additionally, the blueprint integrates GPU metrics using NVIDIA's DCGM plugin, which is essential for monitoring high-performance GPU workloads. For machine learning models running on AWS Inferentia or Trainium, the [Neuron Monitor plugin](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/tools/neuron-sys-tools/neuron-monitor-user-guide.html#neuron-monitor-user-guide) is added to capture and report Neuron-specific metrics.
+
+All metrics, including container insights, GPU performance, and Neuron metrics, are sent to Amazon CloudWatch, where you can monitor and analyze them in real-time. After the deployment is complete, you should be able to access these metrics directly from the CloudWatch console, allowing you to manage and optimize your workloads effectively.
 
 ### Distributed PyTorch Training on Trainium with TorchX and EKS
 
@@ -130,7 +144,7 @@ If you are executing this script on a Cloud9 IDE/EC2 instance different from the
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 1-bert-pretrain-build-image.sh
+chmod +x 1-bert-pretrain-build-image.sh
 ./1-bert-pretrain-build-image.sh
 ```
 
@@ -141,7 +155,7 @@ Enter the ECR region: us-west-2
 ECR repository 'eks_torchx_test' already exists.
 Repository URL: <YOUR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/eks_torchx_test
 Building and Tagging Docker image... <YOUR_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/eks_torchx_test:bert_pretrain
-[+] Building 2.4s (26/26) FINISHED  
+[+] Building 2.4s (26/26) FINISHED
  => [internal] load build definition from Dockerfile.bert_pretrain                                                                                                                   0.0s
  => => transferring dockerfile: 5.15kB                                                                                                                                               0.0s
  => [internal] load .dockerignore                                                                                                                                                    0.0s
@@ -156,13 +170,13 @@ Login to AWS Console and verify the ECR repo(`<YOUR_ACCOUNT_ID>.dkr.ecr.<REGION>
 
 #### Step2: Copy WikiCorpus pre-training dataset for BERT model to FSx for Lustre filesystem
 
-In this step, we make it easy to transfer the WikiCorpus pre-training dataset, which is crucial for training the BERT model in distributed mode by multiple Trainium instances, to the FSx for Lustre filesystem. To achieve this, we will login to `aws-cli-cmd-shell` pod which includes an AWS CLI container, providing access to the filesystem.
+In this step, we make it easy to transfer the WikiCorpus pre-training dataset, which is crucial for training the BERT model in distributed mode by multiple Trainium instances, to the FSx for Lustre filesystem. To achieve this, we will login to `cmd-shell` pod which includes an AWS CLI container, providing access to the filesystem.
 
 Once you're inside the container, Copy the WikiCorpus dataset from S3 bucket (`s3://neuron-s3/training_datasets/bert_pretrain_wikicorpus_tokenized_hdf5/bert_pretrain_wikicorpus_tokenized_hdf5_seqlen128.tar`). The dataset is then unpacked, giving you access to its contents, ready for use in the subsequent BERT model pre-training process.
 
 
 ```bash
-kubectl exec -i -t -n default aws-cli-cmd-shell -c app -- sh -c "clear; (bash || ash || sh)"
+kubectl exec -i -t -n default cmd-shell -c app -- sh -c "clear; (bash || ash || sh)"
 
 # Once logged into the container
 yum install tar
@@ -180,7 +194,7 @@ Execute the following commands.This script prompts the user to configure their k
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 2-bert-pretrain-precompile.sh
+chmod +x 2-bert-pretrain-precompile.sh
 ./2-bert-pretrain-precompile.sh
 ```
 
@@ -211,7 +225,7 @@ We are now in the final step of training the BERT-large model with WikiCorpus da
 
 ```bash
 cd ai-ml/trainium-inferentia/examples/dp-bert-large-pretrain
-chomd +x 3-bert-pretrain.sh
+chmod +x 3-bert-pretrain.sh
 ./3-bert-pretrain.sh
 ```
 

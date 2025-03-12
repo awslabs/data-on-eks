@@ -1,9 +1,11 @@
+/* src/pages/styles.module.css */
+
 .features {
   display: flex;
-  align-items: center;
+  justify-content: center;
   padding: 2rem 0;
   width: 100%;
-  /*background: whitesmoke;*/
+  flex-wrap: wrap;
 }
 
 .featureSvg {
@@ -37,4 +39,45 @@
 
 .heading {
   font-weight: bold;
+}
+
+.text--center {
+  text-align: center;
+}
+
+.padding-horiz--md {
+  padding: 0 1.5rem;
+}
+
+.container {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.col {
+  flex: 1 1 calc(33.333% - 20px); /* Ensure 3 columns */
+  margin: 10px;
+  box-sizing: border-box;
+}
+
+@media screen and (max-width: 996px) {
+  .features {
+    padding: 2rem 0;
+  }
+  .col {
+    flex: 1 1 calc(50% - 20px); /* Ensure 2 columns on smaller screens */
+    margin: 10px 0;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .col {
+    flex: 1 1 100%; /* Ensure 1 column on very small screens */
+    margin: 10px 0;
+  }
 }

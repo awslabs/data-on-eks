@@ -15,7 +15,7 @@ variable "region" {
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   type        = string
-  default     = "1.29"
+  default     = "1.30"
 }
 
 # VPC with 2046 IPs (10.1.0.0/21) and 2 AZs
@@ -39,14 +39,26 @@ variable "enable_jupyterhub" {
   default     = false
 }
 
-variable "enable_amazon_prometheus" {
-  description = "Enable AWS Managed Prometheus service"
+variable "enable_mpi_operator" {
+  description = "Flag to enable the MPI Operator deployment"
   type        = bool
   default     = false
 }
 
-variable "enable_mpi_operator" {
-  description = "Flag to enable the MPI Operator deployment"
+variable "enable_volcano" {
+  description = "Flag to enable the Volcano batch scheduler"
+  type        = bool
+  default     = false
+}
+
+variable "enable_torchx_etcd" {
+  description = "Flag to enable etcd deployment for torchx"
+  type        = bool
+  default     = false
+}
+
+variable "enable_fsx_for_lustre" {
+  description = "Flag to enable resources for FSx for Lustre"
   type        = bool
   default     = false
 }
@@ -97,4 +109,29 @@ variable "inf2_48xl_desired_size" {
   description = "Worker node desired size"
   type        = number
   default     = 0
+}
+
+variable "enable_kuberay_operator" {
+  description = "Flag to enable kuberay operator"
+  type        = bool
+  default     = true
+}
+
+variable "kms_key_admin_roles" {
+  description = "list of role ARNs to add to the KMS policy"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_rayserve_ha_elastic_cache_redis" {
+  description = "Flag to enable Ray Head High Availability with Elastic Cache for Redis"
+  type        = bool
+  default     = false
+}
+
+
+variable "access_entries" {
+  description = "Map of access entries to add to the cluster"
+  type        = any
+  default     = {}
 }

@@ -25,6 +25,17 @@ proxy:
 singleuser:
   startTimeout: 1200 # 20 mins to spin up a notebook server for GPU including the image pull
   profileList:
+    - display_name: Elyra (CPU)
+      description: "Elyra Notebooks | Karpenter Autoscaling"
+      kubespawner_override:
+        image: public.ecr.aws/data-on-eks/elyra-jupyter:3.15.0
+        node_selector:
+          NodePool: default
+        cpu_guarantee: 2
+        mem_guarantee: 8G
+        cpu_limit: 4
+        mem_limit: 8G
+      cmd: null
     - display_name: Data Engineering (CPU)
       description: "PySpark Notebooks | Karpenter AutoScaling"
       profile_options:
@@ -67,6 +78,7 @@ singleuser:
       kubespawner_override:
         node_selector:
           NodePool: trainium
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: aws.amazon.com/neuroncore
             operator: Exists
@@ -127,9 +139,10 @@ singleuser:
       description: "GPU Time-Slicing with Single GPU VMs (G5 2x, 4x, 8x, 16x) | nvidia.com/gpu: 1 | Karpenter AutoScaling"
       kubespawner_override:
         # namespace: data-team-a
-        image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+        image: cschranz/gpu-jupyter:v1.6_cuda-11.8_ubuntu-22.04_python-only
         node_selector:
           NodePool: gpu-ts # TIME-SLICING: Use this config with time-slicing mode
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
@@ -150,10 +163,11 @@ singleuser:
     - display_name: Data Science (GPU + MIG on P4d.24xlarge)
       description: "GPU MIG with P4d instances | nvidia.com/mig-1g.5gb: 1 | Cluster Autoscaler"
       kubespawner_override:
-        image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+        image: cschranz/gpu-jupyter:v1.6_cuda-11.8_ubuntu-22.04_python-only
         node_selector:
           provisioner: cluster-autoscaler
           node.kubernetes.io/instance-type: p4d.24xlarge
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
@@ -174,10 +188,10 @@ singleuser:
     - display_name: Data Science (GPU - P4d.24xlarge)
       description: "GPU with P4d instances | Karpenter Autoscaler"
       kubespawner_override:
-        image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+        image: cschranz/gpu-jupyter:v1.6_cuda-11.8_ubuntu-22.04_python-only
         node_selector:
-          node.kubernetes.io/instance-type: p4d.24xlarge
-          NodePool: gpu
+          NodePool: gpu-mig
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"

@@ -20,3 +20,8 @@ jobs:
         uses: actions/checkout@v3
       - name: Codespell
         uses: codespell-project/actions-codespell@v2
+        with:
+          check_filenames: true
+          # When using this Action in other repos, the --skip option below can be removed
+          skip: "*.excalidraw,*.git,*.png,*.jpg,*.svg,go.mod,go.sum"
+        continue-on-error: true # The PR checks will not fail, but the possible spelling issues will still be reported for review and correction

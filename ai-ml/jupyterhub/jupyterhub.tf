@@ -49,7 +49,7 @@ resource "kubernetes_secret_v1" "jupyterhub_single_user" {
 
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
-# This will be repalced with Dynamic EFS provision using EFS CSI Driver
+# This will be replaced with Dynamic EFS provision using EFS CSI Driver
 #---------------------------------------------------------------
 resource "aws_efs_file_system" "efs" {
   encrypted = true
@@ -57,11 +57,20 @@ resource "aws_efs_file_system" "efs" {
   tags = local.tags
 }
 
-resource "aws_efs_mount_target" "efs_mt" {
-  count = length(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]))
-
+#---------------------------------------------------------------
+# module.vpc.private_subnets = [AZ1_10.x, AZ2_10.x, AZ1_100.x, AZ2_100.x]
+# We use index 2 and 3 to select the subnet in AZ1 with the 100.x CIDR:
+# Create EFS mount targets for the 3rd  subnet
+resource "aws_efs_mount_target" "efs_mt_1" {
   file_system_id  = aws_efs_file_system.efs.id
-  subnet_id       = element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), count.index)
+  subnet_id       = module.vpc.private_subnets[2]
+  security_groups = [aws_security_group.efs.id]
+}
+
+# Create EFS mount target for the 4th subnet
+resource "aws_efs_mount_target" "efs_mt_2" {
+  file_system_id  = aws_efs_file_system.efs.id
+  subnet_id       = module.vpc.private_subnets[3]
   security_groups = [aws_security_group.efs.id]
 }
 

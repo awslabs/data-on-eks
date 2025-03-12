@@ -1,0 +1,52 @@
+---
+# This is the producer deployment file, you can adjust the number of replicas to produce more data.
+# You will need to change __MY_AWS_REGION__, __MY_KAFKA_BROKERS__, and __MY_PRODUCER_ROLE_ARN__ to match your environment.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: producer-sa
+  annotations:
+    eks.amazonaws.com/role-arn: __MY_PRODUCER_ROLE_ARN__ # Replace with your producer role ARN: producer_iam_role_arn
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer-deployment
+spec:
+  replicas: 100  # Adjusted to match the required number of replicas
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      serviceAccountName: producer-sa
+      containers:
+      - name: producer
+        image: public.ecr.aws/data-on-eks/producer-kafka:1
+        #image: public.ecr.aws/data-on-eks/producer-kafka:1
+        command: ["python", "app.py"]
+        env:
+          - name: RATE_PER_SECOND
+            value: "100000"
+          - name: NUM_OF_MESSAGES
+            value: "10000000"
+          - name: AWS_REGION
+            value: "__MY_AWS_REGION__" # Replace with your AWS region
+          - name: BOOTSTRAP_BROKERS
+            value: "__MY_KAFKA_BROKERS__" # Replace with your bootstrap brokers: bootstrap_brokers
+        resources:
+          limits:
+            cpu: "2"  # Increased CPU limit
+            memory: "4Gi"  # Increased memory limit
+          requests:
+            cpu: "1"  # Increased CPU request
+            memory: "2Gi"  # Increased memory request
+        volumeMounts:
+          - name: shared-volume
+            mountPath: /mnt
+      volumes:
+        - name: shared-volume
+          emptyDir: {}

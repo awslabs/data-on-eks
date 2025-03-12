@@ -4,6 +4,7 @@ sidebar_label: EMR NVIDIA Spark-RAPIDS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
+
 # EMR on EKS NVIDIA RAPIDS Accelerator for Apache Spark
 
 The NVIDIA RAPIDS Accelerator for Apache Spark is a powerful tool that builds on the capabilities of NVIDIA CUDA® - a transformative parallel computing platform designed for enhancing computational processes on NVIDIA's GPU architecture. RAPIDS, a project developed by NVIDIA, comprises a suite of open-source libraries that are hinged upon CUDA, thereby enabling GPU-accelerated data science workflows.
@@ -42,7 +43,7 @@ This example deploys the following resources
 - Ubuntu EKS AMI used for Spark Driver and Spark executor GPU Node groups
 - NVIDIA GPU Operator helm add-on deployed
 - Deploys Metrics server, Cluster Autoscaler, Karpenter, Grafana, AMP and Prometheus server.
-- Enables EMR on EKS  
+- Enables EMR on EKS
   - Creates two namespaces (`emr-ml-team-a`, `emr-ml-team-b`) for data teams
   - Creates Kubernetes role and role binding(`emr-containers` user) for both namespaces
   - IAM roles for both teams needed for job execution
@@ -105,12 +106,12 @@ kubectl get pods --namespace=gpu-operator
     nvidia-device-plugin-daemonset-r5m7z                              1/1     Running
     nvidia-device-plugin-validator-hg78p                              0/1     Completed
     nvidia-driver-daemonset-6s9qv                                     1/1     Running
-    nvidia-gpu-operator-node-feature-discovery-master-6f78fb7cbx79z   1/1     Running  
+    nvidia-gpu-operator-node-feature-discovery-master-6f78fb7cbx79z   1/1     Running
     nvidia-gpu-operator-node-feature-discovery-worker-b2f6b           1/1     Running
     nvidia-gpu-operator-node-feature-discovery-worker-dc2pq           1/1     Running
     nvidia-gpu-operator-node-feature-discovery-worker-h7tpq           1/1     Running
     nvidia-gpu-operator-node-feature-discovery-worker-hkj6x           1/1     Running
-    nvidia-gpu-operator-node-feature-discovery-worker-zjznr           1/1     Running  
+    nvidia-gpu-operator-node-feature-discovery-worker-zjznr           1/1     Running
     nvidia-operator-validator-j7lzh                                   1/1     Running
 ```
 

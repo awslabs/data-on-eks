@@ -1,7 +1,10 @@
 ---
-sidebar_position: 3
-sidebar_label: Observability Spark on EKS
+sidebar_position: 5
+sidebar_label: Spark Observability on EKS
 ---
+
+import TaxiTripExec from './_taxi_trip_exec.md';
+
 # Observability Spark on EKS
 
 ## Introduction
@@ -15,10 +18,9 @@ We will reuse the previous Spark on Operator example. Please follow [this link](
 let's navigate to one example folder under spark-k8s-operator and run the shell script to upload data and py script to the S3 bucket created by terraform above.
 ```bash
 cd data-on-eks/analytics/terraform/spark-k8s-operator/examples/cluster-autoscaler/nvme-ephemeral-storage
-
-# replace \<S3_BUCKET\> with your S3 bucket and \<REGION\> with your region, then run
-./taxi-trip-execute.sh
 ```
+
+<TaxiTripExec />
 
 ## Spark Web UI
 When you submit a Spark application, Spark context is created which ideally gives you [Spark Web UI](https://sparkbyexamples.com/spark/spark-web-ui-understanding/) to monitor the execution of the application. Monitoring includes the following.
@@ -72,6 +74,7 @@ Then open browser and enter localhost:18085. You can view your spark history ser
 ## Prometheus
 Spark users must add the following config to spark application yaml file to extract the metrics from Spark Driver and Executors. In the example, they are added into nvme-ephemeral-storage.yaml already.
 
+```yaml
     "spark.ui.prometheus.enabled": "true"
     "spark.executor.processTreeMetrics.enabled": "true"
     "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
@@ -84,6 +87,7 @@ Spark users must add the following config to spark application yaml file to extr
     "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
     "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
     "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
+```
 
 Run port forward command to expose prometheus service.
 ```bash
@@ -99,7 +103,7 @@ Grafana has been installed. Use the command below to access with port forward.
 # get grafana password
 
 ```bash
-kubectl  port-forward service/grafana 8080:80 -n grafana  
+kubectl  port-forward service/grafana 8080:80 -n grafana
 ```
 
 login username is admin and password can get from secrets manager. You can import dashboard with ID: 7890.

@@ -1,10 +1,10 @@
 terraform {
-  required_version = ">= 1.0.0"
+  required_version = ">= 1.3.2"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 3.72"
+      version = ">= 5.61"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -15,8 +15,8 @@ terraform {
       version = ">= 2.4.1"
     }
     kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = ">= 1.14"
+      source  = "alekc/kubectl"
+      version = ">= 2.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -25,10 +25,6 @@ terraform {
     http = {
       source  = "hashicorp/http"
       version = ">= 3.3"
-    }
-    cloudinit = {
-      source  = "hashicorp/cloudinit"
-      version = ">= 2.0"
     }
   }
 

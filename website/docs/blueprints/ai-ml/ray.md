@@ -1,18 +1,17 @@
 ---
-sidebar_position: 2
+sidebar_position: 5
 sidebar_label: Ray on EKS
 ---
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Ray on EKS
 
-:::caution
-This blueprint should be considered as experimental and should only be used for proof of concept.
+:::danger
+**DEPRECATION NOTICE**
+
+This blueprint will be deprecated and eventually removed from this GitHub repository on **October 27, 2024**, in favor of the [**JARK stack**](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark). Please use the JARK stack blueprint instead.
 :::
 
-:::info
-As part of our ongoing efforts to make this blueprint more enterprise-ready, we are actively working on adding several key functionalities. This includes cost management with Kubecost, advanced observability with OTEL, Amazon Managed Prometheus, and Grafana, as well as improved security and data governance using tools such as OPA/Gatekeeper and IRSA. If you have specific requirements or suggestions for this blueprint, please feel free to open an issue on our GitHub repository.
-:::
 
 ## Introduction
 
@@ -214,16 +213,16 @@ kubectl get nodes
 :::info
 ```bash
 NAME                          STATUS    ROLES    AGE   VERSION
-ip-10-1-1-241.ec2.internal    Unknown   <none>   1s  
-ip-10-1-10-211.ec2.internal   Unknown   <none>   1s  
+ip-10-1-1-241.ec2.internal    Unknown   <none>   1s
+ip-10-1-10-211.ec2.internal   Unknown   <none>   1s
 ip-10-1-13-204.ec2.internal   Ready     <none>   24m   v1.24.9-eks-49d8fe8
 ip-10-1-26-241.ec2.internal   Ready     <none>   12h   v1.24.9-eks-49d8fe8
-ip-10-1-3-64.ec2.internal     Unknown   <none>   7s  
+ip-10-1-3-64.ec2.internal     Unknown   <none>   7s
 ip-10-1-4-21.ec2.internal     Ready     <none>   12h   v1.24.9-eks-49d8fe8
 ip-10-1-40-196.ec2.internal   Ready     <none>   12h   v1.24.9-eks-49d8fe8
-ip-10-1-7-167.ec2.internal    Unknown   <none>   1s  
-ip-10-1-9-112.ec2.internal    Unknown   <none>   1s  
-ip-10-1-9-172.ec2.internal    Unknown   <none>   1s  
+ip-10-1-7-167.ec2.internal    Unknown   <none>   1s
+ip-10-1-9-112.ec2.internal    Unknown   <none>   1s
+ip-10-1-9-172.ec2.internal    Unknown   <none>   1s
 ```
 :::
 

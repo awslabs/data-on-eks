@@ -50,7 +50,7 @@ module "eks_blueprints_addons" {
   enable_aws_efs_csi_driver = true
 
   #---------------------------------------
-  # CAUTION: This blueprint creates a PUBIC facing load balancer to show the Airflow Web UI for demos.
+  # CAUTION: This blueprint creates a PUBLIC facing load balancer to show the Airflow Web UI for demos.
   # Please change this to a private load balancer if you are using this in production.
   #---------------------------------------
   enable_aws_load_balancer_controller = true
@@ -139,7 +139,7 @@ module "eks_blueprints_addons" {
   # Prommetheus and Grafana stack
   #---------------------------------------
   #---------------------------------------------------------------
-  # Install Kafka Montoring Stack with Prometheus and Grafana
+  # Install Kafka Monitoring Stack with Prometheus and Grafana
   # 1- Grafana port-forward `kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack`
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
@@ -173,7 +173,7 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.2.9" # ensure to update this to the latest/desired version
+  version = "1.33.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 

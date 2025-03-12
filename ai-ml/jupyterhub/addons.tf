@@ -1,6 +1,6 @@
 # Use this data source to get the ARN of a certificate in AWS Certificate Manager (ACM)
 data "aws_acm_certificate" "issued" {
-  count    = var.jupyter_hub_auth_mechanism == "cognito" ? 1 : 0
+  count    = var.jupyter_hub_auth_mechanism != "dummy" ? 1 : 0
   domain   = var.acm_certificate_domain
   statuses = ["ISSUED"]
 }
@@ -11,6 +11,44 @@ data "aws_ecrpublic_authorization_token" "token" {
 
 locals {
   cognito_custom_domain = var.cognito_custom_domain
+}
+
+#---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_annotations" "disable_gp2" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "false"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+resource "kubernetes_storage_class" "default_gp3" {
+  metadata {
+    name = "gp3"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" : "true"
+    }
+  }
+
+  storage_provisioner    = "ebs.csi.aws.com"
+  reclaim_policy         = "Delete"
+  allow_volume_expansion = true
+  volume_binding_mode    = "WaitForFirstConsumer"
+  parameters = {
+    fsType    = "ext4"
+    encrypted = true
+    type      = "gp3"
+  }
+
+  depends_on = [kubernetes_annotations.disable_gp2]
 }
 
 #---------------------------------------------------------------
@@ -45,31 +83,10 @@ module "eks_blueprints_addons" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
     }
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      preserve = true
-    }
-    kube-proxy = {
-      preserve = true
-    }
-  }
-
-  #---------------------------------------
-  # Kubernetes Add-ons
-  #---------------------------------------
-  #---------------------------------------------------------------
-  # CoreDNS Autoscaler helps to scale for large EKS Clusters
-  #   Further tuning for CoreDNS is to leverage NodeLocal DNSCache -> https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/
-  #---------------------------------------------------------------
-  enable_cluster_proportional_autoscaler = true
-  cluster_proportional_autoscaler = {
-    timeout = "300"
-    values = [templatefile("${path.module}/helm/coredns-autoscaler/values.yaml", {
-      target = "deployment/coredns"
-    })]
-    description = "Cluster Proportional Autoscaler for CoreDNS Service"
+    coredns    = {}
+    kube-proxy = {}
+    # VPC CNI uses worker node IAM role policies
+    vpc-cni = {}
   }
 
   #---------------------------------------
@@ -99,16 +116,29 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter                  = true
   karpenter_enable_spot_termination = true
+  karpenter_node = {
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    }
+  }
   karpenter = {
-    timeout             = "300"
+    chart_version       = "0.37.0"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
   #---------------------------------------
-  # AWS Load Balancer Controller
+  # AWS Load Balancer Controller Add-on
   #---------------------------------------
   enable_aws_load_balancer_controller = true
+  # turn off the mutating webhook for services because we are using
+  # service.beta.kubernetes.io/aws-load-balancer-type: external
+  aws_load_balancer_controller = {
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
 
   #---------------------------------------
   # Prometheus and Grafana stack
@@ -147,118 +177,6 @@ module "eks_blueprints_addons" {
     })]
   }
 
-  #---------------------------------------
-  # Additional Helm Charts
-  #---------------------------------------
-  helm_releases = {
-    storageclass = {
-      name        = "storageclass"
-      description = "A Helm chart for storage configurations"
-      chart       = "${path.module}/helm/storageclass"
-    }
-    karpenter-resources-cpu = {
-      name        = "karpenter-resources-cpu"
-      description = "A Helm chart for karpenter CPU based resources"
-      chart       = "${path.module}/helm/karpenter-resources"
-      values = [
-        <<-EOT
-          clusterName: ${module.eks.cluster_name}
-          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-        EOT
-      ]
-    }
-    karpenter-resources-ts = {
-      name        = "karpenter-resources-ts"
-      description = "A Helm chart for karpenter GPU based resources - compatible with GPU time slicing"
-      chart       = "${path.module}/helm/karpenter-resources"
-      values = [
-        <<-EOT
-          name: gpu-ts
-          clusterName: ${module.eks.cluster_name}
-          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-          instanceSizes: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
-          instanceFamilies: ["g5"]
-          taints:
-            - key: hub.jupyter.org/dedicated
-              value: "user"
-              effect: "NoSchedule"
-            - key: nvidia.com/gpu
-              effect: "NoSchedule"
-          amiFamily: Ubuntu
-        EOT
-      ]
-    }
-    karpenter-resources-mig = {
-      name        = "karpenter-resources-gpu"
-      description = "A Helm chart for karpenter GPU based resources - compatible with P4d instances"
-      chart       = "${path.module}/helm/karpenter-resources"
-      values = [
-        <<-EOT
-          name: gpu
-          clusterName: ${module.eks.cluster_name}
-          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-          instanceSizes: ["24xlarge"]
-          instanceFamilies: ["p4d"]
-          taints:
-            - key: hub.jupyter.org/dedicated
-              value: "user"
-              effect: "NoSchedule"
-            - key: nvidia.com/gpu
-              effect: "NoSchedule"
-          amiFamily: Ubuntu
-        EOT
-      ]
-    }
-    karpenter-resources-inf = {
-      name        = "karpenter-resources-inf"
-      description = "A Helm chart for karpenter Inferentia based resources"
-      chart       = "${path.module}/helm/karpenter-resources"
-      values = [
-        <<-EOT
-          name: inferentia
-          clusterName: ${module.eks.cluster_name}
-          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-          instanceSizes: ["8xlarge", "24xlarge"]
-          instanceFamilies: ["inf2"]
-          taints:
-            - key: aws.amazon.com/neuroncore
-              value: "true"
-              effect: "NoSchedule"
-            - key: aws.amazon.com/neuron
-              value: "true"
-              effect: "NoSchedule"
-            - key: hub.jupyter.org/dedicated
-              value: "user"
-              effect: "NoSchedule"
-        EOT
-      ]
-    }
-    karpenter-resources-trn = {
-      name        = "karpenter-resources-trn"
-      description = "A Helm chart for karpenter Trainium based resources"
-      chart       = "${path.module}/helm/karpenter-resources"
-      values = [
-        <<-EOT
-          name: trainium
-          clusterName: ${module.eks.cluster_name}
-          karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
-          instanceSizes: ["32xlarge"]
-          instanceFamilies: ["trn1"]
-          taints:
-            - key: aws.amazon.com/neuroncore
-              value: "true"
-              effect: "NoSchedule"
-            - key: aws.amazon.com/neuron
-              value: "true"
-              effect: "NoSchedule"
-            - key: hub.jupyter.org/dedicated
-              value: "user"
-              effect: "NoSchedule"
-        EOT
-      ]
-    }
-  }
-
   tags = local.tags
 }
 
@@ -267,7 +185,7 @@ module "eks_blueprints_addons" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "~> 1.0" # ensure to update this to the latest/desired version
+  version = "1.33.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -277,11 +195,68 @@ module "eks_data_addons" {
   enable_aws_neuron_device_plugin = true
 
   #---------------------------------------------------------------
-  # Enable GPU operator
+  # NVIDIA Device Plugin Add-on
   #---------------------------------------------------------------
-  enable_nvidia_gpu_operator = true
-  nvidia_gpu_operator_helm_config = {
-    values = [templatefile("${path.module}/helm/nvidia-gpu-operator/values.yaml", {})]
+  enable_nvidia_device_plugin = true
+  nvidia_device_plugin_helm_config = {
+    version = "v0.15.0"
+    name    = "nvidia-device-plugin"
+    values = [
+      <<-EOT
+        mixedStrategy: "mixed"
+        config:
+          map:
+            default: |-
+              version: v1
+              flags:
+                migStrategy: none
+              sharing:
+                timeSlicing:
+                  resources:
+                  - name: nvidia.com/gpu
+                    replicas: 4
+            nvidia-a100g: |-
+              version: v1
+              flags:
+                migStrategy: mixed
+              sharing:
+                timeSlicing:
+                  resources:
+                  - name: nvidia.com/gpu
+                    replicas: 8
+                  - name: nvidia.com/mig-1g.5gb
+                    replicas: 2
+                  - name: nvidia.com/mig-2g.10gb
+                    replicas: 2
+                  - name: nvidia.com/mig-3g.20gb
+                    replicas: 3
+                  - name: nvidia.com/mig-7g.40gb
+                    replicas: 7
+        gfd:
+          enabled: true
+        nfd:
+          worker:
+            tolerations:
+              - key: nvidia.com/gpu
+                operator: Exists
+                effect: NoSchedule
+              - operator: "Exists"
+              - key: "hub.jupyter.org/dedicated"
+                operator: "Equal"
+                value: "user"
+                effect: "NoSchedule"
+        tolerations:
+          - key: CriticalAddonsOnly
+            operator: Exists
+          - key: nvidia.com/gpu
+            operator: Exists
+            effect: NoSchedule
+          - key: "hub.jupyter.org/dedicated"
+            operator: "Equal"
+            value: "user"
+            effect: "NoSchedule"
+      EOT
+    ]
   }
 
   #---------------------------------------------------------------
@@ -292,16 +267,18 @@ module "eks_data_addons" {
     values = [templatefile("${path.module}/helm/jupyterhub/jupyterhub-values-${var.jupyter_hub_auth_mechanism}.yaml", {
       ssl_cert_arn                = try(data.aws_acm_certificate.issued[0].arn, "")
       jupyterdomain               = try("https://${var.jupyterhub_domain}/hub/oauth_callback", "")
-      authorize_url               = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")
-      token_url                   = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token", "")
-      userdata_url                = try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
-      client_id                   = try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
-      client_secret               = try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
+      authorize_url               = var.oauth_domain != "" ? "${var.oauth_domain}/auth" : try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/authorize", "")
+      token_url                   = var.oauth_domain != "" ? "${var.oauth_domain}/token" : try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/token", "")
+      userdata_url                = var.oauth_domain != "" ? "${var.oauth_domain}/userinfo" : try("https://${local.cognito_custom_domain}.auth.${local.region}.amazoncognito.com/oauth2/userInfo", "")
+      username_key                = try(var.oauth_username_key, "")
+      client_id                   = var.oauth_jupyter_client_id != "" ? var.oauth_jupyter_client_id : try(aws_cognito_user_pool_client.user_pool_client[0].id, "")
+      client_secret               = var.oauth_jupyter_client_secret != "" ? var.oauth_jupyter_client_secret : try(aws_cognito_user_pool_client.user_pool_client[0].client_secret, "")
       user_pool_id                = try(aws_cognito_user_pool.pool[0].id, "")
       identity_pool_id            = try(aws_cognito_identity_pool.identity_pool[0].id, "")
       jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
       region                      = var.region
     })]
+    version = "3.2.1"
   }
 
   #---------------------------------------------------------------
@@ -312,6 +289,227 @@ module "eks_data_addons" {
     values              = [templatefile("${path.module}/helm/kubecost/values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------------------------------
+  # Karpenter Resources Add-on
+  #---------------------------------------------------------------
+  enable_karpenter_resources = true
+  karpenter_resources_helm_config = {
+    karpenter-resources-ts = {
+      values = [
+        <<-EOT
+      name: gpu-ts
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodePool: gpu-ts
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: hub.jupyter.org/dedicated
+            value: "user"
+            effect: "NoSchedule"
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["2xlarge", "4xlarge", "8xlarge", "16xlarge", "24xlarge"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 60s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    karpenter-resources-mig = {
+      values = [
+        <<-EOT
+      name: gpu-mig
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodePool: gpu-mig
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: hub.jupyter.org/dedicated
+            value: "user"
+            effect: "NoSchedule"
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["p4d"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["24xlarge"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 60s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    karpenter-resources-inf = {
+      values = [
+        <<-EOT
+      name: inferentia
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodePool: inferentia
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: aws.amazon.com/neuroncore
+            value: "true"
+            effect: "NoSchedule"
+          - key: aws.amazon.com/neuron
+            value: "true"
+            effect: "NoSchedule"
+          - key: hub.jupyter.org/dedicated
+            value: "user"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["inf2"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["8xlarge", "24xlarge"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 60s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    karpenter-resources-trn = {
+      values = [
+        <<-EOT
+      name: trainium
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodePool: trainium
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: aws.amazon.com/neuroncore
+            value: "true"
+            effect: "NoSchedule"
+          - key: aws.amazon.com/neuron
+            value: "true"
+            effect: "NoSchedule"
+          - key: hub.jupyter.org/dedicated
+            value: "user"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["trn1"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["32xlarge"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 60s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+    x86-cpu-karpenter = {
+      values = [
+        <<-EOT
+      name: x86-cpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[3]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodePool: default
+          - hub.jupyter.org/node-purpose: user
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["m5"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "xlarge", "2xlarge", "4xlarge", "8xlarge"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 60s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
   }
 }
 

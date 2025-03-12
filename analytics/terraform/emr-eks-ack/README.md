@@ -1,5 +1,13 @@
 # EMR on EKS with ACK Controller and Crossplane
 
+:::danger
+**DEPRECATION NOTICE**
+
+This blueprint will be deprecated and eventually removed from this GitHub repository on **October 27, 2024**. No bugs will be fixed, and no new features will be added. The decision to deprecate is based on the lack of demand and interest in this blueprint, as well as the difficulty in allocating resources to maintain a blueprint that is not actively used by any users or customers.
+
+If you are using this blueprint in production, please add yourself to the [adopters.md](https://github.com/awslabs/data-on-eks/blob/main/ADOPTERS.md) page and raise an issue in the repository. This will help us reconsider and possibly retain and continue to maintain the blueprint. Otherwise, you can make a local copy or use existing tags to access it.
+:::
+
 This pattern is used to deploy the EKS Cluster with EMR on EKS ACK Controllers and Crossplane.
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-ack) to deploy this pattern and run sample tests.
 
@@ -27,7 +35,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.20 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.15 |
 | <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.2 |
-| <a name="module_emr_ack"></a> [emr\_ack](#module\_emr\_ack) | ../../../workshop/modules/emr-ack | n/a |
+| <a name="module_emr_ack"></a> [emr\_ack](#module\_emr\_ack) | ./modules/emr-ack | n/a |
 | <a name="module_emr_containers"></a> [emr\_containers](#module\_emr\_containers) | terraform-aws-modules/emr/aws//modules/virtual-cluster | ~> 1.0 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | ~> 5.0 |
 

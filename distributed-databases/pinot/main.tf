@@ -73,7 +73,7 @@ module "eks" {
       max_size     = 8
       desired_size = 3
 
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m7i.large"]
 
       ebs_optimized = true
       block_device_mappings = {
@@ -97,7 +97,7 @@ module "eks" {
     # https://startree.ai/blog/capacity-planning-in-apache-pinot-part-2
 
     controller_node_group = {
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m7i.large"]
       capacity_type  = "ON_DEMAND"
       max_size       = 5
       min_size       = 3
@@ -117,7 +117,7 @@ module "eks" {
     }
 
     zookeeper_node_group = {
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m7i.large"]
       capacity_type  = "ON_DEMAND"
       max_size       = 5
       min_size       = 3
@@ -137,7 +137,7 @@ module "eks" {
     }
 
     broker_node_group = {
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m7i.large"]
       capacity_type  = "ON_DEMAND"
       max_size       = 5
       min_size       = 3
@@ -157,7 +157,7 @@ module "eks" {
     }
 
     server_node_group = {
-      instance_types = ["r5.xlarge"]
+      instance_types = ["r7i.2xlarge"]
       capacity_type  = "ON_DEMAND"
       max_size       = 9
       min_size       = 6
@@ -188,7 +188,7 @@ module "eks" {
     }
 
     minion_node_group = {
-      instance_types = ["m5.xlarge"]
+      instance_types = ["m7i.large"]
       capacity_type  = "ON_DEMAND"
       max_size       = 3
       min_size       = 1

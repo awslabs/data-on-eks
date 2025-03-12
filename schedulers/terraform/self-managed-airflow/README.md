@@ -11,7 +11,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.9.0 |
 | <a name="requirement_kubectl"></a> [kubectl](#requirement\_kubectl) | >= 1.14 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.20.0 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | 3.5.1 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.5.1 |
 
 ## Providers
 
@@ -21,7 +21,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | >= 5.0 |
 | <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | >= 1.14 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.20.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.5.1 |
+| <a name="provider_random"></a> [random](#provider\_random) | >= 3.5.1 |
 
 ## Modules
 
@@ -36,7 +36,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.34 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.15 |
 | <a name="module_eks_blueprints_addons"></a> [eks\_blueprints\_addons](#module\_eks\_blueprints\_addons) | aws-ia/eks-blueprints-addons/aws | ~> 1.2 |
-| <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | aws-ia/eks-data-addons/aws | ~> 1.2.9 |
+| <a name="module_eks_data_addons"></a> [eks\_data\_addons](#module\_eks\_data\_addons) | aws-ia/eks-data-addons/aws | 1.33.0 |
 | <a name="module_fluentbit_s3_bucket"></a> [fluentbit\_s3\_bucket](#module\_fluentbit\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
 | <a name="module_security_group"></a> [security\_group](#module\_security\_group) | terraform-aws-modules/security-group/aws | ~> 5.0 |
 | <a name="module_spark_logs_s3_bucket"></a> [spark\_logs\_s3\_bucket](#module\_spark\_logs\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.0 |
@@ -80,9 +80,9 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | [kubernetes_service_account_v1.airflow_webserver](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/service_account_v1) | resource |
 | [kubernetes_service_account_v1.airflow_worker](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/service_account_v1) | resource |
 | [kubernetes_service_account_v1.spark_team_a](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/service_account_v1) | resource |
-| [random_id.airflow_webserver](https://registry.terraform.io/providers/hashicorp/random/3.5.1/docs/resources/id) | resource |
-| [random_password.grafana](https://registry.terraform.io/providers/hashicorp/random/3.5.1/docs/resources/password) | resource |
-| [random_password.postgres](https://registry.terraform.io/providers/hashicorp/random/3.5.1/docs/resources/password) | resource |
+| [random_id.airflow_webserver](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
+| [random_password.grafana](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
+| [random_password.postgres](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_ecrpublic_authorization_token.token](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ecrpublic_authorization_token) | data source |

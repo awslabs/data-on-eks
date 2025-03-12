@@ -1,50 +1,128 @@
+# Coordinator Node Memory:
+# JVM Heap (maxHeapSize): 32G (100%)
+# ├── Query Memory (maxMemoryPerNode): 22GB (~70%)
+# ├── Heap Headroom: 9.6GB (30%)
+# └── Total: 31.6GB < 32GB ✓
+
+# Worker Node Memory
+# JVM Heap (maxHeapSize): 89G (100%)
+# ├── Query Memory (maxMemoryPerNode): 71GB (~70%)
+# ├── Heap Headroom: 9.6GB
+# └── Total: 80.6GB < 89GB ✓
+---
 image:
-  tag: "427"
+  repository: trinodb/trino
+  tag: 447
+  pullPolicy: IfNotPresent
 server:
-  workers: 3
+  workers: 1
   exchangeManager:
+    name: filesystem
     baseDir: "s3://${exchange_bucket_id}"
   autoscaling:
-    enabled: true
-    maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
+    enabled: false
+    # Add advanced scaling behavior from https://github.com/trinodb/charts/blob/4630167a839e6730c04cecc2af09ff038f522903/charts/trino/values.yaml#L94
   config:
     query:
-      maxMemory: "40GB"
+      maxMemory: "280GB"  # Total memory across cluster for queries
+      initialHashPartitions: 100  # Improved parallel processing
+      maxStageRetries: 3
+      maxExecutionTime: "24h"
+      clientTimeout: "2h"
 service:
   type: ClusterIP
   port: 8080
+
 coordinator:
   jvm:
-    maxHeapSize: "8G"
+    maxHeapSize: "32G"  # ~80% of container memory
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
   config:
     query:
-      maxMemoryPerNode: "4GB"
-  nodeSelector:
-    NodePool: trino-karpenter
-    karpenter.sh/capacity-type: on-demand
-worker:
-  jvm:
-    maxHeapSize: "8G"
-  config:
-    query:
-      maxMemoryPerNode: "4GB"
+      #maxMemoryPerNode + (maxHeapSize * 0.3) < maxHeapSize
+      maxMemoryPerNode: "22GB"  # ~70% of maxHeapSize
+      minWorkers: 1
+      initialHashPartitions: 100
   resources:
     requests:
-      cpu: 2000m
-      memory: 10Gi
+      cpu: "4000m"     # Reduced CPU request
+      memory: 40Gi     # Reduced memory request
+    limits:
+      cpu: "6000m"     # Higher limit for spikes
+      memory: 40Gi
+  annotations:
+    karpenter.sh/do-not-disrupt: "true"
   nodeSelector:
-    NodePool: trino-karpenter
-    karpenter.sh/capacity-type: spot
+    NodePool: trino-sql-karpenter
+    karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: coordinator
+
+worker:
+  jvm:
+    maxHeapSize: "89G"  # ~80% of container memory (110Gi)
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
+  config:
+    query:
+      maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
+  resources:
+    requests:
+      cpu: "12000m"  # Leave 3000m for system/DaemonSets
+      memory: 112Gi  # Leave 16Gi for system/DaemonSets
+    limits:
+      cpu: "14000m"
+      memory: 112Gi
+  nodeSelector:
+    NodePool: trino-sql-karpenter
+    karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: worker
+
 additionalConfigProperties:
   - "retry-policy=TASK"
   - "exchange.compression-enabled=true"
-  - "query.low-memory-killer.delay=0s"
   - "query.remote-task.max-error-duration=1m"
-  - "query.hash-partition-count=50"
+  - "query.max-hash-partition-count=100"   # Updated from query.hash-partition-count
+  - "spill-enabled=true"                   # Updated from experimental.spill-enabled
+  - "spiller-spill-path=/tmp/spill"        # Chagne this to SSD mount for faster
+  - "memory.heap-headroom-per-node=9.6GB"
+  - "optimizer.join-reordering-strategy=AUTOMATIC"  # Updated from join-reordering-strategy
+  - "query.max-history=100"
+  - "query.client.timeout=30m"
+  - "sink.max-buffer-size=1GB"
+
 additionalExchangeManagerProperties:
+  - "exchange-manager.name=filesystem"
+  - "exchange.base-directories=s3://${exchange_bucket_id}"
   - "exchange.s3.region=${region}"
   - "exchange.s3.iam-role=${irsa_arn}"
+  - "exchange.s3.max-error-retries=10"
+  - "exchange.s3.upload.part-size=64MB"
+
 additionalCatalogs:
   hive: |-
     connector.name=hive
@@ -69,17 +147,51 @@ serviceAccount:
   create: true
   name: ${sa}
 ingress:
+  enabled: false
+jmx:
   enabled: true
-  annotations:
-    kubernetes.io/ingress.class: alb
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/scheme: internet-facing
-  hosts:
-  - paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: trino
-            port:
-              number: 8080
+  registryPort: 9080
+  serverPort: 9081
+  exporter:
+    # jmx.exporter.enabled -- Set to true to export JMX Metrics via HTTP for [Prometheus](https://github.com/prometheus/jmx_exporter) consumption
+    enabled: true
+    image: bitnami/jmx-exporter:latest
+    pullPolicy: Always
+    port: 5556
+    configProperties: |-
+      hostPort: localhost:{{- .Values.jmx.registryPort }}
+      startDelaySeconds: 0
+      ssl: false
+      lowercaseOutputName: false
+      lowercaseOutputLabelNames: false
+      whitelistObjectNames: ["trino.execution:name=QueryManager","trino.execution:name=ClusterSizeMonitor","trino.execution:name=SqlTaskManager","trino.execution.executor:name=TaskExecutor","trino.memory:name=ClusterMemoryManager","java.lang:type=Runtime","trino.memory:type=ClusterMemoryPool,name=general","java.lang:type=Memory","trino.memory:type=MemoryPool,name=general"]
+      autoExcludeObjectNameAttributes: true
+      excludeObjectNameAttributes:
+        "java.lang:type=OperatingSystem":
+          - "ObjectName"
+        "java.lang:type=Runtime":
+          - "ClassPath"
+          - "SystemProperties"
+      rules:
+      - pattern: ".*"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+serviceMonitor:
+  enabled: true
+  labels:
+    prometheus: kube-prometheus
+  interval: "15s"
+  coordinator:
+    enabled: true
+    labels:
+      prometheus: kube-prometheus
+  worker:
+    enabled: true
+    labels:
+      prometheus: kube-prometheus

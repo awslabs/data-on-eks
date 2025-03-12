@@ -85,3 +85,11 @@ html[data-theme="dark"] {
     transform: translatey(0);
   }
 }
+
+/* CSS Hack to style table separator for spark benchmark results table */
+.benchmark-results thead tr th:nth-child(5){
+  background: #141520;
+}
+.benchmark-results tbody tr td:nth-child(5){
+  background: #141520;
+}

@@ -1,0 +1,51 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: keda-scaler-trino-worker
+  namespace: ${trino_namespace}
+spec:
+  scaleTargetRef:
+    name: trino-worker
+  idleReplicaCount: 0
+  minReplicaCount: 1
+  maxReplicaCount: 15
+  pollingInterval: 30  # Seconds
+  cooldownPeriod: 600 # Seconds
+  fallback:
+    failureThreshold: 3
+    replicas: 6
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 600
+          policies:
+          - type: Pods
+            value: 1
+            periodSeconds: 300
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Pods
+            value: 1
+            periodSeconds: 120
+  triggers:
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      activationThreshold: '5'
+      value: '80'  # Target CPU utilization percentage
+  - type: prometheus
+    metricType: Value
+    metadata:
+      serverAddress: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090
+      threshold: '1'
+      metricName: queued_queries
+      query: sum by (service) (avg_over_time(trino_execution_QueryManager_QueuedQueries{service="trino"}[30s]))
+  - type: prometheus
+    metricType: Value
+    metadata:
+      serverAddress: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090
+      threshold: '1'
+      metricName: required_workers
+      query: sum by (service) (avg_over_time(trino_execution_ClusterSizeMonitor_RequiredWorkers{service="trino"}[30s]))

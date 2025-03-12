@@ -1,13 +1,10 @@
 #!/bin/bash
 
-read -p "Enter the region: " region
-export AWS_DEFAULT_REGION=$region
-
 echo "Destroying RayService..."
 
 # Delete the Ingress/SVC before removing the addons
 TMPFILE=$(mktemp)
-terraform -chdir=$SCRIPTDIR output -raw configure_kubectl > "$TMPFILE"
+terraform output -raw configure_kubectl > "$TMPFILE"
 # check if TMPFILE contains the string "No outputs found"
 if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
   echo "No outputs found, skipping kubectl delete"
@@ -28,7 +25,7 @@ targets=(
 for target in "${targets[@]}"
 do
   echo "Destroying module $target..."
-  destroy_output=$(terraform destroy -target="$target" -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
+  destroy_output=$(terraform destroy -target="$target" -auto-approve 2>&1 | tee /dev/tty)
   if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
     echo "SUCCESS: Terraform destroy of $target completed successfully"
   else
@@ -65,7 +62,7 @@ for sg in $(aws ec2 describe-security-groups \
 
 ## Final destroy to catch any remaining resources
 echo "Destroying remaining resources..."
-destroy_output=$(terraform destroy -var="region=$region"-auto-approve 2>&1 | tee /dev/tty)
+destroy_output=$(terraform destroy -var="region=$region" -auto-approve 2>&1 | tee /dev/tty)
 if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
   echo "SUCCESS: Terraform destroy of all modules completed successfully"
 else

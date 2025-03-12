@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 6
 sidebar_label: DataHub on EKS
 ---
 # DataHub on EKS
@@ -11,13 +11,13 @@ This [blueprint](https://github.com/awslabs/data-on-eks/tree/main/analytics/terr
 
 ## DataHub on AWS
 
-On AWS, DataHub can run on EKS cluster.  By using EKS, you can leverage the power and flexibility of Kubernetes to deploy and scale DataHub components, and take advantage of other AWS services and features, such as IAM, VPC, and CloudWatch, to monitor and secure the DataHub cluster.  
+On AWS, DataHub can run on EKS cluster.  By using EKS, you can leverage the power and flexibility of Kubernetes to deploy and scale DataHub components, and take advantage of other AWS services and features, such as IAM, VPC, and CloudWatch, to monitor and secure the DataHub cluster.
 
 DataHub also depends on many underlying infrastructure and services to function, including a message broker, a search engine, graph database, and a relational database like MySQL or PostgreSQL.  AWS offers a range of managed and serverless services that can meet the needs of DataHub and simplify its deployment and operation.
 
 1. DataHub can use Amazon Managed Streaming for Apache Kafka (MSK) as the messaging layer for metadata ingestion and consumption.  MSK is a fully managed Apache Kafka service, so you don't need to handles the provisioning, configuration, and maintenance of Kafka cluster.
 2. DataHub stores metadata in both relational database and a search engine.  For the relational database, this blueprint uses Amazon RDS for MySQL, which is also a managed service that simplifies the setup and operation of MySQL databases.  RDS for MySQL also provides the high availability, security, and other features DataHub needs to store the metadata.
-3. For search engine, this blueprint uses Amazon OpenSearch service to provide fast and scalable search capabilities for the metadata.  
+3. For search engine, this blueprint uses Amazon OpenSearch service to provide fast and scalable search capabilities for the metadata.
 4. This blueprint deployes a Schema Registry service on EKS for DataHub.  You may also choose to use Glue Schema Registry (https://docs.aws.amazon.com/glue/latest/dg/schema-registry.html) instead.  Support for Glue Schema Registry will be included in future release of this blueprint.
 
 ![img.jpg](img/datahub-arch.jpg)

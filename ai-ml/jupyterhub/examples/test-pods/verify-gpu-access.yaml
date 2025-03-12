@@ -14,7 +14,7 @@ spec:
         app: verify-gpu
     spec:
       nodeSelector:
-        karpenter.sh/provisioner-name: gpu   # Force schedule a node with time slicing support
+        NodePool: gpu-mig   # Force schedule a node with time slicing support
       tolerations:   # To tolerate the taint on the nodes
       - key: "nvidia.com/gpu"
         operator: "Exists"

@@ -15,19 +15,15 @@ const config = {
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/header-icon.png',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'awslabs', // Usually your GitHub org/user name.
-  projectName: 'data-on-eks', // Usually your repo name.
-  // deploymentBranch: 'main',
+  organizationName: 'awslabs',
+  projectName: 'data-on-eks',
   githubHost: 'github.com',
-  // Even if you don't use internalization, you can use this field to set useful
-  // metadata like html lang. For example, if your site is Chinese, you may want
-  // to replace "en" with "zh-Hans".
+
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
   },
+
   presets: [
     [
       'classic',
@@ -35,11 +31,13 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl:
-            'https://github.com/awslabs/data-on-eks/blob/main/website/',
+          editUrl: 'https://github.com/awslabs/data-on-eks/blob/main/website/',
         },
         theme: {
-          customCss: require.resolve('./src/css/custom.css'),
+          customCss: [
+            require.resolve('./src/css/custom.css'),
+            require.resolve('./src/css/fonts.css'),
+          ],
         },
       }),
     ],
@@ -55,47 +53,13 @@ const config = {
           src: 'img/header-icon.png',
         },
         items: [
-          {
-            type: 'doc',
-            docId: 'introduction/intro',
-            position: 'left',
-            label: 'Introduction',
-          },
-          {
-            type: 'doc',
-            docId: 'gen-ai/index',
-            position: 'left',
-            label: 'Gen AI'
-          },
-          {
-            type: 'doc',
-            docId: 'blueprints/amazon-emr-on-eks/index',
-            position: 'left',
-            label: 'Blueprints'
-          },
-          {
-            type: 'doc',
-            docId: 'bestpractices/intro',
-            position: 'left',
-            label: 'Best Practices'
-          },
-          {
-            type: 'doc',
-            docId: 'benchmarks/emr-on-eks',
-            position: 'left',
-            label: 'Benchmarks'
-          },
-          {
-            type: 'doc',
-            docId: 'resources/intro',
-            position: 'left',
-            label: 'Resources'
-          },
-          {
-            href: 'https://github.com/awslabs/data-on-eks',
-            label: 'GitHub',
-            position: 'right',
-          },
+          { type: 'doc', docId: 'introduction/intro', position: 'left', label: 'Introduction' },
+          { type: 'doc', docId: 'gen-ai/index', position: 'left', label: 'Gen AI' },
+          { type: 'doc', docId: 'blueprints/amazon-emr-on-eks/index', position: 'left', label: 'Blueprints' },
+          { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices' },
+          { type: 'doc', docId: 'benchmarks/emr-on-eks', position: 'left', label: 'Benchmarks' },
+          { type: 'doc', docId: 'resources/intro', position: 'left', label: 'Resources' },
+          { href: 'https://github.com/awslabs/data-on-eks', label: 'GitHub', position: 'right' },
         ],
       },
       colorMode: {
@@ -108,38 +72,28 @@ const config = {
           hideable: true,
           autoCollapseCategories: true,
         }
-        },
+      },
       footer: {
         style: 'dark',
         links: [
           {
             title: 'Get Started',
-            items: [
-              {
-                label: 'Docs',
-                to: '/docs/introduction/intro',
-              },
-            ],
+            items: [{ label: 'Docs', to: '/docs/introduction/intro' }],
           },
           {
             title: 'Get Involved',
-            items: [
-              {
-                label: 'Github',
-                href: 'https://github.com/awslabs/data-on-eks',
-              }
-            ],
+            items: [{ label: 'Github', href: 'https://github.com/awslabs/data-on-eks' }],
           },
         ],
         copyright: `Built with ❤️ at AWS  <br/> © ${new Date().getFullYear()} Amazon.com, Inc. or its affiliates. All Rights Reserved`,
       },
       prism: {
         theme: lightCodeTheme,
-        darkTheme: darkCodeTheme
+        darkTheme: darkCodeTheme,
       },
     }),
 
-  plugins: [require.resolve('docusaurus-lunr-search')],
+    plugins: [require.resolve('docusaurus-lunr-search')],
 };
 
 module.exports = config;

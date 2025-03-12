@@ -1,3 +1,53 @@
+data "aws_iam_policy_document" "trino_exchange_access" {
+  statement {
+    sid    = ""
+    effect = "Allow"
+    resources = [
+      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}",
+      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}/*"
+    ]
+    actions = ["s3:Get*",
+      "s3:List*",
+    "s3:*Object*"]
+  }
+}
+
+data "aws_iam_policy_document" "trino_s3_access" {
+  statement {
+    sid    = ""
+    effect = "Allow"
+    resources = [
+      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}",
+      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*"
+    ]
+    actions = ["s3:Get*",
+      "s3:List*",
+    "s3:*Object*"]
+  }
+
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = ["*"]
+    actions = [
+      "s3:ListStorageLensConfigurations",
+      "s3:ListAccessPointsForObjectLambda",
+      "s3:GetAccessPoint",
+      "s3:GetAccountPublicAccessBlock",
+      "s3:ListAllMyBuckets",
+      "s3:ListAccessPoints",
+      "s3:ListJobs",
+      "s3:PutStorageLensConfiguration",
+      "s3:ListMultiRegionAccessPoints",
+      "s3:CreateJob"
+    ]
+  }
+}
+
+data "aws_iam_policy" "glue_full_access" {
+  arn = "arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess"
+}
+
 #---------------------------------------------------------------
 # Creating an s3 bucket for event logs
 #---------------------------------------------------------------
@@ -22,7 +72,7 @@ module "s3_bucket" {
 }
 
 #---------------------------------------------------------------
-# Trino S3 Bucket
+# Trino S3 Bucket for Data
 #---------------------------------------------------------------
 module "trino_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -99,11 +149,15 @@ resource "aws_iam_policy" "trino_exchange_bucket_policy" {
 # Trino Helm Add-on
 #---------------------------------------
 module "trino_addon" {
+  depends_on = [
+    module.eks_blueprints_addons,
+  ]
+
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.1.1" #ensure to update this to the latest/desired version
 
   chart            = "trino"
-  chart_version    = "0.13.0"
+  chart_version    = "0.34.0"
   repository       = "https://trinodb.github.io/charts"
   description      = "Trino Helm Chart deployment"
   namespace        = local.trino_namespace
@@ -139,4 +193,20 @@ module "trino_addon" {
       service_account = local.trino_sa
     }
   }
+}
+
+
+#---------------------------------------------------------------
+# KEDA ScaleObject - Trino Prometheus
+#---------------------------------------------------------------
+resource "kubectl_manifest" "trino_keda" {
+
+  yaml_body = templatefile("${path.module}/trino-keda.yaml", {
+    trino_namespace = local.trino_namespace
+  })
+
+  depends_on = [
+    module.eks_blueprints_addons,
+    module.trino_addon
+  ]
 }

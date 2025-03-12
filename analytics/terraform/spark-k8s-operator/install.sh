@@ -7,6 +7,7 @@ export AWS_DEFAULT_REGION=$region
 targets=(
   "module.vpc"
   "module.eks"
+  "module.eks_blueprints_addons" # install kube-prometheus-stack first so addons can use CRDs
 )
 
 # Initialize Terraform

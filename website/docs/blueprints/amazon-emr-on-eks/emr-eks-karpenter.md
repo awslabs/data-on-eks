@@ -6,11 +6,6 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
-import CodeBlock from '@theme/CodeBlock';
-import SparkComputeOptimizedNodepool from '!!raw-loader!../../../../analytics/terraform/emr-eks-karpenter/karpenter-provisioners/spark-compute-optimized-provisioner.yaml';
-import SparkMemoryOptimizedNodepool from '!!raw-loader!../../../../analytics/terraform/emr-eks-karpenter/karpenter-provisioners/spark-memory-optimized-provisioner.yaml';
-import SparkGravitonMemoryOptimizedNodepool from '!!raw-loader!../../../../analytics/terraform/emr-eks-karpenter/karpenter-provisioners/spark-graviton-memory-optimized-provisioner.yaml';
-
 # EMR on EKS with [Karpenter](https://karpenter.sh/)
 
 ## Introduction
@@ -169,7 +164,8 @@ In this tutorial, you will use Karpenter Nodepool that uses compute optimized in
 <details>
 <summary> To view Karpenter Nodepool for compute optimized instances, Click to toggle content!</summary>
 
-<CodeBlock language="yaml">{SparkComputeOptimizedNodepool}</CodeBlock>
+Verify the Karpenter NodeClass and Nodepool code [here](https://github.com/awslabs/data-on-eks/blob/35e09a8fbe64266778e0d86fe2eb805b8373e590/analytics/terraform/emr-eks-karpenter/addons.tf#L204)
+
 </details>
 
 To run Spark Jobs that can use this Nodepool, you need to submit your jobs by adding `tolerations` to your pod templates
@@ -223,7 +219,8 @@ In this tutorial, you will use Karpenter Nodepool that uses memory optimized ins
 <details>
 <summary> To view Karpenter Nodepool for memory optimized instances, Click to toggle content!</summary>
 
-<CodeBlock language="yaml">{SparkMemoryOptimizedNodepool}</CodeBlock>
+Verify the Karpenter NodeClass and Nodepool code [here](https://github.com/awslabs/data-on-eks/blob/35e09a8fbe64266778e0d86fe2eb805b8373e590/analytics/terraform/emr-eks-karpenter/addons.tf#L204)
+
 </details>
 
 To run Spark Jobs that can use this Nodepool, you need to submit your jobs by adding `tolerations` to your pod templates
@@ -275,7 +272,8 @@ In this tutorial, you will use Karpenter Nodepool that uses Graviton memory opti
 <details>
 <summary> To view Karpenter Nodepool for Graviton memory optimized instances, Click to toggle content!</summary>
 
-<CodeBlock language="yaml">{SparkGravitonMemoryOptimizedNodepool}</CodeBlock>
+Verify the Karpenter NodeClass and Nodepool code [here](https://github.com/awslabs/data-on-eks/blob/35e09a8fbe64266778e0d86fe2eb805b8373e590/analytics/terraform/emr-eks-karpenter/addons.tf#L204)
+
 </details>
 
 To run Spark Jobs that can use this Nodepool, you need to submit your jobs by adding `tolerations` to your pod templates
