@@ -1,0 +1,34 @@
+# ----------------------------------------------------------------------------
+# RayJob: llama3-generate-pretraining-test-data
+#
+# Description:
+# This RayJob is responsible for generating pre-training test data required for
+# the Llama3 model training. It sources data from the specified dataset, processes
+# it, and prepares it for use in subsequent training stages. The job runs a Python
+# script (`get_dataset.py`) that performs these data preparation steps.
+
+# Usage:
+# Apply this configuration to your Kubernetes cluster using `kubectl apply -f download_fineweb_dataset.yaml`.
+# Ensure that the Ray cluster (`kuberay-trn1`) is running and accessible in the specified namespace.
+# ----------------------------------------------------------------------------
+
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: grammarly-generate-pretraining-test-data
+  namespace: default
+spec:
+  submissionMode: K8sJobMode
+  entrypoint: "mkdir -p /shared/llama3.1_config/ /shared/fineweb_llama3.1_tokenized /shared/checkpoint /shared/tblogs && cp config.json /shared/llama3.1_config/ && python3 get_dataset.py"
+  runtimeEnvYAML: |
+    working_dir: /grammarly_pretraining
+    env_vars:
+      PYTHONUNBUFFERED: '0'
+    resources:
+      requests:
+        cpu: "6"
+        memory: "30Gi"
+  clusterSelector:
+    ray.io/cluster: kuberay-trn1
+    rayClusterNamespace: default  # Replace with the namespace where your RayCluster is deployed
+  ttlSecondsAfterFinished: 60  # Time to live for the pod after completion (in seconds)
