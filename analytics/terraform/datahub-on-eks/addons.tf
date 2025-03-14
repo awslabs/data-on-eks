@@ -2,7 +2,7 @@ module "eks_blueprints_addons" {
   # Users should pin the version to the latest available release
   # tflint-ignore: terraform_module_pinned_source
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "~> 1.13"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -54,6 +54,12 @@ module "eks_blueprints_addons" {
   # ALB Controller
   #---------------------------------------
   enable_aws_load_balancer_controller = true
+  aws_load_balancer_controller = {
+    set = [{
+      name  = "enableServiceMutatorWebhook"
+      value = "false"
+    }]
+  }
 
   #---------------------------------------
   # CloudWatch metrics for EKS

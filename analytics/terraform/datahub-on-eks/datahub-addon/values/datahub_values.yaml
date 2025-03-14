@@ -3,12 +3,12 @@
 datahub-gms:
   enabled: true
   image:
-    repository: linkedin/datahub-gms
+    repository: acryldata/datahub-gms
 
 datahub-frontend:
   enabled: true
   image:
-    repository: linkedin/datahub-frontend-react
+    repository: acryldata/datahub-frontend-react
   # Set up ingress to expose react front-end
   ingress:
     enabled: true
@@ -35,11 +35,11 @@ acryl-datahub-actions:
 
 datahub-mae-consumer:
   image:
-    repository: linkedin/datahub-mae-consumer
+    repository: acryldata/datahub-mae-consumer
 
 datahub-mce-consumer:
   image:
-    repository: linkedin/datahub-mce-consumer
+    repository: acryldata/datahub-mce-consumer
 
 datahub-ingestion-cron:
   enabled: false
@@ -49,7 +49,7 @@ datahub-ingestion-cron:
 elasticsearchSetupJob:
   enabled: true
   image:
-    repository: linkedin/datahub-elasticsearch-setup
+    repository: acryldata/datahub-elasticsearch-setup
     # tag: v0.8.44
   podSecurityContext:
     fsGroup: 1000
@@ -63,7 +63,7 @@ elasticsearchSetupJob:
 kafkaSetupJob:
   enabled: true
   image:
-    repository: linkedin/datahub-kafka-setup
+    repository: acryldata/datahub-kafka-setup
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -80,22 +80,21 @@ mysqlSetupJob:
     runAsUser: 1000
   podAnnotations: {}
 
-postgresqlSetupJob:
-  enabled: false
-  image:
-    repository: acryldata/datahub-postgres-setup
-  podSecurityContext:
-    fsGroup: 1000
-  securityContext:
-    runAsUser: 1000
-  podAnnotations: {}
+#postgresqlSetupJob:
+#  enabled: false
+#  image:
+#    repository: acryldata/datahub-postgres-setup
+#  podSecurityContext:
+#    fsGroup: 1000
+#  securityContext:
+#    runAsUser: 1000
+#  podAnnotations: {}
 
 
 datahubUpgrade:
   enabled: true
   image:
     repository: acryldata/datahub-upgrade
-    # tag: "v0.10.0"  # defaults to .global.datahub.version
   batchSize: 1000
   batchDelayMs: 100
   noCodeDataMigration:
@@ -251,7 +250,7 @@ global:
       #   secretKey: postgres-password
 
   datahub:
-    version: v0.12.0
+    version: v0.15.0.1
 
     systemUpdate:
       enabled: true
@@ -277,7 +276,7 @@ global:
 
     managed_ingestion:
       enabled: true
-      defaultCliVersion: "0.12.0"
+      defaultCliVersion: "0.15.0.1"
 
     metadata_service_authentication:
       enabled: true
