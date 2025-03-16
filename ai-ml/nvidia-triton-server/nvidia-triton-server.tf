@@ -68,10 +68,10 @@ module "triton_server_vllm" {
           - type: Pods
             pods:
               metric:
-                name: nv_inference_queue_duration_ms
+                name: queue_compute_ratio
               target:
                 type: AverageValue
-                averageValue: 10
+                averageValue: 1000m
       tolerations:
         - key: "nvidia.com/gpu"
           operator: "Exists"
