@@ -21,5 +21,5 @@ rules:
           resource: "pod"
     name:
       matches: "nv_inference_queue_duration_us"
-      as: "nv_inference_queue_duration_ms"
-    metricsQuery: 'avg(rate(nv_inference_queue_duration_us{<<.LabelMatchers>>}[1m])/1000) by (<<.GroupBy>>)'
+      as: "queue_compute_ratio"
+    metricsQuery: 'rate(nv_inference_queue_duration_us{<<.LabelMatchers>>}[1m])/clamp_min(rate(nv_inference_compute_infer_duration_us{<<.LabelMatchers>>}[1m]),1)'
