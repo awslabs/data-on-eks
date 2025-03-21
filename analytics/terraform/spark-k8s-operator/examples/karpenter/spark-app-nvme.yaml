@@ -142,7 +142,6 @@ spec:
     memoryOverhead: "2g"
     serviceAccount: spark-s3-express
     labels:
-      spark-role: driver
       version: 3.2.1
     nodeSelector:
       NodeGroupType: "SparkComputeNitroNvme"
@@ -168,7 +167,6 @@ spec:
     memoryOverhead: "2g"
     serviceAccount: spark-s3-express
     labels:
-      spark-role: executor
       version: 3.2.1
     nodeSelector:
       NodeGroupType: "SparkComputeNitroNvme"
