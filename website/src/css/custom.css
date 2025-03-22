@@ -93,3 +93,20 @@ html[data-theme="dark"] {
 .benchmark-results tbody tr td:nth-child(5){
   background: #141520;
 }
+
+/* 🔥 Highlighted Navbar Item for Migration Announcement */
+.navbar-highlight-link {
+  background-color: #e5534b;
+  color: #ffffff !important;
+  padding: 6px 12px;
+  margin-right: 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.navbar-highlight-link:hover {
+  background-color: #c6453d;
+  color: #ffffff !important;
+}

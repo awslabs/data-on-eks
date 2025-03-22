@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: lora-finetune-app 
+  name: lora-finetune-app
 spec:
   containers:
     - name: app

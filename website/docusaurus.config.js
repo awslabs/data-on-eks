@@ -53,8 +53,15 @@ const config = {
           src: 'img/header-icon.png',
         },
         items: [
+          {
+            type: 'doc',
+            docId: 'migration/migration-announcement',
+            label: '🚨 Repo Split Update',
+            position: 'left',
+            className: 'navbar-highlight-link',
+          },
           { type: 'doc', docId: 'introduction/intro', position: 'left', label: 'Introduction' },
-          { type: 'doc', docId: 'gen-ai/index', position: 'left', label: 'Gen AI' },
+          { type: 'doc', docId: 'gen-ai/index', position: 'left', label: 'AI on EKS' },
           { type: 'doc', docId: 'blueprints/amazon-emr-on-eks/index', position: 'left', label: 'Blueprints' },
           { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices' },
           { type: 'doc', docId: 'benchmarks/emr-on-eks', position: 'left', label: 'Benchmarks' },

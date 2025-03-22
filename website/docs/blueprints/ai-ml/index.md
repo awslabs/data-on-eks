@@ -43,4 +43,4 @@ In addition to these, this section provides other valuable ML blueprints:
 
 - **JupyterHub on EKS**: Explore the [JupyterHub blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub), which showcases Time Slicing and MIG features, as well as multi-tenant configurations with profiles. This is ideal for deploying large-scale JupyterHub platforms on EKS.
 
-- **Additional Patterns**: For other patterns using NVIDIA Triton server, NVIDIA NGC, and more, refer to the [Gen AI page](https://awslabs.github.io/data-on-eks/docs/gen-ai).
+- **Additional Patterns**: For other patterns using NVIDIA Triton server, NVIDIA NGC, and more, refer to the [AI on EKS page](https://awslabs.github.io/data-on-eks/docs/gen-ai).
