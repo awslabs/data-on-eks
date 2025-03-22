@@ -1,0 +1,49 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: load-test-template # this value is overwritten by Locust
+  namespace: spark-team-a # this value is overwritten by Locust
+spec:
+  type: Scala
+  mode: cluster
+  image: public.ecr.aws/data-on-eks/spark:pi-sleep-v0.0.2
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/examples/jars/spark-pi-sleep.jar
+  mainClass: org.example.JavaSparkPiSleep
+  arguments: ["5", "3600"]
+  sparkVersion: 3.5.3
+  sparkConf:
+    spark.kubernetes.executor.podNamePrefix: load-test # this value is overwritten by Locust
+    spark.testing.reservedMemory: "1" # THIS IS UNSAFE. DO NOT DO THIS IN NON-TESTING ENVIRONMENTS.
+    # spark.kubernetes.submission.connectionTimeout: "120000" # milliseconds
+    # spark.kubernetes.submission.requestTimeout: "120000"
+    # spark.kubernetes.driver.connectionTimeout: "120000"
+    # spark.kubernetes.driver.requestTimeout: "120000"
+    # spark.kubernetes.allocation.batch.size: "20" # default 5 but adjust according to your cluster size
+  restartPolicy:
+    type: Never
+  timeToLiveSeconds: 60  # Time to live for the pod after completion (in seconds)
+  driver:
+    cores: 1
+    coreRequest: "0.1"
+    memory: 512m
+    memoryOverhead: 0m
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: spark-operator-benchmark-ng
+    tolerations:
+      - key: spark-operator-benchmark-ng
+        operator: Exists
+        effect: NoSchedule
+  executor:
+    instances: 5
+    coreRequest: "0.1"
+    cores: 1
+    memory: 256m
+    memoryOverhead: 0m
+    nodeSelector:
+      NodeGroupType: spark-operator-benchmark-ng
+    tolerations:
+      - key: spark-operator-benchmark-ng
+        operator: Exists
+        effect: NoSchedule

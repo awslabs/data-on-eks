@@ -50,7 +50,7 @@ resource "aws_eks_access_entry" "karpenter_nodes" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.34" # ensure to update this to the latest/desired version
+  version = "1.35" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -356,6 +356,54 @@ module "eks_data_addons" {
       EOT
       ]
     }
+    spark-operator-benchmark = {
+      values = [
+        <<-EOT
+      name: spark-operator-benchmark
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-operator-benchmark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["8", "36"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
     spark-compute-ondemand = {
       values = [
         <<-EOT
@@ -581,17 +629,38 @@ module "eks_data_addons" {
 
   #---------------------------------------------------------------
   # Spark Operator Add-on
-  # Add this to enable YuniKorn as Default Scheduler
-  #    controller:
-  #      batchScheduler:
-  #        enable: true
-  #        default: "yunikorn"
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "2.0.2"
+    version = "2.1.0"
+    timeout = "120"
     values = [
       <<-EOT
+        controller:
+          # -- Number of replicas of controller.
+          replicas: 1
+          # -- Reconcile concurrency, higher values might increase memory usage.
+          # -- Increased from 10 to 20 to leverage more cores from the instance
+          workers: 20
+          # -- Change this to True when YuniKorn is deployed
+          batchScheduler:
+            enable: false
+            # default: "yunikorn"
+        #   -- Uncomment this for Spark Operator scale test
+        #   -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
+        #   nodeSelector:
+        #     NodeGroupType: spark-operator-benchmark
+        #   resources:
+        #     requests:
+        #       cpu: 33000m
+        #       memory: 50Gi
+        # webhook:
+        #   nodeSelector:
+        #     NodeGroupType: spark-operator-benchmark
+        #   resources:
+        #     requests:
+        #       cpu: 1000m
+        #       memory: 10Gi
         spark:
           # -- List of namespaces where to run spark jobs.
           # If empty string is included, all namespaces will be allowed.
@@ -618,16 +687,16 @@ module "eks_data_addons" {
           # Prometheus pod monitor for controller pods
           # Note: The kube-prometheus-stack addon must deploy before the PodMonitor CRD is available.
           #       This can cause the terraform apply to fail since the addons are deployed in parallel
-          # podMonitor:
-          #   # -- Specifies whether to create pod monitor.
-          #   create: true
-          #   labels: {}
-          #   # -- The label to use to retrieve the job name from
-          #   jobLabel: spark-operator-podmonitor
-          #   # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
-          #   podMetricsEndpoint:
-          #     scheme: http
-          #     interval: 5s
+          podMonitor:
+            # -- Specifies whether to create pod monitor.
+            create: true
+            labels: {}
+            # -- The label to use to retrieve the job name from
+            jobLabel: spark-operator-podmonitor
+            # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
+            podMetricsEndpoint:
+              scheme: http
+              interval: 5s
       EOT
     ]
   }
@@ -637,7 +706,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
-    version = "1.6.0"
+    version = "1.6.1"
     values  = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {})]
   }
 
@@ -679,122 +748,16 @@ module "eks_data_addons" {
 }
 
 #---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.34"
-  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-#---------------------------------------------------------------
-# IRSA for Mountpoint S3 CSI Driver
-#---------------------------------------------------------------
-module "s3_csi_driver_irsa" {
-  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version          = "~> 5.34"
-  role_name_prefix = format("%s-%s-", local.name, "s3-csi-driver")
-  role_policy_arns = {
-    # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
-    s3_access = aws_iam_policy.s3_irsa_access_policy.arn
-    #kms_access = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
-  }
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:s3-csi-driver-sa"]
-    }
-  }
-  tags = local.tags
-}
-
-resource "aws_iam_policy" "s3_irsa_access_policy" {
-  name        = "${local.name}-S3Access"
-  path        = "/"
-  description = "S3 Access for Nodes"
-
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  # checkov:skip=CKV_AWS_288: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_290: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_289: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_355: Demo purpose IAM policy
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:*",
-          "s3express:*"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
-}
-
-#---------------------------------------------------------------
 # EKS Blueprints Addons
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "~> 1.20"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------
-  eks_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
-    aws-mountpoint-s3-csi-driver = {
-      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
-    }
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      preserve = true
-    }
-    kube-proxy = {
-      preserve = true
-    }
-  }
-
-  #---------------------------------------
-  # Metrics Server
-  #---------------------------------------
-  enable_metrics_server = true
-  metrics_server = {
-    chart_version = "3.12.2"
-    values        = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
-  }
-
-  #---------------------------------------
-  # Cluster Autoscaler
-  #---------------------------------------
-  enable_cluster_autoscaler = true
-  cluster_autoscaler = {
-    chart_version = "9.43.1"
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = var.region,
-      eks_cluster_id = module.eks.cluster_name
-    })]
-  }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
@@ -808,18 +771,9 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "1.0.6"
+    chart_version       = "1.2.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------
-  # CloudWatch metrics for EKS
-  #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics = {
-    chart_version = "0.0.11"
-    values        = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -847,7 +801,7 @@ module "eks_blueprints_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.9.2"
+    chart_version = "1.11.0"
     set = [{
       name  = "enableServiceMutatorWebhook"
       value = "false"
@@ -856,7 +810,7 @@ module "eks_blueprints_addons" {
 
   enable_ingress_nginx = true
   ingress_nginx = {
-    version = "4.11.3"
+    version = "4.12.0"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
@@ -880,7 +834,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "65.5.1"
+    chart_version = "69.5.2"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
@@ -898,7 +852,7 @@ module "eks_blueprints_addons" {
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  version = "~> 4.6"
 
   bucket_prefix = "${local.name}-spark-logs-"
 
@@ -967,6 +921,8 @@ resource "aws_iam_policy" "s3tables_policy" {
         Action = [
           "s3tables:UpdateTableMetadataLocation",
           "s3tables:GetNamespace",
+          "s3tables:ListTableBuckets",
+          "s3tables:ListNamespaces",
           "s3tables:GetTableBucket",
           "s3tables:GetTableBucketMaintenanceConfiguration",
           "s3tables:GetTableBucketPolicy",
