@@ -35,10 +35,10 @@ We will provide a detailed announcement and URLs during and after the soft launc
 Here’s what this change means for contributors and users:
 
 1. **🚫 AI/ML Pull Requests (PRs) are currently paused** in this repository. Please hold off on submitting new AI-related blueprints or modules until the `ai-on-eks` repo is publicly available.
-2. **✅ Existing AI blueprints will remain available** in this repository until the new repo (`ai-on-eks`) is fully launched and public.
-3. **📦 Once the migration is complete**, all new AI on EKS blueprints and updates to existing ones will be made directly in the `ai-on-eks` repository. However, we will keep the existing AI/ML on EKS blueprints in this `data-on-eks` repo until all related **blogs** and **documentation** are updated to point to the new `ai-on-eks` repo.
-4. **🔗 All existing AWS blogs, workshops, and documentation** that currently point to the `data-on-eks` repository will remain unchanged for now. However, we will raise separate issues to update these resources to reference the new `ai-on-eks` repository. This process may take some time, depending on resource availability.
-5. **💬 Going forward, all new issues related to AI on EKS**, whether for new content or updates to existing blueprints should be opened in the `ai-on-eks` repository. We will not address AI on EKS related issues in the `data-on-eks` repo unless the specific blueprint or content still exists only here and hasn't yet been migrated.
+2. **✅ Existing AI blueprints will remain temporarily available**  in this `data-on-eks` repository. Once the new `ai-on-eks` repo is fully launched, all new content and updates will be made there instead.
+3. **📦 Once the migration is complete**, updates to existing AI/ML blueprints will no longer be made in the `data-on-eks` repo. However, we will retain these blueprints here temporarily until all related blogs and documentation have been updated to reference the new `ai-on-eks` repository.
+4. **🔗 Existing AWS blogs, workshops, and documentation** that currently point to the `data-on-eks` repository will remain unchanged to avoid breaking links. We will raise separate issues to update these references to the new `ai-on-eks` repository over time, depending on resource availability.
+5. **💬 Going forward, all new issues related to AI on EKS**, whether for new content or updates to existing blueprints should be opened in the `ai-on-eks` repository. We will not address AI on EKS related issues in `data-on-eks` unless the specific blueprint or content exists only in this repo and hasn’t yet been migrated.
 
 
 ## ✅ What Stays in This Repo?
