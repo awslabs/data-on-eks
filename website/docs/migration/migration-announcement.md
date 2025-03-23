@@ -36,9 +36,9 @@ Here’s what this change means for contributors and users:
 
 1. **🚫 AI/ML Pull Requests (PRs) are currently paused** in this repository. Please hold off on submitting new AI-related blueprints or modules until the `ai-on-eks` repo is publicly available.
 2. **✅ Existing AI blueprints will remain available** in this repository until the new repo (`ai-on-eks`) is fully launched and public.
-3. **📦 Once the migration is complete**, all AI blueprints and documentation will be removed from this repo and moved permanently to `ai-on-eks`.
-4. **🔗 Some AWS blogs, workshops, or tutorials** referencing current AI code in this repository may temporarily break during the transition. We are tracking these and will **update links to point to the new AI repository** where needed.
-5. **💬 You can continue to open issues related to AI blueprints**, and we’ll respond or guide you to the new repo once it's available.
+3. **📦 Once the migration is complete**, all new AI on EKS blueprints and updates to existing ones will be made directly in the `ai-on-eks` repository. However, we will keep the existing AI/ML on EKS blueprints in this `data-on-eks` repo until all related **blogs** and **documentation** are updated to point to the new `ai-on-eks` repo.
+4. **🔗 All existing AWS blogs, workshops, and documentation** that currently point to the `data-on-eks` repository will remain unchanged for now. However, we will raise separate issues to update these resources to reference the new `ai-on-eks` repository. This process may take some time, depending on resource availability.
+5. **💬 Going forward, all new issues related to AI on EKS**, whether for new content or updates to existing blueprints should be opened in the `ai-on-eks` repository. We will not address AI on EKS related issues in the `data-on-eks` repo unless the specific blueprint or content still exists only here and hasn't yet been migrated.
 
 
 ## ✅ What Stays in This Repo?
@@ -78,4 +78,4 @@ We deeply appreciate your feedback, support, and contributions to the **Data on 
 
 Stay tuned for more details as we approach KubeCon EU in April. We can’t wait to share what’s next with you!
 
-— *The Data on EKS Maintainers*
+— *The Data & AI on EKS Maintainers*

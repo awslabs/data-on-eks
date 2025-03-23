@@ -3,7 +3,14 @@ sidebar_position: 1
 sidebar_label: Overview
 ---
 
-# AI on EKS
+# Generative AI on EKS
+
+:::caution
+
+The **AI on EKS** content **is being migrated** to a new repository.
+🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+
+:::
 
 Welcome to generative AI on [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/), your gateway to harnessing the power of Large Language Models (LLMs) for a wide range of applications. This introduction page serves as your starting point to explore our offerings for Training, Fine-tuning, and Inference using various LLMs, including BERT-Large, Llama2, Stable Diffusion, and more.
 

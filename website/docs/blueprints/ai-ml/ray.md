@@ -6,6 +6,13 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Ray on EKS
 
+:::caution
+
+The **AI on EKS** content **is being migrated** to a new repository.
+🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+
+:::
+
 :::danger
 **DEPRECATION NOTICE**
 

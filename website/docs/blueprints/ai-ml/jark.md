@@ -6,12 +6,19 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # JARK on EKS
 
+:::caution
+
+The **AI on EKS** content **is being migrated** to a new repository.
+🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+
+:::
+
 :::warning
 Deployment of ML models on EKS requires access to GPUs or Neuron instances. If your deployment isn't working, it’s often due to missing access to these resources. Also, some deployment patterns rely on Karpenter autoscaling and static node groups; if nodes aren't initializing, check the logs for Karpenter or Node groups to resolve the issue.
 :::
 
 :::info
-These instructions only deploy the JARK cluster as a base. If you are looking to deploy specific models for inference or training, please refer to this [AI on EKS](https://awslabs.github.io/data-on-eks/docs/gen-ai) page for end-to-end instructions.
+These instructions only deploy the JARK cluster as a base. If you are looking to deploy specific models for inference or training, please refer to this [Gen AI](https://awslabs.github.io/data-on-eks/docs/gen-ai) page for end-to-end instructions.
 :::
 
 ### What is JARK?
@@ -156,7 +163,7 @@ nvidia-device-plugin   nvidia-device-plugin-node-feature-discovery-master   1/1 
 
 :::info
 
-Please refer to [AI on EKS](https://awslabs.github.io/data-on-eks/docs/gen-ai) page for deploying Gen AI mmodels on EKS.
+Please refer to [Gen AI](https://awslabs.github.io/data-on-eks/docs/gen-ai) page for deploying Gen AI mmodels on EKS.
 
 :::
 

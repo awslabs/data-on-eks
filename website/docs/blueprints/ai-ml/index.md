@@ -3,6 +3,13 @@ sidebar_position: 1
 sidebar_label: Introduction
 ---
 
+:::caution
+
+The **AI on EKS** content **is being migrated** to a new repository.
+🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+
+:::
+
 # AI/ML Platforms on Amazon EKS
 
 Amazon Elastic Kubernetes Service (EKS) is a powerful, managed Kubernetes platform that has become a cornerstone for deploying and managing AI/ML workloads in the cloud. With its ability to handle complex, resource-intensive tasks, Amazon EKS provides a scalable and flexible foundation for running AI/ML models, making it an ideal choice for organizations aiming to harness the full potential of machine learning.
@@ -43,4 +50,4 @@ In addition to these, this section provides other valuable ML blueprints:
 
 - **JupyterHub on EKS**: Explore the [JupyterHub blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub), which showcases Time Slicing and MIG features, as well as multi-tenant configurations with profiles. This is ideal for deploying large-scale JupyterHub platforms on EKS.
 
-- **Additional Patterns**: For other patterns using NVIDIA Triton server, NVIDIA NGC, and more, refer to the [AI on EKS page](https://awslabs.github.io/data-on-eks/docs/gen-ai).
+- **Additional Patterns**: For other patterns using NVIDIA Triton server, NVIDIA NGC, and more, refer to the [Gen AI page](https://awslabs.github.io/data-on-eks/docs/gen-ai).

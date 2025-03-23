@@ -4,6 +4,13 @@ sidebar_position: 1
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
+:::caution
+
+The **AI on EKS** content **is being migrated** to a new repository.
+🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+
+:::
+
 # DeepSeek-R1 on EKS with Ray and vLLM
 
 In this guide, we'll explore deploying [DeepSeek-R1-Distill-Llama-8B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B) model inference using [Ray](https://docs.ray.io/en/latest/serve/getting_started.html) with a [vLLM](https://github.com/vllm-project/vllm) backend on [Amazon EKS](https://aws.amazon.com/eks/).
