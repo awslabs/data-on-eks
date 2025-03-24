@@ -4,10 +4,28 @@
 > 💡 **Optimized Solutions for Data and AI on EKS**
 
 
+## 🚨🚨 Important Announcement: Repository Split in Progress 🚨🚨
+
+> **📢 The Data on EKS project is evolving!**
+>
+> We’re splitting this repo into two separate projects to better serve the community:
+>
+> - 📊 **`data-on-eks`** → for **Data Analytics blueprints and patterns**
+> - 🤖 **`ai-on-eks`** (coming soon) → for **AI/ML training, inference, and Terraform templates**
+>
+> 🗓️ Soft launch at **KubeCon EU London (April 2025)**
+>
+> 🚀 Full migration by **end of April 2025**
+>
+> 🔒 **AI-related PRs are paused** in this repo until the new repo is live.
+>
+> 🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+>
+
 
 ### Build, Scale, and Optimize Data & AI/ML Platforms on [Amazon EKS](https://aws.amazon.com/eks/) 🚀
 
-Welcome to **Data on EKS**, your gateway to scaling **Data and AI** workloads on Amazon EKS. Unlock the potential of [Gen AI](https://aws.amazon.com/generative-ai/) with a rich collection of Terraform Blueprints featuring best practices for deploying robust solutions with advanced logging and observability.
+Welcome to **Data on EKS**, your gateway to scaling **Data and AI** workloads on Amazon EKS. Unlock the potential of [AI on EKS](https://aws.amazon.com/generative-ai/) with a rich collection of Terraform Blueprints featuring best practices for deploying robust solutions with advanced logging and observability.
 
 Explore practical examples and patterns for running Data workloads on EKS using advanced frameworks such as [Apache Spark](https://spark.apache.org/) for distributed data processing, [Apache Flink](https://flink.apache.org/) for real-time stream processing, and [Apache Kafka](https://kafka.apache.org/) for high-throughput distributed messaging. Automate and orchestrate complex workflows with [Apache Airflow](https://airflow.apache.org/) and leverage the robust capabilities of [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to build resilient clusters, seamlessly integrating Kubernetes with big data solutions for enhanced scalability and performance.
 

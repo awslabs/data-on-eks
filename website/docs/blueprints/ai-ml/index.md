@@ -3,6 +3,13 @@ sidebar_position: 1
 sidebar_label: Introduction
 ---
 
+:::caution
+
+The **AI on EKS** content **is being migrated** to a new repository.
+🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+
+:::
+
 # AI/ML Platforms on Amazon EKS
 
 Amazon Elastic Kubernetes Service (EKS) is a powerful, managed Kubernetes platform that has become a cornerstone for deploying and managing AI/ML workloads in the cloud. With its ability to handle complex, resource-intensive tasks, Amazon EKS provides a scalable and flexible foundation for running AI/ML models, making it an ideal choice for organizations aiming to harness the full potential of machine learning.

@@ -1538,7 +1538,7 @@
           "expr": "sum(spark_application_success_count) by (pod)",
           "hide": false,
           "instant": false,
-          "legendFormat": "Total Succesful Spark Jobs",
+          "legendFormat": "Total Successful Spark Jobs",
           "range": true,
           "refId": "E"
         },
