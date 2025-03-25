@@ -32,8 +32,3 @@ repos:
           - --args=--only=terraform_workspace_remote
       - id: terraform_validate
         exclude: (docs|modules)
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
-    hooks:
-      - id: codespell
-        args: ["--skip=*.excalidraw,*.py,*.yaml"]
