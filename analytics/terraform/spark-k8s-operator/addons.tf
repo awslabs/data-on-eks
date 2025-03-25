@@ -588,7 +588,7 @@ module "eks_blueprints_addons" {
 
   enable_ingress_nginx = true
   ingress_nginx = {
-    version = "4.12.0"
+    version = "4.12.1"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
