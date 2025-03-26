@@ -1,6 +1,6 @@
 ---
 sidebar_position: 1
-sidebar_label: EMR on EKS with Spark
+sidebar_label: EMR on EKS Benchmarks
 ---
 
 # Amazon EMR on Amazon EKS provides up to 61% lower costs and up to 68% performance improvement for Spark workloads
