@@ -1,0 +1,88 @@
+# gradio-deploy.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gradio-aibrix
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gradio-deployment
+  namespace: gradio-aibrix
+  labels:
+    app: gradio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gradio
+  template:
+    metadata:
+      labels:
+        app: gradio
+    spec:
+      containers:
+        - name: gradio
+          image: public.ecr.aws/f6k0g8i1/genai-labs/gradio-base:0.8
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 7860
+          resources:
+            requests:
+              cpu: "512m"
+              memory: "2048Mi"
+            limits:
+              cpu: "1"
+              memory: "4096Mi"
+          volumeMounts:
+            - name: gradio-app-script
+              mountPath: /app/gradio-app.py
+              subPath: gradio-app-mistral7b-inf2.py
+      volumes:
+        - name: gradio-app-script
+          configMap:
+            name: gradio-app-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gradio-service
+  namespace: gradio-aibrix
+spec:
+  selector:
+    app: gradio
+  ports:
+    - name: http
+      protocol: TCP
+      port: 7860
+      targetPort: 7860
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gradio-app-script
+  namespace: gradio-aibrix
+data:
+  gradio-app-mistral7b-inf2.py: |
+    import os
+    import gradio as gr
+    from openai import OpenAI
+
+
+    client = OpenAI(
+    base_url="http://envoy-aibrix-system-aibrix-eg-903790dc.envoy-gateway-system.svc.cluster.local/v1/",
+    api_key="dummy"
+    )
+
+    def predict(message, history,model):
+      history.append({"role": "user", "content": message})
+      try:
+        completion = client.chat.completions.create(messages=history, model=model, stream=False)
+        return completion.choices[0].message.content
+      except Exception as e:
+          return f"Error in generating chat completion: {str(e)}"
+
+    model_prompt = gr.Textbox("deepseek-r1-distill-llama-8b", label="Model Name")
+    demo = gr.ChatInterface(predict, type="messages",additional_inputs=[model_prompt])
+    demo.launch()
