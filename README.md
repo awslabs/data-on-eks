@@ -12,25 +12,25 @@ _(Pronounced: "Do.eks")_
 | 📊 **Data on EKS (This Repo)** | [github.com/awslabs/data-on-eks](https://github.com/awslabs/data-on-eks) | [awslabs.github.io/data-on-eks](https://awslabs.github.io/data-on-eks) |
 | 🤖 **AI on EKS (AI/ML Blueprints)** | [github.com/awslabs/ai-on-eks](https://github.com/awslabs/ai-on-eks) | [awslabs.github.io/ai-on-eks](https://awslabs.github.io/ai-on-eks) |
 
-> 🧭 Use **Data on EKS** for analytics, batch, stream, workflow, and data platform workloads.  
+> 🧭 Use **Data on EKS** for analytics, batch, stream, workflow, and data platform workloads.
 > Use **AI on EKS** for model training, inference, GenAI, and ML orchestration.
 
 ## 🚨 Important Announcement: Project Split! (⏳ _Temporary Notice_)
 
 > To better organize and support data and AI/ML workloads independently, we've split the original **Data on EKS** project into **two focused repositories**:
-> 
-> - 📊 **[Data on EKS](https://github.com/awslabs/data-on-eks)** – Focuses on Data Analytics, ETL, Streaming, Databases, and Query Engines  
+>
+> - 📊 **[Data on EKS](https://github.com/awslabs/data-on-eks)** – Focuses on Data Analytics, ETL, Streaming, Databases, and Query Engines
 > - 🤖 **[AI on EKS](https://github.com/awslabs/ai-on-eks)** – Covers AI/ML, including LLMs, Training/Inference, and Generative AI patterns
-> 
-> 📆 Officially announced at **KubeCon EU London (April 2025)**  
+>
+> 📆 Officially announced at **KubeCon EU London (April 2025)**
 > 📦 Full migration complete by **end of April 2025**
-> 
+>
 > All future **AI-related contributions** should be directed to the new [AI on EKS GitHub repository](https://github.com/awslabs/ai-on-eks).
-> 
+>
 
 ### Build, Scale, and Optimize Data Platforms on [Amazon EKS](https://aws.amazon.com/eks/) 🚀
 
-Welcome to **Data on EKS**, your launchpad for deploying **data platforms at scale** on [Amazon EKS](https://aws.amazon.com/eks/). 
+Welcome to **Data on EKS**, your launchpad for deploying **data platforms at scale** on [Amazon EKS](https://aws.amazon.com/eks/).
 
 Explore practical examples and patterns for running Data workloads on EKS using advanced frameworks such as [Apache Spark](https://spark.apache.org/) for distributed data processing, [Apache Flink](https://flink.apache.org/) for real-time stream processing, and [Apache Kafka](https://kafka.apache.org/) for high-throughput distributed messaging. Automate and orchestrate complex workflows with [Apache Airflow](https://airflow.apache.org/) and leverage the robust capabilities of [Amazon EMR on EKS](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html) to build resilient clusters, seamlessly integrating Kubernetes with big data solutions for enhanced scalability and performance.
 
@@ -92,7 +92,7 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 This library is licensed under the Apache 2.0 License.
 
 ## 🙌 Community
-We're building an open-source community focused on **Data Engineering, Streaming, and Analytics** on Kubernetes.  
+We're building an open-source community focused on **Data Engineering, Streaming, and Analytics** on Kubernetes.
 
 Come join us and contribute to shaping the future of data platforms on Amazon EKS!
 

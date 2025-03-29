@@ -70,7 +70,7 @@ export default function HomepageFeatures() {
       <div className="container">
         <div className="row" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
           {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} /> 
+            <Feature key={idx} {...props} />
           ))}
         </div>
       </div>
