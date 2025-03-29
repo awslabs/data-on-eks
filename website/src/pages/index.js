@@ -31,11 +31,11 @@ function HomepageHeader() {
           <Link
             className={clsx("button button--lg", styles.buttonSpinUp)}
             to="/docs/introduction/intro">
-            Let's Spin Up
+            Data on EKS
           </Link>
           <Link
             className={clsx("button button--lg", styles.buttonGenAI)}
-            to="/docs/gen-ai">
+            to="https://awslabs.github.io/ai-on-eks/">
             AI on EKS
           </Link>
         </div>
