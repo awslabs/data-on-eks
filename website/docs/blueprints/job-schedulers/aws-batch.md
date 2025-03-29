@@ -150,7 +150,7 @@ This will output something like the following:
 ]
 ```
 
-:::Tip
+:::tip
 If you see an empty result, it is likely that you are using a different default AWS Region than the one that was deployed to. Adjust the value of your default Region by setting the `AWS_DEFAULT_REGION` shell variable.
 
 ```bash

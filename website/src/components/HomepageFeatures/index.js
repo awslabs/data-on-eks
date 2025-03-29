@@ -4,60 +4,50 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Generative AI',
-    Svg: require('@site/static/img/green-ai.svg').default,
-    description: (
-      <>
-        Explore cutting-edge blueprints and patterns for deploying Generative AI models on EKS.
-        Leverage Ray, JupyterHub, and advanced MLOps practices to streamline your AI/ML workloads.
-      </>
-    ),
-  },
-  {
     title: 'Data Analytics',
     Svg: require('@site/static/img/green-da.svg').default,
     description: (
       <div>
-          Best Practice Data Analytics Deployment Templates and Examples for EKS with Apache Spark, Spark Operator, Dask, Beam, and More
+        Best Practice Data Analytics Deployment Templates and Examples for EKS with Apache Spark, Spark Operator, Dask, Beam, and More
       </div>
+    ),
+  },
+  {
+    title: 'Streaming Data Platforms',
+    Svg: require('@site/static/img/green-stream.svg').default,
+    description: (
+      <>
+        Building High-Scalability Streaming Data Platforms with Kafka, Flink, Spark Streaming, and More
+      </>
     ),
   },
   {
     title: 'Amazon EMR on EKS',
     Svg: require('@site/static/img/green-emr.svg').default,
     description: (
-        <>
-            Optimized Multi-Tenant Deployment of Amazon EMR on EKS Cluster with Best Practices using Karpenter Autoscaler and Apache YuniKorn Templates<br/>
-        </>
+      <>
+        Optimized Multi-Tenant Deployment of Amazon EMR on EKS Cluster with Best Practices using Karpenter Autoscaler and Apache YuniKorn Templates<br/>
+      </>
     ),
   },
   {
-        title: 'Streaming Data Platforms',
-        Svg: require('@site/static/img/green-stream.svg').default,
-        description: (
-            <>
-                Building High-Scalability Streaming Data Platforms with Kafka, Flink, Spark Streaming, and More
-            </>
-        ),
+    title: 'Schedulers',
+    Svg: require('@site/static/img/green-schd.svg').default,
+    description: (
+      <>
+        Optimizing Job Scheduling on EKS with Apache Airflow, Amazon MWAA, Argo Workflow, and More
+      </>
+    ),
   },
   {
-        title: 'Schedulers',
-        Svg: require('@site/static/img/green-schd.svg').default,
-        description: (
-            <>
-                Optimizing Job Scheduling on EKS with Apache Airflow, Amazon MWAA, Argo Workflow, and More
-            </>
-        ),
+    title: 'Distributed Databases & Query Engines',
+    Svg: require('@site/static/img/green-dd.svg').default,
+    description: (
+      <>
+        Constructing High-Performance, Scalable Distributed Databases and Query Engines with Cassandra, Trino, Presto, and More
+      </>
+    ),
   },
-  {
-        title: 'Distributed Databases & Query Engines',
-        Svg: require('@site/static/img/green-dd.svg').default,
-        description: (
-            <>
-                Constructing High-Performance, Scalable Distributed Databases and Query Engines with Cassandra, Trino, Presto, and More
-            </>
-        ),
-    },
 ];
 
 function Feature({Svg, title, description}) {
@@ -78,7 +68,7 @@ export default function HomepageFeatures() {
   return (
     <section className={styles.features}>
       <div className="container">
-        <div className="row">
+        <div className="row" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
           {FeatureList.map((props, idx) => (
             <Feature key={idx} {...props} />
           ))}
