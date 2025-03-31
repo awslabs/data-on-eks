@@ -137,13 +137,24 @@ alertmanager:
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
-# Adding AMP datasource to Grafana config
+  service:
+    type: ClusterIP
+    port: 3000
   serviceAccount:
     create: false
     name: ${amp_sa}
   grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s/proxy/3000/"
+      serve_from_sub_path: false
+    security:
+      cookie_secure: false
+      allow_embedding: true
     auth:
       sigv4_auth_enabled: true
+  env:
+    GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/proxy/3000/"
+    GF_SERVER_SERVE_FROM_SUB_PATH: "false"
   additionalDataSources:
     - name: AMP
       editable: true
@@ -173,5 +184,3 @@ grafana:
         url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
       spark-job-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/emr-eks-karpenter/emr-grafana-dashboard/emr-eks-grafana-dashboard.json
-      spark-operator-dashboard:
-        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/kubeflow-spark-operator-dashboard.json
