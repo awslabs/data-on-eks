@@ -9,9 +9,9 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 # Trino on EKS Best Practices
 [Apache Trino](https://trino.io/) deployment on [Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) delivers distributed query processing with cloud-native scalability. Organizations can optimize costs by selecting specific compute instances and storage solutions that match their workload requirements while they  combine the power of Trino with the scalability and flexibility of EKS using [Karpenter](https://karpenter.sh/).
 
-This guide provides prescriptive guidance for deploying Trino on EKS. It focuses on achieving high scalability and low cost through optimal configurations, effective resource management, and cost-saving strategies. We cover detailed configurations for popular file formats such as Hive and Iceberg. These configurations ensure seamless data access and optimize performance. Our goal is to help you set up a Trino deployment that is both efficient and cost-effective. 
+This guide provides prescriptive guidance for deploying Trino on EKS. It focuses on achieving high scalability and low cost through optimal configurations, effective resource management, and cost-saving strategies. We cover detailed configurations for popular file formats such as Hive and Iceberg. These configurations ensure seamless data access and optimize performance. Our goal is to help you set up a Trino deployment that is both efficient and cost-effective.
 
-We have a [deployment-ready blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/distributed-databases/trino) for deploying Trino on EKS, which incorporates the best practices discussed here. 
+We have a [deployment-ready blueprint](https://awslabs.github.io/data-on-eks/docs/blueprints/distributed-databases/trino) for deploying Trino on EKS, which incorporates the best practices discussed here.
 
 Refer to these best practices for the rational and further optimization/fine-tuning.
 
@@ -147,7 +147,7 @@ Use Karpenter to create a dynamic node pool that includes both spot and on-deman
   memory: 1000Gi
   weight: 100
   ```
-</details> 
+</details>
 
 Example of a Karpenter Node Pool setup can be also viewed in the [DoEKS repository](https://github.com/awslabs/data-on-eks/blob/f8dda1ae530902b77ee123661265caa09d97969b/distributed-databases/trino/karpenter.tf#L100) and the [EC2 Node Class configuration](https://github.com/awslabs/data-on-eks/blob/f8dda1ae530902b77ee123661265caa09d97969b/distributed-databases/trino/karpenter.tf#L65).
 
@@ -155,7 +155,7 @@ Example of a Karpenter Node Pool setup can be also viewed in the [DoEKS reposito
 Configure mixed instance types within the same instance pool to enhance flexibility and ensure access to a range of instance sizes, from small to large, based on workload demands.
 
 
-:::tip[Key Recomendations]
+:::tip[Key Recommendations]
 :::
 - Use Karpenter: For better scaling and simplified management of Trino clusters, prefer using Karpenter. It provides faster node provisioning, enhanced flexibility with mixed instance types, and better resource efficiency. Karpenter delivers superior scaling capabilities compared to MNG, making it the preferred choice for scaling secondary(worker) nodes in analytics applications.
 - Dedicated Nodes: Deploy one Trino pod per node to fully utilize available resources.
@@ -166,7 +166,7 @@ Configure mixed instance types within the same instance pool to enhance flexibil
 </CollapsibleContent>
 
 <CollapsibleContent header={<span><h2>Trino on EKS Setup</h2></span>}>
-Helm streamlines your Trino deployment on EKS. You can deploy using either the [official Helm chart](https://github.com/trinodb/charts) or community charts for configuration management. 
+Helm streamlines your Trino deployment on EKS. You can deploy using either the [official Helm chart](https://github.com/trinodb/charts) or community charts for configuration management.
 
 ## Setup
 
@@ -185,16 +185,16 @@ Helm streamlines your Trino deployment on EKS. You can deploy using either the [
   * Configure nodeSelector
   * Configure affinity rules
 
-### Deployment 
+### Deployment
 
 Use separate Helm commands for each workload type, with their respective values files. For example
 ```
 # ETL Cluster
 helm install etl-trino trino-chart -f etl-values.yaml
- 
+
 # Interactive Cluster
 helm install interactive-trino trino-chart -f interactive-values.yaml
- 
+
 # BI Cluster
 helm install analytics-trino trino-chart -f analytics-values.yaml
 ```
@@ -224,7 +224,7 @@ When deployed on EKS, both coordinator and worker components run as pods within 
 
 Coordinators handle query planning and orchestration, requiring fewer resources than worker nodes. Coordinator pods need fewer resources than workers as they focus on query planning rather than data processing. Below are the key configuration settings for high availability and efficient resource usage.
 
-#### Resource Configuration sufficient for query planning and coordination tasks 
+#### Resource Configuration sufficient for query planning and coordination tasks
 
 * Memory: 40Gi
 * CPU: 4-6 cores
@@ -258,12 +258,12 @@ Coordinators handle query planning and orchestration, requiring fewer resources 
 
 Kubernetes uses resource requests and limits to manage container resources effectively. Here's how to optimize them for different Trino pod types:
 
-### Worker Pods 
+### Worker Pods
 
 - Set resources.requests slightly lower than resources.limits (e.g., 10-20% difference).
 - This approach ensures efficient resource allocation while preventing resource exhaustion.
 
-### Coordinator Pods 
+### Coordinator Pods
 
 - Configure resource limits 20-30% higher than requests.
 - This strategy accommodates occasional usage spikes, providing burst capacity while maintaining predictable scheduling.
@@ -346,10 +346,10 @@ Coming Soon
 
 Amazon Elastic Compute Cloud (EC2) offers diverse computing options through its instance families and processors, including standard, compute-optimized, memory-optimized, and I/O-optimized configurations. You can purchase these instances through [flexible pricing models](https://aws.amazon.com/ec2/pricing/): On-Demand, Compute Savings Plan, Reserved, or Spot instances. Choosing the appropriate instance type optimizes your costs, maximizes performance, and supports sustainability goals. EKS enables you to match these compute resources precisely to your workload requirements. For Trino distributed clusters specifically, your compute selection directly impacts cluster performance.
 
-:::tip[Key Recomendations]
+:::tip[Key Recommendations]
 :::
-- Use [AWS Graviton-based Instances](https://aws.amazon.com/ec2/graviton/): Graviton instances lowers cost of instances while improving performance, it also helps to meet with sustainability goals 
-- Use Karpenter: For better scaling and simplified management of Trino clusters, prefer using Karpenter. 
+- Use [AWS Graviton-based Instances](https://aws.amazon.com/ec2/graviton/): Graviton instances lowers cost of instances while improving performance, it also helps to meet with sustainability goals
+- Use Karpenter: For better scaling and simplified management of Trino clusters, prefer using Karpenter.
 - Diversify the Spot Instances to maximize your savings. [More details can be found in EC2 Spot Best Practices](https://aws.amazon.com/blogs/compute/best-practices-to-optimize-your-amazon-ec2-spot-instances-usage/). Use [Fault-Tolerant execution](http://localhost:3000/data-on-eks/docs/blueprints/distributed-databases/trino#example-3-optional-fault-tolerant-execution-in-trino) with EC2 Spot Instances
 
 </CollapsibleContent>
@@ -360,7 +360,7 @@ Amazon Elastic Compute Cloud (EC2) offers diverse computing options through its 
 
 Trino's distributed nature across pods requires implementation of networking best practices to ensure optimal performance. Proper implementation improves resiliency, prevents IP exhaustion, reduces pod initialization errors, and minimizes latency. Pod networking forms the core of Kubernetes operations. Amazon EKS uses the VPC CNI plugin, operating in underlay mode where pods and hosts share the network layer. This ensures consistent IP addressing across both cluster and VPC environments.
 
-### VPC CNI Addon 
+### VPC CNI Addon
 The Amazon VPC CNI plugin can be customized to manage IP address allocation efficiently. By default, the Amazon VPC CNI assigns two Elastic Network Interfaces (ENIs) per node. These ENIs reserve numerous IP addresses, particularly on larger instance types. Since Trino typically needs only one pod per node plus a few IP addresses for DaemonSet pods (for logging and networking), you can configure the CNI to limit IP address allocation and reduce overhead.
 
 The following settings to the VPC CNI Addon can be applied using the EKS API, Terraform, or any other Infrastructure-as-Code (IaC) tool. For more in-depth details, refer to the official documentation:VPC CNI Prefix and IP Target.
@@ -368,8 +368,8 @@ The following settings to the VPC CNI Addon can be applied using the EKS API, Te
 ### Configuring the VPC CNI Addon
 
 Limit IP Addresses per Node by adjusting the configuration to allocate only the required number of IPs:
-- MINIMUM_IP_TARGET: Set this to the expected number of pods per node (e.g., 30). 
-- WARM_IP_TARGET: Set to 1 to keep the warm IP pool minimal. 
+- MINIMUM_IP_TARGET: Set this to the expected number of pods per node (e.g., 30).
+- WARM_IP_TARGET: Set to 1 to keep the warm IP pool minimal.
 - ENABLE_PREFIX_DELEGATION: Improve IP address efficiency by assigning IP prefixes to worker nodes rather than individual secondary IP addresses. This approach reduces Network Address Usage (NAU) within your VPC by utilizing a smaller, more concentrated pool of IP addresses.
 
 #### Sample VPC CNI Configuration
@@ -384,10 +384,10 @@ vpc-cni = {
       ENABLE_PREFIX_DELEGATION    = "true"
     }
   })
-}   
+}
 ```
 
-:::tip[Key Recomendations]
+:::tip[Key Recommendations]
 :::
 <b>Enable prefix delegation:</b> VPC CNI plugin supports prefix delegation, which assigns blocks of 16 IPv4 addresses (/28 prefix) to each node. This feature reduces the number of ENIs required per node. By using prefix delegation, you can lower your EC2 Network Address Usage (NAU), reduce network management complexity, and decrease operational costs.
 
@@ -459,7 +459,7 @@ Remember to adjust these practices based on your specific workload characteristi
 <CollapsibleContent header={<span><h2>Configuring Trino Connectors</h2></span>}>
 Trino connects to data sources through specialized adapters called connectors. The Hive and Iceberg connectors enable Trino to read columnar file formats like Parquet and ORC (Optimized Row Columnar). Proper connector configuration ensures optimal query performance and system compatibility.
 
-:::tip[Key Recomendations]
+:::tip[Key Recommendations]
 :::
 - **Isolation**: Use separate catalogs for different data sources or environments
 - **Security**: Implement appropriate authentication and authorization mechanisms
@@ -496,7 +496,7 @@ hive.s3.ssl.enabled=true
 hive.security=legacy
 ```
 
-:::tip[Key Recomendations]
+:::tip[Key Recommendations]
 :::
 ### Metastore Configuration
 
@@ -558,7 +558,7 @@ hive.s3.path-style-access=true
 hive.s3.ssl.enabled=true
 ```
 
-:::tip[Key Recomendations]
+:::tip[Key Recommendations]
 :::
 
 ### Catalog Configuration
@@ -632,7 +632,7 @@ A generic huide for optimizing large-scale queries in Trino can be found below. 
 - Use S3 with optimized settings for exchange data
 - Increase concurrent connections and adjust upload part sizes
 
-:::tip[Key Recomendations]
+:::tip[Key Recommendations]
 :::
 - **Monitoring**: Use tools like Prometheus and Grafana for real-time metrics
 - **Testing**: Simulate workloads/run POCs to validate configurations before production
