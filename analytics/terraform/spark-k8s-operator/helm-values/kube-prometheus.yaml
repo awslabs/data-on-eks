@@ -103,6 +103,7 @@ prometheus:
           - spark-team-a
           - spark-team-b
           - spark-team-c
+          - spark-s3-express
       podMetricsEndpoints:
         - port: "spark-ui"
           interval: 30s
