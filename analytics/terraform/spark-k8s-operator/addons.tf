@@ -521,6 +521,42 @@ module "eks_data_addons" {
       EOT
       ]
     }
+    spark-compute-graviton-ondemand = {
+      values = [
+        <<-EOT
+      name: spark-compute-graviton-ondemand
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkComputeGravitonOnDemand
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["arm64"]
+        limits:
+          cpu: 2000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
     spark-compute-graviton = {
       values = [
         <<-EOT
