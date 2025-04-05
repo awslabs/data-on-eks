@@ -144,7 +144,7 @@ spec:
     labels:
       version: 3.2.1
     nodeSelector:
-      NodeGroupType: "SparkGravitonMemoryOptimized"
+      NodeGroupType: "SparkGravitonOnDemand"
   executor:
     podSecurityContext:
       # runAsUser: 1000
