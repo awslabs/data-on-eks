@@ -1,9 +1,9 @@
 prometheus:
   prometheusSpec:
     retention: 5h
-    scrapeInterval: 30s
-    evaluationInterval: 30s
-    scrapeTimeout: 10s
+    scrapeInterval: 10s
+    evaluationInterval: 10s
+    scrapeTimeout: 5s
     storageSpec:
       volumeClaimTemplate:
         metadata:
@@ -60,10 +60,10 @@ prometheus:
           - spark-s3-express
       podMetricsEndpoints:
         - port: "spark-ui"
-          interval: 30s
+          interval: 10s
           path: /metrics/driver/prometheus/
         - port: "spark-ui"
-          interval: 30s
+          interval: 10s
           path: /metrics/executors/prometheus/
 
 alertmanager:
