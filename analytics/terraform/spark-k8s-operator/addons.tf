@@ -521,10 +521,10 @@ module "eks_data_addons" {
       EOT
       ]
     }
-    spark-compute-graviton-ondemand = {
+    spark-compute-graviton-od-memory = {
       values = [
         <<-EOT
-      name: spark-compute-graviton-ondemand
+      name: spark-compute-graviton-od-memory
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
@@ -539,7 +539,7 @@ module "eks_data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: SparkComputeGravitonOnDemand
+          - NodeGroupType: SparkComputeGravitonODMemory
           - multiArch: Spark
         requirements:
           - key: "karpenter.sh/capacity-type"
@@ -548,6 +548,18 @@ module "eks_data_addons" {
           - key: "kubernetes.io/arch"
             operator: In
             values: ["arm64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["r"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["4", "8", "16", "32"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
         limits:
           cpu: 2000
         disruption:
