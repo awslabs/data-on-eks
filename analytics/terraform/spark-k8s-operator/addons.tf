@@ -511,7 +511,7 @@ module "eks_data_addons" {
             values: ["r"]
           - key: karpenter.k8s.aws/instance-family
             operator: In
-            values: ["r5","r5n"]
+            values: ["r5","r5n", "r6i", "r6in", "r7i"]
         limits:
           cpu: 2000
         disruption:
