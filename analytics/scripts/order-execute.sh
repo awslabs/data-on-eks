@@ -26,4 +26,7 @@ INPUT_DATA_S3_PATH="s3://${S3_DIRECTORY_BUCKET}/order/input"
 aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key scripts/pyspark-order.py --body pyspark-order.py --region ${REGION}
 
 # Copy Test Input data to S3 bucket
-aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key order/input/order.parquet --body order.parquet --region ${REGION}
+aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key order/input/order1.parquet --body order.parquet --region ${REGION}
+aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key order/input/order2.parquet --body order.parquet --region ${REGION}
+aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key order/input/order3.parquet --body order.parquet --region ${REGION}
+aws s3api put-object --bucket ${S3_DIRECTORY_BUCKET} --key order/input/order4.parquet --body order.parquet --region ${REGION}
