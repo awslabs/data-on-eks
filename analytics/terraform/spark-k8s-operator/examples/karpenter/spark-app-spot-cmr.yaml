@@ -142,7 +142,7 @@ spec:
     labels:
       version: 3.2.1
     nodeSelector:
-      NodeGroupType: "SparkComputeSpotCMR"
+      NodeGroupType: "SparkComputeOnDemand"
   executor:
     podSecurityContext:
       # runAsUser: 1000
