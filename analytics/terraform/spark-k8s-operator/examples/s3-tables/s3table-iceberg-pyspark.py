@@ -33,30 +33,33 @@ def main(args):
     input_csv_path = args[1]  # Path to the input CSV file
     s3table_arn = args[2]  # s3table arn
 
+    # Configuration parameters
+    namespace = "doeks_namespace"
+    catalog_name = "s3tablesbucket"
+    table_name = "employee_s3_table"
+    full_table_name = f"s3tablesbucket.{namespace}.{table_name}"
+    catalog_uri =  f"https://s3tables.{region}.amazonaws.com/iceberg"
+
     # Initialize Spark session
     logger.info("Initializing Spark Session")
     spark = (SparkSession
              .builder
              .appName(f"{AppName}_{dt_string}")
              .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-             .config("spark.sql.catalog.s3tablesbucket", "org.apache.iceberg.spark.SparkCatalog")
-             .config("spark.sql.catalog.s3tablesbucket.warehouse", s3table_arn)
-             .config("spark.sql.catalog.s3tablesbucket.type", "rest")
-             .config("spark.sql.catalog.s3tablesbucket.rest.sigv4-enabled", "true")
-             .config("spark.sql.catalog.s3tablesbucket.rest.signing-name", "s3tables")
-             .config("spark.sql.catalog.s3tablesbucket.rest.signing-region", region)
-             .config("spark.sql.catalog.s3tablesbucket.uri", f"https://s3tables.{region}.amazonaws.com/iceberg")
-             .config("spark.sql.catalog.s3tablesbucket.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-             .config('spark.hadoop.fs.s3.impl', "org.apache.hadoop.fs.s3a.S3AFileSystem")
+             .config(f"spark.sql.catalog.{catalog_name}", "org.apache.iceberg.spark.SparkCatalog")
+             .config(f"spark.sql.catalog.{catalog_name}.warehouse", s3table_arn)
+             .config(f"spark.sql.catalog.{catalog_name}.type", "rest")
+             .config(f"spark.sql.catalog.{catalog_name}.rest.sigv4-enabled", "true")
+             .config(f"spark.sql.catalog.{catalog_name}.rest.signing-name", "s3tables")
+             .config(f"spark.sql.catalog.{catalog_name}.rest.signing-region", region)
+             .config(f"spark.sql.catalog.{catalog_name}.uri", catalog_uri)
+             .config(f"spark.sql.catalog.{catalog_name}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+             .config("spark.hadoop.fs.s3.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
              .config("spark.sql.defaultCatalog", "s3tablesbucket")
              .getOrCreate())
 
     spark.sparkContext.setLogLevel("INFO")
     logger.info("Spark session initialized successfully")
-
-    namespace = "doeks_namespace"
-    table_name = "employee_s3_table"
-    full_table_name = f"s3tablesbucket.{namespace}.{table_name}"
 
     # Step 1: Create namespace if not exists
     logger.info(f"Creating namespace: {namespace}")
@@ -84,7 +87,10 @@ def main(args):
             salary DOUBLE
         )
         USING iceberg
-        OPTIONS ('format-version'='2')
+        TBLPROPERTIES (
+            'format-version'='2',
+            'write.format.default'='parquet'
+        )
     """)
 
     # Step 4: Write data to the table
