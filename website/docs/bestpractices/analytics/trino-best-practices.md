@@ -64,7 +64,7 @@ Apache Trino is a powerful distributed SQL query engine designed for high-perfor
 
 </CollapsibleContent>
 
-<CollapsibleContent header={<h2><span>EKS Cluster Setup</span></h2>}>
+<CollapsibleContent header={<h2><span>EKS Cluster Configuration</span></h2>}>
 
 ## Creating the EKS Cluster
 
@@ -166,7 +166,7 @@ Configure mixed instance types within the same instance pool to enhance flexibil
 </CollapsibleContent>
 
 <CollapsibleContent header={<span><h2>Trino on EKS Setup</h2></span>}>
-Helm streamlines your Trino deployment on EKS. You can deploy using either the [official Helm chart](https://github.com/trinodb/charts) or community charts for configuration management.
+Helm streamlines your Trino deployment on EKS. We recommend installing through Helm using either the [official Helm chart](https://github.com/trinodb/charts) or community charts for configuration management.
 
 ## Setup
 
@@ -187,7 +187,7 @@ Helm streamlines your Trino deployment on EKS. You can deploy using either the [
 
 ### Deployment
 
-Use separate Helm commands for each workload type, with their respective values files. For example
+Use separate Helm configurations for each workload type, with their respective values files. For example
 ```
 # ETL Cluster
 helm install etl-trino trino-chart -f etl-values.yaml
@@ -333,9 +333,6 @@ fs.cache.preferred-hosts-count=10 # The cluster size determines the host count. 
 Configure instances with Local SSD storage for cache directories to significantly improve I/O speed and overall query performance.
 :::
 
-## Trino Gateway
-Coming Soon
-
 </CollapsibleContent>
 
 <CollapsibleContent header={<h2><span>Compute, Storage, and Networking Best Practices</span></h2>}>
@@ -406,6 +403,8 @@ This sections focuses on AWS services for optimal storage management with Trino 
 - Enable S3 server-side encryption (SSE-S3 or SSE-KMS) for data at rest
 - Configure appropriate bucket policies and access through IAM roles
 - Use S3 bucket prefixes strategically for better query performance
+- Use Trino with S3 Select to improve query performance
+- 
 
 ### EBS Storage for Coordinator and Workers
 
@@ -564,6 +563,9 @@ hive.s3.ssl.enabled=true
 ### Catalog Configuration
 - Use AWS Glue as the catalog for centralized schema management
 - Set `iceberg.catalog.type=glue` and specify the region
+- Use Iceberg REST Catalog protocol
+ `iceberg.catalog.type=rest`
+  `iceberg.rest-catalog.uri=https://iceberg-with-rest:8181/'` 
 
 ####   File Format
 - Use Parquet or ORC for optimal performance
