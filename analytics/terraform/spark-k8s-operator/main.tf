@@ -57,6 +57,10 @@ locals {
   s3_express_zone_id   = local.s3_express_az_ids[0]
   s3_express_zone_name = local.s3_express_azs[0]
 
+  enable_spot_termination = var.enable_spot_termination
+
+  queue_name = coalesce(var.queue_name, "Karpenter-${local.name}")
+
   tags = {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
