@@ -15,20 +15,22 @@ We have a [deployment-ready blueprint](https://awslabs.github.io/data-on-eks/doc
 
 Refer to these best practices for the rational and further optimization/fine-tuning.
 
-<CollapsibleContent header={<h2><span>Apache Trino</span></h2>}>
-
-## Basics
-
-Apache Trino is a powerful distributed SQL query engine designed for high-performance analytics and big data processing.
+<CollapsibleContent header={<h2><span>Apache Trino Fundamentals</span></h2>}>
+This section covers Apache Trino's core architecture, capabilities, use cases, and ecosystem with references.
 
 ### Core Architecture
+
+Apache Trino is a powerful distributed SQL query engine designed for high-performance analytics and big data processing. Some of the key components are 
 
 - Distributed coordinator-worker model
 - In-memory processing architecture
 - MPP (Massively Parallel Processing) execution
 - Dynamic query optimization engine
+- More details can be found [here](https://trino.io/docs/current/overview/concepts.html#architecture)
 
 ### Key Capabilities
+
+Trino offers several features that enhance data processing capabilities.
 
 - Query Federation
 - Simultaneous queries across multiple data sources
@@ -38,22 +40,27 @@ Apache Trino is a powerful distributed SQL query engine designed for high-perfor
 
 ### Connectors Ecosystem
 
-- 50+ production-ready connectors including:
+Trino enables SQL querying of diverse data sources by configuring a catalog with the appropriate connector and connecting through standard SQL clients.
+
+- 50+ [production-ready connectors](https://trino.io/ecosystem/data-source) including:
   - Cloud storage (AWS S3)
   - Relational databases (PostgreSQL, MySQL, SQL Server)
   - NoSQL stores (MongoDB, Cassandra)
   - Data lakes (Apache Hive, Apache Iceberg, Delta Lake)
   - Streaming platforms (Apache Kafka)
 
-### Performance Optimizations
+### Query Optimizations
 
 - Advanced cost-based optimizer
 - Dynamic filtering
 - Adaptive query execution
 - Sophisticated memory management
 - Columnar processing support
+- Read more [here](https://trino.io/docs/current/optimizer.html)
 
 ### Use Cases
+
+Trino addresses these key use cases:
 
 - Interactive analytics
 - Data lake queries
