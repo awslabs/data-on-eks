@@ -49,9 +49,9 @@ data "aws_availability_zones" "available" {
 #---------------------------------------
 # Karpenter
 #---------------------------------------
-data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.ecr
-}
+# data "aws_ecrpublic_authorization_token" "token" {
+#   provider = aws.ecr
+# }
 
 # Retrieves the IAM session context, including the ARN of the currently logged-in user/role.
 data "aws_iam_session_context" "current" {
