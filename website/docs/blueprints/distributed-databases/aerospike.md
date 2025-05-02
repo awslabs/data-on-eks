@@ -13,7 +13,7 @@ sidebar_label: Aerospike
 
 * **High Availability and Resilience**: With features like Cross-Datacenter Replication (XDR), Aerospike provides fine-grained control for asynchronous data replication across geographically dispersed clusters. This ensures data availability and compliance with data locality regulations. EKS enhances this resilience by distributing workloads across multiple availability zones.
 
-* **Operational Efficiency**: The Aerospike Kubernetes Operator automates routine tasks such as configuration, scaling, and upgrading Aerospike clusters. This reduces operational complexity and overhead, allowing teams to focus on delivering value rather than managing infrastructure. 
+* **Operational Efficiency**: The Aerospike Kubernetes Operator automates routine tasks such as configuration, scaling, and upgrading Aerospike clusters. This reduces operational complexity and overhead, allowing teams to focus on delivering value rather than managing infrastructure.
 
 * **Cost Optimization**: Leveraging Aerospike’s efficient use of resources and EKS’s flexible infrastructure, organizations can achieve significant cost savings compared to traditional deployments. Aerospike’s ability to deliver high performance with a reduced hardware footprint translates to lower total cost of ownership.
 
