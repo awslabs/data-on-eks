@@ -139,7 +139,16 @@ echo $S3_BUCKET
 
 <CollapsibleContent header={<h2><span>Execute Sample Spark job with Karpenter</span></h2>}>
 
-Navigate to example directory and submit the Spark job.
+Navigate to example directory. You will need to replace the <S3_BUCKET> placeholders in this file with the name of the bucket created earlier. You can get that value by running echo $S3_BUCKET.
+
+To do this automatically you can run the following, which will create a .old backup file and do the replacement for you.
+
+
+```bash
+sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./pyspark-pi-job.yaml
+```
+
+Submit the Spark Job
 
 ```bash
 cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/karpenter
@@ -155,7 +164,7 @@ kubectl get pods -n spark-team-a -w
 
 You can check the status of the SparkApplication if the pods are already completed:
 ```bash
-kubectl kubectl describe sparkapplication pyspark-pi-karpenter -n spark-team-a
+kubectl describe sparkapplication pyspark-pi-karpenter -n spark-team-a
 ```
 
 You can try the following examples to leverage multiple Karpenter Nodepools, EBS as Dynamic PVC instead of SSD and YuniKorn Gang Scheduling.

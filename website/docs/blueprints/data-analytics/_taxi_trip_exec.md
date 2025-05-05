@@ -7,7 +7,7 @@ require a relatively fast internet connection.
 ```bash
 cd ${DOEKS_HOME}/analytics/scripts/
 chmod +x taxi-trip-execute.sh
-taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
+./taxi-trip-execute.sh ${S3_BUCKET} YOUR_REGION_HERE
 ```
 
 You can return to the blueprint directory and continue with the example
