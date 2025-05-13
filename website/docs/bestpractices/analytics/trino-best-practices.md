@@ -7,7 +7,7 @@ import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Trino on EKS Best Practices
-[Apache Trino](https://trino.io/) deployment on [Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) delivers distributed query processing with cloud-native scalability. Organizations can optimize costs by selecting specific compute instances and storage solutions that match their workload requirements while they  combine the power of Trino with the scalability and flexibility of EKS using [Karpenter](https://karpenter.sh/).
+[Trino](https://trino.io/) deployment on [Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) delivers distributed query processing with cloud-native scalability. Organizations can optimize costs by selecting specific compute instances and storage solutions that match their workload requirements while they  combine the power of Trino with the scalability and flexibility of EKS using [Karpenter](https://karpenter.sh/).
 
 This guide provides prescriptive guidance for deploying Trino on EKS. It focuses on achieving high scalability and low cost through optimal configurations, effective resource management, and cost-saving strategies. We cover detailed configurations for popular file formats such as Hive and Iceberg. These configurations ensure seamless data access and optimize performance. Our goal is to help you set up a Trino deployment that is both efficient and cost-effective.
 
@@ -15,12 +15,12 @@ We have a [deployment-ready blueprint](https://awslabs.github.io/data-on-eks/doc
 
 Refer to these best practices for the rational and further optimization/fine-tuning.
 
-<CollapsibleContent header={<h2><span>Apache Trino Fundamentals</span></h2>}>
-This section covers Apache Trino's core architecture, capabilities, use cases, and ecosystem with references.
+<CollapsibleContent header={<h2><span>Trino Fundamentals</span></h2>}>
+This section covers Trino's core architecture, capabilities, use cases, and ecosystem with references.
 
 ### Core Architecture
 
-Apache Trino is a powerful distributed SQL query engine designed for high-performance analytics and big data processing. Some of the key components are 
+Trino is a powerful distributed SQL query engine designed for high-performance analytics and big data processing. Some of the key components are 
 
 - Distributed coordinator-worker model
 - In-memory processing architecture
