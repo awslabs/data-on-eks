@@ -139,7 +139,7 @@ echo $S3_BUCKET
 
 <CollapsibleContent header={<h2><span>Execute Sample Spark job with Karpenter</span></h2>}>
 
-Navigate to example directory. You will need to replace the <S3_BUCKET> placeholders in this file with the name of the bucket created earlier. You can get that value by running echo $S3_BUCKET.
+Navigate to example directory. You will need to replace the `<S3_BUCKET>` placeholders in this file with the name of the bucket created earlier. You can get that value by running echo $S3_BUCKET.
 
 To do this automatically you can run the following, which will create a .old backup file and do the replacement for you.
 
