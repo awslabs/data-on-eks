@@ -2,7 +2,7 @@
 
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming/emr-eks-flink) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -68,7 +68,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_flink_job_execution_role_arn"></a> [flink\_job\_execution\_role\_arn](#output\_flink\_job\_execution\_role\_arn) | IAM linked role for the flink job |
 | <a name="output_flink_operator_bucket"></a> [flink\_operator\_bucket](#output\_flink\_operator\_bucket) | S3 bucket name for Flink operator data,logs,checkpoint and savepoint |
 | <a name="output_flink_operator_role_arn"></a> [flink\_operator\_role\_arn](#output\_flink\_operator\_role\_arn) | IAM linked role for the flink operator |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 

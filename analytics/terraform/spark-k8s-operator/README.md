@@ -1,7 +1,7 @@
 # Spark on K8s Operator with EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/spark-operator-yunikorn) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -107,4 +107,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_s3_bucket_id_spark_history_server"></a> [s3\_bucket\_id\_spark\_history\_server](#output\_s3\_bucket\_id\_spark\_history\_server) | Spark History server logs S3 bucket ID |
 | <a name="output_s3_bucket_region_spark_history_server"></a> [s3\_bucket\_region\_spark\_history\_server](#output\_s3\_bucket\_region\_spark\_history\_server) | Spark History server logs S3 bucket ID |
 | <a name="output_subnet_ids_starting_with_100"></a> [subnet\_ids\_starting\_with\_100](#output\_subnet\_ids\_starting\_with\_100) | Secondary CIDR Private Subnet IDs for EKS Data Plane |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

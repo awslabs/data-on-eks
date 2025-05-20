@@ -20,7 +20,7 @@ This section covers Trino's core architecture, capabilities, use cases, and ecos
 
 ### Core Architecture
 
-Trino is a powerful distributed SQL query engine designed for high-performance analytics and big data processing. Some of the key components are 
+Trino is a powerful distributed SQL query engine designed for high-performance analytics and big data processing. Some of the key components are
 
 - Distributed coordinator-worker model
 - In-memory processing architecture
@@ -411,7 +411,7 @@ This sections focuses on AWS services for optimal storage management with Trino 
 - Configure appropriate bucket policies and access through IAM roles
 - Use S3 bucket prefixes strategically for better query performance
 - Use Trino with S3 Select to improve query performance
-- 
+-
 
 ### EBS Storage for Coordinator and Workers
 
@@ -572,7 +572,7 @@ hive.s3.ssl.enabled=true
 - Set `iceberg.catalog.type=glue` and specify the region
 - Use Iceberg REST Catalog protocol
  `iceberg.catalog.type=rest`
-  `iceberg.rest-catalog.uri=https://iceberg-with-rest:8181/'` 
+  `iceberg.rest-catalog.uri=https://iceberg-with-rest:8181/'`
 
 ####   File Format
 - Use Parquet or ORC for optimal performance
