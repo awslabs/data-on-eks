@@ -3,7 +3,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 ---
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -53,4 +53,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 ## Outputs
 
 No outputs.
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

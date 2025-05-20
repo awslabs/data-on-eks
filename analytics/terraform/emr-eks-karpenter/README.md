@@ -2,7 +2,7 @@
 
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-karpenter) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -102,4 +102,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_emr_s3_bucket_name"></a> [emr\_s3\_bucket\_name](#output\_emr\_s3\_bucket\_name) | S3 bucket for EMR workloads. Scripts,Logs etc. |
 | <a name="output_fsx_s3_bucket_name"></a> [fsx\_s3\_bucket\_name](#output\_fsx\_s3\_bucket\_name) | FSx filesystem sync with S3 bucket |
 | <a name="output_grafana_secret_name"></a> [grafana\_secret\_name](#output\_grafana\_secret\_name) | Grafana password secret name |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

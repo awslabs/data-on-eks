@@ -2,7 +2,7 @@
 
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/aws-batch) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -81,4 +81,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_configure_kubectl_cmd"></a> [configure\_kubectl\_cmd](#output\_configure\_kubectl\_cmd) | Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig |
 | <a name="output_run_example_aws_batch_job"></a> [run\_example\_aws\_batch\_job](#output\_run\_example\_aws\_batch\_job) | Use the AWS CLI to submit the example Hello World AWS Batch job definition to the Spot job queue. |
 | <a name="output_run_example_aws_batch_job_on_spot"></a> [run\_example\_aws\_batch\_job\_on\_spot](#output\_run\_example\_aws\_batch\_job\_on\_spot) | Use the AWS CLI to submit the example Hello World AWS Batch job definition to the Spot job queue. |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

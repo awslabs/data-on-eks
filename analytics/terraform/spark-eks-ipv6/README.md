@@ -1,6 +1,6 @@
 # Spark K8s Operator running on Amazon EKS IPv6 cluster
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -79,4 +79,4 @@
 | <a name="output_grafana_secret_name"></a> [grafana\_secret\_name](#output\_grafana\_secret\_name) | Grafana password secret name |
 | <a name="output_region"></a> [region](#output\_region) | AWS region were cluster is deployed |
 | <a name="output_s3_bucket_id_spark_event_logs_example_data"></a> [s3\_bucket\_id\_spark\_event\_logs\_example\_data](#output\_s3\_bucket\_id\_spark\_event\_logs\_example\_data) | S3 bucket for Spark Event Logs and Example Data bucket ID |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

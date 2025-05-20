@@ -1,7 +1,7 @@
 # Self-managed Apache Airflow deployment for EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/self-managed-airflow) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -120,4 +120,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_grafana_secret_name"></a> [grafana\_secret\_name](#output\_grafana\_secret\_name) | Grafana password secret name |
 | <a name="output_s3_bucket_id_airflow_logs"></a> [s3\_bucket\_id\_airflow\_logs](#output\_s3\_bucket\_id\_airflow\_logs) | Airflow logs S3 bucket ID |
 | <a name="output_s3_bucket_id_fluentbit_logs"></a> [s3\_bucket\_id\_fluentbit\_logs](#output\_s3\_bucket\_id\_fluentbit\_logs) | FluentBit logs S3 bucket ID |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

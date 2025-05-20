@@ -1,7 +1,7 @@
 # Apache NiFi on EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks/nifi) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -94,4 +94,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_configure_kubectl"></a> [configure\_kubectl](#output\_configure\_kubectl) | Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig |
 | <a name="output_grafana_secret_name"></a> [grafana\_secret\_name](#output\_grafana\_secret\_name) | Grafana password secret name |
 | <a name="output_nifi_login_password_secret_name"></a> [nifi\_login\_password\_secret\_name](#output\_nifi\_login\_password\_secret\_name) | Apache NiFi Login password secret name |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->
