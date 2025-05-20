@@ -59,15 +59,20 @@ jobs:
 
       - name: Config Terraform plugin cache
         if: steps.changes.outputs.src== 'true'
-        run: mkdir --parents ${{ env.TERRAFORM_DOCS_VERSION }}
+        run: mkdir --parents ${{ env.TF_PLUGIN_CACHE_DIR }}
 
-      - name: Cache Terraform
-        uses: actions/cache@v3
+      - name: Restore Terraform Cache
+        id: restore-cache
+        uses: actions/cache/restore@v4
         if: steps.changes.outputs.src== 'true'
         with:
-          path: ${{ env.TERRAFORM_DOCS_VERSION }}
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
-          restore-keys: ${{ runner.os }}-terraform-
+          # restore latest matching cache to the tf cache dir
+          # matches exact branch and versions hash, then any cache from the same branch, then any cache from any branch
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-terraform-${{ github.head_ref }}-${{ hashFiles('**/versions.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-${{ github.head_ref }}
+            ${{ runner.os }}-terraform-
 
       - name: Terraform min/max versions
         uses: clowdhaus/terraform-min-max@v1.3.2
@@ -112,15 +117,20 @@ jobs:
 
       - name: Config Terraform plugin cache
         if: steps.changes.outputs.src== 'true'
-        run: mkdir --parents ${{ env.TERRAFORM_DOCS_VERSION }}
+        run: mkdir --parents ${{ env.TF_PLUGIN_CACHE_DIR }}
 
-      - name: Cache Terraform
-        uses: actions/cache@v3
+      - name: Restore Terraform Cache
+        id: restore-cache
+        uses: actions/cache/restore@v4
         if: steps.changes.outputs.src== 'true'
         with:
+          # restore latest matching cache to the tf cache dir
+          # matches exact branch and versions hash, then any cache from the same branch, then any cache from any branch
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
-          restore-keys: ${{ runner.os }}-terraform-
+          key: ${{ runner.os }}-terraform-${{ github.head_ref }}-${{ hashFiles('**/versions.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-${{ github.head_ref }}
+            ${{ runner.os }}-terraform-
 
       - name: Install tfsec
         if: steps.changes.outputs.src== 'true'
@@ -138,3 +148,12 @@ jobs:
           terraform-version: ${{ steps.minMax.outputs.maxVersion }}
           terraform-docs-version: ${{ env.TERRAFORM_DOCS_VERSION }}
           tflint-version: ${{ env.TFLINT_VERSION }}
+
+      - name: Save Terraform Cache
+        uses: actions/cache/save@v4
+        if: steps.changes.outputs.src== 'true'
+        with:
+          # caches cannot be updated, we can only save this hash once,
+          # after validating all blueprints we should have all plugins in cache.
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-terraform-${{ github.head_ref }}-${{ hashFiles('**/versions.tf') }}
