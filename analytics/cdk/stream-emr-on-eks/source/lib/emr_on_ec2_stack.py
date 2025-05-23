@@ -64,7 +64,7 @@ class EMREC2Stack(NestedStack):
 
         # emr service role
         svc_role = iam.Role(self,"EMRSVCRole",
-            assumed_by=iam.ServicePrincipal("elasticmapreduce.amazonaws.com"),
+            assumed_by=iam.ServicePrincipal("eks.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonEMRServicePolicy_v2")
             ]
