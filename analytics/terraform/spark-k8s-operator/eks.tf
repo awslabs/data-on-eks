@@ -329,7 +329,7 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attac
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.52"
+  version               = "~> 5.55"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
@@ -346,7 +346,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "s3_csi_driver_irsa" {
   source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version          = "~> 5.34"
+  version          = "~> 5.55"
   role_name_prefix = format("%s-%s-", local.name, "s3-csi-driver")
   role_policy_arns = {
     # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
