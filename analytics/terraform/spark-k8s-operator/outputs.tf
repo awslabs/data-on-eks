@@ -48,7 +48,7 @@ output "grafana_secret_name" {
 
 output "s3directory_bucket_name" {
   description = "s3 directory bucket name"
-  value       = aws_s3_directory_bucket.spark_data_bucket_express.id
+  value       = aws_s3_directory_bucket.spark_data_bucket_express.bucket
 }
 
 output "s3directory_bucket_region" {
