@@ -71,7 +71,7 @@ module "vpc_endpoints_sg" {
 
 module "vpc_endpoints" {
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 5.19"
+  version = "~> 5.21"
 
   create = var.enable_vpc_endpoints
 
@@ -88,11 +88,14 @@ module "vpc_endpoints" {
       }
     }
     },
-    { for service in toset(["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]) :
+    { for service in toset(["autoscaling", "ecr.api", "ecr.dkr", "ec2", "ec2messages", "eks", "eks-auth", "elasticloadbalancing", "sts", "kms", "logs", "ssm", "ssmmessages"]) :
       replace(service, ".", "_") =>
       {
-        service             = service
-        subnet_ids          = module.vpc.private_subnets
+        service = service
+        # Filter for only the private subnets in the 10.x CIDR to avoid DuplicateSubnetsInSameZone exception
+        subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+          substr(cidr_block, 0, 3) == "10." ? subnet_id : null]
+        )
         private_dns_enabled = true
         tags                = { Name = "${local.name}-${service}" }
       }

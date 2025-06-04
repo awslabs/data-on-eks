@@ -55,7 +55,8 @@ kubecostModel:
   image: public.ecr.aws/kubecost/cost-model
 
 forecasting:
-  image: public.ecr.aws/kubecost/kubecost-modeling:v0.1.19
+  image:
+    repository: public.ecr.aws/kubecost/kubecost-modeling
 
 networkCosts:
   # enable networking costs daemonset
@@ -63,7 +64,8 @@ networkCosts:
   config:
     services:
       amazon-web-services: true
-  image: public.ecr.aws/kubecost/kubecost-network-costs:v0.17.6
+  image:
+    repository: public.ecr.aws/kubecost/kubecost-network-costs
 
 clusterController:
   image:

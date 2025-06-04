@@ -40,3 +40,23 @@ output "grafana_secret_name" {
   description = "Grafana password secret name"
   value       = aws_secretsmanager_secret.grafana.name
 }
+
+################################################################################
+# S3 Directory Bucket
+################################################################################
+
+
+output "s3directory_bucket_name" {
+  description = "s3 directory bucket name"
+  value       = aws_s3_directory_bucket.spark_data_bucket_express.bucket
+}
+
+output "s3directory_bucket_region" {
+  description = "s3 directory bucket region"
+  value       = local.region
+}
+
+output "s3directory_bucket_zone" {
+  description = "s3 directory bucket availability zone"
+  value       = local.s3_express_zone_name
+}
