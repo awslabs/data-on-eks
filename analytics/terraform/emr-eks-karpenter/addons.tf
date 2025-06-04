@@ -196,7 +196,7 @@ resource "kubectl_manifest" "spark_monitor" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.33.0" # ensure to update this to the latest/desired version
+  version = "1.37.1" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -457,6 +457,7 @@ module "eks_data_addons" {
   # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = var.enable_emr_spark_operator
   spark_history_server_helm_config = {
+    version = "1.3.2"
     values = [
       <<-EOT
       sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"

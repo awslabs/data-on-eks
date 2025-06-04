@@ -1,6 +1,5 @@
 ---
-sidebar_position: 4
-sidebar_label: Networking for Data
+sidebar_label: VPC Configuration
 ---
 
 # Networking for Data

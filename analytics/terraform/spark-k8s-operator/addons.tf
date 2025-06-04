@@ -50,7 +50,7 @@ resource "aws_eks_access_entry" "karpenter_nodes" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.35" # ensure to update this to the latest/desired version
+  version = "1.37.1" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -763,8 +763,9 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = true
+
   spark_history_server_helm_config = {
-    version = "1.2.0"
+    version = "1.3.2"
     values = [
       <<-EOT
       sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
