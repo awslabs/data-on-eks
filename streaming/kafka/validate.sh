@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+# set -x
 case "$1" in
   update-kubeconfig)
     aws eks --region $AWS_REGION update-kubeconfig --name kafka-on-eks
