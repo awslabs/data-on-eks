@@ -4,6 +4,7 @@ set -o pipefail
 
 read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
+export AWS_REGION=$AWS_DEFAULT_REGION
 
 echo "Deleting EC2 instances created ..."
 aws ec2 describe-instances \
