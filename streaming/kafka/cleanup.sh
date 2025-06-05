@@ -7,11 +7,26 @@ export AWS_DEFAULT_REGION=$region
 export AWS_REGION=$AWS_DEFAULT_REGION
 
 echo "Deleting EC2 instances created ..."
-aws ec2 describe-instances \
+# Get the list of instance IDs
+instance_ids=$(aws ec2 describe-instances \
   --filters "Name=tag:karpenter.sh/nodepool,Values=kafka" "Name=instance-state-name,Values=running" \
   --query "Reservations[*].Instances[*].InstanceId" \
-  --output text | \
-xargs -n 1 aws ec2 terminate-instances --instance-ids
+  --output text)
+  
+# Terminate the instances
+for instance_id in $instance_ids; do
+  aws ec2 terminate-instances --instance-ids $instance_id
+done
+
+# Wait for the instances to be terminated
+for instance_id in $instance_ids; do
+  status=$(aws ec2 describe-instances --instance-ids $instance_id --query "Reservations[*].Instances[*].State.Name" --output text)
+  while [ "$status" != "terminated" ]; do
+    echo "Waiting for instance $instance_id to be terminated..."
+    sleep 5
+    status=$(aws ec2 describe-instances --instance-ids $instance_id --query "Reservations[*].Instances[*].State.Name" --output text)
+  done
+done
 
 targets=(
   "module.eks_data_addons"
