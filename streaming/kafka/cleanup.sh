@@ -18,6 +18,8 @@ targets=(
   "module.eks"
 )
 
+terraform init
+  
 for target in "${targets[@]}"
 do
   terraform destroy -target="$target" -auto-approve
