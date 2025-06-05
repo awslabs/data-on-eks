@@ -128,9 +128,6 @@ case "$1" in
       --region $AWS_REGION --output text)
     aws ec2 terminate-instances --instance-id ${ec2_instance_id} --region $AWS_REGION > /dev/null
     ;;
-  validate-kafka-cluster-pod)
-    kubectl -n kafka get pod cluster-kafka-0 -owide
-    ;;
   verify-consumer-topic-failover-topic)
     kubectl exec -it kafka-cli -n kafka -- bin/kafka-console-consumer.sh \
      --topic test-topic-failover \
