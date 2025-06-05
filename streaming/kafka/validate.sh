@@ -182,7 +182,7 @@ case "$1" in
   aws ec2 terminate-instances --instance-id $EC2_INSTANCE_ID --region $AWS_REGION > /dev/null
   ;;
   validate-kafka-cluster-pod)
-    kubectl -n kafka get pod cluster-kafka-0 -o wide
+    kubectl -n kafka get pod cluster-broker-0 -o wide
   ;;
   *)
     echo "Usage: $0 {update-kubeconfig|get-nodes-core|get-nodes-kafka|get-strimzi-pod-sets|get-kafka-pods|get-all-kafka-namespace|apply-kafka-topic|get-kafka-topic|describe-kafka-topic|deploy-kafka-consumer|get-kafka-consumer-producer-steams-pods|verify-kafka-producer|verify-kafka-streams|verify-kafka-consumer|get-cruise-control-pods|apply-kafka-rebalance-manifest|describe-kafka-rebalance|annotate-kafka-rebalance-pod|describe-kafka-partitions|run-perf-test-on-kafka-topic|verify-kafka-consumer-perf-test-topic|view-and-login-to-grafana-dashboard|get-grafana-login-password|create-node-failure|validate-kafka-cluster-pod|verify-consumer-topic-failover-topic|create-test-failover-topic|describe-test-failover-topic|get-test-topic-failover-from-consumer}"
