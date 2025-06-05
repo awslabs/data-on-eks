@@ -60,9 +60,6 @@ case "$1" in
   --topic my-topic \
   --bootstrap-server cluster-kafka-bootstrap:9092
   ;;
-
-# TODO
-
   verify-kafka-producer)
     kubectl -n kafka logs $(kubectl -n kafka get pod -l app=java-kafka-producer -o jsonpath='{.items[*].metadata.name}')
     ;;
