@@ -4,6 +4,11 @@ case "$1" in
   update-kubeconfig)
     aws eks --region $AWS_REGION update-kubeconfig --name kafka-on-eks
     ;;
+  apply-kafka-cluster-manifests)
+    kubectl create namespace kafka
+    kubectl apply -f kafka-manifests/
+    kubectl apply -f monitoring-manifests/
+  ;;
   get-nodes-core)
     kubectl get nodes -l 'NodeGroupType=core'
     ;;
