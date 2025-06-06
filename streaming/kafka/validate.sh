@@ -119,17 +119,6 @@ case "$1" in
   get-grafana-login-password)
     aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text
     ;;
-  create-node-failure)
-    kubectl drain ip-10-1-2-35.us-west-2.compute.internal \
-      --delete-emptydir-data \
-      --force \
-      --ignore-daemonsets
-    ec2_instance_id=$(aws ec2 describe-instances \
-      --filters "Name=private-dns-name,Values=ip-10-1-2-35.us-west-2.compute.internal" \
-      --query 'Reservations[*].Instances[*].{Instance:InstanceId}' \
-      --region $AWS_REGION --output text)
-    aws ec2 terminate-instances --instance-id ${ec2_instance_id} --region $AWS_REGION > /dev/null
-    ;;
   verify-consumer-topic-failover-topic)
     kubectl exec -it kafka-cli -n kafka -- bin/kafka-console-consumer.sh \
      --topic test-topic-failover \
@@ -184,6 +173,6 @@ case "$1" in
     kubectl -n kafka get pod cluster-broker-0 -o wide
   ;;
   *)
-    echo "Usage: $0 {update-kubeconfig|get-nodes-core|get-nodes-kafka|get-strimzi-pod-sets|get-kafka-pods|get-all-kafka-namespace|apply-kafka-topic|get-kafka-topic|describe-kafka-topic|deploy-kafka-consumer|get-kafka-consumer-producer-steams-pods|verify-kafka-producer|verify-kafka-streams|verify-kafka-consumer|get-cruise-control-pods|apply-kafka-rebalance-manifest|describe-kafka-rebalance|annotate-kafka-rebalance-pod|describe-kafka-partitions|run-perf-test-on-kafka-topic|verify-kafka-consumer-perf-test-topic|view-and-login-to-grafana-dashboard|get-grafana-login-password|create-node-failure|validate-kafka-cluster-pod|verify-consumer-topic-failover-topic|create-test-failover-topic|describe-test-failover-topic|get-test-topic-failover-from-consumer}"
+    echo "Usage: $0 {update-kubeconfig|get-nodes-core|get-nodes-kafka|get-strimzi-pod-sets|get-kafka-pods|get-all-kafka-namespace|apply-kafka-topic|get-kafka-topic|describe-kafka-topic|deploy-kafka-consumer|get-kafka-consumer-producer-steams-pods|verify-kafka-producer|verify-kafka-streams|verify-kafka-consumer|get-cruise-control-pods|apply-kafka-rebalance-manifest|describe-kafka-rebalance|annotate-kafka-rebalance-pod|describe-kafka-partitions|run-perf-test-on-kafka-topic|verify-kafka-consumer-perf-test-topic|view-and-login-to-grafana-dashboard|get-grafana-login-password|create-node-failure|validate-kafka-cluster-pod|verify-consumer-topic-failover-topic|create-test-failover-topic|describe-test-failover-topic|get-test-topic-failover-from-consumer|apply-kafka-cluster-manifests|create-kafka-cli-pod|update-kafka-replicas|verify-kafka-brokers|describe-kafka-topic-partitions|verify-kafka-producer|create-kafka-perf-test-topic|run-kafka-topic-perf-test|view-and-login-to-grafana-dashboard|get-grafana-login-password|verify-consumer-topic-failover-topic|create-kafka-failover-topic|describe-kafka-failover-topic|send-messages-to-kafka-failover-topic-from-producer|read-messages-from-kafka-failover-topic-consumer|get-kafka-cluster-pod}"
     exit 1
 esac
