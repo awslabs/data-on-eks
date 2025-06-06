@@ -158,7 +158,7 @@ case "$1" in
     kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic --from-beginning
     ;;
   get-kafka-cluster-pod) 
-    kubectl -n kafka get pod 
+    kubectl -n kafka get pod cluster-broker-0 -o wide
   ;;
   create-node-failure)
   # Get the node where the cluster-broker-0 pod is running
