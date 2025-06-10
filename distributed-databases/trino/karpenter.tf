@@ -94,7 +94,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
 }
 
 # Create a Karpenter NodePool using the AL2023 NodeClass
-resource "kubectl_manifest" "karpenter_node_pool" {
+resource "kubectl_manifest" "karpenter_worker_pool" {
   yaml_body = <<-YAML
     apiVersion: karpenter.sh/v1
     kind: NodePool
@@ -133,6 +133,53 @@ resource "kubectl_manifest" "karpenter_node_pool" {
         cpu: "1000"
         memory: 1000Gi
       weight: 100
+  YAML
+
+  depends_on = [
+    kubectl_manifest.karpenter_node_class
+  ]
+}
+
+# Create a Karpenter NodePool using the AL2023 NodeClass
+resource "kubectl_manifest" "karpenter_ctl_pool" {
+  yaml_body = <<-YAML
+    apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
+      name: trino-control-karpenter
+    spec:
+      template:
+        metadata:
+          labels:
+            NodePool: trino-control-karpenter
+        spec:
+          nodeClassRef:
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+            name: trino-karpenter
+          requirements:
+            - key: "karpenter.sh/capacity-type"
+              operator: In
+              values: ["on-demand"]
+            - key: "kubernetes.io/arch"
+              operator: In
+              values: ["arm64"]
+            - key: "karpenter.k8s.aws/instance-category"
+              operator: In
+              values: ["r"]
+            - key: "karpenter.k8s.aws/instance-family"
+              operator: In
+              values: ["r6g", "r7g", "r8g"]
+            - key: "karpenter.k8s.aws/instance-size"
+              operator: In
+              values: ["2xlarge", "4xlarge"]
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 60s
+      limits:
+        cpu: "128"
+        memory: 256Gi
+      weight: 10
   YAML
 
   depends_on = [
