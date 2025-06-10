@@ -50,7 +50,6 @@ spec:
     cores: 1
     instances: 4
     memory: "4g"
-    serviceAccount: spark-team-a 
+    serviceAccount: spark-team-a
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
-

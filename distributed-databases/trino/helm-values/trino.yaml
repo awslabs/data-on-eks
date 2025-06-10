@@ -86,8 +86,8 @@ worker:
       maxMemoryPerNode: "6GB"  # ~80% of maxHeapSize
   resources:
     requests:
-      cpu: "3000m"  
-      memory: 14Gi  
+      cpu: "3000m"
+      memory: 14Gi
     limits:
       cpu: "6000m"
       memory: 14Gi

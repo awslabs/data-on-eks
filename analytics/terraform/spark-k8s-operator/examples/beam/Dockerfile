@@ -23,7 +23,7 @@ RUN cd ${SPARK_HOME}/jars && \
     wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar && \
     wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-yarn-server-web-proxy/${HADOOP_VERSION}/hadoop-yarn-server-web-proxy-${HADOOP_VERSION}.jar && \
     wget https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar
-    
+
 RUN apt-get update && \
     apt-get install -y gcc libssl-dev lzma liblzma-dev libbz2-dev libffi-dev tar gzip wget make && \
     wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
@@ -33,7 +33,7 @@ RUN apt-get update && \
     make install
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV --copies
-RUN cp -r /usr/local/lib/python3.11/* $VIRTUAL_ENV/lib/python3.11 
+RUN cp -r /usr/local/lib/python3.11/* $VIRTUAL_ENV/lib/python3.11
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install apache_beam==${BEAM_VERSION} \
@@ -48,4 +48,3 @@ COPY --from=apache/beam_python3.11_sdk:2.58.0 /opt/apache/beam /opt/apache/beam
 WORKDIR ${SPARK_HOME}
 
 USER ${SPARK_UID}
-

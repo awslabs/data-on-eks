@@ -15,7 +15,7 @@ import CodeBlock from '@theme/CodeBlock';
 
 ## Beam on Amazon EKS
 
-The Spark Operator for Kubernetes simplifies the deployment and management of Apache Spark on Kubernetes. By using the Spark Operator, we can directly submit Apache Beam pipelines as Spark Applications and deploy and manage them on EKS cluster, taking advantage of features such as automatic scaling and self-healing capabilities on the robust and managed infrastructure of EKS. 
+The Spark Operator for Kubernetes simplifies the deployment and management of Apache Spark on Kubernetes. By using the Spark Operator, we can directly submit Apache Beam pipelines as Spark Applications and deploy and manage them on EKS cluster, taking advantage of features such as automatic scaling and self-healing capabilities on the robust and managed infrastructure of EKS.
 
 ## Solution overview
 
@@ -27,7 +27,7 @@ In this solution, we will show how to deploy your Beam pipeline, written in Pyth
 
 <CollapsibleContent header={<h2><span>Deploying the Spark-Operator-on-EKS solution</span></h2>}>
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator), you will provision the following resources required to run Spark Jobs with open source Spark Operator.  
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator), you will provision the following resources required to run Spark Jobs with open source Spark Operator.
 
 It deploys an EKS Cluster running the Spark K8s Operator into a new VPC.
 
@@ -78,7 +78,7 @@ echo $S3_BUCKET
 
 ### Step 1: Build custom Docker Image with Spark and Beam SDK
 
-Create a custom spark runtime image from the office spark base image, with a Python virtual environment and Apache Beam SDK pre-installed. 
+Create a custom spark runtime image from the office spark base image, with a Python virtual environment and Apache Beam SDK pre-installed.
 
 - Review the sample [Dockerfile](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/examples/beam/Dockerfile)
 - Customize the Dockerfile as needed for your environment
@@ -108,7 +108,7 @@ python3 -m pip install apache_beam==2.58.0 \
 
 ```
 
-Download the [wordcount.py](https://raw.githubusercontent.com/apache/beam/master/sdks/python/apache_beam/examples/wordcount.py) example pipeline and the sample input file. The wordcount Python example demonstrates an Apache Beam pipeline with the following stages: read files, split words, map, group, and sum word counts, and write output to files.  
+Download the [wordcount.py](https://raw.githubusercontent.com/apache/beam/master/sdks/python/apache_beam/examples/wordcount.py) example pipeline and the sample input file. The wordcount Python example demonstrates an Apache Beam pipeline with the following stages: read files, split words, map, group, and sum word counts, and write output to files.
 
 ```sh
 curl -O https://raw.githubusercontent.com/apache/beam/master/sdks/python/apache_beam/examples/wordcount.py
@@ -122,7 +122,7 @@ Upload the input text file to the S3 bucket.
 aws s3 cp kinglear.txt s3://${S3_BUCKET}/
 ```
 
-To run an Apache Beam Python pipeline on Spark, you may package the pipeline and all its dependencies into a single jar file.  Use the below command to create the "fat" jar for the wordcount pipeline with all parameters, without actually executing the pipeline:  
+To run an Apache Beam Python pipeline on Spark, you may package the pipeline and all its dependencies into a single jar file.  Use the below command to create the "fat" jar for the wordcount pipeline with all parameters, without actually executing the pipeline:
 
 ```sh
 python3 wordcount.py --output_executable_path=./wordcountApp.jar \ --runner=SparkRunner \ --environment_type=PROCESS \ --environment_config='{"command":"/opt/apache/beam/boot"}' \ --input=s3://${S3_BUCKET}/kinglear.txt \ --output=s3://${S3_BUCKET}/output.txt
@@ -141,7 +141,7 @@ In this step, we create the manifest file for the SparkApplication object to sub
 envsubst < beamapp.yaml > beamapp.yaml
 ```
 
-This command will replace the env varibles in file beamapp.yaml.  
+This command will replace the env varibles in file beamapp.yaml.
 
 ### Step 4: Execute Spark Job
 
@@ -155,10 +155,10 @@ kubectl apply -f beamapp.yaml
 ### Step 5: Monitor and review the pipeline job
 
 Monitor and review the pipeline job
-The word count Beam pipeline may take a couple of minutes to execute.  There are a few ways to monitor its status and review job details.  
+The word count Beam pipeline may take a couple of minutes to execute.  There are a few ways to monitor its status and review job details.
 
 1. We can use the Spark history server to check the running job
- 
+
 We used the spark-k8s-operator pattern to create the EKS cluster, which had already installed and configured a spark-history-server.  Run the command below to start port-forwarding, then click the Preview menu and select Preview Running Application:
 
 ```sh
