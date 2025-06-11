@@ -169,9 +169,9 @@ grafana:
   dashboards:
     default:
       karpenter-capacity-dashboard:
-        url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-capacity-dashboard.json
+        url: https://raw.githubusercontent.com/aws/karpenter-provider-aws/d389d3c82f93b9abd713746ed3fefd3ef8f34d72/website/content/en/v1.2/getting-started/getting-started-with-karpenter/karpenter-capacity-dashboard.json
       karpenter-performance-dashboard:
-        url: https://karpenter.sh/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
+        url: https://raw.githubusercontent.com/aws/karpenter-provider-aws/d389d3c82f93b9abd713746ed3fefd3ef8f34d72/website/content/en/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
       spark-job-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/emr-eks-grafana-dashboard.json
       spark-operator-dashboard:
