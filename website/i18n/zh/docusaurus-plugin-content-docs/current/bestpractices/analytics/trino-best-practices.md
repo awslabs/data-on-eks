@@ -1,12 +1,12 @@
 ---
 sidebar_position: 2
-sidebar_label: EKS上的Trino最佳实践
+sidebar_label: Trino on EKS最佳实践
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
-# EKS上的Trino最佳实践
+# Trino on EKS最佳实践
 [Trino](https://trino.io/)在[Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS)上的部署提供了具有云原生可扩展性的分布式查询处理。组织可以通过选择与其工作负载需求相匹配的特定计算实例和存储解决方案来优化成本，同时使用[Karpenter](https://karpenter.sh/)将Trino的强大功能与EKS的可扩展性和灵活性相结合。
 
 本指南为在EKS上部署Trino提供了规范性指导。它专注于通过最佳配置、有效的资源管理和成本节约策略来实现高可扩展性和低成本。我们涵盖了流行文件格式（如Hive和Iceberg）的详细配置。这些配置确保了无缝的数据访问并优化了性能。我们的目标是帮助您设置既高效又经济的Trino部署。
@@ -170,8 +170,8 @@ Karpenter节点池设置的示例也可以在[DoEKS仓库](https://github.com/aw
 - 工作节点分布：对工作节点使用按需和竞价实例的混合，以平衡成本效益和可用性。
 - 托管节点组使用：MNG应用于工作负载的弹性组件和集群的其他组件，如可观测性工具。
 </CollapsibleContent>
-<CollapsibleContent header={<span><h2>EKS上的Trino设置</h2></span>}>
-Helm简化了您在EKS上的Trino部署。我们建议使用[官方Helm图表](https://github.com/trinodb/charts)或社区图表通过Helm安装，以进行配置管理。
+<CollapsibleContent header={<span><h2>Trino on EKS设置</h2></span>}>
+Helm简化了您在Trino on EKS部署。我们建议使用[官方Helm图表](https://github.com/trinodb/charts)或社区图表通过Helm安装，以进行配置管理。
 
 ## 设置
 

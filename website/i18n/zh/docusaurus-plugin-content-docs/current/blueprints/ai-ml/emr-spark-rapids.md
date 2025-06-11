@@ -6,7 +6,7 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -28,7 +28,7 @@ Amazon EMR与NVIDIA RAPIDS Accelerator for Apache Spark的集成​ Amazon EMR o
 
 - Spark 3确保端到端管道的无缝协调 - 从数据摄取，通过模型训练，到可视化。同一个GPU加速设置可以同时服务于Spark和机器学习或深度学习框架。这消除了对离散集群的需求，并为整个管道提供了GPU加速。
 
-- Spark 3在Catalyst查询优化器中扩展了对列式处理的支持。RAPIDS Accelerator可以插入到这个系统中，加速SQL和DataFrame操作符。当查询计划被执行时，这些操作符可以利用Spark集群中的GPU来提高性能。
+- Spark 3在Catalyst查询优化器中扩展了对列式处理的支持。RAPIDS Accelerator可以插入到这个系统中，加速SQL和DataFrame operator。当查询计划被执行时，这些 operator可以利用Spark集群中的GPU来提高性能。
 
 - NVIDIA引入了一种创新的Spark shuffle实现，旨在优化Spark任务之间的数据交换。这个shuffle系统建立在GPU加速的通信库上，包括UCX、RDMA和NCCL，这些库显著提高了数据传输率和整体性能。-
 

@@ -1,13 +1,13 @@
 ---
 title: Trn1上使用Nemo-Megatron的Llama-2
 sidebar_position: 2
-description: 使用Trainium、Neuronx-Nemo-Megatron和MPI操作符训练Llama-2模型
+description: 使用Trainium、Neuronx-Nemo-Megatron和MPI operator训练Llama-2模型
 ---
 import CollapsibleContent from '../../../../../../../src/components/CollapsibleContent';
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -30,8 +30,8 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 :::
 
 
-# 使用Trainium、Neuronx-Nemo-Megatron和MPI操作符训练Llama-2模型
-欢迎阅读这份关于使用AWS Trainium、Neuronx-Nemo-Megatron和MPI操作符在Amazon Elastic Kubernetes Service (EKS)上训练[Meta Llama-2-7b](https://ai.meta.com/llama/#inside-the-model)模型的综合指南。
+# 使用Trainium、Neuronx-Nemo-Megatron和MPI operator训练Llama-2模型
+欢迎阅读这份关于使用AWS Trainium、Neuronx-Nemo-Megatron和MPI operator在Amazon Elastic Kubernetes Service (EKS)上训练[Meta Llama-2-7b](https://ai.meta.com/llama/#inside-the-model)模型的综合指南。
 
 在本教程中，您将学习如何使用Amazon EKS中的[AWS Trainium](https://aws.amazon.com/machine-learning/trainium/)加速器运行多节点训练作业。具体来说，您将使用4个AWS EC2 trn1.32xlarge实例在[RedPajama数据集的子集](https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T-Sample)上预训练Llama-2-7b。
 
@@ -63,7 +63,7 @@ Llama-2有三种不同的模型大小：
 
 **MPI启动器Pod：** 此pod负责协调工作节点pod之间的MPI作业。当训练作业首次提交到集群时，会创建一个MPI启动器pod，它等待工作节点上线，连接到每个工作节点，并调用训练脚本。
 
-**MPI操作符：** Kubernetes中的操作符是打包、部署和管理Kubernetes应用程序的方法。MPI操作符自动化了MPI工作负载的部署和管理。
+**MPI operator：** Kubernetes中的 operator是打包、部署和管理Kubernetes应用程序的方法。MPI operator自动化了MPI工作负载的部署和管理。
 
 **FSx for Lustre：** 一个共享的高性能文件系统，非常适合机器学习、高性能计算（HPC）、视频处理和金融建模等工作负载。FSx for Lustre文件系统将在训练作业的工作节点pod之间共享，提供一个中央存储库来访问训练数据并存储模型工件和日志。
 
@@ -102,7 +102,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 cd data-on-eks/ai-ml/trainium-inferentia
 ```
 
-默认情况下**MPI操作符**未安装，设置为false。我们将运行以下export命令来设置环境变量。
+默认情况下**MPI operator**未安装，设置为false。我们将运行以下export命令来设置环境变量。
 
 **注意：** 截至2024/01/04，Trainium实例仅在us-west-2、us-east-1和us-east-2区域可用。
 
@@ -271,13 +271,13 @@ kubectl delete pod cli-cmd-shell
 
 我们终于准备好启动我们的预编译和训练作业了！
 
-首先，让我们通过运行此命令检查MPI操作符是否正常工作：
+首先，让我们通过运行此命令检查MPI operator是否正常工作：
 
 ```bash
 kubectl get all -n mpi-operator
 ```
 
-如果MPI操作符未安装，请在继续之前按照[MPI操作符安装说明](https://github.com/kubeflow/mpi-operator#installation)进行操作。
+如果MPI operator未安装，请在继续之前按照[MPI operator安装说明](https://github.com/kubeflow/mpi-operator#installation)进行操作。
 在我们运行训练作业之前，我们首先运行一个预编译作业，以准备模型工件。此步骤提取并编译Llama-2-7b模型的底层计算图，并生成可以在Trainium加速器上运行的Neuron可执行文件（NEFF）。这些NEFF存储在FSx上的持久Neuron缓存中，以便训练作业稍后可以访问它们。
 
 ### 运行预编译作业

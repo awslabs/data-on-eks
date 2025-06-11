@@ -7,7 +7,7 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::

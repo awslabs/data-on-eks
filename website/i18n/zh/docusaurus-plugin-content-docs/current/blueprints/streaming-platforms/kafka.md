@@ -1,5 +1,5 @@
 ---
-title: EKS上的Kafka
+title: Kafka on EKS
 sidebar_position: 4
 ---
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
@@ -11,9 +11,9 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 KRaft模式简化了Kafka部署，增强了可扩展性，并改进了整体系统性能。通过使用内置的共识协议，KRaft减少了操作复杂性，可能加快了代理启动时间，并允许更好地处理元数据操作。这种架构转变使Kafka能够更有效地管理更大的集群，对于希望简化其事件流基础设施并为未来可扩展性需求做准备的组织来说，这是一个有吸引力的选择。
 
 ## 用于Apache Kafka的Strimzi
-[Strimzi](https://strimzi.io/)提供了一种在各种部署配置中在Kubernetes上运行Apache Kafka集群的方法。Strimzi结合了安全性和简单配置，基于操作符模式使用kubectl和/或GitOps在Kubernetes上部署和管理Kafka。
+[Strimzi](https://strimzi.io/)提供了一种在各种部署配置中在Kubernetes上运行Apache Kafka集群的方法。Strimzi结合了安全性和简单配置，基于 operator模式使用kubectl和/或GitOps在Kubernetes上部署和管理Kafka。
 
-从版本`0.32.0`开始，Strimzi提供了使用KRaft部署Kafka集群的完全支持，使组织更容易利用这种新架构。通过使用Strimzi，您可以在Kubernetes上无缝部署和管理KRaft模式的Kafka集群，利用其自定义资源定义(CRDs)和操作符来处理配置和生命周期管理的复杂性。
+从版本`0.32.0`开始，Strimzi提供了使用KRaft部署Kafka集群的完全支持，使组织更容易利用这种新架构。通过使用Strimzi，您可以在Kubernetes上无缝部署和管理KRaft模式的Kafka集群，利用其自定义资源定义(CRDs)和 operator来处理配置和生命周期管理的复杂性。
 
 ## 架构
 
@@ -73,8 +73,8 @@ Kafka集群最常见的资源瓶颈是网络吞吐量、存储吞吐量以及使
 - 创建一个新的示例VPC，3个私有子网和3个公共子网。
 - 为公共子网创建互联网网关，为私有子网创建NAT网关。
 - 创建具有公共端点的EKS集群控制平面（仅用于演示目的）和一个托管节点组。
-- 部署指标服务器、Karpenter、自管理ebs-csi-driver、Strimzi Kafka操作符、Grafana操作符。
-- Strimzi Kafka操作符是部署到`strimzi-kafka-operator`命名空间的Apache Kafka的Kubernetes操作符。默认情况下，操作符监视并处理所有命名空间中的`kafka`。
+- 部署指标服务器、Karpenter、自管理ebs-csi-driver、Strimzi Kafka operator、Grafana operator。
+- Strimzi Kafka operator是部署到`strimzi-kafka-operator`命名空间的Apache Kafka的Kubernetes operator。默认情况下， operator监视并处理所有命名空间中的`kafka`。
 
 ### 先决条件
 确保您已在机器上安装了以下工具。
@@ -180,7 +180,7 @@ ip-10-1-2-56.eu-west-1.compute.internal    Ready    <none>   62m     v1.31.0-eks
 
 ### 验证Kafka代理和控制器
 
-验证由Strimzi操作符创建的Kafka代理和控制器pod及其状态。
+验证由Strimzi operator创建的Kafka代理和控制器pod及其状态。
 
 ```bash
 kubectl get strimzipodsets.core.strimzi.io -n kafka

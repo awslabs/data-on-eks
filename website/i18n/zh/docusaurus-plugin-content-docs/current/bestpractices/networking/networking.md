@@ -2,7 +2,7 @@
 sidebar_label: VPC配置
 ---
 
-# 数据网络
+# Networking for Data
 
 ## VPC和IP考虑因素
 

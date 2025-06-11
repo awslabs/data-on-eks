@@ -91,4 +91,4 @@ spec:
 
 # 端到端部署示例
 
-端到端部署示例可以在[GPU上的Stable Diffusion](../../../../../zh/docusaurus-plugin-content-docs/current/gen-ai/inference/GPUs/stablediffusion-gpus.md)中找到。
+端到端部署示例可以在[Stable Diffusion on GPU](../../../../../zh/docusaurus-plugin-content-docs/current/gen-ai/inference/GPUs/stablediffusion-gpus.md)中找到。

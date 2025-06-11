@@ -1,12 +1,12 @@
 ---
 sidebar_position: 1
-sidebar_label: EKS上的Trainium
+sidebar_label: Trainium on EKS
 ---
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -16,8 +16,8 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 :::
 
 
-# EKS上的AWS Trainium
-[AWS Trainium](https://aws.amazon.com/machine-learning/trainium/)是一种先进的ML加速器，可以改变高性能深度学习(DL)训练。由AWS Trainium芯片提供支持的`Trn1`实例专为**100B+参数**模型的高性能DL训练而构建。Trn1实例经过精心设计，具有卓越的性能，专门用于在AWS上训练流行的自然语言处理(NLP)模型，与基于GPU的EC2实例相比，可节省高达**50%的成本**。这种成本效益使其成为数据科学家和ML从业者的一个有吸引力的选择，他们寻求优化训练成本而不影响性能。
+# Trainium on EKS
+[亚马逊云科技 Trainium](https://aws.amazon.com/machine-learning/trainium/)是一种先进的ML加速器，可以改变高性能深度学习(DL)训练。由AWS Trainium芯片提供支持的`Trn1`实例专为**100B+参数**模型的高性能DL训练而构建。Trn1实例经过精心设计，具有卓越的性能，专门用于在AWS上训练流行的自然语言处理(NLP)模型，与基于GPU的EC2实例相比，可节省高达**50%的成本**。这种成本效益使其成为数据科学家和ML从业者的一个有吸引力的选择，他们寻求优化训练成本而不影响性能。
 
 Trn1实例功能的核心是[AWS Neuron SDK](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/)，这是一个软件开发工具包，与领先的ML框架和库无缝集成，如[PyTorch](https://pytorch.org/)、[TensorFlow](https://tensorflow.org/)、[Megatron-LM](https://huggingface.co/docs/accelerate/usage_guides/megatron_lm)和[Hugging Face](https://huggingface.co/)。Neuron SDK使开发人员能够轻松地在Trainium上训练NLP、计算机视觉和推荐模型，只需要几行代码更改。
 

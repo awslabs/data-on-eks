@@ -4,7 +4,7 @@ sidebar_label: 介绍
 ---
 
 # 介绍
-Data on Amazon EKS(DoEKS) - 一个用于在[Amazon EKS](https://aws.amazon.com/eks/)上构建[aws](https://aws.amazon.com/)托管和自管理可扩展数据平台的工具。使用DoEKS，您可以获得：
+Data on Amazon EKS(DoEKS) - 一个用于在[Amazon EKS](https://aws.amazon.com/eks/)上构建[亚马逊云科技](https://www.amazonaws.cn/)托管和自管理可扩展数据平台的工具。使用DoEKS，您可以获得：
 
 1. 使用[Terraform](https://www.terraform.io/)和[AWS CDK](https://aws.amazon.com/cdk/)等的强大部署基础设施即代码(IaC)模板
 2. 在Amazon EKS上部署数据解决方案的最佳实践
@@ -13,7 +13,7 @@ Data on Amazon EKS(DoEKS) - 一个用于在[Amazon EKS](https://aws.amazon.com/e
 5. 深入的参考架构和数据博客，让您保持领先
 
 # 架构
-该图显示了DoEKS中涵盖的在Kubernetes上运行的开源数据工具、k8s操作符和框架。AWS数据分析托管服务与Data on EKS开源工具的集成。
+该图显示了DoEKS中涵盖的在Kubernetes上运行的开源数据工具、k8s operator和框架。亚马逊云科技数据分析托管服务与Data on EKS开源工具的集成。
 
 ![Data on EKS.png](../../../../../docs/introduction/doeks.png)
 

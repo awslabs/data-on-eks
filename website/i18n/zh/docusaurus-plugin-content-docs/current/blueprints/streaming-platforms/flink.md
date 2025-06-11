@@ -1,5 +1,5 @@
 ---
-title: EKS上的Flink操作符
+title: Flink Operator on EKS
 sidebar_position: 3
 ---
 
@@ -27,14 +27,14 @@ Flink架构与EKS的高级设计。
 
 ![Flink设计UI](../../../../../../docs/blueprints/streaming-platforms/img/flink-design.png)
 
-## Flink Kubernetes操作符
-[Flink Kubernetes操作符](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/)是一个强大的工具，用于在Kubernetes上管理Flink集群。Flink Kubernetes操作符（操作符）作为控制平面，管理Apache Flink应用程序的完整部署生命周期。操作符可以使用Helm安装在Kubernetes集群上。Flink操作符的核心职责是管理Flink应用程序的完整生产生命周期。
+## Flink Kubernetes operator
+[Flink Kubernetes operator](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/)是一个强大的工具，用于在Kubernetes上管理Flink集群。Flink Kubernetes operator（ operator）作为控制平面，管理Apache Flink应用程序的完整部署生命周期。 operator可以使用Helm安装在Kubernetes集群上。Flink operator的核心职责是管理Flink应用程序的完整生产生命周期。
 1. 运行、暂停和删除应用程序
 2. 有状态和无状态应用程序升级
 3. 触发和管理保存点
 4. 处理错误，回滚损坏的升级
 
-Flink操作符定义了两种类型的自定义资源(CR)，它们是Kubernetes API的扩展。
+Flink operator定义了两种类型的自定义资源(CR)，它们是Kubernetes API的扩展。
 
 <Tabs>
 <TabItem value="FlinkDeployment" label="FlinkDeployment">
@@ -113,7 +113,7 @@ Flink操作符定义了两种类型的自定义资源(CR)，它们是Kubernetes 
 根据Flink文档，建议在生产环境中使用应用程序模式的FlinkDeployment。
 :::
 
-除了部署类型外，Flink Kubernetes操作符还支持两种部署模式：`Native`和`Standalone`。
+除了部署类型外，Flink Kubernetes operator还支持两种部署模式：`Native`和`Standalone`。
 
 <Tabs>
 <TabItem value="Native" label="Native">
@@ -124,7 +124,7 @@ Flink操作符定义了两种类型的自定义资源(CR)，它们是Kubernetes 
 - Flink集群直接与Kubernetes通信，允许它管理Kubernetes资源，例如动态分配和释放TaskManager pod。
 - Flink Native对于想要构建自己的集群管理系统或与现有管理系统集成的高级用户很有用。
 - Flink Native在作业调度和执行方面提供了更大的灵活性。
-- 对于标准操作符使用，建议在Native模式下运行您自己的Flink作业。
+- 对于标准 operator使用，建议在Native模式下运行您自己的Flink作业。
 
 ```yaml
 apiVersion: flink.apache.org/v1beta1
@@ -141,7 +141,7 @@ mode: native
 **Standalone**
 
 - Standalone集群部署只是将Kubernetes作为Flink集群运行的编排平台。
-- Flink不知道它在Kubernetes上运行，因此所有Kubernetes资源需要由Kubernetes操作符外部管理。
+- Flink不知道它在Kubernetes上运行，因此所有Kubernetes资源需要由Kubernetes operator外部管理。
 
     ```yaml
     apiVersion: flink.apache.org/v1beta1
@@ -158,8 +158,8 @@ mode: native
 ## 在Kubernetes上运行Flink作业的最佳实践
 要充分利用Kubernetes上的Flink，以下是一些最佳实践：
 
-- **使用Kubernetes操作符**：安装并使用Flink Kubernetes操作符来自动化Flink集群在Kubernetes上的部署和管理。
-- **在专用命名空间中部署**：为Flink Kubernetes操作符创建一个单独的命名空间，为Flink作业/工作负载创建另一个命名空间。这确保Flink作业是隔离的，并拥有自己的资源。
+- **使用Kubernetes operator**：安装并使用Flink Kubernetes operator来自动化Flink集群在Kubernetes上的部署和管理。
+- **在专用命名空间中部署**：为Flink Kubernetes operator创建一个单独的命名空间，为Flink作业/工作负载创建另一个命名空间。这确保Flink作业是隔离的，并拥有自己的资源。
 - **使用高质量存储**：将Flink检查点和保存点存储在高质量存储中，如Amazon S3或其他持久外部存储。这些存储选项可靠、可扩展，并为大量数据提供持久性。
 - **优化资源分配**：为Flink作业分配足够的资源以确保最佳性能。这可以通过为Flink容器设置资源请求和限制来完成。
 - **适当的网络隔离**：使用Kubernetes网络策略将Flink作业与在同一Kubernetes集群上运行的其他工作负载隔离。这确保Flink作业具有所需的网络访问权限，而不受其他工作负载的影响。
@@ -168,7 +168,7 @@ mode: native
 - **将检查点和保存点存储在正确的位置**：将检查点存储在分布式文件系统或键值存储中，如Amazon S3或其他持久外部存储。将保存点存储在持久外部存储中，如Amazon S3。
 
 ## Flink升级
-Flink操作符为Flink作业提供了三种升级模式。查看[Flink升级文档](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/custom-resource/job-management/#stateful-and-stateless-application-upgrades)获取最新信息。
+Flink operator为Flink作业提供了三种升级模式。查看[Flink升级文档](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/custom-resource/job-management/#stateful-and-stateless-application-upgrades)获取最新信息。
 
 1. **stateless**：从空状态进行无状态应用程序升级
 2. **last-state**：在任何应用程序状态下快速升级（即使对于失败的作业），不需要健康的作业，因为它总是使用最新的检查点信息。如果HA元数据丢失，可能需要手动恢复。
@@ -181,15 +181,15 @@ Flink操作符为Flink作业提供了三种升级模式。查看[Flink升级文�
 
 <CollapsibleContent header={<h2><span>部署解决方案</span></h2>}>
 
-在这个[示例](https://github.com/awslabs/data-on-eks/tree/main/streaming/flink)中，您将配置运行带有Flink操作符和Apache YuniKorn的Flink作业所需的以下资源。
+在这个[示例](https://github.com/awslabs/data-on-eks/tree/main/streaming/flink)中，您将配置运行带有Flink operator和Apache YuniKorn的Flink作业所需的以下资源。
 
-此示例将运行Flink操作符的EKS集群部署到新的VPC中。
+此示例将运行Flink operator的EKS集群部署到新的VPC中。
 
 - 创建一个新的示例VPC，2个私有子网和2个公共子网
 - 为公共子网创建互联网网关，为私有子网创建NAT网关
 - 创建具有公共端点的EKS集群控制平面（仅用于演示目的），带有核心托管节点组、按需节点组和用于Flink工作负载的Spot节点组
 - 部署指标服务器、集群自动扩展器、Apache YuniKorn、Karpenter、Grafana、AMP和Prometheus服务器
-- 部署Cert Manager和Flink操作符附加组件。Flink操作符依赖于Cert Manager
+- 部署Cert Manager和Flink operator附加组件。Flink operator依赖于Cert Manager
 - 创建新的Flink数据团队资源，包括命名空间、服务账户、IRSA、角色和角色绑定
 - 为不同计算类型部署三个Karpenter配置器
 

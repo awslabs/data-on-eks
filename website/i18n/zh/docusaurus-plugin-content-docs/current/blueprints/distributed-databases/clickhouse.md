@@ -2,7 +2,7 @@
 sidebar_position: 4
 sidebar_label: ClickHouse
 ---
-# EKS上的ClickHouse
+# ClickHouse on EKS
 [ClickHouse](https://clickhouse.com/)是一个高性能、面向列的SQL数据库管理系统(DBMS)，用于在线分析处理(OLAP)，在Apache 2.0许可下开源。
 
 
@@ -17,4 +17,4 @@ OLAP是一种软件技术，您可以使用它从不同角度分析业务数据�
 * SQL支持：ClickHouse支持SQL的一个子集，使已经熟悉基于SQL的数据库的开发人员和分析师易于使用和熟悉。
 * 集成数据格式：ClickHouse支持各种数据格式，包括CSV、JSON、Apache Avro和Apache Parquet，使其在摄取和查询不同类型的数据方面具有灵活性。
 
-**要在EKS上部署Clickhouse**，我们推荐来自Altinity的这个[EKS上的Clickhouse蓝图](https://github.com/Altinity/terraform-aws-eks-clickhouse)，Altinity是维护[Clickouse Kubernetes操作符](https://github.com/Altinity/clickhouse-operator)的AWS合作伙伴。如果您对蓝图或操作符有任何问题，请在相应的Altinity GitHub仓库上创建问题。
+**要在EKS上部署Clickhouse**，我们推荐来自Altinity的这个[ClickHouse on EKS蓝图](https://github.com/Altinity/terraform-aws-eks-clickhouse)，Altinity是维护[Clickouse Kubernetes operator](https://github.com/Altinity/clickhouse-operator)的AWS合作伙伴。如果您对蓝图或 operator有任何问题，请在相应的Altinity GitHub仓库上创建问题。

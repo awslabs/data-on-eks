@@ -3,15 +3,15 @@ sidebar_position: 2
 sidebar_label: CloudNativePG PostgreSQL
 ---
 
-# 使用CloudNativePG操作符在EKS上部署PostgreSQL数据库
+# 使用CloudNativePG operator在EKS上部署PostgreSQL数据库
 
 ## 介绍
 
-**CloudNativePG**是一个开源[操作符](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)，旨在管理[Kubernetes](https://kubernetes.io)上的[PostgreSQL](https://www.postgresql.org/)工作负载。
+**CloudNativePG**是一个开源[ operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)，旨在管理[Kubernetes](https://kubernetes.io)上的[PostgreSQL](https://www.postgresql.org/)工作负载。
 
 它定义了一个新的Kubernetes资源，称为`Cluster`，代表由一个主节点和可选数量的副本组成的PostgreSQL集群，这些副本共存于选定的Kubernetes命名空间中，用于高可用性和分担只读查询。
 
-位于同一Kubernetes集群中的应用程序可以使用完全由操作符管理的服务访问PostgreSQL数据库，而不必担心故障转移或切换后主角色的变化。位于Kubernetes集群外部的应用程序需要配置Service或Ingress对象，通过TCP公开Postgres。Web应用程序可以利用基于PgBouncer的原生连接池。
+位于同一Kubernetes集群中的应用程序可以使用完全由 operator管理的服务访问PostgreSQL数据库，而不必担心故障转移或切换后主角色的变化。位于Kubernetes集群外部的应用程序需要配置Service或Ingress对象，通过TCP公开Postgres。Web应用程序可以利用基于PgBouncer的原生连接池。
 
 CloudNativePG最初由[EDB](https://www.enterprisedb.com)构建，然后在Apache License 2.0下开源，并于2022年4月提交给CNCF Sandbox。[源代码仓库在Github](https://github.com/cloudnative-pg/cloudnative-pg)。
 
@@ -30,7 +30,7 @@ CloudNativePG最初由[EDB](https://www.enterprisedb.com)构建，然后在Apach
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 4. [psql](https://formulae.brew.sh/formula/libpq)
 
-### 部署带有CloudNativePG操作符的EKS集群
+### 部署带有CloudNativePG operator的EKS集群
 
 首先，克隆仓库
 
@@ -114,7 +114,7 @@ kubectl create -f examples/storageclass.yaml
 
 kubectl create -f examples/auth-prod.yaml
 ```
-与Kubernetes中的任何其他部署一样，要部署PostgreSQL集群，您需要应用一个定义所需`Cluster`的配置文件。CloudNativePG操作符提供两种引导新数据库的类型：
+与Kubernetes中的任何其他部署一样，要部署PostgreSQL集群，您需要应用一个定义所需`Cluster`的配置文件。CloudNativePG operator提供两种引导新数据库的类型：
 
 1. 引导一个空集群
 2. 从另一个集群引导。
@@ -219,7 +219,7 @@ kubectl create -f examples/prod-cluster.yaml
 
 ```
 
-验证CloudNatvicePG操作符是否创建了三个pod：一个主节点和两个备用节点。
+验证CloudNatvicePG operator是否创建了三个pod：一个主节点和两个备用节点。
 
 ```bash
 
@@ -236,7 +236,7 @@ service/prod-ro    ClusterIP   172.20.96.16     <none>        5432/TCP   4m53s
 service/prod-rw    ClusterIP   172.20.236.1     <none>        5432/TCP   4m53s
 ```
 
-操作符还创建了三个服务：
+ operator还创建了三个服务：
 
 1. `-rw`：仅指向集群数据库的主实例
 2. `-ro`指向热备用副本，用于只读工作负载

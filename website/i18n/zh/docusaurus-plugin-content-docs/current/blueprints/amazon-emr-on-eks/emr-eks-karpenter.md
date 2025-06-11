@@ -1,12 +1,12 @@
 ---
 sidebar_position: 2
-sidebar_label: 使用Karpenter的EMR on EKS
+sidebar_label: EMR on EKS与Karpenter
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
-# 使用[Karpenter](https://karpenter.sh/)的EMR on EKS
+# 将[Karpenter](https://karpenter.sh/)与EMR on EKS结合
 
 ## 介绍
 

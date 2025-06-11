@@ -3,7 +3,7 @@ sidebar_position: 5
 sidebar_label: Aerospike
 ---
 
-# EKS上的Aerospike数据库企业版
+# Aerospike on EKS数据库企业版
 [Aerospike数据库企业版](https://aerospike.com)是一个高性能、分布式NoSQL数据库，专为实时、关键任务应用程序设计。将Aerospike与Amazon Elastic Kubernetes Service (EKS)集成，结合了Aerospike强大的数据管理能力和Kubernetes的编排能力。这种集成使组织能够在EKS灵活且弹性的环境中利用Aerospike的可预测的亚毫秒级性能和无缝扩展性。通过利用[Aerospike Kubernetes Operator (AKO)](https://aerospike.com/docs/cloud/kubernetes/operator)，在EKS上部署和管理Aerospike集群的过程实现了自动化，确保高效运营并降低复杂性。
 
 ## Aerospike在EKS上的主要优势
@@ -28,6 +28,6 @@ sidebar_label: Aerospike
 通过在Amazon EKS上部署Aerospike数据库企业版，组织可以利用Aerospike高性能数据管理和Kubernetes编排能力的组合优势，为实时数据应用程序提供可扩展、弹性和经济高效的解决方案。
 
 ## 在EKS上部署Aerospike
-要在EKS集群上部署Aerospike数据库企业版，我们建议使用由Aerospike维护的[EKS上的Aerospike蓝图](https://github.com/aerospike/aerospike-terraform-aws-eks)，Aerospike是AWS合作伙伴和[Aerospike Kubernetes Operator](https://github.com/aerospike/aerospike-kubernetes-operator)的维护者。
+要在EKS集群上部署Aerospike数据库企业版，我们建议使用由Aerospike维护的[Aerospike on EKS蓝图](https://github.com/aerospike/aerospike-terraform-aws-eks)，Aerospike是AWS合作伙伴和[Aerospike Kubernetes Operator](https://github.com/aerospike/aerospike-kubernetes-operator)的维护者。
 
-如果您在使用蓝图或操作符时遇到任何问题，请在相关的Aerospike GitHub仓库上报告。
+如果您在使用蓝图或 operator时遇到任何问题，请在相关的Aerospike GitHub仓库上报告。

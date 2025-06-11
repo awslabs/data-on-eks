@@ -1,8 +1,8 @@
 ---
 sidebar_position: 7
-sidebar_label: EKS上的Superset
+sidebar_label: Superset on EKS
 ---
-# EKS上的Superset
+# Superset on EKS
 
 ## 介绍
 [Apache Superset](https://superset.apache.org/)是一个流行的开源数据探索和可视化平台。Superset为数据科学家、分析师和业务用户提供了丰富的数据可视化集和简单的即席查询和分析功能。

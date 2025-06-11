@@ -1,8 +1,8 @@
 ---
 sidebar_position: 6
-sidebar_label: EKS上的DataHub
+sidebar_label: DataHub on EKS
 ---
-# EKS上的DataHub
+# DataHub on EKS
 
 ## 介绍
 DataHub是一个开源数据目录，支持端到端数据发现、数据可观测性和数据治理。这个广泛的元数据平台允许用户从各种来源收集、存储和探索元数据，如数据库、数据湖、流平台和ML特征存储。DataHub提供许多[功能](https://datahubproject.io/docs/features/)，用于搜索和浏览元数据的丰富UI，以及用于与其他应用程序集成的API。

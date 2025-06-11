@@ -1,12 +1,12 @@
 ---
-title: 使用vLLM的RayServe
+title: RayServe with vLLM
 sidebar_position: 1
 ---
 import CollapsibleContent from '../../../../../../../src/components/CollapsibleContent';
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -410,7 +410,7 @@ prometheus-operated                              ClusterIP   None             <n
 这需要部署ServiceMonitor和PodMonitor资源：
 
  - **ServiceMonitor**用于从Ray头节点收集指标，该节点有一个公开其指标端点的Kubernetes服务。
- - **PodMonitor**是必要的，因为KubeRay操作符不为Ray工作节点Pod创建Kubernetes服务。因此，我们不能使用ServiceMonitor从工作节点Pod抓取指标，而必须使用PodMonitors CRD。
+ - **PodMonitor**是必要的，因为KubeRay operator不为Ray工作节点Pod创建Kubernetes服务。因此，我们不能使用ServiceMonitor从工作节点Pod抓取指标，而必须使用PodMonitors CRD。
 
 ```bash
 cd data-on-eks/ai-ml/jark-stack/terraform/monitoring

@@ -6,7 +6,7 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -124,7 +124,7 @@ Volcano的帮派调度确保作业（或"帮派"）中的所有pod同时调度�
     # 根据您的要求设置区域。检查指定区域中Trn1实例的可用性。
     export TF_VAR_region=us-west-2
 
-    # 使用KubeRay操作符启用Volcano自定义调度器
+    # 使用KubeRay operator启用Volcano自定义调度器
     export TF_VAR_enable_volcano=true
 
     # 注意：此配置将创建两个新的Trn1 32xl实例。在继续之前，请确保验证相关成本。
@@ -168,7 +168,7 @@ cd gen-ai/training/raytrain-llama2-pretrain-trn1
 运行此脚本后，记下生成的Docker镜像URL和标签。
 您将在下一步中需要这些信息。
 
-## 3. 使用KubeRay操作符启动Ray集群
+## 3. 使用KubeRay operator启动Ray集群
 
 如果您跳过步骤2，则无需修改YAML文件。
 您可以简单地对文件运行`kubectl apply`命令，它将使用我们发布的公共ECR镜像。

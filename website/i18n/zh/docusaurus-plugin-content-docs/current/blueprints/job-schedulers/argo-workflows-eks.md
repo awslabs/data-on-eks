@@ -1,14 +1,14 @@
 ---
-title: EKS上的Argo Workflows
+title: Argo Workflows on EKS
 sidebar_position: 4
 ---
-# EKS上的Argo Workflows
+# Argo Workflows on EKS
 Argo Workflows是一个开源的容器原生工作流引擎，用于在Kubernetes上编排并行作业。它作为Kubernetes CRD（自定义资源定义）实现。因此，Argo工作流可以使用kubectl进行管理，并与其他Kubernetes服务（如卷、密钥和RBAC）原生集成。
 
 该示例演示了如何使用[Argo Workflows](https://argoproj.github.io/argo-workflows/)向Amazon EKS分配作业。
 
 1. 使用Argo Workflows创建spark作业。
-2. 通过spark操作符使用Argo Workflows创建spark作业。
+2. 通过spark operator使用Argo Workflows创建spark作业。
 3. 使用[Argo Events](https://argoproj.github.io/argo-events/)基于Amazon SQS消息插入事件触发Argo Workflows创建spark作业。
 
 此示例的[代码仓库](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/argo-workflow)。
@@ -42,7 +42,7 @@ terraform apply -var region=$region #默认为us-west-2
 - 公共子网的互联网网关和私有子网的NAT网关
 - 带有一个托管节点组的EKS集群控制平面
 - EKS托管附加组件：VPC_CNI、CoreDNS、Kube_Proxy、EBS_CSI_Driver
-- K8S指标服务器、CoreDNS自动扩展器、集群自动扩展器、AWS for FluentBit、Karpenter、Argo Workflows、Argo Events、Kube Prometheus Stack、Spark操作符和Yunikorn调度器
+- K8S指标服务器、CoreDNS自动扩展器、集群自动扩展器、AWS for FluentBit、Karpenter、Argo Workflows、Argo Events、Kube Prometheus Stack、Spark operator和Yunikorn调度器
 - Argo Workflows和Argo Events的K8s角色和角色绑定
 
 ![terraform-output](../../../../../../docs/blueprints/job-schedulers/img/terraform-output-argo.png)
@@ -127,7 +127,7 @@ spark   Running   8s
 
 ![argo-wf-spark](../../../../../../docs/blueprints/job-schedulers/img/argo-wf-spark.png)
 
-### 使用Spark操作符和Argo Workflow提交Spark作业
+### 使用Spark operator和Argo Workflow提交Spark作业
 
 ```bash
 kubectl apply -f workflow-examples/argo-spark-operator.yaml

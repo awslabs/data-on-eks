@@ -1,14 +1,14 @@
 ---
 sidebar_position: 2
-sidebar_label: EKS上的JARK
+sidebar_label: JARK on EKS
 ---
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
-# EKS上的JARK
+# JARK on EKS
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -40,7 +40,7 @@ JARK技术栈非常适合寻求简化部署和管理AI模型复杂过程的团�
 ![alt text](../../../../../../docs/blueprints/ai-ml/img/jark.png)
 
 
-### Kubernetes上的Ray
+### Ray on Kubernetes
 
 [Ray](https://www.ray.io/)是一个用于构建可扩展和分布式应用程序的开源框架。它旨在通过为分布式计算提供简单直观的API，使编写并行和分布式Python应用程序变得容易。它拥有不断增长的用户和贡献者社区，并由Anyscale, Inc.的Ray团队积极维护和开发。
 
@@ -50,7 +50,7 @@ JARK技术栈非常适合寻求简化部署和管理AI模型复杂过程的团�
 
 要在多台机器上生产环境中部署Ray，用户必须首先部署[**Ray集群**](https://docs.ray.io/en/latest/cluster/getting-started.html)。Ray集群由头节点和工作节点组成，可以使用内置的**Ray自动扩缩器**进行自动扩展。
 
-通过[**KubeRay操作符**](https://ray-project.github.io/kuberay/)支持在Kubernetes（包括Amazon EKS）上部署Ray集群。该操作符提供了一种Kubernetes原生方式来管理Ray集群。KubeRay操作符的安装涉及部署操作符和`RayCluster`、`RayJob`和`RayService`的CRD，如[此处](https://ray-project.github.io/kuberay/deploy/helm/)所述。
+通过[**KubeRay Operator**](https://ray-project.github.io/kuberay/)支持在Kubernetes（包括Amazon EKS）上部署Ray集群。该 operator提供了一种Kubernetes原生方式来管理Ray集群。KubeRay operator的安装涉及部署 operator和`RayCluster`、`RayJob`和`RayService`的CRD，如[此处](https://ray-project.github.io/kuberay/deploy/helm/)所述。
 
 在Kubernetes上部署Ray可以提供几个好处：
 

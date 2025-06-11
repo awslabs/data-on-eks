@@ -1,13 +1,13 @@
 ---
 sidebar_position: 3
-sidebar_label: 带Spark Operator的EMR运行时
+sidebar_label: 将EMR Runtime与Spark Operator结合
 ---
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
-# 带Spark Operator的EMR运行时
+# 将EMR Runtime与Spark Operator结合
 
 ## 介绍
-在本文中，我们将学习部署带有EMR Spark Operator的EKS，并使用EMR运行时执行示例Spark作业。
+在本文中，我们将学习部署将Spark Operator与EMR on EKS结合，并使用EMR运行时执行示例Spark作业。
 
 在这个[示例](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/emr-eks-karpenter)中，您将配置使用Spark Operator和EMR运行时运行Spark应用程序所需的以下资源。
 

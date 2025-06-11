@@ -1,14 +1,14 @@
 ---
 sidebar_position: 5
-sidebar_label: EKS上的Ray
+sidebar_label: Ray on EKS
 ---
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
-# EKS上的Ray
+# Ray on EKS
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -30,9 +30,9 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 
 *来源：https://docs.ray.io/en/latest/cluster/key-concepts.html*
 
-## Kubernetes上的Ray
+## Ray on Kubernetes
 
-通过[**KubeRay操作符**](https://ray-project.github.io/kuberay/)支持在Kubernetes（包括Amazon EKS）上部署Ray集群。该操作符提供了一种Kubernetes原生方式来管理Ray集群。KubeRay操作符的安装涉及部署操作符和`RayCluster`、`RayJob`和`RayService`的CRD，如[此处](https://ray-project.github.io/kuberay/deploy/helm/)所述。
+通过[**KubeRay operator**](https://ray-project.github.io/kuberay/)支持在Kubernetes（包括Amazon EKS）上部署Ray集群。该 operator提供了一种Kubernetes原生方式来管理Ray集群。KubeRay operator的安装涉及部署 operator和`RayCluster`、`RayJob`和`RayService`的CRD，如[此处](https://ray-project.github.io/kuberay/deploy/helm/)所述。
 
 在Kubernetes上部署Ray可以提供几个好处：
 
@@ -56,10 +56,10 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 
 ## 部署示例
 
-在这个[示例](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform)中，您将使用KubeRay操作符在Amazon EKS上配置Ray集群。该示例还演示了使用Karpenter对特定作业的Ray集群的工作节点进行自动扩展。
+在这个[示例](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/ray/terraform)中，您将使用KubeRay operator在Amazon EKS上配置Ray集群。该示例还演示了使用Karpenter对特定作业的Ray集群的工作节点进行自动扩展。
 
 
-![EKS上的Ray](../../../../../../docs/blueprints/ai-ml/img/ray-on-eks.png)
+![Ray on EKS](../../../../../../docs/blueprints/ai-ml/img/ray-on-eks.png)
 
 <CollapsibleContent header={<h3><span>先决条件</span></h3>}>
 
@@ -73,7 +73,7 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 
 </CollapsibleContent>
 
-<CollapsibleContent header={<h3><span>部署带有KubeRay操作符的EKS集群</span></h3>}>
+<CollapsibleContent header={<h3><span>部署带有KubeRay operator的EKS集群</span></h3>}>
 
 #### 克隆仓库
 

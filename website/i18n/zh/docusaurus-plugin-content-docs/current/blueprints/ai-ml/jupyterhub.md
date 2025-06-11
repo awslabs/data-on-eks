@@ -1,12 +1,12 @@
 ---
 sidebar_position: 3
-sidebar_label: EKS上的JupyterHub
+sidebar_label: JupyterHub on EKS
 ---
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -15,16 +15,16 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 在EKS上部署ML模型需要访问GPU或Neuron实例。如果您的部署不起作用，通常是由于缺少对这些资源的访问权限。此外，一些部署模式依赖于Karpenter自动扩展和静态节点组；如果节点未初始化，请检查Karpenter或节点组的日志以解决问题。
 :::
 
-# EKS上的JupyterHub
+# JupyterHub on EKS
 
 [JupyterHub](https://jupyter.org/hub)是一个强大的多用户服务器，使用户能够访问和交互Jupyter笔记本和其他Jupyter兼容环境。它提供了一个协作平台，多个用户可以同时访问和使用笔记本，促进用户之间的协作和共享。JupyterHub允许用户创建自己的隔离计算环境（称为"spawners"）并在这些环境中启动Jupyter笔记本或其他交互式计算环境。这为每个用户提供了自己的工作空间，包括文件、代码和计算资源。
 
-## EKS上的JupyterHub
+## JupyterHub on EKS
 在Amazon Elastic Kubernetes Service (EKS)上部署JupyterHub结合了JupyterHub的多功能性与Kubernetes的可扩展性和灵活性。这个蓝图使用户能够在EKS上借助JupyterHub配置文件构建多租户JupyterHub平台。通过为每个用户利用EFS共享文件系统，它便于轻松共享笔记本并提供个人EFS存储，以便用户pod可以安全地存储数据，即使用户pod被删除或过期。当用户登录时，他们可以在现有EFS卷下访问所有脚本和数据。
 
 通过利用EKS的功能，您可以无缝扩展JupyterHub环境以满足用户需求，确保高效的资源利用和最佳性能。使用EKS，您可以利用Kubernetes的功能，如自动扩展、高可用性以及轻松部署更新和升级。这使您能够为用户提供可靠且强大的JupyterHub体验，使他们能够有效地协作、探索和分析数据。
 
-要开始使用EKS上的JupyterHub，请按照本指南中的说明设置和配置您的JupyterHub环境。
+要开始使用JupyterHub on EKS，请按照本指南中的说明设置和配置您的JupyterHub环境。
 
 <CollapsibleContent header={<h3><span>部署解决方案</span></h3>}>
 
@@ -37,7 +37,7 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 - 设置两个EFS存储挂载：一个用于个人存储，一个用于共享存储。
 - 可选：使用[Amazon Cognito](https://aws.amazon.com/cognito/)用户池对用户进行身份验证。链接到Cognito文档
 
-通过遵循此蓝图，您可以轻松部署和配置EKS上的JupyterHub环境，利用各种AWS服务为用户提供协作和可扩展的平台。
+通过遵循此蓝图，您可以轻松部署和配置JupyterHub on EKS环境，利用各种AWS服务为用户提供协作和可扩展的平台。
 
 <CollapsibleContent header={<h3><span>先决条件</span></h3>}>
 
@@ -146,7 +146,7 @@ aws eks --region us-west-2 update-kubeconfig --name jupyterhub-on-eks
 ```bash
 kubectl get pods -A
 ```
-这个验证步骤对于确保所有必要组件正常运行至关重要。如果一切正常，那么您可以放心继续，知道您的Amazon EKS上的JupyterHub环境已准备好赋能您的数据和机器学习团队。
+这个验证步骤对于确保所有必要组件正常运行至关重要。如果一切正常，那么您可以放心继续，知道您的Amazon JupyterHub on EKS环境已准备好赋能您的数据和机器学习团队。
 
 要验证JupyterHub附加组件是否正在运行，请确保控制器和webhook的附加组件部署处于RUNNING状态。
 

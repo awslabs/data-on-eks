@@ -1,6 +1,6 @@
 ---
 sidebar_position: 6
-sidebar_label: 带Fargate的EMR on EKS
+sidebar_label: EMR on EKS with Fargate
 ---
 
 :::danger

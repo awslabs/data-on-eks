@@ -16,7 +16,7 @@
     "description": "The label of footer link with label=Github linking to https://github.com/awslabs/data-on-eks"
   },
   "copyright": {
-    "message": "在AWS用❤️构建 <br/> © ${new Date().getFullYear()} Amazon.com, Inc. 或其附属公司。保留所有权利",
+    "message": "在亚马逊云科技用❤️构建 <br/> © ${new Date().getFullYear()} Amazon.com, Inc. 或其附属公司。保留所有权利",
     "description": "The footer copyright"
   }
 }

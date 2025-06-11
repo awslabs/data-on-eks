@@ -1,6 +1,6 @@
 ---
 sidebar_position: 3
-sidebar_label: EKS上的Trino
+sidebar_label: Trino on EKS
 ---
 
 # 在EKS上部署Trino
@@ -114,7 +114,7 @@ Trino Web UI将显示0个活动工作节点：
 
 在此示例中，我们将使用AWS Glue设置Hive元存储，源数据存储在S3中，并使用爬虫从中推断模式以构建Glue表。
 
-使用带有Glue连接器的EKS上的Trino，我们将使用Trino CLI运行示例SQL查询来检索数据。
+使用带有Glue连接器的Trino on EKS，我们将使用Trino CLI运行示例SQL查询来检索数据。
 
 #### 设置
 
@@ -212,7 +212,7 @@ cd data-on-eks/distributed-databases/trino/examples
 
 在此示例中，我们将设置使用AWS Glue作为目录类型的Apache Iceberg，并将数据以PARQUET格式存储在Amazon S3中。
 
-使用带有Iceberg连接器的EKS上的Trino，我们将使用Trino CLI创建上述资源并运行示例SQL查询来插入和检索数据。
+使用带有Iceberg连接器的Trino on EKS，我们将使用Trino CLI创建上述资源并运行示例SQL查询来插入和检索数据。
 
 #### 运行查询
 

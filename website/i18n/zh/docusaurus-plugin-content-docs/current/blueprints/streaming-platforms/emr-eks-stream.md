@@ -1,5 +1,5 @@
 ---
-title: 带Spark Streaming的EMR on EKS
+title: EMR on EKS with Spark Streaming
 sidebar_position: 2
 ---
 
@@ -12,7 +12,7 @@ sidebar_position: 2
 :::
 
 
-# 带Spark Streaming的EMR on EKS
+# EMR on EKS with Spark Streaming
 
 这是一个用Python [CDK](https://docs.aws.amazon.com/cdk/latest/guide/home.html)开发的项目。
 它包括示例数据、Kafka生产者模拟器和可以使用EMR on EC2或EMR on EKS运行的消费者示例。此外，我们还为不同用例添加了一些Kinesis示例。

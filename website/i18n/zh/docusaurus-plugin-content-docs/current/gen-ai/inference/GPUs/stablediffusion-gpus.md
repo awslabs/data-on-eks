@@ -1,12 +1,12 @@
 ---
-title: GPU上的Stable Diffusion
+title: Stable Diffusion on GPU
 sidebar_position: 3
 ---
 import CollapsibleContent from '../../../../../../../src/components/CollapsibleContent';
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -28,7 +28,7 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 通过此模式，您将完成以下内容：
 
 - 创建一个Amazon EKS集群，带有Karpenter管理的GPU节点池，用于节点的动态扩展。
-- 使用[jark-stack](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/jark-stack/terraform) Terraform蓝图安装KubeRay操作符和其他核心EKS附加组件。
+- 使用[jark-stack](https://github.com/awslabs/data-on-eks/tree/main/ai-ml/jark-stack/terraform) Terraform蓝图安装KubeRay operator和其他核心EKS附加组件。
 - 使用RayServe部署Stable Diffusion模型，以高效地跨GPU资源进行扩展
 
 ### 什么是Stable Diffusion？

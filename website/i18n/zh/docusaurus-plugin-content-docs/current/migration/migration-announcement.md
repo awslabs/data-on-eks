@@ -1,10 +1,10 @@
 ---
 id: migration-announcement
-title: "🚨 仓库拆分：EKS上的数据和EKS上的AI"
+title: "🚨 仓库拆分：EKS上的数据和AI on EKS"
 sidebar_position: 0
 ---
 
-# 🔥 EKS上的数据正在演变：介绍EKS上的AI
+# 🔥 EKS上的数据正在演变：介绍AI on EKS
 
 :::note
 
@@ -38,7 +38,7 @@ sidebar_position: 0
 2. **✅ 现有AI蓝图将暂时保留**在这个`data-on-eks`仓库中。一旦新的`ai-on-eks`仓库完全启动，所有新内容和更新将在那里进行。
 3. **📦 一旦迁移完成**，对现有AI/ML蓝图的更新将不再在`data-on-eks`仓库中进行。但是，我们将暂时保留这些蓝图，直到所有相关博客和文档都已更新，引用新的`ai-on-eks`仓库。
 4. **🔗 现有的AWS博客、研讨会和文档**，目前指向`data-on-eks`仓库的将保持不变，以避免链接断开。我们将根据资源可用性，随着时间的推移，提出单独的问题来更新这些引用到新的`ai-on-eks`仓库。
-5. **💬 今后，所有与EKS上的AI相关的新问题**，无论是新内容还是对现有蓝图的更新，都应在`ai-on-eks`仓库中提出。除非特定蓝图或内容仅存在于此仓库中且尚未迁移，否则我们不会在`data-on-eks`中处理与EKS上的AI相关的问题。
+5. **💬 今后，所有与AI on EKS相关的新问题**，无论是新内容还是对现有蓝图的更新，都应在`ai-on-eks`仓库中提出。除非特定蓝图或内容仅存在于此仓库中且尚未迁移，否则我们不会在`data-on-eks`中处理与AI on EKS相关的问题。
 
 
 ## ✅ 这个仓库中保留什么？
@@ -63,7 +63,7 @@ sidebar_position: 0
 
 以下组件正在迁移到新的ai-on-eks仓库（即将推出）：
 
-- 🤖 [EKS上的AI](https://awslabs.github.io/data-on-eks../..../../docs/gen-ai)部分：包括当前托管在../..../../docs/gen-ai下的模型训练、推理和服务模式
+- 🤖 [AI on EKS](https://awslabs.github.io/data-on-eks../..../../docs/gen-ai)部分：包括当前托管在../..../../docs/gen-ai下的模型训练、推理和服务模式
 
 - 🛠️ [AI Terraform模块](https://github.com/awslabs/data-on-eks/tree/main/ai-ml)：用于部署端到端AI工作负载的IaC模板
 

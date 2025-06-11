@@ -7,7 +7,7 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -158,7 +158,7 @@ my-scheduler-c6fc957d9-hzrf7  1/1     Running   0  2d1h
 </CollapsibleContent>
 ## 使用Llama3模型部署Ray集群
 
-在本教程中，我们利用KubeRay操作符，它通过自定义资源定义扩展Kubernetes，用于Ray特定的构造，如RayCluster、RayJob和RayService。操作符监视与这些资源相关的用户事件，自动创建必要的Kubernetes工件以形成Ray集群，并持续监控集群状态以确保所需配置与实际状态匹配。它处理生命周期管理，包括设置、工作节点组的动态扩展和拆卸，抽象出在Kubernetes上管理Ray应用程序的复杂性。
+在本教程中，我们利用KubeRay operator，它通过自定义资源定义扩展Kubernetes，用于Ray特定的构造，如RayCluster、RayJob和RayService。 operator监视与这些资源相关的用户事件，自动创建必要的Kubernetes工件以形成Ray集群，并持续监控集群状态以确保所需配置与实际状态匹配。它处理生命周期管理，包括设置、工作节点组的动态扩展和拆卸，抽象出在Kubernetes上管理Ray应用程序的复杂性。
 
 每个Ray集群由一个头节点pod和一系列工作节点pod组成，具有可选的自动扩展支持，根据工作负载需求调整集群大小。KubeRay支持异构计算节点（包括GPU）和在同一Kubernetes集群中运行具有不同Ray版本的多个Ray集群。此外，KubeRay可以与AWS Inferentia加速器集成，使大型语言模型（如Llama 3）能够在专门的硬件上高效部署，可能提高机器学习推理任务的性能和成本效益。
 

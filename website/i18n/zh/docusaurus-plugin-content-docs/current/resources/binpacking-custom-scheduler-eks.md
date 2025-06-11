@@ -7,7 +7,7 @@ sidebar_label: Amazon EKS 的装箱调度
 # Amazon EKS 的装箱调度
 
 ## 介绍
-在本文中，我们将向您展示如何在运行 DoEKS 时为 Amazon EKS 启用自定义调度器，特别是针对 EKS 上的 Spark，包括开源 Spark 和 EMR on EKS。自定义调度器是一个在数据平面运行的具有 ```MostAllocated``` 策略的自定义 Kubernetes 调度器。
+在本文中，我们将向您展示如何在运行 DoEKS 时为 Amazon EKS 启用自定义调度器，特别是针对 Spark on EKS，包括开源 Spark 和 EMR on EKS。自定义调度器是一个在数据平面运行的具有 ```MostAllocated``` 策略的自定义 Kubernetes 调度器。
 
 ### 为什么需要装箱调度
 默认情况下，[scheduling-plugin](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins) NodeResourcesFit 使用 ```LeastAllocated``` 作为评分策略。对于长时间运行的工作负载，这很好，因为它提供了高可用性。但对于批处理作业，如 Spark 工作负载，这会导致高成本。通过将策略从 ```LeastAllocated``` 更改为 ```MostAllocated```，可以避免将 Pod 分散到所有运行的节点上，从而提高资源利用率和成本效益。

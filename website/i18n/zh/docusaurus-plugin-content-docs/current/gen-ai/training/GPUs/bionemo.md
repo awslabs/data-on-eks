@@ -6,7 +6,7 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -32,9 +32,9 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 
 ## 在Kubernetes上部署BioNeMo
 
-此蓝图利用三个主要组件实现其功能。NVIDIA设备插件促进GPU使用，FSx存储训练数据，Kubeflow训练操作符管理实际的训练过程。
+此蓝图利用三个主要组件实现其功能。NVIDIA设备插件促进GPU使用，FSx存储训练数据，Kubeflow训练 operator管理实际的训练过程。
 
-1) [**Kubeflow训练操作符**](https://www.kubeflow.org/docs/components/training/)
+1) [**Kubeflow训练 operator**](https://www.kubeflow.org/docs/components/training/)
 2) [**NVIDIA设备插件**](https://github.com/NVIDIA/k8s-device-plugin)
 3) [**FSx for Lustre CSI驱动程序**](https://docs.aws.amazon.com/eks/latest/userguide/fsx-csi.html)
 
@@ -83,10 +83,10 @@ cd data-on-eks/ai-ml/bionemo
 aws eks update-kubeconfig --name bionemo-on-eks #或者您用于EKS集群名称的任何名称
 ```
 
-由于训练操作符没有helm图表，我们必须手动安装该包。如果训练操作符团队构建了helm图表，我们
+由于训练 operator没有helm图表，我们必须手动安装该包。如果训练 operator团队构建了helm图表，我们
 将把它纳入terraform-aws-eks-data-addons仓库。
 
-#### 安装Kubeflow训练操作符
+#### 安装Kubeflow训练 operator
 ```bash
 kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.7.0"
 ```
@@ -258,7 +258,7 @@ esm1nv-pretraining-worker-9    1/1     Running   0          13m
 此配置利用了Kubeflow的PyTorch训练自定义资源定义(CRD)。在此清单中，各种参数可供自定义。有关每个参数的详细见解和微调指导，您可以参考[BioNeMo的文档](https://docs.nvidia.com/bionemo-framework/latest/notebooks/model_training_esm1nv.html)。
 
 :::info
-根据Kubeflow训练操作符文档，如果您没有明确指定主副本pod，第一个工作副本pod(worker-0)将被视为主pod。
+根据Kubeflow训练 operator文档，如果您没有明确指定主副本pod，第一个工作副本pod(worker-0)将被视为主pod。
 :::
 
 要跟踪此过程的进度，请按照以下步骤操作：

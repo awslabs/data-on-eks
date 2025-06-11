@@ -3,15 +3,15 @@ sidebar_position: 2
 sidebar_label: CloudNativePG PostgreSQL
 ---
 
-# 使用CloudNativePG操作符在EKS上部署PostgreSQL数据库
+# 使用CloudNativePG operator在EKS上部署PostgreSQL数据库
 
 ## 介绍
 
-**CloudNativePG**是一个开源[操作符](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)，旨在管理[Kubernetes](https://kubernetes.io)上的[PostgreSQL](https://www.postgresql.org/)工作负载。
+**CloudNativePG**是一个开源[ operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)，旨在管理[Kubernetes](https://kubernetes.io)上的[PostgreSQL](https://www.postgresql.org/)工作负载。
 
 它定义了一个新的Kubernetes资源，称为`Cluster`，代表由一个主节点和可选数量的副本组成的PostgreSQL集群，这些副本共存于选定的Kubernetes命名空间中，用于高可用性和分担只读查询。
 
-位于同一Kubernetes集群中的应用程序可以使用完全由操作符管理的服务访问PostgreSQL数据库，而不必担心故障转移或切换后主角色的变化。位于Kubernetes集群外部的应用程序需要配置Service或Ingress对象，通过TCP公开Postgres。Web应用程序可以利用基于PgBouncer的原生连接池。
+位于同一Kubernetes集群中的应用程序可以使用完全由 operator管理的服务访问PostgreSQL数据库，而不必担心故障转移或切换后主角色的变化。位于Kubernetes集群外部的应用程序需要配置Service或Ingress对象，通过TCP公开Postgres。Web应用程序可以利用基于PgBouncer的原生连接池。
 
 CloudNativePG最初由[EDB](https://www.enterprisedb.com)构建，然后在Apache License 2.0下开源，并于2022年4月提交给CNCF Sandbox。[源代码仓库在Github](https://github.com/cloudnative-pg/cloudnative-pg)。
 
@@ -30,7 +30,7 @@ CloudNativePG最初由[EDB](https://www.enterprisedb.com)构建，然后在Apach
 3. [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 4. [psql](https://formulae.brew.sh/formula/libpq)
 
-### 部署带有CloudNativePG操作符的EKS集群
+### 部署带有CloudNativePG operator的EKS集群
 
 首先，克隆仓库
 

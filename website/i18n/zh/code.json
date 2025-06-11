@@ -20,7 +20,7 @@
     "description": "Title for Amazon EMR on EKS feature"
   },
   "homepage.features.emrOnEks.description": {
-    "message": "使用Karpenter自动缩放器和Apache YuniKorn模板，优化Amazon EMR在EKS集群上的多租户部署最佳实践",
+    "message": "使用Karpenter和Apache YuniKorn模板，优化Amazon EMR在EKS集群上的多租户部署最佳实践",
     "description": "Description for Amazon EMR on EKS feature"
   },
   "homepage.features.schedulers.title": {
@@ -40,11 +40,11 @@
     "description": "Description for Distributed Databases & Query Engines feature"
   },
   "homepage.header.dataOnEks": {
-    "message": "EKS上的数据",
+    "message": "Data on EKS",
     "description": "Button text for Data on EKS"
   },
   "homepage.header.aiOnEks": {
-    "message": "EKS上的AI",
+    "message": "AI on EKS",
     "description": "Button text for AI on EKS"
   },
   "homepage.spotlight": {

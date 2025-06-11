@@ -1,9 +1,9 @@
 ---
 sidebar_position: 5
-sidebar_label: EKS上的Apache NiFi
+sidebar_label: Apache NiFi on EKS
 ---
 
-# EKS上的Apache NiFi
+# Apache NiFi on EKS
 
 ## 介绍
 
@@ -282,7 +282,7 @@ aws kinesis create-stream --stream-name kds-stream-nifi-on-EKS
 aws dynamodb create-table --cli-input-json  JSONSchemaDynamoDBTABLE.json
 ```
 
-6. 使用端点打开EKS上的Apache Nifi UI，创建一个处理组，并将其命名为NifiStreamingExample。
+6. 使用端点打开Apache NiFi on EKS UI，创建一个处理组，并将其命名为NifiStreamingExample。
 
 ![Apache NiFi画布](../../../../../../docs/blueprints/streaming-platforms/img/nifi-screenshot-1.png)
 

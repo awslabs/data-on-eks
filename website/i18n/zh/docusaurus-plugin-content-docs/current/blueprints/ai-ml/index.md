@@ -5,12 +5,12 @@ sidebar_label: 介绍
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
 
-# Amazon EKS上的AI/ML平台
+# Amazon AI on EKS/ML平台
 
 Amazon Elastic Kubernetes Service (EKS)是一个强大的、托管的Kubernetes平台，已成为在云中部署和管理AI/ML工作负载的基石。凭借其处理复杂、资源密集型任务的能力，Amazon EKS为运行AI/ML模型提供了可扩展和灵活的基础，使其成为旨在充分利用机器学习潜力的组织的理想选择。
 
@@ -42,12 +42,12 @@ Amazon EKS提供了一个全面的、托管的环境，简化了AI/ML模型的�
 通过两个主要蓝图支持在Amazon EKS上部署生成式AI模型：
 
 - **对于GPU**：使用[JARK堆栈蓝图](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jark)。
-- **对于Neuron**：从[EKS上的Trainium蓝图](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium)开始。
+- **对于Neuron**：从[Trainium on EKS蓝图](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/trainium)开始。
 
 除了这些之外，本节还提供了其他有价值的ML蓝图：
 
 - **NVIDIA Spark RAPIDS**：对于GPU上的Spark工作负载，请参考[NVIDIA Spark RAPIDS蓝图](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/emr-spark-rapids)。
 
-- **EKS上的JupyterHub**：探索[JupyterHub蓝图](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub)，它展示了时间切片和MIG功能，以及带有配置文件的多租户配置。这非常适合在EKS上部署大规模JupyterHub平台。
+- **JupyterHub on EKS**：探索[JupyterHub蓝图](https://awslabs.github.io/data-on-eks/docs/blueprints/ai-ml/jupyterhub)，它展示了时间切片和MIG功能，以及带有配置文件的多租户配置。这非常适合在EKS上部署大规模JupyterHub平台。
 
 - **其他模式**：有关使用NVIDIA Triton服务器、NVIDIA NGC等的其他模式，请参考[生成式AI页面](https://awslabs.github.io/data-on-eks/docs/gen-ai)。

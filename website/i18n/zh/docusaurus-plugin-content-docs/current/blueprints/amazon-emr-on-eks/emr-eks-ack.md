@@ -1,6 +1,6 @@
 ---
 sidebar_position: 4
-sidebar_label: 带ACK控制器的EMR on EKS
+sidebar_label: EMR on EKS with ACK
 ---
 import CollapsibleContent from '../../../../../../src/components/CollapsibleContent';
 
@@ -13,7 +13,7 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 :::
 
 
-# 用于EMR on EKS的ACK控制器
+# EMR on EKS with ACK
 
 ## 介绍
 在本文中，我们将学习通过使用[AWS Controllers for Kubernetes (ACK)](https://aws-controllers-k8s.github.io/community/docs/tutorials/emr-on-eks-example/)构建EMR on EKS Spark工作负载。

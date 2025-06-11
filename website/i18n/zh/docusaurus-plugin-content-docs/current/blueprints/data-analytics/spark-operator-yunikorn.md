@@ -1,6 +1,6 @@
 ---
 sidebar_position: 2
-sidebar_label: 带有 YuniKorn 的 Spark Operator
+sidebar_label: Spark Operator与YuniKorn
 hide_table_of_contents: true
 ---
 import Tabs from '@theme/Tabs';
@@ -12,7 +12,7 @@ import ReplaceS3BucketPlaceholders from '../../../../../../docs/blueprints/data-
 
 import CodeBlock from '@theme/CodeBlock';
 
-# 带有 YuniKorn 的 Spark Operator
+# Spark Operator与YuniKorn
 
 ## 介绍
 

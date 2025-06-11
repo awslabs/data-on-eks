@@ -5,7 +5,7 @@ sidebar_label: EKS上的Spark可观测性
 
 import TaxiTripExec from '../../../../../../docs/blueprints/data-analytics/_taxi_trip_exec.md';
 
-# EKS上的可观测性Spark
+# EKS上的Spark可观测性
 
 ## 介绍
 在本文中，我们将学习EKS上Spark的可观测性。我们将使用Spark History Server查看Spark应用程序日志并通过Spark Web UI检查Spark作业进度。Amazon Managed Service for Prometheus用于收集和存储Spark应用程序生成的指标，Grafana用于构建监控用例的仪表板。

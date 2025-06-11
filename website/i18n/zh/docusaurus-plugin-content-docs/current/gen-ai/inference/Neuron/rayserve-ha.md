@@ -6,7 +6,7 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -69,7 +69,7 @@ GCS容错需要一个外部Redis数据库。您可以选择托管自己的Redis�
 export TF_VAR_enable_rayserve_ha_elastic_cache_redis=true
 ```
 
-然后，运行`install.sh`脚本来安装带有KubeRay操作符和其他附加组件的EKS集群。
+然后，运行`install.sh`脚本来安装带有KubeRay operator和其他附加组件的EKS集群。
 
 ```bash
 cd data-on-eks/ai-ml/trainimum-inferentia

@@ -1,6 +1,6 @@
 ---
 sidebar_position: 3
-sidebar_label: EKS上的Airflow
+sidebar_label: Airflow on EKS
 ---
 
 import Tabs from '@theme/Tabs';

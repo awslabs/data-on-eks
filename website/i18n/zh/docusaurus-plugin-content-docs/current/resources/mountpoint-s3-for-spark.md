@@ -47,9 +47,9 @@ import DaemonSetWithConfig from '!!raw-loader!../../../../../../analytics/terraf
 
 <CollapsibleContent header={<h2><span>部署解决方案资源</span></h2>}>
 
-在这个[示例](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator)中，您将配置以下资源，这些资源是使用开源Spark操作符运行Spark作业所必需的。
+在这个[示例](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator)中，您将配置以下资源，这些资源是使用开源Spark operator运行Spark作业所必需的。
 
-此示例将运行Spark K8s操作符的EKS集群部署到新的VPC中。
+此示例将运行Spark K8s operator的EKS集群部署到新的VPC中。
 
 - 创建一个新的示例VPC、2个私有子网和2个公共子网
 - 为公共子网创建互联网网关，为私有子网创建NAT网关
@@ -169,7 +169,7 @@ DaemonSet Pod需要将```securityContext```设置为privileged，并且```hostPI
 ## 执行Spark作业
 以下是使用方法2与DaemonSet测试场景的步骤：
 
-1. 部署[Spark操作符资源](#资源分配)
+1. 部署[Spark operator资源](#资源分配)
 2. 准备S3存储桶
     1. ``` cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/mountpoint-s3-spark/ ```
     2. ``` chmod +x copy-jars-to-s3.sh ```

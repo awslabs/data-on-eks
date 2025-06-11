@@ -1,6 +1,6 @@
 ---
 sidebar_position: 6
-sidebar_label: 使用AWS CDK的EMR on EKS数据平台
+sidebar_label: EMR on EKS Data Platform with AWS CDK
 ---
 
 :::danger
@@ -11,7 +11,7 @@ sidebar_label: 使用AWS CDK的EMR on EKS数据平台
 如果您在生产环境中使用此蓝图，请将自己添加到[adopters.md](https://github.com/awslabs/data-on-eks/blob/main/ADOPTERS.md)页面并在仓库中提出问题。这将帮助我们重新考虑并可能保留并继续维护该蓝图。否则，您可以制作本地副本或使用现有标签访问它。
 :::
 
-# 使用AWS CDK的EMR on EKS数据平台
+# EMR on EKS Data Platform with AWS CDK
 
 在本文档中，我们将向您展示如何使用AWS CDK和[Analytics Reference Architecture](https://aws.amazon.com/blogs/opensource/adding-cdk-constructs-to-the-aws-analytics-reference-architecture/) (ARA)库来部署端到端数据分析平台。该平台将允许您在由EMR on EKS支持的EMR Studio的Jupyter笔记本中运行Spark交互式会话，并使用EMR on EKS运行Spark作业。下面的架构显示了您将使用CDK和ARA库部署的基础设施。
 

@@ -12,7 +12,7 @@ sidebar_label: 使用 CDK 的 EMR on EKS
 :::
 
 
-# 使用 CDK 的 EMR on EKS 蓝图
+# EMR on EKS with CDK
 
 ## 介绍
 在本文中，我们将学习如何使用 `cdk-eks-blueprints` 中的 EMR on EKS AddOn 和 Teams 来部署 EKS 基础设施以提交 Spark 作业。`cdk-eks-blueprints` 允许您部署 EKS 集群并使其能够被 EMR on EKS 服务使用，只需最少的设置。下面的架构图展示了您将通过此蓝图部署的基础设施的概念视图。

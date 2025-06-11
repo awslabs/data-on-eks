@@ -12,7 +12,7 @@
     "description": "Navbar item with label Introduction"
   },
   "item.label.AI on EKS (🚨 Moving)": {
-    "message": "EKS上的AI (🚨 迁移中)",
+    "message": "AI on EKS (🚨 迁移中)",
     "description": "Navbar item with label AI on EKS (🚨 Moving)"
   },
   "item.label.Blueprints": {

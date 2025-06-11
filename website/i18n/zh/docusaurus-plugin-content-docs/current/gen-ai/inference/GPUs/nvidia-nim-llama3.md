@@ -1,12 +1,12 @@
 ---
-title: Amazon EKS上的NVIDIA NIM LLM
+title: NVIDIA NIM LLM on EKS
 sidebar_position: 4
 ---
 import CollapsibleContent from '../../../../../../../src/components/CollapsibleContent';
 
 :::caution
 
-**EKS上的AI**内容**正在迁移**到一个新的仓库。
+**AI on EKS**内容**正在迁移**到一个新的仓库。
 🔗 👉 [阅读完整的迁移公告 »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
 
 :::
@@ -27,7 +27,7 @@ import CollapsibleContent from '../../../../../../../src/components/CollapsibleC
 我们正在积极增强此蓝图，以纳入可观测性、日志记录和可扩展性方面的改进。
 :::
 
-# Amazon EKS上的NVIDIA NIM LLM部署
+# NVIDIA NIM LLM on EKS部署
 
 ## 什么是NVIDIA NIM？
 

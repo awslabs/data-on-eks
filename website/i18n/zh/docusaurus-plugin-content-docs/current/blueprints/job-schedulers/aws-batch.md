@@ -1,9 +1,9 @@
 ---
-title: EKS上的AWS Batch
+title: AWS Batch on EKS
 sidebar_position: 5
 ---
 
-# EKS上的AWS Batch
+# AWS Batch on EKS
 AWS Batch是一个完全托管的AWS原生批处理计算服务，它在Amazon Elastic Kubernetes Service (EKS)等AWS托管容器编排服务之上规划、调度和运行您的容器化批处理工作负载（机器学习、模拟和分析）。
 
 AWS Batch为高性能计算工作负载添加了必要的操作语义和资源，使其能够在您现有的EKS集群上高效且经济地运行。
