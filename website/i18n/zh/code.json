@@ -1,0 +1,54 @@
+{
+  "homepage.features.dataAnalytics.title": {
+    "message": "数据分析",
+    "description": "Title for Data Analytics feature"
+  },
+  "homepage.features.dataAnalytics.description": {
+    "message": "适用于EKS的最佳实践数据分析部署模板和示例，包括Apache Spark、Spark Operator、Dask、Beam等",
+    "description": "Description for Data Analytics feature"
+  },
+  "homepage.features.streamingDataPlatforms.title": {
+    "message": "流数据平台",
+    "description": "Title for Streaming Data Platforms feature"
+  },
+  "homepage.features.streamingDataPlatforms.description": {
+    "message": "使用Kafka、Flink、Spark Streaming等构建高可扩展性流数据平台",
+    "description": "Description for Streaming Data Platforms feature"
+  },
+  "homepage.features.emrOnEks.title": {
+    "message": "Amazon EMR on EKS",
+    "description": "Title for Amazon EMR on EKS feature"
+  },
+  "homepage.features.emrOnEks.description": {
+    "message": "使用Karpenter和Apache YuniKorn模板，优化Amazon EMR在EKS集群上的多租户部署最佳实践",
+    "description": "Description for Amazon EMR on EKS feature"
+  },
+  "homepage.features.schedulers.title": {
+    "message": "调度器",
+    "description": "Title for Schedulers feature"
+  },
+  "homepage.features.schedulers.description": {
+    "message": "使用Apache Airflow、Amazon MWAA、Argo Workflow等优化EKS上的作业调度",
+    "description": "Description for Schedulers feature"
+  },
+  "homepage.features.distributedDatabases.title": {
+    "message": "分布式数据库和查询引擎",
+    "description": "Title for Distributed Databases & Query Engines feature"
+  },
+  "homepage.features.distributedDatabases.description": {
+    "message": "使用Cassandra、Trino、Presto等构建高性能、可扩展的分布式数据库和查询引擎",
+    "description": "Description for Distributed Databases & Query Engines feature"
+  },
+  "homepage.header.dataOnEks": {
+    "message": "Data on EKS",
+    "description": "Button text for Data on EKS"
+  },
+  "homepage.header.aiOnEks": {
+    "message": "AI on EKS",
+    "description": "Button text for AI on EKS"
+  },
+  "homepage.spotlight": {
+    "message": "聚光灯下 🎥",
+    "description": "Title for the spotlight section"
+  }
+}
