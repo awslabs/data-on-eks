@@ -1,0 +1,38 @@
+{
+  "logo.alt": {
+    "message": "DoEKS 标志",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.🚨 Repo Split Update": {
+    "message": "🚨 仓库拆分更新",
+    "description": "Navbar item with label 🚨 Repo Split Update"
+  },
+  "item.label.Introduction": {
+    "message": "介绍",
+    "description": "Navbar item with label Introduction"
+  },
+  "item.label.AI on EKS (🚨 Moving)": {
+    "message": "EKS上的AI (🚨 迁移中)",
+    "description": "Navbar item with label AI on EKS (🚨 Moving)"
+  },
+  "item.label.Blueprints": {
+    "message": "蓝图",
+    "description": "Navbar item with label Blueprints"
+  },
+  "item.label.Best Practices": {
+    "message": "最佳实践",
+    "description": "Navbar item with label Best Practices"
+  },
+  "item.label.Benchmarks": {
+    "message": "基准测试",
+    "description": "Navbar item with label Benchmarks"
+  },
+  "item.label.Resources": {
+    "message": "资源",
+    "description": "Navbar item with label Resources"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  }
+}
