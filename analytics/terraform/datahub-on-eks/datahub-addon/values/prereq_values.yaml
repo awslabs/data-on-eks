@@ -61,6 +61,8 @@ cp-helm-charts:
   # Schema registry is under the community license
   cp-schema-registry:
     enabled: true
+    image: confluentinc/cp-schema-registry
+    imageTag: 7.9.2
     kafka:
       bootstrapServers: ${msk_bootstrap_brokers}  # <<release-name>>-kafka:9092
   cp-kafka:

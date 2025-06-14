@@ -6,7 +6,7 @@ locals {
   prereq_chart       = "datahub-prerequisites"
   datahub_namespace  = "datahub"
   datahub_repository = "https://helm.DataHubproject.io/"
-  datahub_version    = "0.5.10"
+  datahub_version    = "0.6.8"
   prereq_version     = "0.1.15"
 
   datahub_merged_values_yaml = yamlencode(merge(

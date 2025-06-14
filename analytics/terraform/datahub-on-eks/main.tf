@@ -34,7 +34,7 @@ module "eks" {
       desired_size = 3
 
       force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types       = ["m7g.xlarge"]
 
       ebs_optimized = true
       block_device_mappings = {

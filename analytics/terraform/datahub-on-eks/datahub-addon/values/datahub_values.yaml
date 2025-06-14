@@ -4,11 +4,13 @@ datahub-gms:
   enabled: true
   image:
     repository: acryldata/datahub-gms
+    tag: v1.1.0
 
 datahub-frontend:
   enabled: true
   image:
     repository: acryldata/datahub-frontend-react
+    tag: v1.1.0
   # Set up ingress to expose react front-end
   ingress:
     enabled: true
@@ -26,6 +28,7 @@ acryl-datahub-actions:
   enabled: true
   image:
     repository: acryldata/datahub-actions
+    tag: v1.1.0
   resources:
     limits:
       memory: 512Mi
@@ -36,21 +39,24 @@ acryl-datahub-actions:
 datahub-mae-consumer:
   image:
     repository: acryldata/datahub-mae-consumer
+    tag: v1.1.0
 
 datahub-mce-consumer:
   image:
     repository: acryldata/datahub-mce-consumer
+    tag: v1.1.0
 
 datahub-ingestion-cron:
   enabled: false
   image:
     repository: acryldata/datahub-ingestion
+    tag: v1.1.0
 
 elasticsearchSetupJob:
   enabled: true
   image:
     repository: acryldata/datahub-elasticsearch-setup
-    # tag: v0.8.44
+    tag: v1.1.0
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -64,6 +70,7 @@ kafkaSetupJob:
   enabled: true
   image:
     repository: acryldata/datahub-kafka-setup
+    tag: v1.1.0
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -74,6 +81,7 @@ mysqlSetupJob:
   enabled: true
   image:
     repository: acryldata/datahub-mysql-setup
+    tag: v1.1.0
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -84,6 +92,7 @@ mysqlSetupJob:
 #  enabled: false
 #  image:
 #    repository: acryldata/datahub-postgres-setup
+#    tag: v1.1.0
 #  podSecurityContext:
 #    fsGroup: 1000
 #  securityContext:
@@ -95,6 +104,7 @@ datahubUpgrade:
   enabled: true
   image:
     repository: acryldata/datahub-upgrade
+    tag: v1.1.0
   batchSize: 1000
   batchDelayMs: 100
   noCodeDataMigration:
@@ -141,7 +151,7 @@ datahubUpgrade:
 datahubSystemUpdate:
   image:
     repository: acryldata/datahub-upgrade
-    # tag:
+    tag: v1.1.0
   podSecurityContext: {}
     # fsGroup: 1000
   securityContext: {}
@@ -250,7 +260,7 @@ global:
       #   secretKey: postgres-password
 
   datahub:
-    version: v0.15.0.1
+    version: v1.1.0
 
     systemUpdate:
       enabled: true
@@ -261,7 +271,7 @@ global:
       enablePrometheus: true
     mae_consumer:
       port: "9091"
-    appVersion: "1.0"
+    appVersion: "1.1.0"
 
     encryptionKey:
       secretRef: "datahub-encryption-secrets"
@@ -276,7 +286,7 @@ global:
 
     managed_ingestion:
       enabled: true
-      defaultCliVersion: "0.15.0.1"
+      defaultCliVersion: "1.1.0"
 
     metadata_service_authentication:
       enabled: true
