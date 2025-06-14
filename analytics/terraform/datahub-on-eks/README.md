@@ -1,6 +1,32 @@
 # Deploying DataHub on EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/datahub-on-eks) to deploy this pattern and run sample tests.
 
+## Release Notes
+
+### Version 1.1.0 (June 2025)
+
+#### EKS Cluster Upgrade
+- Updated Kubernetes version from 1.31 to 1.33 (latest available)
+- Upgraded node group instance types from m5.xlarge to m7g.xlarge (AWS Graviton3)
+
+#### DataHub Components Upgrade
+- Updated DataHub Helm chart from version 0.5.10 to 0.6.8 (with appVersion v1.1.0)
+- Added explicit image tags (v1.1.0) for all DataHub components
+- Updated DataHub version references from v0.15.0.1 to v1.1.0
+
+#### AWS Services Upgrade
+- OpenSearch: Updated from 2.11 to 2.19
+- MSK Kafka: Updated from 3.8.x to 3.9.x
+- RDS MySQL: Updated from 8.0 to 8.4.5
+- Instance types: Upgraded from m6g/c6g to m7g/c7g for better performance
+
+#### Provider and Module Versions
+- AWS provider: Updated from >= 3.72 to >= 5.0.0
+- Helm provider: Updated from >= 2.4.1 to >= 2.10.0
+- Kubernetes provider: Updated from >= 2.10 to >= 2.23.0
+- Random provider: Updated from >= 3.1 to >= 3.5.0
+- Various module versions updated to latest
+
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
 
