@@ -3,14 +3,14 @@ sidebar_label: This is a Template
 ---
 
 <!---
-This is a template for use when writing a new best practices guide. 
+This is a template for use when writing a new best practices guide.
 -->
 
 # \<Top Level Header\>
 
 Replace `<Top Level Header>` with your clear and concise description for the overall topic of this document.
 
-Examples: 
+Examples:
 - "VPC Configurations"
 - "Pod Security"
 - "Control Plane"
@@ -19,7 +19,7 @@ Examples:
 
 Replace `<Second Level Header>` with a clear and concise description about this topic.
 
-Examples: 
+Examples:
 - "IP Considerations"
 - "Policy-as-code (PAC)"
 - "Monitor Control Plane Metrics"
@@ -29,9 +29,9 @@ Add background information here if required. For example:
 
 ### \<Third Level Header\>
 
-Replace `<Third Level Header>` with a clear and concise description of best practice or a problem. 
+Replace `<Third Level Header>` with a clear and concise description of best practice or a problem.
 
-Examples: 
+Examples:
 - "Consider using a secondary CIDR"
 - "Employ least privileged access to AWS Resources"
 - "Replace long running instances"

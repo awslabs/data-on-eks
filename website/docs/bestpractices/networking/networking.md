@@ -6,12 +6,16 @@ sidebar_label: VPC Configuration
 
 ## VPC and IP Considerations
 
+### Default VPC CNI Configuration
+With the default VPC CNI configuration larger nodes will consume more IP addresses. For example a [`m5.8xlarge` node](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) that is running 10 pods will hold 60 IPs total (to satisfy `WARM_ENI_TARGET=1`). However a `m5.16xlarge` node would hold 100 IPs.
+
+The AWS VPC CNI maintains this “warm pool” of IP addresses on the EKS worker nodes to assign to Pods. When more IP addresses are needed for your Pods, the CNI must communicate with EC2 APIs to assign the addresses to your nodes.
+
 ### Plan for a large amount of IP address usage in your EKS clusters.
 
-The AWS VPC CNI maintains a “warm pool” of IP addresses on the EKS worker nodes to assign to Pods. When more IP addresses are needed for your Pods, the CNI must communicate with EC2 APIs to assign the addresses to your nodes. During periods of high churn or large scale out these EC2 API calls can be rate throttled, which will delay the provisioning of Pods and thus delay the execution of workloads. When designing the VPC for your environment plan for more IP addresses than just your pods to accommodate this warm pool.
+During periods of high churn or large scale out, these EC2 API calls can be rate throttled, which will delay the provisioning of Pods and thus delay the execution of workloads. Also, configuring the VPC CNI to minimize this warm pool can increase the EC2 API calls from your nodes and increase the risk of rate throttling.
 
-With the default VPC CNI configuration larger nodes will consume more IP addresses. For example [a `m5.8xlarge` node](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) that is running 10 pods will hold 60 IPs total (to satisfy `WARM_ENI=1`). However a `m5.16xlarge` node would hold 100 IPs.
-Configuring the VPC CNI to minimize this warm pool can increase the EC2 API calls from your nodes and increase the risk of rate throttling. Planning for this extra IP address usage can avoid rate throttling problems and managing the IP address usage.
+Hence, planning for this extra IP address usage can avoid rate throttling problems and managing the IP address usage.
 
 
 ### Consider using a secondary CIDR if your IP space is constrained.
@@ -69,10 +73,16 @@ For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_
 
   [...]
 ```
+For detailed information of tweaking VPC CNI variables, refer to [this documentation on github](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/eni-and-ip-target.md).
+
+:::info
+Careful consideration is needed when configuring `MINIMUM_IP_TARGET`, as it increases EC2 API call frequency for IP attachment and detachment operations by ipamd. Excessive API calls can trigger throttling, preventing new ENI or IP assignments across the entire cluster.
+Hence this configuration is ideally recommended for small clusters or clusters with very low pod churn.
+:::
 
 ### Limit the number of IPs per node on large instance types with `MAX_ENI` and `max-pods`
 
-When using larger instance types such as `16xlarge` or `24xlarge` the [number of IP addresses that can be assigned per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) can be fairly large. For example, a `c5.18xlarge` instance type with the default CNI configuration of `WARM_ENI=1` would end up holding 100 IP addresses (50 IPs per ENI * 2 ENIs) when running a handful of pods.
+When using larger instance types such as `16xlarge` or `24xlarge` the [number of IP addresses that can be assigned per ENI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) can be fairly large. For example, a `c5.18xlarge` instance type with the default CNI configuration of `WARM_ENI_TARGET=1` would end up holding 100 IP addresses (50 IPs per ENI * 2 ENIs) when running a handful of pods.
 
 For some workloads the CPU, Memory, or other resource will limit the number of Pods on that `c5.18xlarge` before we need more than 50 IPs. In this case you may want to be able to run 30-40 pods maximum on that instance.
 
@@ -176,6 +186,34 @@ spec:
 
 
 ## Application
+
+### Scaling CoreDNS
+#### Default Behavior
+Route 53 Resolver enforces a limit of 1024 packets per second per network interface for each EC2 instance, and this limit is not adjustable. In EKS clusters, CoreDNS runs with two replicas by default, with each replica on a separate EC2 instance. When DNS traffic exceeds 1024 packets per second for a CoreDNS replica, DNS requests will be throttled, resulting in `unknownHostException` errors.
+
+#### Remediation
+To address the scalability of default coreDNS, consider implementing one of the following two options:
+  * [Enable coreDNS auto-scaling](https://docs.aws.amazon.com/eks/latest/userguide/coredns-autoscaling.html).
+  * [Implement Node local cache](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/).
+
+
+While scaling out `CoreDNS` it is also crucial to distribute replicas across different nodes. Co-locating CoreDNS on same nodes, will again end up throttling the ENI, rendering additional replicas ineffective. In order to distribute `CoreDNS` across nodes, apply node anti-affinity policy to the pods:
+
+```
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+      topologyKey: kubernetes.io/hostname
+```
+
+#### CoreDNS Monitoring
+It is recommended to continuously monitor CoreDNS metrics. Refer to [EKS Networking Best Practices](https://docs.aws.amazon.com/eks/latest/best-practices/monitoring_eks_workloads_for_network_performance_issues.html#_monitoring_coredns_traffic_for_dns_throttling_issues) for detailed information.
 
 ### DNS Lookups and ndots
 
