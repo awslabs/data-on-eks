@@ -8,7 +8,7 @@ metadata:
   namespace: flink-team-a-ns
 spec:
   imagePullPolicy: Always
-  emrReleaseLabel: "emr-7.1.0-flink-latest"
+  emrReleaseLabel: "emr-7.9.0-flink-latest"
   flinkVersion: v1_18
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "2"
