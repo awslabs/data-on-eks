@@ -21,7 +21,15 @@ const config = {
 
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'zh'],
+    localeConfigs: {
+      en: {
+        label: "English",
+      },
+      zh: {
+        label: "简体中文",
+      },
+    },
   },
 
   presets: [
@@ -67,6 +75,7 @@ const config = {
           { type: 'doc', docId: 'benchmarks/emr-on-eks', position: 'left', label: 'Benchmarks' },
           { type: 'doc', docId: 'resources/intro', position: 'left', label: 'Resources' },
           { href: 'https://github.com/awslabs/data-on-eks', label: 'GitHub', position: 'right' },
+          { type: 'localeDropdown', position: 'right' },
         ],
       },
       colorMode: {
