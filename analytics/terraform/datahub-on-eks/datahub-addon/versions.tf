@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.3.0"
+  required_version = ">= 1.3.2"
 
   required_providers {
     kubernetes = {
@@ -8,7 +8,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.4.1"
+      version = "~> 2.17"
     }
     random = {
       source  = "hashicorp/random"
