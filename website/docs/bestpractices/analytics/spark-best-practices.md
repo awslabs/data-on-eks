@@ -14,22 +14,22 @@ For deploying Spark on EKS you can leverage the [blueprints](https://awslabs.git
 
 ## EKS Networking
 ### VPC and Subnets Sizing
-#### Problem Statement
+#### VPC IP address exhaustion
 
 As EKS clusters scale up with additional Spark workloads, the number of pods managed by a cluster can easily grow into the thousands, each consuming an IP address. This creates challenges, since IP addresses within a VPC are limited, and it's not always feasible to recreate a larger VPC or extend the current VPC's CIDR blocks.
-    * Worker nodes and pods both consume IP addresses. By default, VPC CNI has `WARM_ENI_TARGET=1` means that `ipamd` should keep "a full ENI" of available IPs around in the `ipamd` warm pool for the Pod IP assignment.
-        * `ipamd` stands for IP Address Management Daemon, and [is a core component of VPC CNI](https://docs.aws.amazon.com/eks/latest/best-practices/networking.html#amazon-virtual-private-cloud-vpc-cni). It maintains a warm pool of available IPs for fast Pod startup times.
+
+Worker nodes and pods both consume IP addresses. By default, VPC CNI has `WARM_ENI_TARGET=1` means that `ipamd` should keep "a full ENI" of available IPs around in the `ipamd` warm pool for the Pod IP assignment. 
     
 #### Remediation for IP Address exhaustion
 While IP exhaustion remediation methods exist for VPCs, they introduce additional operational complexity and have significant implications to consider. Hence, for new EKS clusters, it is recommended to over-provision the subnets you will use for Pod networking for growth.
     
-For addressing IP address exhaustion, consider creating new subnets with larger CIDR blocks within the VPC and deploying worker nodes in these expanded subnets.
+For addressing IP address exhaustion, consider adding secondary CIDR blocks to your VPC and creating new subnets from these additional address ranges, then deploying worker nodes in these expanded subnets.
 
 If adding more subnets, is not an option, then you will have to work on optimising the IP address assignment by tweaking CNI Configuration Variables. Refer to [configure MINIMUM_IP_TARGET](/docs/bestpractices/networking#avoid-using-warm_ip_target-in-large-clusters-or-cluster-with-a-lot-of-churn).
 
 
 ### CoreDNS Recommendations
-#### Problem Statement
+#### DNS Lookup Throttling
 Spark applications running on Kubernetes generate high volumes of DNS lookups when executors communicate with external services. This occurs during data ingestion, processing, and when connecting to external databases or shuffle services.
 
 When DNS traffic exceeds 1024 packets per second for a CoreDNS replica, DNS requests will be throttled, resulting in `unknownHostException` errors.
@@ -40,26 +40,26 @@ It is recommended to scale CoreDNS, as your workload scales. Refer to [Scaling C
 
 ### Reduce Inter AZ Traffic
 
-#### Problem Statement
+#### Inter AZ Costs
 During the shuffle stage, Spark executors may need to exchange data between them. If the Pods are spread across multiple Availability Zones (AZs), this shuffle operation can turn out to be very expensive, especially on Network I/O front, which will be charged as Inter-AZ Traffic costs.
 
 #### Remediation
-For Spark workloads, it is recommended to colocate executors and worker pods in the same AZ. Colocating workloads in the same AZ serves two main purposes:
-        * Reduce inter-AZ traffic costs
-        * Reduce network latency between executors/Pods
+For Spark workloads, it is recommended to colocate executor pods and worker nodes in the same AZ. Colocating workloads in the same AZ serves two main purposes:
+* Reduce inter-AZ traffic costs
+* Reduce network latency between executors/Pods
 
 Refer to [Inter AZ Network Optimization](/docs/bestpractices/networking#inter-az-network-optimization) for having pods co-locate on the same AZ.
 
-## Karpenter Recommendations for Scaling Compute nodes
-Here are Karpenter recommendations for Spark workloads. For complete Karpenter configuration details, refer [Karpenter documentation](https://karpenter.sh/docs/).
+## Karpenter Recommendations
+Here are the Karpenter recommendations for scaling compute nodes while running Spark workloads. For complete Karpenter configuration details, refer [Karpenter documentation](https://karpenter.sh/docs/).
 
 Consider creating separate NodePools for driver and executor pods.
 
 ### Driver Nodepool
 The Spark driver is a single pod and manages the entire lifecycle of the Spark application. Terminating spark driver pod, effectively means terminating the entire spark job.
-    * Configure Driver Nodepool to use on-demand nodes only.
-    * Disable `consolidation` on Driver Nodepool.
-    * Use `node selectors` or `taints/tolerations` for placing driver pods on this designated Driver NodePool.
+* Configure Driver Nodepool to always use `on-demand` nodes only. When Spark driver pods run on spot instances, they are vulnerable to unexpected terminations due to spot instance reclamation, resulting in computation loss and interrupted processing that requires manual intervention to restart.
+* Disable [`consolidation`](https://karpenter.sh/docs/concepts/disruption/#consolidation) on Driver Nodepool.
+* Use `node selectors` or `taints/tolerations` for placing driver pods on this designated Driver NodePool.
 
 ### Executor Nodepool
 #### Configure Spot instances 
@@ -77,65 +77,76 @@ While enabling `consolidation` for Spark executor pods can lead to better cluste
 
 This impact is particularly noticeable in long-running Spark jobs. To mitigate this, it's essential to carefully tune the consolidation interval.
 
-To save intermediate data computed in Spark Executors, consider one of the following options, which are discussed in `Storage section`:
-    * PVC attach
-    * External Shuffle storage
-    * Executor handling (Related to handling interruptions)
-        * `spark.executor.decommission.enabled=true`
-        * `spark.storage.decommission.enabled=true`
+Enable graceful executor pods shutdown:
+* `spark.executor.decommission.enabled=true`: Enables graceful decommissioning of executors, allowing them to complete their current tasks and transfer their cached data before shutting down. This is particularly useful when using spot instances for executors.
+
+* `spark.storage.decommission.enabled=true`: Enables the migration of cached RDD blocks from the decommissioning executor to other active executors before shutdown, preventing data loss and the need for recomputation.
+
+
+To explore other means to save intermediate data computed in Spark Executors, refer to [Storage Best Practices](#storage-best-practices).
 
 #### Handling interruptions during Karpenter Consolidation/Spot Termination
 
-Perform a controlled decommissioning instead of killing an executor. Leverage `TerminationGracePeriod`, be executor aware and save shuffle data before node being decommissioned.
+Perform controlled decommissioning instead of abruptly killing executors when nodes are scheduled for termination. To achieve this:
+* Configure appropriate TerminationGracePeriod values for Spark workloads.
+* Implement executor-aware termination handling.
+* Ensure shuffle data is saved before nodes are decommissioned.
 
-Spark also provides native configurations, to control the termination behaviour.
-        * Controlling the `executor` interruptions
-            * Config:
-                * `spark.executor.decommission.enabled`
-                * `spark.executor.decommission.forceKillTimeout`
-            * This is particularly useful in scenarios where executors might be terminated due to spot instance interruptions or Karpenter consolidation events.
-            * This will allow executor to gracefully shutdown. Executors will stop accepting tasks and would notify driver about decommissioning state.
-        * To control executor’s `BlockManager` behaviour
-            * Config:
-                * `spark.storage.decommission.enabled`
-                * `spark.storage.decommission.shuffleBlocks.enabled`
-                * `spark.storage.decommission.rddBlocks.enabled`
-                * `spark.storage.decommission.fallbackStorage.path`
+Spark provides native configurations to control termination behavior:
 
-This enables the migration of shuffle and RDD blocks from decommissioning executor to other available executors or to a fallback storage location if configured. This helps in dynamic environment by reducing the need to recompute the shuffle data or RDD blocks, there by improving the job completion times and resource efficiency.
+**Controlling executor interruptions**
+* **Configs**:
+* `spark.executor.decommission.enabled`
+* `spark.executor.decommission.forceKillTimeout`
+These configurations are particularly useful in scenarios where executors might be terminated due to spot instance interruptions or Karpenter consolidation events. When enabled, executors will gracefully shutdown by stopping task acceptance and notifying the driver about their decommissioning state.
 
+**Controlling executor's BlockManager behavior**
+* **Configs**:
+* `spark.storage.decommission.enabled`
+* `spark.storage.decommission.shuffleBlocks.enabled`
+* `spark.storage.decommission.rddBlocks.enabled`
+* `spark.storage.decommission.fallbackStorage.path`
+These settings enable the migration of shuffle and RDD blocks from decommissioning executors to other available executors or to a fallback storage location. This approach helps in dynamic environments by reducing the need to recompute shuffle data or RDD blocks, thereby improving job completion times and resource efficiency.
 
 ## Advanced Scheduling Considerations
 ### Default Kubernetes Scheduler behaviour.
 
-Default kubernetes scheduler uses `least allocated` approach. This strategy aims to distribute pods evenly across cluster, which helps in maintaining availability and a balanced resource utilization across all nodes, rather than packing more pods in fewer nodes.
+Default Kubernetes scheduler uses `least allocated` approach. This strategy aims to distribute pods evenly across cluster, which helps in maintaining availability and a balanced resource utilization across all nodes, rather than packing more pods in fewer nodes.
 
 `Most allocated` approach on the other hand, aims to favor nodes with most amount of allocated resources, which leads to packing more pods onto nodes that are already heavily allocated. This approach is favourable for spark jobs, as it aims for high utilization on select nodes at pod scheduling time, leading to better consolidation of nodes. You will have to leverage a custom kube-scheduler with this option enabled, or leverage Custom Schedulers purpose built for more advanced orchestration.
 
 ### Custom Schedulers
 
 Custom schedulers enhance Kubernetes’ native scheduling capabilities by providing advanced features tailored for batch and high-performance computing workloads. Custom schedulers enhance resource allocation by optimizing bin-packing and offering scheduling tailored to specific application needs. Here are popular custom schedulers for running Spark workloads on Kubernetes.
-    * [Apache Yunikorn](https://yunikorn.apache.org/)
-    * [Volcano](https://volcano.sh/en/)
+* [Apache Yunikorn](https://yunikorn.apache.org/)
+* [Volcano](https://volcano.sh/en/)
 
 Advantages of leveraging custom schedulers like Yunikorn.
-        * It provides hierarchical queue system and configurable policies allow for complex resource management.
-        * Gang Scheduling
+* Hierarchical queue system and configurable policies allowing for complex resource management.
+* Gang scheduling, which ensures all related pods (like Spark executors) start together, preventing resource wastage.
+* Resource fairness across different tenants and workloads.
+
 
 ### How will Yunikorn and Karpenter work together?
 
-Karpenter focuses on node provisioning and scaling, while custom schedulers like Yunikorn, brings in application awareness for scheduling.
+Karpenter and Yunikorn complement each other by handling different aspects of workload management in Kubernetes:
 
-Yunikorn manages the advanced application scheduling aspects like queue management, resource fairness, gang scheduling.Once Yunikorn schedules the pods, based on application awareness, Karpenter will then fulfil needs of pending pods, spawned by Yunikorn.
+* **Karpenter** focuses on node provisioning and scaling, determining when to add or remove nodes based on resource demands.
+
+* **Yunikorn** brings application awareness to scheduling through advanced features like queue management, resource fairness, and gang scheduling.
+
+In a typical workflow, Yunikorn first schedules pods based on application-aware policies and queue priorities. When these pods remain pending due to insufficient cluster resources, Karpenter detects these pending pods and provisions appropriate nodes to accommodate them. This integration ensures both efficient pod placement (Yunikorn) and optimal cluster scaling (Karpenter).
+
+For Spark workloads, this combination is particularly effective: Yunikorn ensures executors are scheduled according to application SLAs and dependencies, while Karpenter ensures the right node types are available to meet those specific requirements.
 
 
 ## Storage Best Practices
 ### Node Storage
-By default, the EBS root volumes of worker nodes is set to 20GB. Spark Executors use local storage for temporary data like shuffle data, intermediate results and temporary files. Default storage of 20GB of root volume attached to worker nodes can be limiting in size and performance. Consider the following options to cater to your performance and storage size requirements.
-        * Expand the root volume capacity.
-        * Configure high-performance storage with better I/O and latency.
-        * Mount additional volumes on worker nodes for temporary data storage.
-        * Leverage dynamically provisioned PVCs that can be attached directly to executor pods.
+By default, the EBS root volumes of worker nodes are set to 20GB. Spark Executors use local storage for temporary data like shuffle data, intermediate results, and temporary files. This default storage of 20GB root volume attached to worker nodes can be limiting in both size and performance. Consider the following options to address your performance and storage size requirements:
+* Expand the root volume capacity to provide ample space for intermediate Spark data. You will have to arrive at optimal capacity based on average size of the dataset that each executor will be processing and complexity of spark job.
+* Configure high-performance storage with better I/O and latency.
+* Mount additional volumes on worker nodes for temporary data storage.
+* Leverage dynamically provisioned PVCs that can be attached directly to executor pods.
 
 ### Reuse PVC
 This option allows reusing PVCs associated with Spark executors even after the executors are terminated (either due to consolidation activity or preemption in case of Spot instances).
@@ -144,13 +155,13 @@ This allows for preserving the intermediate shuffle data and cached data on the 
 
 `spark.kubernetes.executor.reusePersistentVolume=true`
 
-### External Shuffle services like `Apache Celeborn`
-Leverage external shuffle service to decouple compute and storage, allowing spark executors to write data to external shuffle service instead of local disks, reducing the risk of data loss and data re-computation due to executor termination/consolidation.
+### External Shuffle services
+Leverage external shuffle services like Apache Celeborn to decouple compute and storage, allowing Spark executors to write data to an external shuffle service instead of local disks. This reduces the risk of data loss and data re-computation due to executor termination or consolidation.
 
-This allows for better resource management, when Spark Dynamic Resource Allocation is enabled.
+This also allows for better resource management, especially when `Spark Dynamic Resource Allocation` is enabled. External shuffle service allows Spark to preserve shuffle data even after executors are removed during dynamic resource allocation, preventing the need for recomputation of shuffle data when new executors are added. This enables more efficient scale-down of resources when they're not needed.
 
-Also consider the performance implications of Apache Celeborn.
-    * External shuffle services is typically suitable for extremely large volumes of shuffle data.
-    * For smaller datasets or applications with low shuffle data volues, the overhead of setting up and managing external shuffle service might outweigh its benefits.
+Also consider the performance implications of external shuffle services. For smaller datasets or applications with low shuffle data volues, the overhead of setting up and managing external shuffle service might outweigh its benefits.
+
+External shuffle services is recommended when dealing with either shuffle data volumes exceeding 500GB to 1TB per job or long running Spark applications that run for several hours to multiple days.
 
 Refer to this [Celeborn Documentation](https://celeborn.apache.org/docs/latest/deploy_on_k8s/) for deployment on Kubernetes and integration configuration with Apache Spark.

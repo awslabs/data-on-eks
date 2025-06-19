@@ -15,8 +15,6 @@ The AWS VPC CNI maintains this “warm pool” of IP addresses on the EKS worker
 
 During periods of high churn or large scale out, these EC2 API calls can be rate throttled, which will delay the provisioning of Pods and thus delay the execution of workloads. Also, configuring the VPC CNI to minimize this warm pool can increase the EC2 API calls from your nodes and increase the risk of rate throttling.
 
-Hence, planning for this extra IP address usage can avoid rate throttling problems and managing the IP address usage.
-
 
 ### Consider using a secondary CIDR if your IP space is constrained.
 
@@ -53,7 +51,8 @@ This failure delays the launch of the Pod and adds pressure to the kubelet and w
 
 ### Avoid using `WARM_IP_TARGET` in large clusters, or cluster with a lot of churn
 
-`WARM_IP_TARGET` can help limit the “wasted” IPs for small clusters, or clusters that has very low pod churn. However, this environment variable on the VPC CNI needs to be carefully configured in large clusters as it may increase the number of EC2 API calls, increasing the risk and impact of rate throttling.
+`WARM_IP_TARGET` can help limit the “wasted” IPs for small clusters, or clusters that has very low pod churn. However, this environment variable on the VPC CNI needs to be carefully configured in large clusters, as it may increase the number of EC2 API calls for IP attachment and detachment operations by ipamd, increasing the risk and impact of rate throttling.
+(`ipamd` stands for IP Address Management Daemon, and [is a core component of VPC CNI](https://docs.aws.amazon.com/eks/latest/best-practices/networking.html#amazon-virtual-private-cloud-vpc-cni). It maintains a warm pool of available IPs for fast Pod startup times.)
 
 For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_TARGET` to a value slightly higher than the expected number of pods you plan to run on each node. This will allow the CNI to provision all of those IP addresses in a single (or few) calls.
 
@@ -74,11 +73,6 @@ For clusters that have a lot of Pod churn, it is recommended to set `MINIMUM_IP_
   [...]
 ```
 For detailed information of tweaking VPC CNI variables, refer to [this documentation on github](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/eni-and-ip-target.md).
-
-:::info
-Careful consideration is needed when configuring `MINIMUM_IP_TARGET`, as it increases EC2 API call frequency for IP attachment and detachment operations by ipamd. Excessive API calls can trigger throttling, preventing new ENI or IP assignments across the entire cluster.
-Hence this configuration is ideally recommended for small clusters or clusters with very low pod churn.
-:::
 
 ### Limit the number of IPs per node on large instance types with `MAX_ENI` and `max-pods`
 
