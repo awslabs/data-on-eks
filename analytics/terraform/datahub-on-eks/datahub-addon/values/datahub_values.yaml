@@ -5,6 +5,13 @@ datahub-gms:
   image:
     repository: acryldata/datahub-gms
     tag: v1.1.0
+  # Configure GMS service with internal load balancer
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      service.beta.kubernetes.io/aws-load-balancer-internal: "true"
 
 datahub-frontend:
   enabled: true
