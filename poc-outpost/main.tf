@@ -1,6 +1,8 @@
-# data "aws_eks_cluster_auth" "this" {
-#   name = local.name
-# }
+# Récupération des informations pour la connexion au cluster EKS
+# Utilise en particulier pour les modules helm et kubectl
+data "aws_eks_cluster_auth" "this" {
+  name = local.name
+}
 # Read AZ for current region
 data "aws_availability_zones" "available" {}
 # Read Outpost informations
