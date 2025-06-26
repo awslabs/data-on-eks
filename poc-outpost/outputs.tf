@@ -7,3 +7,18 @@
 #   description = "Grafana password secret name"
 #   value       = aws_secretsmanager_secret.grafana.name
 # }
+output "eks_cluster_certificate_authority_data" {
+  value = module.eks.cluster_certificate_authority_data
+  description = "Le certificat CA utilisé par le serveur API EKS"
+  sensitive = true
+}
+
+output "eks_cluster_endpoint" {
+  value       = module.eks.cluster_endpoint
+  description = "Le endpoint du cluster EKS"
+}
+
+output "eks_cluster_name" {
+  value       = module.eks.cluster_name
+  description = "Nom du cluster EKS"
+}

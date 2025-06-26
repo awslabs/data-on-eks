@@ -23,6 +23,11 @@ module "vpc" {
     "fake" = "true"
   }
 
+  public_subnet_tags = {
+    "kubernetes.io/role/elb" = 1,
+    "kubernetes.io/cluster/${local.name}" = "owned"
+  }
+
   # LIMITATION ACTUELLE DU MODULE VPC.
   # Le module active directement les COIP (Pool IP dans Outpost) si outpost_arn est setté. 
   # Mais l'outpost du POC est "No CoIP pools available with direct VPC routing 
