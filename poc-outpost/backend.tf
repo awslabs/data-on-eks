@@ -6,4 +6,7 @@ terraform {
     dynamodb_table = "tf-backend-012046422670"
     encrypt        = true
   }
+  # backend "local" {
+  #   path = "terraform.tfstate"
+  # }
 }

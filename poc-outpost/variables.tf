@@ -65,3 +65,9 @@ variable "eks_cluster_version" {
 #   type        = bool
 #   default     = true
 # }
+
+variable "enable_airflow" {
+  description = "Enable Apache Airflow"
+  type        = bool
+  default     = true
+}

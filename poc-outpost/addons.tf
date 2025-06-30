@@ -1,3 +1,37 @@
+#---------------------------------------------------------------
+# GP3 Encrypted Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_annotations" "disable_gp2" {
+  annotations = {
+    "storageclass.kubernetes.io/is-default-class" : "true"
+  }
+  api_version = "storage.k8s.io/v1"
+  kind        = "StorageClass"
+  metadata {
+    name = "gp2"
+  }
+  force = true
+
+  depends_on = [module.eks.eks_cluster_id]
+}
+
+#---------------------------------------------------------------
+# IRSA for EBS CSI Driver
+#---------------------------------------------------------------
+module "ebs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "~> 5.34"
+  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
+  attach_ebs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+  tags = local.tags
+}
+
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.2"
@@ -109,3 +143,38 @@ module "eks_blueprints_addons" {
 #       cluster_name         = module.eks.cluster_name
 #     })]
 #   }
+
+#---------------------------------------------------------------
+# Data on EKS Kubernetes Addons
+#---------------------------------------------------------------
+module "eks_data_addons" {
+  source = "aws-ia/eks-data-addons/aws"
+  version = "1.33.0" # ensure to update this to the latest/desired version
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  #---------------------------------------------------------------
+  # Airflow Add-on
+  #---------------------------------------------------------------
+  enable_airflow = true
+  airflow_helm_config = {
+    namespace = try(kubernetes_namespace_v1.airflow[0].metadata[0].name, local.airflow_namespace)
+    version = "1.17.0"
+    values = [
+      templatefile("${path.module}/helm-values/airflow-values.yaml", {
+        # Airflow Postgres RDS Config
+        airflow_db_user = local.airflow_name
+        airflow_db_pass = try(sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string), "")
+        airflow_db_name = try(module.db[0].db_instance_name, "")
+        airflow_db_host = try(element(split(":", module.db[0].db_instance_endpoint), 0), "")
+        #Service Accounts
+        worker_service_account = try(kubernetes_service_account_v1.airflow_worker[0].metadata[0].name, local.airflow_workers_service_account)
+        scheduler_service_account = try(kubernetes_service_account_v1.airflow_scheduler[0].metadata[0].name, local.airflow_scheduler_service_account)
+        webserver_service_account = try(kubernetes_service_account_v1.airflow_webserver[0].metadata[0].name, local.airflow_webserver_service_account)
+        # S3 bucket config for Logs
+        s3_bucket_name = try(module.airflow_s3_bucket[0].s3_bucket_id, "")
+        webserver_secret_name = local.airflow_webserver_secret_name
+      })
+    ]
+  }
+}

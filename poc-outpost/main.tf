@@ -10,7 +10,7 @@ data "aws_outposts_outpost" "default" {
   name = var.outpost_name
 }
 # data "aws_caller_identity" "current" {}
-# data "aws_partition" "current" {}
+data "aws_partition" "current" {}
 
 # data "aws_ecrpublic_authorization_token" "token" {
 #   provider = aws.virginia
@@ -37,6 +37,17 @@ locals {
 
   # account_id = data.aws_caller_identity.current.account_id
   # partition  = data.aws_partition.current.partition
+
+  #---------------------------------------------------------------
+  # Local variables airflow
+  #---------------------------------------------------------------
+  airflow_name                      = "airflow"
+  airflow_namespace                 = "airflow"
+  airflow_scheduler_service_account = "airflow-scheduler"
+  airflow_webserver_service_account = "airflow-webserver"
+  airflow_workers_service_account   = "airflow-worker"
+  airflow_webserver_secret_name     = "airflow-webserver-secret-key"
+  #---------------------------------------------------------------
 
   tags = {
     Blueprint  = local.name
