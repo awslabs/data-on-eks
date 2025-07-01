@@ -55,6 +55,8 @@ data:
     db: ${airflow_db_name}
     sslmode: disable
 
+postgresql:
+  enabled: false
 ###################################
 # Flask secret key for Airflow Webserver: `[webserver] secret_key` in airflow.cfg
 ###################################
@@ -71,7 +73,19 @@ workers:
   serviceAccount:
     create: false
     name: ${worker_service_account}
-
+  extraContainers:
+    - name: s3-sync
+      image: amazon/aws-cli:latest
+      command: [ "sh", "-c", "aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path};" ]
+      volumeMounts:
+        - name: dags
+          mountPath: ${airflow_dag_path}
+  extraVolumeMounts:
+    - name: dags
+      mountPath: ${airflow_dag_path}
+  extraVolumes:
+    - name: dags
+      emptyDir: { }
 ###################################
 # Airflow scheduler settings
 ###################################
@@ -110,6 +124,19 @@ scheduler:
     - name: git-sync-ssh-key
       secret:
         secretName: airflow-ssh-secret
+    - name: dags
+      emptyDir: { }
+  extraVolumeMounts:
+    - name: dags
+      mountPath: ${airflow_dag_path}
+  extraContainers:
+    - name: s3-sync
+      image: amazon/aws-cli:latest
+      command: [ "sh", "-c", "while true; do aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path}; sleep 60; done" ]
+      volumeMounts:
+        - name: dags
+          mountPath: ${airflow_dag_path}
+
 ###################################
 # Airflow webserver settings
 ###################################
@@ -165,7 +192,8 @@ pgbouncer:
 ###################################
 config:
   core:
-    dags_folder: "s3://${s3_bucket_name}/dags"
+    dags_folder: "${airflow_dag_path}"
+    #dags_folder: "/tmp/"
     # This is ignored when used with the official Docker image
     load_examples: 'True'
     executor: '{{ .Values.executor }}'
@@ -174,7 +202,7 @@ config:
     remote_logging: 'True'
     logging_level: 'INFO'
     colored_console_log: 'True'
-    remote_base_log_folder: "s3://${s3_bucket_name}/airflow-logs"
+    remote_base_log_folder: "s3://${s3_bucket_name}/airflow-logs/"
     # aws_s3_conn is the name of the connection that needs to be created using Airflow admin UI once the deployment is complete
     # Steps can be seen in the docs link here -> https://github.com/apache/airflow/issues/25322
     remote_log_conn_id: 'aws_s3_conn'
@@ -190,42 +218,24 @@ dags:
     # Enable persistent volume for storing dags
     enabled: false
 
-
   gitSync:
     enabled: false
 
-    # git repo clone url
-    repo: git@github.com:Hyper-Mesh/airflow-dags.git
-    #repo: git@github.com:jagpk/sample-airflow-dags.git
-    branch: main
-    rev: HEAD
-    depth: 1
 
-    # the number of consecutive failures allowed before aborting
-    maxFailures: 5
-    # subpath within the repo where dags are located
-    # should be "" if dags are at repo root
-    subPath: "dags"
-
-    # If you are using an ssh clone url, you can specify the name of the secret below
-    sshKeySecret: airflow-ssh-secret
-
-    # If you are using an ssh private key, you can additionally
-    # specify the content of your known_hosts file, example:
-    #https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
-    #https://airflow.apache.org/docs/helm-chart/stable/production-guide.html#knownhosts
-
-    knownHosts: |
-      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-      github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
-      github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
-
-###################################
-# Airflow Extra Secrets
-###################################
-# https://airflow.apache.org/docs/helm-chart/stable/manage-dags-files.html#mounting-dags-from-a-private-github-repo-using-git-sync-sidecar
-
-extraSecrets:
-  airflow-ssh-secret:
-    data: |
-      gitSshKey: 'LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUNGd0FBQUFkemMyZ3RjbgpOaEFBQUFBd0VBQVFBQUFnRUF1NGdNMW1VQkhoSSt5a0xLMGM0c0hxUTVtVUpqYVY4QVAwSktDTTk5MFRzNG9nWWJiQW8yClBzNE8ram1NMVhESXNUUDNXcmZPNHZkSEhUUG96QUpPOTI4S1BLMTBsQ3lybVBUUVZmVGpxaHR4Z2dldWs2djFjVURNNHkKVFlsb3ZTWERxQTZvTFN2TlMwS2lhRjhKQmtrUkdlRzc0MERhUTF0Y2svRGVyT0N4YWVsQ1NWbWJsYjc1RXhQektkYmRjdQpWMEJwcVJWZHh4UGp2ZGtNbUpmZmtKT0lpS2FmUVVLc3lkUjNpVFNEUjkxUVlIS2dJbUNzcm1oVjBwY25GRGFubnFDQUh3CloraTZubFlRbmdyZGRHUVg1NTZDakpBRXl3QXg0cDJyQ0NBdlJyV1V2SEJiZVNIU2lQVGdKelFpNlhyRlFsdlhrRjZBMmsKSzBsdDJkNXVhMGhKRi95dnlLeHBTczQzeWVTK2tZZGkxOUhFMVBXdEZaNDFkMjZoYkZlZWY3bmw1MGpwT3IreG5oMjZmagp2OERROEs4RFV0RmhUTk1vVmhERWM2UDBFaTNiQ2R6VHFaYjZVdFY0KzU0UitCRCtQQURHSXpra3RmV0IwbG1pQjZ3MVpvCksxNndEUjZ5cWpFYklUeVR6UXZnbkZOcG9pNndraWhPeXAzVjc1cmZmUkx6QTZQd2pvQWxNTGN3VXIzVHhqM29ORTN0eVMKYVFvcGJNMVBHU3dqQTFtRW4rdTFSU3NyOHhmT1dJTk41TDJNc2Fwa3VlYUlBZlgzZEZTaW5STlFNS2FwWjdrUU9WMjRYYgpPeHBlRm94aVo1ZTFQQjA0UG5Oc1dMS0htaGJJRHVFeGNyTU4vMUhqRERYODF5bXp2UnEyNkNLZjBvcGh1d0NnMVE0Yi96CkVBQUFkUWRhc25sSFdySjVRQUFBQUhjM05vTFhKellRQUFBZ0VBdTRnTTFtVUJIaEkreWtMSzBjNHNIcVE1bVVKamFWOEEKUDBKS0NNOTkwVHM0b2dZYmJBbzJQczRPK2ptTTFYRElzVFAzV3JmTzR2ZEhIVFBvekFKTzkyOEtQSzEwbEN5cm1QVFFWZgpUanFodHhnZ2V1azZ2MWNVRE00eVRZbG92U1hEcUE2b0xTdk5TMEtpYUY4SkJra1JHZUc3NDBEYVExdGNrL0Rlck9DeGFlCmxDU1ZtYmxiNzVFeFB6S2RiZGN1VjBCcHFSVmR4eFBqdmRrTW1KZmZrSk9JaUthZlFVS3N5ZFIzaVRTRFI5MVFZSEtnSW0KQ3NybWhWMHBjbkZEYW5ucUNBSHdaK2k2bmxZUW5ncmRkR1FYNTU2Q2pKQUV5d0F4NHAyckNDQXZScldVdkhCYmVTSFNpUApUZ0p6UWk2WHJGUWx2WGtGNkEya0swbHQyZDV1YTBoSkYveXZ5S3hwU3M0M3llUytrWWRpMTlIRTFQV3RGWjQxZDI2aGJGCmVlZjdubDUwanBPcit4bmgyNmZqdjhEUThLOERVdEZoVE5Nb1ZoREVjNlAwRWkzYkNkelRxWmI2VXRWNCs1NFIrQkQrUEEKREdJemtrdGZXQjBsbWlCNncxWm9LMTZ3RFI2eXFqRWJJVHlUelF2Z25GTnBvaTZ3a2loT3lwM1Y3NXJmZlJMekE2UHdqbwpBbE1MY3dVcjNUeGozb05FM3R5U2FRb3BiTTFQR1N3akExbUVuK3UxUlNzcjh4Zk9XSU5ONUwyTXNhcGt1ZWFJQWZYM2RGClNpblJOUU1LYXBaN2tRT1YyNFhiT3hwZUZveGlaNWUxUEIwNFBuTnNXTEtIbWhiSUR1RXhjck1OLzFIakREWDgxeW16dlIKcTI2Q0tmMG9waHV3Q2cxUTRiL3pFQUFBQURBUUFCQUFBQ0FIUWtFaTlGWnFmRkRQWWUzNVdJWm5LanFyaHNFVDFWQk1Zbwp1OGt4Ris3WkNuM3Q0bFhMRFVWZ1FJNWZ6Z1R5VUpqT1lrYmd4MVJ4YUsyQlZJL2tiaHQzdlpOT3FZQ0xHY3NrODFJSTFHCmFwa0diRGN5OHB0Rnhya1hpcmZTZmZlR3grSHhFZDdIM2VEYVo5TFQ2TGJuMFp1QjNlY2tad2lJTUpHKy8ybDV6dWFVKysKU0pobjM3UkM2NGtFUTlPZkRLZ2swRXRUWER6SzZLVFBJNm50aFJ2NUF2bitsMnJIYkZPakxsVGZITjhKQlpwMTR3N25hSQpxck8xdXRHUnEvcnBmak52WUFBNmRqbFJmQUVsSVhuUDg2NFMwUzlVa21OV3Y0NWxyMkxjNitxUzBvYlIzeFRxQ1lXZ2dxCkpFKzhvMXFxMHFUQnF4TElRQUErL2JXTXVEelFRS0lpRWVsa0VwYWIvSHJPQThJcUFaZXlwNG5ES3doOUtaL3lqU2NOY2gKV2NPUTdJUXptck1kbm5pb1dsZmNHYURSU2x0K3FIcHNxN29SSHEyb1pDMllLTldjMWlpckM2clhsR2hHU3BBaUhkT1F6QQpnYnlsWklxQVlwM3ExUEdNbGVlOHVmUC93S05GbWdWb1VVNW03ZEF0RjBmdTVtWHAxOWcrN3FtQ0E4WloxdFpaQzZsWWxmClFVNHFQWWEvbFV3Sm9ndjVDL1Z1QmZwcGJjeTlCaXgyWnU1QzliRmd4SmVSVE8ySUJvcGRjeGY5dlBYTCtUZFZyRkRmOGwKVDlFMXNTTFNFd3ZnSmZ1dURiZlRNb1pQdEVRY3hnUjN2MjJCb2dxbnkwbmlOOTVHeHZKVUNpS3RWL2twaHdwUGxUcFc5RgpwTDhlOGtLZ3AzRCtJQ3lWTUJBQUFCQUJldVhhRUF2U3BUL3F4Q01uVkRhUVFXbjhvYzI5TVFpTkxKS1g3cTVDaGlxR2w1CjZHNjN1SzdNTXg1QStERmlWRHlFOU1EYWorejU0TkVId1A1WXZOcWt0a0RjMlpkbjVnNWdScVFNYUFlOUJQRldQdkZ6RzkKN1NxM2lDbk1COTRhbjNVTzR0VzlVUTVIM1AxWCs3RWtvanV3djlCTlpjd3k1SFVDV1pDS3dsR2dXUjl0MFY0dVNva0psTQpyb3Q2dy84eWN3emlVQmxnMDB0VWc4UUZKODhwU2VPdWxyc3k5QWNEY2FHb2txUDRLMGR4ZkZpWXRzQkNlNzd0ZHMxbUQ5CjYrRXBDVk0wNEZzNlQ4NlZOcWtQYzNCcm9TbW1EQWEzeTZYZGw1bjZ1Y0VmTFRZVTVhYmJZRlRkWUs4Q1NIVTdEdzYrT2oKVncxR1F0Qm84ZGIwVWRzQUFBRUJBUEorbk0vL1lUNDRHbWxPZ3FraFBvRG5IRi90WDM0Mk1zMms0OXozSFIvWjVOYmduRwptY2lLSHhNU1BsWU05QUl5QXp3OTRsRWt2NENlRExuOUFEa2FOSmg1eE5hd3B1WUhjaDUwWmZ6TjU2d1dEbllGZEk3SmxMCkJlWVNUeFBnZ0VNWlJaSERLWEljeHhrRUlkNGhxUnhNVTdEdlhQUDg3UEFaMUV3OUVlZVh6MEJRNXlvMDNNd0c5TVZqd1gKRldxUG9rdy8remZkVXpaM2FRb3VSNldKYUs1Z0JoYTNkaVFmbXZDY2RVZmFzMDJPakErM3BIWDJyVWJYRDRTTGFlK1VGUApmNmd0eHREYTZkWFFlZ0ZEaG5STEZRdlJVOUpCdG9xa2oxa2Mza0U2WlhTOTlCT3VoSFRRbFc2RWJtSExhbVVpcFo4eGJYCmhmclV6RGNDamp4VmtBQUFFQkFNWDV5OE84VU1tU2V4dE1Zc3JtWEkwQnNDcHNPMytPMUtKN3A0eWpRcW1lc1F4MGp5akIKRU1rdng3ZGdVbUZ2WmtuZ0kwUGFobXgxNE9hMTRrTFBWU2VUaExYQXd4ZFJLTzRnR2dEQjA1VTR6QnNWOTJScDhqaVg5NgpsMUNxRlBiaFRad2J0QkdZQ2JheDJPY0VFcHR6SmlkanNLcG5sT1JRVDBsdWp0cUluTGt4aFBBVnJkZ3Vib3BLMlA5bXhOCnhmNFg5cDN3NnlCRlNsSzVwT1hseTUvUzlGa2puaURmVnRCVEFTaVFIQUlIdktjWHo1dFNKZEZldkhramxBS24xZktjQWoKOWc1clpRVFRmK05CeWxjSkdnK1VkN0RCdG9JVGhVcWdkQ05JVld3cFhyalpiK2RQQWc3Z0NwM0FMU0NKdzA5aVNYN1g4SwpkcVlab25BSTFaa0FBQUFWZG1GeVlTNWliMjUwYUhWQVoyMWhhV3d1WTI5dEFRSURCQVVHCi0tLS0tRU5EIE9QRU5TU0ggUFJJVkFURSBLRVktLS0tLQo='
+dagProcessor:
+  extraContainers:
+    - name: s3-sync
+      image: amazon/aws-cli:latest
+      command: ["sh", "-c", "while true; do aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path}; sleep 60; done"]
+      volumeMounts:
+        - name: dags
+          mountPath: ${airflow_dag_path}
+  extraVolumes:
+    - name: dags
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: dags
+      mountPath: ${airflow_dag_path}
+  serviceAccount:
+    create: false
+    name: ${dag_processor_service_account}

@@ -171,8 +171,10 @@ module "eks_data_addons" {
         worker_service_account = try(kubernetes_service_account_v1.airflow_worker[0].metadata[0].name, local.airflow_workers_service_account)
         scheduler_service_account = try(kubernetes_service_account_v1.airflow_scheduler[0].metadata[0].name, local.airflow_scheduler_service_account)
         webserver_service_account = try(kubernetes_service_account_v1.airflow_webserver[0].metadata[0].name, local.airflow_webserver_service_account)
-        # S3 bucket config for Logs
+        dag_processor_service_account = try(kubernetes_service_account_v1.airflow_dag[0].metadata[0].name, local.airflow_dag_processor_service_account)
+        # S3 bucket config
         s3_bucket_name = try(module.airflow_s3_bucket[0].s3_bucket_id, "")
+        airflow_dag_path                  = "/opt/airflow/dags"
         webserver_secret_name = local.airflow_webserver_secret_name
       })
     ]

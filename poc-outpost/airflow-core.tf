@@ -365,7 +365,67 @@ resource "aws_iam_policy" "airflow_worker" {
 }
 
 #---------------------------------------------------------------
-# S3 log bucket for Airflow Logs
+# IRSA module for Airflow Dag processor
+#---------------------------------------------------------------
+resource "kubernetes_service_account_v1" "airflow_dag" {
+  count = var.enable_airflow ? 1 : 0
+  metadata {
+    name        = local.airflow_dag_processor_service_account
+    namespace   = kubernetes_namespace_v1.airflow[0].metadata[0].name
+    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_dag[0].iam_role_arn }
+  }
+
+  automount_service_account_token = true
+}
+
+resource "kubernetes_secret_v1" "airflow_dag" {
+  count = var.enable_airflow ? 1 : 0
+  metadata {
+    name      = "${kubernetes_service_account_v1.airflow_dag[0].metadata[0].name}-secret"
+    namespace = kubernetes_namespace_v1.airflow[0].metadata[0].name
+    annotations = {
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_dag[0].metadata[0].name
+      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.airflow[0].metadata[0].name
+    }
+  }
+
+  type = "kubernetes.io/service-account-token"
+}
+
+module "airflow_irsa_dag" {
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
+
+  count = var.enable_airflow ? 1 : 0
+  # IAM role for service account (IRSA)
+  create_release = false
+  create_policy  = false # Policy is created in the next resource
+
+  create_role = var.enable_airflow
+  role_name   = local.airflow_dag_processor_service_account
+
+  role_policies = { AirflowDag = aws_iam_policy.airflow_dag[0].arn }
+
+  oidc_providers = {
+    this = {
+      provider_arn    = module.eks.oidc_provider_arn
+      namespace       = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      service_account = local.airflow_dag_processor_service_account
+    }
+  }
+}
+
+resource "aws_iam_policy" "airflow_dag" {
+  count = var.enable_airflow ? 1 : 0
+
+  description = "IAM policy for Airflow Scheduler Pod"
+  name_prefix = local.airflow_dag_processor_service_account
+  path        = "/"
+  policy      = data.aws_iam_policy_document.airflow_s3[0].json
+}
+
+#---------------------------------------------------------------
+# S3 bucket for Airflow
 #---------------------------------------------------------------
 
 #tfsec:ignore:*
@@ -391,7 +451,7 @@ module "airflow_s3_bucket" {
 }
 
 #---------------------------------------------------------------
-# Example IAM policy for Aiflow S3 logging
+# Example IAM policy for Aiflow S3
 #---------------------------------------------------------------
 data "aws_iam_policy_document" "airflow_s3" {
   count = var.enable_airflow ? 1 : 0
