@@ -114,8 +114,11 @@ Navigate into one of the example directories and run `install.sh` script
 
 ```bash
 cd data-on-eks/analytics/terraform/emr-eks-karpenter
+
 chmod +x install.sh
+
 ./install.sh
+
 ```
 
 ### Verify the resources
@@ -128,22 +131,24 @@ aws eks describe-cluster --name emr-eks-karpenter
 aws amp list-workspaces --alias amp-ws-emr-eks-karpenter
 ```
 
-Verify EMR on EKS Namespaces `emr-data-team-a` and `emr-data-team-b` and Pod status for `Prometheus`, `Vertical Pod Autoscaler`, `Metrics Server` and `Cluster Autoscaler`.
+
+
+Creates k8s config file to authenticate with EKS Cluster
 
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name emr-eks-karpenter # Creates k8s config file to authenticate with EKS Cluster
+aws eks --region us-west-2 update-kubeconfig --name emr-eks-karpenter
+```
 
-kubectl get nodes # Output shows the EKS Managed Node group nodes
+Output shows the EKS Managed Node group nodes
 
-kubectl get ns | grep emr-data-team # Output shows emr-data-team-a and emr-data-team-b namespaces for data teams
+```bash
+kubectl get nodes
+```
 
-kubectl get pods --namespace=prometheus # Output shows Prometheus server and Node exporter pods
+Verify EMR on EKS Namespaces `emr-data-team-a` and `emr-data-team-b`.
 
-kubectl get pods --namespace=vpa  # Output shows Vertical Pod Autoscaler pods
-
-kubectl get pods --namespace=kube-system | grep  metrics-server # Output shows Metric Server pod
-
-kubectl get pods --namespace=kube-system | grep  cluster-autoscaler # Output shows Cluster Autoscaler pod
+```bash
+kubectl get ns | grep emr-data-team
 ```
 
 </CollapsibleContent>
@@ -182,7 +187,8 @@ spec:
 
 **Execute the sample PySpark Job to trigger compute optimized Karpenter Nodepool**
 
-The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. You can get these values `terraform apply` output values or by running `terraform output`. For `S3_BUCKET`, Either create a new S3 bucket or use an existing S3 bucket.
+The following script requires four input parameters `virtual_cluster_id`, `job_execution_role_arn`, `cloudwatch_log_group_name` & `S3_Bucket` to store PySpark scripts, Pod templates and Input data. These values are auto populated by `execute_emr_eks_job.sh`.
+
 
 :::caution
 
@@ -190,10 +196,14 @@ This shell script downloads the test data to your local machine and uploads to S
 
 :::
 
+
 ```bash
 cd data-on-eks/analytics/terraform/emr-eks-karpenter/examples/nvme-ssd/karpenter-compute-provisioner/
+
 ./execute_emr_eks_job.sh
+
 ```
+
 ```
 Enter the EMR Virtual Cluster ID: 4ucrncg6z4nd19vh1lidna2b3
 Enter the EMR Execution Role ARN: arn:aws:iam::123456789102:role/emr-eks-karpenter-emr-eks-data-team-a
@@ -204,11 +214,13 @@ Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. F
 Karpenter may take between 1 and 2 minutes to spin up a new compute node as specified in the Nodepool templates before running the Spark Jobs.
 Nodes will be drained with once the job is completed
 
+
 **Verify the job execution**
 
 ```bash
 kubectl get pods --namespace=emr-data-team-a -w
 ```
+
 
 </TabItem>
 

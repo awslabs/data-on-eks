@@ -2,6 +2,13 @@
 # KubeCost WebUI -> kubectl port-forward --namespace kubecost deployment/kubecost-cost-analyzer 9090
 
 global:
+  # grafana is disabled by default, but can be enabled by setting the following values.
+  # or proxy to an existing grafana: https://docs.kubecost.com/install-and-configure/advanced-configuration/custom-grafana
+  # These options connect kubecost to the local grafana installed with kube-prometheus-stack
+  grafana:
+    enabled: false
+    domainName: kube-prometheus-stack-grafana.kube-prometheus-stack.svc  # domain for the prometheus service in the cluster
+    scheme: "http"  # http or https, for the domain name above.
   # pricingCsv:
   #   enabled: false
   #   location:
@@ -11,10 +18,18 @@ global:
   #     csvAccessCredentials: pricing-schema-access-secret
 
   # This Prometheus setup is reusing the existing Prometheus deployment
-  # Check for more docs under https://guide.kubecost.com/hc/en-us/articles/4407595941015
+  # https://docs.kubecost.com/install-and-configure/advanced-configuration/custom-prom
   prometheus:
     fqdn: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc:9090
     enabled: false
+
+# enable scraping for kubecost metrics in kube-prometheus-stack
+serviceMonitor:
+  enabled: true
+  networkCosts:
+    enabled: true
+prometheusRule:
+  enabled: true
 
 # If you have node-exporter and/or KSM running on your cluster, follow this step to disable the Kubecost included versions.
 prometheus:
@@ -25,26 +40,36 @@ prometheus:
       create: false
   kubeStateMetrics:
     enabled: false
-
-#imageVersion: prod-1.96.0 # commented to use the latest
+  server:
+    image:
+      repository: public.ecr.aws/kubecost/prometheus
+  configmapReload:
+    prometheus:
+      image:
+        repository: public.ecr.aws/kubecost/prometheus-config-reloader
 
 kubecostFrontend:
   image: public.ecr.aws/kubecost/frontend
-  resources:
-    requests:
-      cpu: "200m"
-      memory: "512Mi"
-
-kubecostMetrics:
-  emitPodAnnotations: true
-  emitNamespaceAnnotations: true
 
 kubecostModel:
   image: public.ecr.aws/kubecost/cost-model
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "512Mi"
+
+forecasting:
+  image:
+    repository: public.ecr.aws/kubecost/kubecost-modeling
+
+networkCosts:
+  # enable networking costs daemonset
+  enabled: true
+  config:
+    services:
+      amazon-web-services: true
+  image:
+    repository: public.ecr.aws/kubecost/kubecost-network-costs
+
+clusterController:
+  image:
+    repository: public.ecr.aws/kubecost/cluster-controller
 
 # Set this to false if you're bringing your own service account.
 #serviceAccount:
@@ -58,5 +83,12 @@ persistentVolume:
   size: 32Gi
   dbSize: 32.0Gi
   enabled: true # Note that setting this to false means configurations will be wiped out on pod restart.
-  storageClass: gp2
+  storageClass: gp3
   # existingClaim: kubecost-cost-analyzer # a claim in the same namespace as kubecost
+
+reporting:
+  productAnalytics: false
+
+# kubecostProductConfigs:
+#   carbonEstimates: # Enables Kubecost beta carbon estimation endpoints /assets/carbon and /allocations/carbon
+#     enabled: true
