@@ -30,12 +30,18 @@ If adding more subnets, is not an option, then you will have to work on optimisi
 
 ### CoreDNS Recommendations
 #### DNS Lookup Throttling
-Spark applications running on Kubernetes generate high volumes of DNS lookups when executors communicate with external services. This occurs during data ingestion, processing, and when connecting to external databases or shuffle services.
+Spark applications running on Kubernetes generate high volumes of DNS lookups when executors communicate with external services. 
+
+This occurs because Kubernetes' DNS resolution model requires each pod to query the cluster's DNS service (kube-dns or CoreDNS) for every new connection, and during task executions Spark executors frequently create new connections for communicating with external services. By default, Kubernetes does not cache DNS results at the pod level, meaning each executor pod must perform a new DNS lookup even for previously resolved hostnames. 
+
+This behavior is amplified in Spark applications due to their distributed nature, where multiple executor pods simultaneously attempt to resolve the same external service endpoints.This occurs during data ingestion, processing, and when connecting to external databases or shuffle services.
 
 When DNS traffic exceeds 1024 packets per second for a CoreDNS replica, DNS requests will be throttled, resulting in `unknownHostException` errors.
 
 #### Remediation
 It is recommended to scale CoreDNS, as your workload scales. Refer to [Scaling CoreDNS](/docs/bestpractices/networking#scaling-coredns) for more details on implementation choices. 
+
+It is also recommended to continuously monitor CoreDNS metrics. Refer to [EKS Networking Best Practices](https://docs.aws.amazon.com/eks/latest/best-practices/monitoring_eks_workloads_for_network_performance_issues.html#_monitoring_coredns_traffic_for_dns_throttling_issues) for detailed information.
 
 
 ### Reduce Inter AZ Traffic
@@ -51,19 +57,23 @@ For Spark workloads, it is recommended to colocate executor pods and worker node
 Refer to [Inter AZ Network Optimization](/docs/bestpractices/networking#inter-az-network-optimization) for having pods co-locate on the same AZ.
 
 ## Karpenter Recommendations
+
+[Karpenter](https://karpenter.sh/docs/) enhances Spark on EKS deployments by providing rapid node provisioning capability that aligns with Spark's dynamic resource scaling needs. This automated scaling solution improves resource utilization and cost-efficiency by bringing in right-sized nodes as needed. This also allows Spark jobs to scale seamlessly without the need for pre-configured node groups or manual intervention, there by simplifying operational management.
+
 Here are the Karpenter recommendations for scaling compute nodes while running Spark workloads. For complete Karpenter configuration details, refer [Karpenter documentation](https://karpenter.sh/docs/).
 
 Consider creating separate NodePools for driver and executor pods.
 
 ### Driver Nodepool
-The Spark driver is a single pod and manages the entire lifecycle of the Spark application. Terminating spark driver pod, effectively means terminating the entire spark job.
+The Spark driver is a single pod and manages the entire lifecycle of the Spark application. Terminating Spark driver pod, effectively means terminating the entire Spark job.
 * Configure Driver Nodepool to always use `on-demand` nodes only. When Spark driver pods run on spot instances, they are vulnerable to unexpected terminations due to spot instance reclamation, resulting in computation loss and interrupted processing that requires manual intervention to restart.
 * Disable [`consolidation`](https://karpenter.sh/docs/concepts/disruption/#consolidation) on Driver Nodepool.
 * Use `node selectors` or `taints/tolerations` for placing driver pods on this designated Driver NodePool.
 
 ### Executor Nodepool
 #### Configure Spot instances 
-Consider using spot instances for executors to reduce operational costs.
+In the absence of [Amazon EC2 Reserved Instances](https://aws.amazon.com/ec2/pricing/reserved-instances/) or [Savings Plans](https://aws.amazon.com/savingsplans/), consider using [Amazon EC2 Spot Instances](https://aws.amazon.com/ec2/spot/) for executors to reduce dataplane costs. 
+
 When spot instances are interrupted, executors will be terminated and rescheduled on available nodes. For details on interruption behaviour and node termination management, refer to the `Handling Interruptions` section.
 
 #### Instance and Capacity type selection
@@ -113,7 +123,7 @@ These settings enable the migration of shuffle and RDD blocks from decommissioni
 
 Default Kubernetes scheduler uses `least allocated` approach. This strategy aims to distribute pods evenly across cluster, which helps in maintaining availability and a balanced resource utilization across all nodes, rather than packing more pods in fewer nodes.
 
-`Most allocated` approach on the other hand, aims to favor nodes with most amount of allocated resources, which leads to packing more pods onto nodes that are already heavily allocated. This approach is favourable for spark jobs, as it aims for high utilization on select nodes at pod scheduling time, leading to better consolidation of nodes. You will have to leverage a custom kube-scheduler with this option enabled, or leverage Custom Schedulers purpose built for more advanced orchestration.
+`Most allocated` approach on the other hand, aims to favor nodes with most amount of allocated resources, which leads to packing more pods onto nodes that are already heavily allocated. This approach is favourable for Spark jobs, as it aims for high utilization on select nodes at pod scheduling time, leading to better consolidation of nodes. You will have to leverage a custom kube-scheduler with this option enabled, or leverage Custom Schedulers purpose built for more advanced orchestration.
 
 ### Custom Schedulers
 
@@ -143,7 +153,7 @@ For Spark workloads, this combination is particularly effective: Yunikorn ensure
 ## Storage Best Practices
 ### Node Storage
 By default, the EBS root volumes of worker nodes are set to 20GB. Spark Executors use local storage for temporary data like shuffle data, intermediate results, and temporary files. This default storage of 20GB root volume attached to worker nodes can be limiting in both size and performance. Consider the following options to address your performance and storage size requirements:
-* Expand the root volume capacity to provide ample space for intermediate Spark data. You will have to arrive at optimal capacity based on average size of the dataset that each executor will be processing and complexity of spark job.
+* Expand the root volume capacity to provide ample space for intermediate Spark data. You will have to arrive at optimal capacity based on average size of the dataset that each executor will be processing and complexity of Spark job.
 * Configure high-performance storage with better I/O and latency.
 * Mount additional volumes on worker nodes for temporary data storage.
 * Leverage dynamically provisioned PVCs that can be attached directly to executor pods.
