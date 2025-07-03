@@ -288,31 +288,3 @@ aws iam create-policy --policy-name AmazonEKS_CNI_IPv6_Policy --policy-document 
 ```
 
 3. Re-run the `install.sh` script for the blueprint
-
-## Error: Error: failed to replace object: Deployment.apps "emr-spark-operator" is invalid
-
-If you encounter the following error during execution of ```./install.sh``` to deploy the blueprints:
-
-```shell
-module.eks_data_addons.helm_release.emr_spark_operator[0]: Still modifying... [id=emr-spark-operator, 2m20s elapsed]
-╷
-│ Error: failed to replace object: Deployment.apps "emr-spark-operator" is invalid: spec.selector: Invalid value: v1.LabelSelector{MatchLabels:map[string]string{"app.kubernetes.io/instance":"emr-spark-operator", "app.kubernetes.io/name":"spark-operator", "eks-subscription.amazonaws.com/emr.internal.id":"085a588b-162a-4e36-8979-f4bfc15688d1", "emr-containers.amazonaws.com/component":"spark.operator", "emr-containers.amazonaws.com/operator.release.label":"emr-6.11.0-spark-operator", "emr-containers.amazonaws.com/resource.type":"spark.operator"}, MatchExpressions:[]v1.LabelSelectorRequirement(nil)}: field is immutable
-│
-│   with module.eks_data_addons.helm_release.emr_spark_operator[0],
-│   on .terraform/modules/eks_data_addons/emr-spark-operator.tf line 16, in resource "helm_release" "emr_spark_operator":
-│   16: resource "helm_release" "emr_spark_operator" {
-│
-╵
-```
-
-### Issue Description:
-The error message indicates that the emr-spark-operator deployment failed to update by terraform
-
-### Solution:
-
-To resolve the issue, just uninstall the ```emr-spark-operator``` chart and re-run the ```./install.sh```
-```shell
-helm uninstall emr-spark-operator -n emr-spark-operator
-```
-
-
