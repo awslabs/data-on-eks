@@ -9,7 +9,16 @@ module "eks" {
   # Avoid below option in production. It's just for POC purpose and to easier testing
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
- 
+
+  access_entries = var.access_entries
+
+  # Combine root account, current user/role and additinoal roles to be able to access the cluster KMS key - required for terraform updates
+  kms_key_administrators = distinct(concat([
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"],
+    var.kms_key_admin_roles,
+    [data.aws_iam_session_context.current.issuer_arn]
+  ))
+
   cluster_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
@@ -72,6 +81,7 @@ module "eks" {
   self_managed_node_groups = {
     outposts-ng = {
       name          = "outposts-ng"
+      ami_type       = "AL2023_x86_64_STANDARD"
       instance_type = "c5.2xlarge"
  
       min_size     = 2
@@ -87,10 +97,16 @@ module "eks" {
             volume_size           = 20
             volume_type           = "gp2"
             delete_on_termination = true
+            encrypted             = true
           }
         }
       }
- 
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "doeks"
+      }
+
       subnet_ids = module.outpost_subnet.subnet_id
     }
   }
@@ -98,7 +114,14 @@ module "eks" {
   # Cluster access entry
   # To add the current caller identity as an administrator
   enable_cluster_creator_admin_permissions = true
- 
+
+  node_security_group_tags = merge(local.tags, {
+    # NOTE - if creating multiple security groups with this module, only tag the
+    # security group that Karpenter should utilize with the following tag
+    # (i.e. - at most, only one security group should have this tag in your account)
+    "karpenter.sh/discovery" = local.name
+  })
+
   tags = local.tags
 
   depends_on = [module.vpc]

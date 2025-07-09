@@ -9,12 +9,89 @@ data "aws_availability_zones" "available" {}
 data "aws_outposts_outpost" "default" {
   name = var.outpost_name
 }
-# data "aws_caller_identity" "current" {}
+
+#data "aws_lbs" "all" {}
+
+
+data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
 # data "aws_ecrpublic_authorization_token" "token" {
 #   provider = aws.virginia
 # }
+
+# Retrieves the IAM session context, including the ARN of the currently logged-in user/role.
+data "aws_iam_session_context" "current" {
+  arn = data.aws_caller_identity.current.arn
+}
+
+#---------------------------------------------------------------
+# Module contenant prometheus, grafana
+#---------------------------------------------------------------
+module "utility" {
+  source = "./modules/utility"
+
+  name           = local.name
+  region         = local.region
+  cluster_version = var.eks_cluster_version
+  cluster_endpoint = module.eks.cluster_endpoint
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  tags = local.tags
+
+  depends_on = [
+    module.eks,
+    module.vpc,
+    module.eks_blueprints_addons
+  ]
+}
+
+#---------------------------------------------------------------
+# Module contenant prometheus, grafana
+#---------------------------------------------------------------
+module "supervision" {
+  source = "./modules/supervision"
+
+  name           = local.name
+  region         = local.region
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  cluster_version   = var.eks_cluster_version
+  cluster_endpoint  = module.eks.cluster_endpoint
+  kubernetes_storage_class_default_id = "gp2"
+
+  enable_amazon_grafana = var.enable_amazon_grafana
+  enable_amazon_prometheus = var.enable_amazon_prometheus
+
+  tags = local.tags
+
+  depends_on = [
+    #module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+  ]
+}
+
+#---------------------------------------------------------------
+# Module airflow
+#---------------------------------------------------------------
+module "airflow" {
+  source = "./modules/airflow"
+
+  name           = local.name
+  region         = local.region
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = var.eks_cluster_version
+  private_subnets_cidr = local.private_subnets_cidr
+  vpc_id = module.vpc.vpc_id
+  db_subnets_group_name = aws_db_subnet_group.private.name
+  enable_airflow = var.enable_airflow
+
+  tags = local.tags
+
+  depends_on = [
+    #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+  ]
+
+}
 
 locals {
   name   = var.name
@@ -37,18 +114,6 @@ locals {
 
   # account_id = data.aws_caller_identity.current.account_id
   # partition  = data.aws_partition.current.partition
-
-  #---------------------------------------------------------------
-  # Local variables airflow
-  #---------------------------------------------------------------
-  airflow_name                      = "airflow"
-  airflow_namespace                 = "airflow"
-  airflow_scheduler_service_account = "airflow-scheduler"
-  airflow_webserver_service_account = "airflow-webserver"
-  airflow_workers_service_account   = "airflow-worker"
-  airflow_dag_processor_service_account       = "airflow-dag-processor"
-  airflow_webserver_secret_name     = "airflow-webserver-secret-key"
-  #---------------------------------------------------------------
 
   tags = {
     Blueprint  = local.name

@@ -6,7 +6,7 @@ resource "aws_subnet" "outpost_private" {
 
   tags = merge(
     var.tags,
-    { Name = "${var.name_prefix}-private-outpost" }
+    { Name = "${var.name_prefix}-private-outpost", "karpenter.sh/discovery" = "${var.name_prefix}" }
   )
 }
 
