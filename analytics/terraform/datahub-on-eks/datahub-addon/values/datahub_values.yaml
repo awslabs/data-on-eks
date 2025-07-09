@@ -5,6 +5,20 @@ datahub-gms:
   image:
     repository: acryldata/datahub-gms
     tag: v1.1.0
+  # Environment variables for authentication
+  extraEnvs:
+    - name: METADATA_SERVICE_AUTH_ENABLED
+      value: "true"
+    - name: DATAHUB_AUTH_TOKEN_TTL_HOURS
+      value: "24"
+  # Production resource limits
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
   # Configure GMS service with internal load balancer
   service:
     type: LoadBalancer
@@ -18,15 +32,34 @@ datahub-frontend:
   image:
     repository: acryldata/datahub-frontend-react
     tag: v1.1.0
+  # Production resource limits
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
   # Set up ingress to expose react front-end
+  service:
+    type: ClusterIP
+  # Mount user.props secret as volume
+  extraVolumes:
+    - name: user-props
+      secret:
+        secretName:  datahub-user-secret
+        defaultMode: 0444
+  extraVolumeMounts:
+    - name: user-props
+      mountPath: /datahub-frontend/conf/user.props
+      subPath: user.props
   ingress:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: alb
-      alb.ingress.kubernetes.io/scheme: internal # Private Load Balancer can only be accessed within the VPC
-      alb.ingress.kubernetes.io/target-type: instance
-      alb.ingress.kubernetes.io/inbound-cidrs: 0.0.0.0/0
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+      alb.ingress.kubernetes.io/scheme: internal
+      alb.ingress.kubernetes.io/target-type: ip
+      # Enable HTTPS for production
     hosts:
       - paths:
           - /*
@@ -38,6 +71,7 @@ acryl-datahub-actions:
     tag: v1.1.0
   resources:
     limits:
+      cpu: 500m
       memory: 512Mi
     requests:
       cpu: 300m
@@ -47,11 +81,25 @@ datahub-mae-consumer:
   image:
     repository: acryldata/datahub-mae-consumer
     tag: v1.1.0
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
 
 datahub-mce-consumer:
   image:
     repository: acryldata/datahub-mce-consumer
     tag: v1.1.0
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
 
 datahub-ingestion-cron:
   enabled: false
@@ -117,10 +165,6 @@ datahubUpgrade:
   noCodeDataMigration:
     sqlDbType: "MYSQL"
     # sqlDbType: "POSTGRES"
-  podSecurityContext: {}
-    # fsGroup: 1000
-  securityContext: {}
-    # runAsUser: 1000
   podAnnotations: {}
   # Add extra sidecar containers to job pod
   extraSidecars: []
@@ -159,10 +203,6 @@ datahubSystemUpdate:
   image:
     repository: acryldata/datahub-upgrade
     tag: v1.1.0
-  podSecurityContext: {}
-    # fsGroup: 1000
-  securityContext: {}
-    # runAsUser: 1000
   podAnnotations: {}
   resources:
     limits:
@@ -248,7 +288,7 @@ global:
       host: ${datahub_rds_endpoint}
       hostForMysqlClient: ${datahub_rds_address}
       port: "3306"
-      url: "jdbc:mysql://${datahub_rds_endpoint}/datahub?verifyServerCertificate=false&useSSL=true&useUnicode=yes&characterEncoding=UTF-8&enabledTLSProtocols=TLSv1.2"
+      url: "jdbc:mysql://${datahub_rds_endpoint}/datahub?verifyServerCertificate=false&useSSL=true&requireSSL=true&useUnicode=yes&characterEncoding=UTF-8&enabledTLSProtocols=TLSv1.2"
       driver: "com.mysql.cj.jdbc.Driver"
       username: "admin"
       password:
@@ -308,28 +348,11 @@ global:
         salt:
           secretRef: "datahub-auth-secrets"
           secretKey: "token_service_salt"
-      # Set to false to use existing auth secrets
+      # Set to false to use existing auth secrets created by Terraform
       provisionSecrets:
         enabled: false
         autoGenerate: false
-        annotations:
-          # added to force secret generation before system update
-          helm.sh/hook: "pre-install,pre-upgrade"
-          helm.sh/hook-weight: "-6"
-      # Only specify if autoGenerate set to false
-      #  secretValues:
-      #    secret: <secret value>
-      #    signingKey: <signing key value>
-      #    salt: <salt value>
 
-#  hostAliases:
-#    - ip: "192.168.0.104"
-#      hostnames:
-#        - "broker"
-#        - "mysql"
-#        - "postgresql"
-#        - "elasticsearch"
-#        - "neo4j"
 
 ## Add below to enable SSL for kafka
 #  credentialsAndCertsSecrets:

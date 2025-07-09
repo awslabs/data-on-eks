@@ -91,4 +91,16 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_eks_managed_node_groups_iam_role_name"></a> [eks\_managed\_node\_groups\_iam\_role\_name](#output\_eks\_managed\_node\_groups\_iam\_role\_name) | List of the autoscaling group names created by EKS managed node groups |
 | <a name="output_frontend_url"></a> [frontend\_url](#output\_frontend\_url) | URL for datahub frontend |
 | <a name="output_oidc_provider_arn"></a> [oidc\_provider\_arn](#output\_oidc\_provider\_arn) | The ARN of the OIDC Provider if `enable_irsa = true` |
+
+## Authentication
+
+DataHub is configured with authentication enabled for both backend and frontend components:
+
+- **Default Admin User**: `datahub`
+- **Password Retrieval**: `kubectl get secret datahub-user-secret -n datahub -o jsonpath='{.data.*}' | base64 -d`
+- **Session Timeout**: 8 hours
+- **Token Expiration**: 24 hours
+
+After deployment, access the DataHub frontend URL and login with the default admin credentials to start using the platform.
+
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
