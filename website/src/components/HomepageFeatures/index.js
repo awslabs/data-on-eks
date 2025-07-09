@@ -1,50 +1,101 @@
 import React from 'react';
 import clsx from 'clsx';
+import Translate from '@docusaurus/Translate';
 import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Data Analytics',
+    title: (
+      <Translate
+        id="homepage.features.dataAnalytics.title"
+        description="Title for Data Analytics feature">
+        Data Analytics
+      </Translate>
+    ),
     Svg: require('@site/static/img/green-da.svg').default,
     description: (
       <div>
-        Best Practice Data Analytics Deployment Templates and Examples for EKS with Apache Spark, Spark Operator, Dask, Beam, and More
+        <Translate
+          id="homepage.features.dataAnalytics.description"
+          description="Description for Data Analytics feature">
+          Best Practice Data Analytics Deployment Templates and Examples for EKS with Apache Spark, Spark Operator, Dask, Beam, and More
+        </Translate>
       </div>
     ),
   },
   {
-    title: 'Streaming Data Platforms',
+    title: (
+      <Translate
+        id="homepage.features.streamingDataPlatforms.title"
+        description="Title for Streaming Data Platforms feature">
+        Streaming Data Platforms
+      </Translate>
+    ),
     Svg: require('@site/static/img/green-stream.svg').default,
     description: (
       <>
-        Building High-Scalability Streaming Data Platforms with Kafka, Flink, Spark Streaming, and More
+        <Translate
+          id="homepage.features.streamingDataPlatforms.description"
+          description="Description for Streaming Data Platforms feature">
+          Building High-Scalability Streaming Data Platforms with Kafka, Flink, Spark Streaming, and More
+        </Translate>
       </>
     ),
   },
   {
-    title: 'Amazon EMR on EKS',
+    title: (
+      <Translate
+        id="homepage.features.emrOnEks.title"
+        description="Title for Amazon EMR on EKS feature">
+        Amazon EMR on EKS
+      </Translate>
+    ),
     Svg: require('@site/static/img/green-emr.svg').default,
     description: (
       <>
-        Optimized Multi-Tenant Deployment of Amazon EMR on EKS Cluster with Best Practices using Karpenter Autoscaler and Apache YuniKorn Templates<br/>
+        <Translate
+          id="homepage.features.emrOnEks.description"
+          description="Description for Amazon EMR on EKS feature">
+          Optimized Multi-Tenant Deployment of Amazon EMR on EKS Cluster with Best Practices using Karpenter Autoscaler and Apache YuniKorn Templates
+        </Translate><br/>
       </>
     ),
   },
   {
-    title: 'Schedulers',
+    title: (
+      <Translate
+        id="homepage.features.schedulers.title"
+        description="Title for Schedulers feature">
+        Schedulers
+      </Translate>
+    ),
     Svg: require('@site/static/img/green-schd.svg').default,
     description: (
       <>
-        Optimizing Job Scheduling on EKS with Apache Airflow, Amazon MWAA, Argo Workflow, and More
+        <Translate
+          id="homepage.features.schedulers.description"
+          description="Description for Schedulers feature">
+          Optimizing Job Scheduling on EKS with Apache Airflow, Amazon MWAA, Argo Workflow, and More
+        </Translate>
       </>
     ),
   },
   {
-    title: 'Distributed Databases & Query Engines',
+    title: (
+      <Translate
+        id="homepage.features.distributedDatabases.title"
+        description="Title for Distributed Databases & Query Engines feature">
+        Distributed Databases & Query Engines
+      </Translate>
+    ),
     Svg: require('@site/static/img/green-dd.svg').default,
     description: (
       <>
-        Constructing High-Performance, Scalable Distributed Databases and Query Engines with Cassandra, Trino, Presto, and More
+        <Translate
+          id="homepage.features.distributedDatabases.description"
+          description="Description for Distributed Databases & Query Engines feature">
+          Constructing High-Performance, Scalable Distributed Databases and Query Engines with Cassandra, Trino, Presto, and More
+        </Translate>
       </>
     ),
   },

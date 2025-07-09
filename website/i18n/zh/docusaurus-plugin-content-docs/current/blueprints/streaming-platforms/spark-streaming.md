@@ -1,0 +1,285 @@
+---
+title: EKS中从Kafka进行Spark流式处理
+sidebar_position: 6
+---
+
+:::danger
+**弃用通知**
+
+此蓝图将于**2024年10月27日**被弃用并最终从此GitHub仓库中移除。不会修复任何错误，也不会添加新功能。弃用的决定基于对此蓝图的需求和兴趣不足，以及难以分配资源维护一个没有被任何用户或客户积极使用的蓝图。
+
+如果您在生产环境中使用此蓝图，请将自己添加到[adopters.md](https://github.com/awslabs/data-on-eks/blob/main/ADOPTERS.md)页面并在仓库中提出问题。这将帮助我们重新考虑并可能保留并继续维护该蓝图。否则，您可以制作本地副本或使用现有标签访问它。
+:::
+
+
+此示例展示了使用Spark Operator创建使用Kafka（Amazon MSK）的生产者和消费者堆栈。主要思想是展示Spark Streaming与Kafka一起工作，使用Apache Iceberg以Parquet格式持久化数据。
+
+## 部署EKS集群及测试此示例所需的所有附加组件和基础设施
+
+### 克隆仓库
+
+```bash
+git clone https://github.com/awslabs/data-on-eks.git
+```
+
+### 初始化Terraform
+
+导航到示例目录并运行初始化脚本`install.sh`。
+
+```bash
+cd data-on-eks/streaming/spark-streaming/terraform/
+./install.sh
+```
+
+### 导出Terraform输出
+
+Terraform脚本完成后，导出必要的变量以在`sed`命令中使用它们。
+
+```bash
+export CLUSTER_NAME=$(terraform output -raw cluster_name)
+export PRODUCER_ROLE_ARN=$(terraform output -raw producer_iam_role_arn)
+export CONSUMER_ROLE_ARN=$(terraform output -raw consumer_iam_role_arn)
+export MSK_BROKERS=$(terraform output -raw bootstrap_brokers)
+export REGION=$(terraform output -raw s3_bucket_region_spark_history_server)
+export ICEBERG_BUCKET=$(terraform output -raw s3_bucket_id_iceberg_bucket)
+```
+
+### 更新kubeconfig
+
+更新kubeconfig以验证部署。
+
+```bash
+aws eks --region $REGION update-kubeconfig --name $CLUSTER_NAME
+kubectl get nodes
+```
+
+### 配置生产者
+
+要部署生产者，请使用从Terraform导出的变量更新`examples/producer/00_deployment.yaml`清单。
+
+```bash
+# 应用`sed`命令替换生产者清单中的占位符
+sed -i.bak -e "s|__MY_PRODUCER_ROLE_ARN__|$PRODUCER_ROLE_ARN|g" \
+           -e "s|__MY_AWS_REGION__|$REGION|g" \
+           -e "s|__MY_KAFKA_BROKERS__|$MSK_BROKERS|g" \
+           ../examples/producer/00_deployment.yaml
+
+# 对删除主题清单应用sed，这可用于删除kafka主题并再次启动堆栈
+sed -i.bak -e "s|__MY_KAFKA_BROKERS__|$MSK_BROKERS|g" \
+           ../examples/producer/01_delete_topic.yaml
+```
+
+### 配置消费者
+
+要部署Spark消费者，请使用从Terraform导出的变量更新`examples/consumer/manifests/01_spark_application.yaml`清单。
+
+```bash
+# 应用`sed`命令替换消费者Spark应用程序清单中的占位符
+sed -i.bak -e "s|__MY_BUCKET_NAME__|$ICEBERG_BUCKET|g" \
+           -e "s|__MY_KAFKA_BROKERS_ADRESS__|$MSK_BROKERS|g" \
+           ../examples/consumer/manifests/01_spark_application.yaml
+```
+
+### 部署生产者和消费者
+
+配置生产者和消费者清单后，使用kubectl部署它们。
+
+```bash
+# 部署生产者
+kubectl apply -f ../examples/producer/00_deployment.yaml
+
+# 部署消费者
+kubectl apply -f ../examples/consumer/manifests/
+```
+
+#### 检查生产者到MSK
+
+首先，让我们查看生产者日志，以验证数据是否正在创建并流入MSK：
+
+```bash
+kubectl logs $(kubectl get pods -l app=producer -oname) -f
+```
+
+#### 使用Spark Operator检查Spark Streaming应用程序
+
+对于消费者，我们首先需要获取`SparkApplication`，它生成`spark-submit`命令给Spark Operator，以基于YAML配置创建驱动程序和执行器pod：
+
+```bash
+kubectl get SparkApplication -n spark-operator
+```
+
+您应该看到`STATUS`等于`RUNNING`，现在让我们验证驱动程序和执行器pod：
+
+```bash
+kubectl get pods -n spark-operator
+```
+
+您应该看到类似下面的输出：
+
+```bash
+NAME                                     READY   STATUS      RESTARTS   AGE
+kafkatoiceberg-1e9a438f4eeedfbb-exec-1   1/1     Running     0          7m15s
+kafkatoiceberg-1e9a438f4eeedfbb-exec-2   1/1     Running     0          7m14s
+kafkatoiceberg-1e9a438f4eeedfbb-exec-3   1/1     Running     0          7m14s
+spark-consumer-driver                    1/1     Running     0          9m
+spark-operator-9448b5c6d-d2ksp           1/1     Running     0          117m
+spark-operator-webhook-init-psm4x        0/1     Completed   0          117m
+```
+
+我们有`1个驱动程序`和`3个执行器`pod。现在，让我们检查驱动程序日志：
+
+```bash
+kubectl logs pod/spark-consumer-driver -n spark-operator
+```
+
+您应该只看到表明作业正在运行的`INFO`日志。
+
+### 验证数据流
+
+部署生产者和消费者后，通过检查消费者应用程序在S3存储桶中的输出来验证数据流。您可以运行`s3_automation`脚本来实时查看S3存储桶中的数据大小。
+
+按照以下步骤操作：
+
+1. **导航到`s3_automation`目录**：
+
+    ```bash
+    cd ../examples/s3_automation/
+    ```
+
+2. **运行`s3_automation`脚本**：
+
+    ```bash
+    python app.py
+    ```
+
+    此脚本将持续监控并显示S3存储桶的总大小，为您提供正在摄取的数据的实时视图。您可以选择查看存储桶大小或根据需要删除特定目录。
+
+
+#### 使用`s3_automation`脚本
+
+`s3_automation`脚本提供两个主要功能：
+
+- **检查存储桶大小**：持续监控并显示S3存储桶的总大小。
+- **删除目录**：删除S3存储桶内的特定目录。
+
+以下是如何使用这些功能：
+
+1. **检查存储桶大小**：
+    - 当提示时，输入`size`以获取存储桶的当前大小（以MB为单位）。
+
+2. **删除目录**：
+    - 当提示时，输入`delete`，然后提供您希望删除的目录前缀（例如，`myfolder/`）。
+
+## 调整生产者和消费者以获得更好的性能
+
+部署生产者和消费者后，您可以通过调整生产者的副本数量和Spark应用程序的执行器配置来进一步优化数据摄取和处理。以下是一些帮助您入门的建议：
+
+### 调整生产者副本数量
+
+您可以增加生产者部署的副本数量，以处理更高的消息生产率。默认情况下，生产者部署配置为单个副本。增加这个数字允许更多的生产者实例同时运行，增加整体吞吐量。
+
+要更改副本数量，请更新`examples/producer/00_deployment.yaml`中的`replicas`字段：
+
+```yaml
+spec:
+  replicas: 200  # 增加此数字以扩展生产者
+```
+
+您还可以调整环境变量来控制消息的速率和数量：
+
+```yaml
+env:
+  - name: RATE_PER_SECOND
+    value: "200000"  # 增加此值以每秒生产更多消息
+  - name: NUM_OF_MESSAGES
+    value: "20000000"  # 增加此值以生产更多总消息
+```
+
+应用更新的部署：
+
+```bash
+kubectl apply -f ../examples/producer/00_deployment.yaml
+```
+
+### 调整Spark执行器以获得更好的摄取性能
+
+为了有效处理增加的数据量，您可以向Spark应用程序添加更多执行器或增加分配给每个执行器的资源。这将允许消费者更快地处理数据并减少摄取时间。
+
+要调整Spark执行器配置，请更新`examples/consumer/manifests/01_spark_application.yaml`：
+
+```yaml
+spec:
+  dynamicAllocation:
+    enabled: true
+    initialExecutors: 5
+    minExecutors: 5
+    maxExecutors: 50  # 增加此数字以允许更多执行器
+  executor:
+    cores: 4  # 增加CPU分配
+    memory: "8g"  # 增加内存分配
+```
+
+应用更新的Spark应用程序：
+
+```bash
+kubectl apply -f ../examples/consumer/manifests/01_spark_application.yaml
+```
+
+### 验证和监控
+
+进行这些更改后，监控日志和指标以确保系统按预期运行。您可以检查生产者日志以验证数据生产，以及消费者日志以验证数据摄取和处理。
+
+要检查生产者日志：
+
+```bash
+kubectl logs $(kubectl get pods -l app=producer -oname) -f
+```
+
+要检查消费者日志：
+
+```bash
+kubectl logs pod/spark-consumer-driver -n spark-operator
+```
+
+> 可以再次使用验证数据流脚本
+
+### 总结
+
+通过调整生产者副本数量和调整Spark执行器设置，您可以优化数据管道的性能。这使您能够处理更高的摄取率并更有效地处理数据，确保您的Spark Streaming应用程序能够跟上来自Kafka的增加的数据量。
+
+请随意尝试这些设置，为您的工作负载找到最佳配置。祝您流式处理愉快！
+
+
+### 清理生产者和消费者资源
+
+要仅清理生产者和消费者资源，请使用以下命令：
+
+```bash
+# 清理生产者资源
+kubectl delete -f ../examples/producer/00_deployment.yaml
+
+# 清理消费者资源
+kubectl delete -f ../examples/consumer/manifests/
+```
+
+### 从`.bak`恢复`.yaml`文件
+
+如果您需要将`.yaml`文件重置为带有占位符的原始状态，请将`.bak`文件移回`.yaml`。
+
+```bash
+# 恢复生产者清单
+mv ../examples/producer/00_deployment.yaml.bak ../examples/producer/00_deployment.yaml
+
+
+# 恢复消费者Spark应用程序清单
+mv ../examples/consumer/manifests/01_spark_application.yaml.bak ../examples/consumer/manifests/01_spark_application.yaml
+```
+
+### 销毁EKS集群和资源
+
+要清理整个EKS集群和相关资源：
+
+```bash
+cd data-on-eks/streaming/spark-streaming/terraform/
+terraform destroy
+```
