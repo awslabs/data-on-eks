@@ -2,4 +2,4 @@ server:
   autoscaling:
     enabled: true
     minReplicas: 1
-  serviceType: ClusterIP
+  serviceType: LoadBalancer
