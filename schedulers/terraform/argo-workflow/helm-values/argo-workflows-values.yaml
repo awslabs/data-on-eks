@@ -3,3 +3,5 @@ server:
     enabled: true
     minReplicas: 1
   serviceType: LoadBalancer
+  serviceAnnotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
