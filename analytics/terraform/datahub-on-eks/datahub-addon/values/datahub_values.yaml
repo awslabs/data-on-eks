@@ -27,6 +27,7 @@ datahub-gms:
       service.beta.kubernetes.io/aws-load-balancer-type: nlb
       service.beta.kubernetes.io/aws-load-balancer-internal: "true"
 
+
 datahub-frontend:
   enabled: true
   image:
@@ -40,6 +41,7 @@ datahub-frontend:
     requests:
       cpu: 500m
       memory: 512Mi
+
   # Set up ingress to expose react front-end
   service:
     type: ClusterIP
@@ -89,6 +91,7 @@ datahub-mae-consumer:
       cpu: 500m
       memory: 512Mi
 
+
 datahub-mce-consumer:
   image:
     repository: acryldata/datahub-mce-consumer
@@ -101,6 +104,7 @@ datahub-mce-consumer:
       cpu: 500m
       memory: 512Mi
 
+
 datahub-ingestion-cron:
   enabled: false
   image:
@@ -112,6 +116,7 @@ elasticsearchSetupJob:
   image:
     repository: acryldata/datahub-elasticsearch-setup
     tag: v1.1.0
+
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -126,6 +131,7 @@ kafkaSetupJob:
   image:
     repository: acryldata/datahub-kafka-setup
     tag: v1.1.0
+
   podSecurityContext:
     fsGroup: 1000
   securityContext:
@@ -147,7 +153,6 @@ mysqlSetupJob:
 #  enabled: false
 #  image:
 #    repository: acryldata/datahub-postgres-setup
-#    tag: v1.1.0
 #  podSecurityContext:
 #    fsGroup: 1000
 #  securityContext:
@@ -160,6 +165,7 @@ datahubUpgrade:
   image:
     repository: acryldata/datahub-upgrade
     tag: v1.1.0
+
   batchSize: 1000
   batchDelayMs: 100
   noCodeDataMigration:
@@ -309,6 +315,7 @@ global:
   datahub:
     version: v1.1.0
 
+
     systemUpdate:
       enabled: true
 
@@ -334,6 +341,7 @@ global:
     managed_ingestion:
       enabled: true
       defaultCliVersion: "1.1.0"
+
 
     metadata_service_authentication:
       enabled: true

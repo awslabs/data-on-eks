@@ -1,14 +1,14 @@
 # CloudNativePG Operator on EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/distributed-databases/cloudnative-postgres) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.72 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.4.1 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.2 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.95 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | ~> 2.17 |
 | <a name="requirement_kubectl"></a> [kubectl](#requirement\_kubectl) | >= 1.14 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.4.3 |
@@ -17,7 +17,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.95 |
 | <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | >= 1.14 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 | <a name="provider_random"></a> [random](#provider\_random) | >= 3.4.3 |
@@ -26,7 +26,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_barman_backup_irsa"></a> [barman\_backup\_irsa](#module\_barman\_backup\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons | ed27abc//modules/irsa |
+| <a name="module_barman_backup_irsa"></a> [barman\_backup\_irsa](#module\_barman\_backup\_irsa) | github.com/aws-ia/terraform-aws-eks-blueprints-addons//modules/irsa | ed27abc |
 | <a name="module_barman_s3_bucket"></a> [barman\_s3\_bucket](#module\_barman\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 3.8 |
 | <a name="module_ebs_csi_driver_irsa"></a> [ebs\_csi\_driver\_irsa](#module\_ebs\_csi\_driver\_irsa) | terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks | ~> 5.14 |
 | <a name="module_eks"></a> [eks](#module\_eks) | terraform-aws-modules/eks/aws | ~> 19.15 |
@@ -70,4 +70,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_barman_backup_irsa"></a> [barman\_backup\_irsa](#output\_barman\_backup\_irsa) | ARN for Backup IAM ROLE |
 | <a name="output_barman_s3_bucket"></a> [barman\_s3\_bucket](#output\_barman\_s3\_bucket) | Backup bucket |
 | <a name="output_configure_kubectl"></a> [configure\_kubectl](#output\_configure\_kubectl) | Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

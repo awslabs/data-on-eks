@@ -5,8 +5,8 @@ certifi==2025.1.31
 charset-normalizer==3.4.1
 click==8.1.8
 ConfigArgParse==1.7
-Flask==3.1.0
-Flask-Cors==5.0.0
+Flask==3.1.1
+Flask-Cors==6.0.0
 Flask-Login==0.6.3
 gevent==24.11.1
 geventhttpclient==2.3.3
@@ -14,7 +14,7 @@ google-auth==2.38.0
 greenlet==3.1.1
 idna==3.10
 itsdangerous==2.2.0
-Jinja2==3.1.5
+Jinja2==3.1.6
 kubernetes==29.0.0
 locust==2.23.1
 MarkupSafe==3.0.2
@@ -33,7 +33,7 @@ rsa==4.9
 six==1.17.0
 tomli==2.2.1
 typing_extensions==4.12.2
-urllib3==2.3.0
+urllib3==2.5.0
 websocket-client==1.8.0
 Werkzeug==3.1.3
 zope.event==5.0

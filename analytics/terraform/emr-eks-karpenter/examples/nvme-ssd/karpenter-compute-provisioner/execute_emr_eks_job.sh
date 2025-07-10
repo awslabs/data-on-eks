@@ -1,22 +1,25 @@
 #!/bin/bash
 
-read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
+# read -p "Enter EMR Virtual Cluster AWS Region: " AWS_REGION
 # read -p "Enter the EMR Virtual Cluster ID: " EMR_VIRTUAL_CLUSTER_ID
 # read -p "Enter the EMR Execution Role ARN: " EMR_EXECUTION_ROLE_ARN
 # read -p "Enter the CloudWatch Log Group name: " CLOUDWATCH_LOG_GROUP
-read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: " S3_BUCKET
+# read -p "Enter the S3 Bucket for storing PySpark Scripts, Pod Templates and Input data. For e.g., s3://<bucket-name>: " S3_BUCKET
 
 cp ../../../terraform.tfstate .
 EMR_VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '."data-team-a".virtual_cluster_id')
 EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '."data-team-a".job_execution_role_arn')
 CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '."data-team-a".cloudwatch_log_group_name')
+S3_BUCKET="s3://$(terraform output -json emr_s3_bucket_name | tr -d '"')"
+AWS_REGION=$(terraform output -json aws_region | tr -d '"')
+
 rm terraform.tfstate
 
 #--------------------------------------------
 # DEFAULT VARIABLES CAN BE MODIFIED
 #--------------------------------------------
 JOB_NAME='taxidata'
-EMR_EKS_RELEASE_LABEL="emr-6.10.0-latest" # Spark 3.3.1
+EMR_EKS_RELEASE_LABEL="emr-7.9.0-latest" # Spark 3.3.1
 
 SPARK_JOB_S3_PATH="${S3_BUCKET}/${EMR_VIRTUAL_CLUSTER_ID}/${JOB_NAME}"
 SCRIPTS_S3_PATH="${SPARK_JOB_S3_PATH}/scripts"

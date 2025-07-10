@@ -16,4 +16,4 @@ Checkout the EMR on EKS Best practices GitHub docs [here](https://aws.github.io/
 ### Architecture
 The following diagram illustrates the solution architecture Amazon EMR on EKS.
 
-![emr-eks-architecture](./emr-eks-architecture.png)
+![emr-eks-architecture](./img/emr-eks-architecture.png)

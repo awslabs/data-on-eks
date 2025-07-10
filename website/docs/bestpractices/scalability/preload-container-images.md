@@ -1,8 +1,9 @@
 ---
-title: Preload container images into data volumes
-sidebar_position: 2
+sidebar_label: Preload Container Images
+sidebar_position: 1
 ---
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+
+import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
 # Preload container images into data volumes with EBS Snapshots
 
@@ -90,4 +91,4 @@ spec:
 
 # End-to-End deployment example
 
-An end-to-end deployment example can be found in [Stable Diffusion on GPU](../gen-ai/inference/GPUs/stablediffusion-gpus).
+An end-to-end deployment example can be found in [Stable Diffusion on GPU](../../gen-ai/inference/GPUs/stablediffusion-gpus).

@@ -4,6 +4,13 @@ sidebar_label: BioNeMo on EKS
 ---
 import CollapsibleContent from '../../../../src/components/CollapsibleContent';
 
+:::caution
+
+The **AI on EKS** content **is being migrated** to a new repository.
+🔗 👉 [Read the full migration announcement »](https://awslabs.github.io/data-on-eks/docs/migration/migration-announcement)
+
+:::
+
 # BioNeMo on EKS
 
 :::warning

@@ -1,13 +1,13 @@
 # NVIDIA Triton server Terraform blueprint
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.72 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.4.1 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.2 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.95 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | ~> 2.17 |
 | <a name="requirement_kubectl"></a> [kubectl](#requirement\_kubectl) | >= 1.14 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
 | <a name="requirement_null"></a> [null](#requirement\_null) | >= 3.1 |
@@ -17,9 +17,9 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
-| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | >= 3.72 |
-| <a name="provider_helm"></a> [helm](#provider\_helm) | >= 2.4.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.95 |
+| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | ~> 5.95 |
+| <a name="provider_helm"></a> [helm](#provider\_helm) | ~> 2.17 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 | <a name="provider_null"></a> [null](#provider\_null) | >= 3.1 |
 | <a name="provider_random"></a> [random](#provider\_random) | >= 3.1 |
@@ -79,9 +79,9 @@
 | <a name="input_huggingface_token"></a> [huggingface\_token](#input\_huggingface\_token) | Hugging Face Secret Token | `string` | `"DUMMY_TOKEN_REPLACE_ME"` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name of the VPC and EKS Cluster | `string` | `"nvidia-triton-server"` | no |
 | <a name="input_ngc_api_key"></a> [ngc\_api\_key](#input\_ngc\_api\_key) | NGC API Key | `string` | `"DUMMY_NGC_API_KEY_REPLACE_ME"` | no |
-| <a name="input_nim_models"></a> [nim\_models](#input\_nim\_models) | NVIDIA NIM Models | <pre>list(object({<br>    name    = string<br>    id      = string<br>    enable  = bool<br>    num_gpu = string<br>  }))</pre> | <pre>[<br>  {<br>    "enable": false,<br>    "id": "nvcr.io/nim/meta/llama-3.1-8b-instruct",<br>    "name": "llama-3-1-8b-instruct",<br>    "num_gpu": "4"<br>  },<br>  {<br>    "enable": true,<br>    "id": "nvcr.io/nim/meta/llama3-8b-instruct",<br>    "name": "llama3-8b-instruct",<br>    "num_gpu": "1"<br>  }<br>]</pre> | no |
+| <a name="input_nim_models"></a> [nim\_models](#input\_nim\_models) | NVIDIA NIM Models | <pre>list(object({<br/>    name    = string<br/>    id      = string<br/>    enable  = bool<br/>    num_gpu = string<br/>  }))</pre> | <pre>[<br/>  {<br/>    "enable": false,<br/>    "id": "nvcr.io/nim/meta/llama-3.1-8b-instruct",<br/>    "name": "llama-3-1-8b-instruct",<br/>    "num_gpu": "4"<br/>  },<br/>  {<br/>    "enable": true,<br/>    "id": "nvcr.io/nim/meta/llama3-8b-instruct",<br/>    "name": "llama3-8b-instruct",<br/>    "num_gpu": "1"<br/>  }<br/>]</pre> | no |
 | <a name="input_region"></a> [region](#input\_region) | region | `string` | `"us-west-2"` | no |
-| <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br>  "100.64.0.0/16"<br>]</pre> | no |
+| <a name="input_secondary_cidr_blocks"></a> [secondary\_cidr\_blocks](#input\_secondary\_cidr\_blocks) | Secondary CIDR blocks to be attached to VPC | `list(string)` | <pre>[<br/>  "100.64.0.0/16"<br/>]</pre> | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | VPC CIDR. This should be a valid private (RFC 1918) CIDR range | `string` | `"10.1.0.0/21"` | no |
 
 ## Outputs
@@ -92,4 +92,4 @@
 | <a name="output_grafana_secret_name"></a> [grafana\_secret\_name](#output\_grafana\_secret\_name) | The name of the secret containing the Grafana admin password. |
 | <a name="output_s3_bucket_name"></a> [s3\_bucket\_name](#output\_s3\_bucket\_name) | The name of the S3 bucket. |
 | <a name="output_s3_bucket_region"></a> [s3\_bucket\_region](#output\_s3\_bucket\_region) | The AWS region this bucket resides in. |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

@@ -7,7 +7,7 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 /** @type {{onBrokenLinks: string, organizationName: string, plugins: string[], title: string, url: string, onBrokenMarkdownLinks: string, i18n: {defaultLocale: string, locales: string[]}, trailingSlash: boolean, baseUrl: string, presets: [string,Options][], githubHost: string, tagline: string, themeConfig: ThemeConfig & UserThemeConfig & AlgoliaThemeConfig, projectName: string}} */
 const config = {
   title: 'Data on EKS',
-  tagline: 'Supercharge your Data and AI/ML Journey with Amazon EKS',
+  tagline: 'Supercharge your Data Journey with Amazon EKS',
   url: 'https://awslabs.github.io',
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
@@ -53,8 +53,15 @@ const config = {
           src: 'img/header-icon.png',
         },
         items: [
+          {
+            type: 'doc',
+            docId: 'migration/migration-announcement',
+            label: '🚨 Repo Split Update',
+            position: 'left',
+            className: 'navbar-highlight-link',
+          },
           { type: 'doc', docId: 'introduction/intro', position: 'left', label: 'Introduction' },
-          { type: 'doc', docId: 'gen-ai/index', position: 'left', label: 'Gen AI' },
+          { type: 'doc', docId: 'gen-ai/index', position: 'left', label: 'AI on EKS (🚨 Moving)' },
           { type: 'doc', docId: 'blueprints/amazon-emr-on-eks/index', position: 'left', label: 'Blueprints' },
           { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices' },
           { type: 'doc', docId: 'benchmarks/emr-on-eks', position: 'left', label: 'Benchmarks' },
