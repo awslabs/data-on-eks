@@ -89,23 +89,7 @@ chmod +x install.sh
 
 ### Verify Deployment
 
-After the deployment completes, we can access the DataHub UI and test importing metadata from sample datasources.  For demo purpose, this blueprint creates the Ingress object for the datahub FrontEnd UI with public LoadBalancer(internal # Private Load Balancer can only be accessed within the VPC).  For production workloads, you can modify datahub_values.yaml to use internal LB:
-
-```
-datahub-frontend:
-  enabled: true
-  image:
-    repository: linkedin/datahub-frontend-react
-  # Set up ingress to expose react front-end
-  ingress:
-    enabled: true
-    annotations:
-      kubernetes.io/ingress.class: alb
-      alb.ingress.kubernetes.io/scheme: **internal # Private Load Balancer can only be accessed within the VPC**
-      alb.ingress.kubernetes.io/target-type: instance
-```
-
-You may find the URL to the datahub frontend from the output `frontend_url`, or by running kubectl command below:
+After the deployment completes, we can access the DataHub UI and test importing metadata from sample datasources.  This blueprint creates the Ingress object for the datahub FrontEnd UI with internal LoadBalancer (can only be accessed within the VPC).  You may find the URL to the datahub frontend from the output `frontend_url`, or by running kubectl command below:
 
 ```sh
 kubectl get ingress datahub-datahub-frontend -n datahub
@@ -115,7 +99,13 @@ NAME                       CLASS    HOSTS   ADDRESS                             
 datahub-datahub-frontend   <none>   *       k8s-datahub-datahubd-xxxxxxxxxx-xxxxxxxxxx.<region>.elb.amazonaws.com   80      nn
 ```
 
-Copy the ADDRESS field from the output, then open browser and enter the URL as `http://<address>/`. Enter `datahub` as both user name and password when prompted.  We can view the DataHub UI like below.
+Copy the ADDRESS field from the output, then open browser and enter the URL as `http://<address>/`. Enter `datahub` as the user name when prompted.  The default password is set through Kubernetes secret, you can reveal it with command:
+
+```
+kubectl get secret datahub-user-secret -n datahub -o jsonpath='{.data.*}' | base64 -d
+```
+
+After logging in, we will get the DataHub UI like below.
 
 ![img.png](img/datahub-ui.png)
 
