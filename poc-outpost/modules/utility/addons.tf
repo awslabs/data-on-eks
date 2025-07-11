@@ -32,4 +32,22 @@ module "eks_blueprints_addons" {
     }
   }
 
+  # ---------------------------------------
+  # cert manager
+  # ---------------------------------------
+  enable_cert_manager = true
+  cert_manager = {
+    chart_version    = "v1.11.1"
+    namespace        = local.cert_manager_namespace
+    create_namespace = true
+  }
+}
+
+resource "aws_cognito_user_pool" "main_pool" {
+  name = "main-user-pool"
+}
+
+resource "aws_cognito_user_pool_domain" "main_domain" {
+  domain       = local.cognito_custom_domain
+  user_pool_id = aws_cognito_user_pool.main_pool.id
 }

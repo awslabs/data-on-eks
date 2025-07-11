@@ -17,7 +17,7 @@ ingress:
 
     # Annotations for the web Ingress
     annotations:
-      alb.ingress.kubernetes.io/group.name: dataengineering
+      alb.ingress.kubernetes.io/group.name: airflow
       alb.ingress.kubernetes.io/target-type: ip
       alb.ingress.kubernetes.io/scheme: internet-facing # Private Load Balancer can only be accessed within the VPC
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'

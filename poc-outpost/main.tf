@@ -25,6 +25,7 @@ data "aws_iam_session_context" "current" {
   arn = data.aws_caller_identity.current.arn
 }
 
+
 #---------------------------------------------------------------
 # Module contenant prometheus, grafana
 #---------------------------------------------------------------
@@ -37,6 +38,8 @@ module "utility" {
   cluster_endpoint = module.eks.cluster_endpoint
   oidc_provider_arn = module.eks.oidc_provider_arn
 
+  cognito_custom_domain = local.cognito_custom_domain
+  cluster_issuer_name = var.cluster_issuer_name
   tags = local.tags
 
   depends_on = [
@@ -78,14 +81,34 @@ module "airflow" {
   name           = local.name
   region         = local.region
   oidc_provider_arn = module.eks.oidc_provider_arn
-  cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_version   = var.eks_cluster_version
   private_subnets_cidr = local.private_subnets_cidr
   vpc_id = module.vpc.vpc_id
   db_subnets_group_name = aws_db_subnet_group.private.name
   enable_airflow = var.enable_airflow
 
   tags = local.tags
+
+  depends_on = [
+    #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+  ]
+}
+
+module "trino" {
+  source = "./modules/trino"
+
+  name           = local.name
+  region         = local.region
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  private_subnets_cidr = local.private_subnets_cidr
+  vpc_id = module.vpc.vpc_id
+  db_subnets_group_name = aws_db_subnet_group.private.name
+
+  karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
+  tags = local.tags
+
+  cognito_user_pool_id = module.utility.cognito_user_pool_id
+  cognito_custom_domain = local.cognito_custom_domain
+  cluster_issuer_name = var.cluster_issuer_name
 
   depends_on = [
     #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
@@ -112,6 +135,7 @@ locals {
   # Public subnets: seulement pour les non-Outpost AZs (10.0.1.0/24, 10.0.2.0/24)
   public_subnets_cidr = [for k, az in local.non_outpost_azs : cidrsubnet(var.vpc_cidr, 8, k + 1)]
 
+  cognito_custom_domain = local.name
   # account_id = data.aws_caller_identity.current.account_id
   # partition  = data.aws_partition.current.partition
 

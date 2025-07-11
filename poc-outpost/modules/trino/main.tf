@@ -13,16 +13,26 @@ data "aws_eks_cluster_auth" "this" {
 }
 
 
+
+#---------------------------------------------------------------
+
 locals {
   name   = var.name
   region = var.region
-  cluster_version = var.cluster_version
-  cluster_endpoint = var.cluster_endpoint
-  oidc_provider_arn = var.oidc_provider_arn
+  oidc_provider_arn    = var.oidc_provider_arn
+  vpc_id = var.vpc_id
+  private_subnets_cidr = var.private_subnets_cidr
+  db_subnet_group_name = var.db_subnets_group_name
+  karpenter_node_iam_role_name = var.karpenter_node_iam_role_name
 
+  trino_namespace = "trino"
+  trino_name = "trino"
+  trino_sa        = "trino-sa"
+
+  cognito_user_pool_id = var.cognito_user_pool_id
   cognito_custom_domain = var.cognito_custom_domain
   cluster_issuer_name = var.cluster_issuer_name
-  cert_manager_namespace = "cert-manager"
+
 
   tags = var.tags
 }

@@ -18,8 +18,6 @@ locals {
   region = var.region
   vpc_id = var.vpc_id
   private_subnets_cidr = var.private_subnets_cidr
-  cluster_version = var.cluster_version
-  cluster_endpoint = var.cluster_endpoint
   oidc_provider_arn    = var.oidc_provider_arn
   db_subnet_group_name = var.db_subnets_group_name
   enable_airflow = var.enable_airflow

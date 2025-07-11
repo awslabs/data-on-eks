@@ -22,3 +22,13 @@ output "eks_cluster_name" {
   value       = module.eks.cluster_name
   description = "Nom du cluster EKS"
 }
+
+output "S3_airflow_data_bucket" {
+  value       = module.airflow.airflow_data_bucket
+  description = "Le bucket S3 utilisé par airflow pour les dags et les logs"
+}
+
+output "S3_trino_data_bucket" {
+  value       = module.trino.trino_data_bucket
+  description = "Le bucket S3 utilisé par Trino pour stocker les données"
+}

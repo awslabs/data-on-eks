@@ -27,3 +27,13 @@ variable "tags" {
   type        = map(string)
   description = "Tags à appliquer aux ressources"
 }
+
+variable "cognito_custom_domain" {
+  description = "Custom domain for Cognito"
+  type        = string
+}
+
+variable "cluster_issuer_name" {
+  description = "Name of the cluster issuer for cert-manager"
+  type        = string
+}

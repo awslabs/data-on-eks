@@ -8,8 +8,18 @@ variable "region" {
   type        = string
 }
 
+variable "tags" {
+  type        = map(string)
+  description = "Tags à appliquer aux ressources"
+}
+
 variable "oidc_provider_arn" {
   description = "ARN of the OIDC provider for the EKS cluster"
+  type        = string
+}
+
+variable "karpenter_node_iam_role_name" {
+  description = "The name of the IAM role created for Karpenter nodes"
   type        = string
 }
 
@@ -28,12 +38,17 @@ variable "db_subnets_group_name" {
   type        = string
 }
 
-variable "tags" {
-  type        = map(string)
-  description = "Tags à appliquer aux ressources"
+variable "cognito_user_pool_id" {
+  description = "ID of the Cognito user pool for authentication"
+  type        = string
 }
 
-variable "enable_airflow" {
-  description = "Enable Airflow deployment"
-  type        = bool
+variable "cognito_custom_domain" {
+  description = "Custom domain for Cognito user pool"
+  type        = string
+}
+
+variable "cluster_issuer_name" {
+  description = "Name of the cluster issuer for cert-manager"
+  type        = string
 }

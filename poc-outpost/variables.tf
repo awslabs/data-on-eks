@@ -78,6 +78,12 @@ variable "enable_airflow" {
   default     = true
 }
 
+variable "cluster_issuer_name" {
+  description = "Name of the cluster issuer for cert-manager"
+  type        = string
+  default     = "selfsigned-cluster-issuer"
+}
+
 # Access Entries for Cluster Access Control
 variable "access_entries" {
   description = <<EOT

@@ -1,0 +1,235 @@
+# Coordinator Node Memory:
+# JVM Heap (maxHeapSize): 32G (100%)
+# ├── Query Memory (maxMemoryPerNode): 22GB (~70%)
+# ├── Heap Headroom: 9.6GB (30%)
+# └── Total: 31.6GB < 32GB ✓
+
+# Worker Node Memory
+# JVM Heap (maxHeapSize): 89G (100%)
+# ├── Query Memory (maxMemoryPerNode): 71GB (~70%)
+# ├── Heap Headroom: 9.6GB
+# └── Total: 80.6GB < 89GB ✓
+---
+image:
+  repository: trinodb/trino
+  tag: 447
+  pullPolicy: IfNotPresent
+server:
+  workers: 1
+  exchangeManager:
+    name: filesystem
+    baseDir: "s3://${exchange_bucket_id}"
+  autoscaling:
+    enabled: false
+
+  config:
+    https:
+      enabled: true
+      authenticationType: "OAUTH2"
+    query:
+      maxMemory: "280GB"  # Total memory across cluster for queries
+      initialHashPartitions: 100  # Improved parallel processing
+      maxStageRetries: 3
+      maxExecutionTime: "24h"
+      clientTimeout: "2h"
+  coordinatorExtraConfig: |
+    web-ui.authentication.type=oauth2
+    http-server.authentication.type=oauth2
+    http-server.https.port=8443
+    http-server.authentication.oauth2.oidc.discovery=true
+    http-server.authentication.oauth2.issuer=https://${cognito_user_pool_domain}.auth.${region}.amazoncognito.com
+    http-server.authentication.oauth2.client-id=${cpgnito_user_pool_client_id}
+    http-server.authentication.oauth2.client-secret=${cognito_user_pool_client_secret}
+    http-server.authentication.oauth2.callback-url=https://k8s-trino-6ae964ff84-341795026.us-west-2.elb.amazonaws.com/oidc-callback
+    http-server.authentication.oauth2.token-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/token
+    http-server.authentication.oauth2.auth-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/authorize
+    #http-server.authentication.oauth2.scopes="openid email profile"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+coordinator:
+  jvm:
+    maxHeapSize: "32G"  # ~80% of container memory
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
+  config:
+    query:
+      #maxMemoryPerNode + (maxHeapSize * 0.3) < maxHeapSize
+      maxMemoryPerNode: "22GB"  # ~70% of maxHeapSize
+      minWorkers: 1
+      initialHashPartitions: 100
+  resources:
+    requests:
+      cpu: "4000m"     # Reduced CPU request
+      memory: 40Gi     # Reduced memory request
+    limits:
+      cpu: "6000m"     # Higher limit for spikes
+      memory: 40Gi
+  annotations:
+    karpenter.sh/do-not-disrupt: "true"
+  nodeSelector:
+    NodePool: trino-sql-karpenter
+    karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: coordinator
+
+worker:
+  jvm:
+    maxHeapSize: "89G"  # ~80% of container memory (110Gi)
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
+  config:
+    query:
+      maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
+  resources:
+    requests:
+      cpu: "12000m"  # Leave 3000m for system/DaemonSets
+      memory: 112Gi  # Leave 16Gi for system/DaemonSets
+    limits:
+      cpu: "14000m"
+      memory: 112Gi
+  nodeSelector:
+    NodePool: trino-sql-karpenter
+    karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: worker
+
+additionalConfigProperties:
+  - "retry-policy=TASK"
+  - "exchange.compression-enabled=true"
+  - "query.remote-task.max-error-duration=1m"
+  - "query.max-hash-partition-count=100"   # Updated from query.hash-partition-count
+  - "spill-enabled=true"                   # Updated from experimental.spill-enabled
+  - "spiller-spill-path=/tmp/spill"        # Chagne this to SSD mount for faster
+  - "memory.heap-headroom-per-node=9.6GB"
+  - "optimizer.join-reordering-strategy=AUTOMATIC"  # Updated from join-reordering-strategy
+  - "query.max-history=100"
+  - "query.client.timeout=30m"
+  - "sink.max-buffer-size=1GB"
+
+additionalExchangeManagerProperties:
+  - "exchange-manager.name=filesystem"
+  - "exchange.base-directories=s3://${exchange_bucket_id}"
+  - "exchange.s3.region=${region}"
+  - "exchange.s3.iam-role=${irsa_arn}"
+  - "exchange.s3.max-error-retries=10"
+  - "exchange.s3.upload.part-size=64MB"
+
+connector:
+  name: iceberg
+
+catalogs:
+  iceberg: |
+    connector.name=iceberg
+    iceberg.catalog.type=jdbc
+    iceberg.jdbc-catalog.catalog-name=iceberg
+    iceberg.jdbc-catalog.driver-class=org.postgresql.Driver
+    iceberg.jdbc-catalog.connection-url=${trino_db_url}
+    iceberg.jdbc-catalog.connection-user=${trino_db_user}
+    iceberg.jdbc-catalog.connection-password=${trino_db_password}
+    iceberg.jdbc-catalog.default-warehouse-dir=s3://${exchange_bucket_id}
+
+serviceAccount:
+  create: true
+  name: ${sa}
+###################################
+# Ingress configuration
+###################################
+ingress:
+  # Enable web ingress resource
+  enabled: true
+  # Annotations for the web Ingress
+  annotations:
+    cert-manager.io/cluster-issuer: ${cluster_issuer_name}
+    alb.ingress.kubernetes.io/group.name: trino
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/scheme: internet-facing # Private Load Balancer can only be accessed within the VPC
+    #alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    #alb.ingress.kubernetes.io/healthcheck-path: '/health'
+    # Enable the following if you have public/internal domain e.g., https://mycompany.com/
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:....................."
+  tls:
+    - hosts:
+      secretName: "${cognito_user_pool_client_secret}"  # The secret containing the TLS certificate and key
+  # The path for the web Ingress
+  hosts:
+    - paths:
+        - path: "/"
+          # The pathType for the above path (used only with Kubernetes v1.19 and above)
+          pathType: "Prefix"
+    # The Ingress Class for the web Ingress (used only with Kubernetes v1.19 and above)
+  className: "alb"
+
+jmx:
+
+  enabled: true
+  registryPort: 9080
+  serverPort: 9081
+  exporter:
+    # jmx.exporter.enabled -- Set to true to export JMX Metrics via HTTP for [Prometheus](https://github.com/prometheus/jmx_exporter) consumption
+    enabled: true
+    image: bitnami/jmx-exporter:latest
+    pullPolicy: Always
+    port: 5556
+    configProperties: |-
+      hostPort: localhost:{{- .Values.jmx.registryPort }}
+      startDelaySeconds: 0
+      ssl: false
+      lowercaseOutputName: false
+      lowercaseOutputLabelNames: false
+      whitelistObjectNames: ["trino.execution:name=QueryManager","trino.execution:name=ClusterSizeMonitor","trino.execution:name=SqlTaskManager","trino.execution.executor:name=TaskExecutor","trino.memory:name=ClusterMemoryManager","java.lang:type=Runtime","trino.memory:type=ClusterMemoryPool,name=general","java.lang:type=Memory","trino.memory:type=MemoryPool,name=general"]
+      autoExcludeObjectNameAttributes: true
+      excludeObjectNameAttributes:
+        "java.lang:type=OperatingSystem":
+          - "ObjectName"
+        "java.lang:type=Runtime":
+          - "ClassPath"
+          - "SystemProperties"
+      rules:
+      - pattern: ".*"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+  interval: "15s"
+  coordinator:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
+  worker:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
