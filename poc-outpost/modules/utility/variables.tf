@@ -37,3 +37,13 @@ variable "cluster_issuer_name" {
   description = "Name of the cluster issuer for cert-manager"
   type        = string
 }
+
+variable "zone_id" {
+  description = "Zone ID for the DNS records"
+  type        = string
+}
+
+variable "main_domain" {
+    description = "Main domain for the cluster"
+    type        = string
+}

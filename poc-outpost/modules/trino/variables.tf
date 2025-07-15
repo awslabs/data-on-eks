@@ -52,3 +52,18 @@ variable "cluster_issuer_name" {
   description = "Name of the cluster issuer for cert-manager"
   type        = string
 }
+
+variable "main_domain" {
+  description = "Main domain for the cluster"
+  type        = string
+}
+
+variable "zone_id" {
+  description = "Zone ID for the main domain"
+  type        = string
+}
+
+variable "wildcard_certificate_arn" {
+  description = "ARN of the wildcard certificate for the main domain"
+  type        = string
+}

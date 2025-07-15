@@ -1,18 +1,17 @@
+# This file contains the configuration for a wildcard TLS certificate using cert-manager.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: ${trino_name_cert}
+  name: ${trino_wildcard-eks-tls_name}
   namespace: ${trino_namespace}
 spec:
-  isCA: true
-  commonName: k8s-trino-6ae964ff84-341795026.us-west-2.elb.amazonaws.com
-  secretName: ${trino_name_tls}
+  secretName: ${trino_wildcard-eks-tls_name}
+  commonName: "*.${wildcard_domain}"
   dnsNames:
-    - k8s-trino-6ae964ff84-341795026.us-west-2.elb.amazonaws.com
+    - "*.${wildcard_domain}"
   privateKey:
     algorithm: RSA
     size: 2048
   issuerRef:
     name: ${cluster_issuer_name}
     kind: ClusterIssuer
-    group: cert-manager.io

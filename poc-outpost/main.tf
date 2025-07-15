@@ -40,6 +40,9 @@ module "utility" {
 
   cognito_custom_domain = local.cognito_custom_domain
   cluster_issuer_name = var.cluster_issuer_name
+  main_domain = var.main_domain
+  zone_id = local.zone_id
+
   tags = local.tags
 
   depends_on = [
@@ -109,6 +112,9 @@ module "trino" {
   cognito_user_pool_id = module.utility.cognito_user_pool_id
   cognito_custom_domain = local.cognito_custom_domain
   cluster_issuer_name = var.cluster_issuer_name
+  zone_id = local.zone_id
+  main_domain = var.main_domain
+  wildcard_certificate_arn = module.utility.wildcard_certificate_arn
 
   depends_on = [
     #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
@@ -136,6 +142,12 @@ locals {
   public_subnets_cidr = [for k, az in local.non_outpost_azs : cidrsubnet(var.vpc_cidr, 8, k + 1)]
 
   cognito_custom_domain = local.name
+  main_domain = var.main_domain
+
+  zone_id = aws_route53_zone.main.zone_id
+  sub_name = var.sub_domain
+
+
   # account_id = data.aws_caller_identity.current.account_id
   # partition  = data.aws_partition.current.partition
 

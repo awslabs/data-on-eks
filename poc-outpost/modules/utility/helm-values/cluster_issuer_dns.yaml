@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ${cluster_issuer_name}
+spec:
+  acme:
+    #server: https://acme-v02.api.letsencrypt.org/directory
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: david.sin@soprasteria.com
+    privateKeySecretRef:
+      name: ${cluster_issuer_name}
+    solvers:
+      - dns01:
+          route53:
+            region: ${region}  # adapte à ta région AWS
+            hostedZoneID: ${zone_id}  # ton Hosted Zone ID Route53

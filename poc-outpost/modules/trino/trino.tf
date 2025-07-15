@@ -1,3 +1,16 @@
+resource "kubernetes_secret" "jks_keystore" {
+  metadata {
+    name      = "keystore"
+    namespace = local.trino_namespace
+  }
+
+  data = {
+    "keystore.jks" = filebase64("${path.module}/cert/keystore.jks")
+  }
+
+  type = "Opaque"
+}
+
 
 data "aws_iam_policy_document" "trino_exchange_access" {
   statement {
@@ -186,6 +199,15 @@ module "trino_addon" {
         cognito_user_pool_client_secret = try(sensitive(aws_cognito_user_pool_client.trino.client_secret),"")
         cluster_issuer_name = local.cluster_issuer_name
 
+        trino_name = local.trino_name
+        trino_domain = local.main_domain
+        trino_wildcard_certificate_arn = local.wildcard_certificate_arn
+        trino_tls_secret = local.wildcard_domain_secret_name
+        trino_communication_encryption = "MaCleSuperSecrete123456!" # test
+        # JKS Keystore
+        trino_jks_keystore_secret = kubernetes_secret.jks_keystore.metadata[0].name
+        trino_jks_keystore_password = "password" # This is the password for the keystore.jks file
+
       })
   ]
 
@@ -225,3 +247,5 @@ resource "kubectl_manifest" "trino_keda" {
     module.trino_addon
   ]
 }
+
+

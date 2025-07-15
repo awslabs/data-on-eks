@@ -24,8 +24,8 @@ server:
 
   config:
     https:
-      enabled: true
-      authenticationType: "OAUTH2"
+      enabled: false  # Disable HTTPS for simplicity
+      #authenticationType: "OAUTH2"
     query:
       maxMemory: "280GB"  # Total memory across cluster for queries
       initialHashPartitions: 100  # Improved parallel processing
@@ -33,16 +33,22 @@ server:
       maxExecutionTime: "24h"
       clientTimeout: "2h"
   coordinatorExtraConfig: |
-    web-ui.authentication.type=oauth2
-    http-server.authentication.type=oauth2
-    http-server.https.port=8443
-    http-server.authentication.oauth2.oidc.discovery=true
-    http-server.authentication.oauth2.issuer=https://${cognito_user_pool_domain}.auth.${region}.amazoncognito.com
-    http-server.authentication.oauth2.client-id=${cpgnito_user_pool_client_id}
-    http-server.authentication.oauth2.client-secret=${cognito_user_pool_client_secret}
-    http-server.authentication.oauth2.callback-url=https://k8s-trino-6ae964ff84-341795026.us-west-2.elb.amazonaws.com/oidc-callback
-    http-server.authentication.oauth2.token-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/token
-    http-server.authentication.oauth2.auth-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/authorize
+    #web-ui.authentication.type=oauth2
+    #http-server.authentication.type=oauth2
+    http-server.http.enabled=true
+    http-server.https.enabled=false
+    #http-server.https.port=8443
+    #http-server.https.keystore.path=/etc/trino/tls/keystore.jks
+    #http-server.https.keystore.key=${trino_jks_keystore_password}  # The password for the keystore
+    http-server.authentication.allow-insecure-over-http=true
+    internal-communication.shared-secret=${trino_communication_encryption}
+    #http-server.authentication.oauth2.oidc.discovery=true
+    #http-server.authentication.oauth2.issuer=https://${cognito_user_pool_domain}.auth.${region}.amazoncognito.com
+    #http-server.authentication.oauth2.client-id=${cpgnito_user_pool_client_id}
+    #http-server.authentication.oauth2.client-secret=${cognito_user_pool_client_secret}
+    #http-server.authentication.oauth2.callback-url=https://${trino_name}.${trino_domain}/oidc-callback
+    #http-server.authentication.oauth2.token-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/token
+    #http-server.authentication.oauth2.auth-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/authorize
     #http-server.authentication.oauth2.scopes="openid email profile"
 
 service:
@@ -50,6 +56,15 @@ service:
   port: 8080
 
 coordinator:
+  additionalVolumes:
+    - name: trino-tls-cert
+      secret:
+        secretName: "${trino_jks_keystore_secret}" # The secret containing the TLS certificate and key for Trino
+  additionalVolumeMounts:
+    - name: trino-tls-cert
+      mountPath: /etc/trino/tls
+      readOnly: true
+
   jvm:
     maxHeapSize: "32G"  # ~80% of container memory
     extraArguments:
@@ -164,21 +179,20 @@ ingress:
   enabled: true
   # Annotations for the web Ingress
   annotations:
-    cert-manager.io/cluster-issuer: ${cluster_issuer_name}
-    alb.ingress.kubernetes.io/group.name: trino
+    alb.ingress.kubernetes.io/certificate-arn: ${trino_wildcard_certificate_arn}
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/scheme: internet-facing # Private Load Balancer can only be accessed within the VPC
-    #alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
-    #alb.ingress.kubernetes.io/healthcheck-path: '/health'
-    # Enable the following if you have public/internal domain e.g., https://mycompany.com/
+    alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:....................."
+    alb.ingress.kubernetes.io/healthcheck-path: '/health'
+    alb.ingress.kubernetes.io/load-balancer-name: "k8s-${trino_name}"
   tls:
     - hosts:
-      secretName: "${cognito_user_pool_client_secret}"  # The secret containing the TLS certificate and key
+      - "${trino_name}.${trino_domain}"
+      secretName: "${trino_tls_secret}"  # The secret containing the TLS certificate on wildcard domain
   # The path for the web Ingress
   hosts:
-    - paths:
+    - host: "${trino_name}.${trino_domain}"  # The domain name for the web Ingress
+      paths:
         - path: "/"
           # The pathType for the above path (used only with Kubernetes v1.19 and above)
           pathType: "Prefix"

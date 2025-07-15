@@ -25,7 +25,7 @@ module "vpc" {
 
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1,
-    "kubernetes.io/cluster/${local.name}" = "owned"
+    "kubernetes.io/cluster/${local.name}" = "owned",
   }
 
   # LIMITATION ACTUELLE DU MODULE VPC.

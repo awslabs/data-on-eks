@@ -23,6 +23,9 @@ locals {
   cognito_custom_domain = var.cognito_custom_domain
   cluster_issuer_name = var.cluster_issuer_name
   cert_manager_namespace = "cert-manager"
+  cert_service_account = "cert-manager-service-account"
+  main_domain = var.main_domain
+  zone_id = var.zone_id
 
   tags = var.tags
 }

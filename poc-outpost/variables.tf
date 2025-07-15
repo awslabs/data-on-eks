@@ -81,7 +81,25 @@ variable "enable_airflow" {
 variable "cluster_issuer_name" {
   description = "Name of the cluster issuer for cert-manager"
   type        = string
-  default     = "selfsigned-cluster-issuer"
+  default     = "poc-eks-cluster-issuer"
+}
+
+variable "main_domain" {
+  description = "Main domain for the cluster"
+  type        = string
+  default     = "orange-eks.com"
+}
+
+variable "sub_domain" {
+  description = "Subdomain for the cluster"
+  type        = string
+  default     = "poc.orange-eks.com"
+}
+
+variable "shared_alb_name" {
+    description = "Name of the shared Application Load Balancer (ALB) for the cluster"
+    type        = string
+    default     = "pocsharedalb"
 }
 
 # Access Entries for Cluster Access Control

@@ -32,7 +32,10 @@ locals {
   cognito_user_pool_id = var.cognito_user_pool_id
   cognito_custom_domain = var.cognito_custom_domain
   cluster_issuer_name = var.cluster_issuer_name
-
+  main_domain = var.main_domain
+  zone_id = var.zone_id
+  wildcard_certificate_arn = var.wildcard_certificate_arn
+  wildcard_domain_secret_name = "wildcard-orange-eks-tls"
 
   tags = var.tags
 }
