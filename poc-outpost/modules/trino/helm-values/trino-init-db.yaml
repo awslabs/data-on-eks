@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-iceberg-tables
+  namespace: ${trino_namespace}
+spec:
+  #ttlSecondsAfterFinished: 10
+  template:
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: OnFailure
+      containers:
+        - name: psql
+          image: postgres:15
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret  # Secret contenant le mot de passe
+                  key: password
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              psql -h ${postgres_host} -U ${postgres_user} -d ${postgres_db_name}  -c "
+              DROP TABLE IF EXISTS iceberg_namespaces, iceberg_tables, iceberg_snapshots, iceberg_manifests, iceberg_partition_specs, iceberg_sort_orders, iceberg_namespace_properties;
+
+                CREATE TABLE IF NOT EXISTS iceberg_tables (
+                  catalog_name VARCHAR(255) NOT NULL,
+                  table_namespace VARCHAR(255) NOT NULL,
+                  table_name VARCHAR(255) NOT NULL,
+                  metadata_location VARCHAR(1000),
+                  previous_metadata_location VARCHAR(1000),
+                  PRIMARY KEY (catalog_name, table_namespace, table_name)
+                );
+                CREATE TABLE iceberg_namespace_properties (
+                  catalog_name VARCHAR(255) NOT NULL,
+                  namespace VARCHAR(255) NOT NULL,
+                  property_key VARCHAR(255),
+                  property_value VARCHAR(1000),
+                  PRIMARY KEY (catalog_name, namespace, property_key)
+                );
+               
+              ";
+              sleep infinity

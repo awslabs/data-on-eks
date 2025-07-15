@@ -1,13 +1,27 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: alb-test
+  name: alb-test2
+#---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-orange-eks-tls
+  namespace: alb-test2
+spec:
+  secretName: wildcard-orange-eks-tls
+  commonName: "*.orange-eks.com"
+  dnsNames:
+    - "*.orange-eks.com"
+  issuerRef:
+    name: letsencrypt-dns
+    kind: ClusterIssuer
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
-  namespace: alb-test
+  namespace: alb-test2
 spec:
   replicas: 1
   selector:
@@ -28,7 +42,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hello-service
-  namespace: alb-test
+  namespace: alb-test2
 spec:
   type: ClusterIP 
   selector:
@@ -42,15 +56,24 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: hello-ingress
-  namespace: alb-test
+  namespace: alb-test2
   annotations:
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:012046422670:certificate/6c66dc7f-99b8-4441-8b0b-b395b4e4b915
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}, {"HTTPS": 443}]'
+    #alb.ingress.kubernetes.io/ssl-redirect: '443'
+    #cert-manager.io/cluster-issuer: letsencrypt-dns
+    alb.ingress.kubernetes.io/load-balancer-name: k8s-albtest2
 spec:
+  tls:
+    - hosts:
+        - albtest2bis.orange-eks.com
+      secretName: wildcard-orange-eks-tls
   ingressClassName: alb
   rules:
-    - http:
+    - host: albtest2.orange-eks.com  ##doit pas avoir de - entre alb et test2 car sur route53, l'association se fait avec concatenation
+      http:
         paths:
           - path: /
             pathType: Prefix

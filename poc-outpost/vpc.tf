@@ -25,7 +25,7 @@ module "vpc" {
 
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1,
-    "kubernetes.io/cluster/${local.name}" = "owned"
+    "kubernetes.io/cluster/${local.name}" = "owned",
   }
 
   # LIMITATION ACTUELLE DU MODULE VPC.
@@ -42,6 +42,7 @@ module "vpc" {
   # outpost_subnets = local.private_subnets_cidr
   # outpost_arn     = data.aws_outposts_outpost.default.arn
   # outpost_az      = local.outpost_az
+
 
   enable_nat_gateway = true
   single_nat_gateway = true
@@ -61,4 +62,13 @@ module "outpost_subnet" {
   tags = local.tags
 
   depends_on = [module.vpc]
+}
+
+#---------------------------------------------------------------
+# using existing private subnets for creating db subnet on outpost RDS
+#---------------------------------------------------------------
+resource "aws_db_subnet_group" "private" {
+  name       = "db-private-subnet-outpost"
+  subnet_ids = module.outpost_subnet.subnet_id
+  tags       = local.tags
 }
