@@ -83,20 +83,20 @@ module "eks_blueprints_addons" {
   # ---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
   # ---------------------------------------
-  enable_karpenter = true
-  karpenter = {
-    chart_version       = "1.0.5"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-  karpenter_enable_spot_termination          = true
-  karpenter_enable_instance_profile_creation = true
-  karpenter_node = {
-    iam_role_use_name_prefix = false
-    iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-    }
-  }
+  # enable_karpenter = true
+  # karpenter = {
+  #   chart_version       = "1.0.5"
+  #   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  #   repository_password = data.aws_ecrpublic_authorization_token.token.password
+  # }
+  # karpenter_enable_spot_termination          = true
+  # karpenter_enable_instance_profile_creation = true
+  # karpenter_node = {
+  #   iam_role_use_name_prefix = false
+  #   iam_role_additional_policies = {
+  #     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  #   }
+  # }
 
   #---------------------------------------
   # Cluster Autoscaler

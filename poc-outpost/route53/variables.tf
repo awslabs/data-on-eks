@@ -37,9 +37,9 @@ variable "sub_domain" {
 }
 
 variable "shared_alb_name" {
-    description = "Name of the shared Application Load Balancer (ALB) for the cluster"
-    type        = string
-    default     = "pocsharedalb"
+  description = "Name of the shared Application Load Balancer (ALB) for the cluster"
+  type        = string
+  default     = "pocsharedalb"
 }
 
 # Access Entries for Cluster Access Control

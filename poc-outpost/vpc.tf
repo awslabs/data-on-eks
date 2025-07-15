@@ -13,18 +13,18 @@ module "vpc" {
   name = local.name
   cidr = var.vpc_cidr
 
-  azs  = local.azs
+  azs = local.azs
 
   # Public subnets: seulement pour les non-Outpost AZs (10.0.1.0/24, 10.0.2.0/24)
-  public_subnets = local.public_subnets_cidr
-  private_subnets = local.factice_private_subnets_cidr  # Subnet factice pour activer les routes NAT (si liste vide, le bind n'est pas fait par le module)
+  public_subnets  = local.public_subnets_cidr
+  private_subnets = local.factice_private_subnets_cidr # Subnet factice pour activer les routes NAT (si liste vide, le bind n'est pas fait par le module)
 
   private_subnet_tags = {
     "fake" = "true"
   }
 
   public_subnet_tags = {
-    "kubernetes.io/role/elb" = 1,
+    "kubernetes.io/role/elb"              = 1,
     "kubernetes.io/cluster/${local.name}" = "owned",
   }
 
@@ -53,13 +53,13 @@ module "vpc" {
 module "outpost_subnet" {
   source = "./modules/outpost_subnet"
 
-  vpc_id         = module.vpc.vpc_id
-  natgw_id       = module.vpc.natgw_ids[0]
-  cidr_block     = local.private_subnets_cidr[0]
-  outpost_arn    = data.aws_outposts_outpost.default.arn
-  outpost_az     = data.aws_outposts_outpost.default.availability_zone
-  name_prefix    = local.name
-  tags = local.tags
+  vpc_id      = module.vpc.vpc_id
+  natgw_id    = module.vpc.natgw_ids[0]
+  cidr_block  = local.private_subnets_cidr[0]
+  outpost_arn = data.aws_outposts_outpost.default.arn
+  outpost_az  = data.aws_outposts_outpost.default.availability_zone
+  name_prefix = local.name
+  tags        = local.tags
 
   depends_on = [module.vpc]
 }

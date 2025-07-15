@@ -32,16 +32,16 @@ data "aws_iam_session_context" "current" {
 module "utility" {
   source = "./modules/utility"
 
-  name           = local.name
-  region         = local.region
-  cluster_version = var.eks_cluster_version
-  cluster_endpoint = module.eks.cluster_endpoint
+  name              = local.name
+  region            = local.region
+  cluster_version   = var.eks_cluster_version
+  cluster_endpoint  = module.eks.cluster_endpoint
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   cognito_custom_domain = local.cognito_custom_domain
-  cluster_issuer_name = var.cluster_issuer_name
-  main_domain = var.main_domain
-  zone_id = local.zone_id
+  cluster_issuer_name   = var.cluster_issuer_name
+  main_domain           = var.main_domain
+  zone_id               = local.zone_id
 
   tags = local.tags
 
@@ -58,14 +58,14 @@ module "utility" {
 module "supervision" {
   source = "./modules/supervision"
 
-  name           = local.name
-  region         = local.region
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  cluster_version   = var.eks_cluster_version
-  cluster_endpoint  = module.eks.cluster_endpoint
+  name                                = local.name
+  region                              = local.region
+  oidc_provider_arn                   = module.eks.oidc_provider_arn
+  cluster_version                     = var.eks_cluster_version
+  cluster_endpoint                    = module.eks.cluster_endpoint
   kubernetes_storage_class_default_id = "gp2"
 
-  enable_amazon_grafana = var.enable_amazon_grafana
+  enable_amazon_grafana    = var.enable_amazon_grafana
   enable_amazon_prometheus = var.enable_amazon_prometheus
 
   tags = local.tags
@@ -81,13 +81,13 @@ module "supervision" {
 module "airflow" {
   source = "./modules/airflow"
 
-  name           = local.name
-  region         = local.region
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  private_subnets_cidr = local.private_subnets_cidr
-  vpc_id = module.vpc.vpc_id
+  name                  = local.name
+  region                = local.region
+  oidc_provider_arn     = module.eks.oidc_provider_arn
+  private_subnets_cidr  = local.private_subnets_cidr
+  vpc_id                = module.vpc.vpc_id
   db_subnets_group_name = aws_db_subnet_group.private.name
-  enable_airflow = var.enable_airflow
+  enable_airflow        = var.enable_airflow
 
   tags = local.tags
 
@@ -99,21 +99,21 @@ module "airflow" {
 module "trino" {
   source = "./modules/trino"
 
-  name           = local.name
-  region         = local.region
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  private_subnets_cidr = local.private_subnets_cidr
-  vpc_id = module.vpc.vpc_id
+  name                  = local.name
+  region                = local.region
+  oidc_provider_arn     = module.eks.oidc_provider_arn
+  private_subnets_cidr  = local.private_subnets_cidr
+  vpc_id                = module.vpc.vpc_id
   db_subnets_group_name = aws_db_subnet_group.private.name
 
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
-  tags = local.tags
+  tags                         = local.tags
 
-  cognito_user_pool_id = module.utility.cognito_user_pool_id
-  cognito_custom_domain = local.cognito_custom_domain
-  cluster_issuer_name = var.cluster_issuer_name
-  zone_id = local.zone_id
-  main_domain = var.main_domain
+  cognito_user_pool_id     = module.utility.cognito_user_pool_id
+  cognito_custom_domain    = local.cognito_custom_domain
+  cluster_issuer_name      = var.cluster_issuer_name
+  zone_id                  = local.zone_id
+  main_domain              = var.main_domain
   wildcard_certificate_arn = module.utility.wildcard_certificate_arn
 
   depends_on = [
@@ -129,8 +129,8 @@ locals {
   cluster_version = var.eks_cluster_version
 
   # Calcul des azs
-  azs = slice(data.aws_availability_zones.available.names, 0, 3)
-  outpost_az = data.aws_outposts_outpost.default.availability_zone
+  azs             = slice(data.aws_availability_zones.available.names, 0, 3)
+  outpost_az      = data.aws_outposts_outpost.default.availability_zone
   non_outpost_azs = [for az in local.azs : az if az != local.outpost_az]
 
   # Calcul des CIDR associés
@@ -142,9 +142,9 @@ locals {
   public_subnets_cidr = [for k, az in local.non_outpost_azs : cidrsubnet(var.vpc_cidr, 8, k + 1)]
 
   cognito_custom_domain = local.name
-  main_domain = var.main_domain
+  main_domain           = var.main_domain
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id  = aws_route53_zone.main.zone_id
   sub_name = var.sub_domain
 
 
@@ -152,7 +152,7 @@ locals {
   # partition  = data.aws_partition.current.partition
 
   tags = {
-    Blueprint  = local.name
+    Blueprint = local.name
     Terraform = "True"
   }
 }
