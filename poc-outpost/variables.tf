@@ -39,7 +39,7 @@ variable "hosted_zone_id" {
 # Liste des noms de domaine à enregistrer dans Route53 pointant vers le LB Network ciblant l'ingress controller ISTIO
 variable "domaine_name_route53" {
   description = "Liste des noms de domaine a enregistrer dans Route53"
-  default     = ["toto.orange-eks.com", "titi.orange-eks.com"]
+  default     = ["albtest.orange-eks.com"]
   type        = list(string)
 }
 
