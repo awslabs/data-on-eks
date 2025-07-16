@@ -8,9 +8,9 @@
 #   value       = aws_secretsmanager_secret.grafana.name
 # }
 output "eks_cluster_certificate_authority_data" {
-  value = module.eks.cluster_certificate_authority_data
+  value       = module.eks.cluster_certificate_authority_data
   description = "Le certificat CA utilisé par le serveur API EKS"
-  sensitive = true
+  sensitive   = true
 }
 
 output "eks_cluster_endpoint" {

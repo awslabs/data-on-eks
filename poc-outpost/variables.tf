@@ -30,6 +30,19 @@ variable "eks_cluster_version" {
   default     = "1.32"
 }
 
+variable "hosted_zone_id" {
+  description = "Hosted Zone ID Route53"
+  type        = string
+  default     = "Z05779363BJIUL4KDL4V1"
+}
+
+# Liste des noms de domaine à enregistrer dans Route53 pointant vers le LB Network ciblant l'ingress controller ISTIO
+variable "domaine_name_route53" {
+  description = "Liste des noms de domaine a enregistrer dans Route53"
+  default     = ["toto.orange-eks.com", "titi.orange-eks.com"]
+  type        = list(string)
+}
+
 # # Routable Public subnets with NAT Gateway and Internet Gateway. Not required for fully private clusters
 # variable "public_subnets" {
 #   description = "Public Subnets CIDRs. 62 IPs per Subnet/AZ"
@@ -97,9 +110,9 @@ variable "sub_domain" {
 }
 
 variable "shared_alb_name" {
-    description = "Name of the shared Application Load Balancer (ALB) for the cluster"
-    type        = string
-    default     = "pocsharedalb"
+  description = "Name of the shared Application Load Balancer (ALB) for the cluster"
+  type        = string
+  default     = "pocsharedalb"
 }
 
 # Access Entries for Cluster Access Control

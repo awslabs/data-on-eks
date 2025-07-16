@@ -1,0 +1,1 @@
+Folder à supprimer quand les entrées pour Airflow et trino auront basculés sur TLS via Istio
