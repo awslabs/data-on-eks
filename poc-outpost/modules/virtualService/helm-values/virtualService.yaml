@@ -1,0 +1,27 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+spec:
+  hosts:
+    - "${dns_name}"
+  gateways:
+    - ${gateway_name}
+  http:
+    - match:
+        - uri:
+            prefix: "/.well-known/acme-challenge/"
+      route:
+        - destination:
+            host: cert-manager-webhook.cert-manager.svc.cluster.local
+            port:
+              number: 8080
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: ${service_name}
+            port:
+              number: ${service_port}

@@ -4,12 +4,11 @@ metadata:
   name: ${cluster_issuer_name}
 spec:
   acme:
-    #server: https://acme-v02.api.letsencrypt.org/directory
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: david.sin@soprasteria.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: fabrice.scellos@soprasteria.com
     privateKeySecretRef:
-      name: ${cluster_issuer_name}
+      name: "${cluster_issuer_name}-key"
     solvers:
       - http01:
           ingress:
-            class: alb
+            class: istio

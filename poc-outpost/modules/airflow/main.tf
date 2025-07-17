@@ -21,6 +21,9 @@ locals {
   oidc_provider_arn    = var.oidc_provider_arn
   db_subnet_group_name = var.db_subnets_group_name
   enable_airflow = var.enable_airflow
+  cluster_issuer_name = var.cluster_issuer_name
+  main_domain = var.main_domain
+
 
   #---------------------------------------------------------------
   # Local variables airflow

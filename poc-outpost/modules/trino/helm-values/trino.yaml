@@ -40,7 +40,7 @@ server:
     #http-server.https.port=8443
     #http-server.https.keystore.path=/etc/trino/tls/keystore.jks
     #http-server.https.keystore.key=${trino_jks_keystore_password}  # The password for the keystore
-    http-server.authentication.allow-insecure-over-http=true
+    #http-server.authentication.allow-insecure-over-http=true
     internal-communication.shared-secret=${trino_communication_encryption}
     #http-server.authentication.oauth2.oidc.discovery=true
     #http-server.authentication.oauth2.issuer=https://${cognito_user_pool_domain}.auth.${region}.amazoncognito.com
@@ -176,13 +176,13 @@ serviceAccount:
 ###################################
 ingress:
   # Enable web ingress resource
-  enabled: true
+  enabled: false
   # Annotations for the web Ingress
   annotations:
     alb.ingress.kubernetes.io/certificate-arn: ${trino_wildcard_certificate_arn}
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     alb.ingress.kubernetes.io/healthcheck-path: '/health'
     alb.ingress.kubernetes.io/load-balancer-name: "k8s-${trino_name}"
   tls:

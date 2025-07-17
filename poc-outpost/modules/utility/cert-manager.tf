@@ -1,25 +1,26 @@
 
 
-#---------------------------------------------------------------
+# ---------------------------------------------------------------
 # cluster_issuer
-#---------------------------------------------------------------
-# resource "kubectl_manifest" "cluster_issuer" {
-#
-#     yaml_body = templatefile("${path.module}/helm-values/cluster_issuer.yaml", {
-#         cluster_issuer_name = local.cluster_issuer_name
-#     })
-#
-#     depends_on = [
-#         module.eks_blueprints_addons
-#     ]
-# }
+# ---------------------------------------------------------------
+resource "kubectl_manifest" "cluster_issuer" {
 
-resource "kubectl_manifest" "cluster_issuer_dns" {
-
-    yaml_body = templatefile("${path.module}/helm-values/cluster_issuer_dns.yaml", {
+    yaml_body = templatefile("${path.module}/helm-values/cluster_issuer.yaml", {
         cluster_issuer_name = local.cluster_issuer_name
-        region = local.region
-        zone_id = local.zone_id
     })
 
+    depends_on = [
+        module.eks_blueprints_addons
+    ]
 }
+
+# Logique pour pour passer par le DNS Route53
+# resource "kubectl_manifest" "cluster_issuer_dns" {
+#
+#     yaml_body = templatefile("${path.module}/helm-values/cluster_issuer_dns.yaml", {
+#         cluster_issuer_name = local.cluster_issuer_name
+#         region = local.region
+#         zone_id = local.zone_id
+#     })
+#
+# }

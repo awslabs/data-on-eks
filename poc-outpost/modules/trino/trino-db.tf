@@ -9,9 +9,9 @@ module "db" {
 
   # All available versions: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html#PostgreSQL.Concepts
   engine               = "postgres"
-  engine_version       = "15"
-  family               = "postgres15" # DB parameter group
-  major_engine_version = "15"         # DB option group
+  engine_version       = "17"
+  family               = "postgres17" # DB parameter group
+  major_engine_version = "17"         # DB option group
   instance_class       = "db.r5.large"  #outpost db https://docs.aws.amazon.com/fr_fr/AmazonRDS/latest/UserGuide/rds-on-outposts.db-instance-classes.html
 
   allocated_storage     = 20

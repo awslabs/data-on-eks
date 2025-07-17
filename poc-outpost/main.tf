@@ -20,8 +20,7 @@ locals {
   cognito_custom_domain = local.name
   main_domain           = var.main_domain
 
-  zone_id  = aws_route53_zone.main.zone_id
-  sub_name = var.sub_domain
+  zone_id = aws_route53_zone.main.zone_id
 
   tags = {
     Blueprint = local.name
@@ -72,6 +71,7 @@ module "utility" {
   depends_on = [
     module.eks,
     module.vpc,
+    #module.istio,
     module.eks_blueprints_addons
   ]
 }
@@ -103,6 +103,7 @@ module "supervision" {
 # Module airflow
 #---------------------------------------------------------------
 module "airflow" {
+  count  = var.enable_airflow ? 1 : 0
   source = "./modules/airflow"
 
   name                  = local.name
@@ -112,6 +113,8 @@ module "airflow" {
   vpc_id                = module.vpc.vpc_id
   db_subnets_group_name = aws_db_subnet_group.private.name
   enable_airflow        = var.enable_airflow
+  cluster_issuer_name   = var.cluster_issuer_name
+  main_domain           = var.main_domain
 
   tags = local.tags
 
@@ -124,9 +127,10 @@ module "airflow" {
 # Module trino
 #---------------------------------------------------------------
 module "trino" {
+  count  = var.enable_trino ? 1 : 0
   source = "./modules/trino"
 
-  name                  = local.name
+  cluster_name          = local.name
   region                = local.region
   oidc_provider_arn     = module.eks.oidc_provider_arn
   private_subnets_cidr  = local.private_subnets_cidr

@@ -37,3 +37,13 @@ variable "enable_airflow" {
   description = "Enable Airflow deployment"
   type        = bool
 }
+
+variable "cluster_issuer_name" {
+    description = "Name of the ClusterIssuer for cert-manager"
+    type        = string
+}
+
+variable "main_domain" {
+    description = "Main domain for the cluster"
+    type        = string
+}

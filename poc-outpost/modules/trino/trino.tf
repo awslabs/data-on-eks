@@ -248,4 +248,23 @@ resource "kubectl_manifest" "trino_keda" {
   ]
 }
 
+#---------------------------------------------------------------
+# Trino Vitual Service qui remplace l'Ingress
+#---------------------------------------------------------------
+
+module "trino_virtual_service" {
+  source = "../virtualService"
+
+  cluster_issuer_name = var.cluster_issuer_name
+  virtual_service_name = local.trino_name
+  dns_name = "${local.trino_name}.${local.main_domain}"
+  service_name = local.trino_name
+  service_port = 8080
+  namespace = local.trino_namespace
+
+  tags = local.tags
+
+}
+
+
 

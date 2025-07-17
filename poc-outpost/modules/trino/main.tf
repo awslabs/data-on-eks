@@ -17,7 +17,7 @@ data "aws_eks_cluster_auth" "this" {
 #---------------------------------------------------------------
 
 locals {
-  name   = var.name
+  name   = var.cluster_name
   region = var.region
   oidc_provider_arn    = var.oidc_provider_arn
   vpc_id = var.vpc_id

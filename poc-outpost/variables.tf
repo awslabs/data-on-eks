@@ -39,8 +39,12 @@ variable "hosted_zone_id" {
 # Liste des noms de domaine à enregistrer dans Route53 pointant vers le LB Network ciblant l'ingress controller ISTIO
 variable "domaine_name_route53" {
   description = "Liste des noms de domaine a enregistrer dans Route53"
-  default     = ["albtest.orange-eks.com"]
-  type        = list(string)
+  default = [
+    "albtest.orange-eks.com",
+    "trino.orange-eks.com",
+    "airflow.orange-eks.com",
+  ]
+  type = list(string)
 }
 
 # # Routable Public subnets with NAT Gateway and Internet Gateway. Not required for fully private clusters
@@ -91,28 +95,22 @@ variable "enable_airflow" {
   default     = true
 }
 
+variable "enable_trino" {
+  description = "Enable Trino"
+  type        = bool
+  default     = true
+}
+
 variable "cluster_issuer_name" {
   description = "Name of the cluster issuer for cert-manager"
   type        = string
-  default     = "poc-eks-cluster-issuer"
+  default     = "letsencrypt-http-private"
 }
 
 variable "main_domain" {
   description = "Main domain for the cluster"
   type        = string
   default     = "orange-eks.com"
-}
-
-variable "sub_domain" {
-  description = "Subdomain for the cluster"
-  type        = string
-  default     = "poc.orange-eks.com"
-}
-
-variable "shared_alb_name" {
-  description = "Name of the shared Application Load Balancer (ALB) for the cluster"
-  type        = string
-  default     = "pocsharedalb"
 }
 
 # Access Entries for Cluster Access Control

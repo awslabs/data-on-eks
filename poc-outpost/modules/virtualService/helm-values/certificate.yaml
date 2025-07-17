@@ -1,0 +1,18 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-${name}
+  namespace: istio-ingress
+spec:
+  secretName: tls-${name}
+  duration: 2160h # 90d
+  renewBefore: 360h # 15d
+  subject:
+    organizations:
+      - orange
+  commonName: ${dns_name}
+  dnsNames:
+    - ${dns_name}
+  issuerRef:
+    name: ${cluster_issuer_name}
+    kind: ClusterIssuer

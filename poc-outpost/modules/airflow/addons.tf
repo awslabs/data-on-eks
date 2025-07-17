@@ -34,3 +34,21 @@ module "eks_data_addons" {
     ]
   }
 }
+
+#---------------------------------------------------------------
+# Airflow Vitual Service qui remplace l'Ingress
+#---------------------------------------------------------------
+
+module "trino_virtual_service" {
+  source = "../virtualService"
+
+  cluster_issuer_name = var.cluster_issuer_name
+  virtual_service_name = local.airflow_name
+  dns_name = "${local.airflow_name}.${local.main_domain}"
+  service_name = "airflow-api-server"
+  service_port = 8080
+  namespace = local.airflow_namespace
+
+  tags = local.tags
+
+}

@@ -24,12 +24,12 @@ output "eks_cluster_name" {
 }
 
 output "S3_airflow_data_bucket" {
-  value       = module.airflow.airflow_data_bucket
+  value       = length(module.airflow) > 0 ? module.airflow[0].airflow_data_bucket : null
   description = "Le bucket S3 utilisé par airflow pour les dags et les logs"
 }
 
 output "S3_trino_data_bucket" {
-  value       = module.trino.trino_data_bucket
+  value       = length(module.trino) > 0 ? module.trino[0].trino_data_bucket : null
   description = "Le bucket S3 utilisé par Trino pour stocker les données"
 }
 
