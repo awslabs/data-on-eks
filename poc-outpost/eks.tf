@@ -82,11 +82,11 @@ module "eks" {
     outposts-ng = {
       name          = "outposts-ng"
       ami_type      = "AL2023_x86_64_STANDARD"
-      instance_type = "c5.2xlarge"
+      instance_type = "r5.2xlarge"
 
-      min_size     = 2
+      min_size     = 3
       max_size     = 5
-      desired_size = 2
+      desired_size = 3
 
       bootstrap_extra_args = "--kubelet-extra-args '--node-labels=eks.amazonaws.com/compute-type=ec2'"
 

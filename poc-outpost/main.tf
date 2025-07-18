@@ -10,10 +10,11 @@ locals {
   non_outpost_azs = [for az in local.azs : az if az != local.outpost_az]
 
   # Calcul des CIDR associés
-  // CIDR 10.0.0.0/24
-  private_subnets_cidr = [cidrsubnet(var.vpc_cidr, 8, 0)]
-  // CIDR 10.0.254.0/24
-  factice_private_subnets_cidr = [cidrsubnet(var.vpc_cidr, 8, 254)]
+  // CIDR 10.0.32.0/19
+  private_subnets_cidr = [cidrsubnet(var.vpc_cidr, 3, 1)]
+  // CIDR 10.0.64.0/19
+  # factice_private_subnets_cidr = [cidrsubnet(var.vpc_cidr, 8, 254)]
+  factice_private_subnets_cidr = [cidrsubnet(var.vpc_cidr, 3, 2)]
   # Public subnets: seulement pour les non-Outpost AZs (10.0.1.0/24, 10.0.2.0/24)
   public_subnets_cidr = [for k, az in local.non_outpost_azs : cidrsubnet(var.vpc_cidr, 8, k + 1)]
 
@@ -21,6 +22,7 @@ locals {
   main_domain           = var.main_domain
 
   zone_id = aws_route53_zone.main.zone_id
+
 
   tags = {
     Blueprint = local.name
@@ -71,7 +73,7 @@ module "utility" {
   depends_on = [
     module.eks,
     module.vpc,
-    #module.istio,
+    module.istio,
     module.eks_blueprints_addons
   ]
 }
@@ -95,7 +97,7 @@ module "supervision" {
   tags = local.tags
 
   depends_on = [
-    #module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 }
 
@@ -119,7 +121,7 @@ module "airflow" {
   tags = local.tags
 
   depends_on = [
-    #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 }
 
@@ -148,7 +150,7 @@ module "trino" {
   wildcard_certificate_arn = module.utility.wildcard_certificate_arn
 
   depends_on = [
-    #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 
 }
