@@ -91,4 +91,4 @@ spec:
 
 # End-to-End deployment example
 
-An end-to-end deployment example can be found in [Stable Diffusion on GPU](../../gen-ai/inference/GPUs/stablediffusion-gpus).
+For end-to-end deployment examples, refer to the GitHub samples and documentation linked above, or explore the various data analytics blueprints in this repository.

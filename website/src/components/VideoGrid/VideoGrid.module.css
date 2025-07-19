@@ -1,24 +1,69 @@
 .videoGridContainer {
-  width: 90%;
-  margin: 0 auto;
-  padding: 40px 0;
+  width: 100vw;
   position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  padding: 60px 8%;
+  background: linear-gradient(135deg,
+    rgba(248, 250, 252, 0.8) 0%,
+    rgba(255, 255, 255, 0.9) 100%);
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+  box-sizing: border-box;
+}
+
+[data-theme='dark'] .videoGridContainer {
+  background: linear-gradient(135deg,
+    rgba(15, 23, 42, 0.8) 0%,
+    rgba(30, 41, 59, 0.9) 100%);
+  border-top: 1px solid rgba(51, 65, 85, 0.4);
 }
 
 .videoCard {
-  padding: 0 10px;
+  padding: 0 15px;
+  transition: transform 0.3s ease;
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.videoCard:hover {
+  transform: translateY(-8px);
 }
 
 .videoThumbnail {
   position: relative;
   display: block;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 16px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.1),
+    0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.videoThumbnail:hover {
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.15),
+    0 8px 25px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
+}
+
+[data-theme='dark'] .videoThumbnail {
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .videoThumbnail:hover {
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.4),
+    0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .videoThumbnail img {
   width: 100%;
-  height: 200px;
+  height: 400px;
   object-fit: cover;
   transition: transform 0.3s ease;
 }
@@ -32,17 +77,28 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.7);
+  background: linear-gradient(135deg, #146EB4 0%, #FF9900 100%);
   color: white;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 100px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 40px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 12px 35px rgba(20, 110, 180, 0.4),
+    0 6px 20px rgba(255, 153, 0, 0.3);
+  backdrop-filter: blur(15px);
+}
+
+.playButton:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow:
+    0 12px 35px rgba(20, 110, 180, 0.4),
+    0 6px 20px rgba(255, 153, 0, 0.3);
 }
 
 .videoThumbnail:hover .playButton {
@@ -50,25 +106,63 @@
 }
 
 .videoInfo {
-  padding: 15px 0;
+  padding: 30px 20px;
+  background: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(248, 250, 252, 0.90) 100%);
+  border-radius: 0 0 16px 16px;
+  margin-top: -5px;
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-top: none;
+}
+
+[data-theme='dark'] .videoInfo {
+  background: linear-gradient(145deg,
+    rgba(30, 41, 59, 0.95) 0%,
+    rgba(15, 23, 42, 0.90) 100%);
+  border-color: rgba(51, 65, 85, 0.4);
 }
 
 .videoInfo h3 {
-  margin: 0 0 5px;
-  font-size: 16px;
+  margin: 0 0 12px;
+  font-size: 26px;
   line-height: 1.3;
+  font-weight: 700;
+  color: #1e293b;
+  padding: 0 15px;
+}
+
+[data-theme='dark'] .videoInfo h3 {
+  color: #f1f5f9;
 }
 
 .videoInfo small {
   display: block;
-  margin-bottom: 5px;
-  color: #666;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  padding: 0 15px;
+}
+
+[data-theme='dark'] .videoInfo small {
+  color: #94a3b8;
 }
 
 .videoInfo p {
-  font-size: 14px;
-  color: #333;
+  font-size: 18px;
+  color: #475569;
   margin: 0;
+  line-height: 1.6;
+  padding: 0 15px;
+}
+
+[data-theme='dark'] .videoInfo p {
+  color: #94a3b8;
 }
 
 .arrow {
@@ -77,22 +171,33 @@
   transform: translateY(-50%);
   width: 60px;
   height: 60px;
-  background-color: rgba(0, 0, 0, 0.7);
+  background: linear-gradient(135deg,
+    rgba(20, 110, 180, 0.9) 0%,
+    rgba(255, 153, 0, 0.9) 100%);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
+  font-size: 24px;
   z-index: 2;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 8px 25px rgba(20, 110, 180, 0.3),
+    0 4px 15px rgba(255, 153, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .arrow:hover {
-  background-color: rgba(0, 0, 0, 0.9);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-50%) scale(1.1);
+  background: linear-gradient(135deg,
+    rgba(20, 110, 180, 1) 0%,
+    rgba(255, 153, 0, 1) 100%);
+  box-shadow:
+    0 12px 35px rgba(20, 110, 180, 0.4),
+    0 6px 20px rgba(255, 153, 0, 0.3);
 }
 
 .prevArrow {
@@ -103,46 +208,70 @@
   right: -70px;
 }
 
-/* Ensure arrows are visible in both light and dark modes */
-:global(.light) .arrow,
-:global(.dark) .arrow {
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
+/* Dark mode for arrows */
+[data-theme='dark'] .arrow {
+  background: linear-gradient(135deg,
+    rgba(37, 194, 160, 0.9) 0%,
+    rgba(14, 165, 233, 0.9) 100%);
+  box-shadow:
+    0 8px 25px rgba(37, 194, 160, 0.3),
+    0 4px 15px rgba(14, 165, 233, 0.2);
 }
 
-:global(.light) .arrow:hover,
-:global(.dark) .arrow:hover {
-  background-color: rgba(0, 0, 0, 0.9);
+[data-theme='dark'] .arrow:hover {
+  background: linear-gradient(135deg,
+    rgba(37, 194, 160, 1) 0%,
+    rgba(14, 165, 233, 1) 100%);
+  box-shadow:
+    0 12px 35px rgba(37, 194, 160, 0.4),
+    0 6px 20px rgba(14, 165, 233, 0.3);
 }
 
 @media (max-width: 1400px) {
+  .videoGridContainer {
+    padding: 50px 6%;
+  }
   .prevArrow {
-    left: -40px;
+    left: 20px;
   }
   .nextArrow {
-    right: -40px;
+    right: 20px;
   }
 }
 
 @media (max-width: 1200px) {
+  .videoGridContainer {
+    padding: 45px 5%;
+  }
   .prevArrow {
-    left: -30px;
+    left: 15px;
   }
   .nextArrow {
-    right: -30px;
+    right: 15px;
   }
 }
 
 @media (max-width: 768px) {
+  .videoGridContainer {
+    padding: 40px 4%;
+  }
   .prevArrow {
-    left: -20px;
+    left: 10px;
   }
   .nextArrow {
-    right: -20px;
+    right: 10px;
   }
   .arrow {
-    width: 40px;
-    height: 40px;
-    font-size: 24px;
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+  .playButton {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  .videoCard {
+    padding: 0 10px;
   }
 }
