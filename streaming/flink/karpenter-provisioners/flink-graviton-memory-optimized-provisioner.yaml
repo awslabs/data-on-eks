@@ -60,7 +60,7 @@ metadata:
 spec:
   amiFamily: AL2
   amiSelectorTerms:
-    - alias: "al2@latest"  
+    - alias: "al2@latest"
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -74,7 +74,7 @@ spec:
         karpenter.sh/discovery: "${eks_cluster_id}" # replace with your cluster name
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "${eks_cluster_id}" # replace with your cluster name  
+        karpenter.sh/discovery: "${eks_cluster_id}" # replace with your cluster name
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="BOUNDARY"
