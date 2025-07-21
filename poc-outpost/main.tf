@@ -161,8 +161,8 @@ module "trino" {
 }
 
 module "kafka" {
-  count  = var.create_kafka ? 1 : 0
-  source = "../poc-outpost/modules/kafka"
+  count  = var.enable_kafka ? 1 : 0
+  source = "./modules/kafka"
 
   name                         = local.name
   region                       = local.region
