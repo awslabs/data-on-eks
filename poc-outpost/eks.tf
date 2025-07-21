@@ -85,7 +85,7 @@ module "eks" {
       instance_type = "r5.2xlarge"
 
       min_size     = 5
-      max_size     = 5
+      max_size     = 8
       desired_size = 5
 
       bootstrap_extra_args = "--kubelet-extra-args '--node-labels=eks.amazonaws.com/compute-type=ec2'"

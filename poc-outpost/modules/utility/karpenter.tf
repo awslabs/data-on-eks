@@ -46,11 +46,11 @@ resource "helm_release" "karpenter" {
     EOT
   ]
 
-  lifecycle {
-    ignore_changes = [
-      repository_password
-    ]
-  }
+  # lifecycle {
+  #   ignore_changes = [
+  #     repository_password
+  #   ]
+  # }
 
   depends_on = [
     module.karpenter
