@@ -137,25 +137,43 @@ module "trino" {
   count  = var.enable_trino ? 1 : 0
   source = "./modules/trino"
 
-  cluster_name          = local.name
-  region                = local.region
-  oidc_provider_arn     = module.eks.oidc_provider_arn
-  private_subnets_cidr  = local.private_subnets_cidr
-  vpc_id                = module.vpc.vpc_id
-  db_subnets_group_name = aws_db_subnet_group.private.name
+  cluster_name            = local.name
+  region                  = local.region
+  oidc_provider_arn       = module.eks.oidc_provider_arn
+  private_subnets_cidr    = local.private_subnets_cidr
+  vpc_id                  = module.vpc.vpc_id
+  db_subnets_group_name   = aws_db_subnet_group.private.name
   default_node_group_type = var.default_node_group_type
 
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
   tags                         = local.tags
 
-  cognito_user_pool_id     = module.utility.cognito_user_pool_id
-  cognito_custom_domain    = local.cognito_custom_domain
-  cluster_issuer_name      = var.cluster_issuer_name
-  zone_id                  = local.zone_id
-  main_domain              = var.main_domain
+  cognito_user_pool_id  = module.utility.cognito_user_pool_id
+  cognito_custom_domain = local.cognito_custom_domain
+  cluster_issuer_name   = var.cluster_issuer_name
+  zone_id               = local.zone_id
+  main_domain           = var.main_domain
 
   depends_on = [
     #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 
+}
+
+module "kafka" {
+  count  = var.create_kafka ? 1 : 0
+  source = "../poc-outpost/modules/kafka"
+
+  name                         = local.name
+  region                       = local.region
+  oidc_provider_arn            = module.eks.oidc_provider_arn
+  cluster_version              = var.eks_cluster_version
+  cluster_endpoint             = module.eks.cluster_endpoint
+  karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
+
+  tags = local.tags
+
+  depends_on = [
+    #module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+  ]
 }

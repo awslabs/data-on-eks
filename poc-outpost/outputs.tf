@@ -33,3 +33,8 @@ output "S3_trino_data_bucket" {
   value       = length(module.trino) > 0 ? module.trino[0].trino_data_bucket : null
   description = "Le bucket S3 utilisé par Trino pour stocker les données"
 }
+
+output "grafana_local_secret_name" {
+  value       = module.supervision.grafana_secret_name
+  description = "Le nom du secret contenant le mot de passe admin de Grafana pour permettre de récupérer le mot de passe admin de Grafana"
+}
