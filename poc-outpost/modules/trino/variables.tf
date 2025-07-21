@@ -18,6 +18,11 @@ variable "oidc_provider_arn" {
   type        = string
 }
 
+variable "default_node_group_type" {
+  description = "Default node group type for the EKS cluster"
+  type        = string
+}
+
 variable "karpenter_node_iam_role_name" {
   description = "The name of the IAM role created for Karpenter nodes"
   type        = string
@@ -60,10 +65,5 @@ variable "main_domain" {
 
 variable "zone_id" {
   description = "Zone ID for the main domain"
-  type        = string
-}
-
-variable "wildcard_certificate_arn" {
-  description = "ARN of the wildcard certificate for the main domain"
   type        = string
 }

@@ -33,8 +33,3 @@ output "S3_trino_data_bucket" {
   value       = length(module.trino) > 0 ? module.trino[0].trino_data_bucket : null
   description = "Le bucket S3 utilisé par Trino pour stocker les données"
 }
-
-output "wiledcard_certificate_arn" {
-  value       = module.utility.wildcard_certificate_arn
-  description = "ARN du certificat wildcard utilisé pour le domaine principal"
-}

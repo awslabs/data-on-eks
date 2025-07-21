@@ -30,6 +30,12 @@ variable "eks_cluster_version" {
   default     = "1.32"
 }
 
+variable "default_node_group_type" {
+    description = "Default node group type for the EKS cluster"
+    type        = string
+    default     = "doeks"
+}
+
 variable "hosted_zone_id" {
   description = "Hosted Zone ID Route53"
   type        = string
@@ -67,6 +73,12 @@ variable "enable_airflow" {
 
 variable "enable_trino" {
   description = "Enable Trino"
+  type        = bool
+  default     = true
+}
+
+variable "enable_kafka" {
+  description = "enable Kafka cluster"
   type        = bool
   default     = true
 }

@@ -21,8 +21,6 @@ locals {
   cognito_custom_domain = local.name
   main_domain           = var.main_domain
 
-  zone_id = aws_route53_zone.main.zone_id
-
 
   tags = {
     Blueprint = local.name
@@ -50,6 +48,10 @@ data "aws_iam_session_context" "current" {
   arn = data.aws_caller_identity.current.arn
 }
 
+# Used for download oci Karpenter Helm chart
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.virginia
+}
 
 #---------------------------------------------------------------
 # Module contenant prometheus, grafana
@@ -63,6 +65,9 @@ module "utility" {
   cluster_endpoint  = module.eks.cluster_endpoint
   oidc_provider_arn = module.eks.oidc_provider_arn
 
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+
   cognito_custom_domain = local.cognito_custom_domain
   cluster_issuer_name   = var.cluster_issuer_name
   main_domain           = var.main_domain
@@ -71,10 +76,10 @@ module "utility" {
   tags = local.tags
 
   depends_on = [
-    module.eks,
-    module.vpc,
-    module.istio,
-    module.eks_blueprints_addons
+    # module.eks,
+    # module.vpc,
+    # module.istio,
+    # module.eks_blueprints_addons
   ]
 }
 
@@ -97,7 +102,7 @@ module "supervision" {
   tags = local.tags
 
   depends_on = [
-    module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    #module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 }
 
@@ -121,7 +126,7 @@ module "airflow" {
   tags = local.tags
 
   depends_on = [
-    module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 }
 
@@ -138,6 +143,7 @@ module "trino" {
   private_subnets_cidr  = local.private_subnets_cidr
   vpc_id                = module.vpc.vpc_id
   db_subnets_group_name = aws_db_subnet_group.private.name
+  default_node_group_type = var.default_node_group_type
 
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
   tags                         = local.tags
@@ -147,10 +153,9 @@ module "trino" {
   cluster_issuer_name      = var.cluster_issuer_name
   zone_id                  = local.zone_id
   main_domain              = var.main_domain
-  wildcard_certificate_arn = module.utility.wildcard_certificate_arn
 
   depends_on = [
-    module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 
 }

@@ -60,16 +60,7 @@ resource "aws_iam_role_policy_attachment" "cert_manager_route53_attach" {
   policy_arn = aws_iam_policy.cert_manager_dns01.arn
 }
 
-resource "kubernetes_service_account" "cert_manager_sa" {
-  metadata {
-    name      = "${local.cert_service_account}"
-    namespace = "${local.cert_manager_namespace}"
 
-    annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.cert_manager_irsa_role.arn
-    }
-  }
-}
 
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
@@ -80,28 +71,10 @@ module "eks_blueprints_addons" {
   cluster_version   = local.cluster_version
   oidc_provider_arn = local.oidc_provider_arn
 
-  # ---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  # ---------------------------------------
-  # enable_karpenter = true
-  # karpenter = {
-  #   chart_version       = "1.0.5"
-  #   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  #   repository_password = data.aws_ecrpublic_authorization_token.token.password
-  # }
-  # karpenter_enable_spot_termination          = true
-  # karpenter_enable_instance_profile_creation = true
-  # karpenter_node = {
-  #   iam_role_use_name_prefix = false
-  #   iam_role_additional_policies = {
-  #     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  #   }
-  # }
-
   #---------------------------------------
   # Cluster Autoscaler
   #---------------------------------------
-  enable_cluster_autoscaler = false
+  enable_cluster_autoscaler = true
   cluster_autoscaler = {
     values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
       aws_region     = local.region,
@@ -146,42 +119,20 @@ module "eks_blueprints_addons" {
 
 }
 
-##
-# Create a wildcard ACM certificate for the domain
-##
-resource "aws_acm_certificate" "cert" {
-  domain_name       = "*.${local.main_domain}"
-  validation_method = "DNS"
+resource "kubernetes_service_account" "cert_manager_sa" {
+  metadata {
+    name      = "${local.cert_service_account}"
+    namespace = "${local.cert_manager_namespace}"
 
-  tags = local.tags
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Ajouter automatiquement l'enregistrement DNS de validation
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      type   = dvo.resource_record_type
-      record = dvo.resource_record_value
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.cert_manager_irsa_role.arn
     }
   }
-
-  zone_id = data.aws_route53_zone.main.zone_id
-  name    = each.value.name
-  type    = each.value.type
-  ttl     = 60
-  records = [each.value.record]
+  depends_on = [module.eks_blueprints_addons]
 }
 
-# Attendre que la validation soit terminée
-resource "aws_acm_certificate_validation" "cert" {
-  certificate_arn         = aws_acm_certificate.cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
+
+### Create a Cognito User Pool and Domain
 
 resource "aws_cognito_user_pool" "main_pool" {
   name = "main-user-pool"

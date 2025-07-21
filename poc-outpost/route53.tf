@@ -3,7 +3,7 @@ import {
   id = var.hosted_zone_id
 }
 
-# Récupération de l'entrée NameServer de Route53 
+# Récupération de l'entrée NameServer de Route53
 resource "aws_route53_zone" "main" {
   name = local.main_domain
 
@@ -50,7 +50,7 @@ resource "aws_route53_record" "nlb_alias" {
     for name in var.domaine_name_route53 : name => name
   } : {}
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id = local.zone_id
   name    = each.key
   type    = "A"
 
@@ -59,4 +59,11 @@ resource "aws_route53_record" "nlb_alias" {
     zone_id                = local.selected_nlb.zone_id
     evaluate_target_health = false
   }
+}
+
+
+locals {
+
+  zone_id = aws_route53_zone.main.zone_id
+  #zone_id = "Z05779363BJIUL4KDL4V1"
 }

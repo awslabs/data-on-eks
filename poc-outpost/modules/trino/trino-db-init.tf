@@ -9,7 +9,8 @@ resource "kubectl_manifest" "iceberg_rds_db_init_password" {
   })
 
   depends_on = [
-    module.db
+    module.db,
+    module.trino_addon
   ]
 }
 

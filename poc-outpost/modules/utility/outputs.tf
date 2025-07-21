@@ -3,12 +3,14 @@ output "karpenter_node_iam_role_name" {
   value       = module.karpenter.node_iam_role_name
 }
 
+output "karpenter_iam_role_arn" {
+  description = "ARN of the IAM role created for Karpenter"
+  value       = module.karpenter.node_iam_role_arn
+}
+
 output "cognito_user_pool_id" {
   description = "ID of the Cognito User Pool"
   value        = aws_cognito_user_pool.main_pool.id
 }
 
-output "wildcard_certificate_arn" {
-  description = "ARN of the wildcard ACM certificate"
-  value       = aws_acm_certificate_validation.cert.certificate_arn
-}
+

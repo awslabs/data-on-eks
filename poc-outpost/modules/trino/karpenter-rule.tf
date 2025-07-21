@@ -11,7 +11,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
       blockDeviceMappings:
         - deviceName: /dev/xvda
           ebs:
-            volumeSize: 200Gi # This storage used for Trino Spill data
+            volumeSize: 100Gi # This storage used for Trino Spill data
             volumeType: gp2
             encrypted: true
             deleteOnTermination: true
@@ -46,13 +46,14 @@ resource "kubectl_manifest" "karpenter_node_pool" {
             kind: EC2NodeClass
             name: trino-karpenter
           requirements:
-            - key: "karpenter.sh/capacity-type"
+            - key: karpenter.sh/capacity-type
               operator: In
-              values: ["on-demand", "spot"]
+              values:
+              - "on-demand"
             - key: node.kubernetes.io/instance-type
               operator: In
               values:
-              - i3en.6xlarge
+              - r5.4xlarge
       disruption:
         consolidationPolicy: WhenEmptyOrUnderutilized
         consolidateAfter: 60s

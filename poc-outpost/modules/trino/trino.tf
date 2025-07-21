@@ -1,16 +1,21 @@
-resource "kubernetes_secret" "jks_keystore" {
+resource "kubernetes_namespace" "kafka" {
   metadata {
-    name      = "keystore"
-    namespace = local.trino_namespace
+    name = "${local.trino_namespace}"
   }
-
-  data = {
-    "keystore.jks" = filebase64("${path.module}/cert/keystore.jks")
-  }
-
-  type = "Opaque"
 }
 
+# resource "kubernetes_secret" "jks_keystore" {
+#   metadata {
+#     name      = "keystore"
+#     namespace = local.trino_namespace
+#   }
+#
+#   data = {
+#     "keystore.jks" = filebase64("${path.module}/cert/keystore.jks")
+#   }
+#
+#   type = "Opaque"
+# }
 
 data "aws_iam_policy_document" "trino_exchange_access" {
   statement {
@@ -159,6 +164,26 @@ resource "aws_iam_policy" "trino_exchange_bucket_policy" {
   policy      = data.aws_iam_policy_document.trino_exchange_access.json
 }
 
+##
+# Trino certificat pour la partie HTTPS
+##
+resource "kubectl_manifest" "trino_cert" {
+
+  yaml_body = templatefile("${path.module}/helm-values/certificate.yaml", {
+    cluster_issuer_name = local.cluster_issuer_name
+    trino_namespace = local.trino_namespace
+    domain = "${local.trino_name}.${local.main_domain}"
+    trino_tls = local.trino_tls
+  })
+
+}
+
+resource "random_password" "trino_jks_keystore_password" {
+  length  = 24
+  special = false
+}
+
+
 #---------------------------------------
 #Trino Helm Add-on
 #---------------------------------------
@@ -181,6 +206,7 @@ module "trino_addon" {
         region             = local.region
         bucket_id          = module.trino_s3_bucket.s3_bucket_id
         exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
+        default_node_group_type = local.default_node_group_type
 
         trino_db_password = try(sensitive(aws_secretsmanager_secret_version.postgres.secret_string), "")
         trino_db_user = try(module.db.db_instance_name, "")
@@ -200,13 +226,12 @@ module "trino_addon" {
         cluster_issuer_name = local.cluster_issuer_name
 
         trino_name = local.trino_name
-        trino_domain = local.main_domain
-        trino_wildcard_certificate_arn = local.wildcard_certificate_arn
-        trino_tls_secret = local.wildcard_domain_secret_name
+        trino_domain = "${local.trino_name}.${local.main_domain}"
+        trino_tls = local.trino_tls
         trino_communication_encryption = "MaCleSuperSecrete123456!" # test
         # JKS Keystore
-        trino_jks_keystore_secret = kubernetes_secret.jks_keystore.metadata[0].name
-        trino_jks_keystore_password = "password" # This is the password for the keystore.jks file
+        trino_jks_keystore_password = "TRINOPassword123456!" # test
+        #random_password.trino_jks_keystore_password.result
 
       })
   ]
@@ -230,6 +255,9 @@ module "trino_addon" {
       service_account = local.trino_sa
     }
   }
+
+  depends_on = [module.db,
+    random_password.trino_jks_keystore_password]
 }
 
 
@@ -264,7 +292,9 @@ module "trino_virtual_service" {
 
   tags = local.tags
 
+  depends_on = [module.trino_addon]
 }
+
 
 
 

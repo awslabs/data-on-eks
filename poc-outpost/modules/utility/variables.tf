@@ -18,6 +18,16 @@ variable "cluster_endpoint" {
   type        = string
 }
 
+variable "repository_username" {
+  description = "Username for the ECR repository"
+  type        = string
+}
+
+variable "repository_password" {
+    description = "Password for the ECR repository"
+    type        = string
+}
+
 variable "oidc_provider_arn" {
   description = "ARN of the OIDC provider for the EKS cluster"
   type        = string

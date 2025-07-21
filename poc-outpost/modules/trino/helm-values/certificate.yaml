@@ -2,13 +2,13 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: ${trino_wildcard-eks-tls_name}
+  name: ${trino_tls}
   namespace: ${trino_namespace}
 spec:
-  secretName: ${trino_wildcard-eks-tls_name}
-  commonName: "*.${wildcard_domain}"
+  secretName: ${trino_tls}
+  commonName: "${domain}"
   dnsNames:
-    - "*.${wildcard_domain}"
+    - "${domain}"
   privateKey:
     algorithm: RSA
     size: 2048

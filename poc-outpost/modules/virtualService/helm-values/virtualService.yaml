@@ -9,6 +9,10 @@ spec:
   gateways:
     - ${gateway_name}
   http:
+    - headers:
+        request:
+          add:
+            X-Forwarded-Proto: https
     - match:
         - uri:
             prefix: "/.well-known/acme-challenge/"

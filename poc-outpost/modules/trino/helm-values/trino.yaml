@@ -23,8 +23,8 @@ server:
     enabled: false
 
   config:
-    https:
-      enabled: false  # Disable HTTPS for simplicity
+    #https:
+      #enabled: true  # Disable HTTPS for simplicity
       #authenticationType: "OAUTH2"
     query:
       maxMemory: "280GB"  # Total memory across cluster for queries
@@ -35,18 +35,19 @@ server:
   coordinatorExtraConfig: |
     #web-ui.authentication.type=oauth2
     #http-server.authentication.type=oauth2
-    http-server.http.enabled=true
-    http-server.https.enabled=false
+    #http-server.http.enabled=true
+    #http-server.https.enabled=true
+    http-server.process-forwarded=true
     #http-server.https.port=8443
-    #http-server.https.keystore.path=/etc/trino/tls/keystore.jks
-    #http-server.https.keystore.key=${trino_jks_keystore_password}  # The password for the keystore
+    #http-server.https.keystore.path=/tmp/data/keystore.p12
+    #http-server.https.keystore.key="${trino_jks_keystore_password}"  # The password for the keystore
     #http-server.authentication.allow-insecure-over-http=true
     internal-communication.shared-secret=${trino_communication_encryption}
     #http-server.authentication.oauth2.oidc.discovery=true
     #http-server.authentication.oauth2.issuer=https://${cognito_user_pool_domain}.auth.${region}.amazoncognito.com
     #http-server.authentication.oauth2.client-id=${cpgnito_user_pool_client_id}
     #http-server.authentication.oauth2.client-secret=${cognito_user_pool_client_secret}
-    #http-server.authentication.oauth2.callback-url=https://${trino_name}.${trino_domain}/oidc-callback
+    #http-server.authentication.oauth2.callback-url=https://${trino_domain}/oidc-callback
     #http-server.authentication.oauth2.token-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/token
     #http-server.authentication.oauth2.auth-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/authorize
     #http-server.authentication.oauth2.scopes="openid email profile"
@@ -57,13 +58,17 @@ service:
 
 coordinator:
   additionalVolumes:
-    - name: trino-tls-cert
+    - name: trino-tls
       secret:
-        secretName: "${trino_jks_keystore_secret}" # The secret containing the TLS certificate and key for Trino
+        secretName: "${trino_tls}" # The secret containing the TLS certificate and key for Trino
+    - name: temp-data
+      emptyDir: {}
   additionalVolumeMounts:
-    - name: trino-tls-cert
-      mountPath: /etc/trino/tls
+    - name: trino-tls
+      mountPath: /etc/trino/trino-tls
       readOnly: true
+    - name: temp-data
+      mountPath: /tmp/data
 
   jvm:
     maxHeapSize: "32G"  # ~80% of container memory
@@ -84,15 +89,21 @@ coordinator:
   resources:
     requests:
       cpu: "4000m"     # Reduced CPU request
-      memory: 40Gi     # Reduced memory request
+      memory: 20Gi     # Reduced memory request
     limits:
       cpu: "6000m"     # Higher limit for spikes
       memory: 40Gi
   annotations:
     karpenter.sh/do-not-disrupt: "true"
-  nodeSelector:
-    NodePool: trino-sql-karpenter
-    karpenter.sh/capacity-type: on-demand
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: karpenter.sh/capacity-type
+                operator: NotIn
+                values:
+                  - on-demand
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname
@@ -113,6 +124,8 @@ worker:
       - "-Djdk.attach.allowAttachSelf=true"
       - "-XX:+UseContainerSupport"
   config:
+    internal-communication.shared-secret: ${trino_communication_encryption}
+    http-server.process-forwarded: true
     query:
       maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
   resources:
@@ -179,7 +192,6 @@ ingress:
   enabled: false
   # Annotations for the web Ingress
   annotations:
-    alb.ingress.kubernetes.io/certificate-arn: ${trino_wildcard_certificate_arn}
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
@@ -187,11 +199,11 @@ ingress:
     alb.ingress.kubernetes.io/load-balancer-name: "k8s-${trino_name}"
   tls:
     - hosts:
-      - "${trino_name}.${trino_domain}"
-      secretName: "${trino_tls_secret}"  # The secret containing the TLS certificate on wildcard domain
+      - "${trino_domain}"
+      secretName: "${trino_tls}"  # The secret containing the TLS certificate on wildcard domain
   # The path for the web Ingress
   hosts:
-    - host: "${trino_name}.${trino_domain}"  # The domain name for the web Ingress
+    - host: "${trino_domain}"  # The domain name for the web Ingress
       paths:
         - path: "/"
           # The pathType for the above path (used only with Kubernetes v1.19 and above)
@@ -247,3 +259,33 @@ serviceMonitor:
     enabled: true
     labels:
       release: kube-prometheus-stack
+
+initContainers:
+  worker:
+    []
+  coordinator:
+  - name: import-ca-cert
+    image: eclipse-temurin:17-jdk
+    command:
+      - /bin/bash
+      - -c
+      - |
+        set -e
+        # Chemins des fichiers montés
+        CRT_PATH=/etc/trino/trino-tls/tls.crt
+        KEY_PATH=/etc/trino/trino-tls/tls.key
+        P12_PATH=/tmp/data/keystore.p12
+        JKS_PATH=/tmp/data/keystore.jks
+        ALIAS=trino
+        STOREPASS="${trino_jks_keystore_password}"
+        
+        # Générer PKCS12
+        openssl pkcs12 -export -in $CRT_PATH -inkey $KEY_PATH -out $P12_PATH -name $ALIAS -passout pass:$STOREPASS
+
+        # Convertir PKCS12 en JKS
+        keytool -importkeystore -srckeystore $P12_PATH -srcstoretype PKCS12 -srcstorepass $STOREPASS -destkeystore $JKS_PATH -deststoretype JKS -deststorepass $STOREPASS
+    volumeMounts:
+      - name: trino-tls
+        mountPath: /etc/trino/trino-tls
+      - name: temp-data
+        mountPath: /tmp/data
