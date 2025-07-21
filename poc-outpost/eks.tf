@@ -84,9 +84,9 @@ module "eks" {
       ami_type      = "AL2023_x86_64_STANDARD"
       instance_type = "r5.2xlarge"
 
-      min_size     = 5
-      max_size     = 8
-      desired_size = 5
+      min_size     = 6
+      max_size     = 10
+      desired_size = 6
 
       bootstrap_extra_args = "--kubelet-extra-args '--node-labels=eks.amazonaws.com/compute-type=ec2'"
 

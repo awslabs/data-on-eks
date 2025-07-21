@@ -31,9 +31,9 @@ variable "eks_cluster_version" {
 }
 
 variable "default_node_group_type" {
-    description = "Default node group type for the EKS cluster"
-    type        = string
-    default     = "doeks"
+  description = "Default node group type for the EKS cluster"
+  type        = string
+  default     = "doeks"
 }
 
 variable "hosted_zone_id" {

@@ -1,0 +1,110 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: java-kafka-producer
+  name: java-kafka-producer
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-kafka-producer
+  template:
+    metadata:
+      labels:
+        app: java-kafka-producer
+    spec:
+      containers:
+        - name: java-kafka-producer
+          image: quay.io/strimzi-examples/java-kafka-producer:latest
+          env:
+            - name: STRIMZI_TOPIC
+              value: my-topic
+            - name: STRIMZI_DELAY_MS
+              value: "1000"
+            - name: STRIMZI_LOG_LEVEL
+              value: "INFO"
+            - name: STRIMZI_MESSAGE_COUNT
+              value: "1000000"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: cluster-kafka-bootstrap:9092
+            - name: KAFKA_KEY_SERIALIZER
+              value: "org.apache.kafka.common.serialization.StringSerializer"
+            - name: KAFKA_VALUE_SERIALIZER
+              value: "org.apache.kafka.common.serialization.StringSerializer"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: java-kafka-streams
+  name: java-kafka-streams
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-kafka-streams
+  template:
+    metadata:
+      labels:
+        app: java-kafka-streams
+    spec:
+      containers:
+        - name: java-kafka-streams
+          image: quay.io/strimzi-examples/java-kafka-streams:latest
+          env:
+            - name: STRIMZI_SOURCE_TOPIC
+              value: my-topic
+            - name: STRIMZI_TARGET_TOPIC
+              value: my-topic-reversed
+            - name: STRIMZI_LOG_LEVEL
+              value: "INFO"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: cluster-kafka-bootstrap:9092
+            - name: KAFKA_APPLICATION_ID
+              value: java-kafka-streams
+            - name: KAFKA_DEFAULT_COMMIT_INTERVAL_MS
+              value: "5000"
+            - name: KAFKA_DEFAULT_KEY_SERDE
+              value: "org.apache.kafka.common.serialization.Serdes$StringSerde"
+            - name: KAFKA_DEFAULT_VALUE_SERDE
+              value: "org.apache.kafka.common.serialization.Serdes$StringSerde"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: java-kafka-consumer
+  name: java-kafka-consumer
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-kafka-consumer
+  template:
+    metadata:
+      labels:
+        app: java-kafka-consumer
+    spec:
+      containers:
+        - name: java-kafka-consumer
+          image: quay.io/strimzi-examples/java-kafka-consumer:latest
+          env:
+            - name: STRIMZI_TOPIC
+              value: my-topic-reversed
+            - name: STRIMZI_LOG_LEVEL
+              value: "INFO"
+            - name: STRIMZI_MESSAGE_COUNT
+              value: "1000000"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: cluster-kafka-bootstrap:9092
+            - name: KAFKA_GROUP_ID
+              value: java-kafka-consumer
+            - name: KAFKA_KEY_DESERIALIZER
+              value: "org.apache.kafka.common.serialization.StringDeserializer"
+            - name: KAFKA_VALUE_DESERIALIZER
+              value: "org.apache.kafka.common.serialization.StringDeserializer"
