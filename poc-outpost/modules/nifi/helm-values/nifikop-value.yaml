@@ -1,0 +1,71 @@
+## NiFi Operator Image
+##
+image:
+  repository: ghcr.io/konpyutaika/docker-images/nifikop
+  tag: v1.14.1-release
+  pullPolicy: Always
+  imagePullSecrets:
+    enabled: false
+#    name:
+vaultAddress: ""
+# vaultSecret containing a `ca.crt` key with the Vault CA Certificate
+vaultSecret: ""
+# set of namespaces where the operator watches resources
+namespaces: ["nifi"]
+
+# Optional labels to add to all deployed resources
+labels: {}
+
+# Optional annotations to add to all deployed resources
+annotations: {}
+
+## Prometheus-operator resource limits & requests
+## Ref: https://kubernetes.io/docs/user-guide/compute-resources/
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+## RunAsUser for OpenShift compatibility
+podSecurityContext:
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+
+## pod spec host aliases for the operator
+## Ref: https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/
+hostAliases: []
+
+## If true, create & deploy the CRD
+##
+createCustomResource: true
+
+## If true, create & use RBAC resources
+##
+rbacEnable: true
+
+## If true, create serviceAccount
+##
+serviceAccount:
+  create: true
+
+metrics:
+  ## if true deploy service for metrics access
+  enabled: false
+  port: 9090
+
+logLevel: Info
+logEncoding: json
+
+certManager:
+  enabled: true
+  clusterScoped: false
+
+webhook:
+  enabled: true
+
+additionalEnvs: []
