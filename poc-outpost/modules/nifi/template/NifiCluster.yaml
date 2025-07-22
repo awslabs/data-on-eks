@@ -1,0 +1,152 @@
+apiVersion: nifi.konpyutaika.com/v1
+kind: NifiCluster
+metadata:
+  name: eksnifi
+  namespace: nifi
+spec:
+  service:
+    headlessEnabled: true
+    labels:
+      cluster-name: eksnifi
+  # externalServices:
+  #   - name: nifi-clusterk
+  #     spec:
+  #       type: ClusterIP
+  #       portConfigs:
+  #         - port: 8443
+  #           internalListenerName: "https"
+  zkAddress: "zookeeper.zookeeper:2181"
+  zkPath: /eksnifi
+  clusterImage: "apache/nifi:1.23.2"
+  initContainers:
+    - name: import-ca-cert
+      image: eclipse-temurin:17-jdk
+      command: 
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          CACERTS_PATH=$(readlink -f $(which java) | sed 's|/bin/java||')/lib/security/cacerts
+          cp $CACERTS_PATH /opt/certs/cacerts
+          mkdir -p /opt/certs
+          curl -o /opt/certs/isrgrootx1.pem https://letsencrypt.org/certs/isrgrootx1.pem
+          keytool -import -trustcacerts -keystore /opt/certs/cacerts \
+            -storepass changeit -noprompt \
+            -alias letsencryptroot -file /opt/certs/isrgrootx1.pem
+      volumeMounts:
+        - name: truststore-volume
+          mountPath: /opt/certs
+  oneNifiNodePerNode: true
+  managedAdminUsers:
+    - identity: "fscellos"
+      name: "fscellos"
+  readOnlyConfig:
+    logbackConfig:
+      replaceConfigMap:
+        data: logback.xml
+        name: nifi-logback
+        namespace: nifi
+    nifiProperties:
+      overrideConfigs: |
+        nifi.security.truststore=/opt/certs/cacerts
+        nifi.security.truststoreType=JKS
+        nifi.security.truststorePasswd=changeit
+
+        nifi.sensitive.props.key=nifikopnifikopnifikop
+        nifi.nar.library.autoload.directory=../extensions
+
+        # Authentification via OIDC
+        nifi.security.allow.anonymous.authentication=false
+        nifi.security.user.oidc.discovery.url=https://keycloak.orange-eks.com/realms/orange-eks/.well-known/openid-configuration
+        nifi.security.user.oidc.client.id=nifi
+        nifi.security.user.oidc.client.secret=jeqsGB7sU4hy30oou6eN9kB2yG8JOBGS
+        nifi.security.user.oidc.client.authentication=client_secret_basic
+        # nifi.security.user.oidc.preferred.jwsalgorithm=RS256
+        nifi.security.user.oidc.connect.timeout=30
+        nifi.security.user.oidc.claim.identifying.user=preferred_username
+        nifi.security.user.oidc.read.timeout=30
+        nifi.security.user.oidc.truststore.strategy=NIFI
+
+        nifi.security.allow.anonymous.authentication=false
+              
+        # Required for proxy/TLS passthrough
+        nifi.web.proxy.host=nifi.orange-eks.com
+        nifi.web.proxy.context.path=/nifi
+
+        # Identity mapping
+        nifi.security.identity.mapping.pattern.dn=CN=([^,]*)(?:, (?:O|OU)=.*)?
+        nifi.security.identity.mapping.pattern.any=^(.*)$
+        nifi.security.identity.mapping.value.dn=$1
+        nifi.security.identity.mapping.transform.dn=NONE
+
+        nifi.sensitive.props.key=thisIsABadSensitiveKeyPassword
+  pod:
+    labels:
+      cluster-name: eksnifi
+  nodeConfigGroups:
+    default_group:
+      externalVolumeConfigs:
+        - name: truststore-volume
+          mountPath: "/opt/certs"
+          emptyDir: {}
+      imagePullPolicy: IfNotPresent
+      isNode: true
+      serviceAccountName: default
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+              - key: topology.ebs.csi.aws.com/outpost-id
+                operator: Exists        
+      storageConfigs:
+        - mountPath: "/opt/nifi/nifi-current/logs"
+          name: logs
+          reclaimPolicy: Delete
+          pvcSpec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: "gp2"
+            resources:
+              requests:
+                storage: 10Gi
+      resourcesRequirements:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+  nodes:
+    - id: 1
+      nodeConfigGroup: "default_group"
+    - id: 2
+      nodeConfigGroup: "default_group"
+  propagateLabels: true
+  nifiClusterTaskSpec:
+    retryDurationMinutes: 10
+  listenersConfig:
+    internalListeners:
+      # - type: "https"
+      #   name: "https"
+      #   containerPort: 8443
+      # - type: "cluster"
+      #   name: "cluster"
+      #   containerPort: 6007
+      # - type: "s2s"
+      #   name: "s2s"
+      #   containerPort: 10000
+      - containerPort: 8080
+        type: http
+        name: http
+      - containerPort: 6007
+        type: cluster
+        name: cluster
+      - containerPort: 10000
+        type: s2s
+        name: s2s
+      - containerPort: 9090
+        type: prometheus
+        name: prometheus
+      - containerPort: 6342
+        type: load-balance
+        name: load-balance
