@@ -1,5 +1,5 @@
 FROM apache/spark:3.5.6-scala2.12-java17-python3-ubuntu
-USER root
+
 ARG PYTHON_VERSION=3.11.3
 ARG BEAM_VERSION=2.58.0
 ARG HADOOP_VERSION=3.4.1
