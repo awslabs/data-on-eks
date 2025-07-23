@@ -47,7 +47,7 @@ variable "domaine_name_route53" {
   description = "Liste des noms de domaine a enregistrer dans Route53"
   default = [
     "albtest-otl4.orange-eks.com",
-    "trino-otl4.orange-eks.com",
+    "trinoalb4.orange-eks.com",
     "airflowalb4.orange-eks.com",
     "nifi-otl4.orange-eks.com"
   ]
