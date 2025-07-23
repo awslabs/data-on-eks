@@ -59,16 +59,16 @@ spec:
                       operator: NotIn
                       values:
                         - on-demand
-          podAntiAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                - key: "strimzi.io/pool-name"
-                  operator: In
-                  values:
-                  - broker
-                  - controller
-              topologyKey: "kubernetes.io/hostname"
+          # podAntiAffinity:
+          #   requiredDuringSchedulingIgnoredDuringExecution:
+          #   - labelSelector:
+          #       matchExpressions:
+          #       - key: "strimzi.io/pool-name"
+          #         operator: In
+          #         values:
+          #         - broker
+          #         - controller
+          #     topologyKey: "kubernetes.io/hostname"
         topologySpreadConstraints:
           - labelSelector:
               matchExpressions:

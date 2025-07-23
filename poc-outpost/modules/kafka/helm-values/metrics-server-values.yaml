@@ -41,12 +41,12 @@ resources:
     cpu: 200m
     memory: 512Mi
 
-affinity:
-  podAntiAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            k8s-app: metrics-server
-        namespaces:
-          - kube-system
-        topologyKey: kubernetes.io/hostname
+# affinity:
+#   podAntiAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#       - labelSelector:
+#           matchLabels:
+#             k8s-app: metrics-server
+#         namespaces:
+#           - kube-system
+#         topologyKey: kubernetes.io/hostname

@@ -48,7 +48,7 @@ variable "domaine_name_route53" {
   default = [
     "albtest-otl4.orange-eks.com",
     "trino-otl4.orange-eks.com",
-    "airflow-otl4.orange-eks.com",
+    "airflowalb4.orange-eks.com",
     "nifi-otl4.orange-eks.com"
   ]
   type = list(string)
