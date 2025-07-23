@@ -27,8 +27,8 @@ locals {
   default_node_group_type = var.default_node_group_type
 
   trino_namespace = "trino"
-  trino_name = "trino"
-  trino_sa        = "trino-sa"
+  trino_name = "trinoalb4"
+  trino_sa        = "trino-sa-alb4"
   trino_tls = "${local.trino_name}-tls"
 
   cognito_user_pool_id = var.cognito_user_pool_id
@@ -37,6 +37,9 @@ locals {
   main_domain = var.main_domain
   zone_id = var.zone_id
   wildcard_domain_secret_name = "wildcard-orange-eks-tls"
+
+  outpost_name = var.outpost_name
+  output_subnet_id = var.output_subnet_id
 
   tags = var.tags
 }

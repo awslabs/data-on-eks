@@ -12,8 +12,8 @@ module "db" {
   engine_version       = "17"
   family               = "postgres17" # DB parameter group
   major_engine_version = "17"         # DB option group
-  instance_class       = "db.r5.large"  #outpost db https://docs.aws.amazon.com/fr_fr/AmazonRDS/latest/UserGuide/rds-on-outposts.db-instance-classes.html
-
+  #instance_class       = "db.r5.large"  #outpost db https://docs.aws.amazon.com/fr_fr/AmazonRDS/latest/UserGuide/rds-on-outposts.db-instance-classes.html
+  instance_class       = "db.r5.xlarge"  #outpost db https://docs.aws.amazon.com/fr_fr/AmazonRDS/latest/UserGuide/rds-on-outposts.db-instance-classes.html
   allocated_storage     = 20
   max_allocated_storage = 100
 
@@ -66,7 +66,7 @@ resource "random_password" "postgres" {
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "postgres" {
-  name                    = "postgres-trino"
+  name                    = "postgres-trino-${local.name}"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 

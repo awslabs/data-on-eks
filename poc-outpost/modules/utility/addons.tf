@@ -8,7 +8,7 @@ data "aws_route53_zone" "main" {
 }
 
 resource "aws_iam_policy" "cert_manager_dns01" {
-  name = "cert-manager-dns01-route53"
+  name = "cert-manager-dns01-route53-otl4"
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -34,7 +34,7 @@ resource "aws_iam_policy" "cert_manager_dns01" {
 }
 
 resource "aws_iam_role" "cert_manager_irsa_role" {
-  name = "CertManagerIRSA"
+  name = "CertManagerIRSA-otl4"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

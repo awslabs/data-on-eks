@@ -15,4 +15,4 @@ spec:
         mode: SIMPLE
         credentialName: tls-nifi
       hosts:
-        - "nifi.orange-eks.com"
+        - "${nifi_instance_name}.orange-eks.com"

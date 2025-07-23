@@ -67,3 +67,14 @@ variable "zone_id" {
   description = "Zone ID for the main domain"
   type        = string
 }
+
+variable "outpost_name" {
+  type        = string
+  description = "Outpost name"
+  default = "OTL4"
+}
+
+variable "output_subnet_id" {
+  type        = string
+  description = "Outpost subnet id"
+}

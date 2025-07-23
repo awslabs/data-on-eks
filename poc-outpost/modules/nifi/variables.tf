@@ -17,3 +17,9 @@ variable "eks_cluster_name" {
   type        = string
   description = "Cluster EKS Cible"
 }
+
+variable "nifi_instance_name" {
+  type        = string
+  description = "Nifi instance name"
+  default = "nifi-otl4"
+}

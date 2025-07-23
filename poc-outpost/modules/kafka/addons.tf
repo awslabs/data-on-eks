@@ -26,18 +26,53 @@ module "eks_data_addons" {
   depends_on = [kubernetes_namespace.kafka]
 }
 
-resource "kubernetes_manifest" "kafka-manifests" {
-  for_each = { for f in local.kafka_manifest_files : f => f }
-  manifest = yamldecode(file("${path.module}/kafka-manifests/${each.value}"))
+# resource "kubernetes_manifest" "kafka-manifests" {
+#   for_each = { for f in local.kafka_manifest_files : f => f }
+#   manifest = yamldecode(file("${path.module}/kafka-manifests/${each.value}"))
 
-  depends_on = [module.eks_data_addons,
-    kubernetes_namespace.kafka]
+#   depends_on = [module.eks_data_addons,
+#     kubernetes_namespace.kafka]
+# }
+
+# resource "kubernetes_manifest" "monitoring-manifests" {
+#   for_each = { for f in local.monitoring_manifest_files : f => f }
+#   manifest = yamldecode(file("${path.module}/monitoring-manifests/${each.value}"))
+
+#   depends_on = [kubernetes_manifest.kafka-manifests,
+#       kubernetes_namespace.kafka]
+# }
+
+# Application des templates
+# (on n'utilise pas kubernetes_manifest car dans le cas de CRD custom, la vérification fait que le tf script plante au premier lancement)
+locals {
+  kafka_manifests = {
+    for file in local.kafka_manifest_files :
+    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/kafka-manifests/${file}"))
+  }
+  monitoring_manifests = {
+    for file in local.monitoring_manifest_files :
+    trimsuffix(file, ".yaml") => yamldecode(file("${path.module}/monitoring-manifests/${file}"))
+  }
+   all_manifests = merge(local.kafka_manifests, local.monitoring_manifests)
 }
 
-resource "kubernetes_manifest" "monitoring-manifests" {
-  for_each = { for f in local.monitoring_manifest_files : f => f }
-  manifest = yamldecode(file("${path.module}/monitoring-manifests/${each.value}"))
+resource "helm_release" "kafkamanifest" {
+  name             = "kafkamanifest"
+  namespace        = "kafka"
+  create_namespace = false
 
-  depends_on = [kubernetes_manifest.kafka-manifests,
-      kubernetes_namespace.kafka]
+  repository        = "https://bedag.github.io/helm-charts"
+  chart             = "raw"
+  version           = "2.0.0"
+  dependency_update = true
+  upgrade_install   = true
+  wait              = true
+
+  values = [
+    yamlencode({
+      resources = local.all_manifests
+    })
+  ]
+
+  depends_on = [module.eks_data_addons]
 }

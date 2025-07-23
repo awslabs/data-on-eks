@@ -27,7 +27,7 @@ locals {
   nlb_arns = [
     for arn, lb in data.aws_lb.all_details :
     arn
-    if lb.load_balancer_type == "network"
+    if lb.load_balancer_type == "network" && lookup(lb.tags, "elbv2.k8s.aws/cluster", null) == var.name
   ]
 
   selected_nlb_arn = try(local.nlb_arns[0], null)

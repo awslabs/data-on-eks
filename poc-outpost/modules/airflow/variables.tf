@@ -47,3 +47,14 @@ variable "main_domain" {
     description = "Main domain for the cluster"
     type        = string
 }
+
+variable "outpost_name" {
+  type        = string
+  description = "Name of the Outpost"
+  default     = "OTL4"
+}
+
+variable "output_subnet_id" {
+  type        = string
+  description = "Outpost subnet id"
+}

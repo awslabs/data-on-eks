@@ -8,19 +8,19 @@ variable "region" {
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
   type        = string
-  default     = "poc-orange-doeks"
+  default     = "poc-orange-doeks-otl4"
 }
 
 variable "outpost_name" {
   description = "Name of the Outpost"
   type        = string
-  default     = "OTL5"
+  default     = "OTL4"
 }
 
 # VPC
 variable "vpc_cidr" {
   description = "VPC CIDR. This should be a valid private (RFC 1918) CIDR range"
-  default     = "10.0.0.0/16"
+  default     = "10.3.0.0/16"
   type        = string
 }
 
@@ -46,9 +46,10 @@ variable "hosted_zone_id" {
 variable "domaine_name_route53" {
   description = "Liste des noms de domaine a enregistrer dans Route53"
   default = [
-    "albtest.orange-eks.com",
-    "trino.orange-eks.com",
-    "airflow.orange-eks.com",
+    "albtest-otl4.orange-eks.com",
+    "trino-otl4.orange-eks.com",
+    "airflow-otl4.orange-eks.com",
+    "nifi-otl4.orange-eks.com"
   ]
   type = list(string)
 }

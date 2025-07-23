@@ -71,21 +71,13 @@ data "aws_iam_policy" "glue_full_access" {
 # Creating an s3 bucket for event logs
 #---------------------------------------------------------------
 module "s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  source  = "../s3-bucket-outpost"
 
-  bucket_prefix = "${local.name}-trino-"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  bucket_name = "${local.name}-trino"
+  vpc-id      = local.vpc_id
+  outpost_name = local.outpost_name
+  output_subnet_id = local.output_subnet_id
+  vpc_id = local.vpc_id
 
   tags = local.tags
 }
@@ -94,29 +86,17 @@ module "s3_bucket" {
 # Trino S3 Bucket for Data
 #---------------------------------------------------------------
 module "trino_s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  source  = "../s3-bucket-outpost"
 
-  bucket_prefix = "trino-data-bucket-"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  bucket_name = "trino-data-bucket"
+  vpc-id      = local.vpc_id
+  outpost_name = local.outpost_name
+  output_subnet_id = local.output_subnet_id
+  vpc_id = local.vpc_id
 
   tags = local.tags
 }
+
 
 #---------------------------------------------------------------
 # Creates IAM policy for accessing s3 bucket
@@ -131,26 +111,13 @@ resource "aws_iam_policy" "trino_s3_bucket_policy" {
 # Trino Exchange Manager S3 Bucket
 #---------------------------------------------------------------
 module "trino_exchange_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  source  = "../s3-bucket-outpost"
 
-  bucket_prefix = "trino-exchange-bucket-"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  bucket_name = "trino-exchange-bucket"
+  vpc-id      = local.vpc_id
+  outpost_name = local.outpost_name
+  output_subnet_id = local.output_subnet_id
+  vpc_id = local.vpc_id
 
   tags = local.tags
 }

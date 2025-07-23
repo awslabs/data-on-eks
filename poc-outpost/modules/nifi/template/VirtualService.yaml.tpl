@@ -5,7 +5,7 @@ metadata:
   namespace: nifi
 spec:
   hosts:
-    - "nifi.orange-eks.com"
+    - "${nifi_instance_name}.orange-eks.com"
   gateways:
     - nifi-gateway
   http:
@@ -33,4 +33,4 @@ spec:
           set:
             X-Forwarded-Proto: https
             X-Forwarded-Port: "443"
-            X-Forwarded-Host: "nifi.orange-eks.com"
+            X-Forwarded-Host: "${nifi_instance_name}.orange-eks.com"

@@ -8,13 +8,6 @@ spec:
     headlessEnabled: true
     labels:
       cluster-name: eksnifi
-  # externalServices:
-  #   - name: nifi-clusterk
-  #     spec:
-  #       type: ClusterIP
-  #       portConfigs:
-  #         - port: 8443
-  #           internalListenerName: "https"
   zkAddress: "zookeeper.zookeeper:2181"
   zkPath: /eksnifi
   clusterImage: "apache/nifi:1.23.2"

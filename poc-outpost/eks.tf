@@ -80,13 +80,13 @@ module "eks" {
 
   self_managed_node_groups = {
     outposts-ng = {
-      name          = "outposts-ng"
+      name          = "outposts-ng-otl4"
       ami_type      = "AL2023_x86_64_STANDARD"
-      instance_type = "r5.2xlarge"
+      instance_type = "r5.4xlarge" # r5.2xlarge non disponible sur cet outpost
 
-      min_size     = 6
-      max_size     = 10
-      desired_size = 6
+      min_size     = 3
+      max_size     = 5
+      desired_size = 3
 
       bootstrap_extra_args = "--kubelet-extra-args '--node-labels=eks.amazonaws.com/compute-type=ec2'"
 

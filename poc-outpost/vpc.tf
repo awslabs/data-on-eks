@@ -68,7 +68,7 @@ module "outpost_subnet" {
 # using existing private subnets for creating db subnet on outpost RDS
 #---------------------------------------------------------------
 resource "aws_db_subnet_group" "private" {
-  name       = "db-private-subnet-outpost"
+  name       = "db-private-subnet-outpost-otl4"
   subnet_ids = module.outpost_subnet.subnet_id
   tags       = local.tags
 }

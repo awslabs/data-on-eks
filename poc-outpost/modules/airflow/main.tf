@@ -14,6 +14,8 @@ data "aws_eks_cluster_auth" "this" {
 
 
 locals {
+  outpost_name = var.outpost_name
+  output_subnet_id = var.output_subnet_id
   name   = var.name
   region = var.region
   vpc_id = var.vpc_id
@@ -28,7 +30,7 @@ locals {
   #---------------------------------------------------------------
   # Local variables airflow
   #---------------------------------------------------------------
-  airflow_name                      = "airflow"
+  airflow_name                      = "airflowalb4"
   airflow_namespace                 = "airflow"
   airflow_scheduler_service_account = "airflow-scheduler"
   airflow_webserver_service_account = "airflow-webserver"

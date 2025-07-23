@@ -122,6 +122,8 @@ module "airflow" {
   enable_airflow        = var.enable_airflow
   cluster_issuer_name   = var.cluster_issuer_name
   main_domain           = var.main_domain
+  outpost_name          = var.outpost_name
+  output_subnet_id = module.outpost_subnet.subnet_id[0]
 
   tags = local.tags
 
@@ -144,6 +146,8 @@ module "trino" {
   vpc_id                  = module.vpc.vpc_id
   db_subnets_group_name   = aws_db_subnet_group.private.name
   default_node_group_type = var.default_node_group_type
+  outpost_name = var.outpost_name
+  output_subnet_id = module.outpost_subnet.subnet_id[0]
 
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
   tags                         = local.tags
@@ -174,6 +178,6 @@ module "kafka" {
   tags = local.tags
 
   depends_on = [
-    #module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 }

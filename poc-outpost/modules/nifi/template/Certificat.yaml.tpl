@@ -10,9 +10,9 @@ spec:
   subject:
     organizations:
       - orange
-  commonName: nifi.orange-eks.com
+  commonName: ${nifi_instance_name}.orange-eks.com
   dnsNames:
-    - nifi.orange-eks.com
+    - ${nifi_instance_name}.orange-eks.com
   issuerRef:
     name: letsencrypt-http
     kind: ClusterIssuer

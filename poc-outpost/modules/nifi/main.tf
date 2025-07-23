@@ -1,10 +1,10 @@
 locals {
   # Récupération locale car repo OCI non supporté par HELM actuellement dans TF
   # oci://registry-1.docker.io/bitnamicharts/zookeeper -y-> helm pull oci://registry-1.docker.io/bitnamicharts/zookeeper --version 13.8.5
-  chart_zookeper     = "./charts/zookeeper-13.8.5.tgz"
+  chart_zookeper     = "${path.module}/charts/zookeeper-13.8.5.tgz"
   # Récupération locale car repo OCI non supporté par HELM actuellement dans TF
   # oci://ghcr.io/konpyutaika/helm-charts/nifikop -y-> helm pull oci://ghcr.io/konpyutaika/helm-charts/nifikop --version 1.14.1
-  chart_nifikop     = "./charts/nifikop-1.14.1.tgz"
+  chart_nifikop     = "${path.module}/charts/nifikop-1.14.1.tgz"
   zookeeper_values = file("${path.module}/helm-values/zookeeper-value.yaml") 
   nifikop_values = file("${path.module}/helm-values/nifikop-value.yaml") 
   region = "us-west-2"
@@ -80,15 +80,41 @@ resource "kubernetes_config_map_v1" "nifi_logback" {
   }
 }
 
-  # Application des manifests non variabilisés
+# Application des templates
 locals {
-  manifest_files = fileset("${path.module}/template", "*.yaml")
-  parsed_manifests = {
-    for file in local.manifest_files :
-    file => yamldecode(file("${path.module}/template/${file}"))
+  manifests = {
+    certificat = yamldecode(templatefile("${path.module}/template/Certificat.yaml.tpl", {
+      nifi_instance_name = var.nifi_instance_name
+    }))
+    gateway = yamldecode(templatefile("${path.module}/template/Gateway.yaml.tpl", {
+      nifi_instance_name = var.nifi_instance_name
+    }))
+    role = yamldecode(templatefile("${path.module}/template/Role.yaml.tpl", {}))
+    rolebinding = yamldecode(templatefile("${path.module}/template/RoleBindings.yaml.tpl", {}))
+    virtualservice = yamldecode(templatefile("${path.module}/template/VirtualService.yaml.tpl", {
+      nifi_instance_name = var.nifi_instance_name
+    }))
+    nificluster = yamldecode(templatefile("${path.module}/template/NifiCluster.yaml.tpl", {}))
   }
 }
-resource "kubernetes_manifest" "othermanifests" {
-  for_each = local.parsed_manifests
-  manifest = each.value
+
+resource "helm_release" "nifi" {
+  name             = "nifi"
+  namespace        = "nifi"
+  create_namespace = false
+
+  repository        = "https://bedag.github.io/helm-charts"
+  chart             = "raw"
+  version           = "2.0.0"
+  dependency_update = true
+  upgrade_install   = true
+  wait              = true
+
+  values = [
+    yamlencode({
+      resources = local.manifests
+    })
+  ]
+
+  depends_on = [module.nifikop]
 }

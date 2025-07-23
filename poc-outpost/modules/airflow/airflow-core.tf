@@ -13,7 +13,8 @@ module "db" {
   engine_version       = "17"
   family               = "postgres17" # DB parameter group
   major_engine_version = "17"         # DB option group
-  instance_class       = "db.r5.large"  #outpost db https://docs.aws.amazon.com/fr_fr/AmazonRDS/latest/UserGuide/rds-on-outposts.db-instance-classes.html
+  #instance_class       = "db.r5.large"  #outpost db https://docs.aws.amazon.com/fr_fr/AmazonRDS/latest/UserGuide/rds-on-outposts.db-instance-classes.html
+  instance_class       = "db.r5.xlarge"  #outpost db https://docs.aws.amazon.com/fr_fr/AmazonRDS/latest/UserGuide/rds-on-outposts.db-instance-classes.html
 
   allocated_storage     = 20
   max_allocated_storage = 100
@@ -70,7 +71,7 @@ resource "random_password" "postgres" {
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "postgres" {
   count                   = var.enable_airflow ? 1 : 0
-  name                    = "postgres-2"
+  name                    = "postgres-2-${local.name}"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
@@ -254,7 +255,7 @@ resource "random_id" "airflow_webserver" {
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "airflow_webserver" {
   count                   = var.enable_airflow ? 1 : 0
-  name                    = "airflow_webserver_secret_key_2"
+  name                    = "airflow_webserver_secret_key_2${local.name}"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
@@ -422,21 +423,13 @@ resource "aws_iam_policy" "airflow_dag" {
 #tfsec:ignore:*
 module "airflow_s3_bucket" {
   count   = var.enable_airflow ? 1 : 0
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  source  = "../s3-bucket-outpost"
 
-  bucket_prefix = "${local.name}-airflow-"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  bucket_name = "${local.name}-airflow"
+  vpc-id      = local.vpc_id
+  outpost_name = local.outpost_name
+  output_subnet_id = local.output_subnet_id
+  vpc_id = local.vpc_id
 
   tags = local.tags
 }
