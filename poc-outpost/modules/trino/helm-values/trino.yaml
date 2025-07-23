@@ -114,7 +114,8 @@ coordinator:
 
 worker:
   jvm:
-    maxHeapSize: "89G"  # ~80% of container memory (110Gi)
+    # maxHeapSize: "89G"  # ~80% of container memory (110Gi)
+    maxHeapSize: "40G"  # ~80% of container memory (50Gi)
     extraArguments:
       - "-XX:+UseG1GC"
       - "-XX:G1HeapRegionSize=32M"
@@ -127,14 +128,19 @@ worker:
     internal-communication.shared-secret: ${trino_communication_encryption}
     http-server.process-forwarded: true
     query:
-      maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
+      # maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
+      maxMemoryPerNode: "30GB"  # ~80% of maxHeapSize
   resources:
     requests:
-      cpu: "12000m"  # Leave 3000m for system/DaemonSets
-      memory: 112Gi  # Leave 16Gi for system/DaemonSets
+      # cpu: "12000m"  # Leave 3000m for system/DaemonSets
+      # memory: 112Gi  # Leave 16Gi for system/DaemonSets
+      cpu: "4000m"
+      memory: 50Gi
     limits:
-      cpu: "14000m"
-      memory: 112Gi
+      # cpu: "14000m"
+      # memory: 112Gi
+      cpu: "4000m"
+      memory: 50Gi
   nodeSelector:
     NodePool: trino-sql-karpenter
     karpenter.sh/capacity-type: on-demand
