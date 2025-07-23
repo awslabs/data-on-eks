@@ -14,5 +14,5 @@ spec:
   dnsNames:
     - ${nifi_instance_name}.orange-eks.com
   issuerRef:
-    name: letsencrypt-http
+    name: letsencrypt-http-private
     kind: ClusterIssuer

@@ -50,9 +50,9 @@ spec:
 
         # Authentification via OIDC
         nifi.security.allow.anonymous.authentication=false
-        nifi.security.user.oidc.discovery.url=https://keycloak.orange-eks.com/realms/orange-eks/.well-known/openid-configuration
+        nifi.security.user.oidc.discovery.url=https://keycloak-otl4.orange-eks.com/realms/orange-eks/.well-known/openid-configuration
         nifi.security.user.oidc.client.id=nifi
-        nifi.security.user.oidc.client.secret=jeqsGB7sU4hy30oou6eN9kB2yG8JOBGS
+        nifi.security.user.oidc.client.secret=Q6wOLCiRYuua38RIcxdy0nRIWhqKk3bp
         nifi.security.user.oidc.client.authentication=client_secret_basic
         # nifi.security.user.oidc.preferred.jwsalgorithm=RS256
         nifi.security.user.oidc.connect.timeout=30
@@ -63,7 +63,7 @@ spec:
         nifi.security.allow.anonymous.authentication=false
               
         # Required for proxy/TLS passthrough
-        nifi.web.proxy.host=nifi.orange-eks.com
+        nifi.web.proxy.host=nifi-otl4.orange-eks.com
         nifi.web.proxy.context.path=/nifi
 
         # Identity mapping
