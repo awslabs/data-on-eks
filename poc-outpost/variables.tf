@@ -84,6 +84,12 @@ variable "enable_kafka" {
   default     = true
 }
 
+variable "enable_spark_operator" {
+  description = "Enable Spark Operator"
+  type        = bool
+  default     = true
+}
+
 variable "cluster_issuer_name" {
   description = "Name of the cluster issuer for cert-manager"
   type        = string
@@ -118,4 +124,10 @@ Ensure that these roles are trusted and have the necessary access to manage encr
 EOT
   type        = list(string)
   default     = []
+}
+
+variable "spark_teams" {
+  description = "List of all teams (namespaces) for spark team"
+  type        = list(string)
+  default = ["spark-team-a", "spark-team-b", "spark-team-c", "airflow"]
 }

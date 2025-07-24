@@ -21,7 +21,6 @@ server:
     baseDir: "s3://${exchange_bucket_id}"
   autoscaling:
     enabled: false
-
   config:
     #https:
       #enabled: true  # Disable HTTPS for simplicity
@@ -33,14 +32,15 @@ server:
       maxExecutionTime: "24h"
       clientTimeout: "2h"
   coordinatorExtraConfig: |
-    #web-ui.authentication.type=oauth2
-    #http-server.authentication.type=oauth2
+    web-ui.authentication.type=FORM
+    web-ui.enabled=true
+    http-server.authentication.type=PASSWORD
     #http-server.http.enabled=true
-    #http-server.https.enabled=true
+    http-server.https.enabled=true
     http-server.process-forwarded=true
-    #http-server.https.port=8443
-    #http-server.https.keystore.path=/tmp/data/keystore.p12
-    #http-server.https.keystore.key="${trino_jks_keystore_password}"  # The password for the keystore
+    http-server.https.port=8443
+    http-server.https.keystore.path=/tmp/data/keystore.jks
+    http-server.https.keystore.key=${trino_jks_keystore_password}
     #http-server.authentication.allow-insecure-over-http=true
     internal-communication.shared-secret=${trino_communication_encryption}
     #http-server.authentication.oauth2.oidc.discovery=true
@@ -51,12 +51,19 @@ server:
     #http-server.authentication.oauth2.token-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/token
     #http-server.authentication.oauth2.auth-url=${cognito_user_pool_domain}.auth.${region}.amazoncognito.com/oauth2/authorize
     #http-server.authentication.oauth2.scopes="openid email profile"
-
+  workerExtraConfig: |
+    internal-communication.shared-secret=${trino_communication_encryption}
 service:
   type: ClusterIP
   port: 8080
 
 coordinator:
+  additionalConfigFiles:
+    password-authenticator.properties: |
+      password-authenticator.name=file
+      file.password-file=/etc/trino/passwords.db
+    passwords.db: |
+      trino:${trino_user_password}
   additionalVolumes:
     - name: trino-tls
       secret:
@@ -69,6 +76,13 @@ coordinator:
       readOnly: true
     - name: temp-data
       mountPath: /tmp/data
+  additionalExposedPorts:
+    https:
+      servicePort: 8443
+      name: https
+      port: 8443
+      protocol: TCP
+
 
   jvm:
     maxHeapSize: "32G"  # ~80% of container memory
@@ -114,8 +128,7 @@ coordinator:
 
 worker:
   jvm:
-    # maxHeapSize: "89G"  # ~80% of container memory (110Gi)
-    maxHeapSize: "40G"  # ~80% of container memory (50Gi)
+    maxHeapSize: "45G"  # ~80% of container memory (110Gi)
     extraArguments:
       - "-XX:+UseG1GC"
       - "-XX:G1HeapRegionSize=32M"
@@ -125,21 +138,14 @@ worker:
       - "-Djdk.attach.allowAttachSelf=true"
       - "-XX:+UseContainerSupport"
   config:
-    internal-communication.shared-secret: ${trino_communication_encryption}
-    http-server.process-forwarded: true
     query:
-      # maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
-      maxMemoryPerNode: "30GB"  # ~80% of maxHeapSize
+      maxMemoryPerNode: "35GB"  # ~80% of maxHeapSize
   resources:
     requests:
-      # cpu: "12000m"  # Leave 3000m for system/DaemonSets
-      # memory: 112Gi  # Leave 16Gi for system/DaemonSets
-      cpu: "4000m"
-      memory: 50Gi
+      cpu: "6000m"  # Leave 3000m for system/DaemonSets
+      memory: 50Gi  # Leave 16Gi for system/DaemonSets
     limits:
-      # cpu: "14000m"
-      # memory: 112Gi
-      cpu: "4000m"
+      cpu: "7000m"
       memory: 50Gi
   nodeSelector:
     NodePool: trino-sql-karpenter
@@ -196,26 +202,6 @@ serviceAccount:
 ingress:
   # Enable web ingress resource
   enabled: false
-  # Annotations for the web Ingress
-  annotations:
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/healthcheck-path: '/health'
-    alb.ingress.kubernetes.io/load-balancer-name: "k8s-${trino_name}"
-  tls:
-    - hosts:
-      - "${trino_domain}"
-      secretName: "${trino_tls}"  # The secret containing the TLS certificate on wildcard domain
-  # The path for the web Ingress
-  hosts:
-    - host: "${trino_domain}"  # The domain name for the web Ingress
-      paths:
-        - path: "/"
-          # The pathType for the above path (used only with Kubernetes v1.19 and above)
-          pathType: "Prefix"
-    # The Ingress Class for the web Ingress (used only with Kubernetes v1.19 and above)
-  className: "alb"
 
 jmx:
 

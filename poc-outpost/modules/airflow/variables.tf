@@ -33,11 +33,6 @@ variable "tags" {
   description = "Tags à appliquer aux ressources"
 }
 
-variable "enable_airflow" {
-  description = "Enable Airflow deployment"
-  type        = bool
-}
-
 variable "cluster_issuer_name" {
     description = "Name of the ClusterIssuer for cert-manager"
     type        = string
@@ -46,6 +41,11 @@ variable "cluster_issuer_name" {
 variable "main_domain" {
     description = "Main domain for the cluster"
     type        = string
+}
+
+variable "spark_teams" {
+    description = "List of all teams (namespaces) that will use Spark Operator"
+    type        = list(string)
 }
 
 variable "outpost_name" {

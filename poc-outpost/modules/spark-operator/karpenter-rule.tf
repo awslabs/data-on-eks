@@ -3,18 +3,11 @@ resource "kubectl_manifest" "karpenter_node_class" {
     apiVersion: karpenter.k8s.aws/v1
     kind: EC2NodeClass
     metadata:
-      name: trino-karpenter
+      name: spark-karpenter
     spec:
       amiFamily: AL2023
       amiSelectorTerms:
         - alias: al2023@latest
-      blockDeviceMappings:
-        - deviceName: /dev/xvda
-          ebs:
-            volumeSize: 100Gi # This storage used for Trino Spill data
-            volumeType: gp2
-            encrypted: true
-            deleteOnTermination: true
       instanceStorePolicy: RAID0
       role: ${local.karpenter_node_iam_role_name}
       subnetSelectorTerms:
@@ -25,6 +18,12 @@ resource "kubectl_manifest" "karpenter_node_class" {
             karpenter.sh/discovery: ${local.name}
       tags:
         karpenter.sh/discovery: ${local.name}
+      blockDeviceMappings:
+        - deviceName: /dev/xvda
+          ebs:
+            volumeSize: 100Gi
+            volumeType: gp2
+            deleteOnTermination: true
   YAML
 }
 
@@ -34,17 +33,17 @@ resource "kubectl_manifest" "karpenter_node_pool" {
     apiVersion: karpenter.sh/v1
     kind: NodePool
     metadata:
-      name: trino-sql-karpenter
+      name: spark-karpenter
     spec:
       template:
         metadata:
           labels:
-            NodePool: trino-sql-karpenter
+            NodePool: spark
         spec:
           nodeClassRef:
             group: karpenter.k8s.aws
             kind: EC2NodeClass
-            name: trino-karpenter
+            name: spark-karpenter
           requirements:
             - key: karpenter.sh/capacity-type
               operator: In
@@ -52,7 +51,7 @@ resource "kubectl_manifest" "karpenter_node_pool" {
               - "on-demand"
             - key: node.kubernetes.io/instance-type
               operator: In
-              values:
+              values: # de base ca utilise c5d de ["4xlarge", "9xlarge", "12xlarge", "18xlarge", "24xlarge"]
               - r5.4xlarge
       disruption:
         consolidationPolicy: WhenEmptyOrUnderutilized

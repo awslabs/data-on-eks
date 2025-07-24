@@ -39,3 +39,21 @@ output "grafana_local_secret_name" {
   value       = module.supervision.grafana_secret_name
   description = "Le nom du secret contenant le mot de passe admin de Grafana pour permettre de récupérer le mot de passe admin de Grafana"
 }
+
+output "airflow_admin_password" {
+  value       = length(module.airflow) > 0 ? module.airflow[0].airflow_admin_password : null
+  description = "Le mot de passe admin de Airflow"
+  sensitive   = true
+}
+
+output "trino_user_password" {
+  value       = length(module.trino) > 0 ? module.trino[0].trino_user_password : null
+  description = "Le mot de passe pour l'utilisateur Trino"
+  sensitive   = true
+}
+
+
+# output "s3_bucket_id_spark_history_server" {
+#   description = "Spark History server logs S3 bucket ID"
+#   value       =  length(module.spark-operator) > 0 ? module.spark-operator[0].s3_bucket_id_spark_history_server : null
+# }

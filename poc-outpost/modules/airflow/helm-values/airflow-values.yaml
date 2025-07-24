@@ -41,6 +41,20 @@ ingress:
 # One of: LocalExecutor, LocalKubernetesExecutor, CeleryExecutor, KubernetesExecutor, CeleryKubernetesExecutor
 executor: "KubernetesExecutor"
 
+localSettings:
+  stringOverride: |
+    from airflow.kubernetes.pod_generator import PodDefaults
+    from kubernetes.client import V1Container, V1ResourceRequirements
+
+    PodDefaults.SIDECAR_CONTAINER = V1Container(
+        name="airflow-xcom-sidecar",
+        image="apache/airflow:2.9.1",
+        args=["/bin/bash", "-c", "trap 'exit 0' INT; while true; do sleep 1; done"],
+        resources=V1ResourceRequirements(
+            requests={"cpu": "50m", "memory": "64Mi"},
+            limits={"cpu": "200m", "memory": "256Mi"}
+        )
+    )
 ###################################
 # Airflow database
 ###################################
@@ -60,7 +74,7 @@ postgresql:
 ###################################
 # Flask secret key for Airflow Webserver: `[webserver] secret_key` in airflow.cfg
 ###################################
-webserverSecretKeySecretName: ${webserver_secret_name}
+webserverSecretKeySecretName: "${webserver_secret_name}"
 
 ###################################
 # Airflow Worker Config
@@ -73,19 +87,23 @@ workers:
   serviceAccount:
     create: false
     name: ${worker_service_account}
-  extraContainers:
-    - name: s3-sync
-      image: amazon/aws-cli:latest
-      command: [ "sh", "-c", "aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path};" ]
-      volumeMounts:
-        - name: dags
-          mountPath: ${airflow_dag_path}
   extraVolumeMounts:
     - name: dags
       mountPath: ${airflow_dag_path}
   extraVolumes:
     - name: dags
       emptyDir: { }
+  extraInitContainers:
+    - name: s3-sync-init
+      image: amazon/aws-cli:latest
+      command:
+        - "sh"
+        - "-c"
+        - |
+          aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path}
+      volumeMounts:
+        - name: dags
+          mountPath: ${airflow_dag_path}
 ###################################
 # Airflow scheduler settings
 ###################################
@@ -137,6 +155,13 @@ scheduler:
         - name: dags
           mountPath: ${airflow_dag_path}
 
+
+apiServer:
+
+  # Create ServiceAccount
+  serviceAccount:
+    create: false
+    name: ${api_server_service_account}
 ###################################
 # Airflow webserver settings
 ###################################
@@ -169,20 +194,11 @@ webserver:
     email: admin@example.com
     firstName: admin
     lastName: user
-    password: admin
-
-  service:
-    #type: ClusterIP
-    type: NodePort
-
-  # Create ServiceAccount
-  serviceAccount:
-    create: false
-    name: ${webserver_service_account}
+    password: "${webserver_default_user_password}"
 
 #  extraVolumeMounts:
 #    - name: config
-#      mountPath: /opt/irflow/webserver_config.py
+#      mountPath: /opt/airflow/webserver_config.py
 #      subPath: webserver_config.py
 #  extraVolumes:
 #    - name: config
@@ -206,6 +222,8 @@ config:
     load_examples: 'True'
     executor: '{{ .Values.executor }}'
     remote_logging: 'True'
+    dag_dir_list_interval: 30
+    dag_processor_manager_refresh_interval: 30
   logging:
     remote_logging: 'True'
     logging_level: 'INFO'
@@ -216,6 +234,8 @@ config:
     remote_log_conn_id: 'aws_s3_conn'
     delete_worker_pods: 'False'
     encrypt_s3_logs: 'True'
+  scheduler:
+    dag_processor_manager_refresh_interval: 10
 
 
 ###################################
