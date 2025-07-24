@@ -46,9 +46,9 @@ output "airflow_admin_password" {
 }
 
 output "trino_user_password" {
-    value       = length(module.trino) > 0 ? module.trino[0].trino_user_password : null
-    description = "Le mot de passe pour l'utilisateur Trino"
-    sensitive   = true
+  value       = length(module.trino) > 0 ? module.trino[0].trino_user_password : null
+  description = "Le mot de passe pour l'utilisateur Trino"
+  sensitive   = true
 }
 
 

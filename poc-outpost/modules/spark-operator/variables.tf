@@ -32,3 +32,8 @@ variable "karpenter_node_iam_role_name" {
     description = "The name of the IAM role created for Karpenter nodes"
     type        = string
 }
+
+variable "spark_teams" {
+  description = "List of all teams (namespaces) that will use Spark Operator"
+  type        = list(string)
+}

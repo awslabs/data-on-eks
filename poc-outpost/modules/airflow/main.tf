@@ -24,7 +24,6 @@ locals {
   cluster_issuer_name = var.cluster_issuer_name
   main_domain = var.main_domain
 
-
   #---------------------------------------------------------------
   # Local variables airflow
   #---------------------------------------------------------------

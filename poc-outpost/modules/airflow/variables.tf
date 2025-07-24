@@ -42,3 +42,8 @@ variable "main_domain" {
     description = "Main domain for the cluster"
     type        = string
 }
+
+variable "spark_teams" {
+    description = "List of all teams (namespaces) that will use Spark Operator"
+    type        = list(string)
+}

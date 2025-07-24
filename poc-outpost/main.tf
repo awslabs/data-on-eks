@@ -54,7 +54,7 @@ data "aws_ecrpublic_authorization_token" "token" {
 }
 
 #---------------------------------------------------------------
-# Module contenant prometheus, grafana
+# Module contenant les utilitaires de base
 #---------------------------------------------------------------
 module "utility" {
   source = "./modules/utility"
@@ -82,7 +82,29 @@ module "utility" {
     # module.eks_blueprints_addons
   ]
 }
+##
+# Module contenant spark-operator, spark history server, spark job service
+##
+module "spark_operator" {
+  source = "./modules/spark-operator"
+  count  = var.enable_spark_operator ? 1 : 0
 
+  name                         = local.name
+  region                       = local.region
+  oidc_provider_arn            = module.eks.oidc_provider_arn
+  cluster_version              = var.eks_cluster_version
+  cluster_endpoint             = module.eks.cluster_endpoint
+  karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
+  spark_teams                  = var.spark_teams
+
+  tags = local.tags
+
+  depends_on = [
+    # module.eks,
+    # module.kafka,
+    # module.utility,
+  ]
+}
 #---------------------------------------------------------------
 # Module contenant prometheus, grafana
 #---------------------------------------------------------------
@@ -121,6 +143,7 @@ module "airflow" {
   db_subnets_group_name = aws_db_subnet_group.private.name
   cluster_issuer_name   = var.cluster_issuer_name
   main_domain           = var.main_domain
+  spark_teams                  = var.spark_teams
 
   tags = local.tags
 

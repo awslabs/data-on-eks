@@ -1,5 +1,5 @@
 locals {
-    teams = ["spark-team-a", "spark-team-b", "spark-team-c"]
+    teams = var.spark_teams
 }
 #---------------------------------------------------------------
 # Kubernetes Cluster Role binding role for Airflow Worker with Spark Operator Role
