@@ -1,21 +1,23 @@
-resource "kubernetes_namespace" "kafka" {
+resource "kubernetes_namespace" "trino" {
   metadata {
     name = "${local.trino_namespace}"
   }
 }
 
-# resource "kubernetes_secret" "jks_keystore" {
-#   metadata {
-#     name      = "keystore"
-#     namespace = local.trino_namespace
-#   }
-#
-#   data = {
-#     "keystore.jks" = filebase64("${path.module}/cert/keystore.jks")
-#   }
-#
-#   type = "Opaque"
-# }
+resource "random_password" "trino_password" {
+  length  = 16
+  special = true
+}
+
+resource "random_password" "trino_communication_encryption" {
+  length  = 16
+  special = false
+}
+
+resource "bcrypt_hash" "trino_bcrypt" {
+  cleartext = random_password.trino_password.result
+  cost     = 10
+}
 
 data "aws_iam_policy_document" "trino_exchange_access" {
   statement {
@@ -228,7 +230,8 @@ module "trino_addon" {
         trino_name = local.trino_name
         trino_domain = "${local.trino_name}.${local.main_domain}"
         trino_tls = local.trino_tls
-        trino_communication_encryption = "MaCleSuperSecrete123456!" # test
+        trino_user_password = replace(bcrypt_hash.trino_bcrypt.id, "^\\$2[ab]\\$", "$2y$") #trino accepte que les bcrypt avec $2y$
+        trino_communication_encryption = random_password.trino_communication_encryption.result # test
         # JKS Keystore
         trino_jks_keystore_password = "TRINOPassword123456!" # test
         #random_password.trino_jks_keystore_password.result

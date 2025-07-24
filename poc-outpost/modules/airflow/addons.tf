@@ -1,3 +1,8 @@
+resource "random_password" "airflow_admin" {
+  length  = 16
+  special = true
+}
+
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
@@ -12,24 +17,26 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_airflow = true
   airflow_helm_config = {
-    namespace = try(kubernetes_namespace_v1.airflow[0].metadata[0].name, local.airflow_namespace)
+    namespace = try(local.airflow_namespace, local.airflow_namespace)
     version = "1.17.0"
     values = [
       templatefile("${path.module}/helm-values/airflow-values.yaml", {
         # Airflow Postgres RDS Config
         airflow_db_user = local.airflow_name
-        airflow_db_pass = try(sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string), "")
-        airflow_db_name = try(module.db[0].db_instance_name, "")
-        airflow_db_host = try(element(split(":", module.db[0].db_instance_endpoint), 0), "")
+        airflow_db_pass = try(sensitive(aws_secretsmanager_secret_version.postgres.secret_string), "")
+        airflow_db_name = try(module.db.db_instance_name, "")
+        airflow_db_host = try(element(split(":", module.db.db_instance_endpoint), 0), "")
         #Service Accounts
-        worker_service_account = try(kubernetes_service_account_v1.airflow_worker[0].metadata[0].name, local.airflow_workers_service_account)
-        scheduler_service_account = try(kubernetes_service_account_v1.airflow_scheduler[0].metadata[0].name, local.airflow_scheduler_service_account)
-        webserver_service_account = try(kubernetes_service_account_v1.airflow_webserver[0].metadata[0].name, local.airflow_webserver_service_account)
-        dag_processor_service_account = try(kubernetes_service_account_v1.airflow_dag[0].metadata[0].name, local.airflow_dag_processor_service_account)
+        worker_service_account = try(kubernetes_service_account_v1.airflow_worker.metadata[0].name, local.airflow_workers_service_account)
+        scheduler_service_account = try(kubernetes_service_account_v1.airflow_scheduler.metadata[0].name, local.airflow_scheduler_service_account)
+        api_server_service_account = try(kubernetes_service_account_v1.airflow_webserver.metadata[0].name, local.airflow_api_server_service_account)
+        dag_processor_service_account = try(kubernetes_service_account_v1.airflow_dag.metadata[0].name, local.airflow_dag_processor_service_account)
         # S3 bucket config
-        s3_bucket_name = try(module.airflow_s3_bucket[0].s3_bucket_id, "")
+        s3_bucket_name = try(module.airflow_s3_bucket.s3_bucket_id, "")
         airflow_dag_path                  = "/opt/airflow/dags"
         webserver_secret_name = local.airflow_webserver_secret_name
+
+        webserver_default_user_password = random_password.airflow_admin.result
       })
     ]
   }

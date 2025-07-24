@@ -25,3 +25,9 @@ spec:
             host: ${service_name}
             port:
               number: ${service_port}
+      headers:
+        request:
+          set:
+            X-Forwarded-Host: "${dns_name}"
+            X-Forwarded-Port: "443"
+            X-Forwarded-Proto: https

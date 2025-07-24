@@ -2,7 +2,6 @@
 # RDS Postgres Database for Apache Airflow Metadata
 #---------------------------------------------------------------
 module "db" {
-  count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 5.0"
 
@@ -21,12 +20,12 @@ module "db" {
   db_name                = local.airflow_name
   username               = local.airflow_name
   create_random_password = false
-  password               = sensitive(aws_secretsmanager_secret_version.postgres[0].secret_string)
+  password               = sensitive(aws_secretsmanager_secret_version.postgres.secret_string)
   port                   = 5432
 
   multi_az               = false
   db_subnet_group_name   = local.db_subnet_group_name
-  vpc_security_group_ids = [module.security_group[0].security_group_id]
+  vpc_security_group_ids = [module.security_group.security_group_id]
 
   maintenance_window              = "Mon:00:00-Mon:03:00"
   backup_window                   = "03:00-06:00"
@@ -63,28 +62,24 @@ module "db" {
 # Apache Airflow Postgres Metastore DB Master password
 #---------------------------------------------------------------
 resource "random_password" "postgres" {
-  count   = var.enable_airflow ? 1 : 0
   length  = 16
   special = false
 }
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "postgres" {
-  count                   = var.enable_airflow ? 1 : 0
   name                    = "postgres-2"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
 resource "aws_secretsmanager_secret_version" "postgres" {
-  count         = var.enable_airflow ? 1 : 0
-  secret_id     = aws_secretsmanager_secret.postgres[0].id
-  secret_string = random_password.postgres[0].result
+  secret_id     = aws_secretsmanager_secret.postgres.id
+  secret_string = random_password.postgres.result
 }
 
 #---------------------------------------------------------------
 # PostgreSQL RDS security group
 #---------------------------------------------------------------
 module "security_group" {
-  count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 5.0"
 
@@ -109,38 +104,35 @@ module "security_group" {
 #---------------------------------------------------------------
 # Airflow Namespace
 #---------------------------------------------------------------
-resource "kubernetes_namespace_v1" "airflow" {
-  count = var.enable_airflow ? 1 : 0
-  metadata {
-    name = local.airflow_namespace
-  }
-  timeouts {
-    delete = "15m"
-  }
+resource "kubectl_manifest" "airflow" {
+  yaml_body = <<YAML
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${local.airflow_namespace}
+YAML
 }
 
 #---------------------------------------------------------------
 # IRSA module for Airflow Scheduler
 #---------------------------------------------------------------
 resource "kubernetes_service_account_v1" "airflow_scheduler" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
     name        = local.airflow_scheduler_service_account
-    namespace   = kubernetes_namespace_v1.airflow[0].metadata[0].name
-    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_scheduler[0].iam_role_arn }
+    namespace   = local.airflow_namespace
+    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_scheduler.iam_role_arn }
   }
 
   automount_service_account_token = true
 }
 
 resource "kubernetes_secret_v1" "airflow_scheduler" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
-    name      = "${kubernetes_service_account_v1.airflow_scheduler[0].metadata[0].name}-secret"
-    namespace = kubernetes_namespace_v1.airflow[0].metadata[0].name
+    name      = "${kubernetes_service_account_v1.airflow_scheduler.metadata[0].name}-secret"
+    namespace = local.airflow_namespace
     annotations = {
-      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_scheduler[0].metadata[0].name
-      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_scheduler.metadata[0].name
+      "kubernetes.io/service-account.namespace" = local.airflow_namespace
     }
   }
 
@@ -151,56 +143,52 @@ module "airflow_irsa_scheduler" {
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0" # ensure to update this to the latest/desired version
 
-  count = var.enable_airflow ? 1 : 0
   # IAM role for service account (IRSA)
   create_release = false
   create_policy  = false # Policy is created in the next resource
 
-  create_role = var.enable_airflow
+  create_role = true
   role_name   = local.airflow_scheduler_service_account
 
-  role_policies = { AirflowScheduler = aws_iam_policy.airflow_scheduler[0].arn }
+  role_policies = { AirflowScheduler = aws_iam_policy.airflow_scheduler.arn }
 
   oidc_providers = {
     this = {
       provider_arn    = local.oidc_provider_arn
-      namespace       = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      namespace       = local.airflow_namespace
       service_account = local.airflow_scheduler_service_account
     }
   }
 }
 
 resource "aws_iam_policy" "airflow_scheduler" {
-  count = var.enable_airflow ? 1 : 0
 
   description = "IAM policy for Airflow Scheduler Pod"
   name_prefix = local.airflow_scheduler_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3[0].json
+  policy      = data.aws_iam_policy_document.airflow_s3.json
 }
 
 #---------------------------------------------------------------
 # IRSA module for Airflow Webserver
 #---------------------------------------------------------------
 resource "kubernetes_service_account_v1" "airflow_webserver" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
-    name        = local.airflow_webserver_service_account
-    namespace   = kubernetes_namespace_v1.airflow[0].metadata[0].name
-    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_webserver[0].iam_role_arn }
+    name        = local.airflow_api_server_service_account
+    namespace   = local.airflow_namespace
+    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_webserver.iam_role_arn }
   }
 
   automount_service_account_token = true
 }
 
 resource "kubernetes_secret_v1" "airflow_webserver" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
-    name      = "${kubernetes_service_account_v1.airflow_webserver[0].metadata[0].name}-secret"
-    namespace = kubernetes_namespace_v1.airflow[0].metadata[0].name
+    name      = "${kubernetes_service_account_v1.airflow_webserver.metadata[0].name}-secret"
+    namespace = local.airflow_namespace
     annotations = {
-      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_webserver[0].metadata[0].name
-      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_webserver.metadata[0].name
+      "kubernetes.io/service-account.namespace" = local.airflow_namespace
     }
   }
 
@@ -208,7 +196,6 @@ resource "kubernetes_secret_v1" "airflow_webserver" {
 }
 
 module "airflow_irsa_webserver" {
-  count = var.enable_airflow ? 1 : 0
 
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0" #ensure to update this to the latest/desired version
@@ -217,17 +204,17 @@ module "airflow_irsa_webserver" {
   create_release = false
 
   # IAM role for service account (IRSA)
-  create_role   = var.enable_airflow
+  create_role   = true
   create_policy = false # Policy is created in the next resource
 
-  role_name     = local.airflow_webserver_service_account
-  role_policies = merge({ AirflowWebserver = aws_iam_policy.airflow_webserver[0].arn })
+  role_name     = local.airflow_api_server_service_account
+  role_policies = merge({ AirflowWebserver = aws_iam_policy.airflow_webserver.arn })
 
   oidc_providers = {
     this = {
       provider_arn    = local.oidc_provider_arn
-      namespace       = kubernetes_namespace_v1.airflow[0].metadata[0].name
-      service_account = local.airflow_webserver_service_account
+      namespace       = local.airflow_namespace
+      service_account = local.airflow_api_server_service_account
     }
   }
 
@@ -235,40 +222,35 @@ module "airflow_irsa_webserver" {
 }
 
 resource "aws_iam_policy" "airflow_webserver" {
-  count = var.enable_airflow ? 1 : 0
 
   description = "IAM policy for Airflow Webserver Pod"
-  name_prefix = local.airflow_webserver_service_account
+  name_prefix = local.airflow_api_server_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3[0].json
+  policy      = data.aws_iam_policy_document.airflow_s3.json
 }
 
 #---------------------------------------------------------------
 # Apache Airflow Webserver Secret
 #---------------------------------------------------------------
 resource "random_id" "airflow_webserver" {
-  count       = var.enable_airflow ? 1 : 0
   byte_length = 16
 }
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "airflow_webserver" {
-  count                   = var.enable_airflow ? 1 : 0
   name                    = "airflow_webserver_secret_key_2"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
 resource "aws_secretsmanager_secret_version" "airflow_webserver" {
-  count         = var.enable_airflow ? 1 : 0
-  secret_id     = aws_secretsmanager_secret.airflow_webserver[0].id
-  secret_string = random_id.airflow_webserver[0].hex
+  secret_id     = aws_secretsmanager_secret.airflow_webserver.id
+  secret_string = random_id.airflow_webserver.hex
 }
 
 #---------------------------------------------------------------
 # Webserver Secret Key
 #---------------------------------------------------------------
 resource "kubectl_manifest" "airflow_webserver" {
-  count = var.enable_airflow ? 1 : 0
   sensitive_fields = [
     "data.webserver-secret-key"
   ]
@@ -278,7 +260,7 @@ apiVersion: v1
 kind: Secret
 metadata:
    name: ${local.airflow_webserver_secret_name}
-   namespace: ${kubernetes_namespace_v1.airflow[0].metadata[0].name}
+   namespace: ${local.airflow_namespace}
    labels:
     app.kubernetes.io/managed-by: "Helm"
    annotations:
@@ -286,7 +268,7 @@ metadata:
     meta.helm.sh/release-namespace: "airflow"
 type: Opaque
 data:
-  webserver-secret-key: ${base64encode(aws_secretsmanager_secret_version.airflow_webserver[0].secret_string)}
+  webserver-secret-key: ${base64encode(aws_secretsmanager_secret_version.airflow_webserver.secret_string)}
 YAML
 }
 
@@ -294,24 +276,22 @@ YAML
 # IRSA module for Airflow Workers
 #---------------------------------------------------------------
 resource "kubernetes_service_account_v1" "airflow_worker" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
     name        = local.airflow_workers_service_account
-    namespace   = kubernetes_namespace_v1.airflow[0].metadata[0].name
-    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_worker[0].iam_role_arn }
+    namespace   = local.airflow_namespace
+    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_worker.iam_role_arn }
   }
 
   automount_service_account_token = true
 }
 
 resource "kubernetes_secret_v1" "airflow_worker" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
     name      = "${local.airflow_workers_service_account}-secret"
-    namespace = kubernetes_namespace_v1.airflow[0].metadata[0].name
+    namespace = local.airflow_namespace
     annotations = {
-      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_worker[0].metadata[0].name
-      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_worker.metadata[0].name
+      "kubernetes.io/service-account.namespace" = local.airflow_namespace
     }
   }
 
@@ -320,7 +300,6 @@ resource "kubernetes_secret_v1" "airflow_worker" {
 
 # Create IAM Role for Service Account (IRSA) Only if Airflow is enabled
 module "airflow_irsa_worker" {
-  count = var.enable_airflow ? 1 : 0
 
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0" #ensure to update this to the latest/desired version
@@ -333,12 +312,12 @@ module "airflow_irsa_worker" {
   create_policy = false # Policy is created in the next resource
 
   role_name     = local.airflow_workers_service_account
-  role_policies = merge({ AirflowWorker = aws_iam_policy.airflow_worker[0].arn })
+  role_policies = merge({ AirflowWorker = aws_iam_policy.airflow_worker.arn })
 
   oidc_providers = {
     this = {
       provider_arn    = local.oidc_provider_arn
-      namespace       = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      namespace       = local.airflow_namespace
       service_account = local.airflow_workers_service_account
     }
   }
@@ -347,36 +326,33 @@ module "airflow_irsa_worker" {
 }
 
 resource "aws_iam_policy" "airflow_worker" {
-  count = var.enable_airflow ? 1 : 0
 
   description = "IAM policy for Airflow Workers Pod"
   name_prefix = local.airflow_workers_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3[0].json
+  policy      = data.aws_iam_policy_document.airflow_s3.json
 }
 
 #---------------------------------------------------------------
 # IRSA module for Airflow Dag processor
 #---------------------------------------------------------------
 resource "kubernetes_service_account_v1" "airflow_dag" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
     name        = local.airflow_dag_processor_service_account
-    namespace   = kubernetes_namespace_v1.airflow[0].metadata[0].name
-    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_dag[0].iam_role_arn }
+    namespace   = local.airflow_namespace
+    annotations = { "eks.amazonaws.com/role-arn" : module.airflow_irsa_dag.iam_role_arn }
   }
 
   automount_service_account_token = true
 }
 
 resource "kubernetes_secret_v1" "airflow_dag" {
-  count = var.enable_airflow ? 1 : 0
   metadata {
-    name      = "${kubernetes_service_account_v1.airflow_dag[0].metadata[0].name}-secret"
-    namespace = kubernetes_namespace_v1.airflow[0].metadata[0].name
+    name      = "${kubernetes_service_account_v1.airflow_dag.metadata[0].name}-secret"
+    namespace = local.airflow_namespace
     annotations = {
-      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_dag[0].metadata[0].name
-      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.airflow_dag.metadata[0].name
+      "kubernetes.io/service-account.namespace" = local.airflow_namespace
     }
   }
 
@@ -387,32 +363,30 @@ module "airflow_irsa_dag" {
   source  = "aws-ia/eks-blueprints-addon/aws"
   version = "~> 1.0" # ensure to update this to the latest/desired version
 
-  count = var.enable_airflow ? 1 : 0
   # IAM role for service account (IRSA)
   create_release = false
   create_policy  = false # Policy is created in the next resource
 
-  create_role = var.enable_airflow
+  create_role = true
   role_name   = local.airflow_dag_processor_service_account
 
-  role_policies = { AirflowDag = aws_iam_policy.airflow_dag[0].arn }
+  role_policies = { AirflowDag = aws_iam_policy.airflow_dag.arn }
 
   oidc_providers = {
     this = {
       provider_arn    = local.oidc_provider_arn
-      namespace       = kubernetes_namespace_v1.airflow[0].metadata[0].name
+      namespace       = local.airflow_namespace
       service_account = local.airflow_dag_processor_service_account
     }
   }
 }
 
 resource "aws_iam_policy" "airflow_dag" {
-  count = var.enable_airflow ? 1 : 0
 
   description = "IAM policy for Airflow Scheduler Pod"
   name_prefix = local.airflow_dag_processor_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3[0].json
+  policy      = data.aws_iam_policy_document.airflow_s3.json
 }
 
 #---------------------------------------------------------------
@@ -421,7 +395,6 @@ resource "aws_iam_policy" "airflow_dag" {
 
 #tfsec:ignore:*
 module "airflow_s3_bucket" {
-  count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
@@ -445,11 +418,10 @@ module "airflow_s3_bucket" {
 # IAM policy for Aiflow S3
 #---------------------------------------------------------------
 data "aws_iam_policy_document" "airflow_s3" {
-  count = var.enable_airflow ? 1 : 0
   statement {
     sid       = ""
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket[0].s3_bucket_id}"]
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket.s3_bucket_id}"]
 
     actions = [
       "s3:ListBucket"
@@ -458,7 +430,7 @@ data "aws_iam_policy_document" "airflow_s3" {
   statement {
     sid       = ""
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket[0].s3_bucket_id}/*"]
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket.s3_bucket_id}/*"]
 
     actions = [
       "s3:GetObject",

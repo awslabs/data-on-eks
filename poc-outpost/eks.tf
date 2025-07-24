@@ -42,6 +42,15 @@ module "eks" {
       type                       = "ingress"
       source_node_security_group = true
     }
+
+    ingress_kubelet_logs_from_outpost = {
+      description = "Allow access to Kubelet logs on port 10250 from Outpost nodes or bastion"
+      protocol    = "tcp"
+      from_port   = 10250
+      to_port     = 10250
+      type        = "ingress"
+      cidr_blocks = local.private_subnets_cidr
+    }
   }
 
   # Extend node-to-node security group rules

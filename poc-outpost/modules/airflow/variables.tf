@@ -33,11 +33,6 @@ variable "tags" {
   description = "Tags à appliquer aux ressources"
 }
 
-variable "enable_airflow" {
-  description = "Enable Airflow deployment"
-  type        = bool
-}
-
 variable "cluster_issuer_name" {
     description = "Name of the ClusterIssuer for cert-manager"
     type        = string

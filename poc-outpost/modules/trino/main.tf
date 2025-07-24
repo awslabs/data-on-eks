@@ -36,7 +36,6 @@ locals {
   cluster_issuer_name = var.cluster_issuer_name
   main_domain = var.main_domain
   zone_id = var.zone_id
-  wildcard_domain_secret_name = "wildcard-orange-eks-tls"
 
   tags = var.tags
 }

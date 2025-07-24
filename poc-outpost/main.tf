@@ -119,7 +119,6 @@ module "airflow" {
   private_subnets_cidr  = local.private_subnets_cidr
   vpc_id                = module.vpc.vpc_id
   db_subnets_group_name = aws_db_subnet_group.private.name
-  enable_airflow        = var.enable_airflow
   cluster_issuer_name   = var.cluster_issuer_name
   main_domain           = var.main_domain
 
