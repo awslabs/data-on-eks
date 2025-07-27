@@ -272,7 +272,7 @@ Leverages Ray Data's capabilities:
 ```json
 {
   "timestamp": "2024-01-15T10:30:00.000Z",
-  "log_level": "INFO", 
+  "log_level": "INFO",
   "message": "Application started",
   "kubernetes": {
     "pod_name": "spark-driver-xyz",
