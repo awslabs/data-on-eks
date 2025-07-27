@@ -172,3 +172,26 @@ data "aws_iam_policy_document" "s3tables_policy" {
     resources = ["*"]
   }
 }
+
+#---------------------------------------------------------------
+# Ray Data Spark Log Processing Module (Conditional)
+#---------------------------------------------------------------
+module "raydata_pipeline" {
+  count  = var.enable_raydata_processing ? 1 : 0
+  source = "./raydata-pipeline"
+
+  # Required variables passed from parent
+  aws_region       = local.region
+  eks_cluster_name = module.eks.cluster_name
+  s3_bucket        = module.s3_bucket.s3_bucket_id
+  s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
+
+  tags = local.tags
+
+  # Dependencies to ensure proper creation order
+  depends_on = [
+    module.eks,
+    module.s3_bucket,
+    module.eks_blueprints_addons
+  ]
+}

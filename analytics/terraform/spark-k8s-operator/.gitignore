@@ -1,0 +1,51 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Temporary files from execute scripts
+*.tmp
+*.bak
+verify_temp.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+ENV/
+
+# OS files
+.DS_Store
+Thumbs.db
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Log files
+*.log
+crash.log
+
+# SSH keys
+*.pem
+*.key
+
+# Kubernetes
+kubeconfig
+.kube/
+
+# AWS credentials
+.aws/
