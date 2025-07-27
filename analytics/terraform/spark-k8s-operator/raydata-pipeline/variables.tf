@@ -35,11 +35,6 @@ variable "iceberg_database" {
   default     = "raydata_spark_logs"
 }
 
-variable "iceberg_table" {
-  description = "Iceberg table name for processed Spark logs"
-  type        = string
-  default     = "spark_logs"
-}
 
 variable "service_account_name" {
   description = "Name of the Kubernetes service account"
