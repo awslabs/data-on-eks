@@ -56,10 +56,10 @@ output "deployment_instructions" {
   description = "Instructions for deploying the Ray job"
   value       = <<-EOT
     Ray Data infrastructure deployed successfully!
-    
+
     IAM Role: ${aws_iam_role.ray_s3_access.arn}
     Service Account: ${var.service_account_name} in namespace ${var.namespace}
-    
+
     To deploy the Ray job:
     1. cd examples/raydata-sparklogs-processing-job
     2. Update S3_BUCKET in execute-rayjob.sh to: ${var.s3_bucket}

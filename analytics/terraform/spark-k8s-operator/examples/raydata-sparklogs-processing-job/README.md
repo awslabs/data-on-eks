@@ -18,11 +18,11 @@ graph TB
     RayData --> Iceberg[Apache Iceberg Tables]
     Glue[AWS Glue Catalog] --> Iceberg
     Meta[Metadata Tracking] --> RayData
-    
+
     subgraph "EKS Cluster"
         RayData
     end
-    
+
     subgraph "Storage & Catalog"
         S3
         Iceberg
@@ -48,11 +48,11 @@ Add the Ray Data pipeline module to your `main.tf`:
 # Enable Ray Data processing
 module "raydata_pipeline" {
   source = "./raydata-pipeline"
-  
+
   aws_region        = local.region
   eks_cluster_name  = local.name
   s3_bucket         = module.s3_bucket.s3_bucket_id
-  
+
   tags = local.tags
 }
 ```
@@ -76,7 +76,7 @@ terraform apply -var="enable_raydata_processing=true"
 This creates:
 - KubeRay operator for Ray job orchestration
 - Ray service account with IRSA
-- IAM roles with S3 and Glue permissions  
+- IAM roles with S3 and Glue permissions
 - AWS Glue database for Iceberg
 - Kubernetes namespace (`raydata`)
 
@@ -198,7 +198,7 @@ The pipeline implements several intelligent features:
 ```json
 {
   "timestamp": "2024-01-15T10:30:00.000Z",
-  "log_level": "INFO", 
+  "log_level": "INFO",
   "message": "Application started",
   "kubernetes": {
     "pod_name": "spark-driver-xyz",
@@ -228,7 +228,7 @@ CREATE TABLE spark_logs (
   submission_id STRING
 );
 
--- Metadata table: raydata_spark_logs.spark_logs_processing_metadata  
+-- Metadata table: raydata_spark_logs.spark_logs_processing_metadata
 CREATE TABLE spark_logs_processing_metadata (
   spark_app_selector STRING,
   s3_path STRING,
@@ -312,7 +312,7 @@ kubectl get namespace raydata
 ```
 
 **Issue**: `AccessDenied` errors
-```bash  
+```bash
 # Solution: Verify IAM permissions
 kubectl get serviceaccount ray-service-account -n raydata -o yaml
 # Check eks.amazonaws.com/role-arn annotation

@@ -213,9 +213,9 @@ resource "aws_iam_role_policy_attachment" "ray_s3_access" {
 resource "aws_glue_catalog_database" "raydata_iceberg" {
   name        = var.iceberg_database
   description = "Database for storing processed Spark logs using Iceberg format"
-  
+
   catalog_id = local.account_id
-  
+
   tags = local.common_tags
 }
 

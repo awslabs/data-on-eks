@@ -322,33 +322,33 @@ cleanup_rayjob() {
 # Function to verify Iceberg data
 verify_data() {
     print_header "Verifying Ray Data Processing Results"
-    
+
     # Check if Python and PyIceberg are available
     if ! command -v python3 &> /dev/null; then
         print_error "python3 is required for data verification"
         exit 1
     fi
-    
+
     # Check if PyIceberg and dependencies are installed
     print_status "Checking PyIceberg and dependencies..."
     local missing_packages=()
-    
+
     if ! python3 -c "import pyiceberg" 2>/dev/null; then
         missing_packages+=("pyiceberg[glue,s3fs]==0.7.0")
     fi
-    
+
     if ! python3 -c "import numpy" 2>/dev/null; then
         missing_packages+=("numpy")
     fi
-    
+
     if ! python3 -c "import pandas" 2>/dev/null; then
         missing_packages+=("pandas")
     fi
-    
+
     if ! python3 -c "import pyarrow" 2>/dev/null; then
         missing_packages+=("pyarrow")
     fi
-    
+
     if [ ${#missing_packages[@]} -gt 0 ]; then
         print_warning "Missing required packages: ${missing_packages[*]}"
         echo ""
@@ -356,7 +356,7 @@ verify_data() {
         echo "  pip3 install 'pyiceberg[glue,s3fs]==0.7.0' numpy pandas pyarrow"
         echo "  python3 -m pip install 'pyiceberg[glue,s3fs]==0.7.0' numpy pandas pyarrow"
         echo ""
-        
+
         # Check for available package managers
         local pip_cmd=""
         if command -v pip3 &> /dev/null; then
@@ -366,7 +366,7 @@ verify_data() {
         elif python3 -m pip --version &> /dev/null; then
             pip_cmd="python3 -m pip"
         fi
-        
+
         if [[ -n "$pip_cmd" ]]; then
             read -p "Would you like to install PyIceberg now? (y/N): " -n 1 -r
             echo
@@ -392,9 +392,9 @@ verify_data() {
             exit 1
         fi
     fi
-    
+
     print_status "Creating verification script..."
-    
+
     # Create inline Python verification script with parameters
     cat > verify_temp.py << EOF
 #!/usr/bin/env python3
@@ -403,12 +403,12 @@ from pyiceberg.catalog import load_catalog
 
 def verify_iceberg_data(aws_region, s3_bucket, iceberg_database, iceberg_table):
     """Query Iceberg table to verify Ray Data processing results"""
-    
+
     warehouse_path = f"s3://{s3_bucket}/iceberg-warehouse/"
-    
+
     try:
         print("🔍 Connecting to Iceberg catalog...")
-        
+
         # Configure Glue catalog
         catalog = load_catalog(
             "glue",
@@ -418,43 +418,43 @@ def verify_iceberg_data(aws_region, s3_bucket, iceberg_database, iceberg_table):
                 "region_name": aws_region
             }
         )
-        
+
         # Load the table
         table_id = f"{iceberg_database}.{iceberg_table}"
         print(f"📊 Loading table: {table_id}")
         table = catalog.load_table(table_id)
-        
+
         print(f"📂 Table location: {table.location()}")
-        
+
         # Query the data using PyIceberg scan
         print("🎯 Querying Iceberg data...")
-        
+
         # Get all data as PyArrow table
         scan = table.scan()
         arrow_table = scan.to_arrow()
-        
+
         # Convert to Pandas for easier analysis
         df = arrow_table.to_pandas()
-        
+
         print(f"\n✅ SUCCESS! Found {len(df)} records in Iceberg table")
-        
+
         if len(df) == 0:
             print("⚠️  Warning: No data found in table")
             return True
-        
+
         # Data verification and summary
         print("\n📋 Data Summary:")
         print(f"   📊 Total Records: {len(df)}")
         print(f"   📅 Date Range: {df['timestamp'].min()} to {df['timestamp'].max()}")
         print(f"   🏷️  Unique Apps: {df['spark_app_selector'].nunique()}")
         print(f"   📱 Unique Pods: {df['pod_name'].nunique()}")
-        
+
         # Log level distribution
         print("\n📈 Log Level Distribution:")
         log_levels = df['log_level'].value_counts()
         for level, count in log_levels.items():
             print(f"   {level}: {count}")
-        
+
         # Show sample records
         print("\n📝 Sample Records (First 3):")
         sample_df = df[['timestamp', 'log_level', 'pod_name', 'spark_app_selector', 'message']].head(3)
@@ -466,22 +466,22 @@ def verify_iceberg_data(aws_region, s3_bucket, iceberg_database, iceberg_table):
             print(f"     📱 Pod: {row['pod_name']}")
             print(f"     💬 Message: {row['message'][:80]}...")
             print()
-        
+
         # Data quality checks
         print("🔍 Data Quality Checks:")
         print(f"   ✅ No null timestamps: {df['timestamp'].notna().all()}")
         print(f"   ✅ No null log_levels: {df['log_level'].notna().all()}")
         print(f"   ✅ No null spark_app_selector: {df['spark_app_selector'].notna().all()}")
-        
+
         # Spark app analysis
         spark_apps = df['spark_app_selector'].unique()
         print(f"\n🚀 Spark Applications Processed:")
         for app in spark_apps:
             app_count = len(df[df['spark_app_selector'] == app])
             print(f"   📱 {app}: {app_count} logs")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Error querying Iceberg table: {e}")
         return False
@@ -490,15 +490,15 @@ if __name__ == "__main__":
     if len(sys.argv) != 5:
         print("Usage: python3 verify_temp.py <aws_region> <s3_bucket> <iceberg_database> <iceberg_table>")
         sys.exit(1)
-    
+
     aws_region = sys.argv[1]
     s3_bucket = sys.argv[2]
     iceberg_database = sys.argv[3]
     iceberg_table = sys.argv[4]
-    
+
     print("🔍 Verifying Ray Data processed logs in Iceberg...")
     success = verify_iceberg_data(aws_region, s3_bucket, iceberg_database, iceberg_table)
-    
+
     if success:
         print("\n🎉 VERIFICATION SUCCESSFUL!")
         print("✅ Ray Data successfully processed and stored Spark logs in Iceberg format")
@@ -509,9 +509,9 @@ if __name__ == "__main__":
         print("❌ Unable to access or query Iceberg data")
         sys.exit(1)
 EOF
-    
+
     print_status "Running PyIceberg verification..."
-    
+
     # Run the verification script with parameters
     if python3 verify_temp.py "$AWS_REGION" "$S3_BUCKET" "$ICEBERG_DATABASE" "$ICEBERG_TABLE"; then
         print_status "✅ Data verification completed successfully"
@@ -522,7 +522,7 @@ EOF
         print_error "  - PyIceberg is installed: pip install 'pyiceberg[glue,s3fs]'"
         print_error "  - AWS credentials are configured"
     fi
-    
+
     # Cleanup
     rm -f verify_temp.py
 }

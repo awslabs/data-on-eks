@@ -84,7 +84,7 @@ data:
             try:
                 # Configure Iceberg catalog to use AWS Glue as metadata store
                 catalog_type = self.env_config.get('ICEBERG_CATALOG_TYPE', 'glue')
-                
+
                 if catalog_type == 'glue':
                     # Use AWS region from environment or default to us-west-2 (from terraform variables.tf)
                     aws_region = self.env_config.get('AWS_REGION', 'us-west-2')
@@ -112,7 +112,7 @@ data:
             """Initialize Iceberg tables for data and metadata."""
             database = self.env_config['ICEBERG_DATABASE']
             table_name = self.env_config['ICEBERG_TABLE']
-            
+
             # Define schema for the main data table storing processed Spark logs
             # Note: All fields set to optional for PyArrow/Ray Data compatibility
             data_schema = Schema(
@@ -213,14 +213,14 @@ data:
             try:
                 # Query the metadata table to get processing status for all folders
                 df = self.metadata_table.scan().to_pandas()
-                
+
                 if df.empty:
                     logger.info("📊 No previous processing records found")
                     return {}
 
                 # Get the most recent processing record for each spark_app_selector
                 latest_records = df.loc[df.groupby('spark_app_selector')['processing_start_time'].idxmax()]
-                
+
                 status_map = {}
                 for _, row in latest_records.iterrows():
                     status_map[row['spark_app_selector']] = {
@@ -308,7 +308,7 @@ data:
                 # Convert record to PyArrow format and append to Iceberg metadata table
                 df = pd.DataFrame([record])
                 pa_table = pa.Table.from_pandas(df)
-                
+
                 self.metadata_table.append(pa_table)
                 logger.info(f"📝 Updated {spark_app_selector} status to {status}")
 
@@ -474,7 +474,7 @@ data:
                 # Convert to pandas DataFrame with explicit dtypes for Iceberg compatibility
                 import pandas as pd
                 df = pd.DataFrame(valid_records)
-                
+
                 # Ensure required fields are not nullable
                 required_fields = ['timestamp', 'log_level', 'message', 'pod_name', 'namespace_name', 'app', 'spark_app_selector']
                 for field in required_fields:
@@ -485,7 +485,7 @@ data:
                         else:
                             # Convert to non-nullable string type
                             df[field] = df[field].astype('string').fillna('')
-                
+
                 # Convert DataFrame back to dict of lists for Ray Data
                 result = {}
                 for column in df.columns:
@@ -647,7 +647,7 @@ data:
                     table_identifier=f"{self.env_config['ICEBERG_DATABASE']}.{self.env_config['ICEBERG_TABLE']}",
                     catalog_kwargs={
                         "name": "glue",
-                        "type": "glue", 
+                        "type": "glue",
                         "warehouse": self.env_config['ICEBERG_WAREHOUSE'],
                         "region_name": self.env_config['AWS_REGION']
                     }
