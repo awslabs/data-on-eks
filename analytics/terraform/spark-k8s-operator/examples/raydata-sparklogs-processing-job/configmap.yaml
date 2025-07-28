@@ -1,0 +1,686 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-log-processor-code
+  namespace: $NAMESPACE
+  labels:
+    app: spark-log-processor-job
+    component: code
+data:
+  spark_log_processor.py: |
+    #!/usr/bin/env python3
+    """
+    Intelligent Spark Log Processing Pipeline with Iceberg Metadata Tracking
+    Uses Apache Iceberg for data storage and metadata table to track processing status.
+    """
+
+    import os
+    import logging
+    import json
+    import ray
+    import pandas as pd
+    import boto3
+    import pyarrow as pa
+    from pyiceberg.catalog import load_catalog
+    from pyiceberg.table import Table
+    from pyiceberg.schema import Schema
+    from pyiceberg.types import (
+        NestedField, StringType, TimestampType, IntegerType, BooleanType
+    )
+    from typing import Dict, Any, List, Optional, Set
+    from datetime import datetime
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    logger = logging.getLogger("spark-log-processor")
+
+    class SparkLogProcessor:
+        """Intelligent processor with Iceberg metadata tracking for idempotent execution."""
+
+        # Required fields that MUST be present in each log entry for processing
+        REQUIRED_FIELDS = {
+            'timestamp',
+            'log_level',
+            'message',
+            'kubernetes.pod_name',
+            'kubernetes.namespace_name',
+            'kubernetes.labels.app',
+            'kubernetes.labels.spark-app-selector'
+        }
+
+        def __init__(self, env_config: Dict[str, str]):
+            self.env_config = env_config
+            self._validate_environment()
+            # Initialize AWS S3 client for discovering log folders
+            self.s3_client = boto3.client('s3')
+            # Initialize Iceberg catalog and table references
+            self.catalog = None
+            self.data_table = None
+            self.metadata_table = None
+            self._initialize_iceberg()
+
+        def _validate_environment(self) -> None:
+            """Validate required environment variables."""
+            required_vars = [
+                "S3_BUCKET", "S3_PREFIX", "ICEBERG_CATALOG_TYPE",
+                "ICEBERG_DATABASE", "ICEBERG_TABLE", "ICEBERG_WAREHOUSE"
+            ]
+
+            missing_vars = [
+                var for var in required_vars
+                if not self.env_config.get(var) or self.env_config[var].startswith("$")
+            ]
+
+            if missing_vars:
+                raise RuntimeError(f"Missing required environment variables: {missing_vars}")
+
+            logger.info("✅ Environment validation passed")
+
+        def _initialize_iceberg(self) -> None:
+            """Initialize Iceberg catalog and tables."""
+            try:
+                # Configure Iceberg catalog to use AWS Glue as metadata store
+                catalog_type = self.env_config.get('ICEBERG_CATALOG_TYPE', 'glue')
+
+                if catalog_type == 'glue':
+                    # Use AWS region from environment or default to us-west-2 (from terraform variables.tf)
+                    aws_region = self.env_config.get('AWS_REGION', 'us-west-2')
+                    catalog_config = {
+                        'type': 'glue',
+                        'glue.region': aws_region,
+                        's3.region': aws_region,
+                        'warehouse': self.env_config['ICEBERG_WAREHOUSE']
+                    }
+                else:
+                    raise ValueError(f"Unsupported catalog type: {catalog_type}")
+
+                # Load the Iceberg catalog for managing table metadata
+                self.catalog = load_catalog("spark_logs_catalog", **catalog_config)
+                logger.info(f"✅ Iceberg catalog initialized: {catalog_type}")
+
+                # Initialize data and metadata tables
+                self._initialize_tables()
+
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize Iceberg: {e}")
+                raise
+
+        def _initialize_tables(self) -> None:
+            """Initialize Iceberg tables for data and metadata."""
+            database = self.env_config['ICEBERG_DATABASE']
+            table_name = self.env_config['ICEBERG_TABLE']
+
+            # Define schema for the main data table storing processed Spark logs
+            # Note: All fields set to optional for PyArrow/Ray Data compatibility
+            data_schema = Schema(
+                NestedField(1, "timestamp", TimestampType(), required=False),
+                NestedField(2, "log_level", StringType(), required=False),
+                NestedField(3, "message", StringType(), required=False),
+                NestedField(4, "pod_name", StringType(), required=False),
+                NestedField(5, "namespace_name", StringType(), required=False),
+                NestedField(6, "app", StringType(), required=False),
+                NestedField(7, "spark_app_selector", StringType(), required=False),
+                NestedField(8, "queue", StringType(), required=False),
+                NestedField(9, "spark_app_name", StringType(), required=False),
+                NestedField(10, "spark_role", StringType(), required=False),
+                NestedField(11, "spark_version", StringType(), required=False),
+                NestedField(12, "submission_id", StringType(), required=False),
+                NestedField(13, "container_name", StringType(), required=False),
+                NestedField(14, "container_image", StringType(), required=False)
+            )
+
+            # Define schema for metadata table to track processing status of each folder
+            # Note: All fields set to optional for PyArrow/Ray Data compatibility
+            metadata_schema = Schema(
+                NestedField(1, "spark_app_selector", StringType(), required=False),
+                NestedField(2, "s3_path", StringType(), required=False),
+                NestedField(3, "status", StringType(), required=False),
+                NestedField(4, "records_processed", IntegerType(), required=False),
+                NestedField(5, "processing_start_time", TimestampType(), required=False),
+                NestedField(6, "processing_end_time", TimestampType(), required=False),
+                NestedField(7, "error_message", StringType(), required=False),
+                NestedField(8, "job_id", StringType(), required=False),
+                NestedField(9, "updated_at", TimestampType(), required=False)
+            )
+
+            try:
+                # Create or load the main data table for storing processed logs
+                data_table_id = f"{database}.{table_name}"
+                try:
+                    self.data_table = self.catalog.load_table(data_table_id)
+                    logger.info(f"✅ Loaded existing data table: {data_table_id}")
+                except Exception:
+                    self.data_table = self.catalog.create_table(data_table_id, schema=data_schema)
+                    logger.info(f"✅ Created new data table: {data_table_id}")
+
+                # Create or load the metadata table for tracking processing status
+                metadata_table_id = f"{database}.{table_name}_processing_metadata"
+                try:
+                    self.metadata_table = self.catalog.load_table(metadata_table_id)
+                    logger.info(f"✅ Loaded existing metadata table: {metadata_table_id}")
+                except Exception:
+                    self.metadata_table = self.catalog.create_table(metadata_table_id, schema=metadata_schema)
+                    logger.info(f"✅ Created new metadata table: {metadata_table_id}")
+
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize tables: {e}")
+                raise
+
+        def discover_spark_app_folders(self) -> List[Dict[str, str]]:
+            """
+            Discover all spark-app-selector folders in S3.
+            Returns list of dicts with folder info: {'folder_name': str, 's3_path': str}
+            """
+            try:
+                bucket = self.env_config['S3_BUCKET']
+                base_prefix = self.env_config['S3_PREFIX'].rstrip('/')
+
+                logger.info(f"🔍 Discovering spark-app folders in s3://{bucket}/{base_prefix}/")
+
+                paginator = self.s3_client.get_paginator('list_objects_v2')
+                spark_app_folders = []
+
+                for page in paginator.paginate(Bucket=bucket, Prefix=base_prefix + '/', Delimiter='/'):
+                    # Look for folder-level prefixes in S3 bucket structure
+                    for prefix_info in page.get('CommonPrefixes', []):
+                        folder_path = prefix_info['Prefix']
+                        folder_name = folder_path.rstrip('/').split('/')[-1]
+
+                        # Check if it's a spark-app-selector folder (follows spark-* naming pattern)
+                        if folder_name.startswith('spark-'):
+                            full_s3_path = f"s3://{bucket}/{folder_path}"
+                            spark_app_folders.append({
+                                'folder_name': folder_name,
+                                's3_path': full_s3_path
+                            })
+                            logger.info(f"  📁 Found: {folder_name} -> {full_s3_path}")
+
+                logger.info(f"🔍 Discovered {len(spark_app_folders)} spark-app folders")
+                return spark_app_folders
+
+            except Exception as e:
+                logger.error(f"❌ Error discovering spark-app folders: {e}")
+                return []
+
+        def get_folder_processing_status(self) -> Dict[str, Dict[str, Any]]:
+            """
+            Get processing status for all folders from Iceberg metadata table.
+            Returns dict: {spark_app_selector: {status, records_processed, s3_path, ...}}
+            """
+            try:
+                # Query the metadata table to get processing status for all folders
+                df = self.metadata_table.scan().to_pandas()
+
+                if df.empty:
+                    logger.info("📊 No previous processing records found")
+                    return {}
+
+                # Get the most recent processing record for each spark_app_selector
+                latest_records = df.loc[df.groupby('spark_app_selector')['processing_start_time'].idxmax()]
+
+                status_map = {}
+                for _, row in latest_records.iterrows():
+                    status_map[row['spark_app_selector']] = {
+                        's3_path': row['s3_path'],
+                        'status': row['status'],
+                        'records_processed': row['records_processed'],
+                        'processing_start_time': row['processing_start_time'],
+                        'processing_end_time': row['processing_end_time'],
+                        'error_message': row['error_message']
+                    }
+
+                logger.info(f"📊 Retrieved status for {len(status_map)} folders from metadata")
+                return status_map
+
+            except Exception as e:
+                logger.error(f"❌ Error querying folder status: {e}")
+                return {}
+
+        def get_folders_to_process(self) -> List[Dict[str, str]]:
+            """
+            Determine which folders need processing based on metadata table.
+            Returns list of folders that are either new or not in SUCCESS status.
+            """
+            try:
+                # Discover all available spark-app folders in S3
+                all_folders = self.discover_spark_app_folders()
+
+                if not all_folders:
+                    logger.warning("⚠️ No spark-app folders found in S3")
+                    return []
+
+                # Get processing status history from metadata table
+                folder_status = self.get_folder_processing_status()
+
+                # Compare S3 folders with metadata to determine what needs processing
+                folders_to_process = []
+
+                for folder_info in all_folders:
+                    folder_name = folder_info['folder_name']
+                    s3_path = folder_info['s3_path']
+
+                    if folder_name in folder_status:
+                        status_info = folder_status[folder_name]
+                        current_status = status_info['status']
+
+                        if current_status == 'SUCCESS':
+                            logger.info(f"✅ Skipping {folder_name} - already processed successfully")
+                            logger.info(f"    📊 {status_info['records_processed']} records processed")
+                        else:
+                            logger.info(f"🔄 Will reprocess {folder_name} - current status: {current_status}")
+                            if status_info.get('error_message'):
+                                logger.info(f"    ❌ Previous error: {status_info['error_message']}")
+                            folders_to_process.append(folder_info)
+                    else:
+                        logger.info(f"🆕 New folder to process: {folder_name}")
+                        folders_to_process.append(folder_info)
+
+                logger.info(f"📋 Summary: {len(folders_to_process)} folders to process, {len(all_folders) - len(folders_to_process)} already completed")
+                return folders_to_process
+
+            except Exception as e:
+                logger.error(f"❌ Error determining folders to process: {e}")
+                return []
+
+        def update_folder_status(self, spark_app_selector: str, s3_path: str, status: str,
+                               records_processed: int = 0, error_message: str = None) -> None:
+            """Update processing status in Iceberg metadata table."""
+            try:
+                job_id = os.getenv('HOSTNAME', 'unknown') + '-' + datetime.now().strftime('%Y%m%d%H%M%S')
+                current_time = datetime.now()
+
+                # Prepare metadata record with processing status information
+                record = {
+                    'spark_app_selector': spark_app_selector,
+                    's3_path': s3_path,
+                    'status': status,
+                    'records_processed': records_processed,
+                    'processing_start_time': current_time,
+                    'processing_end_time': current_time if status in ['SUCCESS', 'FAILED'] else None,
+                    'error_message': error_message,
+                    'job_id': job_id,
+                    'updated_at': current_time
+                }
+
+                # Convert record to PyArrow format and append to Iceberg metadata table
+                df = pd.DataFrame([record])
+                pa_table = pa.Table.from_pandas(df)
+
+                self.metadata_table.append(pa_table)
+                logger.info(f"📝 Updated {spark_app_selector} status to {status}")
+
+            except Exception as e:
+                logger.error(f"❌ Failed to update folder status: {e}")
+
+        @staticmethod
+        def safe_get_nested(data: Dict[str, Any], path: str, default: Any = None) -> Any:
+            """Safely extract nested values using dot notation."""
+            try:
+                keys = path.split('.')
+                current = data
+                for key in keys:
+                    if isinstance(current, dict) and key in current:
+                        current = current[key]
+                    else:
+                        return default
+                return current if current is not None else default
+            except Exception:
+                return default
+
+        @staticmethod
+        def safe_get_label(labels: Dict[str, Any], key: str, default: Any = None) -> Any:
+            """Safely extract label values, handling special characters in keys."""
+            try:
+                if isinstance(labels, dict) and key in labels:
+                    value = labels[key]
+                    return value if value is not None else default
+                return default
+            except Exception:
+                return default
+
+        @staticmethod
+        def validate_and_transform_row(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            """
+            Validate and transform a single log row.
+            Returns None if row doesn't meet required field criteria.
+            """
+            try:
+                # Check all required fields are present and valid
+                timestamp = row.get('timestamp')
+                if not timestamp:
+                    return None
+
+                log_level = row.get('log_level')
+                if not log_level:
+                    return None
+
+                message = row.get('message')
+                if not message:
+                    return None
+
+                kubernetes = row.get('kubernetes', {})
+                if not isinstance(kubernetes, dict):
+                    return None
+
+                # Check required kubernetes fields
+                pod_name = SparkLogProcessor.safe_get_nested(kubernetes, 'pod_name')
+                namespace_name = SparkLogProcessor.safe_get_nested(kubernetes, 'namespace_name')
+
+                if not pod_name or not namespace_name:
+                    return None
+
+                # Check required label fields
+                labels = SparkLogProcessor.safe_get_nested(kubernetes, 'labels', {})
+                app = SparkLogProcessor.safe_get_label(labels, 'app')
+                spark_app_selector = SparkLogProcessor.safe_get_label(labels, 'spark-app-selector')
+
+                if not app or not spark_app_selector:
+                    return None
+
+                # Transform timestamp to pandas datetime with microsecond precision (not nanoseconds)
+                try:
+                    parsed_timestamp = pd.to_datetime(timestamp, utc=True)
+                    # Ensure microsecond precision for Iceberg compatibility
+                    if hasattr(parsed_timestamp, 'floor'):
+                        parsed_timestamp = parsed_timestamp.floor('us')
+                except (ValueError, TypeError):
+                    return None
+
+                # Build the output record
+                record = {
+                    'timestamp': parsed_timestamp,
+                    'log_level': str(log_level).upper(),
+                    'message': str(message),
+                    'pod_name': str(pod_name),
+                    'namespace_name': str(namespace_name),
+                    'app': str(app),
+                    'spark_app_selector': str(spark_app_selector),
+                    'queue': SparkLogProcessor.safe_get_label(labels, 'queue', ''),
+                    'spark_app_name': SparkLogProcessor.safe_get_label(labels, 'spark-app-name', ''),
+                    'spark_role': SparkLogProcessor.safe_get_label(labels, 'spark-role', ''),
+                    'spark_version': SparkLogProcessor.safe_get_label(labels, 'spark-version', ''),
+                    'submission_id': SparkLogProcessor.safe_get_label(labels, 'sparkoperator.k8s.io/submission-id', ''),
+                    'container_name': SparkLogProcessor.safe_get_nested(kubernetes, 'container_name', ''),
+                    'container_image': SparkLogProcessor.safe_get_nested(kubernetes, 'container_image', '')
+                }
+
+                return record
+
+            except Exception as e:
+                logger.debug(f"Row validation failed: {e}")
+                return None
+
+        @staticmethod
+        def parse_and_filter_batch(batch: Dict[str, Any]) -> Dict[str, Any]:
+            """
+            Parse JSON lines and filter valid records using Ray Data batch processing.
+            """
+            try:
+                # Extract raw text lines from the batch
+                if 'text' in batch:
+                    lines = batch['text']
+                elif 'item' in batch:
+                    lines = batch['item']
+                else:
+                    lines = next(iter(batch.values()))
+
+                valid_records = []
+                processed_count = 0
+
+                for line in lines:
+                    processed_count += 1
+
+                    # Skip empty lines
+                    if not line or not line.strip():
+                        continue
+
+                    try:
+                        # Parse JSON
+                        json_data = json.loads(line.strip())
+
+                        # Validate and transform
+                        record = SparkLogProcessor.validate_and_transform_row(json_data)
+
+                        if record:
+                            valid_records.append(record)
+
+                    except (json.JSONDecodeError, Exception):
+                        # Skip invalid JSON silently
+                        continue
+
+                # Convert to the format Ray Data expects
+                if not valid_records:
+                    # Return empty batch with correct structure
+                    return {
+                        'timestamp': [],
+                        'log_level': [],
+                        'message': [],
+                        'pod_name': [],
+                        'namespace_name': [],
+                        'app': [],
+                        'spark_app_selector': [],
+                        'queue': [],
+                        'spark_app_name': [],
+                        'spark_role': [],
+                        'spark_version': [],
+                        'submission_id': [],
+                        'container_name': [],
+                        'container_image': []
+                    }
+
+                # Convert to pandas DataFrame with explicit dtypes for Iceberg compatibility
+                import pandas as pd
+                df = pd.DataFrame(valid_records)
+
+                # Ensure required fields are not nullable
+                required_fields = ['timestamp', 'log_level', 'message', 'pod_name', 'namespace_name', 'app', 'spark_app_selector']
+                for field in required_fields:
+                    if field in df.columns:
+                        if field == 'timestamp':
+                            # Ensure timestamp is in microseconds, not nanoseconds
+                            df[field] = pd.to_datetime(df[field], utc=True).dt.floor('us')
+                        else:
+                            # Convert to non-nullable string type
+                            df[field] = df[field].astype('string').fillna('')
+
+                # Convert DataFrame back to dict of lists for Ray Data
+                result = {}
+                for column in df.columns:
+                    result[column] = df[column].tolist()
+
+                return result
+
+            except Exception as e:
+                logger.error(f"Batch processing error: {e}")
+                # Return empty batch structure
+                return {
+                    'timestamp': [],
+                    'log_level': [],
+                    'message': [],
+                    'pod_name': [],
+                    'namespace_name': [],
+                    'app': [],
+                    'spark_app_selector': [],
+                    'queue': [],
+                    'spark_app_name': [],
+                    'spark_role': [],
+                    'spark_version': [],
+                    'submission_id': [],
+                    'container_name': [],
+                    'container_image': []
+                }
+
+        def process_logs(self) -> None:
+            """Main processing pipeline with intelligent metadata-driven folder processing."""
+            try:
+                # Initialize Ray distributed computing framework
+                ray.init(ignore_reinit_error=True)
+                logger.info("✅ Ray initialized")
+
+                # Use intelligent discovery to find folders that need processing
+                logger.info("🔍 Starting intelligent folder discovery with metadata tracking...")
+                folders_to_process = self.get_folders_to_process()
+
+                if not folders_to_process:
+                    logger.info("✅ No new folders to process. All spark-app-selectors are up to date.")
+                    return
+
+                # Process each folder and track success/failure metrics
+                total_processed = 0
+                successful_folders = []
+                failed_folders = []
+
+                for folder_info in folders_to_process:
+                    folder_name = folder_info['folder_name']
+                    s3_path = folder_info['s3_path']
+
+                    try:
+                        logger.info(f"🔄 Processing folder: {folder_name}")
+
+                        # Update status to PROCESSING
+                        self.update_folder_status(folder_name, s3_path, 'PROCESSING')
+
+                        # Process the folder
+                        records_processed = self.process_single_folder(s3_path, folder_name)
+
+                        if records_processed > 0:
+                            # Update status to SUCCESS
+                            self.update_folder_status(folder_name, s3_path, 'SUCCESS', records_processed)
+                            successful_folders.append(folder_name)
+                            total_processed += records_processed
+                            logger.info(f"✅ Successfully processed {records_processed} records from {folder_name}")
+                        else:
+                            # Update status to FAILED (no data)
+                            self.update_folder_status(folder_name, s3_path, 'FAILED', 0, 'No valid records found')
+                            logger.warning(f"⚠️ No valid records found in folder: {folder_name}")
+
+                    except Exception as folder_error:
+                        # Update status to FAILED with error message
+                        error_msg = str(folder_error)[:500]  # Truncate long error messages
+                        self.update_folder_status(folder_name, s3_path, 'FAILED', 0, error_msg)
+                        failed_folders.append(folder_name)
+                        logger.error(f"❌ Failed to process folder {folder_name}: {folder_error}")
+                        continue
+
+                # Final summary
+                logger.info(f"🎯 Processing Summary:")
+                logger.info(f"  📊 Total records processed: {total_processed}")
+                logger.info(f"  ✅ Successful folders: {len(successful_folders)}")
+                logger.info(f"  ❌ Failed folders: {len(failed_folders)}")
+
+                if successful_folders:
+                    logger.info(f"  ✅ Successfully processed: {successful_folders}")
+                if failed_folders:
+                    logger.info(f"  ❌ Failed to process: {failed_folders}")
+
+                logger.info("✅ Metadata-driven incremental processing completed")
+
+            except Exception as e:
+                logger.error(f"❌ Pipeline execution failed: {e}")
+                raise
+            finally:
+                # Cleanup
+                if ray.is_initialized():
+                    ray.shutdown()
+                    logger.info("🧹 Ray shutdown complete")
+
+        def process_single_folder(self, s3_uri: str, folder_name: str) -> int:
+            """Process a single spark-app folder and return number of records processed."""
+            try:
+                logger.info(f"📥 Reading JSON lines from {s3_uri}")
+
+                # Read raw log files from S3 using Ray Data's text reader
+                dataset = ray.data.read_text(
+                    s3_uri,
+                    ray_remote_args={"num_cpus": 1}
+                )
+
+                row_count = dataset.count()
+                logger.info(f"📥 Loaded {row_count} raw lines from folder {folder_name}")
+
+                if row_count == 0:
+                    logger.warning(f"⚠️ No data found in folder {folder_name}")
+                    return 0
+
+                # Apply distributed transformation and validation to the raw log data
+                logger.info(f"🔄 Processing {folder_name} with schema validation and filtering")
+                processed_dataset = dataset.map_batches(
+                    SparkLogProcessor.parse_and_filter_batch,
+                    batch_format="pandas",
+                    batch_size=2000,
+                    concurrency=4,
+                    zero_copy_batch=False
+                )
+
+                # Sample validation
+                logger.info(f"🔍 Validating processed data from {folder_name}")
+                try:
+                    sample_batch = processed_dataset.take_batch(3)
+                    if len(sample_batch) > 0:
+                        logger.info("✅ Schema validation passed")
+                        first_col = next(iter(sample_batch.values()))
+                        if len(first_col) > 0:
+                            sample_record = {k: v[0] for k, v in sample_batch.items() if len(v) > 0}
+                            logger.info(f"Sample spark_app_selector: {sample_record.get('spark_app_selector', 'NOT_FOUND')}")
+
+                            # Verify this matches the folder name
+                            sample_selector = sample_record.get('spark_app_selector', '')
+                            if sample_selector == folder_name:
+                                logger.info(f"✅ spark_app_selector matches folder name: {folder_name}")
+                            else:
+                                logger.warning(f"⚠️ Mismatch: folder={folder_name}, selector={sample_selector}")
+                    else:
+                        logger.warning(f"⚠️ No valid records after processing {folder_name}")
+                        return 0
+                except Exception as sample_error:
+                    logger.error(f"❌ Sample validation failed for {folder_name}: {sample_error}")
+                    return 0
+
+                # Write processed data to Iceberg table using Ray Data's native integration
+                logger.info(f"💾 Writing {folder_name} data to Iceberg")
+
+                # Use Ray Data's native Iceberg writer for distributed writes
+                processed_dataset.write_iceberg(
+                    table_identifier=f"{self.env_config['ICEBERG_DATABASE']}.{self.env_config['ICEBERG_TABLE']}",
+                    catalog_kwargs={
+                        "name": "glue",
+                        "type": "glue",
+                        "warehouse": self.env_config['ICEBERG_WAREHOUSE'],
+                        "region_name": self.env_config['AWS_REGION']
+                    }
+                )
+
+                # Count records written for reporting (approximate count)
+                processed_count = processed_dataset.count()
+                logger.info(f"✅ Wrote approximately {processed_count} records for {folder_name}")
+                return processed_count
+
+            except Exception as e:
+                logger.error(f"❌ Failed to process folder {folder_name}: {e}")
+                raise
+
+    def main():
+        """Main entry point with metadata-driven processing."""
+        try:
+            env_config = {
+                'S3_BUCKET': os.getenv('S3_BUCKET'),
+                'S3_PREFIX': os.getenv('S3_PREFIX'),
+                'ICEBERG_CATALOG_TYPE': os.getenv('ICEBERG_CATALOG_TYPE', 'glue'),
+                'ICEBERG_DATABASE': os.getenv('ICEBERG_DATABASE'),
+                'ICEBERG_TABLE': os.getenv('ICEBERG_TABLE'),
+                'ICEBERG_WAREHOUSE': os.getenv('ICEBERG_WAREHOUSE'),
+                'AWS_REGION': os.getenv('AWS_DEFAULT_REGION', 'us-west-2')
+            }
+
+            processor = SparkLogProcessor(env_config)
+            processor.process_logs()
+
+        except Exception as e:
+            logger.error(f"❌ Application failed: {e}")
+            raise
+
+    if __name__ == "__main__":
+        main()

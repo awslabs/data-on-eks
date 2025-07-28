@@ -18,11 +18,11 @@ For deploying Spark on EKS you can leverage the [blueprints](https://awslabs.git
 
 As EKS clusters scale up with additional Spark workloads, the number of pods managed by a cluster can easily grow into the thousands, each consuming an IP address. This creates challenges, since IP addresses within a VPC are limited, and it's not always feasible to recreate a larger VPC or extend the current VPC's CIDR blocks.
 
-Worker nodes and pods both consume IP addresses. By default, VPC CNI has `WARM_ENI_TARGET=1` means that `ipamd` should keep "a full ENI" of available IPs around in the `ipamd` warm pool for the Pod IP assignment. 
-    
+Worker nodes and pods both consume IP addresses. By default, VPC CNI has `WARM_ENI_TARGET=1` means that `ipamd` should keep "a full ENI" of available IPs around in the `ipamd` warm pool for the Pod IP assignment.
+
 #### Remediation for IP Address exhaustion
 While IP exhaustion remediation methods exist for VPCs, they introduce additional operational complexity and have significant implications to consider. Hence, for new EKS clusters, it is recommended to over-provision the subnets you will use for Pod networking for growth.
-    
+
 For addressing IP address exhaustion, consider adding secondary CIDR blocks to your VPC and creating new subnets from these additional address ranges, then deploying worker nodes in these expanded subnets.
 
 If adding more subnets, is not an option, then you will have to work on optimising the IP address assignment by tweaking CNI Configuration Variables. Refer to [configure MINIMUM_IP_TARGET](/docs/bestpractices/networking#avoid-using-warm_ip_target-in-large-clusters-or-cluster-with-a-lot-of-churn).
@@ -30,16 +30,16 @@ If adding more subnets, is not an option, then you will have to work on optimisi
 
 ### CoreDNS Recommendations
 #### DNS Lookup Throttling
-Spark applications running on Kubernetes generate high volumes of DNS lookups when executors communicate with external services. 
+Spark applications running on Kubernetes generate high volumes of DNS lookups when executors communicate with external services.
 
-This occurs because Kubernetes' DNS resolution model requires each pod to query the cluster's DNS service (kube-dns or CoreDNS) for every new connection, and during task executions Spark executors frequently create new connections for communicating with external services. By default, Kubernetes does not cache DNS results at the pod level, meaning each executor pod must perform a new DNS lookup even for previously resolved hostnames. 
+This occurs because Kubernetes' DNS resolution model requires each pod to query the cluster's DNS service (kube-dns or CoreDNS) for every new connection, and during task executions Spark executors frequently create new connections for communicating with external services. By default, Kubernetes does not cache DNS results at the pod level, meaning each executor pod must perform a new DNS lookup even for previously resolved hostnames.
 
 This behavior is amplified in Spark applications due to their distributed nature, where multiple executor pods simultaneously attempt to resolve the same external service endpoints.This occurs during data ingestion, processing, and when connecting to external databases or shuffle services.
 
 When DNS traffic exceeds 1024 packets per second for a CoreDNS replica, DNS requests will be throttled, resulting in `unknownHostException` errors.
 
 #### Remediation
-It is recommended to scale CoreDNS, as your workload scales. Refer to [Scaling CoreDNS](/docs/bestpractices/networking#scaling-coredns) for more details on implementation choices. 
+It is recommended to scale CoreDNS, as your workload scales. Refer to [Scaling CoreDNS](/docs/bestpractices/networking#scaling-coredns) for more details on implementation choices.
 
 It is also recommended to continuously monitor CoreDNS metrics. Refer to [EKS Networking Best Practices](https://docs.aws.amazon.com/eks/latest/best-practices/monitoring_eks_workloads_for_network_performance_issues.html#_monitoring_coredns_traffic_for_dns_throttling_issues) for detailed information.
 
@@ -71,8 +71,8 @@ The Spark driver is a single pod and manages the entire lifecycle of the Spark a
 * Use `node selectors` or `taints/tolerations` for placing driver pods on this designated Driver NodePool.
 
 ### Executor Nodepool
-#### Configure Spot instances 
-In the absence of [Amazon EC2 Reserved Instances](https://aws.amazon.com/ec2/pricing/reserved-instances/) or [Savings Plans](https://aws.amazon.com/savingsplans/), consider using [Amazon EC2 Spot Instances](https://aws.amazon.com/ec2/spot/) for executors to reduce dataplane costs. 
+#### Configure Spot instances
+In the absence of [Amazon EC2 Reserved Instances](https://aws.amazon.com/ec2/pricing/reserved-instances/) or [Savings Plans](https://aws.amazon.com/savingsplans/), consider using [Amazon EC2 Spot Instances](https://aws.amazon.com/ec2/spot/) for executors to reduce dataplane costs.
 
 When spot instances are interrupted, executors will be terminated and rescheduled on available nodes. For details on interruption behaviour and node termination management, refer to the `Handling Interruptions` section.
 
