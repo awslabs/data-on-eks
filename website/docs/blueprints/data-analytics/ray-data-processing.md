@@ -7,11 +7,9 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../../src/components/CollapsibleContent';
 
-# 🚀 Distributed Data Processing with Ray Data
+# Distributed Data Processing with Ray Data
 
-## Introduction
-
-### What is Ray Data?
+## What is Ray Data?
 
 [Ray Data](https://docs.ray.io/en/latest/data/data.html) is a scalable, framework-agnostic data processing library built on top of Ray, designed for distributed data analytics and machine learning workloads. It provides:
 
@@ -21,7 +19,7 @@ import CollapsibleContent from '../../../src/components/CollapsibleContent';
 - **Memory Management**: Efficient handling of large datasets that don't fit in memory
 - **Integration with ML Libraries**: Seamless integration with pandas, NumPy, and PyArrow
 
-### Why Ray Data? Is this an Alternative Tool to Spark?
+## Why Ray Data? Is this an Alternative Tool to Spark?
 
 Ray Data is **complementary to Spark**, not a direct replacement. While both are distributed data processing frameworks, they serve different use cases:
 
@@ -137,6 +135,7 @@ Here's what Spark logs look like when written to S3 by Fluent Bit:
 ```
 
 **Key Challenges:**
+
 - Each log line is wrapped in JSON with Kubernetes metadata
 - The actual log message is embedded in the `log` field
 - No structured schema for querying specific log levels or components
