@@ -1,6 +1,7 @@
 ---
 sidebar_position: 7
 sidebar_label: Ray Data Processing with Iceberg
+mermaid: true
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -25,28 +26,33 @@ This blueprint demonstrates how to deploy a **Ray Data** processing pipeline on 
 ## 📋 Architecture Overview
 
 
-![img.png](img/raydata-arch.png)
+```mermaid
+graph TB
+    S3[S3 Spark Logs] --> RayData[⚡ Ray Data Processing]
+    RayData --> Iceberg[Apache Iceberg Tables in S3]
+    Glue[AWS Glue Catalog] --> Iceberg
+    Meta[Metadata Tracking] --> RayData
+    
+    subgraph "EKS Cluster"
+        RayData
+        subgraph "Ray Cluster"
+            Head[Ray Head Node]
+            Workers[Ray Worker Nodes]
+        end
+    end
+    
+    subgraph "☁️ Storage & Catalog"
+        S3
+        Iceberg
+    end
+    
+    style S3 fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:#fff
+    style Glue fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:#fff
+    style RayData fill:#028CF0,stroke:#232F3E,stroke-width:2px,color:#fff
+    style Iceberg fill:#3FCBFF,stroke:#232F3E,stroke-width:2px,color:#fff
+```
 
-## 🎯 Key Features
 
-<div className="feature-grid">
-  <div className="feature-card">
-    <h3>🔄 Distributed Processing</h3>
-    <p>Ray Data enables scalable, parallel log processing across multiple workers with automatic load balancing</p>
-  </div>
-  <div className="feature-card">
-    <h3>🧊 Apache Iceberg Integration</h3>
-    <p>ACID transactions, schema evolution, and partitioning for reliable data lake storage</p>
-  </div>
-  <div className="feature-card">
-    <h3>🎯 Intelligent Discovery</h3>
-    <p>Automatically discovers and processes new Spark log folders with metadata tracking</p>
-  </div>
-  <div className="feature-card">
-    <h3>♻️ Idempotent Execution</h3>
-    <p>Tracks processing status to avoid reprocessing and enable failure recovery</p>
-  </div>
-</div>
 
 ## 🚀 Getting Started
 
