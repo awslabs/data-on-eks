@@ -10,7 +10,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   # Metrics Server
   #---------------------------------------
-  enable_metrics_server = false
+  enable_metrics_server = true
   metrics_server = {
     values = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
     #name = "metrics-server-otl4"
@@ -47,7 +47,7 @@ module "eks_blueprints_addons" {
   # 2- Grafana Admin user: admin
   # 3- Get admin user password: `aws secretsmanager get-secret-value --secret-id <output.grafana_secret_name> --region $AWS_REGION --query "SecretString" --output text`
   #---------------------------------------------------------------
-  enable_kube_prometheus_stack = false
+  enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
     values = [
         var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {

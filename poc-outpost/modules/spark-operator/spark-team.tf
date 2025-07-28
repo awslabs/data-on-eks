@@ -8,8 +8,10 @@ resource "kubernetes_namespace_v1" "spark_team" {
   metadata {
     name = each.value
   }
-  timeouts {
-    delete = "15m"
+
+  lifecycle {
+    ignore_changes = [metadata]
+    prevent_destroy = true
   }
 }
 
@@ -38,30 +40,6 @@ resource "kubernetes_secret_v1" "spark_team" {
   }
 
   type = "kubernetes.io/service-account-token"
-}
-
-module "spark_team_irsa" {
-  for_each = toset(local.teams)
-
-  source  = "aws-ia/eks-blueprints-addon/aws"
-  version = "~> 1.1"
-
-  create_release = false
-  create_role    = true
-  role_name      = "${local.name}-${each.value}"
-  create_policy  = false
-  role_policies = {
-    spark_team_policy = aws_iam_policy.spark.arn
-    s3tables_policy   = aws_iam_policy.s3tables.arn
-  }
-
-  oidc_providers = {
-    this = {
-      provider_arn    = local.oidc_provider_arn
-      namespace       = each.value
-      service_account = each.value
-    }
-  }
 }
 
 resource "aws_iam_policy" "spark" {
@@ -152,4 +130,29 @@ resource "kubernetes_cluster_role_binding" "spark_role_binding" {
   }
 
   depends_on = [module.spark_team_irsa]
+}
+
+module "spark_team_irsa" {
+  for_each = toset(local.teams)
+
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.1"
+
+  create_release = false
+  create_role    = true
+  role_name      = "${local.name}-${each.value}"
+  create_policy  = false
+  role_policies = {
+    spark_team_policy = aws_iam_policy.spark.arn
+    s3tables_policy   = aws_iam_policy.s3tables.arn
+  }
+
+  oidc_providers = {
+    this = {
+      provider_arn    = local.oidc_provider_arn
+      namespace       = each.value
+      service_account = each.value
+    }
+  }
+
 }

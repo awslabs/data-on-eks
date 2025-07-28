@@ -37,3 +37,19 @@ variable "spark_teams" {
   description = "List of all teams (namespaces) that will use Spark Operator"
   type        = list(string)
 }
+
+variable "outpost_name" {
+  type        = string
+  description = "Name of the Outpost"
+  default     = "OTL4"
+}
+
+variable "output_subnet_id" {
+  type        = string
+  description = "Outpost subnet id"
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC where the EKS cluster will be deployed"
+  type        = string
+}

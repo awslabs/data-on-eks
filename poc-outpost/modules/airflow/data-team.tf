@@ -29,16 +29,33 @@ resource "kubernetes_cluster_role_binding" "airflow_worker_spark_role_binding" {
 #---------------------------------------------------------------
 data "aws_iam_policy_document" "spark_operator" {
   statement {
-    sid       = ""
+    sid       = "AccessPointAccess"
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::*"]
+    resources = [
+      "${module.airflow_s3_bucket.s3_access_arn}",
+      "${module.airflow_s3_bucket.s3_access_arn}/*"
+    ]
 
     actions = [
-      "s3:DeleteObject",
-      "s3:DeleteObjectVersion",
-      "s3:GetObject",
-      "s3:ListBucket",
-      "s3:PutObject",
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
+    ]
+  }
+  statement {
+    sid       = "BucketAccess"
+    effect    = "Allow"
+    resources = [
+      "${module.airflow_s3_bucket.s3_bucket_arn}",
+      "${module.airflow_s3_bucket.s3_bucket_arn}/*"
+    ]
+
+    actions = [
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
     ]
   }
 
@@ -67,13 +84,13 @@ resource "kubernetes_cluster_role" "airflow_spark_access" {
   rule {
     api_groups = [""]
     resources  = ["pods", "pods/log"]
-    verbs      = ["get", "list", "watch", "create", "delete"]
+    verbs      = ["get", "list", "watch", "create", "delete", "patch"]
   }
 
   rule {
     api_groups = ["sparkoperator.k8s.io"]
     resources  = ["sparkapplications", "sparkapplications/status"]
-    verbs      = ["create", "get", "list", "delete", "watch"]
+    verbs      = ["create", "get", "list", "delete", "watch", "patch"]
   }
 }
 

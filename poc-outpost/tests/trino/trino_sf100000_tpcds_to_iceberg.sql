@@ -4,11 +4,11 @@ select * from tpcds.sf10000.warehouse limit 10;
 
 /* Drop tables & schema */
 
-drop schema iceberg.iceberg_schema;
 drop table iceberg.iceberg_schema.warehouse;
 drop table iceberg.iceberg_schema.item;
 drop table iceberg.iceberg_schema.inventory;
 drop table iceberg.iceberg_schema.date_dim;
+drop schema iceberg.iceberg_schema;
 
 /* Iceberg schema creation */
 

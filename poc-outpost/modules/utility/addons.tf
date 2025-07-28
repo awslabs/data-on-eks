@@ -142,3 +142,21 @@ resource "aws_cognito_user_pool_domain" "main_domain" {
   domain       = local.cognito_custom_domain
   user_pool_id = aws_cognito_user_pool.main_pool.id
 }
+
+resource "helm_release" "kyverno" {
+  name       = "kyverno"
+  namespace  = "kyverno"
+  repository = "https://kyverno.github.io/kyverno/"
+  chart      = "kyverno"
+  version    = "3.1.4" # Vérifie la dernière version
+
+  create_namespace = true
+}
+
+resource "kubectl_manifest" "default_affinity" {
+
+    yaml_body = templatefile("${path.module}/helm-values/default_affinity.yaml", {
+
+    })
+
+}

@@ -11,7 +11,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
       blockDeviceMappings:
         - deviceName: /dev/xvda
           ebs:
-            volumeSize: 100Gi # This storage used for Trino Spill data
+            volumeSize: 20Gi # This storage used for Trino Spill data
             volumeType: gp2
             encrypted: true
             deleteOnTermination: true
@@ -50,6 +50,10 @@ resource "kubectl_manifest" "karpenter_node_pool" {
               operator: In
               values:
               - "on-demand"
+            - key: topology.kubernetes.io/region
+              operator: In
+              values:
+              - "${local.region}"
             - key: node.kubernetes.io/instance-type
               operator: In
               values:

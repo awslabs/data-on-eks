@@ -13,6 +13,10 @@ data "aws_eks_cluster_auth" "this" {
   name = local.name
 }
 
+data "aws_eks_cluster" "cluster" {
+  name = "${local.name}"
+}
+
 
 locals {
   outpost_name = var.outpost_name
@@ -38,6 +42,7 @@ locals {
   airflow_webserver_secret_name     = "airflow-webserver-secret-key"
   #---------------------------------------------------------------
 
+  s3_user = "airflow-s3-user"
 
   tags = var.tags
 }

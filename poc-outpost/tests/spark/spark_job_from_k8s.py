@@ -32,11 +32,3 @@ with DAG(
         application_file="$SPARK_PI",
         dag=dag,
     )
-
-    t2 = SparkKubernetesSensor(
-        task_id="${SPARK_JOB_NAME}_monitor",
-        namespace="spark-team-a",
-        application_name="${SPARK_PI_NAME}",
-        dag=dag,
-    )
-    t1 >> t2

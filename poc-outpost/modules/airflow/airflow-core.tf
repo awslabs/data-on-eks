@@ -103,6 +103,23 @@ module "security_group" {
 }
 
 #---------------------------------------------------------------
+# S3 bucket for Airflow
+#---------------------------------------------------------------
+
+#tfsec:ignore:*
+module "airflow_s3_bucket" {
+  source  = "../s3-bucket-outpost"
+
+  bucket_name = "${local.name}-airflow"
+  vpc-id      = local.vpc_id
+  outpost_name = local.outpost_name
+  output_subnet_id = local.output_subnet_id
+  vpc_id = local.vpc_id
+
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
 # Airflow Namespace
 #---------------------------------------------------------------
 resource "kubectl_manifest" "airflow" {
@@ -167,7 +184,7 @@ resource "aws_iam_policy" "airflow_scheduler" {
   description = "IAM policy for Airflow Scheduler Pod"
   name_prefix = local.airflow_scheduler_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3.json
+  policy      = data.aws_iam_policy_document.airflow_s3_outpost.json
 }
 
 #---------------------------------------------------------------
@@ -227,7 +244,7 @@ resource "aws_iam_policy" "airflow_webserver" {
   description = "IAM policy for Airflow Webserver Pod"
   name_prefix = local.airflow_api_server_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3.json
+  policy      = data.aws_iam_policy_document.airflow_s3_outpost.json
 }
 
 #---------------------------------------------------------------
@@ -331,7 +348,7 @@ resource "aws_iam_policy" "airflow_worker" {
   description = "IAM policy for Airflow Workers Pod"
   name_prefix = local.airflow_workers_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3.json
+  policy      = data.aws_iam_policy_document.airflow_s3_outpost.json
 }
 
 #---------------------------------------------------------------
@@ -371,6 +388,7 @@ module "airflow_irsa_dag" {
   create_role = true
   role_name   = local.airflow_dag_processor_service_account
 
+
   role_policies = { AirflowDag = aws_iam_policy.airflow_dag.arn }
 
   oidc_providers = {
@@ -387,47 +405,40 @@ resource "aws_iam_policy" "airflow_dag" {
   description = "IAM policy for Airflow Scheduler Pod"
   name_prefix = local.airflow_dag_processor_service_account
   path        = "/"
-  policy      = data.aws_iam_policy_document.airflow_s3.json
-}
-
-#---------------------------------------------------------------
-# S3 bucket for Airflow
-#---------------------------------------------------------------
-
-#tfsec:ignore:*
-module "airflow_s3_bucket" {
-  source  = "../s3-bucket-outpost"
-
-  bucket_name = "${local.name}-airflow"
-  vpc-id      = local.vpc_id
-  outpost_name = local.outpost_name
-  output_subnet_id = local.output_subnet_id
-  vpc_id = local.vpc_id
-
-  tags = local.tags
+  policy      = data.aws_iam_policy_document.airflow_s3_outpost.json
 }
 
 #---------------------------------------------------------------
 # IAM policy for Aiflow S3
 #---------------------------------------------------------------
-data "aws_iam_policy_document" "airflow_s3" {
+data "aws_iam_policy_document" "airflow_s3_outpost" {
   statement {
-    sid       = ""
+    sid =  "AccessPointAccess"
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket.s3_bucket_id}"]
+    resources = [
+      "${module.airflow_s3_bucket.s3_access_arn}",
+      "${module.airflow_s3_bucket.s3_access_arn}/*"
+    ]
 
     actions = [
-      "s3:ListBucket"
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
     ]
   }
   statement {
-    sid       = ""
+    sid =  "BucketAccess"
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.airflow_s3_bucket.s3_bucket_id}/*"]
+    resources = [
+      "${module.airflow_s3_bucket.s3_bucket_arn}",
+      "${module.airflow_s3_bucket.s3_bucket_arn}/*"]
 
     actions = [
-      "s3:GetObject",
-      "s3:PutObject",
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
     ]
   }
 }

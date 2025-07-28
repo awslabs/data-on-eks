@@ -1,7 +1,9 @@
-export TRINO_BUCKET=$(aws s3 ls | grep trino-data | awk '{print $3}')
+cd ../.. && trino_bucket=$(terraform output -raw S3_trino_data_bucket)
+cd -
+export TRINO_BUCKET="${trino_bucket}"
 envsubst < trino_sf100000_tpcds_to_iceberg.sql > iceberg.sql
 
-export dns=trino.orange-eks.com
+export dns=trinoalb4.orange-eks.com
 
 echo "Get trino user password from terraform output"
 cd ../.. && trino_user_password=$(terraform output -raw trino_user_password)

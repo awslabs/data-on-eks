@@ -5,3 +5,11 @@
 output "s3_bucket_id" {
   value = aws_s3_access_point.this.alias
 }
+
+output "s3_bucket_arn" {
+  value = aws_s3control_bucket.this.arn
+}
+
+output "s3_access_arn" {
+    value = aws_s3_access_point.this.arn
+}

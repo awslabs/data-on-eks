@@ -1,0 +1,40 @@
+# deploiement pour permettre d'ajouter des fichiers dans le bucket
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-awscli
+  namespace: ${namespace}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client-awscli
+  template:
+    metadata:
+      labels:
+        app: client-awscli
+    spec:
+      serviceAccountName: ${sa_name}
+      containers:
+        - name: awscli
+          image: amazon/aws-cli:latest
+          command: ["/bin/sh", "-c", "--"]
+          args:
+            - |
+              yum install -y -q -y tar
+              mkdir -p /data-to-upload
+              echo "Starting upload loop... in order to send files to S3"
+              while true; do
+                for file in /data-to-upload/*; do
+                  [ -e "$file" ] || continue
+                  filename=$(basename "$file")
+                  echo "Uploading: $filename"
+                  aws s3 cp "$file" s3://${s3_bucket_name}/dags/
+                  echo "Done: $filename"
+                  echo "Deleting local file: $file"
+                  rm "$file"
+                  echo "Files now present in S3 access point:"
+                  aws s3 ls s3://${s3_bucket_name}/dags/
+                done
+                sleep 10
+              done

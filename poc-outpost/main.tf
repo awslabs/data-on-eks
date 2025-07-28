@@ -85,24 +85,27 @@ module "utility" {
 ##
 # Module contenant spark-operator, spark history server, spark job service
 ##
-module "spark_operator" {
+module "spark-operator" {
   source = "./modules/spark-operator"
   count  = var.enable_spark_operator ? 1 : 0
 
   name                         = local.name
   region                       = local.region
+  vpc_id                = module.vpc.vpc_id
   oidc_provider_arn            = module.eks.oidc_provider_arn
   cluster_version              = var.eks_cluster_version
   cluster_endpoint             = module.eks.cluster_endpoint
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
+  outpost_name          = var.outpost_name
+  output_subnet_id = module.outpost_subnet.subnet_id[0]
   spark_teams                  = var.spark_teams
 
   tags = local.tags
 
   depends_on = [
-    # module.eks,
-    # module.kafka,
-    # module.utility,
+    # module.eks,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    # module.kafka,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    # module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 }
 #---------------------------------------------------------------
@@ -152,6 +155,7 @@ module "airflow" {
 
   depends_on = [
     #module.supervision,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    # module.spark-operator
   ]
 }
 
@@ -201,6 +205,6 @@ module "kafka" {
   tags = local.tags
 
   depends_on = [
-    module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+    # module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
   ]
 }

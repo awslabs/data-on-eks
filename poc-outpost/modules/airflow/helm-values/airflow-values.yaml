@@ -15,26 +15,6 @@ ingress:
     # Enable web ingress resource
     enabled: false
 
-    # Annotations for the web Ingress
-    annotations:
-      alb.ingress.kubernetes.io/group.name: airflow
-      alb.ingress.kubernetes.io/target-type: ip
-      alb.ingress.kubernetes.io/scheme: internet-facing # Private Load Balancer can only be accessed within the VPC
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
-      alb.ingress.kubernetes.io/healthcheck-path: '/health'
-      # Enable the following if you have public/internal domain e.g., https://mycompany.com/
-      # alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
-      # alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:....................."
-
-    # The path for the web Ingress
-    path: "/"
-
-    # The pathType for the above path (used only with Kubernetes v1.19 and above)
-    pathType: "Prefix"
-
-    # The Ingress Class for the web Ingress (used only with Kubernetes v1.19 and above)
-    ingressClassName: "alb"
-
 ###################################
 # Airflow executor
 ###################################
@@ -150,7 +130,7 @@ scheduler:
   extraContainers:
     - name: s3-sync
       image: amazon/aws-cli:latest
-      command: [ "sh", "-c", "while true; do aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path}; sleep 60; done" ]
+      command: [ "sh", "-c", "while true; do aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path}; sleep 10; done" ]
       volumeMounts:
         - name: dags
           mountPath: ${airflow_dag_path}
@@ -254,7 +234,7 @@ dagProcessor:
   extraContainers:
     - name: s3-sync
       image: amazon/aws-cli:latest
-      command: ["sh", "-c", "while true; do aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path}; sleep 60; done"]
+      command: ["sh", "-c", "while true; do aws s3 sync --delete s3://${s3_bucket_name}/dags ${airflow_dag_path}; sleep 10; done"]
       volumeMounts:
         - name: dags
           mountPath: ${airflow_dag_path}

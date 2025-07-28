@@ -53,7 +53,7 @@ output "trino_user_password" {
 }
 
 
-# output "s3_bucket_id_spark_history_server" {
-#   description = "Spark History server logs S3 bucket ID"
-#   value       =  length(module.spark-operator) > 0 ? module.spark-operator[0].s3_bucket_id_spark_history_server : null
-# }
+output "s3_bucket_id_spark_history_server" {
+  description = "Spark History server logs S3 bucket ID"
+  value       =  length(module.spark-operator) > 0 ? module.spark-operator[0].s3_bucket_id_spark_history_server : null
+}

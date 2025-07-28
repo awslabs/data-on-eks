@@ -20,47 +20,74 @@ resource "bcrypt_hash" "trino_bcrypt" {
 }
 
 data "aws_iam_policy_document" "trino_exchange_access" {
+
   statement {
-    sid    = ""
-    effect = "Allow"
+    sid =  "AccessPointAccess"
+    effect    = "Allow"
     resources = [
-      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}",
-      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}/*"
+      "${module.trino_exchange_bucket.s3_access_arn}",
+      "${module.trino_exchange_bucket.s3_access_arn}/*"
     ]
-    actions = ["s3:Get*",
-      "s3:List*",
-      "s3:*Object*"]
+
+    actions = [
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
+    ]
+  }
+  statement {
+    sid =  "BucketAccess"
+    effect    = "Allow"
+    resources = [
+      "${module.trino_exchange_bucket.s3_bucket_arn}",
+      "${module.trino_exchange_bucket.s3_bucket_arn}/*"]
+
+    actions = [
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
+    ]
   }
 }
 
 data "aws_iam_policy_document" "trino_s3_access" {
   statement {
-    sid    = ""
-    effect = "Allow"
+    sid =  "AccessPointAccess"
+    effect    = "Allow"
     resources = [
-      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}",
-      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*"
+      "${module.trino_exchange_bucket.s3_access_arn}",
+      "${module.trino_exchange_bucket.s3_access_arn}/*"
     ]
-    actions = ["s3:Get*",
-      "s3:List*",
-      "s3:*Object*"]
-  }
 
+    actions = [
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
+    ]
+  }
+  statement {
+    sid =  "BucketAccess"
+    effect    = "Allow"
+    resources = [
+      "${module.trino_exchange_bucket.s3_bucket_arn}",
+      "${module.trino_exchange_bucket.s3_bucket_arn}/*"]
+
+    actions = [
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
+    ]
+  }
   statement {
     sid       = ""
     effect    = "Allow"
     resources = ["*"]
     actions = [
-      "s3:ListStorageLensConfigurations",
-      "s3:ListAccessPointsForObjectLambda",
-      "s3:GetAccessPoint",
-      "s3:GetAccountPublicAccessBlock",
-      "s3:ListAllMyBuckets",
-      "s3:ListAccessPoints",
-      "s3:ListJobs",
-      "s3:PutStorageLensConfiguration",
-      "s3:ListMultiRegionAccessPoints",
-      "s3:CreateJob"
+      "s3-outposts:*"
     ]
   }
 }
@@ -197,8 +224,8 @@ module "trino_addon" {
         trino_name = local.trino_name
         trino_domain = "${local.trino_name}.${local.main_domain}"
         trino_tls = local.trino_tls
-        trino_user_password = replace(bcrypt_hash.trino_bcrypt.id, "^\\$2[ab]\\$", "$2y$") #trino accepte que les bcrypt avec $2y$
-        trino_communication_encryption = random_password.trino_communication_encryption.result # test
+        trino_user_password = replace(bcrypt_hash.trino_bcrypt.id, "$2a$", "$2y$") #trino accepte que les bcrypt avec $2y$
+        trino_communication_encryption = random_password.trino_communication_encryption.result
         # JKS Keystore
         trino_jks_keystore_password = "TRINOPassword123456!" # test
         #random_password.trino_jks_keystore_password.result
@@ -256,7 +283,7 @@ module "trino_virtual_service" {
   cluster_issuer_name = var.cluster_issuer_name
   virtual_service_name = local.trino_name
   dns_name = "${local.trino_name}.${local.main_domain}"
-  service_name = local.trino_name
+  service_name = "trino"
   service_port = 8080
   namespace = local.trino_namespace
 
@@ -264,6 +291,8 @@ module "trino_virtual_service" {
 
   depends_on = [module.trino_addon]
 }
+
+
 
 
 

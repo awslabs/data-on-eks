@@ -1,47 +1,57 @@
 #---------------------------------------------------------------
+# spark history server Namespace
+#---------------------------------------------------------------
+
+# resource "kubernetes_namespace" "spark_history_server_namespace" {
+#   metadata {
+#     name = "${local.spark_history_server_namespace}"
+#   }
+# }
+
+#---------------------------------------------------------------
 # EKS Blueprints Addons
 #---------------------------------------------------------------
-module "eks_blueprints_addons" {
-  source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.20"
-
-  cluster_name      = local.name
-  cluster_endpoint  = local.cluster_endpoint
-  cluster_version   = local.cluster_version
-  oidc_provider_arn = local.oidc_provider_arn
-
-  #---------------------------------------
-  # AWS for FluentBit - DaemonSet
-  #---------------------------------------
-  enable_aws_for_fluentbit = true
-  aws_for_fluentbit_cw_log_group = {
-    use_name_prefix   = false
-    name = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
-    retention_in_days = 30
-  }
-  aws_for_fluentbit = {
-    chart_version = "0.1.34"
-    s3_bucket_arns = [
-      module.s3_bucket.s3_bucket_arn,
-      "${module.s3_bucket.s3_bucket_arn}/*"
-    ]
-    values = [
-      templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
-        region               = local.region,
-        cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
-        s3_bucket_name       = module.s3_bucket.s3_bucket_id
-        cluster_name         = local.name
-      })
-    ]
-  }
-
-}
+# module "eks_blueprints_addons" {
+#   source  = "aws-ia/eks-blueprints-addons/aws"
+#   version = "~> 1.20"
+#
+#   cluster_name      = local.name
+#   cluster_endpoint  = local.cluster_endpoint
+#   cluster_version   = local.cluster_version
+#   oidc_provider_arn = local.oidc_provider_arn
+#
+#   #---------------------------------------
+#   # AWS for FluentBit - DaemonSet
+#   #---------------------------------------
+#   enable_aws_for_fluentbit = true
+#   aws_for_fluentbit_cw_log_group = {
+#     use_name_prefix   = false
+#     name = "/${local.name}/aws-fluentbit-logs" # Add-on creates this log group
+#     retention_in_days = 30
+#   }
+#   aws_for_fluentbit = {
+#     chart_version = "0.1.34"
+#     s3_bucket_arns = [
+#       module.s3_bucket.s3_bucket_arn,
+#       "${module.s3_bucket.s3_bucket_arn}/*"
+#     ]
+#     values = [
+#       templatefile("${path.module}/helm-values/aws-for-fluentbit-values.yaml", {
+#         region               = local.region,
+#         cloudwatch_log_group = "/${local.name}/aws-fluentbit-logs"
+#         s3_bucket_name       = module.s3_bucket.s3_bucket_id
+#         cluster_name         = local.name
+#       })
+#     ]
+#   }
+#
+# }
 
   #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  source  = "aws-ia/eks-data-addons/aws"
+  source = "aws-ia/eks-data-addons/aws"
   version = "1.37.1" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = local.oidc_provider_arn
@@ -65,30 +75,12 @@ module "eks_data_addons" {
           batchScheduler:
             enable: true
             default: "yunikorn"
-        #   -- Uncomment this for Spark Operator scale test
-        #   -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
-        #   nodeSelector:
-        #     NodePool: spark
-        #   resources:
-        #     requests:
-        #       cpu: 33000m
-        #       memory: 50Gi
-        # webhook:
-        #   nodeSelector:
-        #     NodePool: spark
-        #   resources:
-        #     requests:
-        #       cpu: 1000m
-        #       memory: 10Gi
         spark:
           # -- List of namespaces where to run spark jobs.
           # If empty string is included, all namespaces will be allowed.
           # Make sure the namespaces have already existed.
           jobNamespaces:
-            - airflow
-            - spark-team-a
-            - spark-team-b
-            - spark-team-c
+            - ""
           serviceAccount:
             # -- Specifies whether to create a service account for the controller.
             create: true
@@ -134,10 +126,28 @@ module "eks_data_addons" {
   enable_spark_history_server = true
 
   spark_history_server_helm_config = {
+    role_policy_arns = {
+      S3OutpostFullPolicy = "arn:aws:iam::aws:policy/AmazonS3OutpostsFullAccess"
+    }
     version = "1.3.2"
     values = [
       <<-EOT
-      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
+      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/spark-event-logs/"
+
+      sparkConf: |-
+        spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+        spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+        #spark.hadoop.fs.s3a.connection.ssl.enabled=true
+        spark.hadoop.fs.s3a.path.style.access=true
+        spark.hadoop.fs.s3a.endpoint=s3-outposts.${local.region}.amazonaws.com
+        #spark.hadoop.fs.s3a.signing-algorithm=SignatureV4
+        spark.hadoop.fs.s3a.connection.timeout=10000
+
+        spark.eventLog.enabled=true
+        #spark.eventLog.dir=s3a://${module.s3_bucket.s3_bucket_id}/spark-event-logs
+        #spark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/spark-event-logs
+        spark.history.fs.eventLog.rolling.maxFilesToRetain=5
+        spark.history.ui.port=18080
       EOT
     ]
   }
@@ -156,22 +166,15 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # JupyterHub Add-on
   #---------------------------------------------------------------
-  enable_jupyterhub = true
-  jupyterhub_helm_config = {
-    values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
-      jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
-    })]
-    version = "3.3.8"
-  }
-}
+  # enable_jupyterhub = true
+  # jupyterhub_helm_config = {
+  #   values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
+  #     jupyter_single_user_sa_name = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+  #   })]
+  #   version = "3.3.8"
+  # }
 
-#---------------------------------------------------------------
-# IAM Policy for FluentBit Add-on
-#---------------------------------------------------------------
-resource "aws_iam_policy" "fluentbit" {
-  description = "IAM policy policy for FluentBit"
-  name        = "${local.name}-fluentbit-additional"
-  policy      = data.aws_iam_policy_document.fluent_bit.json
+  # depends_on = [kubernetes_service_account_v1.spark_history_server]
 }
 
 #---------------------------------------------------------------
@@ -179,53 +182,154 @@ resource "aws_iam_policy" "fluentbit" {
 #---------------------------------------------------------------
 #tfsec:ignore:*
 module "s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 4.6"
+  source  = "../s3-bucket-outpost"
 
-  bucket_prefix = "${local.name}-spark-logs-"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  bucket_name = "${local.name}-spark-logs"
+  vpc-id      = local.vpc_id
+  outpost_name = local.outpost_name
+  output_subnet_id = local.output_subnet_id
+  vpc_id = local.vpc_id
 
   tags = local.tags
 }
 
-# Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
-resource "aws_s3_object" "this" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  key          = "spark-event-logs/"
-  content_type = "application/x-directory"
-}
+
+#---------------------------------------------------------------
+# IAM Policy for FluentBit Add-on
+#---------------------------------------------------------------
+# resource "aws_iam_policy" "fluentbit" {
+#   description = "IAM policy policy for FluentBit"
+#   name        = "${local.name}-fluentbit-additional"
+#   policy      = data.aws_iam_policy_document.fluent_bit.json
+# }
 
 #---------------------------------------------------------------
 # IAM policy for FluentBit
 #---------------------------------------------------------------
-data "aws_iam_policy_document" "fluent_bit" {
-  statement {
-    sid       = ""
-    effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.s3_bucket.s3_bucket_id}/*"]
+# data "aws_iam_policy_document" "fluent_bit" {
+#   statement {
+#     sid       = ""
+#     effect    = "Allow"
+#     resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.s3_bucket.s3_bucket_id}/*"]
+#
+#     actions = [
+#       "s3:ListBucket",
+#       "s3:PutObject",
+#       "s3:PutObjectAcl",
+#       "s3:GetObject",
+#       "s3:GetObjectAcl",
+#       "s3:DeleteObject",
+#       "s3:DeleteObjectVersion"
+#     ]
+#   }
+# }
 
-    actions = [
-      "s3:ListBucket",
-      "s3:PutObject",
-      "s3:PutObjectAcl",
-      "s3:GetObject",
-      "s3:GetObjectAcl",
-      "s3:DeleteObject",
-      "s3:DeleteObjectVersion"
-    ]
-  }
-}
 
+#---------------------------------------------------------------
+# IRSA module spark history server
+#---------------------------------------------------------------
+# resource "kubernetes_namespace_v1" "spark_history_server_namespace" {
+#
+#   metadata {
+#     name = local.spark_history_server_namespace
+#   }
+#
+#   lifecycle {
+#     ignore_changes = [metadata]
+#     prevent_destroy = true
+#   }
+# }
+#
+# resource "kubernetes_service_account_v1" "spark_history_server" {
+#   metadata {
+#     name        = local.spark_history_server_service_account
+#     namespace   = local.spark_history_server_namespace
+#     annotations = { "eks.amazonaws.com/role-arn" : module.spark_history_server_irsa.iam_role_arn }
+#   }
+#
+#   automount_service_account_token = true
+# }
+#
+# resource "kubernetes_secret_v1" "spark_history_server" {
+#   metadata {
+#     name      = "${kubernetes_service_account_v1.spark_history_server.metadata[0].name}-secret"
+#     namespace = local.spark_history_server_namespace
+#     annotations = {
+#       "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.spark_history_server.metadata[0].name
+#       "kubernetes.io/service-account.namespace" = local.spark_history_server_namespace
+#     }
+#   }
+#
+#   type = "kubernetes.io/service-account-token"
+# }
+#
+# module "spark_history_server_irsa" {
+#   source  = "aws-ia/eks-blueprints-addon/aws"
+#   version = "~> 1.0" # ensure to update this to the latest/desired version
+#
+#   # IAM role for service account (IRSA)
+#   create_release = false
+#   create_policy  = false # Policy is created in the next resource
+#
+#   create_role = true
+#   role_name   = local.spark_history_server_service_account
+#
+#   role_policies = { SparkHistoryServer = aws_iam_policy.spark_history_server.arn }
+#
+#   oidc_providers = {
+#     this = {
+#       provider_arn    = local.oidc_provider_arn
+#       namespace       = local.spark_history_server_namespace
+#       service_account = local.spark_history_server_service_account
+#     }
+#   }
+# }
+#
+# resource "aws_iam_policy" "spark_history_server" {
+#
+#   description = "IAM policy for spark history server Pod"
+#   name_prefix = local.spark_history_server_service_account
+#   path        = "/"
+#   policy      = data.aws_iam_policy_document.s3_outpost.json
+# }
+
+
+# ---------------------------------------------------------------
+# IAM policy for Aiflow S3
+# ---------------------------------------------------------------
+# data "aws_iam_policy_document" "s3_outpost" {
+#   statement {
+#     sid    = "AccessPointAccess"
+#     effect = "Allow"
+#     resources = [
+#       "${module.s3_bucket.s3_access_arn}",
+#       "${module.s3_bucket.s3_access_arn}/*"
+#     ]
+#     actions = [
+#       "s3-outposts:Get*",
+#       "s3-outposts:Describe*",
+#       "s3-outposts:List*",
+#       "s3-object-lambda:Get*",
+#       "s3-object-lambda:List*"
+#     ]
+#   }
+#   statement {
+#     sid    = "BucketAccess"
+#     effect = "Allow"
+#     resources = [
+#       "${module.s3_bucket.s3_bucket_arn}",
+#       "${module.s3_bucket.s3_bucket_arn}/*"
+#     ]
+#
+#     actions = [
+#       "s3-outposts:Get*",
+#       "s3-outposts:Describe*",
+#       "s3-outposts:List*",
+#       "s3-object-lambda:Get*",
+#       "s3-object-lambda:List*"
+#     ]
+#   }
+# }
 
 
 #---------------------------------------------------------------
@@ -274,3 +378,30 @@ resource "aws_iam_policy" "s3tables_policy" {
     ]
   })
 }
+
+# resource "kubernetes_pod" "init_s3_directory_spark_event_logs" {
+#   metadata {
+#     name      = "awscli-init-s3"
+#     namespace = "${local.spark_history_server_namespace}"
+#   }
+#
+#   spec {
+#     service_account_name = "${local.spark_history_server_service_account}"
+#
+#     container {
+#       name  = "awscli"
+#       image = "amazon/aws-cli:latest"
+#
+#       command = [
+#         "sh", "-c",
+#         <<-EOT
+#           aws s3 cp /etc/hostname s3://${module.s3_bucket.s3_bucket_id}/spark-event-logs/.init
+#         EOT
+#       ]
+#     }
+#
+#     restart_policy = "Never"
+#   }
+#
+#   depends_on = [module.eks_data_addons]
+# }

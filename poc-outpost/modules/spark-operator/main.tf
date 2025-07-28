@@ -18,8 +18,11 @@ data "aws_iam_session_context" "current" {
 
 
 locals {
+  outpost_name = var.outpost_name
+  output_subnet_id = var.output_subnet_id
   name   = var.name
   region = var.region
+  vpc_id = var.vpc_id
   cluster_version = var.cluster_version
   cluster_endpoint = var.cluster_endpoint
   oidc_provider_arn = var.oidc_provider_arn
@@ -27,6 +30,9 @@ locals {
 
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
+
+  spark_history_server_service_account = "spark-history-server-sa"
+  spark_history_server_namespace       = "spark-history-server"
 
   tags = var.tags
 }
@@ -38,14 +44,31 @@ data "aws_iam_policy_document" "spark_operator" {
   statement {
     sid       = ""
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:s3:::*"]
+    resources = [
+      "${module.s3_bucket.s3_access_arn}",
+      "${module.s3_bucket.s3_access_arn}/*"
+    ]
 
     actions = [
-      "s3:DeleteObject",
-      "s3:DeleteObjectVersion",
-      "s3:GetObject",
-      "s3:ListBucket",
-      "s3:PutObject",
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
+    ]
+  }
+  statement {
+    sid       = ""
+    effect    = "Allow"
+    resources = [
+      "${module.s3_bucket.s3_bucket_arn}",
+      "${module.s3_bucket.s3_bucket_arn}/*"
+      ]
+
+    actions = [
+      "s3-outposts:GetObject",
+      "s3-outposts:PutObject",
+      "s3-outposts:DeleteObject",
+      "s3-outposts:ListBucket"
     ]
   }
 

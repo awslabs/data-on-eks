@@ -37,6 +37,8 @@ module "eks_data_addons" {
         webserver_secret_name = local.airflow_webserver_secret_name
 
         webserver_default_user_password = random_password.airflow_admin.result
+
+
       })
     ]
   }

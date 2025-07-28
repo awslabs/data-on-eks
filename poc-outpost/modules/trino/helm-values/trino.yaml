@@ -97,7 +97,7 @@ coordinator:
   config:
     query:
       #maxMemoryPerNode + (maxHeapSize * 0.3) < maxHeapSize
-      maxMemoryPerNode: "22GB"  # ~70% of maxHeapSize
+      maxMemoryPerNode: "20GB"  # ~70% of maxHeapSize
       minWorkers: 1
       initialHashPartitions: 100
   resources:
@@ -109,15 +109,6 @@ coordinator:
       memory: 40Gi
   annotations:
     karpenter.sh/do-not-disrupt: "true"
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: karpenter.sh/capacity-type
-                operator: NotIn
-                values:
-                  - on-demand
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname
@@ -178,6 +169,8 @@ additionalExchangeManagerProperties:
   - "exchange.s3.iam-role=${irsa_arn}"
   - "exchange.s3.max-error-retries=10"
   - "exchange.s3.upload.part-size=64MB"
+  - "exchange.s3.storage-class=OUTPOSTS"
+  - "exchange.s3.endpoint=https://s3-outposts.us-west-2.amazonaws.com"
 
 connector:
   name: iceberg
@@ -191,7 +184,10 @@ catalogs:
     iceberg.jdbc-catalog.connection-url=${trino_db_url}
     iceberg.jdbc-catalog.connection-user=${trino_db_user}
     iceberg.jdbc-catalog.connection-password=${trino_db_password}
-    iceberg.jdbc-catalog.default-warehouse-dir=s3://${exchange_bucket_id}
+    iceberg.jdbc-catalog.default-warehouse-dir=s3://${bucket_id}
+    fs.native-s3.enabled=true
+    s3.endpoint=https://s3-outposts.${region}.amazonaws.com
+    s3.path-style-access=true
 
 serviceAccount:
   create: true

@@ -21,9 +21,10 @@ resource "kubectl_manifest" "karpenter_node_class" {
       blockDeviceMappings:
         - deviceName: /dev/xvda
           ebs:
-            volumeSize: 100Gi
+            volumeSize: 20Gi
             volumeType: gp2
             deleteOnTermination: true
+            encrypted: true
   YAML
 }
 
@@ -49,6 +50,10 @@ resource "kubectl_manifest" "karpenter_node_pool" {
               operator: In
               values:
               - "on-demand"
+            - key: topology.kubernetes.io/region
+              operator: In
+              values:
+              - "${local.region}"
             - key: node.kubernetes.io/instance-type
               operator: In
               values: # de base ca utilise c5d de ["4xlarge", "9xlarge", "12xlarge", "18xlarge", "24xlarge"]
