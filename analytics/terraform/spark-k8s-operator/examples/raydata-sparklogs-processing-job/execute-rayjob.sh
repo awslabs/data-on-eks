@@ -14,7 +14,7 @@ NC='\033[0m'
 # =============================================================================
 
 # These should match your parent Terraform module configuration
-S3_BUCKET="<S3_BUCKET>".  # Replace with your S3 Bucket
+S3_BUCKET="<S3_BUCKET>"  # Replace with your S3 Bucket
 S3_PREFIX="<CLUSTER_NAME>/spark-application-logs/spark-team-a". # Replace with your EKS Cluster Name
 AWS_REGION="<AWS_REGION>" # Replace with your AWS region
 
