@@ -178,7 +178,7 @@ graph TB
     style Iceberg fill:#3FCBFF,stroke:#232F3E,stroke-width:2px,color:#fff
 ```
 
-### Key Processing Features
+### Key Features of Ray Data Processing
 
 #### 📊 **Schema Extraction and Parsing**
 
@@ -517,9 +517,11 @@ SELECT * FROM raydata_spark_logs.spark_logs LIMIT 2;
 </TabItem>
 </Tabs>
 
-### Option 1: Built-in Data Verification Script
+### Option 1: Query Iceberg Tables
 
 Use the built-in data verification script provided in the blueprint that automatically sets up a Python virtual environment and all required dependencies:
+
+ from your environment.
 
 ```bash
 # Make script executable (first time only)
