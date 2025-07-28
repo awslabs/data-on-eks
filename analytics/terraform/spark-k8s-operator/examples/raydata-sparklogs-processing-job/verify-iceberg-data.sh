@@ -8,9 +8,9 @@ set -euo pipefail
 #---------------------------------------------------------------
 # Configuration Variables
 #---------------------------------------------------------------
-S3_BUCKET="<S3_BUCKET>"                  # Replace with your S3 bucket name
+S3_BUCKET=<S3_BUCKET>                 # Replace with your S3 bucket name
 # replace with your AWS region                 # Iceberg table name
-AWS_REGION="<AWS_REGION>"
+AWS_REGION=<AWS_REGION>
 ICEBERG_DATABASE="raydata_spark_logs"          # Glue database name
 ICEBERG_TABLE="spark_logs"
                        # AWS region
@@ -172,7 +172,6 @@ main() {
     validate_config
     check_prerequisites
     setup_venv
-    create_verification_script
     run_verification
 
     print_success "Verification completed successfully!"

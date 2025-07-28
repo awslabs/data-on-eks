@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from '@docusaurus/Link';
 import styles from './TechMarquee.module.css';
 
 // Row 1: Data Analytics & Streaming
@@ -6,7 +7,7 @@ const dataStreamingTools = [
   { name: "Apache Spark", color: "linear-gradient(135deg, #FFB84D 0%, #E25A1C 100%)" },
   { name: "Apache Flink", color: "linear-gradient(135deg, #FF8A9B 0%, #E6526F 100%)" },
   { name: "Apache Kafka", color: "linear-gradient(135deg, #9CA3AF 0%, #374151 100%)" },
-  { name: "Ray Data", color: "linear-gradient(135deg, #60A5FA 0%, #2563EB 100%)" },
+  { name: "Ray Data", color: "linear-gradient(135deg, #60A5FA 0%, #2563EB 100%)", url: "/docs/blueprints/data-analytics/ray-data-processing" },
   { name: "Spark Operator", color: "linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%)" },
   { name: "Flink Operator", color: "linear-gradient(135deg, #F472B6 0%, #DB2777 100%)" }
 ];
@@ -37,15 +38,29 @@ export default function TechMarquee() {
       <div className={styles.marqueeContent}>
         {/* Row 1: Data Analytics & Streaming */}
         <div className={styles.marqueeRow}>
-          {dataStreamingTools.map((tech, index) => (
-            <div
-              key={`data-${index}`}
-              className={styles.techItem}
-              style={{ background: tech.color }}
-            >
-              <span className={styles.techName}>{tech.name}</span>
-            </div>
-          ))}
+          {dataStreamingTools.map((tech, index) => {
+            if (tech.url) {
+              return (
+                <Link
+                  key={`data-${index}`}
+                  to={tech.url}
+                  className={styles.techItem}
+                  style={{ background: tech.color, textDecoration: 'none' }}
+                >
+                  <span className={styles.techName}>{tech.name}</span>
+                </Link>
+              );
+            }
+            return (
+              <div
+                key={`data-${index}`}
+                className={styles.techItem}
+                style={{ background: tech.color }}
+              >
+                <span className={styles.techName}>{tech.name}</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Row 2: Orchestration & Databases (Reverse Direction) */}
