@@ -8,8 +8,7 @@ set -euo pipefail
 #---------------------------------------------------------------
 # Configuration Variables
 #---------------------------------------------------------------
-#S3_BUCKET="<ENTER_S3_BUCKET>"
-S3_BUCKET="spark-operator-doeks-spark-logs-20250728032843914000000001"                    # Replace with your S3 bucket name
+S3_BUCKET="<ENTER_S3_BUCKET>"                  # Replace with your S3 bucket name
 ICEBERG_DATABASE="raydata_spark_logs"            # Glue database name
 ICEBERG_TABLE="spark_logs"                       # Iceberg table name
 AWS_REGION="us-west-2"                           # AWS region

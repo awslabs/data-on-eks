@@ -23,7 +23,7 @@ ICEBERG_DATABASE="raydata_spark_logs"
 ICEBERG_TABLE="spark_logs"
 
 # S3 Configuration (should match Terraform module)
-S3_BUCKET="spark-operator-doeks-spark-logs-20250728032843914000000001"  # Replace with your actual S3 bucket name. DON'T USE FIND and REPLACE!
+S3_BUCKET="<ENTER_S3_BUCKET>"  # Replace with your actual S3 bucket name. DON'T USE FIND and REPLACE!
 S3_PREFIX="spark-operator-doeks/spark-application-logs/spark-team-a"
 
 # Ray Configuration (can override Terraform defaults)
