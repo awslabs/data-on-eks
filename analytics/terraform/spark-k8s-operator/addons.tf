@@ -787,7 +787,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Kuberay Operator Add-on
   #---------------------------------------------------------------
-  enable_kuberay_operator = true
+  enable_kuberay_operator = var.enable_raydata
   kuberay_operator_helm_config = {
     version = "1.4.0"
     # Enabling Volcano as Batch scheduler for KubeRay Operator

@@ -53,7 +53,7 @@ const config = {
 
   markdown: {
     mermaid: true,
-  },  
+  },
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */

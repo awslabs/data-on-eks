@@ -23,7 +23,7 @@ ICEBERG_DATABASE="raydata_spark_logs"
 ICEBERG_TABLE="spark_logs"
 
 # S3 Configuration (should match Terraform module)
-S3_BUCKET="spark-operator-doeks-spark-logs-20250726230152973400000002"  # Replace with your actual S3 bucket name. DON'T USE FIND and REPLACE!
+S3_BUCKET="spark-operator-doeks-spark-logs-20250728032843914000000001"  # Replace with your actual S3 bucket name. DON'T USE FIND and REPLACE!
 S3_PREFIX="spark-operator-doeks/spark-application-logs/spark-team-a"
 
 # Ray Configuration (can override Terraform defaults)
@@ -83,8 +83,8 @@ validate_prerequisites() {
     fi
 
     # Check if service account exists (created by Terraform module)
-    if ! kubectl get serviceaccount ray-service-account -n "$NAMESPACE" &> /dev/null; then
-        print_error "Service account 'ray-service-account' not found in namespace '$NAMESPACE'!"
+    if ! kubectl get serviceaccount raydata -n "$NAMESPACE" &> /dev/null; then
+        print_error "Service account 'raydata' not found in namespace '$NAMESPACE'!"
         print_error "Please deploy Terraform infrastructure first."
         print_error "Check that the raydata_pipeline module is properly configured."
         exit 1

@@ -96,7 +96,7 @@ variable "spark_benchmark_ssd_desired_size" {
   default     = 0
 }
 
-variable "enable_raydata_processing" {
+variable "enable_raydata" {
   description = "Enable Ray Data Spark logs processing with Iceberg"
   type        = bool
   default     = false

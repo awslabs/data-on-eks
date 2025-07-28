@@ -43,7 +43,7 @@ spec:
   # Submitter pod configuration with IRSA and additional submitter config
   submitterPodTemplate:
     spec:
-      serviceAccountName: ray-service-account
+      serviceAccountName: raydata
       restartPolicy: Never
       containers:
         - name: rayjob-submitter
@@ -93,7 +93,7 @@ spec:
             app: spark-log-processor-job
             component: ray-head
         spec:
-          serviceAccountName: ray-service-account
+          serviceAccountName: raydata
           containers:
             - name: ray-head
               image: rayproject/ray:2.47.1-py310
@@ -171,7 +171,7 @@ spec:
               app: spark-log-processor-job
               component: ray-worker
           spec:
-            serviceAccountName: ray-service-account
+            serviceAccountName: raydata
             containers:
               - name: ray-worker
                 image: rayproject/ray:2.47.1-py310

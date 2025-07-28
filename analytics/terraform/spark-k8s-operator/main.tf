@@ -40,6 +40,10 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
 
+  # Ray Data configuration
+  s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
+  iceberg_database = "raydata_spark_logs"
+
   s3_express_supported_az_ids = [
     "use1-az4", "use1-az5", "use1-az6", "usw2-az1", "usw2-az3", "usw2-az4", "apne1-az1", "apne1-az4", "eun1-az1", "eun1-az2", "eun1-az3"
   ]
@@ -171,27 +175,4 @@ data "aws_iam_policy_document" "s3tables_policy" {
 
     resources = ["*"]
   }
-}
-
-#---------------------------------------------------------------
-# Ray Data Spark Log Processing Module (Conditional)
-#---------------------------------------------------------------
-module "raydata_pipeline" {
-  count  = var.enable_raydata_processing ? 1 : 0
-  source = "./raydata-pipeline"
-
-  # Required variables passed from parent
-  aws_region       = local.region
-  eks_cluster_name = module.eks.cluster_name
-  s3_bucket        = module.s3_bucket.s3_bucket_id
-  s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
-
-  tags = local.tags
-
-  # Dependencies to ensure proper creation order
-  depends_on = [
-    module.eks,
-    module.s3_bucket,
-    module.eks_blueprints_addons
-  ]
 }
