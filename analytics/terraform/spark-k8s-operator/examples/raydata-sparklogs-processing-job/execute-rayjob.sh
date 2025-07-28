@@ -14,17 +14,16 @@ NC='\033[0m'
 # =============================================================================
 
 # These should match your parent Terraform module configuration
+S3_BUCKET="<S3_BUCKET>".  # Replace with your S3 Bucket
+S3_PREFIX="<CLUSTER_NAME>/spark-application-logs/spark-team-a". # Replace with your EKS Cluster Name
+AWS_REGION="<AWS_REGION>" # Replace with your AWS region
+
 NAMESPACE="raydata"
-AWS_REGION="us-west-2" # UPDATE: Match your AWS region
 
 # Iceberg Configuration
 ICEBERG_CATALOG_TYPE="glue"
 ICEBERG_DATABASE="raydata_spark_logs"
 ICEBERG_TABLE="spark_logs"
-
-# S3 Configuration (should match Terraform module)
-S3_BUCKET="<ENTER_S3_BUCKET>"  # Replace with your actual S3 bucket name. DON'T USE FIND and REPLACE!
-S3_PREFIX="spark-operator-doeks/spark-application-logs/spark-team-a"
 
 # Ray Configuration (can override Terraform defaults)
 BATCH_SIZE="10000"
@@ -102,15 +101,15 @@ validate_config() {
 
     local errors=0
 
-    if [[ -z "$S3_BUCKET" || "$S3_BUCKET" == "<ENTER_S3_BUCKET>" ]]; then
+    if [[ -z "$S3_BUCKET" || "$S3_BUCKET" == "<S3_BUCKET>" ]]; then
         print_error "S3_BUCKET needs to be updated"
-        print_error "Please replace <ENTER_S3_BUCKET> with your actual S3 bucket name"
+        print_error "Please replace <S3_BUCKET> with your actual S3 bucket name"
         errors=$((errors + 1))
     fi
 
-    if [[ "$S3_PREFIX" == *"<ENTER_CLUSTER_NAME>"* ]]; then
-        print_error "S3_PREFIX contains placeholder <ENTER_CLUSTER_NAME>"
-        print_error "Please replace <ENTER_CLUSTER_NAME> with your actual cluster name"
+    if [[ "$S3_PREFIX" == *"<CLUSTER_NAME>"* ]]; then
+        print_error "S3_PREFIX contains placeholder <CLUSTER_NAME>"
+        print_error "Please replace <CLUSTER_NAME> with your actual cluster name"
         errors=$((errors + 1))
     fi
 
@@ -393,7 +392,7 @@ main() {
             echo "  help       Show this help message"
             echo ""
             echo "Required configuration updates:"
-            echo "  - S3_BUCKET: Replace <ENTER_S3_BUCKET> with your bucket name"
+            echo "  - S3_BUCKET: Replace <S3_BUCKET> with your bucket name"
             echo ""
             echo "Features:"
             echo "  - Uses Apache Iceberg for ACID transactions"
@@ -408,11 +407,11 @@ main() {
 
 # Check configuration before deployment
 if [[ "${1:-deploy}" == "deploy" ]]; then
-    if [[ "$S3_BUCKET" == "<ENTER_S3_BUCKET>" ]]; then
+    if [[ "$S3_BUCKET" == "<S3_BUCKET>" ]]; then
         print_error "Please update the configuration section in this script before deployment!"
         echo ""
         echo "Required updates:"
-        echo "  - S3_BUCKET: Replace <ENTER_S3_BUCKET> with your actual bucket name"
+        echo "  - S3_BUCKET: Replace <S3_BUCKET> with your actual bucket name"
         echo ""
         echo "Example:"
         echo "  S3_BUCKET=\"my-spark-logs-bucket\""

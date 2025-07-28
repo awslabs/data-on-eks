@@ -324,17 +324,15 @@ kuberay-operator-74fcdcc6bf-gpl5p   1/1     Running   0          10h
 
 ### Step 3: Configure Ray Job
 
-Navigate to the example directory and update the S3 configuration in the deployment script:
+Navigate to the example directory and update the S3 configuration in the deployment script.
 
 ```bash
 cd examples/raydata-sparklogs-processing-job
-
-# Edit execute-rayjob.sh and update:
-S3_BUCKET="your-spark-logs-bucket"      # Your S3 bucket name
-S3_PREFIX="spark-logs/spark-team-a"     # Path to Spark logs
 ```
 
-### Step 4: Deploy the Ray Job
+Replace  **S3_BUCKET**, **CLUSTER_NAME** and **AWS_REGION** variables in the `execute-rayjob.sh` shell script before running.
+
+### Step 4: Deploy the Ray Cluster & Execute Ray Job
 
 ```bash
 # Make script executable
@@ -524,14 +522,16 @@ Use the built-in data verification script provided in the blueprint that automat
  from your environment.
 
 ```bash
-# Make script executable (first time only)
+# Make script executable
 chmod +x verify-iceberg-data.sh
+```
+Replace  **S3_BUCKET** and **AWS_REGION** variables in the `verify-iceberg-data.sh` shell script before running.
 
-# Update the S3_BUCKET variable in the script, then run:
+```bash
 ./verify-iceberg-data.sh
 ```
 
-The script automatically:
+The script automatically...
 - ✅ Creates an isolated Python virtual environment
 - ✅ Installs PyIceberg and all dependencies (`pyiceberg[glue,s3fs]==0.7.0`)
 - ✅ Connects to AWS Glue catalog and Iceberg tables

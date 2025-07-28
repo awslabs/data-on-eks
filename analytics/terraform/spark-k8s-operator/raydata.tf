@@ -139,4 +139,3 @@ resource "aws_glue_catalog_database" "raydata_iceberg" {
 
   tags = local.tags
 }
-
