@@ -10,7 +10,7 @@ patches:
     kind: Deployment
 - path: patches/config-deployment.yaml
 - path: patches/config-istio.yaml
-- path: patches/namespace-injection.yaml
+# - path: patches/namespace-injection.yaml
 - path: patches/knative-serving-namespaced-admin.yaml
 - path: patches/knative-serving-namespaced-edit.yaml
 - path: patches/knative-serving-namespaced-view.yaml

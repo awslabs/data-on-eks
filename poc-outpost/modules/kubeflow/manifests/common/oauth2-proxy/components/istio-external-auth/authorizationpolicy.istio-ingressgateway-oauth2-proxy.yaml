@@ -9,7 +9,7 @@ spec:
     name: oauth2-proxy
   selector:
     matchLabels:
-      app: istio-ingressgateway
+      app: kubeflow-istio-ingress
   rules:
   # We ONLY authenticate requests that DON'T have an `Authorization` header using oauth2-proxy.
   # This is because we use RequestAuthentication to authenticate requests with an `Authorization` header.

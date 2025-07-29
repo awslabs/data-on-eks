@@ -23,6 +23,8 @@ resource "kubernetes_namespace_v1" "this" {
     name = local.namespace
     labels = {
       istio-injection = "enabled"
+      "pod-security.kubernetes.io/enforce" = "privileged"
+      "pod-security.kubernetes.io/enforce-version" = "latest"
     }
   }
 }

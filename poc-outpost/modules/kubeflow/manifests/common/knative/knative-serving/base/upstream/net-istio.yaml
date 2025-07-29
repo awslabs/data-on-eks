@@ -25,7 +25,7 @@ metadata:
     networking.knative.dev/ingress-provider: istio
 spec:
   selector:
-    istio: ingressgateway
+    istio: kubeflow-ingressgateway
   servers:
     - port:
         number: 80
@@ -46,7 +46,7 @@ metadata:
     networking.knative.dev/ingress-provider: istio
 spec:
   selector:
-    istio: ingressgateway
+    istio: kubeflow-ingressgateway
   servers:
     - port:
         number: 8081

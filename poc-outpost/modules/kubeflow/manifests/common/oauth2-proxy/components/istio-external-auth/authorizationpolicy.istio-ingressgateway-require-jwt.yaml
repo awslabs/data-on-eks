@@ -7,7 +7,7 @@ spec:
   action: DENY
   selector:
     matchLabels:
-      app: istio-ingressgateway
+      app: kubeflow-istio-ingress
   rules:
   # Deny requests that don't have a verified JWT (from a RequestAuthentication)
   # Note, even user requests that have been authenticated by oauth2-proxy will have a JWT,
