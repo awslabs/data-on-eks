@@ -30,13 +30,6 @@ module "istio" {
       repository    = local.istio_chart_url
       name          = "istio-cni"
       namespace     = kubernetes_namespace_v1.istio_system.metadata[0].name
-
-      set = [
-        {
-          name  = "profile"
-          value = "ambient"
-        }
-      ]
     }
     istio-base = {
       chart         = "base"
@@ -51,24 +44,53 @@ module "istio" {
       repository    = local.istio_chart_url
       name          = "istiod"
       namespace     = kubernetes_namespace_v1.istio_system.metadata[0].name
-
-      set = [
-        {
-          name  = "meshConfig.accessLogFile"
-          value = "/dev/stdout"
-        },
-        {
-          name  = "profile"
-          value = "ambient"
-        }
-      ]
-    }
-    ztunnel = {
-      chart         = "ztunnel"
-      chart_version = local.istio_chart_version
-      repository    = local.istio_chart_url
-      name          = "ztunnel"
-      namespace     = kubernetes_namespace_v1.istio_system.metadata[0].name
+      values = [
+          yamlencode({
+            meshConfig = {
+              accessLogFile           = "/dev/stdout"
+              enablePrometheusMerge   = true
+              rootNamespace           = "istio-system"
+              tcpKeepalive = {
+                interval = "5s"
+                probes   = 3
+                time     = "10s"
+              }
+              trustDomain = "cluster.local"
+              defaultConfig = {
+                discoveryAddress = "istiod.istio-system.svc:15012"
+                proxyMetadata    = {}
+                tracing          = {}
+              }
+              extensionProviders = [
+                {
+                  name = "oauth2-proxy"
+                  envoyExtAuthzHttp = {
+                    service  = "oauth2-proxy.oauth2-proxy.svc.cluster.local"
+                    port     = 80
+                    includeRequestHeadersInCheck = [
+                      "authorization",
+                      "cookie"
+                    ]
+                    headersToUpstreamOnAllow = [
+                      "authorization",
+                      "path",
+                      "x-auth-request-email",
+                      "x-auth-request-groups",
+                      "x-auth-request-user"
+                    ]
+                    headersToDownstreamOnDeny = [
+                      "content-type",
+                      "set-cookie"
+                    ]
+                  }
+                }
+              ]
+            }
+            meshNetworks = {
+              networks = {}
+            }
+          })
+        ]
     }
     istio-ingress = {
       chart            = "gateway"

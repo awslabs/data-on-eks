@@ -18,19 +18,19 @@ resource "aws_security_group" "outposts_sg" {
   vpc_id      = module.vpc.vpc_id
 
   ingress {
-    description      = "All inbound in outpost subnet"
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = local.private_subnets_cidr
+    description = "All inbound in outpost subnet"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = local.private_subnets_cidr
   }
 
   egress {
-    description      = "All outbound in outpost subnet"
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = local.private_subnets_cidr
+    description = "All outbound in outpost subnet"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = local.private_subnets_cidr
   }
 
   tags = {
@@ -39,7 +39,7 @@ resource "aws_security_group" "outposts_sg" {
 }
 
 resource "aws_s3outposts_endpoint" "endpoint_s3_outpost" {
-  outpost_id       = data.aws_outposts_outpost.default.id
-  subnet_id        = module.outpost_subnet.subnet_id[0]
+  outpost_id        = data.aws_outposts_outpost.default.id
+  subnet_id         = module.outpost_subnet.subnet_id[0]
   security_group_id = aws_security_group.outposts_sg.id
 }

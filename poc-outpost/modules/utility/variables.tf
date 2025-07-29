@@ -24,8 +24,8 @@ variable "repository_username" {
 }
 
 variable "repository_password" {
-    description = "Password for the ECR repository"
-    type        = string
+  description = "Password for the ECR repository"
+  type        = string
 }
 
 variable "oidc_provider_arn" {
@@ -54,6 +54,6 @@ variable "zone_id" {
 }
 
 variable "main_domain" {
-    description = "Main domain for the cluster"
-    type        = string
+  description = "Main domain for the cluster"
+  type        = string
 }

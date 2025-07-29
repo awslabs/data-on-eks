@@ -1,0 +1,91 @@
+name: Test Pipeline run from Jupyterlab
+on:
+  pull_request:
+    paths:
+    - tests/gh-actions/install_KinD_create_KinD_cluster_install_kustomize.sh
+    - .github/workflows/pipeline_run_from_notebook.yaml
+    - apps/jupyter/notebook-controller/upstream/**
+    - apps/pipeline/upstream/**
+    - tests/gh-actions/install_istio*.sh
+    - tests/gh-actions/install_cert_manager.sh
+    - common/cert-manager/**
+    - common/oauth2-proxy/**
+    - common/istio*/**
+    - common/kubeflow-namespace/**
+    - apps/jupyter/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install KinD, Create KinD cluster and Install kustomize
+      run: ./tests/gh-actions/install_KinD_create_KinD_cluster_install_kustomize.sh
+
+    - name: Install Istio
+      run: ./tests/gh-actions/install_istio-cni.sh
+
+    - name: Install oauth2-proxy
+      run: ./tests/gh-actions/install_oauth2-proxy.sh
+
+    - name: Install cert-manager
+      run: ./tests/gh-actions/install_cert_manager.sh
+
+    - name: Create kubeflow namespace
+      run: kustomize build common/kubeflow-namespace/base | kubectl apply -f -
+
+    - name: Install kubeflow-istio-resources
+      run: kustomize build common/istio-cni-1-24/kubeflow-istio-resources/base | kubectl apply -f -
+
+    - name: Install KF Pipelines
+      run: ./tests/gh-actions/install_pipelines.sh
+
+    - name: Install KF Multi Tenancy
+      run: ./tests/gh-actions/install_multi_tenancy.sh
+
+    - name: Build & Apply manifests
+      run: |
+        kustomize build apps/jupyter/jupyter-web-app/upstream/overlays/istio/ | kubectl apply -f -
+        kustomize build apps/jupyter/notebook-controller/upstream/overlays/kubeflow/ | kubectl apply -f -
+        kustomize build apps/admission-webhook/upstream/overlays/cert-manager | kubectl apply -f -
+        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout 300s \
+          --field-selector=status.phase!=Succeeded
+
+    - name: Create KF Profile
+      run: ./tests/gh-actions/install_kubeflow_profile.sh
+
+    - name: Apply PodDefaults to access ml-pipeline with projected token
+      run: kubectl apply -f tests/gh-actions/kf-objects/poddefaults.access-ml-pipeline.kubeflow-user-example-com.yaml
+
+    - name: Create Kubeflow Notebook with PodDefaults
+      run: |
+        kubectl apply -f tests/gh-actions/kf-objects/notebook.test.kubeflow-user-example.com.yaml
+        kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 \
+          -f tests/gh-actions/kf-objects/notebook.test.kubeflow-user-example.com.yaml \
+          --timeout 600s
+
+    - name: Copy and execute the pipeline run script in KF Notebook
+      run: |
+        kubectl -n kubeflow-user-example-com cp \
+          ./tests/gh-actions/run_and_wait_kubeflow_pipeline.py \
+          test-0:/home/jovyan/run_and_wait_kubeflow_pipeline.py
+
+        kubectl -n kubeflow-user-example-com exec -ti \
+          test-0 -- python /home/jovyan/run_and_wait_kubeflow_pipeline.py
+
+    - name: Apply Pod Security Standards baseline levels
+      run: ./tests/gh-actions/enable_baseline_PSS.sh
+
+    - name: Unapply applied baseline labels
+      run: |
+        NAMESPACES=("istio-system" "auth" "cert-manager" "oauth2-proxy" "kubeflow" "knative-serving")
+        for NAMESPACE in "${NAMESPACES[@]}"; do
+          if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+            kubectl label namespace $NAMESPACE pod-security.kubernetes.io/enforce-
+          fi
+        done
+
+    - name: Applying Pod Security Standards restricted levels
+      run: ./tests/gh-actions/enable_restricted_PSS.sh

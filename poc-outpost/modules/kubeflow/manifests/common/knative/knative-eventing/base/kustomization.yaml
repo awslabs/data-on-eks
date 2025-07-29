@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: knative-eventing
+resources:
+- upstream/eventing-core.yaml
+# Uncomment to install In-Memory Channels as messaging layer: 
+# - upstream/in-memory-channel.yaml
+# Uncomment to install MT-channel-based Broker layer
+# - upstream/mt-channel-broker.yaml
+labels:
+- includeSelectors: true
+  pairs:
+    app.kubernetes.io/component: knative-eventing
+    app.kubernetes.io/name: knative-eventing
+    kustomize.component: knative
+patches:
+- path: patches/clusterrole-patch.yaml

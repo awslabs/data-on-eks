@@ -1,0 +1,34 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: istio-ingressgateway-oauth2-proxy
+  namespace: istio-system
+spec:
+  action: CUSTOM
+  provider:
+    name: oauth2-proxy
+  selector:
+    matchLabels:
+      app: istio-ingressgateway
+  rules:
+  # We ONLY authenticate requests that DON'T have an `Authorization` header using oauth2-proxy.
+  # This is because we use RequestAuthentication to authenticate requests with an `Authorization` header.
+  - when:
+    - key: request.headers[authorization]
+      notValues: ["*"]
+    to:
+    - operation:
+        notPaths:
+        # Exclude dex paths, otherwise users won't be able to log in.
+        - /dex/*
+        - /dex/**
+        - /oauth2/*
+
+        # Exclude paths which are safe to cache by Cloudflare.
+        - /favicon*
+        - /webcomponentsjs*
+        - /vendor.bundle.js
+        - /app.bundle.js
+        - /dashboard_lib.bundle.js
+        - /assets*
+        - /app.css

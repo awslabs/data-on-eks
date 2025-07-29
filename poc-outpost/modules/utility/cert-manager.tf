@@ -5,13 +5,13 @@
 # ---------------------------------------------------------------
 resource "kubectl_manifest" "cluster_issuer" {
 
-    yaml_body = templatefile("${path.module}/helm-values/cluster_issuer.yaml", {
-        cluster_issuer_name = local.cluster_issuer_name
-    })
+  yaml_body = templatefile("${path.module}/helm-values/cluster_issuer.yaml", {
+    cluster_issuer_name = local.cluster_issuer_name
+  })
 
-    depends_on = [
-        module.eks_blueprints_addons
-    ]
+  depends_on = [
+    module.eks_blueprints_addons
+  ]
 }
 
 # Logique pour pour passer par le DNS Route53

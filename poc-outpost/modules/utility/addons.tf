@@ -121,8 +121,8 @@ module "eks_blueprints_addons" {
 
 resource "kubernetes_service_account" "cert_manager_sa" {
   metadata {
-    name      = "${local.cert_service_account}"
-    namespace = "${local.cert_manager_namespace}"
+    name      = local.cert_service_account
+    namespace = local.cert_manager_namespace
 
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.cert_manager_irsa_role.arn
@@ -154,9 +154,6 @@ resource "helm_release" "kyverno" {
 }
 
 resource "kubectl_manifest" "default_affinity" {
-
-    yaml_body = templatefile("${path.module}/helm-values/default_affinity.yaml", {
-
-    })
-
+  yaml_body = templatefile("${path.module}/helm-values/default_affinity.yaml", {
+  })
 }

@@ -1,0 +1,35 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: default-affinity
+spec:
+  admission: true
+  background: true
+  rules:
+  - exclude:
+      resources:
+        names:
+        - trino-worker
+    match:
+      resources:
+        kinds:
+        - Deployment
+        - StatefulSet
+        - DaemonSet
+    mutate:
+      patchStrategicMerge:
+        spec:
+          template:
+            spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: karpenter.sh/capacity-type
+                        operator: NotIn
+                        values:
+                        - on-demand
+    name: set-default-affinity
+    skipBackgroundRequests: true
+  validationFailureAction: Audit

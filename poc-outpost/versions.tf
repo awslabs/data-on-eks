@@ -2,6 +2,10 @@ terraform {
   required_version = ">= 1.3.2"
 
   required_providers {
+    kustomization = {
+      source  = "kbst/kustomization"
+      version = ">= 0.6.3"
+    }
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.95" # Certains modules ne fonctionnent pas avec les versions 6.X 

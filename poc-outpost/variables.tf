@@ -129,5 +129,5 @@ EOT
 variable "spark_teams" {
   description = "List of all teams (namespaces) for spark team"
   type        = list(string)
-  default = ["spark-team-a", "spark-team-b", "spark-team-c"]
+  default     = ["spark-team-a", "spark-team-b", "spark-team-c"]
 }
