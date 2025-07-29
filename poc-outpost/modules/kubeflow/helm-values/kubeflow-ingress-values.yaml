@@ -1,0 +1,90 @@
+COMPUTED VALUES:
+_internal_defaults_do_not_set:
+  affinity: {}
+  annotations: {}
+  autoscaling:
+    autoscaleBehavior: {}
+    enabled: true
+    maxReplicas: 5
+    minReplicas: 1
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: {}
+  containerSecurityContext: {}
+  env: {}
+  imagePullPolicy: ""
+  imagePullSecrets: []
+  kind: Deployment
+  labels:
+    istio.io/dataplane-mode: none
+  minReadySeconds: null
+  name: "kubeflow-istio-ingress"
+  networkGateway: ""
+  nodeSelector: {}
+  podAnnotations:
+    inject.istio.io/templates: gateway
+    prometheus.io/path: /stats/prometheus
+    prometheus.io/port: "15020"
+    prometheus.io/scrape: "true"
+    sidecar.istio.io/inject: "true"
+  podDisruptionBudget: {}
+  priorityClassName: ""
+  rbac:
+    enabled: true
+  readinessProbe: {}
+  replicaCount: null
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 1024Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  revision: ""
+  securityContext: {}
+  service:
+    annotations: {}
+    externalIPs: []
+    externalTrafficPolicy: ""
+    ipFamilies: []
+    ipFamilyPolicy: ""
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    ports:
+    - name: status-port
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+    - name: http2
+      port: 80
+      protocol: TCP
+      targetPort: 80
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+    type: LoadBalancer
+  serviceAccount:
+    annotations: {}
+    create: true
+    name: ""
+  strategy: {}
+  terminationGracePeriodSeconds: 30
+  tolerations: []
+  topologySpreadConstraints: []
+  volumeMounts: []
+  volumes: []
+labels:
+  istio: kubeflow-ingressgateway
+service:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+
+# On conserve le SA existant pour les AuthorizationPolicies déployées en standard par Kubeflow soit ok
+rbac:
+  enabled: false
+serviceAccount:
+  create: false
+  name: "istio-ingress"

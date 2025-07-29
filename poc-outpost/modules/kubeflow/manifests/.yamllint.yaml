@@ -1,0 +1,16 @@
+# It extends the default conf by adjusting some options.
+extends: default
+
+rules:
+  document-start:
+    present: false
+  document-end:
+    present: false
+  indentation:
+    indent-sequences: false
+  line-length:
+    max: 400
+  truthy:
+    allowed-values: ['on', 'off', 'true', 'false']
+  empty-lines: 
+    level: warning

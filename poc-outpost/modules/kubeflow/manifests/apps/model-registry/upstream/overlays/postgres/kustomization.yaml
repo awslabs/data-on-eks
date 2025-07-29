@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kubeflow
+
+bases:
+- ../../base
+resources:
+- model-registry-db-pvc.yaml
+- model-registry-db-deployment.yaml
+- model-registry-db-service.yaml
+
+patchesStrategicMerge:
+- patches/model-registry-deployment.yaml
+
+configMapGenerator:
+- name: metadata-registry-db-parameters
+  envs:
+  - params.env
+secretGenerator:
+- name: metadata-registry-db-secrets
+  envs:
+  - secrets.env
+generatorOptions:
+  disableNameSuffixHash: true
+
+images:
+- name: postgres
+  newName: postgres
+  newTag: 14.7-alpine3.17
+
+vars:
+- name: MLMD_DB_HOST
+  objref:
+    kind: Service
+    name: metadata-postgres-db
+    apiVersion: v1
+  fieldref:
+    fieldpath: metadata.name
+- name: POSTGRES_PORT
+  objref:
+    kind: ConfigMap
+    name: metadata-registry-db-parameters
+    apiVersion: v1
+  fieldref:
+    fieldpath: data.POSTGRES_PORT

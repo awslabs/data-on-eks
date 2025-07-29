@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+- authorizationpolicy.istio-ingressgateway-oauth2-proxy.yaml
+- authorizationpolicy.istio-ingressgateway-require-jwt.yaml
+- requestauthentication.dex-jwt.yaml
+
+# If want to enable caching for some paths (e.g. when using Cloudflare),
+# use the following AuthorizationPolicies instead of the default ones.
+#- authorizationpolicy.istio-ingressgateway-oauth2-proxy.cloudflare.yaml
+#- authorizationpolicy.istio-ingressgateway-require-jwt.cloudflare.yaml

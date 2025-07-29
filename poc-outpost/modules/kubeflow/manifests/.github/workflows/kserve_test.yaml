@@ -1,0 +1,135 @@
+name: Test KServe
+on:
+  pull_request:
+    paths:
+    - tests/gh-actions/install_KinD_create_KinD_cluster_install_kustomize.sh
+    - .github/workflows/kserve_m2m_test.yaml
+    - apps/kserve/**
+    - tests/gh-actions/kserve/**
+    - tests/gh-actions/test_kserve.sh
+    - tests/gh-actions/install_kserve.sh
+    - common/istio*/**
+    - tests/gh-actions/install_istio*.sh
+    - common/oauth2-proxy/**
+    - tests/gh-actions/install_oauth2-proxy.sh
+    - common/cert-manager/**
+    - tests/gh-actions/install_cert_manager.sh
+    - common/knative/**
+    - tests/gh-actions/install_knative*.sh
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install KinD, Create KinD cluster and Install kustomize
+      run: ./tests/gh-actions/install_KinD_create_KinD_cluster_install_kustomize.sh
+
+    - name: Install kubectl
+      run: ./tests/gh-actions/install_kubectl.sh
+
+    - name: Install Istio CNI
+      run: ./tests/gh-actions/install_istio-cni.sh
+
+    - name: Install oauth2-proxy
+      run: ./tests/gh-actions/install_oauth2-proxy.sh
+
+    - name: Install cert-manager
+      run: ./tests/gh-actions/install_cert_manager.sh
+
+    - name: Create kubeflow namespace
+      run: kustomize build common/kubeflow-namespace/base | kubectl apply -f -
+
+    - name: Install knative CNI
+      run: ./tests/gh-actions/install_knative-cni.sh
+
+    - name: Install KServe
+      run: ./tests/gh-actions/install_kserve.sh
+
+    - name: Install KF Multi Tenancy
+      run: ./tests/gh-actions/install_multi_tenancy.sh
+
+    - name: Install kubeflow-istio-resources
+      run: kustomize build common/istio-cni-1-24/kubeflow-istio-resources/base | kubectl apply -f -
+
+    - name: Create KF Profile
+      run: ./tests/gh-actions/install_kubeflow_profile.sh
+
+    - name: Setup python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Port forward
+      run: ./tests/gh-actions/port_forward_gateway.sh
+
+    - name: Run KServe tests
+      run: ./tests/gh-actions/test_kserve.sh kubeflow-user-example-com
+
+    - name: Detailed KServe Access Diagnostics
+      run: |
+        export KSERVE_INGRESS_HOST_PORT=localhost:8080
+        export KSERVE_M2M_TOKEN="$(kubectl -n kubeflow-user-example-com create token default-editor)"
+
+        echo "=== AuthorizationPolicy Details ==="
+        kubectl get authorizationpolicy -n kubeflow-user-example-com -o yaml
+
+        echo "=== Detailed Curl Test ==="
+        curl -vv \
+          -H "Host: isvc-sklearn.kubeflow-user-example-com.example.com" \
+          -H "Authorization: Bearer ${KSERVE_M2M_TOKEN}" \
+          -H "Content-Type: application/json" \
+          "http://${KSERVE_INGRESS_HOST_PORT}/v1/models/isvc-sklearn:predict" \
+          -d '{"instances": [[6.8, 2.8, 4.8, 1.4], [6.0, 3.4, 4.5, 1.6]]}'
+
+    # TODO FOR FOLLOW UP PR
+    #- name: Run and fail kserve tests without kserve m2m token
+      #run: |
+      #  export KSERVE_INGRESS_HOST_PORT=localhost:8080
+      #  cd ./tests/gh-actions/kserve
+      #  if pytest . -vs --log-level info; then
+      #    echo "This test should fail with an HTTP redirect to oauth2-proxy/dex auth."; exit 1
+      #  else
+      #    echo "Task failed successfully!"
+      #    echo "This is a provisional way of testing that m2m is enabled for kserve."
+      #  fi
+
+    # TODO FOR FOLLOW UP PR
+    #- name: Test that token from attacker namespace is rejected
+    #  run: |
+    #    export KSERVE_INGRESS_HOST_PORT=localhost:8080
+    #    kubectl create ns kubeflow-user-example-com-attacker
+    #    kubectl create serviceaccount attacker-sa -n kubeflow-user-example-com-attacker
+    #    export ATTACKER_TOKEN="$(kubectl -n kubeflow-user-example-com-attacker create token attacker-sa)"
+    #    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: isvc-sklearn.kubeflow-user-example-com.example.com" \
+    #        -H "Authorization: Bearer ${ATTACKER_TOKEN}" \
+    #        -H "Content-Type: application/json" \
+    #        "http://${KSERVE_INGRESS_HOST_PORT}/v1/models/isvc-sklearn:predict" \
+    #        -d '{"instances": [[6.8, 2.8, 4.8, 1.4], [6.0, 3.4, 4.5, 1.6]]}')
+    #    if [[ "$RESPONSE" == "403" || "$RESPONSE" == "401" ]]; then
+    #      echo "Security test passed: Request with attacker token was correctly rejected with $RESPONSE"
+    #    else
+    #      echo "Security test failed: Request with attacker token returned $RESPONSE instead of 403/401"
+    #      exit 1
+    #    fi
+
+    - name: Run kserve models webapp test
+      run: |
+        kubectl wait --for=condition=Available --timeout=300s -n kubeflow deployment/kserve-models-web-app
+
+    - name: Apply Pod Security Standards baseline levels
+      run: ./tests/gh-actions/enable_baseline_PSS.sh
+
+    - name: Unapply applied baseline labels
+      run: |
+        NAMESPACES=("istio-system" "auth" "cert-manager" "oauth2-proxy" "kubeflow" "knative-serving")
+        for NAMESPACE in "${NAMESPACES[@]}"; do
+          if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+            kubectl label namespace $NAMESPACE pod-security.kubernetes.io/enforce-
+          fi
+        done
+
+    - name: Applying Pod Security Standards restricted levels
+      run: ./tests/gh-actions/enable_restricted_PSS.sh

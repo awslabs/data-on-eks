@@ -1,0 +1,167 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ray-workers-head
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        # kubeflow-user-example-com should be replaced with the namespace where the Ray cluster is being deployed
+        # TODO automatically use the current namespace
+        - "cluster.local/ns/kubeflow-user-example-com/sa/default-editor"
+  - to:
+    - operation:
+        ports:
+        - "6379"
+        - "6380"
+        - "6381"
+        - "6382"
+        - "6383"
+        - "52365"
+        - "8080"
+        - "10012"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    ray.io/headless-worker-svc: raycluster-istio
+  name: raycluster-istio-headless-svc
+spec:
+  clusterIP: None
+  selector:
+    ray.io/cluster: kubeflow-raycluster
+  publishNotReadyAddresses: true
+  ports:
+  - name: node-manager-port
+    port: 6380
+    appProtocol: grpc
+  - name: object-manager-port
+    port: 6381
+    appProtocol: grpc
+  - name: runtime-env-agent-port
+    port: 6382
+    appProtocol: grpc
+  - name: dashboard-agent-grpc-port
+    port: 6383
+    appProtocol: grpc
+  - name: dashboard-agent-listen-port
+    port: 52365
+    appProtocol: http
+  - name: metrics-export-port
+    port: 8080
+    appProtocol: http
+  - name: max-worker-port
+    port: 10012
+    appProtocol: grpc
+---
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: kubeflow-raycluster
+spec:
+  rayVersion: '2.44.1'
+  enableInTreeAutoscaling: true
+  autoscalerOptions:
+    upscalingMode: Default 
+    idleTimeoutSeconds: 60
+  headGroupSpec:
+    rayStartParams:
+      num-cpus: '1'
+      node-manager-port: '6380'
+      object-manager-port: '6381'
+      runtime-env-agent-port: '6382'
+      dashboard-agent-grpc-port: '6383'
+      dashboard-agent-listen-port: '52365'
+      metrics-export-port: '8080'
+      max-worker-port: '10012'
+      # kubeflow-user-example-com should be replaced with the namespace where the Ray cluster is being deployed
+      # TODO automatically use the current namespace
+      node-ip-address: $(hostname -I | tr -d ' ' | sed 's/\./-/g').raycluster-istio-headless-svc.kubeflow-user-example-com.svc.cluster.local
+    template:
+      metadata:
+        labels:
+          sidecar.istio.io/inject: "true"
+      spec:
+        serviceAccountName: default-editor
+        containers:
+        - name: ray-head # TODO why call it headless with a head...
+          image: rayproject/ray:2.44.1-py311-cpu
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh","-c","ray stop"]
+          volumeMounts:
+            - mountPath: /tmp/ray
+              name: ray-logs
+          resources:
+            limits:
+              cpu: "1"
+              memory: "2G"
+            requests:
+              cpu: "100m"
+              memory: "2G"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+        volumes:
+          - name: ray-logs
+            emptyDir: {}
+  workerGroupSpecs:
+    - replicas: 1
+      minReplicas: 1
+      maxReplicas: 1
+      groupName: small-group
+      rayStartParams:
+        num-cpus: '1'
+        node-manager-port: '6380'
+        object-manager-port: '6381'
+        runtime-env-agent-port: '6382'
+        dashboard-agent-grpc-port: '6383'
+        dashboard-agent-listen-port: '52365'
+        metrics-export-port: '8080'
+        max-worker-port: '10012'
+        # kubeflow-user-example-com should be replaced with the namespace where the Ray cluster is being deployed
+        # TODO automatically use the current namespace
+        node-ip-address: $(hostname -I | tr -d ' ' | sed 's/\./-/g').raycluster-istio-headless-svc.kubeflow-user-example-com.svc.cluster.local
+      template:
+        metadata:
+          labels:
+            sidecar.istio.io/inject: "true"
+        spec:
+          serviceAccountName: default-editor
+          containers:
+          - name: ray-worker
+            image: rayproject/ray:2.44.1-py311-cpu
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh","-c","ray stop"]
+            # use volumeMounts.Optional.
+            # Refer to https://kubernetes.io/docs/concepts/storage/volumes/
+            volumeMounts:
+             - mountPath: /tmp/ray
+               name: ray-logs
+            resources:
+             limits:
+               cpu: "1"
+               memory: "1G"
+             requests:
+               cpu: "300m"
+               memory: "1G"
+            securityContext:
+             allowPrivilegeEscalation: false
+             capabilities:
+               drop: ["ALL"]
+             runAsNonRoot: true
+             seccompProfile:
+               type: RuntimeDefault
+          volumes:
+            - name: ray-logs
+              emptyDir: {}

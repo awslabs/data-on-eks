@@ -54,6 +54,14 @@ variable "domaine_name_route53" {
   type = list(string)
 }
 
+variable "domaine_name_route53_gw_kf" {
+  description = "Liste des noms de domaine a enregistrer dans Route53 sur l'ingress gateway Kubeflow"
+  default = [
+    "kubeflow-otl4.orange-eks.com",
+  ]
+  type = list(string)
+}
+
 variable "enable_amazon_prometheus" {
   description = "Enable Amazon Prometheus for monitoring"
   type        = bool
@@ -129,5 +137,5 @@ EOT
 variable "spark_teams" {
   description = "List of all teams (namespaces) for spark team"
   type        = list(string)
-  default = ["spark-team-a", "spark-team-b", "spark-team-c"]
+  default     = ["spark-team-a", "spark-team-b", "spark-team-c"]
 }

@@ -18,14 +18,14 @@ module "karpenter" {
 
 # Deploy Karpenter using Helm
 resource "helm_release" "karpenter" {
-  namespace  = "kube-system"
-  name       = "karpenter"
-  repository = "oci://public.ecr.aws/karpenter"
+  namespace           = "kube-system"
+  name                = "karpenter"
+  repository          = "oci://public.ecr.aws/karpenter"
   repository_username = local.repository_username
   repository_password = local.repository_password
-  chart      = "karpenter"
-  version    = "1.5.0"
-  wait       = false
+  chart               = "karpenter"
+  version             = "1.5.0"
+  wait                = false
 
   values = [
     <<-EOT

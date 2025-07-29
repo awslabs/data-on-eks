@@ -1,0 +1,50 @@
+name: Image Extracting and Security Scanning
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    paths:
+    - '.github/workflows/trivy.yaml'
+    - 'tests/gh-actions/trivy_scan.py'
+
+jobs:
+  image-extraction-and-security-scan:
+    if: ${{ github.repository == 'kubeflow/manifests' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Install kustomize
+    - name: Install kustomize
+      run: |
+        bash tests/gh-actions/install_kustomize.sh
+
+    # Install trivy
+    - name: Install trivy
+      run: |
+        bash tests/gh-actions/install_trivy.sh
+
+    # Install Python
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    # Install prettytable package
+    - name: Install prettytable
+      run: |
+        pip install prettytable
+
+    - name: Run image extracting and security scanning script
+      run: |
+        cd tests/gh-actions
+        python3 trivy_scan.py
+
+    - name: Upload trivy scanned_results
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy_scanned_results
+        path: image_lists/

@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: katib-controller
+  namespace: kubeflow
+  labels:
+    katib.kubeflow.org/component: controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      katib.kubeflow.org/component: controller
+  template:
+    metadata:
+      labels:
+        katib.kubeflow.org/component: controller
+        sidecar.istio.io/inject: "false"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: katib-controller
+      containers:
+        - name: katib-controller
+          image: ghcr.io/kubeflow/katib/katib-controller
+          command: ["./katib-controller"]
+          args:
+            - --katib-config=/katib-config.yaml
+          ports:
+            - containerPort: 8443
+              name: webhook
+              protocol: TCP
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+            - containerPort: 18080
+              name: healthz
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthz
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+          env:
+            - name: KATIB_CORE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - mountPath: /tmp/cert
+              name: cert
+              readOnly: true
+            - mountPath: /katib-config.yaml
+              name: katib-config
+              subPath: katib-config.yaml
+              readOnly: true
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: katib-webhook-cert
+        - name: katib-config
+          configMap:
+            name: katib-config

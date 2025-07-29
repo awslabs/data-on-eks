@@ -91,13 +91,13 @@ module "spark-operator" {
 
   name                         = local.name
   region                       = local.region
-  vpc_id                = module.vpc.vpc_id
+  vpc_id                       = module.vpc.vpc_id
   oidc_provider_arn            = module.eks.oidc_provider_arn
   cluster_version              = var.eks_cluster_version
   cluster_endpoint             = module.eks.cluster_endpoint
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
-  outpost_name          = var.outpost_name
-  output_subnet_id = module.outpost_subnet.subnet_id[0]
+  outpost_name                 = var.outpost_name
+  output_subnet_id             = module.outpost_subnet.subnet_id[0]
   spark_teams                  = var.spark_teams
 
   tags = local.tags
@@ -147,9 +147,9 @@ module "airflow" {
   cluster_issuer_name   = var.cluster_issuer_name
   main_domain           = var.main_domain
   outpost_name          = var.outpost_name
-  output_subnet_id = module.outpost_subnet.subnet_id[0]
+  output_subnet_id      = module.outpost_subnet.subnet_id[0]
 
-  spark_teams                  = var.spark_teams
+  spark_teams = var.spark_teams
 
   tags = local.tags
 
@@ -173,8 +173,8 @@ module "trino" {
   vpc_id                  = module.vpc.vpc_id
   db_subnets_group_name   = aws_db_subnet_group.private.name
   default_node_group_type = var.default_node_group_type
-  outpost_name = var.outpost_name
-  output_subnet_id = module.outpost_subnet.subnet_id[0]
+  outpost_name            = var.outpost_name
+  output_subnet_id        = module.outpost_subnet.subnet_id[0]
 
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
   tags                         = local.tags
