@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
 # Install Kserve in kubeflow namespace
 - kserve_kubeflow.yaml
-- kserve-cluster-resources.yaml
+# - kserve-cluster-resources.yaml
 
 # Patch to delete the kserve-localmodelnode-agent DaemonSet
 patches:

@@ -97,6 +97,7 @@ spec:
     - source:
         principals:
         - cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account
+        - cluster.local/ns/istio-ingress/sa/istio-ingress
         requestPrincipals: # new! Require JWT
         - '*'
   selector:

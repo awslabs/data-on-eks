@@ -46,6 +46,9 @@ module "istio" {
       namespace     = kubernetes_namespace_v1.istio_system.metadata[0].name
       values = [
           yamlencode({
+            global = {
+              cni = { enabled = true }
+            }
             meshConfig = {
               accessLogFile           = "/dev/stdout"
               enablePrometheusMerge   = true
