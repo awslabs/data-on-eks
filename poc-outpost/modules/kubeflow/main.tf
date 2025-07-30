@@ -235,13 +235,293 @@ module "kfpipelines" {
 }
 
 #---------------------------------------------------------------
-# Déploiement KServer
+# Déploiement KServer 1/2
 #---------------------------------------------------------------
-# module "kserve" {
+module "kserve1" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/kserve/kserve"
+  helminstallname ="kserve1"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.kfpipelines]
+}
+
+#---------------------------------------------------------------
+# Déploiement KServer 2/2
+#---------------------------------------------------------------
+module "kserve2" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/kserve/kserver-clusterressources"
+  helminstallname ="kserve2"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.kserve1]
+}
+
+#---------------------------------------------------------------
+# Déploiement Model Web Application
+#---------------------------------------------------------------
+module "modelwebapp" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/kserve/models-web-app/overlays/kubeflow"
+  helminstallname ="modelwebapp"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.kserve2]
+}
+
+#---------------------------------------------------------------
+# Déploiement Katib
+#---------------------------------------------------------------
+module "katib" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/katib/upstream/installs/katib-with-kubeflow"
+  helminstallname ="katib"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.modelwebapp]
+}
+
+#---------------------------------------------------------------
+# Déploiement Dashboard
+#---------------------------------------------------------------
+module "dashboard" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/centraldashboard/overlays/oauth2-proxy"
+  helminstallname ="dashboard"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.katib]
+}
+
+#---------------------------------------------------------------
+# Déploiement Admission Webhook
+#---------------------------------------------------------------
+module "admwebhook" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/admission-webhook/upstream/overlays/cert-manager"
+  helminstallname ="admwebhook"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.dashboard]
+}
+
+#---------------------------------------------------------------
+# Déploiement Notebook controller
+#---------------------------------------------------------------
+module "notebookcontroller" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/jupyter/notebook-controller/upstream/overlays/kubeflow"
+  helminstallname ="notebookcontroller"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.admwebhook]
+}
+
+#---------------------------------------------------------------
+# Déploiement Jupyter
+#---------------------------------------------------------------
+module "jupyter" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/jupyter/jupyter-web-app/upstream/overlays/istio"
+  helminstallname ="jupyter"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.notebookcontroller]
+}
+
+#---------------------------------------------------------------
+# Déploiement PVCViewer
+#---------------------------------------------------------------
+module "pvcviewer" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/pvcviewer-controller/upstream/base"
+  helminstallname ="pvcviewer"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.jupyter]
+}
+
+#---------------------------------------------------------------
+# Déploiement Kube flow acccess management
+#---------------------------------------------------------------
+module "kfam" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/profiles/upstream/overlays/kubeflow"
+  helminstallname ="kfam"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.pvcviewer]
+}
+
+#---------------------------------------------------------------
+# Déploiement Volume Web app
+#---------------------------------------------------------------
+module "volapp" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/volumes-web-app/upstream/overlays/istio"
+  helminstallname ="volapp"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.kfam]
+}
+
+#---------------------------------------------------------------
+# Déploiement Tensorboard webapp
+#---------------------------------------------------------------
+module "tensorboardwebapp" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/tensorboard/tensorboards-web-app/upstream/overlays/istio"
+  helminstallname ="tensorboardwebapp"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.volapp]
+}
+
+#---------------------------------------------------------------
+# Déploiement Tensorboard Controller
+#---------------------------------------------------------------
+module "tensorboardcontroller" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/tensorboard/tensorboard-controller/upstream/overlays/kubeflow"
+  helminstallname ="tensorboardcontroller"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.tensorboardwebapp]
+}
+
+#---------------------------------------------------------------
+# Déploiement Training operator
+#---------------------------------------------------------------
+module "trainingoperator" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/apps/training-operator/upstream/overlays/kubeflow"
+  helminstallname ="trainingoperator"
+  namespace = "kubeflow"
+  createnamespace = false
+
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
+
+  depends_on = [module.tensorboardcontroller]
+}
+
+#---------------------------------------------------------------
+# Spark  operator (deja installé par ailleurs)
+#---------------------------------------------------------------
+# module "sparkoperator" {
 #   source = "../kustomize"
 #   # Variables
-#   overlayfolder= "${path.module}/manifests/apps/kserve/kserve"
-#   helminstallname ="kserve"
+#   overlayfolder= "${path.module}/manifests/apps/spark/spark-operator/overlays/kubeflow"
+#   helminstallname ="sparkoperator"
 #   namespace = "kubeflow"
 #   createnamespace = false
 
@@ -251,25 +531,54 @@ module "kfpipelines" {
 #     helm = helm
 #   }
 
-#   depends_on = [module.kfpipelines]
+#   depends_on = [module.trainingoperator]
 # }
 
-# #---------------------------------------------------------------
-# # Déploiement Model Web Application
-# #---------------------------------------------------------------
-# module "modelwebapp" {
-#   source = "../kustomize"
-#   # Variables
-#   overlayfolder= "${path.module}/manifests/ apps/kserve/models-web-app/overlays/kubeflow"
-#   helminstallname ="modelwebapp"
-#   namespace = "kubeflow"
-#   createnamespace = false
+#---------------------------------------------------------------
+# user namespaces
+#---------------------------------------------------------------
+module "userns" {
+  source = "../kustomize"
+  # Variables
+  overlayfolder= "${path.module}/manifests/common/user-namespace/base"
+  helminstallname ="userns"
+  namespace = "kubeflow"
+  createnamespace = false
 
-#   providers = {
-#     kubernetes = kubernetes
-#     kustomization = kustomization
-#     helm = helm
-#   }
+  providers = {
+    kubernetes = kubernetes
+    kustomization = kustomization
+    helm = helm
+  }
 
-#   depends_on = [module.kserve]
-# }
+  depends_on = [module.trainingoperator]
+}
+
+#---------------------------------------------------------------
+# Déploiement certificat let's encrypt
+#---------------------------------------------------------------
+locals {
+  manifests = {
+    certificat = yamldecode(templatefile("${path.module}/templates/certificate.yaml.tpl", {
+      kubeflow_domain = var.kubeflow_domain
+    }))
+  }
+}
+resource "helm_release" "certificatkubeflow" {
+  name             = "certificatkubeflow"
+  namespace        = "istio-ingress"
+  create_namespace = false
+
+  repository        = "https://bedag.github.io/helm-charts"
+  chart             = "raw"
+  version           = "2.0.0"
+  dependency_update = true
+  upgrade_install   = true
+  wait              = true
+
+  values = [
+    yamlencode({
+      resources = local.manifests
+    })
+  ]
+}

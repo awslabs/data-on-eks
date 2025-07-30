@@ -5,6 +5,7 @@ provider "kustomization" {
   kubeconfig_path= "~/.kube/config"
 }
 
+# Déploiement Kubeflow
 module "kubeflow" {
   source = "./modules/kubeflow"
 
