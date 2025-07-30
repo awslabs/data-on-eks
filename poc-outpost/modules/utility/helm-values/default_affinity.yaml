@@ -11,6 +11,7 @@ spec:
             - Deployment
             - StatefulSet
             - DaemonSet
+            - Pod
       exclude:
         resources:
           names:
