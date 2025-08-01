@@ -10,6 +10,14 @@ spec:
     - ${gateway_name}
   http:
     - match:
+      - uri:
+          prefix: /oauth2/
+      route:
+        - destination:
+           host: oauth2-proxy.${namespace}.svc.cluster.local
+           port:
+             number: 80
+    - match:
         - uri:
             prefix: "/.well-known/acme-challenge/"
       route:

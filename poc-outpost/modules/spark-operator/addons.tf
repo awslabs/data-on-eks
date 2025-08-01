@@ -1,13 +1,27 @@
 #---------------------------------------------------------------
-# spark history server Namespace
+# spark history server IAM
 #---------------------------------------------------------------
+module "spark_history_server_irsa" {
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "~> 1.0" # ensure to update this to the latest/desired version
 
-# resource "kubernetes_namespace" "spark_history_server_namespace" {
-#   metadata {
-#     name = "${local.spark_history_server_namespace}"
-#   }
-# }
+  # IAM role for service account (IRSA)
+  create_release = false
+  create_policy  = true
 
+  create_role = true
+  role_name   = local.spark_history_server_service_account
+
+  role_policies = { SparkHistoryServer = "arn:aws:iam::aws:policy/AmazonS3OutpostsFullAccess" }
+
+  oidc_providers = {
+    this = {
+      provider_arn    = local.oidc_provider_arn
+      namespace       = local.spark_history_server_namespace
+      service_account = local.spark_history_server_service_account
+    }
+  }
+}
 #---------------------------------------------------------------
 # EKS Blueprints Addons
 #---------------------------------------------------------------
@@ -47,7 +61,7 @@
 #
 # }
 
-  #---------------------------------------------------------------
+#---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
@@ -111,6 +125,7 @@ module "eks_data_addons" {
     ]
   }
 
+
   #---------------------------------------------------------------
   # Apache YuniKorn Add-on
   #---------------------------------------------------------------
@@ -122,33 +137,51 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   # Spark History Server Add-on
   #---------------------------------------------------------------
-  # Spark history server is required only when EMR Spark Operator is enabled
   enable_spark_history_server = true
 
   spark_history_server_helm_config = {
-    role_policy_arns = {
-      S3OutpostFullPolicy = "arn:aws:iam::aws:policy/AmazonS3OutpostsFullAccess"
-    }
-    version = "1.3.2"
+    version = "1.5.1"
+    create_irsa = false
     values = [
-      <<-EOT
-      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/spark-event-logs/"
 
-      sparkConf: |-
-        spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider
-        spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+      yamlencode({
+        image = {
+          repository = "012046422670.dkr.ecr.us-west-2.amazonaws.com/spark-history-server"
+          tag        = "aws-jdk11-1.5.1"
+        }
+        logStore = {
+          type = "s3"
+          s3 = {
+            bucket           = module.s3_bucket.s3_bucket_id
+            eventLogsPath    = "spark-event-logs/"
+            endpoint         = "s3-outposts.${local.region}.amazonaws.com"
+            pathStyleAccess  = true
+            irsaRoleArn      = module.spark_history_server_irsa.iam_role_arn
+          }
+        }
+
+
+        #sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/spark-event-logs/"
+
+        sparkConf = <<-EOC
+
+        #spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+        #spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
         #spark.hadoop.fs.s3a.connection.ssl.enabled=true
-        spark.hadoop.fs.s3a.path.style.access=true
-        spark.hadoop.fs.s3a.endpoint=s3-outposts.${local.region}.amazonaws.com
-        #spark.hadoop.fs.s3a.signing-algorithm=SignatureV4
-        spark.hadoop.fs.s3a.connection.timeout=10000
+        tspark.hadoop.fs.s3a.path.style.access=true
 
-        spark.eventLog.enabled=true
+        #spark.hadoop.fs.s3a.signing-algorithm=SignatureV4
+        #spark.hadoop.fs.s3a.connection.timeout=10000
+
+        #spark.eventLog.enabled=true
         #spark.eventLog.dir=s3a://${module.s3_bucket.s3_bucket_id}/spark-event-logs
-        #spark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/spark-event-logs
-        spark.history.fs.eventLog.rolling.maxFilesToRetain=5
-        spark.history.ui.port=18080
-      EOT
+        spark.hadoop.fs.s3a.endpoint=https://s3-outposts.${local.region}.amazonaws.com
+        #spark.history.fs.eventLog.rolling.maxFilesToRetain=5
+        #spark.history.ui.port=18080
+
+      EOC
+
+      })
     ]
   }
 
@@ -174,8 +207,24 @@ module "eks_data_addons" {
   #   version = "3.3.8"
   # }
 
-  # depends_on = [kubernetes_service_account_v1.spark_history_server]
+  depends_on = [module.spark_history_server_irsa]
 }
+
+##
+# spark history server certificat
+##
+
+resource "kubectl_manifest" "spark_history_server_cert" {
+
+  yaml_body = templatefile("${path.module}/helm-values/certificate.yaml", {
+    cluster_issuer_name = local.cluster_issuer_name
+    namespace = local.spark_history_server_namespace
+    domain = "${local.spark_history_server_name}.${local.main_domain}"
+    tls = local.spark_history_server_tls
+  })
+
+}
+
 
 #---------------------------------------------------------------
 # S3 bucket for Spark Event Logs and Example Data
@@ -193,150 +242,12 @@ module "s3_bucket" {
   tags = local.tags
 }
 
-
-#---------------------------------------------------------------
-# IAM Policy for FluentBit Add-on
-#---------------------------------------------------------------
-# resource "aws_iam_policy" "fluentbit" {
-#   description = "IAM policy policy for FluentBit"
-#   name        = "${local.name}-fluentbit-additional"
-#   policy      = data.aws_iam_policy_document.fluent_bit.json
-# }
-
-#---------------------------------------------------------------
-# IAM policy for FluentBit
-#---------------------------------------------------------------
-# data "aws_iam_policy_document" "fluent_bit" {
-#   statement {
-#     sid       = ""
-#     effect    = "Allow"
-#     resources = ["arn:${data.aws_partition.current.partition}:s3:::${module.s3_bucket.s3_bucket_id}/*"]
-#
-#     actions = [
-#       "s3:ListBucket",
-#       "s3:PutObject",
-#       "s3:PutObjectAcl",
-#       "s3:GetObject",
-#       "s3:GetObjectAcl",
-#       "s3:DeleteObject",
-#       "s3:DeleteObjectVersion"
-#     ]
-#   }
-# }
-
-
-#---------------------------------------------------------------
-# IRSA module spark history server
-#---------------------------------------------------------------
-# resource "kubernetes_namespace_v1" "spark_history_server_namespace" {
-#
-#   metadata {
-#     name = local.spark_history_server_namespace
-#   }
-#
-#   lifecycle {
-#     ignore_changes = [metadata]
-#     prevent_destroy = true
-#   }
-# }
-#
-# resource "kubernetes_service_account_v1" "spark_history_server" {
-#   metadata {
-#     name        = local.spark_history_server_service_account
-#     namespace   = local.spark_history_server_namespace
-#     annotations = { "eks.amazonaws.com/role-arn" : module.spark_history_server_irsa.iam_role_arn }
-#   }
-#
-#   automount_service_account_token = true
-# }
-#
-# resource "kubernetes_secret_v1" "spark_history_server" {
-#   metadata {
-#     name      = "${kubernetes_service_account_v1.spark_history_server.metadata[0].name}-secret"
-#     namespace = local.spark_history_server_namespace
-#     annotations = {
-#       "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.spark_history_server.metadata[0].name
-#       "kubernetes.io/service-account.namespace" = local.spark_history_server_namespace
-#     }
-#   }
-#
-#   type = "kubernetes.io/service-account-token"
-# }
-#
-# module "spark_history_server_irsa" {
-#   source  = "aws-ia/eks-blueprints-addon/aws"
-#   version = "~> 1.0" # ensure to update this to the latest/desired version
-#
-#   # IAM role for service account (IRSA)
-#   create_release = false
-#   create_policy  = false # Policy is created in the next resource
-#
-#   create_role = true
-#   role_name   = local.spark_history_server_service_account
-#
-#   role_policies = { SparkHistoryServer = aws_iam_policy.spark_history_server.arn }
-#
-#   oidc_providers = {
-#     this = {
-#       provider_arn    = local.oidc_provider_arn
-#       namespace       = local.spark_history_server_namespace
-#       service_account = local.spark_history_server_service_account
-#     }
-#   }
-# }
-#
-# resource "aws_iam_policy" "spark_history_server" {
-#
-#   description = "IAM policy for spark history server Pod"
-#   name_prefix = local.spark_history_server_service_account
-#   path        = "/"
-#   policy      = data.aws_iam_policy_document.s3_outpost.json
-# }
-
-
-# ---------------------------------------------------------------
-# IAM policy for Aiflow S3
-# ---------------------------------------------------------------
-# data "aws_iam_policy_document" "s3_outpost" {
-#   statement {
-#     sid    = "AccessPointAccess"
-#     effect = "Allow"
-#     resources = [
-#       "${module.s3_bucket.s3_access_arn}",
-#       "${module.s3_bucket.s3_access_arn}/*"
-#     ]
-#     actions = [
-#       "s3-outposts:Get*",
-#       "s3-outposts:Describe*",
-#       "s3-outposts:List*",
-#       "s3-object-lambda:Get*",
-#       "s3-object-lambda:List*"
-#     ]
-#   }
-#   statement {
-#     sid    = "BucketAccess"
-#     effect = "Allow"
-#     resources = [
-#       "${module.s3_bucket.s3_bucket_arn}",
-#       "${module.s3_bucket.s3_bucket_arn}/*"
-#     ]
-#
-#     actions = [
-#       "s3-outposts:Get*",
-#       "s3-outposts:Describe*",
-#       "s3-outposts:List*",
-#       "s3-object-lambda:Get*",
-#       "s3-object-lambda:List*"
-#     ]
-#   }
-# }
-
-
 #---------------------------------------------------------------
 # S3Table IAM policy for Karpenter nodes
 # The S3 tables library does not fully support IRSA and Pod Identity as of this writing.
 # We give the node role access to S3tables to work around this limitation.
 #---------------------------------------------------------------
+
 resource "aws_iam_policy" "s3tables_policy" {
   name_prefix = "${local.name}-s3tables"
   path        = "/"
@@ -379,29 +290,47 @@ resource "aws_iam_policy" "s3tables_policy" {
   })
 }
 
-# resource "kubernetes_pod" "init_s3_directory_spark_event_logs" {
-#   metadata {
-#     name      = "awscli-init-s3"
-#     namespace = "${local.spark_history_server_namespace}"
-#   }
-#
-#   spec {
-#     service_account_name = "${local.spark_history_server_service_account}"
-#
-#     container {
-#       name  = "awscli"
-#       image = "amazon/aws-cli:latest"
-#
-#       command = [
-#         "sh", "-c",
-#         <<-EOT
-#           aws s3 cp /etc/hostname s3://${module.s3_bucket.s3_bucket_id}/spark-event-logs/.init
-#         EOT
-#       ]
-#     }
-#
-#     restart_policy = "Never"
-#   }
-#
-#   depends_on = [module.eks_data_addons]
-# }
+resource "kubernetes_pod" "init_s3_directory_spark_event_logs" {
+  metadata {
+    name      = "awscli-init-s3"
+    namespace = "${local.spark_history_server_namespace}"
+  }
+
+  spec {
+    service_account_name = "${local.spark_history_server_service_account}"
+
+    container {
+      name  = "awscli"
+      image = "amazon/aws-cli:latest"
+
+      command = [
+        "sh", "-c",
+        <<-EOT
+          aws s3 cp /etc/hostname s3://${module.s3_bucket.s3_bucket_id}/spark-event-logs/.init
+        EOT
+      ]
+    }
+
+    restart_policy = "Never"
+  }
+
+  depends_on = [module.eks_data_addons]
+}
+
+
+#---------------------------------------------------------------
+# Spark history server Virtual Service qui remplace l'Ingress
+#---------------------------------------------------------------
+
+module "virtual_service" {
+  source = "../virtualService"
+
+  cluster_issuer_name = var.cluster_issuer_name
+  virtual_service_name = local.spark_history_server_name
+  dns_name = "${local.spark_history_server_name}.${local.main_domain}"
+  service_name = "spark-history-server"
+  service_port = 80
+  namespace = local.spark_history_server_namespace
+
+  tags = local.tags
+}

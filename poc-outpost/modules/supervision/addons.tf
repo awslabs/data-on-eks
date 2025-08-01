@@ -94,3 +94,22 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
 }
+
+#---------------------------------------------------------------
+# Grafana local VirtualService qui remplace l'Ingress
+#---------------------------------------------------------------
+
+module "grafana_virtual_service" {
+  source = "../virtualService"
+
+  cluster_issuer_name = var.cluster_issuer_name
+  virtual_service_name = local.grafana_name
+  dns_name = "${local.grafana_name}.${local.main_domain}"
+  service_name = "kube-prometheus-stack-grafana"
+  service_port = 80
+  namespace = local.grafana_namespace
+
+  tags = local.tags
+
+  depends_on = [module.eks_blueprints_addons]
+}

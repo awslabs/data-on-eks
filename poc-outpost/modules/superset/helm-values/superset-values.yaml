@@ -1,0 +1,87 @@
+extraenv:
+  DEBUG: "true"
+# Superset node configuration
+supersetNode:
+  replicaCount: 1
+  connections:
+    # -- Change in case of bringing your own redis and then also set redis.enabled:false
+    redis_host: "${redis_host}"
+    redis_port: "6379"
+    redis_user: "${redis_user}"
+    # redis_password: superset
+    redis_cache_db: "1"
+    redis_celery_db: "0"
+    # Or SSL port is usually 6380
+    # Update following for using Redis with SSL
+    redis_ssl:
+      enabled: false
+      ssl_cert_reqs: CERT_NONE
+    # You need to change below configuration incase bringing own PostgresSQL instance and also set postgresql.enabled:false
+    db_host: ${db_host}
+    db_port: "5432"
+    db_user: ${db_user}
+    db_pass: ${db_pass}
+    db_name: ${db_name}
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+
+  resources:
+     limits:
+      cpu: 200m
+      memory: 256Mi
+     requests:
+      cpu: 200m
+      memory: 256Mi
+
+# Superset Celery worker configuration
+supersetWorker:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+  command:
+    - "/bin/sh"
+    - "-c"
+    - ". {{ .Values.configMountPath }}/superset_bootstrap.sh; celery --app=superset.tasks.celery_app:app worker"
+  # -- If true, forces deployment to reload on each upgrade
+  forceReload: false
+  # -- Init container
+  # @default -- a container waiting for postgres and redis
+  initContainers:
+    - name: wait-for-postgres-redis
+      image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+      imagePullPolicy: "{{ .Values.initImage.pullPolicy }}"
+      envFrom:
+        - secretRef:
+            name: "{{ tpl .Values.envFromSecret . }}"
+      command:
+        - /bin/sh
+        - -c
+        - dockerize -wait "tcp://$DB_HOST:$DB_PORT" -wait "tcp://$REDIS_HOST:$REDIS_PORT" -timeout 120s
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+postgresql:
+  ## Set to false if bringing your own PostgreSQL.
+  enabled: false
+
+configOverrides:
+   secret: |
+     SECRET_KEY = '5WPuGEgPfGTrk9MCVLFkzNk0fO4hyfsykSrM03fHn1m8d3yQQd4yjyvf'
+     RATELIMIT_STORAGE_URI = "redis://{{ .Values.supersetNode.connections.redis_host }}:{{ .Values.supersetNode.connections.redis_port }}/3"
+
+
+redis:
+ enabled: false
+runAsUser: 1000

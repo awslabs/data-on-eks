@@ -1,0 +1,17 @@
+# This file contains the configuration for a wildcard TLS certificate using cert-manager.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${tls}
+  namespace: ${namespace}
+spec:
+  secretName: ${tls}
+  commonName: "${domain}"
+  dnsNames:
+    - "${domain}"
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    name: ${cluster_issuer_name}
+    kind: ClusterIssuer

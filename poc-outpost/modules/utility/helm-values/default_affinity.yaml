@@ -4,7 +4,7 @@ metadata:
   name: default-affinity
 spec:
   rules:
-    - name: set-default-affinity
+    - name: set-default-affinity-to-controllers
       match:
         resources:
           kinds:
@@ -30,3 +30,25 @@ spec:
                               operator: NotIn
                               values:
                                 - on-demand
+
+    - name: set-default-affinity-to-pods
+      match:
+        resources:
+          kinds:
+            - Pod
+      exclude:
+        resources:
+          names:
+            - trino-worker
+      mutate:
+        patchStrategicMerge:
+          spec:
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: karpenter.sh/capacity-type
+                          operator: NotIn
+                          values:
+                            - on-demand

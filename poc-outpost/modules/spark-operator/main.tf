@@ -27,12 +27,19 @@ locals {
   cluster_endpoint = var.cluster_endpoint
   oidc_provider_arn = var.oidc_provider_arn
   karpenter_node_iam_role_name = var.karpenter_node_iam_role_name
+  main_domain = var.main_domain
+  cluster_issuer_name = var.cluster_issuer_name
 
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
 
+  cognito_user_pool_id = var.cognito_user_pool_id
+  cognito_custom_domain = var.cognito_custom_domain
+
   spark_history_server_service_account = "spark-history-server-sa"
   spark_history_server_namespace       = "spark-history-server"
+  spark_history_server_tls = "spark-history-server-tls"
+  spark_history_server_name = "sparkhistoryalb4"
 
   tags = var.tags
 }

@@ -1,4 +1,4 @@
-export dns=trino.orange-eks.com
+export dns=trinoalb4.orange-eks.com
 
 echo "Get trino user password from terraform output"
 cd ../.. && trino_user_password=$(terraform output -raw trino_user_password)

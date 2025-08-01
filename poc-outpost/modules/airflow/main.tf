@@ -27,6 +27,7 @@ locals {
   private_subnets_cidr = var.private_subnets_cidr
   oidc_provider_arn    = var.oidc_provider_arn
   db_subnet_group_name = var.db_subnets_group_name
+  ec_subnet_group_name = var.db_subnets_group_name
   cluster_issuer_name = var.cluster_issuer_name
   main_domain = var.main_domain
 

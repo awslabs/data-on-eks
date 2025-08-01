@@ -30,11 +30,6 @@ variable "oidc_provider_arn" {
   type        = string
 }
 
-variable "kubernetes_storage_class_default_id" {
-  description = "ID of the default Kubernetes storage class"
-  type        = string
-}
-
 variable "cluster_issuer_name" {
   description = "Name of the cluster issuer for the OIDC provider"
   type        = string
@@ -45,13 +40,29 @@ variable "main_domain" {
     type        = string
 }
 
-variable "enable_amazon_prometheus" {
-  description = "Enable Amazon Prometheus for monitoring"
-  type        = bool
+variable "private_subnets_cidr" {
+    description = "List of private subnets CIDR blocks"
+    type        = list(string)
 }
 
-variable "enable_amazon_grafana" {
-  description = "Enable Amazon Grafana for monitoring"
-  type        = bool
+variable "vpc_id" {
+    description = "VPC ID where the EKS cluster is deployed"
+    type        = string
+}
+
+
+variable "db_subnet_group_name" {
+    description = "Name of the DB subnet group"
+    type        = string
+}
+
+variable "ec_subnet_group_name" {
+    description = "Name of the ElastiCache subnet group"
+    type        = string
+}
+
+variable "security_group_id" {
+    description = "Security group ID for the Superset deployment"
+    type        = string
 }
 

@@ -60,7 +60,7 @@ resource "kubectl_manifest" "karpenter_node_pool" {
               - r5.4xlarge
       disruption:
         consolidationPolicy: WhenEmptyOrUnderutilized
-        consolidateAfter: 3600s  #initialement à 60s
+        consolidateAfter: 600s  #initialement à 60s
       limits:
         cpu: "1000"
         memory: 1000Gi

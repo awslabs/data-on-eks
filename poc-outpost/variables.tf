@@ -49,7 +49,10 @@ variable "domaine_name_route53" {
     "albtest-otl4.orange-eks.com",
     "trinoalb4.orange-eks.com",
     "airflowalb4.orange-eks.com",
-    "nifi-otl4.orange-eks.com"
+    "nifi-otl4.orange-eks.com",
+    "sparkhistoryalb4.orange-eks.com",
+    "supersetalb4.orange-eks.com",
+    "grafanaalb4.orange-eks.com",
   ]
   type = list(string)
 }
@@ -94,6 +97,12 @@ variable "enable_kafka" {
 
 variable "enable_spark_operator" {
   description = "Enable Spark Operator"
+  type        = bool
+  default     = true
+}
+
+variable "enable_superset" {
+  description = "Enable Apache Superset"
   type        = bool
   default     = true
 }

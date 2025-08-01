@@ -53,3 +53,23 @@ variable "vpc_id" {
   description = "ID of the VPC where the EKS cluster will be deployed"
   type        = string
 }
+
+variable "cluster_issuer_name" {
+    description = "Name of the cluster issuer for cert-manager"
+    type        = string
+}
+
+variable "main_domain" {
+    description = "Main domain for the cluster"
+    type        = string
+}
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID for authentication"
+  type        = string
+}
+
+variable "cognito_custom_domain" {
+  description = "Custom domain for Cognito user pool"
+  type        = string
+}

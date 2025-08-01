@@ -24,6 +24,12 @@ locals {
   grafana_manager_name        = "aws-observability-accelerator"
   grafana_manager_description = "Amazon Managed Grafana workspace for ${local.name}"
 
+  main_domain = var.main_domain
+  cluster_issuer_name = var.cluster_issuer_name
+
+  grafana_name = "grafanaalb4"
+  grafana_namespace = "kube-prometheus-stack"
+
 
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
 

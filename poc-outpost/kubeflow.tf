@@ -2,7 +2,7 @@
 # Déploiement du ClusterIssuer Kubeflow
 #---------------------------------------------------------------
 provider "kustomization" {
-  kubeconfig_path= "~/.kube/config"
+  kubeconfig_path = "~/.kube/config"
 }
 
 # Déploiement Kubeflow
@@ -16,6 +16,6 @@ module "kubeflow" {
   providers = {
     kustomization = kustomization
     kubernetes    = kubernetes
-    helm= helm
+    helm          = helm
   }
 }

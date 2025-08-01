@@ -65,10 +65,20 @@ module "outpost_subnet" {
 }
 
 #---------------------------------------------------------------
-# using existing private subnets for creating db subnet on outpost RDS
+# using existing private subnets for creating db subnet on outpost (RDS)
 #---------------------------------------------------------------
 resource "aws_db_subnet_group" "private" {
   name       = "db-private-subnet-outpost-otl4"
   subnet_ids = module.outpost_subnet.subnet_id
   tags       = local.tags
+}
+
+#---------------------------------------------------------------
+# using existing private subnets for creating elasticache subnet on outpost
+#---------------------------------------------------------------
+resource "aws_elasticache_subnet_group" "private" {
+  name        = "elasticache-private-subnet-outpost-otl4"
+  subnet_ids  = module.outpost_subnet.subnet_id
+  description = "Subnet group for elasticache in private outpost subnet"
+  tags        = local.tags
 }

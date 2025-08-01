@@ -24,9 +24,9 @@
 #
 #
 #   # Workspace IAM role
-#   create_iam_role                = false
+#   create_iam_role                = true
 #   iam_role_name                  = local.grafana_manager_name
-#   use_iam_role_name_prefix       = false
+#   use_iam_role_name_prefix       = true
 #   iam_role_description           = local.grafana_manager_description
 #   iam_role_path                  = "/grafana/"
 #   iam_role_force_detach_policies = true
@@ -52,17 +52,6 @@
 #       seconds_to_live = 3600
 #     }
 #   }
-#
-#   # Role associations
-#   role_associations = {
-#     "ADMIN" = {
-#       "group_ids" = ["1111111111-abcdefgh-1234-5678-abcd-999999999999"]
-#     }
-#     "EDITOR" = {
-#       "user_ids" = ["2222222222-abcdefgh-1234-5678-abcd-999999999999"]
-#     }
-#   }
-#
 #
 #   tags = local.tags
 # }

@@ -98,6 +98,10 @@ module "spark-operator" {
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
   outpost_name                 = var.outpost_name
   output_subnet_id             = module.outpost_subnet.subnet_id[0]
+  cluster_issuer_name          = var.cluster_issuer_name
+  cognito_user_pool_id         = module.utility.cognito_user_pool_id
+  cognito_custom_domain        = local.cognito_custom_domain
+  main_domain                  = var.main_domain
   spark_teams                  = var.spark_teams
 
   tags = local.tags
@@ -123,6 +127,9 @@ module "supervision" {
 
   enable_amazon_grafana    = var.enable_amazon_grafana
   enable_amazon_prometheus = var.enable_amazon_prometheus
+
+  cluster_issuer_name = var.cluster_issuer_name
+  main_domain         = local.main_domain
 
   tags = local.tags
 
@@ -201,6 +208,31 @@ module "kafka" {
   cluster_version              = var.eks_cluster_version
   cluster_endpoint             = module.eks.cluster_endpoint
   karpenter_node_iam_role_name = module.utility.karpenter_node_iam_role_name
+
+  tags = local.tags
+
+  depends_on = [
+    # module.utility,  # A utiliser uniquement si installation full, sinon en patch il faut laisser commenté
+  ]
+}
+
+module "superset" {
+  count  = var.enable_superset ? 1 : 0
+  source = "./modules/superset"
+
+  name                = local.name
+  region              = local.region
+  oidc_provider_arn   = module.eks.oidc_provider_arn
+  cluster_version     = var.eks_cluster_version
+  cluster_endpoint    = module.eks.cluster_endpoint
+  cluster_issuer_name = var.cluster_issuer_name
+  main_domain         = local.main_domain
+
+  private_subnets_cidr  = local.private_subnets_cidr
+  vpc_id                = module.vpc.vpc_id
+  db_subnet_group_name = aws_db_subnet_group.private.name
+  ec_subnet_group_name = aws_elasticache_subnet_group.private.name
+  security_group_id = module.eks.node_security_group_id
 
   tags = local.tags
 
