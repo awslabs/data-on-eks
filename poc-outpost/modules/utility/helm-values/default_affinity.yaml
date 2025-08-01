@@ -14,8 +14,9 @@ spec:
             - Pod
       exclude:
         resources:
-          names:
-            - trino-worker
+          selector:
+            matchLabels:
+              kyverno.io/skip-affinity: "true"
       mutate:
         patchStrategicMerge:
           spec:
@@ -38,8 +39,9 @@ spec:
             - Pod
       exclude:
         resources:
-          names:
-            - trino-worker
+          selector:
+            matchLabels:
+              kyverno.io/skip-affinity: "true"
       mutate:
         patchStrategicMerge:
           spec:

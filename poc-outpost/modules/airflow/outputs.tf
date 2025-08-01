@@ -6,3 +6,7 @@ output "airflow_admin_password" {
   value     = random_password.airflow_admin.result
   sensitive = true
 }
+output "db" {
+  description = "Database Airflow"
+  value       = module.db
+}

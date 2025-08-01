@@ -13,3 +13,8 @@ output "trino_user_password" {
   value       = random_password.trino_password.result
   sensitive = true
 }
+
+output "db" {
+    description = "Database Trino"
+    value       = module.db
+}

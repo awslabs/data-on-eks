@@ -118,6 +118,8 @@ coordinator:
           component: coordinator
 
 worker:
+  labels:
+    kyverno.io/skip-affinity: "true"
   jvm:
     maxHeapSize: "45G"  # ~80% of container memory (110Gi)
     extraArguments:
@@ -139,8 +141,8 @@ worker:
       cpu: "7000m"
       memory: 50Gi
   nodeSelector:
-    NodePool: trino-sql-karpenter
-    karpenter.sh/capacity-type: on-demand
+    NodePool: karpenter
+    karpenter.sh/capacity-type: "on-demand"
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: kubernetes.io/hostname

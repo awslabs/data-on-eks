@@ -39,7 +39,8 @@ resource "kubectl_manifest" "karpenter_node_pool" {
       template:
         metadata:
           labels:
-            NodePool: trino-sql-karpenter
+            NodePool: karpenter
+            karpenter.sh/capacity-type: "on-demand"
         spec:
           nodeClassRef:
             group: karpenter.k8s.aws
@@ -50,10 +51,6 @@ resource "kubectl_manifest" "karpenter_node_pool" {
               operator: In
               values:
               - "on-demand"
-            - key: topology.kubernetes.io/region
-              operator: In
-              values:
-              - "${local.region}"
             - key: node.kubernetes.io/instance-type
               operator: In
               values:

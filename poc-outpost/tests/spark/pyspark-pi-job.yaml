@@ -52,12 +52,13 @@ spec:
     memory: "512m"
     labels:
       version: 3.5.3
+      kyverno.io/skip-affinity: "true"
     serviceAccount: spark-team-a
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodePool: "spark"
+      NodePool: "karpenter"
       karpenter.sh/capacity-type: "on-demand"
   executor:
     cores: 1
@@ -66,8 +67,10 @@ spec:
     serviceAccount: spark-team-a
     labels:
       version: 3.5.3
+      kyverno.io/skip-affinity: "true"
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
     nodeSelector:
-      NodePool: "spark"
+      NodePool: "karpenter"
+      karpenter.sh/capacity-type: "on-demand"
