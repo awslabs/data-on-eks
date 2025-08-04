@@ -46,7 +46,7 @@ resource "helm_release" "kubeflowgw" {
 module "oauth2_proxy" {
   source = "../kustomize"
   # Variables
-  overlayfolder= "${path.module}/manifests/common/oauth2-proxy/overlays/m2m-dex-and-kind"
+  overlayfolder= "${path.module}/manifests/common/oauth2-proxy/overlays/m2m-dex-and-kind-otl4"
   helminstallname ="oauth2proxy"
   namespace = "oauth2-proxy"
   createnamespace = true
@@ -64,7 +64,7 @@ module "oauth2_proxy" {
 module "dex" {
   source = "../kustomize"
   # Variables
-  overlayfolder= "${path.module}/manifests/common/dex/overlays/oauth2-proxy"
+  overlayfolder= "${path.module}/manifests/common/dex/overlays/oauth2-proxy-otl4"
   helminstallname ="dex"
   namespace = "auth"
   createnamespace = true

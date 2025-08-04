@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex
+data:
+  config.yaml: |
+    issuer: https://kubeflow-otl4.orange-eks.com/dex
+    storage:
+      type: kubernetes
+      config:
+        inCluster: true
+    web:
+      http: 0.0.0.0:5556
+    logger:
+      level: "debug"
+      format: text
+    oauth2:
+      skipApprovalScreen: true
+    enablePasswordDB: false
+    connectors:
+    - type: oidc
+      id: keycloak
+      name: keycloak
+      config:
+        issuer: https://keycloak-otl4.orange-eks.com/realms/orange-eks
+        clientID: dex
+        clientSecret: rIxY2oXZdpsm4W8PdbXDGBGpTrMGL3QS
+        redirectURI: https://kubeflow-otl4.orange-eks.com/dex/callback
+    staticClients:
+    - idEnv: OIDC_CLIENT_ID
+      redirectURIs: ["/oauth2/callback"]
+      name: 'Dex Login Application'
+      secretEnv: OIDC_CLIENT_SECRET
