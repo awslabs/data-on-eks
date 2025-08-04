@@ -152,13 +152,13 @@ variable "spark_teams" {
 variable "keycloak_url" {
   type        = string
   description = "Url keycloak"
-  default = "keycloak-otl4.orange-eks.com"
+  default     = "keycloak-otl4.orange-eks.com"
 }
 
 variable "client_keycloak_nifi" {
   type        = string
   description = "Client keycloak Nifi"
-  default = "nifi2"
+  default     = "nifi2"
 }
 
 variable "secret_keycloak_nifi" {
@@ -166,8 +166,13 @@ variable "secret_keycloak_nifi" {
   description = "Secret keycloak Nifi"
 }
 
+variable "dex_client_secret" {
+  type        = string
+  description = "Secret pour DEX"
+}
+
 variable "apply_nifi2" {
   type        = bool
   description = "Indicate if new nifi2 module must be applied"
-  default = false
+  default     = false
 }

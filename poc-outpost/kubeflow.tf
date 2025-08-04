@@ -9,6 +9,8 @@ provider "kustomization" {
 module "kubeflow" {
   source = "./modules/kubeflow"
 
+  dex_client_secret = var.dex_client_secret
+
   depends_on = [
     module.istio
   ]
