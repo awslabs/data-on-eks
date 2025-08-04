@@ -2,7 +2,7 @@
 # Module de déploiement Nifi 
 #---------------------------------------------------------------
 module "nifi" {
-  count = 0
+  count  = 0
   source = "./modules/nifi"
   # Variables
   region           = local.region

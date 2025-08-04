@@ -228,11 +228,11 @@ module "superset" {
   cluster_issuer_name = var.cluster_issuer_name
   main_domain         = local.main_domain
 
-  private_subnets_cidr  = local.private_subnets_cidr
-  vpc_id                = module.vpc.vpc_id
+  private_subnets_cidr = local.private_subnets_cidr
+  vpc_id               = module.vpc.vpc_id
   db_subnet_group_name = aws_db_subnet_group.private.name
   ec_subnet_group_name = aws_elasticache_subnet_group.private.name
-  security_group_id = module.eks.node_security_group_id
+  security_group_id    = module.eks.node_security_group_id
 
   tags = local.tags
 

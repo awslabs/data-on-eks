@@ -35,9 +35,9 @@ locals {
     && !can(regex("kubeflow", lookup(lb.tags, "service.k8s.aws/stack", "")))
   ]
   selected_nlb_arn = try(local.nlb_arns[0], null)
-  selected_nlb = try(data.aws_lb.all_details[local.selected_nlb_arn], null)
+  selected_nlb     = try(data.aws_lb.all_details[local.selected_nlb_arn], null)
 
-    # kubeflow 
+  # kubeflow 
   nlb_arns_kf = [
     for arn, lb in data.aws_lb.all_details :
     arn
@@ -46,7 +46,7 @@ locals {
     && can(regex("kubeflow", lookup(lb.tags, "service.k8s.aws/stack", "")))
   ]
   selected_nlb_arn_kf = try(local.nlb_arns_kf[0], null)
-  selected_nlb_kf = try(data.aws_lb.all_details[local.selected_nlb_arn_kf], null)
+  selected_nlb_kf     = try(data.aws_lb.all_details[local.selected_nlb_arn_kf], null)
 }
 
 # Récupération du détail des Load Balancers

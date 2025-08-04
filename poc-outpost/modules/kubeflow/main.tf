@@ -1,5 +1,76 @@
 locals {
+  dex_configmap_patch = <<-EOT
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: dex
+      namespace: auth
+    data:
+      config.yaml: |
+        issuer: https://${var.kubeflow_domain}/dex
+        storage:
+          type: kubernetes
+          config:
+            inCluster: true
+        web:
+          http: 0.0.0.0:5556
+        logger:
+          level: "debug"
+          format: text
+        oauth2:
+          skipApprovalScreen: true
+        enablePasswordDB: false
+        connectors:
+        - type: oidc
+          id: keycloak
+          name: keycloak
+          config:
+            issuer: https://${var.keycloak_domain}/realms/${var.keycloak_realm}
+            clientID: ${var.dex_client_id}
+            clientSecret: ${var.dex_client_secret}
+            redirectURI: https://${var.kubeflow_domain}/dex/callback
+        staticClients:
+        - idEnv: OIDC_CLIENT_ID
+          redirectURIs: ["/oauth2/callback"]
+          name: 'Dex Login Application'
+          secretEnv: OIDC_CLIENT_SECRET
+  EOT
+}
 
+locals {
+  oauth2proxy_cfg = <<-EOT
+    provider = "oidc"
+    oidc_issuer_url = "http://${var.kubeflow_domain}/dex"
+    scope = "profile email groups openid"
+    email_domains = [ "*" ]
+    upstreams = [ "static://200" ]
+    skip_auth_routes = [
+      "^/dex/",
+    ]
+    api_routes = [
+      "/api/",
+      "/apis/",
+      "^/ml_metadata",
+    ]
+    skip_oidc_discovery = true
+    login_url = "/dex/auth"
+    redeem_url = "http://${var.kubeflow_domain}/dex/token"
+    oidc_jwks_url = "http://${var.kubeflow_domain}/dex/keys"
+    skip_provider_button = false
+    provider_display_name = "Dex"
+    custom_sign_in_logo = "/custom-theme/kubeflow-logo.svg"
+    banner = "-"
+    footer = "-"
+    prompt = "none"
+    set_authorization_header = true
+    set_xauthrequest = true
+    cookie_name = "oauth2_proxy_kubeflow"
+    cookie_expire = "24h"
+    cookie_refresh = 0
+    code_challenge_method = "S256"
+    redirect_url = "/oauth2/callback"
+    relative_redirect_url = true
+  EOT
 }
 
 #---------------------------------------------------------------
@@ -40,13 +111,26 @@ resource "helm_release" "kubeflowgw" {
   ]
 }
 
+# Génération des fichiers pour kubeflow
+# Fichier modules/kubeflow/manifests/common/oauth2-proxy/base-otl/oauth2_proxy.cfg
+# Fichier modules/kubeflow/manifests/common/dex/overlays/oauth2-proxy/config-map
+resource "local_file" "dex_patch" {
+  content  = local.dex_configmap_patch
+  filename = "${path.module}/manifests/common/dex/overlays/oauth2-proxy/config-map"
+}
+
+resource "local_file" "oauth2proxy_cfg" {
+  content  = local.oauth2proxy_cfg
+  filename = "${path.module}/manifests/common/oauth2-proxy/base/oauth2_proxy.cfg"
+}
+
 #---------------------------------------------------------------
 # Déploiement de OAuth2 proxy
 #---------------------------------------------------------------
 module "oauth2_proxy" {
   source = "../kustomize"
   # Variables
-  overlayfolder= "${path.module}/manifests/common/oauth2-proxy/overlays/m2m-dex-and-kind-otl4"
+  overlayfolder= "${path.module}/manifests/common/oauth2-proxy/overlays/m2m-dex-and-kind"
   helminstallname ="oauth2proxy"
   namespace = "oauth2-proxy"
   createnamespace = true
@@ -56,6 +140,8 @@ module "oauth2_proxy" {
     kustomization = kustomization
     helm = helm
   }
+
+  depends_on = [local_file.dex_patch,local.oauth2proxy_cfg]
 }
 
 #---------------------------------------------------------------
@@ -64,7 +150,7 @@ module "oauth2_proxy" {
 module "dex" {
   source = "../kustomize"
   # Variables
-  overlayfolder= "${path.module}/manifests/common/dex/overlays/oauth2-proxy-otl4"
+  overlayfolder= "${path.module}/manifests/common/dex/overlays/oauth2-proxy"
   helminstallname ="dex"
   namespace = "auth"
   createnamespace = true
@@ -74,6 +160,8 @@ module "dex" {
     kustomization = kustomization
     helm = helm
   }
+
+  depends_on = [local_file.dex_patch,local.oauth2proxy_cfg]
 }
 
 #---------------------------------------------------------------
