@@ -49,7 +49,7 @@ variable "domaine_name_route53" {
     "albtest-otl4.orange-eks.com",
     "trinoalb4.orange-eks.com",
     "airflowalb4.orange-eks.com",
-    "nifi-otl4.orange-eks.com",
+    "nifi2-otl4.orange-eks.com",
     "sparkhistoryalb4.orange-eks.com",
     "supersetalb4.orange-eks.com",
     "grafanaalb4.orange-eks.com",
@@ -147,4 +147,27 @@ variable "spark_teams" {
   description = "List of all teams (namespaces) for spark team"
   type        = list(string)
   default     = ["spark-team-a", "spark-team-b", "spark-team-c"]
+}
+
+variable "keycloak_url" {
+  type        = string
+  description = "Url keycloak"
+  default = "keycloak-otl4.orange-eks.com"
+}
+
+variable "client_keycloak_nifi" {
+  type        = string
+  description = "Client keycloak Nifi"
+  default = "nifi2"
+}
+
+variable "secret_keycloak_nifi" {
+  type        = string
+  description = "Secret keycloak Nifi"
+}
+
+variable "apply_nifi2" {
+  type        = bool
+  description = "Indicate if new nifi2 module must be applied"
+  default = false
 }
