@@ -41,3 +41,11 @@ Le prometheus manager et le metrics server sont ajoutés pour permettre à Keda 
 Les tests réalisés : 
 -   on utilise des exemples du blueprint pour injecter des données via la cli trino
 -   on utilise des exemples du blueprint pour requeter des données via la cli trino
+
+## Tips
+
+Suppression du lock si besoin : 
+
+```
+aws dynamodb delete-item --table-name tf-backend-012046422670 --key '{"LockID": {"S": "tf-backend-012046422670/terraform/state-poc-olt4"}}'
+```

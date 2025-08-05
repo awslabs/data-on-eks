@@ -64,5 +64,5 @@ website/package-lock.json
 website/package.json
 
 # Generated files
-./poc-outpost/BaseTest/modules/kubeflow/manifests/common/dex/overlays/oauth2-proxy/config-map
-./poc-outpost/BaseTest/modules/kubeflow/manifests/common/oauth2-proxy/base/oauth2_proxy.cfg
+poc-outpost/modules/kubeflow/manifests/common/dex/overlays/oauth2-proxy/config-map.yaml
+poc-outpost/modules/kubeflow/manifests/common/oauth2-proxy/base/oauth2_proxy.cfg

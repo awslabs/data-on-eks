@@ -13,7 +13,7 @@ variable "keycloak_domain" {
 variable "keycloak_realm" {
   type        = string
   description = "Realm keycloak"
-  default = "dex"
+  default = "orange-eks"
 }
 
 variable "dex_client_id" {

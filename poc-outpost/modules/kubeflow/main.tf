@@ -116,7 +116,7 @@ resource "helm_release" "kubeflowgw" {
 # Fichier modules/kubeflow/manifests/common/dex/overlays/oauth2-proxy/config-map
 resource "local_file" "dex_patch" {
   content  = local.dex_configmap_patch
-  filename = "${path.module}/manifests/common/dex/overlays/oauth2-proxy/config-map"
+  filename = "${path.module}/manifests/common/dex/overlays/oauth2-proxy/config-map.yaml"
 }
 
 resource "local_file" "oauth2proxy_cfg" {
