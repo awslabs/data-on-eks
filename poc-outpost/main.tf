@@ -155,9 +155,9 @@ module "airflow" {
   main_domain           = var.main_domain
   outpost_name          = var.outpost_name
   output_subnet_id      = module.outpost_subnet.subnet_id[0]
-
   spark_teams = var.spark_teams
-
+  airflow_oidc_secret = var.airflow_oidc_secret
+  keycloak_domain = var.keycloak_url
   tags = local.tags
 
   depends_on = [

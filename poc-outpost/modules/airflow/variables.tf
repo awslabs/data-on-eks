@@ -58,3 +58,25 @@ variable "output_subnet_id" {
   type        = string
   description = "Outpost subnet id"
 }
+
+variable "airflow_oidc_secret" {
+  type        = string
+  description = "Secret for airflow client in keycloak"
+}
+
+variable "airflow_oidc_client" {
+  type        = string
+  description = "Client airflow in keycloak"
+  default = "airflow"
+}
+
+variable "keycloak_realm" {
+  type        = string
+  description = "Name of keycloak realm"
+  default = "orange-eks"
+}
+
+variable "keycloak_domain" {
+  type        = string
+  description = "DNS Domain for keycloak"
+}

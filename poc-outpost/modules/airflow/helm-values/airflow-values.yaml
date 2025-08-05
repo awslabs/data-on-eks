@@ -137,15 +137,48 @@ scheduler:
 
 
 apiServer:
-
   # Create ServiceAccount
   serviceAccount:
     create: false
     name: ${api_server_service_account}
+  extraVolumes:
+    - name: airflow-webserver-config
+      configMap:
+        name: airflow-webserver-config
+  extraVolumeMounts:
+    - name: airflow-webserver-config
+      mountPath: /opt/airflow/webserver_config.py
+      subPath: webserver_config.py
+      readOnly: true
 ###################################
 # Airflow webserver settings
 ###################################
 webserver:
+  webserverConfig: |
+    from flask_appbuilder.security.manager import AUTH_OAUTH
+
+    AUTH_TYPE = AUTH_OAUTH
+    AUTH_USER_REGISTRATION = True
+    AUTH_USER_REGISTRATION_ROLE = "Admin"
+    AUTH_ROLE_PUBLIC = "Admin"
+    
+    OAUTH_PROVIDERS = [{
+        'name': 'keycloak',
+        'token_key': 'access_token',
+        'icon': 'fa-circle-o',
+        'remote_app': {
+            'client_id': '${airflow_oidc_client}',
+            'client_secret': '${airflow_oidc_secret}',
+            'api_base_url': 'https://${keycloak_domain}/realms/${keycloak_realm}/protocol/openid-connect',
+            'access_token_url': 'https://${keycloak_domain}/realms/${keycloak_realm}/protocol/openid-connect/token',
+            'authorize_url': 'https://${keycloak_domain}/realms/${keycloak_realm}/protocol/openid-connect/auth',
+            'jwks_uri' : 'https://${keycloak_domain}/realms/${keycloak_realm}/protocol/openid-connect/certs',
+            'userinfo_endpoint': 'https://${keycloak_domain}/realms/${keycloak_realm}/protocol/openid-connect/userinfo',
+            'client_kwargs': {
+                'scope': 'openid email profile'
+            }
+        }
+    }]
   # Number of webservers
   replicas: 2
 
@@ -166,24 +199,15 @@ webserver:
       cpu: 1000m
       memory: 4Gi
 
-  # Create initial user.
-  defaultUser:
-    enabled: true
-    role: Admin
-    username: admin
-    email: admin@example.com
-    firstName: admin
-    lastName: user
-    password: "${webserver_default_user_password}"
-
-#  extraVolumeMounts:
-#    - name: config
-#      mountPath: /opt/airflow/webserver_config.py
-#      subPath: webserver_config.py
-#  extraVolumes:
-#    - name: config
-#      configMap:
-#        name: airflow-webserver-config
+  # # Create initial user.
+  # defaultUser:
+  #   enabled: true
+  #   role: Admin
+  #   username: admin
+  #   email: admin@example.com
+  #   firstName: admin
+  #   lastName: user
+  #   password: "${webserver_default_user_password}"
 ###################################
 # PgBouncer settings
 ###################################

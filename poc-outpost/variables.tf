@@ -166,6 +166,11 @@ variable "secret_keycloak_nifi" {
   description = "Secret keycloak Nifi"
 }
 
+variable "airflow_oidc_secret" {
+  type        = string
+  description = "Secret keycloak Airflow"
+}
+
 variable "dex_client_secret" {
   type        = string
   description = "Secret pour DEX"
