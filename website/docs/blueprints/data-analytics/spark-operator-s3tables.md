@@ -321,7 +321,7 @@ The following commands will show the additional information on the S3 Tables.
 Use the S3Table API to confirm the table was created successfully. Just replace the `<ACCOUNT_ID>` and run the command.
 
 ```bash
-aws s3tables get-table --table-bucket-arn arn:aws:s3tables:<REGION>:<ACCOUNT_ID>:bucket/doeks-spark-on-eks-s3table \
+aws s3tables get-table --table-bucket-arn arn:aws:s3tables:<REGION>:<ACCOUNT_ID>:bucket/doeks-spark-operator-doeks-s3table \
 --namespace doeks_namespace \
 --name employee_s3_table
 ```
@@ -334,7 +334,7 @@ Output looks like below.
 {
     "name": "employee_s3_table",
     "type": "customer",
-    "tableARN": "arn:aws:s3tables:us-west-2:<ACCOUNT_ID>:bucket/doeks-spark-on-eks-s3table/table/55511111-7a03-4513-b921-e372b0030daf",
+    "tableARN": "arn:aws:s3tables:us-west-2:<ACCOUNT_ID>:bucket/doeks-spark-operator-doeks-s3table/table/55511111-7a03-4513-b921-e372b0030daf",
     "namespace": [
         "doeks_namespace"
     ],
@@ -352,14 +352,14 @@ Output looks like below.
 ### Monitor the table maintenance job status:
 
 ```bash
-aws s3tables get-table-maintenance-job-status --table-bucket-arn arn:aws:s3tables:us-west-2:"\<ACCOUNT_ID>:bucket/doeks-spark-on-eks-s3table --namespace doeks_namespace --name employee_s3_table
+aws s3tables get-table-maintenance-job-status --table-bucket-arn arn:aws:s3tables:us-west-2:"\<ACCOUNT_ID>:bucket/doeks-spark-operator-doeks-s3table --namespace doeks_namespace --name employee_s3_table
 ```
 
 This command provides information about Iceberg compaction, snapshot management, and unreferenced file removal processes.
 
 ```json
 {
-    "tableARN": "arn:aws:s3tables:us-west-2:<ACCOUNT_ID>:bucket/doeks-spark-on-eks-s3table/table/55511111-7a03-4513-b921-e372b0030daf",
+    "tableARN": "arn:aws:s3tables:us-west-2:<ACCOUNT_ID>:bucket/doeks-spark-operator-doeks-s3table/table/55511111-7a03-4513-b921-e372b0030daf",
     "status": {
         "icebergCompaction": {
             "status": "Successful",

@@ -119,7 +119,7 @@ benchmark-exec-ebs-exec-9        1/1     Running   0          73s     100.64.238
 tpcds-benchmark-1tb-ebs-driver   1/1     Running   0          2m33s   100.64.228.162   ip-100-64-213-174.ec2.internal   <none>           <none>
 ```
 
-The benchmark is also configured to export metrics and logs so you can review the benchmark using the [Spark Observability tools explained here](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/observability-spark-on-eks#spark-history-server).
+The benchmark is also configured to export metrics and logs so you can review the benchmark using the [Spark Observability tools explained here](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/observability-spark-operator-doeks#spark-history-server).
 
 To get an idea how far along the benchmark is, you can use the Spark Web UI to review which query is currently being executed.
 Port forward to the Benchmark Driver to see the UI:

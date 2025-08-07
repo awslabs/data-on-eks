@@ -126,7 +126,7 @@ The log snippet of the `tpcds-data-generation-1tb-driver` pod should look like b
 24/11/01 15:29:42 INFO FileFormatWriter: Start to commit write Job xxxx.
 24/11/01 15:29:42 INFO FileFormatWriter: Write Job xxxx committed. Elapsed time: 158 ms.
 24/11/01 15:29:42 INFO FileFormatWriter: Finished processing stats for write job xxxx.
-Data generated at s3a://spark-on-eks-spark-logs-xxx/TPCDS-TEST-1TB
+Data generated at s3a://spark-operator-doeks-spark-logs-xxx/TPCDS-TEST-1TB
 24/11/01 15:29:42 INFO SparkContext: SparkContext is stopping with exitCode 0.
 24/11/01 15:29:42 INFO SparkUI: Stopped Spark web UI at http://tpcds-data-generation-1tb-yyyyy-driver-svc.spark-team-a.svc:4040
 24/11/01 15:29:42 INFO KubernetesClusterSchedulerBackend: Shutting down all executors
