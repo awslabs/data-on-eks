@@ -1,10 +1,12 @@
 hub:
+%{ if enable_spark_workshop_config ~}
+  baseUrl: "/jupyter/"
+%{ endif ~}
   db:
     pvc:
       storage: 50Gi
       storageClassName: gp3
   authenticatePrometheus: false
-
 proxy:
   https:
     enabled: false
