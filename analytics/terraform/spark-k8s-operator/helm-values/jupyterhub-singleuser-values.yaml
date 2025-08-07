@@ -4,7 +4,6 @@ hub:
       storage: 50Gi
       storageClassName: gp3
   authenticatePrometheus: false
-
 proxy:
   https:
     enabled: false

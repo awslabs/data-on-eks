@@ -50,7 +50,7 @@ resource "aws_eks_access_entry" "karpenter_nodes" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.37.1" # ensure to update this to the latest/desired version
+  version = "1.38.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -765,12 +765,12 @@ module "eks_data_addons" {
   enable_spark_history_server = true
 
   spark_history_server_helm_config = {
-    version = "1.3.2"
-    values = [
-      <<-EOT
-      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
-      EOT
-    ]
+    version = "1.5.1"
+    values = [templatefile("${path.module}/helm-values/shs-values.yaml",
+      {
+        s3_bucket_name   = module.s3_bucket.s3_bucket_id,
+        event_log_prefix = aws_s3_object.this.key,
+    })]
   }
 
   #---------------------------------------------------------------
@@ -803,9 +803,10 @@ module "eks_data_addons" {
   # JupyterHub Add-on
   #---------------------------------------------------------------
   enable_jupyterhub = var.enable_jupyterhub
+
   jupyterhub_helm_config = {
     values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
-      jupyter_single_user_sa_name = var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "no-tused"
+      jupyter_single_user_sa_name = var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "not-used"
     })]
     version = "3.3.8"
   }
