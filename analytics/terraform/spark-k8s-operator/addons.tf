@@ -771,9 +771,6 @@ module "eks_data_addons" {
         s3_bucket_name   = module.s3_bucket.s3_bucket_id,
         event_log_prefix = aws_s3_object.this.key,
     })]
-
-
-
   }
 
   #---------------------------------------------------------------
