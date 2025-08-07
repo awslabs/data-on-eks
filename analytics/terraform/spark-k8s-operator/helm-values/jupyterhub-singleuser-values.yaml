@@ -1,7 +1,4 @@
 hub:
-%{ if enable_spark_workshop_config ~}
-  baseUrl: "/jupyter/"
-%{ endif ~}
   db:
     pvc:
       storage: 50Gi

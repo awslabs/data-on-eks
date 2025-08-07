@@ -51,7 +51,7 @@ variable "enable_yunikorn" {
 }
 
 variable "enable_jupyterhub" {
-  default     = true
+  default     = false
   description = "Enable Jupyter Hub"
   type        = bool
 }
@@ -76,12 +76,6 @@ variable "spark_benchmark_ssd_desired_size" {
 
 variable "enable_raydata" {
   description = "Enable Ray Data Spark logs processing with Iceberg"
-  type        = bool
-  default     = false
-}
-
-variable "enable_spark_workshop_config" {
-  description = "Enabling config for Spark Workshop"
   type        = bool
   default     = false
 }

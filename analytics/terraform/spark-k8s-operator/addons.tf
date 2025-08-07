@@ -766,59 +766,53 @@ module "eks_data_addons" {
 
   spark_history_server_helm_config = {
     version = "1.5.1"
+    values = [templatefile("${path.module}/helm-values/shs-values.yaml",
+      {
+        s3_bucket_name   = module.s3_bucket.s3_bucket_id,
+        event_log_prefix = aws_s3_object.this.key,
+    })]
+
+
+
+  }
+
+  #---------------------------------------------------------------
+  # Kubecost Add-on
+  #---------------------------------------------------------------
+  enable_kubecost = true
+  kubecost_helm_config = {
+    version             = "2.7.0"
+    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+    repository_password = data.aws_ecrpublic_authorization_token.token.password
+  }
+
+  #---------------------------------------------------------------
+  # Kuberay Operator Add-on
+  #---------------------------------------------------------------
+  enable_kuberay_operator = var.enable_raydata
+  kuberay_operator_helm_config = {
+    version = "1.4.0"
+    # Enabling Volcano as Batch scheduler for KubeRay Operator
     values = [
       <<-EOT
-        logStore:
-          s3:
-            bucket: "${module.s3_bucket.s3_bucket_id}"
-            eventLogsPath: "${aws_s3_object.this.key}"
-
-        ${var.enable_spark_workshop_config ?
-      "sparkConf: |-\n        spark.ui.proxyBase=/shs" :
-      ""
-    }
-        EOT
-  ]
-}
-
-#---------------------------------------------------------------
-# Kubecost Add-on
-#---------------------------------------------------------------
-enable_kubecost = true
-kubecost_helm_config = {
-  version             = "2.7.0"
-  values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
-}
-
-#---------------------------------------------------------------
-# Kuberay Operator Add-on
-#---------------------------------------------------------------
-enable_kuberay_operator = var.enable_raydata
-kuberay_operator_helm_config = {
-  version = "1.4.0"
-  # Enabling Volcano as Batch scheduler for KubeRay Operator
-  values = [
-    <<-EOT
       batchScheduler:
         enabled: false
     EOT
-  ]
-}
+    ]
+  }
 
-#---------------------------------------------------------------
-# JupyterHub Add-on
-#---------------------------------------------------------------
-enable_jupyterhub = var.enable_jupyterhub
+  #---------------------------------------------------------------
+  # JupyterHub Add-on
+  #---------------------------------------------------------------
+  enable_jupyterhub = var.enable_jupyterhub
 
-jupyterhub_helm_config = {
-  values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
-    jupyter_single_user_sa_name  = var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "not-used"
-    enable_spark_workshop_config = var.enable_spark_workshop_config
-  })]
-  version = "3.3.8"
-}
+  jupyterhub_helm_config = {
+    values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
+      jupyter_single_user_sa_name = var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "not-used"
+    })]
+    version = "3.3.8"
+  }
 }
 
 #---------------------------------------------------------------

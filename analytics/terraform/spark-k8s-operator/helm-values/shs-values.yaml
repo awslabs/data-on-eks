@@ -1,0 +1,8 @@
+historyServer:
+  store:
+    hybridStore:
+      enabled: true
+logStore:
+  s3:
+    bucket: ${s3_bucket_name}
+    eventLogsPath: ${event_log_prefix}
