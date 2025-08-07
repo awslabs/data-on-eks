@@ -100,7 +100,7 @@ aws amp list-workspaces --alias amp-ws-emr-eks-karpenter
 Verify Namespace `emr-data-team-a` and Pod status for `Prometheus`, `Vertical Pod Autoscaler`, `Metrics Server` and `Cluster Autoscaler`.
 
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name spark-operator-doeks # Creates k8s config file to authenticate with EKS Cluster
+aws eks --region us-west-2 update-kubeconfig --name spark-on-eks # Creates k8s config file to authenticate with EKS Cluster
 
 kubectl get nodes # Output shows the EKS Managed Node group nodes
 

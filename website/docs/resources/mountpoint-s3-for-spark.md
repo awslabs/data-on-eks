@@ -180,7 +180,7 @@ Here are the steps to test the scenario using Approach 2 with DaemonSet:
     2. ``` chmod +x copy-jars-to-s3.sh ```
     3. ``` ./copy-jars-to-s3.sh ```
 3. Set-up Kubeconfig
-    1. ```aws eks update-kubeconfig --name spark-operator-doeks```
+    1. ```aws eks update-kubeconfig --name spark-on-eks```
 4. Apply DaemonSet
     1. ```kubectl apply -f mountpoint-s3-daemonset.yaml ```
 4. Apply Spark Job sample
