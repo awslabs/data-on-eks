@@ -762,7 +762,7 @@ module "eks_data_addons" {
   # Spark History Server Add-on
   #---------------------------------------------------------------
   # Spark history server is required only when EMR Spark Operator is enabled
-  enable_spark_history_server = true
+  enable_spark_history_server = var.enable_spark_history_server
 
   spark_history_server_helm_config = {
     version = "1.5.1"
