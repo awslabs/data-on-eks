@@ -61,7 +61,11 @@ data "aws_iam_policy_document" "bedrock_jupyter" {
   statement {
     sid       = "BedrockModelAccess"
     effect    = "Allow"
-    resources = ["arn:${data.aws_partition.current.partition}:bedrock:*::foundation-model/*"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:bedrock:*::foundation-model/*",
+      "arn:aws:bedrock:*:*:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "arn:aws:bedrock:*:*:inference-profile/us.anthropic.claude-sonnet-4-20250514-v1:0"
+      ]
     actions = [
       "bedrock:InvokeModel",
       "bedrock:InvokeModelWithResponseStream"
