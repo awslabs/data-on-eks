@@ -266,21 +266,26 @@ To list all the resources created for Flink team to run Flink jobs using this na
 
 <CollapsibleContent header={<h2><span>Execute Sample Flink job with Karpenter</span></h2>}>
 
+Get the role arn linked to the job execution service account.
+```bash
+export FLINK_JOB_ROLE=$( terraform output flink_job_execution_role_arn )
+```
+Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
+```bash
+export S3_BUCKET="${$( terraform output flink_operator_bucket )//\"/}" 
+```
+
 Navigate to example directory and submit the Flink job.
 
 ```bash
 cd data-on-eks/streaming/emr-eks-flink/examples/karpenter
 ```
-Get the role arn linked to the job execution service account.
-```bash
-terraform output flink_job_execution_role_arn
-```
-Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
-```bash
-terraform output flink_operator_bucket
-```
 
-Open the basic-example-app-cluster.yaml in any editor and replace the place holder for **JOB_EXECUTION_ROLE_ARN** with the flink_job_execution_role_arn terraform output command. Replace the **ENTER_S3_BUCKET** placeholder with the flink_operator_bucket output.
+Modify the basic-example-app-cluster.yaml by replacing the placeholders with values from the two env variables above.
+
+```bash
+envsubst < basic-example-app-cluster.yaml > basic-example-app-cluster.yaml
+```
 
 Deploy the job by running the kubectl deploy command.
 
@@ -294,23 +299,23 @@ You should see the new nodes triggered by the karpenter and the YuniKorn will sc
 ```bash
 kubectl get deployments -n flink-team-a-ns
 NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
-basic-example-app-cluster-flink   2/2     2            2           3h6m
+basic-example-karpenter-flink   2/2     2            2           3h6m
 
 kubectl get pods -n flink-team-a-ns
 NAME                                               READY   STATUS    RESTARTS   AGE
-basic-example-app-cluster-flink-7c7d9c6fd9-cdfmd   2/2     Running   0          3h7m
-basic-example-app-cluster-flink-7c7d9c6fd9-pjxj2   2/2     Running   0          3h7m
-basic-example-app-cluster-flink-taskmanager-1-1    2/2     Running   0          3h6m
+basic-example-karpenter-flink-7c7d9c6fd9-cdfmd   2/2     Running   0          3h7m
+basic-example-karpenter-flink-7c7d9c6fd9-pjxj2   2/2     Running   0          3h7m
+basic-example-karpenter-flink-taskmanager-1-1    2/2     Running   0          3h6m
 
 kubectl get services -n flink-team-a-ns
 NAME                                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-basic-example-app-cluster-flink-rest   ClusterIP   172.20.17.152   <none>        8081/TCP   3h7m
+basic-example-karpenter-flink-rest   ClusterIP   172.20.17.152   <none>        8081/TCP   3h7m
 ```
 
 To access the Flink WebUI for the job run this command locally.
 
 ```bash
-kubectl port-forward svc/basic-example-app-cluster-flink-rest 8081 -n flink-team-a-ns
+kubectl port-forward svc/basic-example-karpenter-flink-rest 8081 -n flink-team-a-ns
 ```
 
 ![Flink Job UI](img/flink1.png)
