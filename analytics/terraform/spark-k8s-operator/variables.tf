@@ -79,3 +79,9 @@ variable "enable_raydata" {
   type        = bool
   default     = false
 }
+
+variable "enable_spark_history_server" {
+  description = "Enable Spark History Server"
+  type        = bool
+  default     = true
+}
