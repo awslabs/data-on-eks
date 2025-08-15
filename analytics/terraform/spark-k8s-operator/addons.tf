@@ -69,7 +69,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -123,7 +123,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -183,7 +183,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -236,7 +236,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -368,7 +368,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -413,7 +413,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -449,7 +449,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -488,7 +488,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -530,7 +530,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -578,7 +578,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -631,7 +631,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
