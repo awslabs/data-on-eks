@@ -22,12 +22,6 @@
 # ║          │ 10.1.32.0/20  (4096 IPs) │ 100.64.128.0/18 (16384)       │ 10.1.130.0/24 (256)     ║
 # ║          │ 10.1.48.0/20  (4096 IPs) │ 100.64.192.0/18 (16384)       │ 10.1.131.0/24 (256)     ║
 # ╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
-#
-# Usage Notes:
-# • Private Primary: Main application subnets (EC2, RDS, etc.)
-# • Private Secondary: Pod/container networking (EKS, Fargate)
-# • Public: Load balancers, NAT gateways, bastion hosts
-# • Change var.az_count (2-4) to scale AZs - CIDR ranges adapt automatically
 
 locals {
 
@@ -48,13 +42,14 @@ locals {
 
   # Generate subnet names
   private_subnet_names = concat(
-    [for az in local.azs : "${var.name}-private-${az}"],
+    [for az in local.azs : "${var.name}-private-${az}"],          # Primary CIDR for EKS Control Plane ENI + Load Balancers etc
     [for az in local.azs : "${var.name}-private-secondary-${az}"] # Secondary CIDR for workload pods
   )
 
   public_subnet_names = [for az in local.azs : "${var.name}-public-${az}"]
 
 }
+
 #---------------------------------------------------------------
 # VPC
 #---------------------------------------------------------------
