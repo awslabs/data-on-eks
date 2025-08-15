@@ -31,6 +31,18 @@ variable "secondary_cidr_blocks" {
   type        = list(string)
 }
 
+# How many AZs to span (2..4)
+variable "az_count" {
+  description = "Number of Availability Zones (2-4)"
+  type        = number
+  default     = 3
+  
+  validation {
+    condition     = var.az_count >= 2 && var.az_count <= 4
+    error_message = "AZ count must be between 2 and 4"
+  }
+}
+
 # Enable this for fully private clusters
 variable "enable_vpc_endpoints" {
   description = "Enable VPC Endpoints"
