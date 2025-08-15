@@ -34,24 +34,24 @@ locals {
   private_primary_subnets = [
     for i, az in local.azs : cidrsubnet(var.vpc_cidr, 4, i)
   ]
-  
+
   private_secondary_subnets = [
     for i, az in local.azs : cidrsubnet(var.secondary_cidr_blocks[0], 2, i)
   ]
-  
+
   public_subnets = [
     for i, az in local.azs : cidrsubnet(var.vpc_cidr, 8, 128 + i)
   ]
-  
+
   # Combine all private subnets
   all_private_subnets = concat(local.private_primary_subnets, local.private_secondary_subnets)
-  
+
   # Generate subnet names
   private_subnet_names = concat(
     [for az in local.azs : "${var.name}-private-${az}"],
-    [for az in local.azs : "${var.name}-private-secondary-${az}"]  # Secondary CIDR for workload pods
+    [for az in local.azs : "${var.name}-private-secondary-${az}"] # Secondary CIDR for workload pods
   )
-  
+
   public_subnet_names = [for az in local.azs : "${var.name}-public-${az}"]
 
 }
