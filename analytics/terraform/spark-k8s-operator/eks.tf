@@ -297,7 +297,7 @@ module "eks" {
 # EKS Amazon CloudWatch Observability Role
 #---------------------------------------------------------------
 resource "aws_iam_role" "cloudwatch_observability_role" {
-  name = "${local.name}-eks-cw-agent-role"
+  name_prefix = "${local.name}-eks-cw-agent-"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -363,7 +363,7 @@ module "s3_csi_driver_irsa" {
 }
 
 resource "aws_iam_policy" "s3_irsa_access_policy" {
-  name        = "${local.name}-S3Access"
+  name_prefix = "${local.name}-S3Access-"
   path        = "/"
   description = "S3 Access for Nodes"
 

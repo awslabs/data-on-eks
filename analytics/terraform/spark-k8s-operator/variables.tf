@@ -35,7 +35,7 @@ variable "secondary_cidr_blocks" {
 variable "az_count" {
   description = "Number of Availability Zones (2-4)"
   type        = number
-  default     = 3
+  default     = 2
 
   validation {
     condition     = var.az_count >= 2 && var.az_count <= 4
