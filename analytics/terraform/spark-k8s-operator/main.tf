@@ -35,7 +35,7 @@ provider "kubectl" {
 locals {
   name   = var.name
   region = var.region
-  azs    = slice(data.aws_availability_zones.available.names, 0, 2)
+  azs    = slice(data.aws_availability_zones.available.names, 0, var.az_count)
 
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
