@@ -1,8 +1,33 @@
 #!/bin/bash
 # set -x
+
+# Function to get the kafka-on-eks cluster name
+get_cluster_name() {
+  local cluster_name=$(aws eks list-clusters --region $AWS_REGION --query "clusters[?starts_with(@, 'kafka-on-eks')]" --output text)
+  if [ -z "$cluster_name" ]; then
+    echo "Error: No kafka-on-eks cluster found in region $AWS_REGION" >&2
+    echo "Available clusters:" >&2
+    aws eks list-clusters --region $AWS_REGION --output table >&2
+    return 1
+  fi
+  echo $cluster_name
+}
+
 case "$1" in
   update-kubeconfig)
-    aws eks --region $AWS_REGION update-kubeconfig --name kafka-on-eks
+    cluster_name=$(get_cluster_name)
+    if [ $? -ne 0 ]; then
+      exit 1
+    fi
+    echo "Found cluster: $cluster_name"
+    aws eks --region $AWS_REGION update-kubeconfig --name $cluster_name
+    ;;
+  get-cluster-name)
+    cluster_name=$(get_cluster_name)
+    if [ $? -ne 0 ]; then
+      exit 1
+    fi
+    echo "Cluster name: $cluster_name"
     ;;
   apply-kafka-cluster-manifests)
     kubectl create namespace kafka
@@ -87,31 +112,7 @@ case "$1" in
       --topic test-topic \
       --bootstrap-server cluster-kafka-bootstrap:9092
     ;;
-  create-kafka-perf-test-topic)
-    kubectl exec -it kafka-cli -n kafka -- bin/kafka-topics.sh \
-    --create \
-    --topic test-topic-perf \
-    --partitions 3 \
-    --replication-factor 3 \
-    --bootstrap-server cluster-kafka-bootstrap:9092
-    ;;
-  run-kafka-topic-perf-test)
-    kubectl exec -it kafka-cli -n kafka -- bin/kafka-producer-perf-test.sh \
-      --topic test-topic-perf \
-      --num-records 100000000 \
-      --throughput -1 \
-      --producer-props bootstrap.servers=cluster-kafka-bootstrap:9092 \
-          acks=all \
-      --record-size 100 \
-      --print-metrics
-    ;;
-  verify-kafka-consumer-perf-test-topic)
-    kubectl exec -it kafka-cli -n kafka -- bin/kafka-consumer-perf-test.sh \
-      --topic test-topic-perf \
-      --messages 100000000 \
-      --broker-list bootstrap.servers=cluster-kafka-bootstrap.kafka.svc.cluster.local:9092 | \
-      jq -R .|jq -sr 'map(./",")|transpose|map(join(": "))[]'
-    ;;
+
   view-and-login-to-grafana-dashboard)
     echo "Grafana password is : $(aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text)"
     kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack
@@ -173,6 +174,61 @@ case "$1" in
     kubectl -n kafka get pod cluster-broker-0 -o wide
   ;;
   *)
-    echo "Usage: $0 {update-kubeconfig|get-nodes-core|get-nodes-kafka|get-strimzi-pod-sets|get-kafka-pods|get-all-kafka-namespace|apply-kafka-topic|get-kafka-topic|describe-kafka-topic|deploy-kafka-consumer|get-kafka-consumer-producer-steams-pods|verify-kafka-producer|verify-kafka-streams|verify-kafka-consumer|get-cruise-control-pods|apply-kafka-rebalance-manifest|describe-kafka-rebalance|annotate-kafka-rebalance-pod|describe-kafka-partitions|run-perf-test-on-kafka-topic|verify-kafka-consumer-perf-test-topic|view-and-login-to-grafana-dashboard|get-grafana-login-password|create-node-failure|validate-kafka-cluster-pod|verify-consumer-topic-failover-topic|create-test-failover-topic|describe-test-failover-topic|get-test-topic-failover-from-consumer|apply-kafka-cluster-manifests|create-kafka-cli-pod|update-kafka-replicas|verify-kafka-brokers|describe-kafka-topic-partitions|verify-kafka-producer|create-kafka-perf-test-topic|run-kafka-topic-perf-test|view-and-login-to-grafana-dashboard|get-grafana-login-password|verify-consumer-topic-failover-topic|create-kafka-failover-topic|describe-kafka-failover-topic|send-messages-to-kafka-failover-topic-from-producer|read-messages-from-kafka-failover-topic-consumer|get-kafka-cluster-pod}"
+    echo "Kafka Helper Script - General cluster management and validation commands"
+    echo "For load testing commands, use: ./load-test.sh"
+    echo ""
+    echo "Usage: $0 {COMMAND}"
+    echo ""
+    echo "Cluster Setup:"
+    echo "  get-cluster-name                     - Show the current kafka-on-eks cluster name"
+    echo "  update-kubeconfig                    - Update kubeconfig for kafka-on-eks cluster"
+    echo "  apply-kafka-cluster-manifests        - Apply Kafka cluster and monitoring manifests"
+    echo ""
+    echo "Node Management:"
+    echo "  get-nodes-core                       - Get core nodes"
+    echo "  get-nodes-kafka                      - Get Kafka nodes"
+    echo ""
+    echo "Kafka Resources:"
+    echo "  get-strimzi-pod-sets                 - Get Strimzi pod sets"
+    echo "  get-kafka-pods                       - Get Kafka pods"
+    echo "  get-all-kafka-namespace              - Get all resources in kafka namespace"
+    echo "  create-kafka-cli-pod                 - Create Kafka CLI pod for testing"
+    echo ""
+    echo "Topic Management:"
+    echo "  apply-kafka-topic                    - Apply Kafka topic manifests"
+    echo "  get-kafka-topic                      - Get Kafka topics"
+    echo "  describe-kafka-topic                 - Describe test topic"
+    echo "  describe-kafka-topic-partitions      - Describe topic partitions"
+    echo ""
+    echo "Producer/Consumer:"
+    echo "  deploy-kafka-consumer                - Deploy Kafka producers and consumers"
+    echo "  get-kafka-consumer-producer-steams-pods - Get producer/consumer/streams pods"
+    echo "  verify-kafka-producer                - Check producer logs"
+    echo "  verify-kafka-streams                 - Check streams logs"
+    echo "  verify-kafka-consumer                - Check consumer logs"
+    echo ""
+    echo "Rebalancing:"
+    echo "  get-cruise-control-pods              - Get Cruise Control pods"
+    echo "  apply-kafka-rebalance-manifest       - Apply rebalance manifest"
+    echo "  describe-kafka-rebalance             - Describe rebalance status"
+    echo "  annotate-kafka-rebalance-pod         - Approve rebalance"
+    echo ""
+    echo "Failover Testing:"
+    echo "  create-kafka-failover-topic          - Create failover test topic"
+    echo "  describe-kafka-failover-topic        - Describe failover topic"
+    echo "  verify-consumer-topic-failover-topic - Verify failover topic consumer"
+    echo "  send-messages-to-kafka-failover-topic-from-producer - Send messages to failover topic"
+    echo "  read-messages-from-kafka-failover-topic-consumer - Read messages from failover topic"
+    echo "  create-node-failure                  - Simulate node failure"
+    echo "  get-kafka-cluster-pod                - Get cluster broker pod"
+    echo "  validate-kafka-cluster-pod           - Validate cluster broker pod"
+    echo ""
+    echo "Configuration:"
+    echo "  update-kafka-replicas                - Update min.insync.replicas"
+    echo "  verify-kafka-brokers                 - Verify Kafka brokers"
+    echo ""
+    echo "Monitoring:"
+    echo "  view-and-login-to-grafana-dashboard  - Access Grafana dashboard"
+    echo "  get-grafana-login-password           - Get Grafana password"
     exit 1
 esac

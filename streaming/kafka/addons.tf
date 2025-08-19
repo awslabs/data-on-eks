@@ -111,6 +111,10 @@ module "eks_blueprints_addons" {
     chart_version       = "1.0.5"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
+    timeout             = 600  # 10 minutes
+    wait                = true
+    atomic              = true
+    cleanup_on_fail     = true
   }
   karpenter_enable_spot_termination          = true
   karpenter_enable_instance_profile_creation = true
@@ -142,7 +146,12 @@ module "eks_blueprints_addons" {
         storage_class_type  = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "48.1.1"
+    chart_version   = "48.1.1"
+    timeout         = 900  # 15 minutes
+    wait            = true
+    wait_for_jobs   = true
+    atomic          = true
+    cleanup_on_fail = true
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
@@ -197,7 +206,13 @@ module "eks_data_addons" {
       operating_system = "linux"
       node_group_type  = "core"
     })],
-    version = "0.43.0"
+    version         = "0.46.0"  # Latest version with EKS 1.33 compatibility
+    timeout         = 900  # 15 minutes
+    wait            = true
+    wait_for_jobs   = true
+    atomic          = true
+    cleanup_on_fail = true
+    max_history     = 3
   }
 
   #---------------------------------------
