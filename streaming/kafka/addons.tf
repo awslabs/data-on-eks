@@ -108,7 +108,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter = true
   karpenter = {
-    chart_version       = "1.0.5"
+    chart_version       = "1.6.0"  # Compatible with Kubernetes 1.33
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
     timeout             = 600  # 10 minutes
@@ -194,7 +194,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.34.0" # ensure to update this to the latest/desired version
+  version = "1.35.0" # Updated for better Kubernetes 1.33 support
 
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------------------------------
