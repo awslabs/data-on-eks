@@ -1,5 +1,5 @@
 locals {
-  teams = ["spark-team-a", "spark-team-b", "spark-team-c"] # Add more team names as needed
+  teams = ["spark-team-a", "spark-team-b", "spark-team-c", "spark-s3-express", "raydata"] # Add more team names as needed
 }
 
 resource "kubernetes_namespace_v1" "spark_team" {

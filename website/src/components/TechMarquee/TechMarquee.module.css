@@ -1,0 +1,195 @@
+/* ==========================================
+   TECH MARQUEE ANIMATION SECTION
+   ========================================== */
+
+.marqueeContainer {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  padding: 4rem 0;
+  background: linear-gradient(135deg,
+    rgba(37, 194, 160, 0.03) 0%,
+    rgba(20, 110, 180, 0.05) 25%,
+    rgba(99, 102, 241, 0.04) 50%,
+    rgba(16, 185, 129, 0.03) 75%,
+    rgba(6, 182, 212, 0.04) 100%);
+  overflow: hidden;
+  border-top: 1px solid rgba(37, 194, 160, 0.1);
+  border-bottom: 1px solid rgba(37, 194, 160, 0.1);
+  box-sizing: border-box;
+}
+
+[data-theme='dark'] .marqueeContainer {
+  background: linear-gradient(135deg,
+    rgba(37, 194, 160, 0.08) 0%,
+    rgba(20, 110, 180, 0.10) 25%,
+    rgba(99, 102, 241, 0.08) 50%,
+    rgba(16, 185, 129, 0.08) 75%,
+    rgba(6, 182, 212, 0.08) 100%);
+  border-top: 1px solid rgba(37, 194, 160, 0.2);
+  border-bottom: 1px solid rgba(37, 194, 160, 0.2);
+}
+
+.marqueeContent {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.marqueeRow {
+  display: flex;
+  gap: 5rem;
+  animation: marqueeScroll 50s linear infinite;
+  white-space: nowrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.marqueeRow[data-reverse="true"] {
+  animation-direction: reverse;
+  animation-duration: 40s;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.techItem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.75rem 3.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  min-width: 200px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.techItem:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme='dark'] .techItem {
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 0 40px rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .techItem:hover {
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.6),
+    0 15px 40px rgba(0, 0, 0, 0.4),
+    inset 0 3px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+    0 0 50px rgba(255, 255, 255, 0.1),
+    0 0 100px rgba(255, 255, 255, 0.05);
+  filter: brightness(1.25) saturate(1.4) contrast(1.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+
+.techName {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.025em;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(255, 255, 255, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.4);
+  line-height: 1.2;
+  position: relative;
+  z-index: 2;
+}
+
+/* Pause animation on hover for better UX */
+.marqueeContainer:hover .marqueeRow {
+  animation-play-state: paused;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 1024px) {
+  .marqueeContainer {
+    padding: 3rem 0;
+  }
+
+  .marqueeContent {
+    gap: 2.5rem;
+  }
+
+  .marqueeRow {
+    gap: 3rem;
+  }
+
+  .techItem {
+    padding: 1rem 2rem;
+  }
+
+  .techName {
+    font-size: 1rem;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .marqueeContainer {
+    padding: 2.5rem 0;
+  }
+
+  .marqueeContent {
+    gap: 2rem;
+  }
+
+  .marqueeRow {
+    gap: 2.5rem;
+  }
+
+  .techItem {
+    padding: 0.875rem 1.75rem;
+  }
+
+  .techName {
+    font-size: 0.95rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .marqueeContainer {
+    padding: 2rem 0;
+  }
+
+  .marqueeContent {
+    gap: 1.5rem;
+  }
+
+  .marqueeRow {
+    gap: 2rem;
+  }
+
+  .techItem {
+    padding: 0.75rem 1.5rem;
+  }
+
+  .techName {
+    font-size: 0.875rem;
+  }
+}

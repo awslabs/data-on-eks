@@ -40,3 +40,39 @@ output "grafana_secret_name" {
   description = "Grafana password secret name"
   value       = aws_secretsmanager_secret.grafana.name
 }
+
+################################################################################
+# S3 Directory Bucket
+################################################################################
+
+
+output "s3directory_bucket_name" {
+  description = "s3 directory bucket name"
+  value       = aws_s3_directory_bucket.spark_data_bucket_express.bucket
+}
+
+output "s3directory_bucket_region" {
+  description = "s3 directory bucket region"
+  value       = local.region
+}
+
+output "s3directory_bucket_zone" {
+  description = "s3 directory bucket availability zone"
+  value       = local.s3_express_zone_name
+}
+
+################################################################################
+# Ray Data Configuration
+################################################################################
+
+output "raydata_config" {
+  description = "Configuration for Ray Data processing"
+  value = var.enable_raydata ? {
+    namespace         = "raydata"
+    service_account   = "raydata" # Created by spark-team.tf
+    s3_prefix         = local.s3_prefix
+    iceberg_database  = local.iceberg_database
+    iceberg_warehouse = "s3://${module.s3_bucket.s3_bucket_id}/iceberg-warehouse/"
+    iam_role_arn      = module.spark_team_irsa["raydata"].iam_role_arn
+  } : null
+}

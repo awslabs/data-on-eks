@@ -40,6 +40,10 @@ module "eks" {
       most_recent              = true
     }
 
+    aws-mountpoint-s3-csi-driver = {
+      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
+    }
+
     metrics-server = {}
     amazon-cloudwatch-observability = {
       preserve                 = true
@@ -132,7 +136,7 @@ module "eks" {
       )
 
       min_size     = 3
-      max_size     = 9
+      max_size     = 3
       desired_size = 3
 
       instance_types = ["m5.xlarge"]
@@ -293,7 +297,7 @@ module "eks" {
 # EKS Amazon CloudWatch Observability Role
 #---------------------------------------------------------------
 resource "aws_iam_role" "cloudwatch_observability_role" {
-  name = "${local.name}-eks-cw-agent-role"
+  name_prefix = "${local.name}-eks-cw-agent-"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -325,7 +329,7 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attac
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
   source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.52"
+  version               = "~> 5.55"
   role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
   attach_ebs_csi_policy = true
   oidc_providers = {
@@ -335,4 +339,51 @@ module "ebs_csi_driver_irsa" {
     }
   }
   tags = local.tags
+}
+
+#---------------------------------------------------------------
+# IRSA for Mountpoint S3 CSI Driver
+#---------------------------------------------------------------
+module "s3_csi_driver_irsa" {
+  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version          = "~> 5.55"
+  role_name_prefix = format("%s-%s-", local.name, "s3-csi-driver")
+  role_policy_arns = {
+    # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
+    s3_access = aws_iam_policy.s3_irsa_access_policy.arn
+    #kms_access = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
+  }
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:s3-csi-driver-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+resource "aws_iam_policy" "s3_irsa_access_policy" {
+  name_prefix = "${local.name}-S3Access-"
+  path        = "/"
+  description = "S3 Access for Nodes"
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  # checkov:skip=CKV_AWS_288: Demo purpose IAM policy
+  # checkov:skip=CKV_AWS_290: Demo purpose IAM policy
+  # checkov:skip=CKV_AWS_289: Demo purpose IAM policy
+  # checkov:skip=CKV_AWS_355: Demo purpose IAM policy
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:*",
+          "s3express:*"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
 }

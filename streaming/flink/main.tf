@@ -96,6 +96,13 @@ module "eks" {
     }
   }
 
+  node_security_group_tags = merge(local.tags, {
+    # NOTE - if creating multiple security groups with this module, only tag the
+    # security group that Karpenter should utilize with the following tag
+    # (i.e. - at most, only one security group should have this tag in your account)
+    "karpenter.sh/discovery" = local.name
+  })
+
   eks_managed_node_groups = {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads

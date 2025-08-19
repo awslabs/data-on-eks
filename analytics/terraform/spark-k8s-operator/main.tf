@@ -35,10 +35,31 @@ provider "kubectl" {
 locals {
   name   = var.name
   region = var.region
-  azs    = slice(data.aws_availability_zones.available.names, 0, 2)
+  azs    = slice(data.aws_availability_zones.available.names, 0, var.az_count)
 
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
+
+  # Ray Data configuration
+  s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
+  iceberg_database = "raydata_spark_logs"
+
+  s3_express_supported_az_ids = [
+    "use1-az4", "use1-az5", "use1-az6", "usw2-az1", "usw2-az3", "usw2-az4", "apne1-az1", "apne1-az4", "eun1-az1", "eun1-az2", "eun1-az3"
+  ]
+
+  s3_express_az_ids = [
+    for az_id in data.aws_availability_zones.available.zone_ids :
+    az_id if contains(local.s3_express_supported_az_ids, az_id)
+  ]
+
+  s3_express_azs = [for zone_id in local.s3_express_az_ids : [
+    for az in data.aws_availability_zones.available.zone_ids :
+    data.aws_availability_zones.available.names[index(data.aws_availability_zones.available.zone_ids, az)] if az == zone_id
+  ][0]]
+
+  s3_express_zone_id   = local.s3_express_az_ids[0]
+  s3_express_zone_name = local.s3_express_azs[0]
 
   tags = {
     Blueprint  = local.name

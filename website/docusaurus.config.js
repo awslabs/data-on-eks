@@ -19,6 +19,12 @@ const config = {
   projectName: 'data-on-eks',
   githubHost: 'github.com',
 
+  // Enable experimental faster builds with Rspack and v4 future flags
+  future: {
+    experimental_faster: true,
+    v4: true,
+  },
+
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -43,6 +49,12 @@ const config = {
     ],
   ],
 
+  themes: ['@docusaurus/theme-mermaid'],
+
+  markdown: {
+    mermaid: true,
+  },
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -53,16 +65,7 @@ const config = {
           src: 'img/header-icon.png',
         },
         items: [
-          {
-            type: 'doc',
-            docId: 'migration/migration-announcement',
-            label: '🚨 Repo Split Update',
-            position: 'left',
-            className: 'navbar-highlight-link',
-          },
-          { type: 'doc', docId: 'introduction/intro', position: 'left', label: 'Introduction' },
-          { type: 'doc', docId: 'gen-ai/index', position: 'left', label: 'AI on EKS (🚨 Moving)' },
-          { type: 'doc', docId: 'blueprints/amazon-emr-on-eks/index', position: 'left', label: 'Blueprints' },
+          { type: 'doc', docId: 'blueprints/data-analytics/index', position: 'left', label: 'Blueprints' },
           { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices' },
           { type: 'doc', docId: 'benchmarks/emr-on-eks', position: 'left', label: 'Benchmarks' },
           { type: 'doc', docId: 'resources/intro', position: 'left', label: 'Resources' },
@@ -97,6 +100,18 @@ const config = {
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
+        additionalLanguages: ['bash', 'yaml', 'python', 'javascript', 'typescript', 'java', 'go', 'sql', 'json'],
+        magicComments: [
+          {
+            className: 'theme-code-block-highlighted-line',
+            line: 'highlight-next-line',
+            block: {start: 'highlight-start', end: 'highlight-end'},
+          },
+          {
+            className: 'code-block-error-line',
+            line: 'error-next-line',
+          },
+        ],
       },
     }),
 
