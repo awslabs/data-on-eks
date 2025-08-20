@@ -116,7 +116,7 @@ case "$1" in
   view-and-login-to-grafana-dashboard)
     echo "Open browser with local Grafana Web UI: http://localhost:8080/login"
     echo "Grafana username is : admin"
-    echo "Grafana password is : $(aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text)"
+    echo "Grafana password is : $(aws secretsmanager get-secret-value --secret-id kafka-on-eks-cfcc94-grafana --region $AWS_REGION --query "SecretString" --output text)"
     kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack
     ;;
   get-grafana-login-password)
