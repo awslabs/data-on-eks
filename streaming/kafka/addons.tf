@@ -217,7 +217,7 @@ module "eks_data_addons" {
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
+  #---------------------------------------g
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
     default = {
@@ -232,10 +232,10 @@ module "eks_data_addons" {
           - alias: "bottlerocket@latest"
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         securityGroupSelectorTerms:
           tags:
-            Name: ${module.eks.cluster_name}-node
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         instanceStorePolicy: RAID0
       nodePool:
         labels:
@@ -273,10 +273,10 @@ module "eks_data_addons" {
           - alias: "bottlerocket@latest"
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         securityGroupSelectorTerms:
           tags:
-            Name: ${module.eks.cluster_name}-node
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         instanceStorePolicy: RAID0
       nodePool:
         labels:
