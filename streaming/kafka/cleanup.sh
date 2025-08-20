@@ -43,12 +43,50 @@ kafka_instances=$(aws ec2 describe-instances \
   --query "Reservations[*].Instances[*].InstanceId" \
   --output text 2>/dev/null || echo "")
 
+# Method 5: Find instances with "karpenter-kafka" specifically
+karpenter_kafka_instances=$(aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=*karpenter-kafka*" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+  --query "Reservations[*].Instances[*].InstanceId" \
+  --output text 2>/dev/null || echo "")
+
+# Method 6: Find by karpenter.sh/provisioner-name tag (older Karpenter versions)
+karpenter_provisioner_instances=$(aws ec2 describe-instances \
+  --filters "Name=tag-key,Values=karpenter.sh/provisioner-name" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+  --query "Reservations[*].Instances[*].InstanceId" \
+  --output text 2>/dev/null || echo "")
+
+# Method 7: Find by NodeGroupType=kafka tag
+nodegroup_kafka_instances=$(aws ec2 describe-instances \
+  --filters "Name=tag:NodeGroupType,Values=kafka" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+  --query "Reservations[*].Instances[*].InstanceId" \
+  --output text 2>/dev/null || echo "")
+
+# Method 8: Find by launch template name containing "karpenter" or "kafka"
+echo "Searching for instances by launch template names..."
+launch_template_instances=$(aws ec2 describe-instances \
+  --filters "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+  --query "Reservations[*].Instances[?LaunchTemplate && (contains(LaunchTemplate.Name, 'karpenter') || contains(LaunchTemplate.Name, 'kafka'))].InstanceId" \
+  --output text 2>/dev/null || echo "")
+
 # Combine all instance IDs and remove duplicates
-all_instances="$karpenter_instances_1 $karpenter_instances_2 $karpenter_instances_3 $kafka_instances"
+all_instances="$karpenter_instances_1 $karpenter_instances_2 $karpenter_instances_3 $kafka_instances $karpenter_kafka_instances $karpenter_provisioner_instances $nodegroup_kafka_instances $launch_template_instances"
 unique_instances=$(echo $all_instances | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
 if [ -n "$unique_instances" ] && [ "$unique_instances" != " " ]; then
-  echo "Found instances to terminate: $unique_instances"
+  echo "Found instances to terminate:"
+  echo "Instance IDs: $unique_instances"
+  
+  # Show instance details for verification
+  echo "Instance details:"
+  for instance_id in $unique_instances; do
+    if [ -n "$instance_id" ]; then
+      instance_info=$(aws ec2 describe-instances --instance-ids $instance_id \
+        --query "Reservations[*].Instances[*].[InstanceId,Tags[?Key=='Name'].Value|[0],State.Name,InstanceType]" \
+        --output text 2>/dev/null || echo "$instance_id unknown unknown unknown")
+      echo "  $instance_info"
+    fi
+  done
+  echo ""
   
   # Terminate all instances
   for instance_id in $unique_instances; do

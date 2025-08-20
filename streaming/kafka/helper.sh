@@ -114,6 +114,8 @@ case "$1" in
     ;;
 
   view-and-login-to-grafana-dashboard)
+    echo "Open browser with local Grafana Web UI: http://localhost:8080/login"
+    echo "Grafana username is : admin"
     echo "Grafana password is : $(aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text)"
     kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack
     ;;
@@ -145,7 +147,11 @@ case "$1" in
     kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic
     ;;
   read-messages-from-kafka-failover-topic-consumer)
-    kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic --from-beginning
+    kubectl exec -it kafka-cli -n kafka -- bin/kafka-console-consumer.sh \
+      --topic test-topic-failover \
+      --bootstrap-server cluster-kafka-bootstrap:9092 \
+      --partition 0 \
+      --from-beginning
     ;;
   get-kafka-cluster-pod) 
     kubectl -n kafka get pod cluster-broker-0 -o wide
