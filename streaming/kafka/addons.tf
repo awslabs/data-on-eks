@@ -280,12 +280,8 @@ module "eks_data_addons" {
         instanceStorePolicy: RAID0
       nodePool:
         labels:
-          type: karpenter
-          NodeGroupType: kafka
-        taints:
-          - key: dedicated
-            value: kafka
-            effect: NoSchedule
+          - type: karpenter
+          - NodeGroupType: kafka
         requirements:
           - key: "kubernetes.io/arch"
             operator: In
