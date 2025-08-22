@@ -959,7 +959,7 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-grafana"
+  name_prefix             = "${local.name}-grafana-"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
