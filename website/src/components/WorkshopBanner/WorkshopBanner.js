@@ -26,7 +26,7 @@ const WorkshopBanner = () => {
          Featured AWS Workshops
          <span className={styles.titleIcon}>✨</span>
        </div>
-      
+
        <div className={styles.workshopCards}>
          <a
            href="https://aws-experience.com/emea/smb/events/series/get-hands-on-with-amazon-eks?trk=f26b398b-f6b5-458d-bbcc-ab6d18efa5a3&sc_channel=el"
