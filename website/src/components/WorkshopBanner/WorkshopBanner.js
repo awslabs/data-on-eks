@@ -56,7 +56,7 @@ const WorkshopBanner = () => {
            <div className={styles.cardContent}>
              <h3 className={styles.cardTitle}>Spark AI Agent Workshop</h3>
              <p className={styles.cardDescription}>
-               Build intelligent AI agents using Apache Spark and Generative AI on AWS
+               Building an Intelligent Debugging and Optimization AI Agent for Apache Spark on EKS
              </p>
              <div className={styles.cardBadge}>AI Agent Workshop</div>
            </div>
