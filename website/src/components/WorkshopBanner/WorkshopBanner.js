@@ -40,7 +40,7 @@ const WorkshopBanner = () => {
              <p className={styles.cardDescription}>
                Get hands-on with Amazon EKS and learn to run Apache Spark workloads at scale
              </p>
-             <div className={styles.cardBadge}>Live Workshop</div>
+             <div className={styles.cardBadge}>Instructor-led  Workshop</div>
            </div>
            <div className={styles.cardArrow}>→</div>
          </a>
