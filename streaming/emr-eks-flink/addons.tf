@@ -42,6 +42,7 @@ module "eks_blueprints_addons" {
     kube-proxy = {
       preserve = true
     }
+    eks-pod-identity-agent = {}
   }
 
   #---------------------------------------
@@ -78,24 +79,6 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
-  # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
-  enable_karpenter                  = true
-  karpenter_enable_spot_termination = true
-  karpenter = {
-    chart_version       = "v0.34.0"
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-  karpenter_node = {
-    iam_role_name            = "${local.name}-karpenter-node"
-    iam_role_use_name_prefix = false
-    iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-    }
-  }
-
-  #---------------------------------------
   # CloudWatch metrics for EKS
   #---------------------------------------
   enable_aws_cloudwatch_metrics = true
@@ -105,14 +88,73 @@ module "eks_blueprints_addons" {
 
 }
 
+#------------------------------
+# Karpenter
+#------------------------------
+module "karpenter" {
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "~> 20.24"
+
+  cluster_name          = module.eks.cluster_name
+  enable_v1_permissions = true
+
+  enable_pod_identity             = true
+  create_pod_identity_association = true
+
+  # Used to attach additional IAM policies to the Karpenter node IAM role
+  node_iam_role_additional_policies = {
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+
+  tags = local.tags
+
+  depends_on = [
+    module.eks
+  ]
+}
+
+# Deploy Karpenter using Helm
+resource "helm_release" "karpenter" {
+  namespace  = "kube-system"
+  name       = "karpenter"
+  repository = "oci://public.ecr.aws/karpenter"
+  chart      = "karpenter"
+  version    = "1.6.1"
+  wait       = false
+
+  values = [
+    <<-EOT
+    nodeSelector:
+      NodeGroupType: core
+    settings:
+      clusterName: ${module.eks.cluster_name}
+      clusterEndpoint: ${module.eks.cluster_endpoint}
+      interruptionQueue: ${module.karpenter.queue_name}
+    webhook:
+      enabled: false
+    EOT
+  ]
+
+  lifecycle {
+    ignore_changes = [
+      repository_password
+    ]
+  }
+
+  depends_on = [
+    module.karpenter
+  ]
+}
+
+
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
 #---------------------------------------------------------------
 module "eks_data_addons" {
-  depends_on = [module.flink_irsa_jobs, module.flink_irsa_operator]
+  depends_on = [module.flink_irsa_jobs, module.flink_irsa_operator, module.eks_blueprints_addons, helm_release.karpenter]
 
   source            = "aws-ia/eks-data-addons/aws"
-  version           = "1.33.0" # ensure to update this to the latest/desired version
+  version           = "1.37.1" # ensure to update this to the latest/desired version
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
@@ -122,6 +164,7 @@ module "eks_data_addons" {
   emr_flink_operator_helm_config = {
     repository               = "oci://public.ecr.aws/emr-on-eks"
     operatorExecutionRoleArn = module.flink_irsa_operator.iam_role_arn
+    version                  = "7.9.0"
   }
 
   #---------------------------------------------------------------
@@ -137,7 +180,7 @@ module "eks_data_addons" {
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
 
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        karpenterRole: ${split("/", module.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
             Name: "${module.eks.cluster_name}-private*"
@@ -193,7 +236,7 @@ module "eks_data_addons" {
       name: flink-graviton-memory-optimized
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
-        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        karpenterRole: ${split("/", module.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
             Name: "${module.eks.cluster_name}-private*"

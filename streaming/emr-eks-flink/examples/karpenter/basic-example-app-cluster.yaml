@@ -8,7 +8,7 @@ metadata:
   namespace: flink-team-a-ns
 spec:
   imagePullPolicy: Always
-  emrReleaseLabel: "emr-7.1.0-flink-latest"
+  emrReleaseLabel: "emr-7.9.0-flink-latest"
   flinkVersion: v1_18
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "2"
@@ -26,11 +26,11 @@ spec:
 
     jobmanager.scheduler: adaptive
     # Replace with s3 bucket in your own account
-    state.checkpoints.dir: s3://<ENTER_S3_BUCKET>/checkpoints
-    state.savepoints.dir: s3://<ENTER_S3_BUCKET>/savepoints
+    state.checkpoints.dir: s3://$S3_BUCKET/checkpoints
+    state.savepoints.dir: s3://$S3_BUCKET/savepoints
 
   # Replace this execution role ARN with your own
-  executionRoleArn: <<JOB_EXECUTION_ROLE_ARN>>
+  executionRoleArn: $FLINK_JOB_ROLE
 
   podTemplate:
     apiVersion: v1
@@ -43,7 +43,7 @@ spec:
 
   jobManager:
     # Replace with s3 bucket in your own account
-    storageDir: s3://<ENTER_S3_BUCKET>/data/basic-example-app-cluster/jobmanager
+    storageDir: s3://$S3_BUCKET/data/basic-example-app-cluster/jobmanager
     resource:
       memory: "2048m"
       cpu: 1
@@ -62,7 +62,7 @@ spec:
     savepointTriggerNonce: 0
   monitoringConfiguration:
     s3MonitoringConfiguration:
-      logUri: <ENTER_S3_BUCKET>/logs
+      logUri: $S3_BUCKET/logs
     cloudWatchMonitoringConfiguration:
        logGroupName: /aws/emr-flink/flink-team-a
     sideCarResources:
