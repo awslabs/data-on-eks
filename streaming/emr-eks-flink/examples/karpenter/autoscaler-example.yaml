@@ -32,7 +32,7 @@ spec:
     kubernetes.taskmanager.local-recovery.persistentVolumeClaim.sizeLimit: 10Gi
     execution.checkpointing.externalized-checkpoint-retention: RETAIN_ON_CANCELLATION
     # log-based incremental checkpoint
-    state.backend.changelog.enabled: "false" 
+    state.backend.changelog.enabled: "false"
     state.backend.changelog.storage: filesystem
     dstl.dfs.base-path: s3://${S3_BUCKET}/flink/autoscaling/changelog
     state.backend: rocksdb
@@ -82,7 +82,7 @@ spec:
     # if you have your job jar in S3 bucket you can use that path as well
     jarURI: local:///opt/flink/examples/streaming/AutoscalingExample.jar
     entryClass: org.apache.flink.streaming.examples.autoscaling.LoadSimulationPipeline
-    args: 
+    args:
       - "--maxLoadPerTask"
       - "1;2;4;8;16;"
       - "--repeatsAfterMinutes"

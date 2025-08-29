@@ -272,7 +272,7 @@ export FLINK_JOB_ROLE=$( terraform output flink_job_execution_role_arn )
 ```
 Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
 ```bash
-export S3_BUCKET="${$( terraform output flink_operator_bucket )//\"/}" 
+export S3_BUCKET="${$( terraform output flink_operator_bucket )//\"/}"
 ```
 
 Navigate to example directory and submit the Flink job.
@@ -335,7 +335,7 @@ export FLINK_JOB_ROLE=$( terraform output flink_job_execution_role_arn )
 ```
 Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
 ```bash
-export S3_BUCKET="${$( terraform output flink_operator_bucket )//\"/}" 
+export S3_BUCKET="${$( terraform output flink_operator_bucket )//\"/}"
 ```
 
 Navigate to example directory and submit the Flink job.
@@ -378,7 +378,7 @@ job:
     # if you have your job jar in S3 bucket you can use that path as well
     jarURI: local:///opt/flink/examples/streaming/AutoscalingExample.jar
     entryClass: org.apache.flink.streaming.examples.autoscaling.LoadSimulationPipeline
-    args: 
+    args:
       - "--maxLoadPerTask"
       - "1;2;4;8;16;"
       - "--repeatsAfterMinutes"
@@ -391,7 +391,7 @@ Deploy the job with the kubectl deploy command.
 kubectl apply -f autoscaler-example.yaml
 ```
 
-Monitor the job status using the below command. You should see the new nodes triggered by the karpenter and the YuniKorn will schedule Job manager pods and two Taskmanager pods.  As the load increases, autoscaler changes the paralellism of the tasks and more task manager pods are added as needed: 
+Monitor the job status using the below command. You should see the new nodes triggered by the karpenter and the YuniKorn will schedule Job manager pods and two Taskmanager pods.  As the load increases, autoscaler changes the paralellism of the tasks and more task manager pods are added as needed:
 
 ```bash
 NAME                                             READY   STATUS    RESTARTS   AGE

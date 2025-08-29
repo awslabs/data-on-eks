@@ -36,7 +36,7 @@ module "eks" {
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
   vpc_id                          = module.vpc.vpc_id
   subnet_ids                      = module.vpc.private_subnets
-  
+
   # Add the IAM identity that terraform is using as a cluster admin
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
@@ -99,7 +99,7 @@ module "eks" {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
-    
+
     core_node_group = {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
@@ -132,7 +132,7 @@ module "eks" {
         Name = "core-node-grp"
       }
     }
-    
-    
+
+
   }
 }
