@@ -81,7 +81,7 @@ spec:
   job:
     # if you have your job jar in S3 bucket you can use that path as well
     jarURI: local:///opt/flink/examples/streaming/AutoscalingExample.jar
-    entryClass: LoadSimulationPipeline
+    entryClass: org.apache.flink.streaming.examples.autoscaling.LoadSimulationPipeline
     args: 
       - "--maxLoadPerTask"
       - "1;2;4;8;16;"
