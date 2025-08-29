@@ -34,7 +34,7 @@ spec:
     # log-based incremental checkpoint
     state.backend.changelog.enabled: "false" 
     state.backend.changelog.storage: filesystem
-    dstl.dfs.base-path: s3://${BUCKET_NAME}/flink/autoscaling/changelog
+    dstl.dfs.base-path: s3://${S3_BUCKET}/flink/autoscaling/changelog
     state.backend: rocksdb
     state.backend.incremental: "true"
     # Fine-grained recovery
@@ -80,8 +80,8 @@ spec:
 
   job:
     # if you have your job jar in S3 bucket you can use that path as well
-    jarURI: $AUTOSCALING_JAR
-    entryClass: autoscaling.LoadSimulationPipeline
+    jarURI: local:///opt/flink/examples/streaming/AutoscalingExample.jar
+    entryClass: LoadSimulationPipeline
     args: 
       - "--maxLoadPerTask"
       - "1;2;4;8;16;"
