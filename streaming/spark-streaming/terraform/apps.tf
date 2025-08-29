@@ -57,7 +57,8 @@ resource "aws_iam_policy" "consumer_s3_kafka" {
 }
 
 module "producer_iam_role" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.55"
 
   role_name = "producer-irsa"
 

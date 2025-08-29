@@ -141,7 +141,7 @@ In this step, we create the manifest file for the SparkApplication object to sub
 envsubst < beamapp.yaml > beamapp.yaml
 ```
 
-This command will replace the env varibles in file beamapp.yaml.
+This command will replace the env variables in file beamapp.yaml.
 
 ### Step 4: Execute Spark Job
 

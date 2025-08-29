@@ -10,10 +10,10 @@ on:
       - '**.yaml'
 
 env:
-  TERRAFORM_DOCS_VERSION: v0.16.0
-  TFSEC_VERSION: v1.22.0
+  TERRAFORM_DOCS_VERSION: v0.20.0
+  TFSEC_VERSION: v1.28.14
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
-  TFLINT_VERSION: v0.50.2
+  TFLINT_VERSION: v0.56.0
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -27,11 +27,11 @@ jobs:
       directories: ${{ steps.dirs.outputs.directories }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get root directories
         id: dirs
-        uses: clowdhaus/terraform-composite-actions/directories@v1.9.0
+        uses: clowdhaus/terraform-composite-actions/directories@v1.11.1
 
   preCommitMinVersions:
     name: Min TF pre-commit
@@ -45,9 +45,9 @@ jobs:
         run: rm -rf $(which terraform)
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         id: changes
         with:
           # We only need to check Terraform files for the current directory
@@ -59,25 +59,30 @@ jobs:
 
       - name: Config Terraform plugin cache
         if: steps.changes.outputs.src== 'true'
-        run: mkdir --parents ${{ env.TERRAFORM_DOCS_VERSION }}
+        run: mkdir --parents ${{ env.TF_PLUGIN_CACHE_DIR }}
 
-      - name: Cache Terraform
-        uses: actions/cache@v3
+      - name: Restore Terraform Cache
+        id: restore-cache
+        uses: actions/cache/restore@v4
         if: steps.changes.outputs.src== 'true'
         with:
-          path: ${{ env.TERRAFORM_DOCS_VERSION }}
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
-          restore-keys: ${{ runner.os }}-terraform-
+          # restore latest matching cache to the tf cache dir
+          # matches exact branch and versions hash, then any cache from the same branch, then any cache from any branch
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-terraform-${{ github.head_ref }}-${{ hashFiles('**/versions.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-${{ github.head_ref }}
+            ${{ runner.os }}-terraform-
 
       - name: Terraform min/max versions
-        uses: clowdhaus/terraform-min-max@v1.3.1
+        uses: clowdhaus/terraform-min-max@v1.3.2
         if: steps.changes.outputs.src== 'true'
         id: minMax
         with:
           directory: ${{ matrix.directory }}
 
       - name: Pre-commit Terraform ${{ steps.minMax.outputs.minVersion }}
-        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.9.0
+        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.11.1
         # Run only validate pre-commit check on min version supported
         if: ${{ matrix.directory !=  '.' && steps.changes.outputs.src== 'true' }}
         with:
@@ -85,7 +90,7 @@ jobs:
           args: 'terraform_validate --color=always --show-diff-on-failure --files ${{ matrix.directory }}/*'
 
       - name: Pre-commit Terraform ${{ steps.minMax.outputs.minVersion }}
-        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.9.0
+        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.11.1
         # Run only validate pre-commit check on min version supported
         if: ${{ matrix.directory ==  '.' && steps.changes.outputs.src== 'true' }}
         with:
@@ -101,9 +106,9 @@ jobs:
         run: rm -rf $(which terraform)
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -112,15 +117,20 @@ jobs:
 
       - name: Config Terraform plugin cache
         if: steps.changes.outputs.src== 'true'
-        run: mkdir --parents ${{ env.TERRAFORM_DOCS_VERSION }}
+        run: mkdir --parents ${{ env.TF_PLUGIN_CACHE_DIR }}
 
-      - name: Cache Terraform
-        uses: actions/cache@v3
+      - name: Restore Terraform Cache
+        id: restore-cache
+        uses: actions/cache/restore@v4
         if: steps.changes.outputs.src== 'true'
         with:
+          # restore latest matching cache to the tf cache dir
+          # matches exact branch and versions hash, then any cache from the same branch, then any cache from any branch
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
-          restore-keys: ${{ runner.os }}-terraform-
+          key: ${{ runner.os }}-terraform-${{ github.head_ref }}-${{ hashFiles('**/versions.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-${{ github.head_ref }}
+            ${{ runner.os }}-terraform-
 
       - name: Install tfsec
         if: steps.changes.outputs.src== 'true'
@@ -128,13 +138,22 @@ jobs:
 
       - name: Terraform min/max versions
         id: minMax
-        uses: clowdhaus/terraform-min-max@v1.3.1
+        uses: clowdhaus/terraform-min-max@v1.3.2
         if: steps.changes.outputs.src== 'true'
 
       - name: Pre-commit Terraform ${{ steps.minMax.outputs.maxVersion }}
-        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.9.0
+        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.11.1
         if: steps.changes.outputs.src== 'true'
         with:
           terraform-version: ${{ steps.minMax.outputs.maxVersion }}
           terraform-docs-version: ${{ env.TERRAFORM_DOCS_VERSION }}
           tflint-version: ${{ env.TFLINT_VERSION }}
+
+      - name: Save Terraform Cache
+        uses: actions/cache/save@v4
+        if: steps.changes.outputs.src== 'true'
+        with:
+          # caches cannot be updated, we can only save this hash once,
+          # after validating all blueprints we should have all plugins in cache.
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-terraform-${{ github.head_ref }}-${{ hashFiles('**/versions.tf') }}

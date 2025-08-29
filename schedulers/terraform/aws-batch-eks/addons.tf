@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 module "ebs_csi_irsa_role" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = ">= 5.44"
+  version = "~> 5.55"
 
   role_name = join("_", [var.eks_cluster_name, "ebs-csi"])
 
@@ -23,7 +23,7 @@ module "ebs_csi_irsa_role" {
 #---------------------------------------------------------------
 module "cloudwatch_irsa_role" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = ">= 5.44"
+  version = "~> 5.55"
 
   role_name = join("_", [var.eks_cluster_name, "cloudwatch"])
 
