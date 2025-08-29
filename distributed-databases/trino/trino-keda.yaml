@@ -2,7 +2,6 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: keda-scaler-trino-worker
-#  namespace: ${trino_namespace}
   namespace: trino
 spec:
   scaleTargetRef:

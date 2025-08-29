@@ -107,8 +107,8 @@ additionalConfigProperties:
   - "exchange.compression-enabled=true"
   - "query.remote-task.max-error-duration=1m"
   - "query.max-hash-partition-count=100"   # Updated from query.hash-partition-count
-  - "spill-enabled=false"                   # Updated from experimental.spill-enabled
-  - "spiller-spill-path=/tmp/spill"        # Chagne this to SSD mount for faster
+  - "spill-enabled=false"                  # Updated from experimental.spill-enabled
+  - "spiller-spill-path=/tmp/spill"        # Change this to SSD mount for faster
   - "memory.heap-headroom-per-node=1.6GB"
   - "optimizer.join-reordering-strategy=AUTOMATIC"  # Updated from join-reordering-strategy
   - "query.max-history=100"
