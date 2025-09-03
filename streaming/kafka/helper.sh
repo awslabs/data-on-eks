@@ -68,7 +68,7 @@ case "$1" in
     kubectl apply -f examples/kafka-producers-consumers.yaml
     ;;
   get-kafka-consumer-producer-steams-pods)
-    kubectl -n kafka get pod -l 'app in (java-kafka-producer,java-kafka-streams,java-kafka-consumer)'
+    kubectl -n kafka get pod -l 'app in (java-kafka-producer,java-kafka-streams,java-kafka-consumer)' --watch
     ;;
   update-kafka-replicas)
     # Set the desired min.insync.replicas value
