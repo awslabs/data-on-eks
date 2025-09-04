@@ -31,7 +31,7 @@ case "$1" in
     ;;
   apply-kafka-cluster-manifests)
     kubectl create namespace kafka
-    kubectl apply -f kafka-manifests/
+    kubectl apply -f kafka-manifests/kafka-cluster.yml
     kubectl apply -f monitoring-manifests/
   ;;
   get-nodes-core)
