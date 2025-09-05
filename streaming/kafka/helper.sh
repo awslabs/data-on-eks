@@ -31,7 +31,7 @@ case "$1" in
     ;;
   apply-kafka-cluster-manifests)
     kubectl create namespace kafka
-    kubectl apply -f kafka-manifests/kafka-cluster.yml
+    kubectl apply -f kafka-manifests/
     kubectl apply -f monitoring-manifests/
   ;;
   get-nodes-core)
@@ -144,7 +144,7 @@ case "$1" in
       --bootstrap-server cluster-kafka-bootstrap:9092
     ;;
   send-messages-to-kafka-failover-topic-from-producer)
-    kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic
+    kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic-failover
     ;;
   read-messages-from-kafka-failover-topic-consumer)
     kubectl exec -it kafka-cli -n kafka -- bin/kafka-console-consumer.sh \
@@ -178,7 +178,35 @@ case "$1" in
   ;;
   validate-kafka-cluster-pod)
     kubectl -n kafka get pod cluster-broker-0 -o wide
-  ;;
+    ;;
+  debug-kafka-connectivity)
+    echo "=== Kafka Connectivity Debug ==="
+    echo "1. Checking Kafka brokers:"
+    kubectl -n kafka get pod -l app.kubernetes.io/name=kafka
+    echo ""
+    echo "2. Checking Kafka service:"
+    kubectl -n kafka get svc cluster-kafka-bootstrap
+    echo ""
+    echo "3. Testing connectivity from kafka-cli pod:"
+    kubectl -n kafka exec kafka-cli -- bin/kafka-broker-api-versions.sh --bootstrap-server cluster-kafka-bootstrap:9092 2>/dev/null || echo "Failed to connect to Kafka brokers"
+    echo ""
+    echo "4. Listing all topics:"
+    kubectl -n kafka exec kafka-cli -- bin/kafka-topics.sh --list --bootstrap-server cluster-kafka-bootstrap:9092 2>/dev/null || echo "Failed to list topics"
+    echo ""
+    echo "5. Checking test-topic-failover details:"
+    kubectl -n kafka exec kafka-cli -- bin/kafka-topics.sh --describe --topic test-topic-failover --bootstrap-server cluster-kafka-bootstrap:9092 2>/dev/null || echo "Topic test-topic-failover does not exist"
+    ;;
+  test-kafka-producer-consumer)
+    echo "=== Testing Kafka Producer/Consumer Flow ==="
+    echo "1. First, ensure the failover topic exists:"
+    ./helper.sh create-kafka-failover-topic
+    echo ""
+    echo "2. Send a test message:"
+    echo "test-message-$(date +%s)" | kubectl -n kafka exec -i kafka-cli -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic-failover
+    echo ""
+    echo "3. Read messages from the topic:"
+    timeout 10s kubectl -n kafka exec kafka-cli -- bin/kafka-console-consumer.sh --topic test-topic-failover --bootstrap-server cluster-kafka-bootstrap:9092 --from-beginning --timeout-ms 8000 2>/dev/null || echo "No messages found or timeout reached"
+    ;;
   *)
     echo "Kafka Helper Script - General cluster management and validation commands"
     echo "For load testing commands, use: ./load-test.sh"
@@ -228,6 +256,10 @@ case "$1" in
     echo "  create-node-failure                  - Simulate node failure"
     echo "  get-kafka-cluster-pod                - Get cluster broker pod"
     echo "  validate-kafka-cluster-pod           - Validate cluster broker pod"
+    echo ""
+    echo "Debugging:"
+    echo "  debug-kafka-connectivity             - Debug Kafka broker connectivity and topics"
+    echo "  test-kafka-producer-consumer         - End-to-end test of producer/consumer flow"
     echo ""
     echo "Configuration:"
     echo "  update-kafka-replicas                - Update min.insync.replicas"
