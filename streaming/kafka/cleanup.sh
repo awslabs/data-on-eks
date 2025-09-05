@@ -14,10 +14,12 @@ else
   echo "Using existing AWS_REGION: $AWS_REGION"
 fi
 
-echo "Deleting ALL EC2 instances created by Karpenter..."
-
-# Find ALL Karpenter instances using multiple tag patterns
-echo "Finding Karpenter instances by various tags..."
+# Function to delete EC2 instances (called after EKS cluster deletion)
+delete_ec2_instances() {
+  echo "=== Deleting ALL EC2 instances created by Karpenter ==="
+  
+  # Find ALL Karpenter instances using multiple tag patterns
+  echo "Finding Karpenter instances by various tags..."
 
 # Method 1: Find by karpenter.sh/nodepool tag (any value)
 karpenter_instances_1=$(aws ec2 describe-instances \
@@ -68,9 +70,42 @@ launch_template_instances=$(aws ec2 describe-instances \
   --query "Reservations[*].Instances[?LaunchTemplate && (contains(LaunchTemplate.Name, 'karpenter') || contains(LaunchTemplate.Name, 'kafka'))].InstanceId" \
   --output text 2>/dev/null || echo "")
 
+# Method 9: Find instances with exact "karpenter-kafka" pattern
+karpenter_kafka_exact=$(aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=karpenter-kafka*" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+  --query "Reservations[*].Instances[*].InstanceId" \
+  --output text 2>/dev/null || echo "")
+
+# Method 10: Find by karpenter.k8s.aws tags (newer Karpenter versions)
+karpenter_k8s_instances=$(aws ec2 describe-instances \
+  --filters "Name=tag-key,Values=karpenter.k8s.aws/nodepool" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+  --query "Reservations[*].Instances[*].InstanceId" \
+  --output text 2>/dev/null || echo "")
+
+# Method 11: Broad search for any instance with kafka-on-eks in tags
+eks_kafka_instances=$(aws ec2 describe-instances \
+  --filters "Name=tag-value,Values=*kafka-on-eks*" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+  --query "Reservations[*].Instances[*].InstanceId" \
+  --output text 2>/dev/null || echo "")
+
 # Combine all instance IDs and remove duplicates
-all_instances="$karpenter_instances_1 $karpenter_instances_2 $karpenter_instances_3 $kafka_instances $karpenter_kafka_instances $karpenter_provisioner_instances $nodegroup_kafka_instances $launch_template_instances"
+all_instances="$karpenter_instances_1 $karpenter_instances_2 $karpenter_instances_3 $kafka_instances $karpenter_kafka_instances $karpenter_provisioner_instances $nodegroup_kafka_instances $launch_template_instances $karpenter_kafka_exact $karpenter_k8s_instances $eks_kafka_instances"
 unique_instances=$(echo $all_instances | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
+# Debug: Show what each method found
+echo "Debug - Instance discovery results:"
+echo "  Method 1 (karpenter.sh/nodepool tag): $karpenter_instances_1"
+echo "  Method 2 (name contains karpenter): $karpenter_instances_2"
+echo "  Method 3 (karpenter.sh/cluster tag): $karpenter_instances_3"
+echo "  Method 4 (name contains kafka): $kafka_instances"
+echo "  Method 5 (name contains karpenter-kafka): $karpenter_kafka_instances"
+echo "  Method 6 (karpenter.sh/provisioner-name): $karpenter_provisioner_instances"
+echo "  Method 7 (NodeGroupType=kafka): $nodegroup_kafka_instances"
+echo "  Method 8 (launch template): $launch_template_instances"
+echo "  Method 9 (exact karpenter-kafka pattern): $karpenter_kafka_exact"
+echo "  Method 10 (karpenter.k8s.aws tags): $karpenter_k8s_instances"
+echo "  Method 11 (kafka-on-eks in any tag): $eks_kafka_instances"
+echo "  Combined unique instances: $unique_instances"
 
 if [ -n "$unique_instances" ] && [ "$unique_instances" != " " ]; then
   echo "Found instances to terminate:"
@@ -127,8 +162,24 @@ if [ -n "$unique_instances" ] && [ "$unique_instances" != " " ]; then
   echo "Waiting additional 30 seconds for ENI cleanup..."
   sleep 30
 else
-  echo "No Karpenter or Kafka instances found to terminate"
+  echo "No Karpenter or Kafka instances found with automatic detection"
+  echo ""
+  echo "Showing ALL instances in region for manual verification:"
+  echo "Looking for instances that might be related to kafka-on-eks..."
+  
+  all_instances_manual=$(aws ec2 describe-instances \
+    --filters "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+    --query "Reservations[*].Instances[*].[InstanceId,Tags[?Key=='Name'].Value|[0],State.Name,InstanceType,LaunchTime]" \
+    --output table 2>/dev/null || echo "Failed to list instances")
+  
+  echo "$all_instances_manual"
+  echo ""
+  echo "If you see kafka-related instances above, you can terminate them manually:"
+  echo "  aws ec2 terminate-instances --instance-ids <instance-id-1> <instance-id-2> ..."
 fi
+}
+
+echo "Skipping EC2 instance deletion at this stage - will delete after EKS cluster is removed to prevent Karpenter from recreating them..."
 
 echo "Cleaning up KMS aliases that might conflict..."
 # Find and delete KMS aliases that match the kafka-on-eks pattern
@@ -206,6 +257,10 @@ if [ -n "$remaining_clusters" ]; then
 else
   echo "No remaining EKS clusters found"
 fi
+
+echo "=== Now deleting EC2 instances after EKS cluster removal ==="
+# Call the EC2 deletion function now that EKS cluster is gone
+delete_ec2_instances
 
 echo "Deleting any remaining EC2 resources..."
 
