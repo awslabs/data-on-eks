@@ -1,7 +1,16 @@
 #!/bin/bash
 
-read -p "Enter the region: " region
-export AWS_DEFAULT_REGION=$region
+# Check if AWS_REGION is already set
+if [ -z "$AWS_REGION" ]; then
+  read -p "Enter the AWS region: " region
+  export AWS_REGION=$region
+  export AWS_DEFAULT_REGION=$region
+  echo "AWS_REGION set to: $AWS_REGION"
+else
+  region=$AWS_REGION
+  export AWS_DEFAULT_REGION=$AWS_REGION
+  echo "Using existing AWS_REGION: $AWS_REGION"
+fi
 
 # List of Terraform modules to apply in sequence
 targets=(
@@ -12,8 +21,16 @@ targets=(
   "module.eks_data_addons"
 )
 
-# Initialize Terraform
-terraform init --upgrade
+# Clean up any existing state issues and reinitialize Terraform
+echo "Cleaning up Terraform cache and reinitializing..."
+rm -rf .terraform.lock.hcl
+rm -rf .terraform/modules
+rm -rf .terraform/providers
+rm -rf .terraform
+
+# Force a clean initialization with provider upgrade
+echo "Performing clean Terraform initialization..."
+terraform init -upgrade -reconfigure
 
 # Apply modules in sequence
 for target in "${targets[@]}"
