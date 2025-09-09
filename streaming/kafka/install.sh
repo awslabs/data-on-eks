@@ -25,7 +25,12 @@ targets=(
 echo "Cleaning up Terraform cache and reinitializing..."
 rm -rf .terraform.lock.hcl
 rm -rf .terraform/modules
-terraform init --upgrade
+rm -rf .terraform/providers
+rm -rf .terraform
+
+# Force a clean initialization with provider upgrade
+echo "Performing clean Terraform initialization..."
+terraform init -upgrade -reconfigure
 
 # Apply modules in sequence
 for target in "${targets[@]}"

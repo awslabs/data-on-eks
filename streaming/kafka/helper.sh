@@ -13,6 +13,7 @@ get_cluster_name() {
   echo $cluster_name
 }
 
+
 case "$1" in
   update-kubeconfig)
     cluster_name=$(get_cluster_name)
@@ -116,11 +117,23 @@ case "$1" in
   view-and-login-to-grafana-dashboard)
     echo "Open browser with local Grafana Web UI: http://localhost:8080/login"
     echo "Grafana username is : admin"
-    echo "Grafana password is : $(aws secretsmanager get-secret-value --secret-id kafka-on-eks-cfcc94-grafana --region $AWS_REGION --query "SecretString" --output text)"
+
+    # Get AWS Account ID from STS
+    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+    # Create encoded ID using sha256
+    ENCODED_ID=$(echo -n $AWS_ACCOUNT_ID | sha256sum | cut -c1-6)
+    # Use it in the command
+    echo "Grafana password is : $(aws secretsmanager get-secret-value --secret-id kafka-on-eks-${ENCODED_ID}-grafana --region $AWS_REGION --query "SecretString" --output text)"
+
     kubectl port-forward svc/kube-prometheus-stack-grafana 8080:80 -n kube-prometheus-stack
     ;;
   get-grafana-login-password)
-    aws secretsmanager get-secret-value --secret-id kafka-on-eks-grafana --region $AWS_REGION --query "SecretString" --output text
+    # Get AWS Account ID from STS
+    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+    # Create encoded ID using sha256
+    ENCODED_ID=$(echo -n $AWS_ACCOUNT_ID | sha256sum | cut -c1-6)
+    # Use it in the command
+    echo "Grafana password is : $(aws secretsmanager get-secret-value --secret-id kafka-on-eks-${ENCODED_ID}-grafana --region $AWS_REGION --query "SecretString" --output text)"
     ;;
   verify-consumer-topic-failover-topic)
     kubectl exec -it kafka-cli -n kafka -- bin/kafka-console-consumer.sh \
