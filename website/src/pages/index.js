@@ -33,9 +33,13 @@ function HomepageHeader() {
            {siteConfig.tagline}
          </p>
          <p className={styles.heroDescription}>
-           The comprehensive set of tools for running data workloads on Amazon EKS.
+           <Translate id="homepage.hero.description">
+             The comprehensive set of tools for running data workloads on Amazon EKS.
+           </Translate>
            <br />
-           Build, deploy, and scale your data infrastructure with confidence.
+           <Translate id="homepage.hero.subtitle">
+             Build, deploy, and scale your data infrastructure with confidence.
+           </Translate>
          </p>
        </div>
 
@@ -45,7 +49,9 @@ function HomepageHeader() {
          <Link
            className={clsx(styles.primaryButton)}
            to="/docs/blueprints/data-analytics">
-           <span>Get Started</span>
+           <span>
+             <Translate id="homepage.cta.getStarted">Get Started</Translate>
+           </span>
            <svg className={styles.buttonIcon} width="20" height="20" viewBox="0 0 20 20" fill="none">
              <path d="M10.75 8.75L14.25 12.25L10.75 15.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
              <path d="M19.25 12.25H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -54,7 +60,7 @@ function HomepageHeader() {
          <Link
            className={clsx(styles.secondaryButton)}
            to="https://awslabs.github.io/ai-on-eks/">
-           Explore AI on EKS
+           <Translate id="homepage.cta.exploreAI">Explore AI on EKS</Translate>
          </Link>
        </div>
 
@@ -63,15 +69,21 @@ function HomepageHeader() {
        <div className={styles.trustIndicators}>
          <div className={styles.trustItem}>
            <span className={styles.trustNumber}>30+</span>
-           <span className={styles.trustLabel}>Ready-to-use Blueprints</span>
+           <span className={styles.trustLabel}>
+             <Translate id="homepage.trust.blueprints">Ready-to-use Blueprints</Translate>
+           </span>
          </div>
          <div className={styles.trustItem}>
            <span className={styles.trustNumber}>700+</span>
-           <span className={styles.trustLabel}>GitHub Stars</span>
+           <span className={styles.trustLabel}>
+             <Translate id="homepage.trust.stars">GitHub Stars</Translate>
+           </span>
          </div>
          <div className={styles.trustItem}>
            <span className={styles.trustNumber}>AWS</span>
-           <span className={styles.trustLabel}>Official Project</span>
+           <span className={styles.trustLabel}>
+             <Translate id="homepage.trust.official">Official Project</Translate>
+           </span>
          </div>
        </div>
      </div>
@@ -91,7 +103,9 @@ function HomepageHeader() {
 function DataOnEKSHeader() {
  return (
    <div className={styles.dataOnEKSHeader}>
-     <h2 className={styles.spotlightTitle}>Featured Videos</h2>
+     <h2 className={styles.spotlightTitle}>
+       <Translate id="homepage.features.featuredVideos">Featured Videos</Translate>
+     </h2>
    </div>
  );
 }

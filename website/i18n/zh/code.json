@@ -1,10 +1,66 @@
 {
+  "homepage.hero.description": {
+    "message": "在 Amazon EKS 上运行数据工作负载的综合工具集。",
+    "description": "Hero description on homepage"
+  },
+  "homepage.hero.subtitle": {
+    "message": "满怀信心地构建、部署和扩展您的数据基础设施。",
+    "description": "Hero subtitle on homepage"
+  },
+  "homepage.cta.getStarted": {
+    "message": "开始使用",
+    "description": "Get Started button text"
+  },
+  "homepage.cta.exploreAI": {
+    "message": "探索 AI on EKS",
+    "description": "Explore AI on EKS button text"
+  },
+  "homepage.trust.blueprints": {
+    "message": "即用型蓝图",
+    "description": "Ready-to-use Blueprints trust indicator"
+  },
+  "homepage.trust.stars": {
+    "message": "GitHub 星标",
+    "description": "GitHub Stars trust indicator"
+  },
+  "homepage.trust.official": {
+    "message": "AWS 官方项目",
+    "description": "AWS Official Project trust indicator"
+  },
+  "homepage.features.featuredVideos": {
+    "message": "精选视频",
+    "description": "Featured Videos section title"
+  },
+  "homepage.features.workflowOrchestration.title": {
+    "message": "工作流编排",
+    "description": "Title for Workflow Orchestration feature"
+  },
+  "homepage.features.workflowOrchestration.description": {
+    "message": "精确编排复杂的数据工作流。部署 Apache Airflow、Argo Workflows 和 Amazon MWAA 来自动化 ETL 管道、ML 训练和数据质量检查。再也不会错过依赖关系。",
+    "description": "Description for Workflow Orchestration feature"
+  },
+  "homepage.features.whatIsDataOnEKS": {
+    "message": "什么是 Data on EKS？",
+    "description": "What is Data on EKS section title"
+  },
+  "homepage.features.whatIsDataOnEKS.description": {
+    "message": "Data on EKS 是一个开源的、企业就绪的框架，用于在 Amazon EKS 上运行可扩展的数据平台。它将开源数据工具与 AWS 基础设施集成，并提供 Terraform 和 ArgoCD 模板、经过验证的蓝图、性能基准测试和最佳实践。专为规模和弹性而构建，它帮助团队满怀信心地在 EKS 上部署和操作数千个节点的复杂数据工作负载。",
+    "description": "What is Data on EKS section description"
+  },
+  "homepage.features.learnMore": {
+    "message": "了解更多",
+    "description": "Learn more link text"
+  },
+  "homepage.features.distributedDatabases.description": {
+    "message": "随时随地查询任何内容。部署 Trino、Presto 和 ClickHouse，在数据湖、数据仓库和实时流中进行闪电般快速的分析。在毫秒内跨 50+ 数据源连接数据。",
+    "description": "Description for Distributed Databases feature"
+  },
   "homepage.features.dataAnalytics.title": {
     "message": "数据分析",
     "description": "Title for Data Analytics feature"
   },
   "homepage.features.dataAnalytics.description": {
-    "message": "适用于EKS的最佳实践数据分析部署模板和示例，包括Apache Spark、Spark Operator、Dask、Beam等",
+    "message": "使用企业级分析解决方案转换您的数据。部署具有生产就绪配置的 Apache Spark、Ray、Dask 和 Jupyter 环境。使用经过实战检验的架构，满怀信心地从 TB 扩展到 PB。",
     "description": "Description for Data Analytics feature"
   },
   "homepage.features.streamingDataPlatforms.title": {
@@ -12,7 +68,7 @@
     "description": "Title for Streaming Data Platforms feature"
   },
   "homepage.features.streamingDataPlatforms.description": {
-    "message": "使用Kafka、Flink、Spark Streaming等构建高可扩展性流数据平台",
+    "message": "构建永不停歇的实时数据管道。使用 Apache Kafka、Flink 和 Kinesis 每秒处理数百万个事件。从物联网传感器到金融交易，以任何规模处理任何流工作负载。",
     "description": "Description for Streaming Data Platforms feature"
   },
   "homepage.features.emrOnEks.title": {
@@ -20,24 +76,12 @@
     "description": "Title for Amazon EMR on EKS feature"
   },
   "homepage.features.emrOnEks.description": {
-    "message": "使用Karpenter和Apache YuniKorn模板，优化Amazon EMR在EKS集群上的多租户部署最佳实践",
+    "message": "使用 Amazon EMR on EKS 在 Kubernetes 上运行企业级 Spark 工作负载。获得优化的 Spark 运行时、自动扩展、简化的作业管理以及与 AWS 服务的无缝集成，实现更快、更经济的大数据处理。",
     "description": "Description for Amazon EMR on EKS feature"
-  },
-  "homepage.features.schedulers.title": {
-    "message": "调度器",
-    "description": "Title for Schedulers feature"
-  },
-  "homepage.features.schedulers.description": {
-    "message": "使用Apache Airflow、Amazon MWAA、Argo Workflow等优化EKS上的作业调度",
-    "description": "Description for Schedulers feature"
   },
   "homepage.features.distributedDatabases.title": {
     "message": "分布式数据库和查询引擎",
     "description": "Title for Distributed Databases & Query Engines feature"
-  },
-  "homepage.features.distributedDatabases.description": {
-    "message": "使用Cassandra、Trino、Presto等构建高性能、可扩展的分布式数据库和查询引擎",
-    "description": "Description for Distributed Databases & Query Engines feature"
   },
   "homepage.header.dataOnEks": {
     "message": "Data on EKS",
