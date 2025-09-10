@@ -47,7 +47,7 @@ coordinator:
   config:
     query:
       #maxMemoryPerNode + (maxHeapSize * 0.3) < maxHeapSize
-      maxMemoryPerNode: "22GB"  # ~70% of maxHeapSize
+      maxMemoryPerNode: "6GB"  # ~70% of maxHeapSize
       minWorkers: 1
       initialHashPartitions: 100
   resources:
@@ -60,7 +60,7 @@ coordinator:
   annotations:
     karpenter.sh/do-not-disrupt: "true"
   nodeSelector:
-    NodePool: trino-sql-karpenter
+    NodePool: trino-control-karpenter
     karpenter.sh/capacity-type: on-demand
   topologySpreadConstraints:
     - maxSkew: 1
@@ -72,7 +72,7 @@ coordinator:
 
 worker:
   jvm:
-    maxHeapSize: "89G"  # ~80% of container memory (110Gi)
+    maxHeapSize: "12G"  # ~80% of container memory (14Gi)
     extraArguments:
       - "-XX:+UseG1GC"
       - "-XX:G1HeapRegionSize=32M"
@@ -83,14 +83,14 @@ worker:
       - "-XX:+UseContainerSupport"
   config:
     query:
-      maxMemoryPerNode: "71GB"  # ~80% of maxHeapSize
+      maxMemoryPerNode: "6GB"  # ~80% of maxHeapSize
   resources:
     requests:
-      cpu: "12000m"  # Leave 3000m for system/DaemonSets
-      memory: 112Gi  # Leave 16Gi for system/DaemonSets
+      cpu: "3000m"
+      memory: 14Gi
     limits:
-      cpu: "14000m"
-      memory: 112Gi
+      cpu: "6000m"
+      memory: 14Gi
   nodeSelector:
     NodePool: trino-sql-karpenter
     karpenter.sh/capacity-type: on-demand
@@ -107,9 +107,9 @@ additionalConfigProperties:
   - "exchange.compression-enabled=true"
   - "query.remote-task.max-error-duration=1m"
   - "query.max-hash-partition-count=100"   # Updated from query.hash-partition-count
-  - "spill-enabled=true"                   # Updated from experimental.spill-enabled
-  - "spiller-spill-path=/tmp/spill"        # Chagne this to SSD mount for faster
-  - "memory.heap-headroom-per-node=9.6GB"
+  - "spill-enabled=false"                  # Updated from experimental.spill-enabled
+  - "spiller-spill-path=/tmp/spill"        # Change this to SSD mount for faster
+  - "memory.heap-headroom-per-node=1.6GB"
   - "optimizer.join-reordering-strategy=AUTOMATIC"  # Updated from join-reordering-strategy
   - "query.max-history=100"
   - "query.client.timeout=30m"
@@ -186,7 +186,7 @@ serviceMonitor:
   enabled: true
   labels:
     prometheus: kube-prometheus
-  interval: "15s"
+  interval: "5s"
   coordinator:
     enabled: true
     labels:

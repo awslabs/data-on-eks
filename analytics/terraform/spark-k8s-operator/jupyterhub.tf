@@ -17,6 +17,7 @@ module "jupyterhub_single_user_irsa" {
   role_policy_arns = {
     policy          = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
     s3tables_policy = aws_iam_policy.s3tables.arn
+    bedrock_policy  = aws_iam_policy.bedrock[0].arn
   }
 
   oidc_providers = {
@@ -50,4 +51,45 @@ resource "kubernetes_secret_v1" "jupyterhub_single_user" {
   }
 
   type = "kubernetes.io/service-account-token"
+}
+
+#---------------------------------------------------------------------
+# Example IAM policy for accessing Bedrock Models from Spark Jobs
+# Please modify this policy according to your security requirements.
+#---------------------------------------------------------------------
+data "aws_iam_policy_document" "bedrock_jupyter" {
+  statement {
+    sid    = "BedrockModelAccess"
+    effect = "Allow"
+    resources = [
+      "arn:${data.aws_partition.current.partition}:bedrock:*::foundation-model/*",
+      "arn:aws:bedrock:*:*:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "arn:aws:bedrock:*:*:inference-profile/us.anthropic.claude-sonnet-4-20250514-v1:0"
+    ]
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream"
+    ]
+  }
+
+  statement {
+    sid       = "BedrockModelDiscovery"
+    effect    = "Allow"
+    resources = ["*"]
+    actions = [
+      "bedrock:ListFoundationModels",
+      "bedrock:GetFoundationModel"
+    ]
+  }
+}
+
+#---------------------------------------------------------------------
+# Important prerequisite: Amazon Bedrock models must be enabled in the AWS console first.
+# The IAM policy alone doesn't enable model access - you need to request access to models in the Bedrock console.
+#---------------------------------------------------------------------
+resource "aws_iam_policy" "bedrock" {
+  count       = var.enable_jupyterhub ? 1 : 0
+  description = "IAM role policy for Bedrock model access from JupyterHub pods"
+  name_prefix = "${local.name}-bedrock-irsa"
+  policy      = data.aws_iam_policy_document.bedrock_jupyter.json
 }

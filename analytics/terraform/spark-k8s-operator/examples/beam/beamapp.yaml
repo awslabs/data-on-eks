@@ -1,0 +1,55 @@
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: beam-wc
+  namespace: spark-team-a
+spec:
+  type: Python
+  pythonVersion: "3"
+  # Beam runtime image
+  image: "$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/beam-spark-repo:eks-beam-image"
+  imagePullPolicy: Always
+  mainClass:  org.apache.beam.runners.spark.SparkPipelineRunner
+  mainApplicationFile: "s3://$S3_BUCKET/app/wordcountApp.jar"
+  sparkConf:
+    spark.local.dir: "/data"
+    spark.speculation: "false"
+    spark.network.timeout: "2400"
+    spark.hadoop.fs.s3a.connection.timeout: "1200000"
+    spark.hadoop.fs.s3a.path.style.access: "true"
+    spark.hadoop.fs.s3a.connection.maximum: "200"
+    spark.hadoop.fs.s3a.fast.upload: "true"
+    spark.hadoop.fs.s3a.readahead.range: "256K"
+    spark.hadoop.fs.s3a.input.fadvise: "random"
+    spark.hadoop.fs.s3a.aws.credentials.provider.mapping: "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    spark.hadoop.fs.s3a.aws.credentials.provider: "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider" # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html"
+    spark.hadoop.fs.s3.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    spark.eventLog.enabled: "true"
+    spark.eventLog.dir: "s3://$S3_BUCKET/spark-event-logs/"
+    spark.app.name: "beam-wc"
+    spark.kubernetes.executor.podNamePrefix: "beam-spark"
+    spark.kubernetes.driver.pod.name: beam-spark-driver
+    # Required for EMR Runtime and Glue Catalogue
+    spark.sql.parquet.fs.optimized.committer.optimization-enabled: "true"
+    spark.executor.defaultJavaOptions: -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70 -XX:OnOutOfMemoryError="kill -9 %p"
+    spark.driver.defaultJavaOptions:  -XX:OnOutOfMemoryError="kill -9 %p" -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70
+    spark.pyspark.python: /opt/venv/bin/python3
+    spark.pyspark.driver.python: /opt/venv/bin/python3
+  sparkVersion: "3.5.6"
+  restartPolicy:
+    type: Never
+  driver:
+    cores: 1
+    memory: "4g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+      karpenter.sh/capacity-type: "on-demand"
+  executor:
+    cores: 1
+    instances: 4
+    memory: "4g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"

@@ -1,7 +1,0 @@
-FROM public.ecr.aws/amazonlinux/amazonlinux:2023
-
-RUN yum update -y && yum install -y awscli-2
-
-RUN python3 -m ensurepip --upgrade
-
-RUN pip3 install -U "huggingface_hub[cli]"

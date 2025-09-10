@@ -53,6 +53,7 @@ site
 
 # venv
 **/.venv/*
+**/venv/*
 
 # gradio
 **/gradio_cached_examples
