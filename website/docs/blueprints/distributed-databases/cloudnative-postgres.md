@@ -140,7 +140,7 @@ cd data-on-eks/distributed-databases/cloudnative-postgres
 
 terraform output
 
-barman_backup_irsa = "arn:aws:iam::<your_account_id>:role/cnpg-on-eks-prod-irsa"
+barman_backup_irsa = "arn:aws:iam::<your_account_id>:role/cnpg-prod-irsa"
 barman_s3_bucket = "XXXX-cnpg-barman-bucket"
 configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name cnpg"
 ```
@@ -311,9 +311,19 @@ prod-3  29 MB          0/6000000    Standby (async)   OK      BestEffort  1.19.0
 In this example, we deployed a Prometheus and Grafana addons to monitor all database clusters created by CloudNativePG. Let's check Grafana dashboard.
 
 ```bash
-kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 8080:80
+kubectl -n monitoring port-forward svc/prometheus-grafana 8080:80
 
 ```
+
+You can get the username and password by running the following command:
+
+```bash
+kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-user}" | base64 --decode ; echo
+
+kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+```
+
+Now, you can go to http://localhost:8080 to log into the Grafana dashboard. 
 
 ![CloudNativePG Grafana Dashboard](img/cnpg_garfana_dashboard.png)
 
@@ -326,6 +336,12 @@ In this section, we are going to expose read-write service `-rw`using `kubectl p
 
 kubectl port-forward svc/prod-rw 5432:5432 -n demo
 
+```
+
+First, let's get the `app-auth` secret. 
+
+```bash
+kubectl get secret app-auth -n demo -o=jsonpath='{.data.password}' | base64 --decode ; echo
 ```
 
 Now, we use `psql` cli to import `world.sql` into our database instance WorldDB using credentials from `app-auth` secrets.
