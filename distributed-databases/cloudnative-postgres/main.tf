@@ -26,6 +26,14 @@ module "eks" {
       type                       = "ingress"
       source_node_security_group = true
     }
+    ingress_nodes_postgresql = {
+      description                = "Cluster to nodes PostgreSQL"
+      protocol                   = "tcp"
+      from_port                  = 5432
+      to_port                    = 5432
+      type                       = "ingress"
+      source_node_security_group = true
+    }
   }
 
   # Extend node-to-node security group rules
@@ -35,6 +43,14 @@ module "eks" {
       protocol    = "-1"
       from_port   = 0
       to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+    ingress_postgresql = {
+      description = "PostgreSQL port for CNPG cluster communication"
+      protocol    = "tcp"
+      from_port   = 5432
+      to_port     = 5432
       type        = "ingress"
       self        = true
     }
@@ -73,6 +89,8 @@ module "eks" {
 
       force_update_version = true
       instance_types       = ["m8g.xlarge"]
+
+      vpc_security_group_ids = [module.eks.cluster_primary_security_group_id]
 
       ebs_optimized = true
       block_device_mappings = {
