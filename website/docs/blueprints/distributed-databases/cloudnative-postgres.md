@@ -76,27 +76,27 @@ First, lets verify that we have worker nodes running in the cluster.
 
 ```bash
 kubectl get nodes
-NAME                                        STATUS   ROLES    AGE     VERSION
-ip-10-1-10-192.us-west-2.compute.internal   Ready    <none>   4d17h   v1.25.6-eks-48e63af
-ip-10-1-10-249.us-west-2.compute.internal   Ready    <none>   4d17h   v1.25.6-eks-48e63af
-ip-10-1-11-38.us-west-2.compute.internal    Ready    <none>   4d17h   v1.25.6-eks-48e63af
-ip-10-1-12-195.us-west-2.compute.internal   Ready    <none>   4d17h   v1.25.6-eks-48e63af
+NAME                                        STATUS   ROLES    AGE   VERSION
+ip-10-1-10-68.us-west-2.compute.internal    Ready    <none>   94m   v1.32.8-eks-99d6cc0
+ip-10-1-11-124.us-west-2.compute.internal   Ready    <none>   97m   v1.32.8-eks-99d6cc0
+ip-10-1-11-187.us-west-2.compute.internal   Ready    <none>   97m   v1.32.8-eks-99d6cc0
+ip-10-1-12-158.us-west-2.compute.internal   Ready    <none>   97m   v1.32.8-eks-99d6cc0
 ```
 
 Next, lets verify all the pods are running.
 
 ```bash
 kubectl get pods --namespace=monitoring
-NAME                                                        READY   STATUS    RESTARTS        AGE
-alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   1 (4d17h ago)   4d17h
-kube-prometheus-stack-grafana-7f8b9dc64b-sb27n              3/3     Running   0               4d17h
-kube-prometheus-stack-kube-state-metrics-5979d9d98c-r9fxn   1/1     Running   0               60m
-kube-prometheus-stack-operator-554b6f9965-zqszr             1/1     Running   0               60m
-prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0               4d17h
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-prometheus-kube-prometheus-alertmanager-0   2/2     Running   0          94m
+prometheus-grafana-679d5bbf76-mvtp5                      3/3     Running   0          91m
+prometheus-kube-prometheus-operator-579b8cf467-h7fwm     1/1     Running   0          83m
+prometheus-kube-state-metrics-6d476dd454-p52mr           1/1     Running   0          94m
+prometheus-prometheus-kube-prometheus-prometheus-0       2/2     Running   0          80m
 
 kubectl get pods --namespace=cnpg-system
-NAME                                          READY   STATUS    RESTARTS   AGE
-cnpg-on-eks-cloudnative-pg-587d5d8fc5-65z9j   1/1     Running   0          4d17h
+NAME                                   READY   STATUS    RESTARTS   AGE
+cnpg-cloudnative-pg-85949d9bc8-dp8vq   1/1     Running   0          83m
 ```
 
 ### Deploy a PostgreSQL cluster
@@ -183,10 +183,10 @@ spec:
   logLevel: debug
   # Choose the right storageclass for type of workload.
   storage:
-    storageClass: storageclass-io2
+    storageClass: storageclass-io2 # change this if you want to use a different storage class (ex: storageclass-gp3)
     size: 4Gi
   walStorage:
-    storageClass: storageclass-io2
+    storageClass: storageclass-io2 # change this if you want to use a different storage class (ex: storageclass-gp3)
     size: 4Gi
   monitoring:
     enablePodMonitor: true
