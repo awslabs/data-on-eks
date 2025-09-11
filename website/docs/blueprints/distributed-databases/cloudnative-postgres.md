@@ -63,13 +63,13 @@ cd data-on-eks/distributed-databases/cloudnative-postgres
 Verify the Amazon EKS Cluster
 
 ```bash
-aws eks describe-cluster --name cnpg-on-eks
+aws eks describe-cluster --name cnpg
 ```
 
 Update local kubeconfig so we can access kubernetes cluster
 
 ```bash
-aws eks update-kubeconfig --name cnpg-on-eks --region us-west-2
+aws eks update-kubeconfig --name cnpg --region us-west-2
 ```
 
 First, lets verify that we have worker nodes running in the cluster.
@@ -133,7 +133,7 @@ As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you n
 1. Bootstrap an empty cluster
 2. Bootstrap From another cluster.
 
-In this first example, we are going to create a new empty database cluster using `initdb`flags. We are going to use the template below by modifying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
+In this first example, we are going to create a new empty database cluster using `initdb` flags. We are going to use the template below by modifying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
 
 ```bash
 cd data-on-eks/distributed-databases/cloudnative-postgres
@@ -142,7 +142,7 @@ terraform output
 
 barman_backup_irsa = "arn:aws:iam::<your_account_id>:role/cnpg-on-eks-prod-irsa"
 barman_s3_bucket = "XXXX-cnpg-barman-bucket"
-configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name cnpg-on-eks"
+configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name cnpg"
 ```
 
 ```yaml
@@ -155,7 +155,7 @@ metadata:
 spec:
   description: "Cluster Demo for DoEKS"
   # Choose your PostGres Database Version
-  imageName: ghcr.io/cloudnative-pg/postgresql:15.2
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.2
   # Number of Replicas
   instances: 3
   startDelay: 300
@@ -181,12 +181,13 @@ spec:
       # - hostssl app all all cert
       - host app app all password
   logLevel: debug
+  # Choose the right storageclass for type of workload.
   storage:
-    storageClass: ebs-sc
-    size: 1Gi
+    storageClass: storageclass-io2
+    size: 4Gi
   walStorage:
-    storageClass: ebs-sc
-    size: 1Gi
+    storageClass: storageclass-io2
+    size: 4Gi
   monitoring:
     enablePodMonitor: true
   bootstrap:
@@ -199,7 +200,7 @@ spec:
     barmanObjectStore:
     # For backup, we S3 bucket to store data.
     # On this Blueprint, we create an S3 check the terraform output for it.
-      destinationPath: s3://<your-s3-barman-bucket> #2
+      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket, #2
       s3Credentials:
         inheritFromIAMRole: true
       wal:
@@ -207,13 +208,14 @@ spec:
         maxParallel: 8
     retentionPolicy: "30d"
 
-  resources: # m5large: m5xlarge 2vCPU, 8GI RAM
+  resources: 
     requests:
       memory: "512Mi"
       cpu: "1"
     limits:
       memory: "1Gi"
       cpu: "2"
+
 
   affinity:
     enablePodAntiAffinity: true
@@ -222,14 +224,12 @@ spec:
   nodeMaintenanceWindow:
     inProgress: false
     reusePVC: false
-
-
 ```
 
 Once updated, you can apply your template.
 
 ```bash
-kubectl create -f examples/prod-cluster.yaml
+kubectl create -f examples/cluster-prod.yaml
 
 ```
 
@@ -261,7 +261,7 @@ Note that `-any` points on all the instances.
 Another way to check Cluster status is by using [cloudnative-pg kubectl plugin](https://cloudnative-pg.io/documentation/1.19/cnpg-plugin/#cloudnativepg-plugin) offered by the CloudNativePG community,
 
 ```bash
-kubectl cnpg status prod
+kubectl cnpg status prod -n demo
 
 Cluster Summary
 Name:               prod
