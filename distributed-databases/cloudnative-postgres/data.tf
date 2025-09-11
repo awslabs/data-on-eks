@@ -19,7 +19,7 @@ data "aws_ami" "eks" {
 
   filter {
     name   = "name"
-    values = ["amazon-eks-node-al2023-arm64-standard-${module.eks.cluster_version}-*"]
+    values = ["amazon-eks-node-al2023-arm64-standard-${var.eks_cluster_version}-*"]
   }
 
   filter {
