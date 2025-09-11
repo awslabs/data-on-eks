@@ -1,0 +1,68 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: compute-optimized-graviton
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: compute-optimized-graviton
+        node.kubernetes.io/instance-category: compute
+        node.kubernetes.io/arch: arm64
+        NodeGroupType: SparkGravitonMemoryOptimized
+        
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      
+      requirements:
+        # Capacity type - prefer spot for even better cost optimization
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+          
+        # Architecture - ARM64 only
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+          
+        # Instance categories - compute optimized
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["c"]
+          
+        # Instance families - Graviton compute families (gen 6+)
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["c6g", "c6gd", "c6gn", "c7g", "c7gd", "c7gn"]
+          
+        # Instance sizes - medium to very large
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge"]
+          
+        # Nitro system
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+          
+        # Generation 5+ (Graviton starts at gen 6)
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["5"]
+
+  # Resource limits for budget control
+  limits:
+    cpu: "2000"
+    memory: "8000Gi"
+    
+  # Node lifecycle settings
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: "600s"
+    
+  # Higher weight for cost optimization
+  weight: 15

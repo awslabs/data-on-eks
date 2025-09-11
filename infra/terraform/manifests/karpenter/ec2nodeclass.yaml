@@ -1,0 +1,376 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+  
+  # Block device mappings for additional storage
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-vertical-ebs-scale
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+  
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
+    #!/bin/bash
+    echo "Running a custom user data script"
+    set -ex
+    yum install mdadm -y
+
+    IDX=1
+    DEVICES=$(lsblk -o NAME,TYPE -dsn | awk '/disk/ {print $1}')
+
+    DISK_ARRAY=()
+
+    for DEV in $DEVICES
+    do
+      DISK_ARRAY+=("/dev/$${DEV}")
+    done
+
+    DISK_COUNT=$${#DISK_ARRAY[@]}
+
+    if [ $${DISK_COUNT} -eq 0 ]; then
+      echo "No SSD disks available. Creating new EBS volume according to number of cores available in the node."
+      yum install -y jq awscli
+      TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 3600")
+
+      # Get instance info
+      INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+      AVAILABILITY_ZONE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
+      REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/[a-z]$//')
+
+      # Get the number of cores available
+      CORES=$(nproc --all)
+
+      # Define volume size based on the number of cores and EBS volume size per core
+      VOLUME_SIZE=$(expr $CORES \* 10) # 10GB per core. Change as desired
+
+      # Create a volume
+      VOLUME_ID=$(aws ec2 create-volume --availability-zone $AVAILABILITY_ZONE --size $VOLUME_SIZE --volume-type gp3 --region $REGION --output text --query 'VolumeId')
+
+      # Check whether the volume is available
+      while [ "$(aws ec2 describe-volumes --volume-ids $VOLUME_ID --region $REGION --query "Volumes[*].State" --output text)" != "available" ]; do
+        echo "Waiting for volume to become available"
+        sleep 5
+      done
+
+      # Attach the volume to the instance
+      aws ec2 attach-volume --volume-id $VOLUME_ID --instance-id $INSTANCE_ID --device /dev/xvdb --region $REGION
+
+      # Update the state to delete the volume when the node is terminated
+      aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --block-device-mappings "[{\"DeviceName\": \"/dev/xvdb\",\"Ebs\":{\"DeleteOnTermination\":true}}]" --region $REGION
+
+      # Wait for the volume to be attached
+      while [ "$(aws ec2 describe-volumes --volume-ids $VOLUME_ID --region $REGION --query "Volumes[*].Attachments[*].State" --output text)" != "attached" ]; do
+        echo "Waiting for volume to be attached"
+        sleep 5
+      done
+
+      # Format the volume
+      sudo mkfs -t ext4 /dev/xvdb # Improve this to get this value dynamically
+      # Create a mount point
+      sudo mkdir /mnt/k8s-disks # Change directory as you like
+      # Mount the volume
+      sudo mount /dev/xvdb /mnt/k8s-disks
+      # To mount this EBS volume on every system reboot, you need to add an entry in /etc/fstab
+      echo "/dev/xvdb /mnt/k8s-disks ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+
+      # Adding permissions to the mount
+      /usr/bin/chown -hR +999:+1000 /mnt/k8s-disks
+    else
+      if [ $${DISK_COUNT} -eq 1 ]; then
+        TARGET_DEV=$${DISK_ARRAY[0]}
+        mkfs.xfs $${TARGET_DEV}
+      else
+        mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$${DISK_COUNT} $${DISK_ARRAY[@]}
+        mkfs.xfs /dev/md0
+        TARGET_DEV=/dev/md0
+      fi
+
+      mkdir -p /mnt/k8s-disks
+      echo $${TARGET_DEV} /mnt/k8s-disks xfs defaults,noatime 1 2 >> /etc/fstab
+      mount -a
+      /usr/bin/chown -hR +999:+1000 /mnt/k8s-disks
+    fi
+
+    --//--
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-operator-benchmark
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-compute-ondemand
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-compute-spot-cmr
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+  
+  # Block device mappings for additional storage
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-compute-spot-r
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-compute-graviton-od-memory
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-compute-graviton
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+  
+  # Block device mappings for additional storage
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spark-compute-nitro-nvme
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+        
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+        
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+  
+  # Block device mappings for additional storage
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true

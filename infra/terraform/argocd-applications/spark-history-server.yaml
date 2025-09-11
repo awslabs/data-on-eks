@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spark-history-server
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://kubedai.github.io/spark-history-server
+    chart: spark-history-server
+    targetRevision: "1.5.1"
+    helm:
+      valuesObject:
+        ${user_values_yaml}
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: spark-history-server
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
