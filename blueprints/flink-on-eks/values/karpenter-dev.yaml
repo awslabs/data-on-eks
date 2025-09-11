@@ -1,0 +1,169 @@
+# Flink on EKS - Karpenter Overrides (Different from Spark!)
+# Shows how same base addon can be configured differently per blueprint
+
+# Same base Karpenter, different configuration
+karpenter:
+  controller:
+    replicas: 2  # Flink needs more stability than Spark dev
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: 500m
+        memory: 2Gi
+
+# Flink-specific NodePool configurations (very different from Spark)
+flinkNodePools:
+  # Streaming-optimized nodes (low latency, high network)
+  - name: flink-streaming-optimized
+    metadata:
+      labels:
+        workload-type: streaming
+        blueprint: flink-on-eks
+    spec:
+      template:
+        spec:
+          requirements:
+            # Different instance families optimized for network performance
+            - key: "karpenter.k8s.aws/instance-family"
+              operator: In
+              values: ["c5n", "c6in", "m5n", "m6in"]  # Network optimized
+            - key: "karpenter.k8s.aws/instance-size"
+              operator: In
+              values: ["xlarge", "2xlarge", "4xlarge", "8xlarge"]
+            - key: "karpenter.sh/capacity-type"
+              operator: In
+              values: ["on-demand"]  # Flink streaming needs reliability
+
+          # Flink-specific taints
+          startupTaints:
+            - key: "flink.apache.org/node-type"
+              value: "streaming-optimized"
+              effect: NoSchedule
+
+          # Longer expiry for long-running streaming jobs
+          expireAfter: 2h
+
+      limits:
+        cpu: 1000
+        memory: 2000Gi
+
+      # Different disruption policy for streaming workloads
+      disruption:
+        consolidationPolicy: WhenEmpty  # Never disrupt running streams
+        consolidateAfter: 300s
+
+  # Checkpoint-optimized nodes (high I/O for state backends)
+  - name: flink-checkpoint-optimized
+    metadata:
+      labels:
+        workload-type: checkpoint-storage
+        blueprint: flink-on-eks
+    spec:
+      template:
+        spec:
+          requirements:
+            # I/O optimized instances for checkpointing
+            - key: "karpenter.k8s.aws/instance-family"
+              operator: In
+              values: ["i3", "i3en", "i4i"]  # Instance store for fast checkpoints
+            - key: "karpenter.k8s.aws/instance-size"
+              operator: In
+              values: ["large", "xlarge", "2xlarge", "4xlarge"]
+
+          startupTaints:
+            - key: "flink.apache.org/node-type"
+              value: "checkpoint-optimized"
+              effect: NoSchedule
+
+          # Persistent nodes for checkpoint storage
+          expireAfter: 4h
+
+      limits:
+        cpu: 500
+        memory: 1000Gi
+
+# Flink-specific EC2NodeClasses (completely different from Spark)
+flinkEC2NodeClasses:
+  - name: flink-streaming-optimized
+    spec:
+      # High-performance networking for streaming
+      instanceStorePolicy: RAID0
+
+      # Enhanced networking configuration
+      userData: |
+        #!/bin/bash
+        /etc/eks/bootstrap.sh {{ .Values.global.clusterName }} \
+          --container-runtime containerd \
+          --kubelet-extra-args '--node-labels=node-type=flink-streaming-optimized,workload-class=streaming'
+
+        # Network optimizations for Flink streaming
+        echo 'net.core.rmem_max=134217728' >> /etc/sysctl.conf
+        echo 'net.core.wmem_max=134217728' >> /etc/sysctl.conf
+        echo 'net.ipv4.tcp_rmem=4096 87380 134217728' >> /etc/sysctl.conf
+        echo 'net.ipv4.tcp_wmem=4096 16384 134217728' >> /etc/sysctl.conf
+        echo 'net.ipv4.tcp_congestion_control=bbr' >> /etc/sysctl.conf
+        echo 'net.core.netdev_max_backlog=30000' >> /etc/sysctl.conf
+        sysctl -p
+
+        # Configure local storage for Flink temp data
+        if [[ -b /dev/nvme1n1 ]]; then
+          mkfs.xfs -f /dev/nvme1n1
+          mkdir -p /mnt/flink-temp
+          mount /dev/nvme1n1 /mnt/flink-temp
+          chmod 777 /mnt/flink-temp
+        fi
+
+      tags:
+        Blueprint: flink-on-eks
+        Environment: dev
+        WorkloadType: streaming
+        OptimizedFor: low-latency
+
+  - name: flink-checkpoint-optimized
+    spec:
+      instanceStorePolicy: NVME  # Different from Spark's RAID0
+
+      # Optimized for high I/O checkpoint operations
+      blockDeviceMappings:
+        - deviceName: /dev/xvda
+          ebs:
+            volumeSize: 200Gi  # Larger for checkpoints
+            volumeType: io2     # Higher IOPS than Spark
+            iops: 10000         # Much higher than Spark
+            throughput: 1000    # Higher throughput
+            encrypted: true
+            deleteOnTermination: true
+
+      userData: |
+        #!/bin/bash
+        /etc/eks/bootstrap.sh {{ .Values.global.clusterName }} \
+          --container-runtime containerd \
+          --kubelet-extra-args '--node-labels=node-type=flink-checkpoint-optimized,workload-class=checkpoint-storage'
+
+        # I/O optimizations for Flink checkpointing
+        echo 'vm.dirty_ratio=15' >> /etc/sysctl.conf      # Different from Spark
+        echo 'vm.dirty_background_ratio=5' >> /etc/sysctl.conf
+        echo 'vm.swappiness=1' >> /etc/sysctl.conf
+        sysctl -p
+
+        # Configure instance store for checkpoint storage
+        if [[ -b /dev/nvme1n1 ]]; then
+          # XFS with optimizations for small files (checkpoints)
+          mkfs.xfs -f -d su=64k,sw=1 /dev/nvme1n1
+          mkdir -p /mnt/flink-checkpoints
+          mount -o noatime,nodiratime,nobarrier /dev/nvme1n1 /mnt/flink-checkpoints
+          chmod 777 /mnt/flink-checkpoints
+
+          # Create checkpoint directory structure
+          mkdir -p /mnt/flink-checkpoints/{completed,in-progress}
+          chmod 777 /mnt/flink-checkpoints/{completed,in-progress}
+        fi
+
+      tags:
+        Blueprint: flink-on-eks
+        Environment: dev
+        WorkloadType: checkpoint-storage
+        OptimizedFor: high-iops

@@ -1,0 +1,23 @@
+configs:
+  cm:
+    kustomize.buildOptions: --enable-helm
+    application.resourceTrackingMethod: annotation
+    resource.compareoptions: |
+      ignoreAggregatedRoles: true
+      ignoreDifferences:
+        resourceIdentifiers:
+        - group: ""
+          kind: PersistentVolumeClaim
+          customization:
+            ignoreDifferences:
+              jsonPointers:
+              - /spec/volumeMode
+              - /spec/resources/requests/storage
+              - /metadata/creationTimestamp
+              - /status
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false

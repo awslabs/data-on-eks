@@ -1,0 +1,6 @@
+nodeSelector:
+  NodeGroupType: core
+
+watchNamespaces:
+  - kafka
+  - datahub

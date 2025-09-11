@@ -1,0 +1,12 @@
+[project]
+name = "data-flow"
+version = "0.1.0"
+description = "Cat Cafe Data Flow Workshop"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.40.32",
+    "faker>=37.8.0",
+    "kafka-python>=2.2.15",
+    "pydantic>=2.0.0",
+]

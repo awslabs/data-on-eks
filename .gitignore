@@ -8,6 +8,10 @@ website/package-lock.json
 
 # Local .terraform directories
 **/.terraform/*
+**/_local/*
+
+# Ignore _local folders under blueprints
+blueprints/**/_local/
 
 # Terraform lockfile
 .terraform.lock.hcl
@@ -27,6 +31,7 @@ crash.log
 # control as they are data points which are potentially sensitive and subject
 # to change depending on the environment.
 *.tfvars
+!blueprints/**/*.tfvars
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
@@ -54,6 +59,7 @@ site
 # venv
 **/.venv/*
 **/venv/*
+**/__pycache__/*
 
 # gradio
 **/gradio_cached_examples

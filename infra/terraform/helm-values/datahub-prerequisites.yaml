@@ -1,0 +1,17 @@
+postgresql:
+  enabled: true
+
+elasticsearch:
+  enabled: false
+
+opensearch:
+  enabled: true
+
+mysql:
+  enabled: false
+
+postgresql:
+  enabled: true
+
+kafka:
+  enabled: false

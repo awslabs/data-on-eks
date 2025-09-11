@@ -1,0 +1,177 @@
+global:
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+
+serviceAccount:
+  create: true
+  name: aws-for-fluent-bit-sa
+
+service:
+  parsersFiles:
+    - /fluent-bit/parsers/parsers.conf
+  extraParsers: |
+    [PARSER]
+      Name    kubernetes
+      Format  regex
+      Regex   ^(?<namespace_name>[^_]+)\.(?<container_name>.+)\.(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)\.(?<docker_id>[a-z0-9]{64})-$
+
+    [PARSER]
+        Name    spark_log_parser
+        Format  regex
+        Regex       ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+stderr\s+F\s+(?<log_date>\d{2}\/\d{2}\/\d{2})\s+(?<log_time>\d{2}:\d{2}:\d{2})\s+(?<log_level>TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL)\s+(?:(?<component>[^:]+):\s+)?(?<message>[\s\S]*)
+
+    [MULTILINE_PARSER]
+        Name          spark_multiline
+        Type          regex
+        Flush_timeout 5000
+        Rule          "start_state"   "^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+(stdout|stderr)\s+F\s+\d{2}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}"  "cont"
+        Rule          "cont"          "^(?!\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+(stdout|stderr)\s+F\s+\d{2}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}).*"  "cont"
+
+input:
+  name: "tail"
+  enabled: true
+  tag: "systempods.<namespace_name>.<container_name>.<pod_name>.<docker_id>-"
+  path: "/var/log/containers/aws-node*,/var/log/containers/kube-proxy*,/var/log/containers/aws-for-fluent*,/var/log/containers/spark-operator*,/var/log/containers/*_yunikorn_*"
+  db: "/var/log/flb_systempods.db"
+  memBufLimit: 5MB
+  skipLongLines: "On"
+  refreshInterval: 10
+  extraInputs: |
+    multiline.parser  docker, cri
+    Tag_Regex         (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
+
+additionalInputs: |
+  [INPUT]
+      Name                tail
+      Tag                 spark.<namespace_name>.<container_name>.<pod_name>.<docker_id>-
+      Path                /var/log/containers/*spark-team-*
+      DB                  /var/log/flb_spark.db
+      multiline.parser    spark_multiline
+      Mem_Buf_Limit       5MB
+      Skip_Long_Lines     On
+      Refresh_Interval    10
+      Tag_Regex           (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
+
+filter:
+  name: "kubernetes"
+  match: "systempods.*"
+  kubeURL: "https://kubernetes.default.svc.cluster.local:443"
+  mergeLog: "On"
+  mergeLogKey: "log_processed"
+  keepLog: "On"
+  k8sLoggingParser: "On"
+  k8sLoggingExclude: "On"
+  bufferSize: "0"
+  extraFilters: |
+    Kube_Tag_Prefix     systempods.
+    Regex_Parser        kubernetes
+    Labels              On
+    Annotations         Off
+    Use_Kubelet         false
+    Kubelet_Port        10250
+    Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+
+additionalFilters: |
+  [FILTER]
+      Name                kubernetes
+      Match               spark.*
+      Kube_URL            https://kubernetes.default.svc.cluster.local:443
+      Merge_Log           On
+      Merge_Log_Key       log_processed
+      Keep_Log            On
+      K8S-Logging.Parser  On
+      K8S-Logging.Exclude On
+      Labels              On
+      Buffer_Size         0
+      Kube_Tag_Prefix     spark.
+      Regex_Parser        kubernetes
+      Use_Kubelet         false
+      Kubelet_Port        10250
+      Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+      Annotations         Off
+
+  [FILTER]
+      Name                parser
+      Match               spark.*
+      Key_Name            log
+      Parser              spark_log_parser
+      Reserve_Data        On
+      Preserve_Key        On
+
+  [FILTER]
+      Name                lua
+      Match               spark.*
+      Script              /fluent-bit/scripts/escape.lua
+      Call                escape_json
+
+  [FILTER]
+      Name                modify
+      Match               spark.*
+      Remove              stream
+      Remove              time
+
+  [FILTER]
+      Name                rewrite_tag
+      Match               spark.*
+      Rule                $kubernetes['labels']['spark-app-selector'] ^(.+)$ from.$1.$TAG[1].$TAG[2].$TAG[3] false
+
+cloudWatchLogs:
+  enabled: false
+  match: "*"
+  region: ${region}
+  logGroupName: ${cloudwatch_log_group}
+  logStreamPrefix: "fluentbit-"
+  autoCreateGroup: false
+  extraOutputs: |
+    log_key               log
+
+additionalOutputs: |
+  [OUTPUT]
+      Name                            s3
+      Match                           systempods.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 50M
+      s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[2]/$TAG[3]/$TAG[3]_%H%M%S_$UUID.json
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  10m
+      json_date_key                   timestamp
+      json_date_format                iso8601
+
+  [OUTPUT]
+      Name                            s3
+      Match                           from.*
+      region                          ${region}
+      bucket                          ${s3_bucket_name}
+      total_file_size                 5M
+      s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[2]/$TAG[1]/$TAG[4]/$TAG[4]_%H%M%S_$UUID.json
+      s3_key_format_tag_delimiters    ..
+      store_dir                       /home/ec2-user/buffer
+      upload_timeout                  5m
+      json_date_key                   timestamp
+      json_date_format                iso8601
+
+volumes:
+  - name: varlog
+    hostPath:
+      path: /var/log
+  - name: varlibdockercontainers
+    hostPath:
+      path: /var/lib/docker/containers
+  - name: lua-scripts
+    configMap:
+      name: lua-scripts
+
+volumeMounts:
+  - name: varlog
+    mountPath: /var/log
+  - name: varlibdockercontainers
+    mountPath: /var/lib/docker/containers
+    readOnly: true
+  - name: lua-scripts
+    mountPath: /fluent-bit/scripts/escape.lua
+    subPath: escape.lua
+    readOnly: true
