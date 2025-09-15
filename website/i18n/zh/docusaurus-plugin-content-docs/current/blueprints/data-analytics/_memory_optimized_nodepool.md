@@ -1,3 +1,16 @@
+# 内存优化节点池配置
+
+此配置定义了用于内存密集型 Spark 工作负载的 Karpenter 节点池。
+
+## 配置说明
+
+- **实例类型**: R5d 系列，专为内存密集型应用优化
+- **容量类型**: 支持 Spot 和按需实例
+- **架构**: AMD64
+- **实例存储**: 配置为 RAID0 以提高性能
+- **CPU 范围**: 4-32 核心
+- **自动扩缩容**: 支持根据工作负载需求自动调整
+
 ```yaml
       name: spark-memory-optimized
       clusterName: ${module.eks.cluster_name}

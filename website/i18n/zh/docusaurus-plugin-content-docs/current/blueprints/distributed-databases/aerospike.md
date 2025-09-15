@@ -3,7 +3,7 @@ sidebar_position: 5
 sidebar_label: Aerospike
 ---
 
-# EKS 上的 Aerospike Database Enterprise
+# Aerospike Database Enterprise on EKS
 [Aerospike Database Enterprise Edition](https://aerospike.com) 是一个高性能、分布式 NoSQL 数据库，专为实时、关键任务应用程序而设计。将 Aerospike 与 Amazon Elastic Kubernetes Service (EKS) 集成，结合了 Aerospike 强大的数据管理能力和 Kubernetes 编排能力。这种集成使组织能够在 EKS 灵活且有弹性的环境中利用 Aerospike 可预测的亚毫秒性能和无缝可扩展性。通过利用 [Aerospike Kubernetes Operator (AKO)](https://aerospike.com/docs/cloud/kubernetes/operator)，在 EKS 上部署和管理 Aerospike 集群是自动化的，确保高效运营并降低复杂性。
 
 ## EKS 上 Aerospike 的主要优势

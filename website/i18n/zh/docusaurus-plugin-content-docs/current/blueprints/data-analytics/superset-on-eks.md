@@ -46,3 +46,89 @@ sidebar_label: Superset on EKS
 4. [Helm](https://helm.sh)
 
 ### 部署
+克隆存储库
+
+```bash
+git clone https://github.com/awslabs/data-on-eks.git
+```
+
+导航到其中一个示例目录并运行 `install.sh` 脚本
+
+```bash
+cd data-on-eks/analytics/terraform/superset-on-eks
+chmod +x install.sh
+./install.sh
+```
+或者简单地
+```bash
+terraform init
+terraform apply --auto-approve
+```
+
+### 架构概述
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/apache-superset-eks.png)
+
+### 验证部署
+
+部署完成后，我们可以访问 Superset UI。出于演示目的，此蓝图为 Superset 前端 UI 创建了具有公共 LoadBalancer 的 Ingress 对象，并且在 corenode 和 superset 节点中分别跨 2 个可用区有多个 Pod。
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset-pods.png)
+
+您可以从输出 superset_url 找到 Superset 前端的 URL，或通过运行以下 kubectl 命令：
+
+```sh
+kubectl get ingress  -n superset
+
+# 输出应如下所示
+NAME                CLASS     HOSTS   ADDRESS                                                                   PORTS   AGE
+superset-ingress   aws-alb   *       k8s-superset-***.***.elb.amazonaws.com                                     80      125m
+```
+
+从输出中复制 ADDRESS 字段，然后打开浏览器并输入 URL 为 `http://<address>/`。提示时输入 `admin` 作为用户名和密码。我们可以查看如下的 Superset UI。
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset1.png)
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset2.png)
+
+为了可视化数据，我们需要首先连接到 Postgres 数据库。数据库的 IP 地址可以通过描述 Pod 'superset-postgresql-0' 获得。基本上数据库托管在 superset-node 上
+
+```sh
+k describe po superset-postgresql-0 -n superset
+
+```
+
+获得 IP 地址后，可以按照下面的屏幕截图建立数据库连接
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset-connect-database.png)
+
+连接数据库后，必须配置它以允许文件上传。此功能允许将 csv 和其他格式文件上传为新表。请参考以下屏幕截图
+
+步骤 1：编辑数据库配置并导航到"高级"设置
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset-edit-database.png)
+
+步骤 2：在安全性下滚动到最底部并"勾选允许文件上传到数据库"
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset-enable-fileupload.png)
+
+步骤 3：通过上传文件创建数据集
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset-create-dataset.png)
+
+步骤 4：为了显示示例可视化，上传了各国 COVID 研究的示例 CSV。以下是一些可视化，显示了各国在各种疫苗试验方面的进展
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset-sample-graph.png)
+
+![img.png](../../../../../../docs/blueprints/data-analytics/img/superset-view-by-country.png)
+
+## 清理
+
+要清理您的环境，请运行 `cleanup.sh` 脚本。
+
+```bash
+chmod +x cleanup.sh
+./cleanup.sh
+```
+否则
+```bash
+terraform destroy --auto-approve
+```

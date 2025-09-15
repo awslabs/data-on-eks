@@ -3,7 +3,7 @@ sidebar_position: 1
 sidebar_label: 介绍
 ---
 
-# EKS 上的数据分析
+# 基于Amazon EKS打造数据分析平台
 
 在 Kubernetes 上运行数据分析工具可以为希望从大型复杂数据集中提取洞察的组织提供许多好处。诸如 **Apache Spark** 和 **DASK** 等工具设计为在机器集群上运行，使它们非常适合在 Kubernetes 上部署。
 

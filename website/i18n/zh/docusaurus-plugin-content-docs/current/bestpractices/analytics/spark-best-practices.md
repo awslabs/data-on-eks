@@ -29,11 +29,11 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 
 ### CoreDNS 建议
 #### DNS 查找限制
-在 Kubernetes 上运行的 Spark 应用程序在执行器与外部服务通信时会产生大量 DNS 查找。
+在 Kubernetes 上运行的 Spark 应用程序在executor与外部服务通信时会产生大量 DNS 查找。
 
-这是因为 Kubernetes 的 DNS 解析模型要求每个 Pod 为每个新连接查询集群的 DNS 服务（kube-dns 或 CoreDNS），在任务执行期间，Spark 执行器经常创建新连接来与外部服务通信。默认情况下，Kubernetes 不在 Pod 级别缓存 DNS 结果，这意味着每个执行器 Pod 必须执行新的 DNS 查找，即使是之前解析过的主机名。
+这是因为 Kubernetes 的 DNS 解析模型要求每个 Pod 为每个新连接查询集群的 DNS 服务（kube-dns 或 CoreDNS），在任务执行期间，Spark executor经常创建新连接来与外部服务通信。默认情况下，Kubernetes 不在 Pod 级别缓存 DNS 结果，这意味着每个executor Pod 必须执行新的 DNS 查找，即使是之前解析过的主机名。
 
-这种行为在 Spark 应用程序中被放大，因为它们的分布式特性，多个执行器 Pod 同时尝试解析相同的外部服务端点。这发生在数据摄取、处理以及连接到外部数据库或洗牌服务时。
+这种行为在 Spark 应用程序中被放大，因为它们的分布式特性，多个executor Pod 同时尝试解析相同的外部服务端点。这发生在数据摄取、处理以及连接到外部数据库或洗牌服务时。
 
 当 DNS 流量超过每秒 1024 个数据包对于一个 CoreDNS 副本时，DNS 请求将被限制，导致 `unknownHostException` 错误。
 
@@ -45,12 +45,12 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 ### 减少跨可用区流量
 
 #### 跨可用区成本
-在洗牌阶段，Spark 执行器可能需要在它们之间交换数据。如果 Pod 分布在多个可用区 (AZ) 中，这种洗牌操作可能会变得非常昂贵，特别是在网络 I/O 方面，这将作为跨可用区流量成本收费。
+在洗牌阶段，Spark executor可能需要在它们之间交换数据。如果 Pod 分布在多个可用区 (AZ) 中，这种洗牌操作可能会变得非常昂贵，特别是在网络 I/O 方面，这将作为跨可用区流量成本收费。
 
 #### 补救措施
-对于 Spark 工作负载，建议将执行器 Pod 和工作节点放置在同一个可用区中。将工作负载放置在同一个可用区中有两个主要目的：
+对于 Spark 工作负载，建议将executor Pod 和工作节点放置在同一个可用区中。将工作负载放置在同一个可用区中有两个主要目的：
 * 减少跨可用区流量成本
-* 减少执行器/Pod 之间的网络延迟
+* 减少executor/Pod 之间的网络延迟
 
 请参考[跨可用区网络优化](/docs/bestpractices/networking#inter-az-network-optimization)以使 Pod 在同一个可用区中共同定位。
 
@@ -60,19 +60,19 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 
 以下是在运行 Spark 工作负载时扩展计算节点的 Karpenter 建议。有关完整的 Karpenter 配置详细信息，请参考 [Karpenter 文档](https://karpenter.sh/docs/)。
 
-考虑为驱动程序和执行器 Pod 创建单独的 NodePool。
+考虑为driver和executor Pod 创建单独的 NodePool。
 
-### 驱动程序 NodePool
-Spark 驱动程序是单个 Pod，管理 Spark 应用程序的整个生命周期。终止 Spark 驱动程序 Pod 实际上意味着终止整个 Spark 作业。
-* 配置驱动程序 NodePool 始终仅使用 `on-demand` 节点。当 Spark 驱动程序 Pod 在 Spot 实例上运行时，由于 Spot 实例回收，它们容易受到意外终止的影响，导致计算损失和中断处理，需要手动干预重新启动。
-* 在驱动程序 NodePool 上禁用[`consolidation`](https://karpenter.sh/docs/concepts/disruption/#consolidation)。
-* 使用 `node selectors` 或 `taints/tolerations` 将驱动程序 Pod 放置在此指定的驱动程序 NodePool 上。
+### driver NodePool
+Spark driver是单个 Pod，管理 Spark 应用程序的整个生命周期。终止 Spark driver Pod 实际上意味着终止整个 Spark 作业。
+* 配置driver NodePool 始终仅使用 `on-demand` 节点。当 Spark driver Pod 在 Spot 实例上运行时，由于 Spot 实例回收，它们容易受到意外终止的影响，导致计算损失和中断处理，需要手动干预重新启动。
+* 在driver NodePool 上禁用[`consolidation`](https://karpenter.sh/docs/concepts/disruption/#consolidation)。
+* 使用 `node selectors` 或 `taints/tolerations` 将driver Pod 放置在此指定的driver NodePool 上。
 
-### 执行器 NodePool
+### executor NodePool
 #### 配置 Spot 实例
-在没有 [Amazon EC2 预留实例](https://aws.amazon.com/ec2/pricing/reserved-instances/) 或 [Savings Plans](https://aws.amazon.com/savingsplans/) 的情况下，考虑为执行器使用 [Amazon EC2 Spot 实例](https://aws.amazon.com/ec2/spot/) 来降低数据平面成本。
+在没有 [Amazon EC2 预留实例](https://aws.amazon.com/ec2/pricing/reserved-instances/) 或 [Savings Plans](https://aws.amazon.com/savingsplans/) 的情况下，考虑为executor使用 [Amazon EC2 Spot 实例](https://aws.amazon.com/ec2/spot/) 来降低数据平面成本。
 
-当 Spot 实例被中断时，执行器将被终止并在可用节点上重新调度。有关中断行为和节点终止管理的详细信息，请参考 `处理中断` 部分。
+当 Spot 实例被中断时，executor将被终止并在可用节点上重新调度。有关中断行为和节点终止管理的详细信息，请参考 `处理中断` 部分。
 
 #### 实例和容量类型选择
 
@@ -81,40 +81,40 @@ Spark 驱动程序是单个 Pod，管理 Spark 应用程序的整个生命周期
 使用 `加权 NodePool`，可以使用按优先级顺序排列的加权节点池来优化节点选择。通过为每个节点池分配不同的权重，您可以建立选择层次结构，例如：Spot（最高权重），然后是 Graviton、AMD 和 Intel（最低权重）。
 
 #### 整合配置
-虽然为 Spark 执行器 Pod 启用 `consolidation` 可以带来更好的集群资源利用率，但在作业性能方面取得平衡至关重要。频繁的整合事件可能导致 Spark 作业执行时间变慢，因为执行器被迫重新计算洗牌数据和 RDD 块。
+虽然为 Spark executor Pod 启用 `consolidation` 可以带来更好的集群资源利用率，但在作业性能方面取得平衡至关重要。频繁的整合事件可能导致 Spark 作业执行时间变慢，因为executor被迫重新计算洗牌数据和 RDD 块。
 
 这种影响在长时间运行的 Spark 作业中特别明显。为了缓解这种情况，仔细调整整合间隔至关重要。
 
-启用优雅的执行器 Pod 关闭：
-* `spark.executor.decommission.enabled=true`：启用执行器的优雅退役，允许它们完成当前任务并在关闭前传输其缓存数据。这在为执行器使用 Spot 实例时特别有用。
+启用优雅的executor Pod 关闭：
+* `spark.executor.decommission.enabled=true`：启用executor的优雅退役，允许它们完成当前任务并在关闭前传输其缓存数据。这在为executor使用 Spot 实例时特别有用。
 
-* `spark.storage.decommission.enabled=true`：启用在关闭前将缓存的 RDD 块从退役执行器迁移到其他活动执行器，防止数据丢失和重新计算的需要。
+* `spark.storage.decommission.enabled=true`：启用在关闭前将缓存的 RDD 块从退役executor迁移到其他活动executor，防止数据丢失和重新计算的需要。
 
-要探索在 Spark 执行器中保存中间数据计算的其他方法，请参考[存储最佳实践](#存储最佳实践)。
+要探索在 Spark executor中保存中间数据计算的其他方法，请参考[存储最佳实践](#存储最佳实践)。
 
 #### 在 Karpenter 整合/Spot 终止期间处理中断
 
-在节点计划终止时执行受控退役，而不是突然杀死执行器。要实现这一点：
+在节点计划终止时执行受控退役，而不是突然杀死executor。要实现这一点：
 
 * 为 Spark 工作负载配置适当的 TerminationGracePeriod 值。
-* 实现执行器感知的终止处理。
+* 实现executor感知的终止处理。
 * 确保在节点退役前保存洗牌数据。
 
 Spark 提供原生配置来控制终止行为：
 
-**控制执行器中断**
+**控制executor中断**
 * **配置**：
 * `spark.executor.decommission.enabled`
 * `spark.executor.decommission.forceKillTimeout`
-这些配置在执行器可能由于 Spot 实例中断或 Karpenter 整合事件而被终止的场景中特别有用。启用时，执行器将通过停止任务接受并通知驱动程序其退役状态来优雅关闭。
+这些配置在executor可能由于 Spot 实例中断或 Karpenter 整合事件而被终止的场景中特别有用。启用时，executor将通过停止任务接受并通知driver其退役状态来优雅关闭。
 
-**控制执行器的 BlockManager 行为**
+**控制executor的 BlockManager 行为**
 * **配置**：
 * `spark.storage.decommission.enabled`
 * `spark.storage.decommission.shuffleBlocks.enabled`
 * `spark.storage.decommission.rddBlocks.enabled`
 * `spark.storage.decommission.fallbackStorage.path`
-这些设置启用将洗牌和 RDD 块从退役执行器迁移到其他可用执行器或回退存储位置。这种方法通过减少重新计算洗牌数据或 RDD 块的需要来帮助动态环境，从而提高作业完成时间和资源效率。
+这些设置启用将洗牌和 RDD 块从退役executor迁移到其他可用executor或回退存储位置。这种方法通过减少重新计算洗牌数据或 RDD 块的需要来帮助动态环境，从而提高作业完成时间和资源效率。
 
 ## 高级调度考虑
 ### 默认 Kubernetes 调度器行为
@@ -131,7 +131,7 @@ Spark 提供原生配置来控制终止行为：
 
 利用像 Yunikorn 这样的自定义调度器的优势。
 * 分层队列系统和可配置策略，允许复杂的资源管理。
-* Gang 调度，确保所有相关 Pod（如 Spark 执行器）一起启动，防止资源浪费。
+* Gang 调度，确保所有相关 Pod（如 Spark executor）一起启动，防止资源浪费。
 * 不同租户和工作负载之间的资源公平性。
 
 ### Yunikorn 和 Karpenter 如何协同工作？
@@ -144,30 +144,30 @@ Karpenter 和 Yunikorn 通过处理 Kubernetes 中工作负载管理的不同方
 
 在典型的工作流程中，Yunikorn 首先根据应用程序感知策略和队列优先级调度 Pod。当这些 Pod 由于集群资源不足而保持挂起状态时，Karpenter 检测到这些挂起的 Pod 并配置适当的节点来容纳它们。这种集成确保了高效的 Pod 放置（Yunikorn）和最佳的集群扩展（Karpenter）。
 
-对于 Spark 工作负载，这种组合特别有效：Yunikorn 确保执行器根据应用程序 SLA 和依赖关系进行调度，而 Karpenter 确保正确的节点类型可用以满足这些特定要求。
+对于 Spark 工作负载，这种组合特别有效：Yunikorn 确保executor根据应用程序 SLA 和依赖关系进行调度，而 Karpenter 确保正确的节点类型可用以满足这些特定要求。
 
 ## 存储最佳实践
 ### 节点存储
-默认情况下，工作节点的 EBS 根卷设置为 20GB。Spark 执行器使用本地存储来存储临时数据，如洗牌数据、中间结果和临时文件。附加到工作节点的这个默认 20GB 根卷存储在大小和性能方面都可能是限制性的。考虑以下选项来满足您的性能和存储大小要求：
-* 扩展根卷容量以为中间 Spark 数据提供充足空间。您将必须根据每个执行器将处理的数据集的平均大小和 Spark 作业的复杂性来确定最佳容量。
+默认情况下，工作节点的 EBS 根卷设置为 20GB。Spark executor使用本地存储来存储临时数据，如洗牌数据、中间结果和临时文件。附加到工作节点的这个默认 20GB 根卷存储在大小和性能方面都可能是限制性的。考虑以下选项来满足您的性能和存储大小要求：
+* 扩展根卷容量以为中间 Spark 数据提供充足空间。您将必须根据每个executor将处理的数据集的平均大小和 Spark 作业的复杂性来确定最佳容量。
 * 配置具有更好 I/O 和延迟的高性能存储。
 * 在工作节点上挂载额外的卷用于临时数据存储。
-* 利用可以直接附加到执行器 Pod 的动态配置 PVC。
+* 利用可以直接附加到executor Pod 的动态配置 PVC。
 
 ### 重用 PVC
-此选项允许重用与 Spark 执行器关联的 PVC，即使在执行器被终止后（由于整合活动或在 Spot 实例情况下的抢占）。
+此选项允许重用与 Spark executor关联的 PVC，即使在executor被终止后（由于整合活动或在 Spot 实例情况下的抢占）。
 
-这允许在 PVC 上保留中间洗牌数据和缓存数据。当 Spark 请求新的执行器 Pod 来替换被终止的 Pod 时，系统尝试重用属于被终止执行器的现有 PVC。可以通过以下配置启用此选项：
+这允许在 PVC 上保留中间洗牌数据和缓存数据。当 Spark 请求新的executor Pod 来替换被终止的 Pod 时，系统尝试重用属于被终止executor的现有 PVC。可以通过以下配置启用此选项：
 
 `spark.kubernetes.executor.reusePersistentVolume=true`
 
-### 外部洗牌服务
-利用像 Apache Celeborn 这样的外部洗牌服务来解耦计算和存储，允许 Spark 执行器将数据写入外部洗牌服务而不是本地磁盘。这减少了由于执行器终止或整合而导致的数据丢失和数据重新计算的风险。
+### External Shuffle services
+利用像 Apache Celeborn 这样的External Shuffle services来解耦计算和存储，允许 Spark executor将数据写入External Shuffle services而不是本地磁盘。这减少了由于executor终止或整合而导致的数据丢失和数据重新计算的风险。
 
-这还允许更好的资源管理，特别是当启用 `Spark 动态资源分配` 时。外部洗牌服务允许 Spark 即使在动态资源分配期间删除执行器后也保留洗牌数据，防止在添加新执行器时需要重新计算洗牌数据。这使得在不需要时更有效地缩减资源。
+这还允许更好的资源管理，特别是当启用 `Spark 动态资源分配` 时。External Shuffle services允许 Spark 即使在动态资源分配期间删除executor后也保留洗牌数据，防止在添加新executor时需要重新计算洗牌数据。这使得在不需要时更有效地缩减资源。
 
-还要考虑外部洗牌服务的性能影响。对于较小的数据集或洗牌数据量较低的应用程序，设置和管理外部洗牌服务的开销可能超过其好处。
+还要考虑External Shuffle services的性能影响。对于较小的数据集或洗牌数据量较低的应用程序，设置和管理External Shuffle services的开销可能超过其好处。
 
-当处理每个作业超过 500GB 到 1TB 的洗牌数据量或运行数小时到多天的长时间运行 Spark 应用程序时，建议使用外部洗牌服务。
+当处理每个作业超过 500GB 到 1TB 的洗牌数据量或运行数小时到多天的长时间运行 Spark 应用程序时，建议使用External Shuffle services。
 
 请参考此 [Celeborn 文档](https://celeborn.apache.org/docs/latest/deploy_on_k8s/) 了解在 Kubernetes 上的部署和与 Apache Spark 的集成配置。
