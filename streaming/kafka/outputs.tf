@@ -7,3 +7,8 @@ output "grafana_secret_name" {
   description = "Grafana password secret name"
   value       = aws_secretsmanager_secret.grafana.name
 }
+
+output "cluster_name" {
+  description = "EKS cluster name with unique suffix"
+  value       = local.name
+}

@@ -10,8 +10,10 @@ data "aws_ecrpublic_authorization_token" "token" {
 }
 
 locals {
-  name   = var.name
-  region = var.region
+  # Generate a unique suffix using account ID hash (deterministic but unique per account)
+  account_suffix = substr(sha256(data.aws_caller_identity.current.account_id), 0, 6)
+  name          = "${var.name}-${local.account_suffix}"
+  region        = var.region
 
   cluster_version = var.eks_cluster_version
 

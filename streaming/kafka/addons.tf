@@ -108,9 +108,13 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter = true
   karpenter = {
-    chart_version       = "1.0.5"
+    chart_version       = "1.6.2"  # Compatible with Kubernetes 1.33
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
+    timeout             = 600  # 10 minutes
+    wait                = true
+    atomic              = true
+    cleanup_on_fail     = true
   }
   karpenter_enable_spot_termination          = true
   karpenter_enable_instance_profile_creation = true
@@ -142,7 +146,12 @@ module "eks_blueprints_addons" {
         storage_class_type  = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "48.1.1"
+    chart_version   = "48.1.1"
+    timeout         = 900  # 15 minutes
+    wait            = true
+    wait_for_jobs   = true
+    atomic          = true
+    cleanup_on_fail = true
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
@@ -185,7 +194,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.34.0" # ensure to update this to the latest/desired version
+  version = "1.35.0" # Updated for better Kubernetes 1.33 support
 
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------------------------------
@@ -197,12 +206,18 @@ module "eks_data_addons" {
       operating_system = "linux"
       node_group_type  = "core"
     })],
-    version = "0.43.0"
+    version         = "0.46.0"  # Latest version with EKS 1.33 compatibility
+    timeout         = 900  # 15 minutes
+    wait            = true
+    wait_for_jobs   = true
+    atomic          = true
+    cleanup_on_fail = true
+    max_history     = 3
   }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
-  #---------------------------------------
+  #---------------------------------------g
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
     default = {
@@ -217,10 +232,10 @@ module "eks_data_addons" {
           - alias: "bottlerocket@latest"
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         securityGroupSelectorTerms:
           tags:
-            Name: ${module.eks.cluster_name}-node
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         instanceStorePolicy: RAID0
       nodePool:
         labels:
@@ -258,10 +273,10 @@ module "eks_data_addons" {
           - alias: "bottlerocket@latest"
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         securityGroupSelectorTerms:
           tags:
-            Name: ${module.eks.cluster_name}-node
+            karpenter.sh/discovery: ${module.eks.cluster_name}
         instanceStorePolicy: RAID0
       nodePool:
         labels:
