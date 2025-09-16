@@ -26,6 +26,14 @@ module "eks" {
       type                       = "ingress"
       source_node_security_group = true
     }
+    ingress_nodes_postgresql = {
+      description                = "Cluster to nodes PostgreSQL"
+      protocol                   = "tcp"
+      from_port                  = 5432
+      to_port                    = 5432
+      type                       = "ingress"
+      source_node_security_group = true
+    }
   }
 
   # Extend node-to-node security group rules
@@ -35,6 +43,14 @@ module "eks" {
       protocol    = "-1"
       from_port   = 0
       to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+    ingress_postgresql = {
+      description = "PostgreSQL port for CNPG cluster communication"
+      protocol    = "tcp"
+      from_port   = 5432
+      to_port     = 5432
       type        = "ingress"
       self        = true
     }
@@ -63,22 +79,7 @@ module "eks" {
       name        = "doeks-node-group"
       description = "EKS managed node group example launch template"
 
-      ami_id = data.aws_ami.eks.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
+      ami_type = "AL2023_ARM_64_STANDARD"
 
       subnet_ids = module.vpc.private_subnets
 
@@ -87,7 +88,9 @@ module "eks" {
       desired_size = 4
 
       force_update_version = true
-      instance_types       = ["m5.xlarge"]
+      instance_types       = ["m8g.xlarge"]
+
+      vpc_security_group_ids = [module.eks.cluster_primary_security_group_id]
 
       ebs_optimized = true
       block_device_mappings = {

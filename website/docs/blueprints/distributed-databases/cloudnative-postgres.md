@@ -63,40 +63,40 @@ cd data-on-eks/distributed-databases/cloudnative-postgres
 Verify the Amazon EKS Cluster
 
 ```bash
-aws eks describe-cluster --name cnpg-on-eks
+aws eks describe-cluster --name cnpg
 ```
 
 Update local kubeconfig so we can access kubernetes cluster
 
 ```bash
-aws eks update-kubeconfig --name cnpg-on-eks --region us-west-2
+aws eks update-kubeconfig --name cnpg --region us-west-2
 ```
 
 First, lets verify that we have worker nodes running in the cluster.
 
 ```bash
 kubectl get nodes
-NAME                                        STATUS   ROLES    AGE     VERSION
-ip-10-1-10-192.us-west-2.compute.internal   Ready    <none>   4d17h   v1.25.6-eks-48e63af
-ip-10-1-10-249.us-west-2.compute.internal   Ready    <none>   4d17h   v1.25.6-eks-48e63af
-ip-10-1-11-38.us-west-2.compute.internal    Ready    <none>   4d17h   v1.25.6-eks-48e63af
-ip-10-1-12-195.us-west-2.compute.internal   Ready    <none>   4d17h   v1.25.6-eks-48e63af
+NAME                                        STATUS   ROLES    AGE   VERSION
+ip-10-1-10-68.us-west-2.compute.internal    Ready    <none>   94m   v1.32.8-eks-99d6cc0
+ip-10-1-11-124.us-west-2.compute.internal   Ready    <none>   97m   v1.32.8-eks-99d6cc0
+ip-10-1-11-187.us-west-2.compute.internal   Ready    <none>   97m   v1.32.8-eks-99d6cc0
+ip-10-1-12-158.us-west-2.compute.internal   Ready    <none>   97m   v1.32.8-eks-99d6cc0
 ```
 
 Next, lets verify all the pods are running.
 
 ```bash
 kubectl get pods --namespace=monitoring
-NAME                                                        READY   STATUS    RESTARTS        AGE
-alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   1 (4d17h ago)   4d17h
-kube-prometheus-stack-grafana-7f8b9dc64b-sb27n              3/3     Running   0               4d17h
-kube-prometheus-stack-kube-state-metrics-5979d9d98c-r9fxn   1/1     Running   0               60m
-kube-prometheus-stack-operator-554b6f9965-zqszr             1/1     Running   0               60m
-prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0               4d17h
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-prometheus-kube-prometheus-alertmanager-0   2/2     Running   0          94m
+prometheus-grafana-679d5bbf76-mvtp5                      3/3     Running   0          91m
+prometheus-kube-prometheus-operator-579b8cf467-h7fwm     1/1     Running   0          83m
+prometheus-kube-state-metrics-6d476dd454-p52mr           1/1     Running   0          94m
+prometheus-prometheus-kube-prometheus-prometheus-0       2/2     Running   0          80m
 
 kubectl get pods --namespace=cnpg-system
-NAME                                          READY   STATUS    RESTARTS   AGE
-cnpg-on-eks-cloudnative-pg-587d5d8fc5-65z9j   1/1     Running   0          4d17h
+NAME                                   READY   STATUS    RESTARTS   AGE
+cnpg-cloudnative-pg-85949d9bc8-dp8vq   1/1     Running   0          83m
 ```
 
 ### Deploy a PostgreSQL cluster
@@ -133,16 +133,16 @@ As with any other deployment in Kubernetes, to deploy a PostgreSQL cluster you n
 1. Bootstrap an empty cluster
 2. Bootstrap From another cluster.
 
-In this first example, we are going to create a new empty database cluster using `initdb`flags. We are going to use the template below by modifying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
+In this first example, we are going to create a new empty database cluster using `initdb` flags. We are going to use the template below by modifying the IAM role for IRSA configuration _1_ and S3 bucket for backup restore process and WAL archiving _2_. The Terraform could already created this use `terraform output` to extract these parameters:
 
 ```bash
 cd data-on-eks/distributed-databases/cloudnative-postgres
 
 terraform output
 
-barman_backup_irsa = "arn:aws:iam::<your_account_id>:role/cnpg-on-eks-prod-irsa"
+barman_backup_irsa = "arn:aws:iam::<your_account_id>:role/cnpg-prod-irsa"
 barman_s3_bucket = "XXXX-cnpg-barman-bucket"
-configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name cnpg-on-eks"
+configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name cnpg"
 ```
 
 ```yaml
@@ -155,7 +155,7 @@ metadata:
 spec:
   description: "Cluster Demo for DoEKS"
   # Choose your PostGres Database Version
-  imageName: ghcr.io/cloudnative-pg/postgresql:15.2
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.2
   # Number of Replicas
   instances: 3
   startDelay: 300
@@ -181,12 +181,13 @@ spec:
       # - hostssl app all all cert
       - host app app all password
   logLevel: debug
+  # Choose the right storageclass for type of workload.
   storage:
-    storageClass: ebs-sc
-    size: 1Gi
+    storageClass: storageclass-io2 # change this if you want to use a different storage class (ex: storageclass-gp3)
+    size: 4Gi
   walStorage:
-    storageClass: ebs-sc
-    size: 1Gi
+    storageClass: storageclass-io2 # change this if you want to use a different storage class (ex: storageclass-gp3)
+    size: 4Gi
   monitoring:
     enablePodMonitor: true
   bootstrap:
@@ -199,7 +200,7 @@ spec:
     barmanObjectStore:
     # For backup, we S3 bucket to store data.
     # On this Blueprint, we create an S3 check the terraform output for it.
-      destinationPath: s3://<your-s3-barman-bucket> #2
+      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket, #2
       s3Credentials:
         inheritFromIAMRole: true
       wal:
@@ -207,13 +208,14 @@ spec:
         maxParallel: 8
     retentionPolicy: "30d"
 
-  resources: # m5large: m5xlarge 2vCPU, 8GI RAM
+  resources: 
     requests:
       memory: "512Mi"
       cpu: "1"
     limits:
       memory: "1Gi"
       cpu: "2"
+
 
   affinity:
     enablePodAntiAffinity: true
@@ -222,14 +224,12 @@ spec:
   nodeMaintenanceWindow:
     inProgress: false
     reusePVC: false
-
-
 ```
 
 Once updated, you can apply your template.
 
 ```bash
-kubectl create -f examples/prod-cluster.yaml
+kubectl create -f examples/cluster-prod.yaml
 
 ```
 
@@ -261,7 +261,7 @@ Note that `-any` points on all the instances.
 Another way to check Cluster status is by using [cloudnative-pg kubectl plugin](https://cloudnative-pg.io/documentation/1.19/cnpg-plugin/#cloudnativepg-plugin) offered by the CloudNativePG community,
 
 ```bash
-kubectl cnpg status prod
+kubectl cnpg status prod -n demo
 
 Cluster Summary
 Name:               prod
@@ -311,9 +311,19 @@ prod-3  29 MB          0/6000000    Standby (async)   OK      BestEffort  1.19.0
 In this example, we deployed a Prometheus and Grafana addons to monitor all database clusters created by CloudNativePG. Let's check Grafana dashboard.
 
 ```bash
-kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 8080:80
+kubectl -n monitoring port-forward svc/prometheus-grafana 8080:80
 
 ```
+
+You can get the username and password by running the following command:
+
+```bash
+kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-user}" | base64 --decode ; echo
+
+kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+```
+
+Now, you can go to http://localhost:8080 to log into the Grafana dashboard. 
 
 ![CloudNativePG Grafana Dashboard](img/cnpg_garfana_dashboard.png)
 
@@ -326,6 +336,12 @@ In this section, we are going to expose read-write service `-rw`using `kubectl p
 
 kubectl port-forward svc/prod-rw 5432:5432 -n demo
 
+```
+
+First, let's get the `app-auth` secret. 
+
+```bash
+kubectl get secret app-auth -n demo -o=jsonpath='{.data.password}' | base64 --decode ; echo
 ```
 
 Now, we use `psql` cli to import `world.sql` into our database instance WorldDB using credentials from `app-auth` secrets.

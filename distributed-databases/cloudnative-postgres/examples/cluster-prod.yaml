@@ -7,7 +7,7 @@ metadata:
 spec:
   description: "Cluster Demo for DoEKS"
   # Choose your PostGres Database Version
-  imageName: ghcr.io/cloudnative-pg/postgresql:15.2
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.2
   # Number of Replicas
   instances: 3
   startDelay: 300
@@ -22,7 +22,7 @@ spec:
     # You will find this IAM role on terraform outputs.
     metadata:
       annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa
+        eks.amazonaws.com/role-arn: arn:aws:iam::<<account_id>>:role/cnpg-on-eks-prod-irsa #1
   postgresql:
     parameters:
       shared_buffers: 256MB
@@ -36,10 +36,10 @@ spec:
   # Choose the right storageclass for type of workload.
   storage:
     storageClass: storageclass-io2
-    size: 1Gi
+    size: 4Gi
   walStorage:
     storageClass: storageclass-io2
-    size: 1Gi
+    size: 4Gi
   monitoring:
     enablePodMonitor: true
   bootstrap:
@@ -52,7 +52,7 @@ spec:
     barmanObjectStore:
     # For backup, we S3 bucket to store data.
     # On this Blueprint, we create an S3 check the terraform output for it.
-      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket
+      destinationPath: s3://<your-s3-barman-bucket> # ie: s3://xxxx-cnpg-barman-bucket, #2
       s3Credentials:
         inheritFromIAMRole: true
       wal:
@@ -60,13 +60,14 @@ spec:
         maxParallel: 8
     retentionPolicy: "30d"
 
-  # resources: # m5large: m5xlarge 2vCPU, 8GI RAM
-  #   requests:
-  #     memory: "512Mi"
-  #     cpu: "1"
-  #   limits:
-  #     memory: "1Gi"
-  #     cpu: "2"
+  resources: 
+    requests:
+      memory: "512Mi"
+      cpu: "1"
+    limits:
+      memory: "1Gi"
+      cpu: "2"
+
 
   affinity:
     enablePodAntiAffinity: true
