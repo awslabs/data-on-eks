@@ -25,7 +25,7 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 
 为了解决 IP 地址耗尽问题，考虑向您的 VPC 添加辅助 CIDR 块并从这些额外的地址范围创建新子网，然后在这些扩展的子网中部署工作节点。
 
-如果添加更多子网不是选项，那么您将必须通过调整 CNI 配置变量来优化 IP 地址分配。请参考[配置 MINIMUM_IP_TARGET](/docs/bestpractices/networking#avoid-using-warm_ip_target-in-large-clusters-or-cluster-with-a-lot-of-churn)。
+如果添加更多子网不是选项，那么您将必须通过调整 CNI 配置变量来优化 IP 地址分配。请参考[配置 MINIMUM_IP_TARGET](/docs/bestpractices/networking#在大型集群或具有大量流失的集群中避免使用 WARM_IP_TARGET)。
 
 ### CoreDNS 建议
 #### DNS 查找限制
@@ -38,7 +38,7 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 当 DNS 流量超过每秒 1024 个数据包对于一个 CoreDNS 副本时，DNS 请求将被限制，导致 `unknownHostException` 错误。
 
 #### 补救措施
-建议随着工作负载的扩展来扩展 CoreDNS。请参考[扩展 CoreDNS](/docs/bestpractices/networking#scaling-coredns) 了解实现选择的更多详细信息。
+建议随着工作负载的扩展来扩展 CoreDNS。请参考[扩展 CoreDNS](/docs/bestpractices/networking#扩展-coredns) 了解实现选择的更多详细信息。
 
 还建议持续监控 CoreDNS 指标。请参考 [EKS 网络最佳实践](https://docs.aws.amazon.com/eks/latest/best-practices/monitoring_eks_workloads_for_network_performance_issues.html#_monitoring_coredns_traffic_for_dns_throttling_issues) 获取详细信息。
 
@@ -52,7 +52,7 @@ import CollapsibleContent from '../../../../../../src/components/CollapsibleCont
 * 减少跨可用区流量成本
 * 减少executor/Pod 之间的网络延迟
 
-请参考[跨可用区网络优化](/docs/bestpractices/networking#inter-az-network-optimization)以使 Pod 在同一个可用区中共同定位。
+请参考[跨可用区网络优化](/docs/bestpractices/networking#跨可用区网络优化)以使 Pod 在同一个可用区中共同定位。
 
 ## Karpenter 建议
 

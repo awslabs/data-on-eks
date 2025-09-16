@@ -392,7 +392,7 @@ vpc-cni = {
 :::
 <b>启用前缀委托：</b> VPC CNI 插件支持前缀委托，它为每个节点分配 16 个 IPv4 地址块（/28 前缀）。此功能减少每个节点所需的 ENI 数量。通过使用前缀委托，您可以降低 EC2 网络地址使用 (NAU)、减少网络管理复杂性并降低运营成本。
 
-#### 有关网络相关的更多最佳实践，[请参考我们的网络指南](../networking/networking.md)
+#### 有关网络相关的更多最佳实践，[请参考我们的网络指南](/docs/bestpractices/networking#在大型集群或具有大量流失的集群中避免使用-warm_ip_target)
 
 </CollapsibleContent>
 
