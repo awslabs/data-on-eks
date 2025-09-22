@@ -33,7 +33,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
     type      = "gp3"
   }
 
-  depends_on = [kubernetes_annotations.gp2_default]
+  depends_on = [kubernetes_annotations.gp2_default, module.ebs_csi_driver_irsa]
 }
 
 #---------------------------------------------------------------
