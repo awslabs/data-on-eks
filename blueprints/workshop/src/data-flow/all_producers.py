@@ -7,7 +7,7 @@ from datetime import datetime
 from kafka import KafkaProducer
 
 # Configuration
-KAFKA_BOOTSTRAP_SERVERS = ['localhost:9092']
+KAFKA_BOOTSTRAP_SERVERS = ['localhost:9094']
 
 # Sample data
 INTERACTION_TYPES = ['pet', 'play', 'feed', 'photo']

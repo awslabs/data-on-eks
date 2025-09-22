@@ -1,0 +1,96 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: cat-cafe-raw-ingestion
+  namespace: flink-team-a
+spec:
+  image: public.ecr.aws/m8u6z8z4/manabu-test:flink-2.0-py-3-11@sha256:3e7c0538841bf1bfc45cfd9523dc43c6360124fb571da77d3c617ffd4a8d563a
+  flinkVersion: v2_0
+  serviceAccount: flink-team-a
+  
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    replicas: 1
+  
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    replicas: 2
+  
+  job:
+    jarURI: local:///opt/flink/opt/flink-python-2.1.0.jar
+    entryClass: org.apache.flink.client.python.PythonDriver
+    args:
+      - "-py"
+      - "/tmp/raw-ingestion.py"
+      # - "s3://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/raw-ingestion.py"
+      # - "--pyRequirements"
+      # - "s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/flink-requirements.txt"
+      # - "--pyArchives"
+      # - "s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/python-modules.zip"
+    parallelism: 2
+    upgradeMode: stateless
+  
+  flinkConfiguration:
+    logger.root.level: DEBUG
+    logger.org.apache.flink.client.python: DEBUG
+    logger.org.apache.flink.python: DEBUG
+    taskmanager.numberOfTaskSlots: "2"
+    state.checkpoints.dir: s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-checkpoints/
+    execution.checkpointing.interval: 120s
+    execution.checkpointing.mode: EXACTLY_ONCE
+    
+    # S3 Configuration
+    s3.endpoint: https://s3.amazonaws.com
+    s3.path.style.access: false
+    
+    # Iceberg Configuration
+    table.exec.iceberg.infer-source-parallelism: "false"
+    
+    # Environment Variables
+    env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+    env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+  
+  podTemplate:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "RESTART_TIMESTAMP"
+    spec:
+      volumes:
+        - name: python-script
+          configMap:
+            name: raw-ingestion-py
+      containers:
+        - name: flink-main-container
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: python-script
+              mountPath: /tmp/raw-ingestion.py
+              subPath: raw-ingestion.py
+          # args:
+          #   - "bash"
+          #   - "-c"
+          #   - "sleep 3600"
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+            - name: S3_WAREHOUSE_PATH
+              value: "s3a://data-on-eks-spark-logs-20250915164903963600000002/iceberg-warehouse/"
+            - name: AWS_REGION
+              value: "us-west-2"
+            - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
+              value: "true"
+            # - name: ENABLE_BUILT_IN_PLUGINS
+            #   value: "flink-s3-fs-hadoop-2.0.0.jar"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: raw-ingestion-py
+  namespace: flink-team-a
+data:
+  raw-ingestion.py: |
+    PYTHON_SCRIPT_CONTENT
