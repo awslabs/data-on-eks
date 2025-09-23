@@ -12,6 +12,12 @@ proxy:
     type: ClusterIP
 
 singleuser:
+  # Enabled root access for debugging purposes. Do not enable root access unless it's absolutely necessary.
+  # extraEnv:
+  #   GRANT_SUDO: "yes"
+  #   NOTEBOOK_ARGS: "--allow-root"
+  # uid: 0
+  allowPrivilegeEscalation: true
   profileList:
     - display_name: Data Engineering (CPU)
       description: "PySpark Notebooks | Karpenter AutoScaling"
@@ -33,6 +39,10 @@ singleuser:
               display_name: "PySpark 3.5.3"
               kubespawner_override:
                 image: quay.io/jupyter/pyspark-notebook:spark-3.5.3
+            pyspark40: # Spark 4.0 with native support for aws sdk v2 (needed for pod identity)
+              display_name: "PySpark 4.0.0"
+              kubespawner_override:
+                image: quay.io/jupyter/pyspark-notebook:spark-4.0.1
       kubespawner_override:
         extra_pod_config:
           dns_policy: ClusterFirst

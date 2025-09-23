@@ -1,6 +1,21 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from decimal import Decimal
 from typing import Optional
+
+
+@dataclass
+class CatProfile:
+    cat_id: str
+    name: str
+    coat_color: str
+    coat_length: str
+    age_months: int
+    base_weight_kg: Decimal
+    favorite_food: str
+    favorite_toy: str
+    sociability_score: int
+    vocalization_level: int
+    stress_tendency: str  # high, medium, low
 
 
 @dataclass
