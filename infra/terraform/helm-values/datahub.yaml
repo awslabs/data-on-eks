@@ -24,7 +24,7 @@ global:
 acryl-datahub-actions:
   image:
     registry: public.ecr.aws
-    repository: /m8u6z8z4/manabu-test
+    repository: m8u6z8z4/manabu-test
     tag: datahub-action@sha256:081d218f5adf8029f69f1dc38d5fd2ec2b74bc39d934c03a8b3d73f744e8c4a6
   serviceAccount:
     name: datahub-sa
