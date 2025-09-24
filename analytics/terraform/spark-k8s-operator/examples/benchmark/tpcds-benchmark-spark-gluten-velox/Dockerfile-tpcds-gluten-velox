@@ -83,7 +83,9 @@ RUN set -eux; cd ${SPARK_HOME}/jars; \
 RUN set -eux; cd ${SPARK_HOME}/jars; \
     wget -q https://dlcdn.apache.org/incubator/gluten/1.4.0-incubating/apache-gluten-1.4.0-incubating-bin-spark35.tar.gz; \
     tar -xzf apache-gluten-1.4.0-incubating-bin-spark35.tar.gz; \
-    rm -f apache-gluten-1.4.0-incubating-bin-spark35.tar.gz
+    cp apache-gluten-1.4.0-incubating-bin-spark35/jar/gluten-*.jar .; \
+    cp apache-gluten-1.4.0-incubating-bin-spark35/jar/velox-*.jar .; \
+    rm -rf apache-gluten-1.4.0-incubating-bin-spark35*
 
 # ---- Install sbt 0.13.18 for benchmark compilation ----
 RUN wget https://github.com/sbt/sbt/releases/download/v0.13.18/sbt-0.13.18.tgz && \

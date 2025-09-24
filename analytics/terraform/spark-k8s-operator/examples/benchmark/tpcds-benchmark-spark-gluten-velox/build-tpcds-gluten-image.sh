@@ -19,7 +19,7 @@ cd "$(dirname "$0")/.."
 echo "Building Docker image for AMD64 platform..."
 docker buildx build \
     --platform linux/amd64 \
-    -f Dockerfile-tpcds-gluten-velox-v2 \
+    -f tpcds-benchmark-spark-gluten-velox/Dockerfile-tpcds-gluten-velox \
     -t "${FULL_IMAGE}" \
     --load .
 

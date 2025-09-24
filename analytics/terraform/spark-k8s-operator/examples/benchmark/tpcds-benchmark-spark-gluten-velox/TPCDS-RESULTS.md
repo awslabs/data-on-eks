@@ -17,7 +17,7 @@ This document captures the complete outcome of the 1 TB TPC-DS benchmark runs t
 - **Dataset**: `s3a://spark-benchmarks-tpcds-data-1tb-us-west-2/TPCDS-TEST-1TB`
 - **Scale factor**: 1000 (1 TB)
 - **Iterations**: 1
-- **Cluster capacity**: 8 × c5d.12xlarge nodes labelled `NodeGroupType=spark_benchmark_ssd1`
+- **Cluster capacity**: 8 × c5d.12xlarge nodes labelled `NodeGroupType=spark_benchmark_ssd`
 - **Executors**
   - Gluten + Velox: 23 executors, 5 cores, 20 Gi heap, 6 Gi overhead, 2 Gi off-heap
   - Native Spark: 24 executors, 5 cores, 20 Gi heap, 6 Gi overhead

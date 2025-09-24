@@ -60,12 +60,12 @@ spec:
       - name: JAVA_HOME
         value: "/usr/lib/jvm/java-17-openjdk-amd64"
     nodeSelector:
-      NodeGroupType: "spark_benchmark_ssd1"
+      NodeGroupType: "spark_benchmark_ssd"
   executor:
     cores: 5
     memory: "20g"
     memoryOverhead: "6g"
-    instances: 23  # Fits within 8-node spark_benchmark_ssd1 group alongside driver
+    instances: 23  # Fits within 8-node spark_benchmark_ssd group alongside driver
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -83,7 +83,7 @@ spec:
       - name: JAVA_HOME
         value: "/usr/lib/jvm/java-17-openjdk-amd64"
     nodeSelector:
-      NodeGroupType: "spark_benchmark_ssd1"
+      NodeGroupType: "spark_benchmark_ssd"
   sparkConf:
     # Gluten + Velox Configuration - Official Apache Gluten Setup
     "spark.plugins": "org.apache.gluten.GlutenPlugin"

@@ -65,7 +65,7 @@ spec:
     cores: 5
     memory: "20g"
     memoryOverhead: "6g"
-    instances: 23  # ~3 executors per spark_benchmark_ssd1 node
+    instances: 23  # ~3 executors per spark_benchmark_ssd node
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
