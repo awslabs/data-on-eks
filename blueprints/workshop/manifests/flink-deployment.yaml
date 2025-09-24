@@ -4,7 +4,7 @@ metadata:
   name: cat-cafe-raw-ingestion
   namespace: flink-team-a
 spec:
-  image: public.ecr.aws/m8u6z8z4/manabu-test:flink-2.0-py-3-11@sha256:3e7c0538841bf1bfc45cfd9523dc43c6360124fb571da77d3c617ffd4a8d563a
+  image: public.ecr.aws/m8u6z8z4/manabu-test:flink-2.0-py-3-11@sha256:a535c8893d6dfaddcfee6646f516d1b1dd2e94adc7f3ba74152a22aabef5dc0d
   flinkVersion: v2_0
   serviceAccount: flink-team-a
   
@@ -35,9 +35,16 @@ spec:
     upgradeMode: stateless
   
   flinkConfiguration:
-    logger.root.level: DEBUG
-    logger.org.apache.flink.client.python: DEBUG
-    logger.org.apache.flink.python: DEBUG
+    # logger.root.level: DEBUG
+    # logger.org.apache.flink.client.python: DEBUG
+    # logger.org.apache.flink.python: DEBUG
+    # # Fix logging conflicts
+    # rootLogger.level: INFO
+    # rootLogger.appenderRef.console.ref: ConsoleAppender
+    # appender.console.name: ConsoleAppender
+    # appender.console.type: CONSOLE
+    # appender.console.layout.type: PatternLayout
+    # appender.console.layout.pattern: "%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p %-60c %x - %m%n"
     taskmanager.numberOfTaskSlots: "2"
     state.checkpoints.dir: s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-checkpoints/
     execution.checkpointing.interval: 120s
@@ -53,6 +60,16 @@ spec:
     
     env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
     env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+
+    # datahub configuration
+    execution.job-status-changed-listeners: "io.openlineage.flink.listener.OpenLineageJobStatusChangedListenerFactory"
+    openlineage.transport.type: "http"
+    openlineage.transport.url: "http://data-on-eks-datahub-gms.datahub.svc.cluster.local:8080/openapi/openlineage/api/v1/lineage"
+    openlineage.transport.auth.type: api_key
+    openlineage.transport.auth.apiKey: "$DATAHUB_TOKEN"
+    openlineage.job.namespace: "workshop"
+    openlineage.job.name: "cat-cafe-raw-ingestion"
+
   
   podTemplate:
     metadata:
@@ -83,7 +100,12 @@ spec:
             - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
               value: "true"
             - name: WORKSHOP_DEBUG
-              value: "true"
+              value: "false"
+            - name: DATAHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: datahub-token
+                  key: token
             # - name: ENABLE_BUILT_IN_PLUGINS
             #   value: "flink-s3-fs-hadoop-2.0.0.jar"
 ---
@@ -95,3 +117,12 @@ metadata:
 data:
   raw-ingestion.py: |
     PYTHON_SCRIPT_CONTENT
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: datahub-token
+  namespace: flink-team-a
+type: Opaque
+stringData:
+  token: $DATAHUB_TOKEN

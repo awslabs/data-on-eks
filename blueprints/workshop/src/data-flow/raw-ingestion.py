@@ -140,6 +140,15 @@ def main():
     settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
     table_env = StreamTableEnvironment.create(env, settings)
     
+    # Register Iceberg catalog
+    s3_warehouse = os.getenv('S3_WAREHOUSE_PATH', 's3a://your-bucket/iceberg-warehouse/')
+    table_env.execute_sql(f"""
+        CREATE CATALOG s3_catalog WITH (
+            'type' = 'iceberg',
+            'warehouse' = '{s3_warehouse}',
+            'catalog-impl' = 'org.apache.iceberg.hadoop.HadoopCatalog'
+        )
+    """)
 
     debug_enabled = os.getenv('WORKSHOP_DEBUG', 'false').lower() == 'true'
     print(f"Debug mode: {'enabled' if debug_enabled else 'disabled'}")
