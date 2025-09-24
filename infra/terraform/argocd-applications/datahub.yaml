@@ -12,6 +12,7 @@ spec:
     chart: datahub
     targetRevision: "0.6.21"
     helm:
+      releaseName: data-on-eks
       values: |
         ${user_values_yaml}
 
