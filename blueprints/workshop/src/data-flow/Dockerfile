@@ -41,12 +41,18 @@ RUN wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.2/hadoo
 
 RUN wget https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.34.0/bundle-2.34.0.jar
 
+RUN wget https://repo1.maven.org/maven2/io/openlineage/openlineage-flink/1.37.0/openlineage-flink-1.37.0.jar
+
 # commented this out because the apache mirror site is very slow as of this writing
 # RUN wget https://dlcdn.apache.org/hadoop/common/hadoop-3.4.2/hadoop-3.4.2-lean.tar.gz
 ADD hadoop-3.4.2-lean.tar.gz .
 
 # export HADOOP_CLASSPATH=$(./hadoop-3.4.2/bin/hadoop classpath)
 ENV HADOOP_CLASSPATH=/opt/flink/hadoop-3.4.2/etc/hadoop:/opt/flink/hadoop-3.4.2/share/hadoop/common/lib/*:/opt/flink/hadoop-3.4.2/share/hadoop/common/*:/opt/flink/hadoop-3.4.2/share/hadoop/hdfs:/opt/flink/hadoop-3.4.2/share/hadoop/hdfs/lib/*:/opt/flink/hadoop-3.4.2/share/hadoop/hdfs/*:/opt/flink/hadoop-3.4.2/share/hadoop/mapreduce/*:/opt/flink/hadoop-3.4.2/share/hadoop/yarn:/opt/flink/hadoop-3.4.2/share/hadoop/yarn/lib/*:/opt/flink/hadoop-3.4.2/share/hadoop/yarn/*
+
+USER root
+RUN rm /opt/flink/lib/hadoop-3.4.2/share/hadoop/common/lib/slf4j*
+# RUN chown -R flink:flink /opt/flink/lib/hadoop-3.4.2/
 
 WORKDIR /opt/flink
 
