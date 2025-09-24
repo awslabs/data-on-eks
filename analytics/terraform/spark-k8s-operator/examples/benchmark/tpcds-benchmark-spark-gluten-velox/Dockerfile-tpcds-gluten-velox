@@ -1,0 +1,138 @@
+# TPC-DS Benchmark with Gluten+Velox Support
+# Based on your existing TPC-DS benchmark Dockerfile but with Gluten+Velox added
+# docker buildx build \
+#     --platform linux/amd64 \
+#     -f Dockerfile-tpcds-gluten-velox \
+#     -t "${FULL_IMAGE}" \
+#     --load .
+
+# Ubuntu 22.04 base (matching your Gluten base)
+FROM ubuntu:22.04
+
+# ---- Versions / args ----
+ARG HADOOP_VERSION=3.4.1
+ARG AWS_SDK_VERSION=2.29.0        # AWS SDK v2 bundle for Hadoop 3.4.x
+ARG SPARK_VERSION=3.5.2           # Gluten supports up to 3.5.2
+ARG SCALA_BINARY=2.12
+ARG SPARK_UID=185
+ARG SPARK_GID=185
+ARG TARGETARCH    # provided by buildx: amd64 | arm64
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SPARK_HOME=/opt/spark
+ENV PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:$PATH
+# Map OpenJDK path for Debian/Ubuntu multi-arch
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-${TARGETARCH}
+
+# ---- Base OS deps (matches your list) ----
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jdk-headless \
+    python3 python3-pip \
+    curl wget \
+    ca-certificates tzdata \
+    libgomp1 numactl \
+    tini \
+    gcc \
+    make \
+    flex \
+    bison \
+    git \
+    libc6-dev \
+    build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+# CA bundle path some libs expect (RHEL-style)
+RUN mkdir -p /etc/pki/tls/certs && \
+    ln -sf /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
+
+# ---- Install Apache Spark 3.5.2 (Hadoop3 build) ----
+RUN set -eux; \
+    wget -q https://mirror.lyrahosting.com/apache/spark/spark-3.5.2/spark-3.5.2-bin-hadoop3.tgz -O /tmp/spark.tgz; \
+    tar -xzf /tmp/spark.tgz -C /opt; \
+    ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop3 ${SPARK_HOME}; \
+    rm -f /tmp/spark.tgz
+
+# ---- Create spark user ----
+RUN groupadd -g ${SPARK_GID} spark && \
+    useradd -m -u ${SPARK_UID} -g ${SPARK_GID} -s /bin/bash spark && \
+    chown -R spark:spark /opt/spark-${SPARK_VERSION}-bin-hadoop3 && \
+    chown -R spark:spark ${SPARK_HOME}
+
+# ---- Align Hadoop client + S3A (remove v1 AWS jars, add Hadoop 3.4.1 + AWS SDK v2) ----
+RUN set -eux; cd ${SPARK_HOME}/jars; \
+    # Purge prebundled Hadoop & AWS SDK v1 to avoid mixing
+    find . -maxdepth 1 -type f -name 'hadoop-*.jar' -delete || true; \
+    find . -maxdepth 1 -type f -name 'aws-java-sdk-*.jar' -delete || true; \
+    # Core Hadoop jars
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-auth/${HADOOP_VERSION}/hadoop-auth-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar; \
+    # S3A + AWS SDK v2 (bundle)
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar; \
+    # Hadoop 3.4.x needs commons-configuration2 on classpath
+    wget -q https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.9.0/commons-configuration2-2.9.0.jar; \
+    # Spark cloud committers (match Spark version)
+    wget -q https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_${SCALA_BINARY}/${SPARK_VERSION}/spark-hadoop-cloud_${SCALA_BINARY}-${SPARK_VERSION}.jar; \
+    # XML deps to satisfy jackson-dataformat-xml
+    wget -q https://repo1.maven.org/maven2/com/fasterxml/woodstox/woodstox-core/6.5.1/woodstox-core-6.5.1.jar; \
+    wget -q https://repo1.maven.org/maven2/org/codehaus/woodstox/stax2-api/4.2.2/stax2-api-4.2.2.jar
+
+# ---- Add Gluten bundle for Spark 3.5.2 ----
+RUN set -eux; cd ${SPARK_HOME}/jars; \
+    wget -q https://dlcdn.apache.org/incubator/gluten/1.4.0-incubating/apache-gluten-1.4.0-incubating-bin-spark35.tar.gz; \
+    tar -xzf apache-gluten-1.4.0-incubating-bin-spark35.tar.gz; \
+    rm -f apache-gluten-1.4.0-incubating-bin-spark35.tar.gz
+
+# ---- Install sbt 0.13.18 for benchmark compilation ----
+RUN wget https://github.com/sbt/sbt/releases/download/v0.13.18/sbt-0.13.18.tgz && \
+    tar -xzf sbt-0.13.18.tgz -C /usr/local && \
+    ln -s /usr/local/sbt/bin/sbt /usr/local/bin/sbt && \
+    rm sbt-0.13.18.tgz
+
+# ---- Clone and compile TPC-DS toolkit ----
+WORKDIR /opt
+RUN git clone https://github.com/databricks/tpcds-kit.git && \
+    cd tpcds-kit/tools && \
+    make OS=LINUX && \
+    chmod +x dsdgen dsqgen
+
+# ---- Clone the SQL perf library and related files ----
+RUN git clone -b delta https://github.com/aws-samples/emr-on-eks-benchmark.git /tmp/emr-on-eks-benchmark
+
+# ---- Build the Databricks SQL perf library ----
+RUN cd /tmp/emr-on-eks-benchmark/spark-sql-perf && sbt +package
+
+# ---- Use the compiled Databricks SQL perf library to build benchmark utility ----
+RUN cd /tmp/emr-on-eks-benchmark/ && \
+    mkdir -p /tmp/emr-on-eks-benchmark/benchmark/libs && \
+    cp /tmp/emr-on-eks-benchmark/spark-sql-perf/target/scala-2.12/*.jar /tmp/emr-on-eks-benchmark/benchmark/libs && \
+    cd /tmp/emr-on-eks-benchmark/benchmark && sbt assembly
+
+# ---- Create directory for TPC-DS data and set permissions ----
+RUN mkdir -p /opt/tpcds-data && \
+    chown -R ${SPARK_UID}:${SPARK_UID} /opt/tpcds-data
+
+# ---- Copy the built JARs to Spark's examples directory ----
+RUN mkdir -p ${SPARK_HOME}/examples/jars/ && \
+    cp /tmp/emr-on-eks-benchmark/benchmark/target/scala-2.12/*jar ${SPARK_HOME}/examples/jars/ && \
+    chown -R ${SPARK_UID}:${SPARK_UID} ${SPARK_HOME}/examples
+
+# ---- Clean up build artifacts ----
+RUN rm -rf /tmp/emr-on-eks-benchmark
+
+# ---- Spark defaults: JDK17 module opens for Gluten+Velox ----
+RUN mkdir -p $SPARK_HOME/conf && cat >> $SPARK_HOME/conf/spark-defaults.conf <<'CONF'
+spark.driver.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+spark.executor.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+CONF
+
+# Ensure ownership for the non-root user
+RUN chown -R spark:spark ${SPARK_HOME}
+
+USER ${SPARK_UID}
+WORKDIR ${SPARK_HOME}
+
+# Use standard Spark Kubernetes entrypoint for Spark Operator compatibility
+ENTRYPOINT ["/opt/spark/kubernetes/dockerfiles/spark/entrypoint.sh"]
