@@ -108,10 +108,10 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter = true
   karpenter = {
-    chart_version       = "1.6.2"  # Compatible with Kubernetes 1.33
+    chart_version       = "1.6.2" # Compatible with Kubernetes 1.33
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-    timeout             = 600  # 10 minutes
+    timeout             = 600 # 10 minutes
     wait                = true
     atomic              = true
     cleanup_on_fail     = true
@@ -147,7 +147,7 @@ module "eks_blueprints_addons" {
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
     chart_version   = "48.1.1"
-    timeout         = 900  # 15 minutes
+    timeout         = 900 # 15 minutes
     wait            = true
     wait_for_jobs   = true
     atomic          = true
@@ -206,8 +206,8 @@ module "eks_data_addons" {
       operating_system = "linux"
       node_group_type  = "core"
     })],
-    version         = "0.46.0"  # Latest version with EKS 1.33 compatibility
-    timeout         = 900  # 15 minutes
+    version         = "0.46.0" # Latest version with EKS 1.33 compatibility
+    timeout         = 900      # 15 minutes
     wait            = true
     wait_for_jobs   = true
     atomic          = true
