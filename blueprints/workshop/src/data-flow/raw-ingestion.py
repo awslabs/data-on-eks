@@ -96,7 +96,7 @@ def create_kafka_source_table(table_env, table_name, topic_name):
         'topic' = '{topic_name}',
         'properties.bootstrap.servers' = '{kafka_servers}',
         'properties.group.id' = 'flink-workshop',
-        'scan.startup.mode' = 'earliest-offset',
+        'scan.startup.mode' = 'latest-offset',
         'format' = 'raw'
     )
     """
