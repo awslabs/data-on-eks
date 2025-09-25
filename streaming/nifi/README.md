@@ -1,14 +1,14 @@
 # Apache NiFi on EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/streaming-platforms-eks/nifi) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.72 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.4.1 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.2 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.95 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | ~> 2.17 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.3.2 |
 
@@ -16,8 +16,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
-| <a name="provider_helm"></a> [helm](#provider\_helm) | >= 2.4.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.95 |
+| <a name="provider_helm"></a> [helm](#provider\_helm) | ~> 2.17 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 | <a name="provider_random"></a> [random](#provider\_random) | >= 3.3.2 |
 
@@ -94,4 +94,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_configure_kubectl"></a> [configure\_kubectl](#output\_configure\_kubectl) | Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig |
 | <a name="output_grafana_secret_name"></a> [grafana\_secret\_name](#output\_grafana\_secret\_name) | Grafana password secret name |
 | <a name="output_nifi_login_password_secret_name"></a> [nifi\_login\_password\_secret\_name](#output\_nifi\_login\_password\_secret\_name) | Apache NiFi Login password secret name |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

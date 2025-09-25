@@ -1,0 +1,219 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: spark-log-processing-job
+  namespace: $NAMESPACE
+  labels:
+    app: spark-log-processor-job
+    version: "1.0"
+    team: data-engineering
+spec:
+  entrypoint: python /home/ray/app/spark_log_processor.py
+  runtimeEnvYAML: |
+    pip:
+      - boto3==1.34.131
+      - pyiceberg[glue,s3fs]==0.7.0
+      - ray[data]==2.47.1
+      - pyarrow>=10.0.0
+      - fsspec[s3]
+    env_vars:
+      PYTHONPATH: "/home/ray/app:$PYTHONPATH"
+      RAY_TMPDIR: "/fast-storage/ray"
+      RAY_OBJECT_STORE_ALLOW_SLOW_STORAGE: "1"
+      RAY_SPILL_TO_DISK: "1"
+      # Fix Iceberg timestamp precision issue
+      downcast-ns-timestamp-to-us-on-write: "true"
+
+  shutdownAfterJobFinishes: true
+  ttlSecondsAfterFinished: 300
+  suspend: false
+
+  # shutdownAfterJobFinishes specifies whether the RayCluster should be deleted after the RayJob finishes
+  shutdownAfterJobFinishes: true
+
+  # ttlSecondsAfterFinished specifies the number of seconds after which the RayCluster will be deleted after the RayJob finishes
+  ttlSecondsAfterFinished: 600
+
+  # activeDeadlineSeconds is the duration in seconds that the RayJob may be active before KubeRay actively tries to terminate the RayJob
+  activeDeadlineSeconds: 1800
+
+  # backoffLimit specifies the number of retries before marking this RayJob failed. Each retry creates a new RayCluster.
+  backoffLimit: 0
+
+  # Submitter pod configuration with IRSA and additional submitter config
+  submitterPodTemplate:
+    spec:
+      serviceAccountName: raydata
+      restartPolicy: Never
+      containers:
+        - name: rayjob-submitter
+          image: rayproject/ray:2.47.1-py310
+          env:
+            - name: S3_BUCKET
+              value: "$S3_BUCKET"
+            - name: S3_PREFIX
+              value: "$S3_PREFIX"
+            - name: ICEBERG_CATALOG_TYPE
+              value: "$ICEBERG_CATALOG_TYPE"
+            - name: ICEBERG_DATABASE
+              value: "$ICEBERG_DATABASE"
+            - name: ICEBERG_TABLE
+              value: "$ICEBERG_TABLE"
+            - name: ICEBERG_WAREHOUSE
+              value: "$ICEBERG_WAREHOUSE"
+            - name: BATCH_SIZE
+              value: "$BATCH_SIZE"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "200Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+
+  # Additional configurations for the submitter Kubernetes Job
+  submitterConfig:
+    backoffLimit: 3
+
+  rayClusterSpec:
+    rayVersion: "2.47.1"
+    enableInTreeAutoscaling: true
+
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: "0.0.0.0"
+        dashboard-port: "8265"
+        num-cpus: "2"
+        object-store-memory: "1000000000"
+        temp-dir: "/fast-storage/ray"
+        metrics-export-port: "8080"
+      template:
+        metadata:
+          labels:
+            app: spark-log-processor-job
+            component: ray-head
+        spec:
+          serviceAccountName: raydata
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.47.1-py310
+              imagePullPolicy: Always
+              env:
+                - name: S3_BUCKET
+                  value: "$S3_BUCKET"
+                - name: S3_PREFIX
+                  value: "$S3_PREFIX"
+                - name: ICEBERG_CATALOG_TYPE
+                  value: "$ICEBERG_CATALOG_TYPE"
+                - name: ICEBERG_DATABASE
+                  value: "$ICEBERG_DATABASE"
+                - name: ICEBERG_TABLE
+                  value: "$ICEBERG_TABLE"
+                - name: ICEBERG_WAREHOUSE
+                  value: "$ICEBERG_WAREHOUSE"
+                - name: BATCH_SIZE
+                  value: "$BATCH_SIZE"
+              ports:
+                - name: gcs-server
+                  containerPort: 6379
+                - name: dashboard
+                  containerPort: 8265
+                - name: client
+                  containerPort: 10001
+                - name: metrics
+                  containerPort: 8080
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: "4Gi"
+                limits:
+                  cpu: "4"
+                  memory: "8Gi"
+              volumeMounts:
+                - name: app-volume
+                  mountPath: /home/ray/app
+                - name: fast-storage
+                  mountPath: /fast-storage
+              livenessProbe:
+                httpGet:
+                  path: /
+                  port: 8265
+                initialDelaySeconds: 60
+                periodSeconds: 30
+                timeoutSeconds: 10
+              readinessProbe:
+                httpGet:
+                  path: /
+                  port: 8265
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                timeoutSeconds: 5
+          volumes:
+            - name: app-volume
+              configMap:
+                name: spark-log-processor-code
+            - name: fast-storage
+              emptyDir: {}
+
+    workerGroupSpecs:
+      - groupName: log-processor-workers
+        replicas: $INITIAL_WORKERS
+        minReplicas: $MIN_WORKERS
+        maxReplicas: $MAX_WORKERS
+        rayStartParams:
+          num-cpus: "4"
+          object-store-memory: "2000000000"
+          temp-dir: "/fast-storage/ray"
+          metrics-export-port: "8080"
+        template:
+          metadata:
+            labels:
+              app: spark-log-processor-job
+              component: ray-worker
+          spec:
+            serviceAccountName: raydata
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.47.1-py310
+                imagePullPolicy: Always
+                env:
+                  - name: S3_BUCKET
+                    value: "$S3_BUCKET"
+                  - name: S3_PREFIX
+                    value: "$S3_PREFIX"
+                  - name: ICEBERG_CATALOG_TYPE
+                    value: "$ICEBERG_CATALOG_TYPE"
+                  - name: ICEBERG_DATABASE
+                    value: "$ICEBERG_DATABASE"
+                  - name: ICEBERG_TABLE
+                    value: "$ICEBERG_TABLE"
+                  - name: ICEBERG_WAREHOUSE
+                    value: "$ICEBERG_WAREHOUSE"
+                  - name: BATCH_SIZE
+                    value: "$BATCH_SIZE"
+                lifecycle:
+                  preStop:
+                    exec:
+                      command: ["/bin/sh", "-c", "ray stop"]
+                resources:
+                  requests:
+                    cpu: "4"
+                    memory: "8Gi"
+                  limits:
+                    cpu: "8"
+                    memory: "16Gi"
+                volumeMounts:
+                  - name: fast-storage
+                    mountPath: /fast-storage
+                livenessProbe:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - ray status
+                  initialDelaySeconds: 60
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+            volumes:
+              - name: fast-storage
+                emptyDir: {}

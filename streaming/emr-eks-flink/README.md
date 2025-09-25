@@ -2,14 +2,14 @@
 
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming/emr-eks-flink) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.72 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.13.0 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.2 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.95 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | ~> 2.17 |
 | <a name="requirement_kubectl"></a> [kubectl](#requirement\_kubectl) | >= 1.14 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
 
@@ -17,8 +17,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
-| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | >= 3.72 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.95 |
+| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | ~> 5.95 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 
 ## Modules
@@ -68,7 +68,7 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_flink_job_execution_role_arn"></a> [flink\_job\_execution\_role\_arn](#output\_flink\_job\_execution\_role\_arn) | IAM linked role for the flink job |
 | <a name="output_flink_operator_bucket"></a> [flink\_operator\_bucket](#output\_flink\_operator\_bucket) | S3 bucket name for Flink operator data,logs,checkpoint and savepoint |
 | <a name="output_flink_operator_role_arn"></a> [flink\_operator\_role\_arn](#output\_flink\_operator\_role\_arn) | IAM linked role for the flink operator |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 

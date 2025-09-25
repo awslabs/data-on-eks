@@ -1,14 +1,14 @@
 # Argo Workflows on EKS
 Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/job-schedulers/argo-workflows-eks) to deploy this pattern and run sample tests.
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.72 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.4.1 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.2 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.95 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | ~> 2.17 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.3.2 |
 
@@ -16,8 +16,8 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.72 |
-| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | >= 3.72 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.95 |
+| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | ~> 5.95 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 | <a name="provider_random"></a> [random](#provider\_random) | >= 3.3.2 |
 
@@ -102,4 +102,4 @@ Checkout the [documentation website](https://awslabs.github.io/data-on-eks/docs/
 | <a name="output_s3_bucket_region_spark_history_server"></a> [s3\_bucket\_region\_spark\_history\_server](#output\_s3\_bucket\_region\_spark\_history\_server) | Spark History server logs S3 bucket ID |
 | <a name="output_subnet_ids_starting_with_100"></a> [subnet\_ids\_starting\_with\_100](#output\_subnet\_ids\_starting\_with\_100) | Secondary CIDR Private Subnet IDs for EKS Data Plane |
 | <a name="output_your_event_irsa_arn"></a> [your\_event\_irsa\_arn](#output\_your\_event\_irsa\_arn) | the ARN of IRSA for argo events |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

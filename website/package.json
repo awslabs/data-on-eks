@@ -19,10 +19,15 @@
     "dev": "docusaurus start"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.5.2",
-    "@docusaurus/logger": "^3.4.0",
-    "@docusaurus/plugin-ideal-image": "^3.5.2",
-    "@docusaurus/preset-classic": "^3.5.2",
+    "@babel/core": "^7.22.1",
+    "@babel/plugin-syntax-jsx": "^7.22.5",
+    "@babel/preset-react": "^7.22.5",
+    "@docusaurus/core": "^3.8.1",
+    "@docusaurus/faster": "^3.8.1",
+    "@docusaurus/logger": "^3.8.1",
+    "@docusaurus/plugin-ideal-image": "^3.8.1",
+    "@docusaurus/preset-classic": "^3.8.1",
+    "@docusaurus/theme-mermaid": "^3.8.1",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "docusaurus-lunr-search": "^3.4.0",
@@ -32,10 +37,7 @@
     "react-dom": "^18.2.0",
     "react-slick": "^0.30.2",
     "serve": "^14.2.3",
-    "slick-carousel": "^1.8.1",
-    "@babel/core": "^7.22.1",
-    "@babel/plugin-syntax-jsx": "^7.22.5",
-    "@babel/preset-react": "^7.22.5"
+    "slick-carousel": "^1.8.1"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.23.3",

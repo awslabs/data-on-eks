@@ -6,7 +6,7 @@ locals {
   prereq_chart       = "datahub-prerequisites"
   datahub_namespace  = "datahub"
   datahub_repository = "https://helm.DataHubproject.io/"
-  datahub_version    = "0.5.10"
+  datahub_version    = "0.6.8"
   prereq_version     = "0.1.15"
 
   datahub_merged_values_yaml = yamlencode(merge(
@@ -103,6 +103,11 @@ resource "random_password" "auth_secrets_salt" {
   min_numeric = 1
 }
 
+resource "random_password" "datahub_user_password" {
+  length  = 16
+  special = true
+}
+
 resource "kubernetes_secret" "datahub_auth_secrets" {
   depends_on = [kubernetes_namespace.datahub]
   metadata {
@@ -116,6 +121,18 @@ resource "kubernetes_secret" "datahub_auth_secrets" {
     token_service_salt        = random_password.auth_secrets_salt.result
   }
 
+}
+
+resource "kubernetes_secret" "datahub_user_secret" {
+  depends_on = [kubernetes_namespace.datahub]
+  metadata {
+    name      = "datahub-user-secret"
+    namespace = local.datahub_namespace
+  }
+
+  data = {
+    "user.props" = "datahub:${random_password.datahub_user_password.result}"
+  }
 }
 
 resource "helm_release" "prereq" {
@@ -171,7 +188,7 @@ resource "helm_release" "prereq" {
 }
 
 resource "helm_release" "datahub" {
-  depends_on = [kubernetes_secret.datahub_es_secret, kubernetes_secret.datahub_rds_secret, kubernetes_secret.datahub_auth_secrets, helm_release.prereq]
+  depends_on = [kubernetes_secret.datahub_es_secret, kubernetes_secret.datahub_rds_secret, kubernetes_secret.datahub_auth_secrets, kubernetes_secret.datahub_user_secret, helm_release.prereq]
 
   name                       = try(var.datahub_helm_config["name"], local.datahub_name)
   repository                 = try(var.datahub_helm_config["repository"], local.datahub_repository)

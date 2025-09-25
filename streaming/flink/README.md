@@ -1,13 +1,13 @@
 # Apache Flink on EKS
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.34 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.4.1 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.2 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.95 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | ~> 2.17 |
 | <a name="requirement_kubectl"></a> [kubectl](#requirement\_kubectl) | >= 2.0 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.10 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6.0 |
@@ -16,8 +16,8 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.34 |
-| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | >= 5.34 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.95 |
+| <a name="provider_aws.ecr"></a> [aws.ecr](#provider\_aws.ecr) | ~> 5.95 |
 | <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | >= 2.0 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | >= 2.10 |
 | <a name="provider_random"></a> [random](#provider\_random) | >= 3.6.0 |
@@ -91,4 +91,4 @@
 | <a name="output_grafana_secret_name"></a> [grafana\_secret\_name](#output\_grafana\_secret\_name) | Grafana password secret name |
 | <a name="output_oidc_provider"></a> [oidc\_provider](#output\_oidc\_provider) | The OIDC Provider |
 | <a name="output_oidc_provider_arn"></a> [oidc\_provider\_arn](#output\_oidc\_provider\_arn) | The ARN of the OIDC Provider |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- END_TF_DOCS -->

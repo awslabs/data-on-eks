@@ -29,3 +29,8 @@ output "fsx_s3_bucket_name" {
   description = "FSx filesystem sync with S3 bucket"
   value       = try(module.fsx_s3_bucket.s3_bucket_id, null)
 }
+
+output "aws_region" {
+  description = "AWS Region"
+  value       = local.region
+}

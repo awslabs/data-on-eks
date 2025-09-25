@@ -24,12 +24,12 @@ resource "random_password" "master_password" {
 
 resource "aws_opensearch_domain" "es" {
   domain_name    = "${var.prefix}-es-domain"
-  engine_version = "OpenSearch_2.11"
+  engine_version = "OpenSearch_2.19"
   cluster_config {
     dedicated_master_count = 0
-    dedicated_master_type  = "c6g.large.search"
+    dedicated_master_type  = "c7g.large.search"
     instance_count         = length(var.vpc_private_subnets)
-    instance_type          = "m6g.large.search"
+    instance_type          = "m7g.large.search"
     zone_awareness_enabled = true
     zone_awareness_config {
       availability_zone_count = min(length(var.vpc_private_subnets), 3)
@@ -106,7 +106,7 @@ resource "aws_kms_key" "kms" {
 
 # Allow auto-create-topics
 resource "aws_msk_configuration" "mskconf" {
-  kafka_versions = ["3.8.x"]
+  kafka_versions = ["3.9.x"]
   name           = "mskconf"
 
   server_properties = <<PROPERTIES
@@ -122,11 +122,11 @@ resource "aws_cloudwatch_log_group" "msklg" {
 # Create cluster with smallest instance
 resource "aws_msk_cluster" "msk" {
   cluster_name           = "${var.prefix}-msk"
-  kafka_version          = "3.8.x"
+  kafka_version          = "3.9.x"
   number_of_broker_nodes = length(var.vpc_private_subnets)
 
   broker_node_group_info {
-    instance_type  = "kafka.m5.large"
+    instance_type  = "kafka.m7g.large"
     client_subnets = var.vpc_private_subnets
     storage_info {
       ebs_storage_info {
@@ -199,8 +199,8 @@ resource "aws_db_instance" "datahub_rds" {
   identifier = "${var.prefix}-mysql"
 
   engine         = "mysql"
-  engine_version = "8.0"
-  instance_class = "db.m6g.large"
+  engine_version = "8.4.5"
+  instance_class = "db.m7g.large"
 
   allocated_storage     = 20
   max_allocated_storage = 100
