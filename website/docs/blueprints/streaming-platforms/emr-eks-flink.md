@@ -391,7 +391,7 @@ Deploy the job with the kubectl deploy command.
 kubectl apply -f autoscaler-example.yaml
 ```
 
-Monitor the job status using the below command. You should see the new nodes triggered by the karpenter and the YuniKorn will schedule Job manager pods and two Taskmanager pods.  As the load increases, autoscaler changes the paralellism of the tasks and more task manager pods are added as needed:
+Monitor the job status using the below command. You should see the new nodes triggered by the karpenter and the YuniKorn will schedule Job manager pods and two Taskmanager pods.  As the load increases, autoscaler changes the parallelism of the tasks and more task manager pods are added as needed:
 
 ```bash
 NAME                                             READY   STATUS    RESTARTS   AGE
@@ -416,7 +416,7 @@ Then browse to http://localhost:8081:
 
 ![Flink Job UI](img/flink6.png)
 
-Examine the `max_load` and `paralellism` of each task.
+Examine the `max_load` and `parallelism` of each task.
 
 </CollapsibleContent>
 
