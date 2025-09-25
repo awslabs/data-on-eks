@@ -1,6 +1,9 @@
 global:
   datahub:
     version: v1.2.0
+    
+  # Disable tutorial popups and onboarding
+  datahub_analytics_enabled: false
   
   elasticsearch:
     host: "opensearch-cluster-master"
@@ -11,15 +14,15 @@ global:
       server: "cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
   sql:
     datasource:
-      host: "datahub-prerequisites-postgresql:5432"
-      hostForpostgresqlClient: "datahub-prerequisites-postgresql"
+      host: "postgresql:5432"
+      hostForpostgresqlClient: "postgresql"
       port: "5432"
-      url: "jdbc:postgresql://datahub-prerequisites-postgresql:5432/datahub"
+      url: "jdbc:postgresql://postgresql:5432/datahub"
       driver: "org.postgresql.Driver"
-      username: "postgres"
+      username: "datahub"
       password:
         secretRef: postgresql-secrets
-        secretKey: postgres-password
+        secretKey: password
 
 acryl-datahub-actions:
   image:

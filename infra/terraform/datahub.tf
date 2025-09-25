@@ -2,12 +2,18 @@ locals {
   datahub_service_account = "datahub-sa"
   datahub_namespace = "datahub"
   
-  datahub_prerequisites_values = templatefile("${path.module}/helm-values/datahub-prerequisites.yaml", {})
-  
   datahub_values = templatefile("${path.module}/helm-values/datahub.yaml", {
     s3_bucket_name = module.s3_bucket.s3_bucket_id
     region = local.region
   })
+
+  opensearch_values = templatefile("${path.module}/helm-values/opensearch.yaml", {})
+
+  postgresql_manifests = provider::kubernetes::manifest_decode_multi(
+    templatefile("${path.module}/manifests/datahub/postgresql.yaml", {
+      namespace = local.datahub_namespace
+    })
+  )
 }
 
 #---------------------------------------------------------------
@@ -22,22 +28,6 @@ resource "kubectl_manifest" "datahub_namespace" {
 #---------------------------------------------------------------
 # Database Secrets
 #---------------------------------------------------------------
-resource "kubernetes_secret" "mysql_secrets" {
-  metadata {
-    name      = "mysql-secrets"
-    namespace = local.datahub_namespace
-  }
-
-  data = {
-    mysql-root-password        = random_password.mysql_root.result
-    mysql-replication-password = random_password.mysql_replication.result
-    mysql-password            = random_password.mysql_user.result
-  }
-
-  type = "Opaque"
-  
-  depends_on = [kubectl_manifest.datahub_namespace]
-}
 
 resource "kubernetes_secret" "postgresql_secrets" {
   metadata {
@@ -54,21 +44,6 @@ resource "kubernetes_secret" "postgresql_secrets" {
   type = "Opaque"
   
   depends_on = [kubectl_manifest.datahub_namespace]
-}
-
-resource "random_password" "mysql_root" {
-  length  = 16
-  special = true
-}
-
-resource "random_password" "mysql_replication" {
-  length  = 16
-  special = true
-}
-
-resource "random_password" "mysql_user" {
-  length  = 16
-  special = true
 }
 
 resource "random_password" "postgres" {
@@ -144,18 +119,30 @@ resource "aws_iam_policy" "datahub_s3" {
 }
 
 #---------------------------------------------------------------
-# DataHub Prerequisites Application
+# PostgreSQL StatefulSet and Service
 #---------------------------------------------------------------
-resource "kubectl_manifest" "datahub_prerequisites" {
-  yaml_body = templatefile("${path.module}/argocd-applications/datahub-prerequisites.yaml", {
-    user_values_yaml = indent(8, local.datahub_prerequisites_values)
+resource "kubectl_manifest" "postgresql" {
+  for_each = { for idx, manifest in local.postgresql_manifests : idx => manifest }
+  
+  yaml_body = yamlencode(each.value)
+  
+  depends_on = [
+    kubectl_manifest.datahub_namespace,
+    kubernetes_secret.postgresql_secrets
+  ]
+}
+
+#---------------------------------------------------------------
+# OpenSearch Application
+#---------------------------------------------------------------
+resource "kubectl_manifest" "opensearch" {
+  yaml_body = templatefile("${path.module}/argocd-applications/opensearch.yaml", {
+    user_values_yaml = indent(8, local.opensearch_values)
   })
 
   depends_on = [
     helm_release.argocd,
-    kubernetes_secret.mysql_secrets,
-    kubernetes_secret.postgresql_secrets,
-    kubectl_manifest.strimzi_kafka_operator
+    kubectl_manifest.datahub_namespace
   ]
 }
 
@@ -169,7 +156,8 @@ resource "kubectl_manifest" "datahub" {
 
   depends_on = [
     helm_release.argocd,
-    kubectl_manifest.datahub_prerequisites,
+    kubectl_manifest.postgresql,
+    kubectl_manifest.opensearch,
     module.datahub_pod_identity,
     aws_iam_policy.datahub_s3,
     kubectl_manifest.strimzi_kafka_operator

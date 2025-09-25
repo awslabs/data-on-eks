@@ -1,16 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: datahub-prerequisites
+  name: opensearch
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://helm.datahubproject.io
-    chart: datahub-prerequisites
-    targetRevision: "0.1.15"
+    repoURL: https://opensearch-project.github.io/helm-charts/
+    chart: opensearch
+    targetRevision: "2.18.0"
     helm:
       values: |
         ${user_values_yaml}
