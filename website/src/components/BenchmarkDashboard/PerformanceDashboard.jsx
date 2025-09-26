@@ -354,9 +354,9 @@ const PerformanceDashboard = () => {
           </div>
           <div className="kpi-card warning">
             <div className="kpi-icon">⏱️</div>
-            <div className="kpi-value">14.0 min</div>
+            <div className="kpi-value">42 min</div>
             <div className="kpi-label">Time Saved</div>
-            <div className="kpi-description">841.7 seconds saved on TPC-DS 1TB benchmark suite</div>
+            <div className="kpi-description">42 minutes saved on TPC-DS 1TB benchmark suite (1.7h → 1.0h)</div>
           </div>
         </div>
       </div>

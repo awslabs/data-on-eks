@@ -134,7 +134,7 @@ Gluten’s native execution path shines on wide, compute-heavy SQL. The table hi
       <td><strong>Aggregate Gains</strong></td>
       <td>
         <ul>
-          <li>Total runtime dropped from 2,016.1s to 1,174.4s (841.7s saved)</li>
+          <li>Total runtime dropped from 1.7 hours to 1.0 hour (42 minutes saved)</li>
           <li>Overall speedup of <strong>1.72×</strong> across the TPC-DS suite</li>
           <li>Peak single-query speedup of <strong>5.48×</strong> (q93-v2.4)</li>
         </ul>
@@ -666,6 +666,35 @@ kubectl exec <spark-pod> -- find /opt/spark -name "*velox*"
 kubectl top pod <spark-pod> --containers
 ```
 :::
+
+### Verifying Gluten+Velox Execution in Spark History Server
+
+When Gluten+Velox is working correctly, you'll see distinctive execution patterns in the Spark History Server that indicate native acceleration:
+
+**Key Indicators of Gluten+Velox Execution:**
+- **VeloxSparkPlanExecApi.scala** references in stages and tasks
+- **WholeStageCodegenTransformer** nodes in the DAG visualization
+- **ColumnarBroadcastExchange** operations instead of standard broadcast
+- **GlutenWholeStageColumnarRDD** in the RDD lineage
+- Methods like `executeColumnar` and `mapPartitions` at VeloxSparkPlanExecApi.scala lines
+
+**Example DAG Pattern:**
+```
+AQEShuffleRead
+├── ColumnarBroadcastExchange
+├── ShuffledColumnarBatchRDD [Unordered]
+│   └── executeColumnar at VeloxSparkPlanExecApi.scala:630
+└── MapPartitionsRDD [Unordered]
+    └── mapPartitions at VeloxSparkPlanExecApi.scala:632
+```
+
+**What This Means:**
+- **VeloxSparkPlanExecApi**: Gluten's interface layer to the Velox execution engine
+- **Columnar operations**: Data processed in columnar format (more efficient than row-by-row)
+- **WholeStageTransformer**: Multiple Spark operations fused into single native Velox operations
+- **Off-heap processing**: Memory management handled by Velox, not JVM garbage collector
+
+If you see traditional Spark operations like `mapPartitions at <WholeStageCodegen>` without Velox references, Gluten may have fallen back to JVM execution for unsupported operations.
 
 
 ## Conclusion
