@@ -166,7 +166,7 @@ case "$1" in
       --partition 0 \
       --from-beginning
     ;;
-  get-kafka-cluster-pod) 
+  get-kafka-cluster-pod)
     kubectl -n kafka get pod cluster-broker-0 -o wide
   ;;
   create-node-failure)

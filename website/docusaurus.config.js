@@ -1,6 +1,7 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
+const path = require('path');
 const lightCodeTheme = require('prism-react-renderer').themes.github;
 const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 
@@ -12,7 +13,6 @@ const config = {
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   favicon: 'img/header-icon.png',
 
   organizationName: 'awslabs',
@@ -53,6 +53,9 @@ const config = {
 
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
   },
 
   themeConfig:
@@ -115,7 +118,22 @@ const config = {
       },
     }),
 
-    plugins: [require.resolve('docusaurus-lunr-search')],
+  plugins: [
+    require.resolve('docusaurus-lunr-search'),
+    () => ({
+      name: 'layout-elk-alias',
+      configureWebpack: () => ({
+        resolve: {
+          alias: {
+            '@mermaid-js/layout-elk': path.resolve(
+              __dirname,
+              'node_modules/@mermaid-js/layout-elk/dist/mermaid-layout-elk.core.mjs',
+            ),
+          },
+        },
+      }),
+    }),
+  ],
 };
 
 module.exports = config;

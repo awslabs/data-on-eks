@@ -17,7 +17,7 @@ fi
 # Function to delete EC2 instances (called after EKS cluster deletion)
 delete_ec2_instances() {
   echo "=== Deleting ALL EC2 instances created by Karpenter ==="
-  
+
   # Find ALL Karpenter instances using multiple tag patterns
   echo "Finding Karpenter instances by various tags..."
 
@@ -110,7 +110,7 @@ echo "  Combined unique instances: $unique_instances"
 if [ -n "$unique_instances" ] && [ "$unique_instances" != " " ]; then
   echo "Found instances to terminate:"
   echo "Instance IDs: $unique_instances"
-  
+
   # Show instance details for verification
   echo "Instance details:"
   for instance_id in $unique_instances; do
@@ -122,7 +122,7 @@ if [ -n "$unique_instances" ] && [ "$unique_instances" != " " ]; then
     fi
   done
   echo ""
-  
+
   # Terminate all instances
   for instance_id in $unique_instances; do
     if [ -n "$instance_id" ]; then
@@ -132,7 +132,7 @@ if [ -n "$unique_instances" ] && [ "$unique_instances" != " " ]; then
         --query "Reservations[*].Instances[*].Tags[?Key=='Name'].Value" \
         --output text 2>/dev/null || echo "unknown")
       echo "  Instance name: $instance_name"
-      
+
       aws ec2 terminate-instances --instance-ids $instance_id 2>/dev/null || echo "  Failed to terminate $instance_id"
     fi
   done
@@ -146,18 +146,18 @@ if [ -n "$unique_instances" ] && [ "$unique_instances" != " " ]; then
         status=$(aws ec2 describe-instances --instance-ids $instance_id \
           --query "Reservations[*].Instances[*].State.Name" \
           --output text 2>/dev/null || echo "terminated")
-        
+
         if [ "$status" = "terminated" ] || [ "$status" = "" ]; then
           echo "  Instance $instance_id terminated"
           break
         fi
-        
+
         echo "  Instance $instance_id status: $status"
         sleep 10
       done
     fi
   done
-  
+
   # Additional wait to ensure ENIs are released
   echo "Waiting additional 30 seconds for ENI cleanup..."
   sleep 30
@@ -166,12 +166,12 @@ else
   echo ""
   echo "Showing ALL instances in region for manual verification:"
   echo "Looking for instances that might be related to kafka-on-eks..."
-  
+
   all_instances_manual=$(aws ec2 describe-instances \
     --filters "Name=instance-state-name,Values=running,pending,stopping,stopped" \
     --query "Reservations[*].Instances[*].[InstanceId,Tags[?Key=='Name'].Value|[0],State.Name,InstanceType,LaunchTime]" \
     --output table 2>/dev/null || echo "Failed to list instances")
-  
+
   echo "$all_instances_manual"
   echo ""
   echo "If you see kafka-related instances above, you can terminate them manually:"
@@ -207,7 +207,7 @@ if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete!"* ]]; the
   echo "SUCCESS: Terraform destroy completed successfully"
 else
   echo "Full destroy failed, trying targeted approach..."
-  
+
   # If full destroy fails, try targeted destroys in correct dependency order
   # Note: VPC should be destroyed LAST since everything depends on it
   targets=(
@@ -216,13 +216,13 @@ else
     "module.ebs_csi_driver_irsa"
     "module.eks"
   )
-  
+
   for target in "${targets[@]}"
   do
     echo "Destroying module $target..."
     terraform destroy -target="$target" -var="region=$region" -auto-approve 2>/dev/null || echo "WARNING: Failed to destroy $target, continuing..."
   done
-  
+
   # Destroy VPC last since everything depends on it
   echo "Destroying VPC (last step)..."
   terraform destroy -target="module.vpc" -var="region=$region" -auto-approve 2>/dev/null || echo "WARNING: Failed to destroy VPC, continuing..."
@@ -235,7 +235,7 @@ remaining_clusters=$(aws eks list-clusters --region $region --query "clusters[?s
 if [ -n "$remaining_clusters" ]; then
   for cluster in $remaining_clusters; do
     echo "WARNING: Found remaining EKS cluster: $cluster"
-    
+
     # First, delete all node groups
     echo "Deleting node groups for cluster: $cluster"
     node_groups=$(aws eks list-nodegroups --cluster-name $cluster --region $region --query "nodegroups" --output text 2>/dev/null || echo "")
@@ -244,12 +244,12 @@ if [ -n "$remaining_clusters" ]; then
         echo "Deleting node group: $ng"
         aws eks delete-nodegroup --cluster-name $cluster --nodegroup-name $ng --region $region 2>/dev/null || echo "Failed to delete node group $ng"
       done
-      
+
       # Wait a bit for node groups to start deleting
       echo "Waiting 30 seconds for node groups to start deletion..."
       sleep 30
     fi
-    
+
     # Then delete the cluster
     echo "Attempting to delete cluster: $cluster"
     aws eks delete-cluster --name $cluster --region $region 2>/dev/null || echo "Failed to delete cluster $cluster"
@@ -396,7 +396,7 @@ fi
 if [ -n "$iam_roles" ]; then
   for role in $iam_roles; do
     echo "Cleaning up IAM role: $role"
-    
+
     # First, detach all managed policies
     attached_policies=$(aws iam list-attached-role-policies --role-name $role --query "AttachedPolicies[].PolicyArn" --output text 2>/dev/null || echo "")
     if [ -n "$attached_policies" ]; then
@@ -405,7 +405,7 @@ if [ -n "$iam_roles" ]; then
         aws iam detach-role-policy --role-name $role --policy-arn $policy_arn 2>/dev/null || echo "  Failed to detach policy $policy_arn"
       done
     fi
-    
+
     # Delete inline policies
     inline_policies=$(aws iam list-role-policies --role-name $role --query "PolicyNames" --output text 2>/dev/null || echo "")
     if [ -n "$inline_policies" ]; then
@@ -414,7 +414,7 @@ if [ -n "$iam_roles" ]; then
         aws iam delete-role-policy --role-name $role --policy-name $policy_name 2>/dev/null || echo "  Failed to delete inline policy $policy_name"
       done
     fi
-    
+
     # Remove role from instance profiles
     instance_profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query "InstanceProfiles[].InstanceProfileName" --output text 2>/dev/null || echo "")
     if [ -n "$instance_profiles" ]; then
@@ -425,7 +425,7 @@ if [ -n "$iam_roles" ]; then
         aws iam delete-instance-profile --instance-profile-name $profile 2>/dev/null || echo "  Failed to delete instance profile $profile"
       done
     fi
-    
+
     # Finally delete the role
     echo "  Deleting IAM role: $role"
     aws iam delete-role --role-name $role 2>/dev/null || echo "  Failed to delete role $role"
@@ -446,7 +446,7 @@ fi
 if [ -n "$custom_policies" ]; then
   for policy_arn in $custom_policies; do
     echo "Deleting custom IAM policy: $policy_arn"
-    
+
     # Delete all policy versions except the default
     policy_versions=$(aws iam list-policy-versions --policy-arn $policy_arn --query "Versions[?!IsDefaultVersion].VersionId" --output text 2>/dev/null || echo "")
     if [ -n "$policy_versions" ]; then
@@ -455,7 +455,7 @@ if [ -n "$custom_policies" ]; then
         aws iam delete-policy-version --policy-arn $policy_arn --version-id $version 2>/dev/null || echo "  Failed to delete policy version $version"
       done
     fi
-    
+
     # Delete the policy
     aws iam delete-policy --policy-arn $policy_arn 2>/dev/null || echo "Failed to delete policy $policy_arn"
   done
@@ -519,19 +519,19 @@ vpcs=$(echo $all_vpcs | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
 echo "Found VPCs using different methods:"
 echo "  Method 1 (cluster tags): $vpcs_method1"
-echo "  Method 2 (name contains kafka-on-eks): $vpcs_method2"  
+echo "  Method 2 (name contains kafka-on-eks): $vpcs_method2"
 echo "  Method 3 (name contains kafka): $vpcs_method3"
 echo "  Combined unique VPCs: $vpcs"
 
 if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
   for vpc in $vpcs; do
     echo "Cleaning up VPC: $vpc"
-    
+
     # Detach and delete Internet Gateways
     igws=$(aws ec2 describe-internet-gateways \
       --query "InternetGateways[?Attachments[?VpcId=='$vpc']].InternetGatewayId" \
       --output text 2>/dev/null || echo "")
-    
+
     if [ -n "$igws" ]; then
       for igw in $igws; do
         echo "Detaching Internet Gateway $igw from VPC $vpc"
@@ -540,38 +540,38 @@ if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
         aws ec2 delete-internet-gateway --internet-gateway-id $igw 2>/dev/null || echo "Failed to delete IGW $igw"
       done
     fi
-    
+
     # Clean up route tables (except main)
     route_tables=$(aws ec2 describe-route-tables \
       --query "RouteTables[?VpcId=='$vpc' && !Associations[?Main==\`true\`]].RouteTableId" \
       --output text 2>/dev/null || echo "")
-    
+
     if [ -n "$route_tables" ]; then
       for rt in $route_tables; do
         echo "Deleting route table: $rt"
         aws ec2 delete-route-table --route-table-id $rt 2>/dev/null || echo "Failed to delete route table $rt"
       done
     fi
-    
+
     # Clean up subnets
     subnets=$(aws ec2 describe-subnets \
       --query "Subnets[?VpcId=='$vpc'].SubnetId" \
       --output text 2>/dev/null || echo "")
-    
+
     if [ -n "$subnets" ]; then
       for subnet in $subnets; do
         echo "Deleting subnet: $subnet"
         aws ec2 delete-subnet --subnet-id $subnet 2>/dev/null || echo "Failed to delete subnet $subnet"
       done
     fi
-    
+
     # Wait a bit for resources to be cleaned up
     echo "Waiting 30 seconds for VPC resource cleanup..."
     sleep 30
-    
+
     # Check for any remaining dependencies before VPC deletion
     echo "Checking for remaining VPC dependencies..."
-    
+
     # Check for remaining ENIs
     remaining_enis=$(aws ec2 describe-network-interfaces \
       --query "NetworkInterfaces[?VpcId=='$vpc'].NetworkInterfaceId" \
@@ -586,7 +586,7 @@ if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
       done
       sleep 15
     fi
-    
+
     # Check for remaining security groups (except default)
     remaining_sgs=$(aws ec2 describe-security-groups \
       --query "SecurityGroups[?VpcId=='$vpc' && GroupName!='default'].GroupId" \
@@ -599,7 +599,7 @@ if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
       done
       sleep 10
     fi
-    
+
     # Check for remaining NAT Gateways
     remaining_nats=$(aws ec2 describe-nat-gateways \
       --query "NatGateways[?VpcId=='$vpc' && State!='deleted'].NatGatewayId" \
@@ -613,7 +613,7 @@ if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
       echo "Waiting additional 60 seconds for NAT Gateway cleanup..."
       sleep 60
     fi
-    
+
     # Check for VPC peering connections
     peering_connections=$(aws ec2 describe-vpc-peering-connections \
       --query "VpcPeeringConnections[?AccepterVpcInfo.VpcId=='$vpc' || RequesterVpcInfo.VpcId=='$vpc'].VpcPeeringConnectionId" \
@@ -625,7 +625,7 @@ if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
         aws ec2 delete-vpc-peering-connection --vpc-peering-connection-id $pc 2>/dev/null || echo "Failed to delete peering connection $pc"
       done
     fi
-    
+
     # Check for VPN connections
     vpn_connections=$(aws ec2 describe-vpn-connections \
       --query "VpnConnections[?VpcId=='$vpc' && State!='deleted'].VpnConnectionId" \
@@ -637,7 +637,7 @@ if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
         aws ec2 delete-vpn-connection --vpn-connection-id $vpn 2>/dev/null || echo "Failed to delete VPN connection $vpn"
       done
     fi
-    
+
     # Final attempt to delete the VPC with detailed error reporting
     echo "Attempting to delete VPC: $vpc"
     vpc_delete_result=$(aws ec2 delete-vpc --vpc-id $vpc 2>&1)
@@ -648,26 +648,26 @@ if [ -n "$vpcs" ] && [ "$vpcs" != " " ]; then
       echo "$vpc_delete_result"
       echo ""
       echo "Remaining resources in VPC $vpc:"
-      
+
       # Show what's still in the VPC
       echo "- ENIs:"
       aws ec2 describe-network-interfaces --query "NetworkInterfaces[?VpcId=='$vpc'].[NetworkInterfaceId,Description,Status]" --output table 2>/dev/null || echo "  None found"
-      
+
       echo "- Security Groups:"
       aws ec2 describe-security-groups --query "SecurityGroups[?VpcId=='$vpc'].[GroupId,GroupName]" --output table 2>/dev/null || echo "  None found"
-      
+
       echo "- Subnets:"
       aws ec2 describe-subnets --query "Subnets[?VpcId=='$vpc'].[SubnetId,AvailabilityZone]" --output table 2>/dev/null || echo "  None found"
-      
+
       echo "- Route Tables:"
       aws ec2 describe-route-tables --query "RouteTables[?VpcId=='$vpc'].[RouteTableId,Associations[0].Main]" --output table 2>/dev/null || echo "  None found"
-      
+
       echo "- Internet Gateways:"
       aws ec2 describe-internet-gateways --query "InternetGateways[?Attachments[?VpcId=='$vpc']].[InternetGatewayId,State]" --output table 2>/dev/null || echo "  None found"
-      
+
       echo "- NAT Gateways:"
       aws ec2 describe-nat-gateways --query "NatGateways[?VpcId=='$vpc'].[NatGatewayId,State]" --output table 2>/dev/null || echo "  None found"
-      
+
       echo ""
       echo "Manual cleanup may be required for VPC $vpc"
     fi
@@ -678,7 +678,7 @@ else
   aws ec2 describe-vpcs \
     --query "Vpcs[].[VpcId,Tags[?Key=='Name'].Value|[0],State,CidrBlock]" \
     --output table 2>/dev/null || echo "Failed to list VPCs"
-  
+
   echo ""
   echo "If you see a kafka-related VPC above, you may need to delete it manually:"
   echo "  aws ec2 delete-vpc --vpc-id <vpc-id>"
@@ -694,7 +694,7 @@ if [ -n "$remaining_resources" ]; then
   echo "WARNING: Found remaining resources in Terraform state:"
   echo "$remaining_resources"
   echo "Attempting to remove them from state..."
-  
+
   # Remove each resource from state (this doesn't delete the actual resource, just removes tracking)
   echo "$remaining_resources" | while read resource; do
     if [ -n "$resource" ]; then

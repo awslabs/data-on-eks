@@ -1,0 +1,90 @@
+# Ubuntu 22.04 base
+FROM ubuntu:22.04
+
+# ---- Versions / args ----
+ARG HADOOP_VERSION=3.4.1
+ARG AWS_SDK_VERSION=2.29.0        # AWS SDK v2 bundle for Hadoop 3.4.x
+ARG SPARK_VERSION=3.5.2
+ARG SCALA_BINARY=2.12
+ARG SPARK_UID=185
+ARG SPARK_GID=185
+ARG TARGETARCH    # provided by buildx: amd64 | arm64
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SPARK_HOME=/opt/spark
+ENV PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:$PATH
+# Map OpenJDK path for Debian/Ubuntu multi-arch
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-${TARGETARCH}
+
+# ---- Base OS deps (matches your list) ----
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jdk-headless \
+    python3 python3-pip \
+    curl wget \
+    ca-certificates tzdata \
+    libgomp1 numactl \
+    tini \
+ && rm -rf /var/lib/apt/lists/*
+
+# CA bundle path some libs expect (RHEL-style)
+RUN mkdir -p /etc/pki/tls/certs && \
+    ln -sf /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
+
+# ---- Install Apache Spark 3.5.2 (Hadoop3 build) ----
+RUN set -eux; \
+    wget -q https://mirror.lyrahosting.com/apache/spark/spark-3.5.2/spark-3.5.2-bin-hadoop3.tgz -O /tmp/spark.tgz; \
+    tar -xzf /tmp/spark.tgz -C /opt; \
+    ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop3 ${SPARK_HOME}; \
+    rm -f /tmp/spark.tgz
+
+# ---- Create spark user ----
+RUN groupadd -g ${SPARK_GID} spark && \
+    useradd -m -u ${SPARK_UID} -g ${SPARK_GID} -s /bin/bash spark && \
+    chown -R spark:spark /opt/spark-${SPARK_VERSION}-bin-hadoop3 && \
+    chown -R spark:spark ${SPARK_HOME}
+
+# ---- Align Hadoop client + S3A (remove v1 AWS jars, add Hadoop 3.4.1 + AWS SDK v2) ----
+RUN set -eux; cd ${SPARK_HOME}/jars; \
+    # Purge prebundled Hadoop & AWS SDK v1 to avoid mixing
+    find . -maxdepth 1 -type f -name 'hadoop-*.jar' -delete || true; \
+    find . -maxdepth 1 -type f -name 'aws-java-sdk-*.jar' -delete || true; \
+    # Core Hadoop jars
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-auth/${HADOOP_VERSION}/hadoop-auth-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar; \
+    # S3A + AWS SDK v2 (bundle)
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar; \
+    wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar; \
+    # Hadoop 3.4.x needs commons-configuration2 on classpath
+    wget -q https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.9.0/commons-configuration2-2.9.0.jar; \
+    # Spark cloud committers (match Spark version)
+    wget -q https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_${SCALA_BINARY}/${SPARK_VERSION}/spark-hadoop-cloud_${SCALA_BINARY}-${SPARK_VERSION}.jar; \
+    # XML deps to satisfy jackson-dataformat-xml
+    wget -q https://repo1.maven.org/maven2/com/fasterxml/woodstox/woodstox-core/6.5.1/woodstox-core-6.5.1.jar; \
+    wget -q https://repo1.maven.org/maven2/org/codehaus/woodstox/stax2-api/4.2.2/stax2-api-4.2.2.jar
+
+# ---- Optional: Gluten bundle for Spark 3.5 ----
+# This extracts the tarball into ${SPARK_HOME}/jars/apache-gluten-1.4.0-incubating-bin-spark35/
+# You can reference the plugin jars at runtime (e.g., via spark-submit or spark-defaults).
+RUN set -eux; cd ${SPARK_HOME}/jars; \
+    wget -q https://dlcdn.apache.org/incubator/gluten/1.4.0-incubating/apache-gluten-1.4.0-incubating-bin-spark35.tar.gz; \
+    tar -xzf apache-gluten-1.4.0-incubating-bin-spark35.tar.gz; \
+    rm -f apache-gluten-1.4.0-incubating-bin-spark35.tar.gz
+
+# ---- Spark defaults: JDK17 module opens to avoid Netty/JNI headaches ----
+# JDK module opens (harmless defaults that avoid Netty/JDK17 headaches)
+RUN mkdir -p $SPARK_HOME/conf && cat >> $SPARK_HOME/conf/spark-defaults.conf <<'CONF'
+spark.driver.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+spark.executor.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+CONF
+
+# Ensure ownership for the non-root user (conf just created)
+RUN chown -R spark:spark ${SPARK_HOME}
+
+USER spark
+
+WORKDIR ${SPARK_HOME}
+
+# Use standard Spark Kubernetes entrypoint for Spark Operator compatibility
+ENTRYPOINT ["/opt/spark/kubernetes/dockerfiles/spark/entrypoint.sh"]
