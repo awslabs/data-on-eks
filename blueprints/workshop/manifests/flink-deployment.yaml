@@ -4,7 +4,7 @@ metadata:
   name: cat-cafe-raw-ingestion
   namespace: flink-team-a
 spec:
-  image: public.ecr.aws/m8u6z8z4/manabu-test:flink-2.0-py-3-11@sha256:a535c8893d6dfaddcfee6646f516d1b1dd2e94adc7f3ba74152a22aabef5dc0d
+  image: public.ecr.aws/m8u6z8z4/manabu-test:flink-2.0-py-3-11@sha256:b38d709e80adecd52e2e063404c7a93f8635b01c0a04a09ed8745afb79b82c57
   flinkVersion: v2_0
   serviceAccount: flink-team-a
   
@@ -26,6 +26,8 @@ spec:
     args:
       - "-py"
       - "/tmp/raw-ingestion.py"
+      - "--pyFiles"
+      - "/tmp/models.py"
       # - "s3://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/raw-ingestion.py"
       # - "--pyRequirements"
       # - "s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/flink-requirements.txt"
@@ -33,7 +35,6 @@ spec:
       # - "s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/python-modules.zip"
     parallelism: 2
     upgradeMode: stateless
-  
   flinkConfiguration:
     # logger.root.level: DEBUG
     # logger.org.apache.flink.client.python: DEBUG
@@ -51,8 +52,8 @@ spec:
     execution.checkpointing.mode: EXACTLY_ONCE
     
     # S3 Configuration
-    s3.endpoint: https://s3.amazonaws.com
-    s3.path.style.access: false
+    # s3.endpoint: https://s3.amazonaws.com
+    # s3.path.style.access: false
     
     # Iceberg Configuration
     table.exec.iceberg.write.metadata.delete-after-commit.enabled: "true"
@@ -68,9 +69,6 @@ spec:
     openlineage.transport.auth.type: api_key
     openlineage.transport.auth.apiKey: "$DATAHUB_TOKEN"
     openlineage.job.namespace: "workshop"
-    openlineage.job.name: "cat-cafe-raw-ingestion"
-
-  
   podTemplate:
     metadata:
       annotations:
@@ -86,6 +84,9 @@ spec:
             - name: python-script
               mountPath: /tmp/raw-ingestion.py
               subPath: raw-ingestion.py
+            - name: python-script
+              mountPath: /tmp/models.py
+              subPath: models.py
           # args:
           #   - "bash"
           #   - "-c"
@@ -117,6 +118,8 @@ metadata:
 data:
   raw-ingestion.py: |
     PYTHON_SCRIPT_CONTENT
+  models.py: |
+    MODELS_SCRIPT_CONTENT
 ---
 apiVersion: v1
 kind: Secret

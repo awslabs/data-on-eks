@@ -40,7 +40,7 @@ ENV UV_OFFLINE=1
 #         type: glue
 #     table_pattern:
 #       allow:
-#       - icebeeerg
+#       - data-on-eks
 #   type: iceberg
 
 #   datahub ingest run -c /tmp/test.yaml --report-to /tmp/datahub/logs/7645426c-1251-4fd6-a85d-c402e25463c3/artifacts/ingestion_report.json
