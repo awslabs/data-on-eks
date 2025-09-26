@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 4
 sidebar_label: Apache Spark with Gluten + Velox Benchmarks
 ---
 
@@ -7,7 +7,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PerformanceDashboard from '@site/src/components/BenchmarkDashboard/PerformanceDashboard';
 
-# Apache Spark with Apache Gluten + Velox on Amazon EKS
+# Apache Spark with Apache Gluten + Velox Benchmarks
 
 [Apache Spark](https://spark.apache.org/) powers much of today’s large-scale analytics, but its default SQL engine is still JVM-bound and row-oriented. Even with [Project Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten)’s code generation and vectorized readers, operators often pay heavy costs for Java object creation, garbage collection, and row-to-column conversions. These costs become visible on analytic workloads that scan large [Parquet](https://parquet.apache.org/) or [ORC](https://orc.apache.org/) tables, perform wide joins, or run memory-intensive aggregations—leading to slower queries and inefficient CPU use.
 
