@@ -5,10 +5,15 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   test-deploy:
     name: Test deployment
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         shell: bash

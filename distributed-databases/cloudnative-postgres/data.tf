@@ -13,21 +13,6 @@ data "aws_availability_zones" "available" {
 data "aws_caller_identity" "current" {}
 
 
-data "aws_ami" "eks" {
-  owners      = ["amazon"]
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-al2023-arm64-standard-${var.eks_cluster_version}-*"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = ["arm64"]
-  }
-}
-
 data "aws_iam_policy_document" "irsa_backup_policy" {
   statement {
     sid       = ""
