@@ -1,5 +1,6 @@
 import csv
 import random
+from faker import Faker
 
 # Sample data for generation
 COAT_COLORS = ['tabby', 'calico', 'black', 'orange', 'gray', 'white']
@@ -30,10 +31,8 @@ def generate_cats_csv(num_cats=1000, filename='data/cats.csv'):
         writer.writeheader()
         
         for i in range(1, num_cats + 1):
-            cat_id = f"{i:03d}"
-            
             # Use cat_id as seed for consistent generation
-            random.seed(hash(cat_id))
+            random.seed(hash(i))
             
             # Age affects weight ranges
             age_months = random.randint(6, 120)  # 6 months to 10 years
@@ -47,7 +46,7 @@ def generate_cats_csv(num_cats=1000, filename='data/cats.csv'):
                 base_weight = round(random.uniform(3.5, 8.0), 2)
             
             cat = {
-                'cat_id': cat_id,
+                'cat_id': i,
                 'name': random.choice(cat_names),
                 'coat_color': random.choice(COAT_COLORS),
                 'coat_length': random.choice(COAT_LENGTHS),
@@ -66,5 +65,25 @@ def generate_cats_csv(num_cats=1000, filename='data/cats.csv'):
     random.seed()
     print(f"Generated {num_cats} cats in {filename}")
 
+def generate_visitors_csv(num_visitors=3000, filename='data/visitors.csv'):
+    """Generate CSV file with visitor data"""
+    fake = Faker()
+    
+    with open(filename, 'w', newline='') as csvfile:
+        fieldnames = ['id', 'first_name', 'last_name']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for i in range(1, num_visitors + 1):
+            visitor = {
+                'id': i,
+                'first_name': fake.first_name(),
+                'last_name': fake.last_name()
+            }
+            writer.writerow(visitor)
+    
+    print(f"Generated {num_visitors} visitors in {filename}")
+
 if __name__ == "__main__":
     generate_cats_csv()
+    generate_visitors_csv()

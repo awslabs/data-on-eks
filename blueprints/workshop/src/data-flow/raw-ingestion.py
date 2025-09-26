@@ -14,13 +14,11 @@ def create_tables_config():
     }
     
     for table_name, table_config in config.items():
-        schema, fields_list = generate_flink_schema(table_config['model'])
+        schema, field_info = generate_flink_schema(table_config['model'])
         table_config['schema'] = schema
-        table_config['fields'] = fields_list
+        table_config['field_types'] = field_info
     
     return config
-
-TABLES_CONFIG = create_tables_config()
 
 def create_kafka_source_table(table_env, table_name, topic_name):
     """Create Kafka source table"""
@@ -73,6 +71,8 @@ def create_debug_table(table_env, table_name, schema_ddl):
 
 def main():
 
+    TABLES_CONFIG = create_tables_config()
+
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(2)
     env.enable_checkpointing(120000)  # 2 minutes
@@ -86,7 +86,7 @@ def main():
         CREATE CATALOG workshop WITH (
             'type' = 'iceberg',
             'warehouse' = '{s3_warehouse}',
-            'catalog-impl' = 'org.apache.iceberg.aws.glue.GlueCatalog',
+            'catalog-impl'='org.apache.iceberg.aws.glue.GlueCatalog',
             'io-impl' = 'org.apache.iceberg.aws.s3.S3FileIO',
             'glue.database' = 'data-on-eks'
         )
@@ -112,23 +112,11 @@ def main():
         
         # Build JSON field extraction with type casting
         json_fields = []
-        for field in config['fields']:
-            field_clean = field.strip('`')
-            
-            # Get the expected type from the schema
-            field_type = 'STRING'  # default
-            for schema_part in config['schema'].split(','):
-                if field in schema_part:
-                    if 'INT' in schema_part:
-                        field_type = 'INT'
-                    elif 'DECIMAL' in schema_part:
-                        field_type = 'DECIMAL(4,2)'
-                    break
-            
-            if field_type == 'STRING':
-                json_fields.append(f"JSON_VALUE(`data`, '$.{field_clean}') AS {field}")
+        for field_name, field_type in config['field_types'].items():
+            if field_name == 'timestamp':
+                json_fields.append(f"CAST(JSON_VALUE(`data`, '$.{field_name}') AS {field_type}) AS `{field_name}`")
             else:
-                json_fields.append(f"CAST(JSON_VALUE(`data`, '$.{field_clean}') AS {field_type}) AS {field}")
+                json_fields.append(f"CAST(JSON_VALUE(`data`, '$.{field_name}') AS {field_type}) AS {field_name}")
         
         json_fields_str = ',\n        '.join(json_fields)
         
@@ -165,5 +153,31 @@ def main():
     result = statement_set.execute()
     print("Flink job started successfully - check TaskManager logs for data processing")
 
+def teststuff():
+    TABLES_CONFIG = create_tables_config()
+    for table_name, config in TABLES_CONFIG.items():
+        print(f"Setting up {table_name}...")
+        json_fields = []
+        for field_name, field_type in config['field_types'].items():
+            if field_name == 'timestamp':
+                json_fields.append(f"CAST(JSON_VALUE(`data`, '$.{field_name}') AS {field_type}) AS `{field_name}`")
+            else:
+                json_fields.append(f"CAST(JSON_VALUE(`data`, '$.{field_name}') AS {field_type}) AS {field_name}")
+        
+        json_fields_str = ',\n        '.join(json_fields)
+        
+        # Create INSERT statement for Iceberg sink
+        insert_sql = f"""
+        INSERT INTO {table_name}_sink
+        SELECT 
+            {json_fields_str},
+            DATE_FORMAT(FROM_UNIXTIME(CAST(JSON_VALUE(`data`, '$.timestamp') AS BIGINT) / 1000), 'yyyy-MM-dd') AS date_partition
+        FROM {table_name}_source
+        WHERE JSON_VALUE(`data`, '$.timestamp') IS NOT NULL
+        """
+        print(insert_sql)
+
 if __name__ == '__main__':
     main()
+
+

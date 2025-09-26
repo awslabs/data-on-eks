@@ -28,36 +28,13 @@ spec:
       - "/tmp/raw-ingestion.py"
       - "--pyFiles"
       - "/tmp/models.py"
-      # - "s3://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/raw-ingestion.py"
-      # - "--pyRequirements"
-      # - "s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/flink-requirements.txt"
-      # - "--pyArchives"
-      # - "s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-jobs/python-modules.zip"
     parallelism: 2
     upgradeMode: stateless
   flinkConfiguration:
-    # logger.root.level: DEBUG
-    # logger.org.apache.flink.client.python: DEBUG
-    # logger.org.apache.flink.python: DEBUG
-    # # Fix logging conflicts
-    # rootLogger.level: INFO
-    # rootLogger.appenderRef.console.ref: ConsoleAppender
-    # appender.console.name: ConsoleAppender
-    # appender.console.type: CONSOLE
-    # appender.console.layout.type: PatternLayout
-    # appender.console.layout.pattern: "%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p %-60c %x - %m%n"
     taskmanager.numberOfTaskSlots: "2"
     state.checkpoints.dir: s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-checkpoints/
     execution.checkpointing.interval: 120s
     execution.checkpointing.mode: EXACTLY_ONCE
-    
-    # S3 Configuration
-    # s3.endpoint: https://s3.amazonaws.com
-    # s3.path.style.access: false
-    
-    # Iceberg Configuration
-    table.exec.iceberg.write.metadata.delete-after-commit.enabled: "true"
-    table.exec.iceberg.write.metadata.previous-versions-max: "5"
     
     env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
     env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"

@@ -1,11 +1,11 @@
 from dataclasses import dataclass, asdict, fields
 from decimal import Decimal
-from typing import Optional, get_origin, get_args
+from typing import Optional, get_origin, get_args, Union
 
 
 @dataclass
 class CatProfile:
-    cat_id: str
+    cat_id: int
     name: str
     coat_color: str
     coat_length: str
@@ -21,7 +21,7 @@ class CatProfile:
 @dataclass
 class CatInteraction:
     interaction_id: str
-    cat_id: str
+    cat_id: int
     visitor_id: str
     interaction_type: str  # pet, play, feed, photo
     duration_minutes: int
@@ -32,7 +32,7 @@ class CatInteraction:
 @dataclass
 class AdoptionEvent:
     event_id: str
-    cat_id: str
+    cat_id: int
     event_type: str  # inquiry, application, adoption, return
     visitor_id: str
     timestamp: int
@@ -50,7 +50,7 @@ class AdoptionEvent:
 @dataclass
 class CatWeightReading:
     reading_id: str
-    cat_id: str
+    cat_id: int
     weight_kg: Decimal
     scale_id: str
     timestamp: int
@@ -59,7 +59,7 @@ class CatWeightReading:
 @dataclass
 class CafeRevenue:
     transaction_id: str
-    cat_id: Optional[str]  # null for non-cat specific revenue
+    cat_id: Optional[int]  # null for non-cat specific revenue
     revenue_type: str  # adoption_fee, cafe_visit, merchandise, photo_session
     amount: Decimal
     visitor_id: str
@@ -71,7 +71,7 @@ class CafeRevenue:
 @dataclass
 class EnrichedInteraction:
     interaction_id: str
-    cat_id: str
+    cat_id: int
     visitor_id: str
     interaction_type: str
     duration_minutes: int
@@ -87,7 +87,7 @@ class EnrichedInteraction:
 
 @dataclass
 class DailyCatMetrics:
-    cat_id: str
+    cat_id: int
     date: str  # date format
     total_interactions: int
     avg_stress_level: Decimal
@@ -101,7 +101,7 @@ class DailyCatMetrics:
 @dataclass
 class WeightAlert:
     alert_id: str
-    cat_id: str
+    cat_id: int
     alert_type: str
     message: str
     severity: str  # HIGH, MEDIUM, LOW
@@ -114,7 +114,7 @@ class WeightAlert:
 @dataclass
 class BehavioralAlert:
     alert_id: str
-    cat_id: str
+    cat_id: int
     alert_type: str
     message: str
     severity: str
@@ -125,30 +125,37 @@ class BehavioralAlert:
 
 
 def generate_flink_schema(dataclass_type):
-    """Generate Flink DDL schema and field list from dataclass"""
+    """Generate Flink DDL schema and field info from dataclass"""
     schema_parts = []
-    field_names = []
-    
+    field_info = {}
+
     for field in fields(dataclass_type):
         field_name = f"`{field.name}`" if field.name == 'timestamp' else field.name
-        
+
+        # Handle Optional types
+        actual_type = field.type
+        if get_origin(field.type) is Union:
+            # Extract non-None type from Optional[T]
+            args = get_args(field.type)
+            non_none_types = [arg for arg in args if arg is not type(None)]
+            if non_none_types:
+                actual_type = non_none_types[0]
+
         # Map Python types to Flink types
-        if field.type == str:
+        if actual_type == str:
             flink_type = 'STRING'
-        elif field.type == int:
+        elif actual_type == int:
             if field.name == 'timestamp':
                 flink_type = 'BIGINT'
             else:
                 flink_type = 'INT'
-        elif field.type == Decimal:
+        elif actual_type == Decimal:
             flink_type = 'DECIMAL(4,2)'
-        elif get_origin(field.type) is type(None):  # Optional
-            flink_type = 'STRING'
         else:
             flink_type = 'STRING'
-        
+
         schema_parts.append(f"{field_name} {flink_type}")
-        field_names.append(field_name)
+        field_info[field.name] = flink_type
     
     schema_parts.append("date_partition STRING")
-    return ',\n            '.join(schema_parts), field_names
+    return ',\n            '.join(schema_parts), field_info
