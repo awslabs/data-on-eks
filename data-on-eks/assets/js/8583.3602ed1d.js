@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdoeks_website=self.webpackChunkdoeks_website||[]).push([["8583"],{378:function(e,s,c){c.d(s,{createArchitectureServices:()=>t.S});var t=c(64473);c(78839)}}]);
