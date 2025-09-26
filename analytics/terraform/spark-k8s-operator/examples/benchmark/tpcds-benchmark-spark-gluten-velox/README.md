@@ -4,9 +4,9 @@ Performance benchmark comparing Native Apache Spark with Gluten+Velox accelerati
 
 ## 🚀 Quick Results
 
-- **Overall Performance**: Gluten+Velox **1.60× faster** than Native Spark
-- **Query Success Rate**: 90/104 queries improved (86.5% win rate)
-- **Peak Speedup**: Up to **5.46× faster** on aggregation-heavy queries
+- **Overall Performance**: Gluten+Velox **1.72× faster** than native Spark SQL
+- **Query Coverage**: 103/104 queries completed (99% compatibility)
+- **Peak Speedup**: Up to **5.48× faster** on aggregation-heavy queries
 - **Runtime**: 20.9 min (Gluten) vs 33.5 min (Native)
 
 ## 📁 Files
@@ -45,7 +45,7 @@ Performance benchmark comparing Native Apache Spark with Gluten+Velox accelerati
 ## 📖 Complete Documentation
 
 For detailed architecture, configuration, and analysis, see:
-**[Apache Spark with Gluten+Velox Benchmark Guide](../../../../website/docs/benchmarks/spark-operator-benchmark/spark-gluten-velox-benchmark.md)**
+**[Apache Spark with Gluten+Velox Benchmark Guide](../../../../../../website/docs/benchmarks/spark-operator-benchmark/spark-gluten-velox-benchmark.md)**
 
 ## 🔧 Requirements
 

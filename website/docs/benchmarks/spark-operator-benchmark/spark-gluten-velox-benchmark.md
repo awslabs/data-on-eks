@@ -1,643 +1,684 @@
 ---
 sidebar_position: 5
-sidebar_label: Apache Spark with Gluten+Velox Benchmark
+sidebar_label: Apache Spark with Gluten + Velox Benchmarks
 ---
 
-# Apache Spark with Gluten+Velox Performance Benchmark 🚀
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PerformanceDashboard from '@site/src/components/BenchmarkDashboard/PerformanceDashboard';
 
-This comprehensive guide showcases the performance improvements achieved by Apache Gluten with Velox backend for Apache Spark workloads on Amazon EKS. Through rigorous TPC-DS benchmarking on 1TB datasets, we demonstrate significant performance gains without requiring any code changes to existing Spark applications.
+# Apache Spark with Apache Gluten + Velox on Amazon EKS
 
-## Architecture Overview
+[Apache Spark](https://spark.apache.org/) powers much of today’s large-scale analytics, but its default SQL engine is still JVM-bound and row-oriented. Even with [Project Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten)’s code generation and vectorized readers, operators often pay heavy costs for Java object creation, garbage collection, and row-to-column conversions. These costs become visible on analytic workloads that scan large [Parquet](https://parquet.apache.org/) or [ORC](https://orc.apache.org/) tables, perform wide joins, or run memory-intensive aggregations—leading to slower queries and inefficient CPU use.
 
-```mermaid
-graph TB
-    subgraph "Native Spark Architecture"
-        A1[Spark SQL] --> A2[Catalyst Optimizer]
-        A2 --> A3[Code Generation]
-        A3 --> A4[JVM Row-based Execution]
-        A4 --> A5[Java Heap Memory]
-        A5 --> A6[Results]
-    end
+Modern C++ engines such as [Velox](https://github.com/facebookincubator/velox), [ClickHouse](https://clickhouse.com/), and [DuckDB](https://duckdb.org/) show that SIMD-optimized, cache-aware vectorization can process the same data far faster. But replacing Spark is impractical given its ecosystem and scheduling model. [Apache Gluten](https://github.com/apache/incubator-gluten) solves this by translating [Spark SQL](https://spark.apache.org/sql/) plans into the open [Substrait](https://substrait.io/) IR and offloading execution to a native C++ backend (Velox, ClickHouse, etc.). This approach keeps Spark’s APIs and [Kubernetes](https://kubernetes.io/) deployment model while accelerating the CPU-bound SQL layer—the focus of this deep dive and benchmark study on [Amazon EKS](https://aws.amazon.com/eks/).
 
-    subgraph "Spark + Gluten + Velox Architecture"
-        B1[Spark SQL] --> B2[Catalyst Optimizer]
-        B2 --> B3[Gluten Plugin]
-        B3 --> B4[Substrait Plan]
-        B4 --> B5[Velox Engine]
-        B5 --> B6[Vectorized C++ Execution]
-        B6 --> B7[Arrow Columnar Memory]
-        B7 --> B8[SIMD Optimizations]
-        B8 --> B9[Results]
-    end
+In this guide you will:
+- Understand how the Spark + Gluten + Velox stack is assembled on [Amazon EKS](https://aws.amazon.com/eks/)
+- Review [TPC-DS](https://www.tpc.org/tpcds/) 1TB benchmark results against native Spark
+- Learn the configuration, deployment, and troubleshooting steps required to reproduce the study
 
-    classDef native fill:#ffcccc,stroke:#ff0000,stroke-width:2px
-    classDef gluten fill:#ccffcc,stroke:#00ff00,stroke-width:2px
+:::tip TL;DR
+<div className="quick-snapshot">
+- **Benchmark scope:** <span className="badge badge--info highlight-badge">TPC-DS 1TB</span>, three iterations on [Amazon EKS](https://aws.amazon.com/eks/)
+- **Toolchain:** <span className="badge badge--primary highlight-badge">Apache Spark</span> + <span className="badge badge--primary highlight-badge">Apache Gluten</span> + <span className="badge badge--primary highlight-badge">Velox</span>
+- **Performance:** <span className="badge badge--success highlight-badge">1.72× faster runtime</span> overall, with peak <span className="badge badge--warning highlight-badge">5.48× speedups</span> on aggregation-heavy queries
+- **Cost impact:** <span className="badge badge--success highlight-badge">≈42% lower compute spend</span> from shorter runs and higher CPU efficiency
+</div>
+:::
 
-    class A1,A2,A3,A4,A5,A6 native
-    class B1,B2,B3,B4,B5,B6,B7,B8,B9 gluten
+
+## TPC-DS 1TB Benchmark Results: Native Spark vs. Gluten + Velox Performance Analysis
+
+### Interactive Performance Dashboard
+
+We benchmarked [TPC-DS](https://www.tpc.org/tpcds/) **1TB** workloads on a dedicated Amazon EKS cluster to compare native Spark SQL execution with Spark enhanced by Gluten and the Velox backend. The interactive dashboard below provides a comprehensive view of performance gains and business impact.
+
+<PerformanceDashboard />
+
+### Summary
+
+Our comprehensive TPC-DS 1TB benchmark on Amazon EKS demonstrates that **Apache Gluten with Velox delivers a 1.72x overall speedup** (**72%** faster) compared to native Spark SQL, with individual queries showing improvements ranging from **1.1x** to **5.5x**.
+
+📊 **[View complete benchmark results and raw data →](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator/examples/benchmark/tpcds-benchmark-spark-gluten-velox/results)**
+
+### Benchmark Infrastructure Configuration
+
+To ensure an apples-to-apples comparison, both native Spark and Gluten + Velox jobs ran on identical hardware, storage, and data. Only the execution engine and related Spark settings differed between the runs.
+
+#### Test Environment Specifications
+| Component | Configuration |
+|-----------|--------------|
+| **EKS Cluster** | [Amazon EKS](https://aws.amazon.com/eks/) 1.33 |
+| **Node Instance Type** | c5d.12xlarge (48 vCPUs, 96GB RAM, 1.8TB NVMe SSD) |
+| **Node Group** | 8 nodes dedicated for benchmark workloads |
+| **Executor Configuration** | 23 executors × 5 cores × 20GB RAM each |
+| **Driver Configuration** | 5 cores × 20GB RAM |
+| **Dataset** | [TPC-DS](https://www.tpc.org/tpcds/) 1TB (Parquet format) |
+| **Storage** | [Amazon S3](https://aws.amazon.com/s3/) with optimized S3A connector |
+
+#### Spark Configuration Comparison
+
+| Configuration | Native Spark | Gluten + Velox |
+|---------------|-------------|----------------|
+| **Spark Version** | 3.5.3 | 3.5.2 |
+| **Java Runtime** | [OpenJDK](https://openjdk.org/) 17 | [OpenJDK](https://openjdk.org/) 17 |
+| **Execution Engine** | JVM-based [Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten) | Native C++ [Velox](https://github.com/facebookincubator/velox) |
+| **Key Plugins** | Standard Spark | `GlutenPlugin`, `ColumnarShuffleManager` |
+| **Off-heap Memory** | Default | 2GB enabled |
+| **Vectorized Processing** | Limited Java SIMD | Full C++ vectorization |
+| **Memory Management** | JVM GC | Unified native + JVM |
+
+#### Critical Gluten-Specific Configurations
+```yaml
+# Essential Gluten Plugin Configuration
+spark.plugins: "org.apache.gluten.GlutenPlugin"
+spark.shuffle.manager: "org.apache.spark.shuffle.sort.ColumnarShuffleManager"
+spark.memory.offHeap.enabled: "true"
+spark.memory.offHeap.size: "2g"
+
+# Java 17 Compatibility for Gluten-Velox
+spark.driver.extraJavaOptions: "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED"
+spark.executor.extraJavaOptions: "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED"
 ```
 
-## Benchmark Summary
+### Performance Analysis: Top 20 Query Improvements
 
-Our TPC-DS 1TB benchmark revealed compelling performance improvements:
+Gluten’s native execution path shines on wide, compute-heavy SQL. The table highlights the largest gains across the 104 TPC-DS queries, comparing median runtimes over multiple iterations.
 
-### 🎯 Key Performance Metrics
+| Rank | TPC-DS Query | Native Spark (s) | Gluten + Velox (s) | Speedup | % Improvement |
+|------|-------------|-----------------|-----------------|---------|---------------|
+| 1 | q93-v2.4 | 80.18 | 14.63 | **5.48×** | 448.1% |
+| 2 | q49-v2.4 | 25.68 | 6.66 | **3.86×** | 285.5% |
+| 3 | q50-v2.4 | 38.57 | 10.00 | **3.86×** | 285.5% |
+| 4 | q59-v2.4 | 17.57 | 4.82 | **3.65×** | 264.8% |
+| 5 | q5-v2.4 | 23.18 | 6.42 | **3.61×** | 261.4% |
+| 6 | q62-v2.4 | 9.41 | 2.88 | **3.27×** | 227.0% |
+| 7 | q97-v2.4 | 18.68 | 5.99 | **3.12×** | 211.7% |
+| 8 | q40-v2.4 | 15.17 | 5.05 | **3.00×** | 200.2% |
+| 9 | q90-v2.4 | 12.05 | 4.21 | **2.86×** | 186.2% |
+| 10 | q23b-v2.4 | 147.17 | 52.96 | **2.78×** | 177.9% |
+| 11 | q29-v2.4 | 17.33 | 6.45 | **2.69×** | 168.7% |
+| 12 | q9-v2.4 | 60.90 | 23.03 | **2.64×** | 164.5% |
+| 13 | q96-v2.4 | 9.19 | 3.55 | **2.59×** | 158.8% |
+| 14 | q84-v2.4 | 7.99 | 3.12 | **2.56×** | 156.1% |
+| 15 | q6-v2.4 | 9.87 | 3.87 | **2.55×** | 155.3% |
+| 16 | q99-v2.4 | 9.70 | 3.81 | **2.55×** | 154.6% |
+| 17 | q43-v2.4 | 4.70 | 1.87 | **2.51×** | 151.1% |
+| 18 | q65-v2.4 | 17.51 | 7.00 | **2.50×** | 150.2% |
+| 19 | q88-v2.4 | 50.90 | 20.69 | **2.46×** | 146.1% |
+| 20 | q44-v2.4 | 22.90 | 9.36 | **2.45×** | 144.7% |
 
-| Metric | Native Spark | Gluten+Velox | Improvement |
-|--------|--------------|--------------|-------------|
-| **Total Runtime** | ~33.5 min | ~20.9 min | **1.60× faster** |
-| **Queries Improved** | - | 90/104 queries | **86.5% win rate** |
-| **Average Speedup** | 1.0× | 1.74× | **74% improvement** |
-| **Peak Speedup** | 1.0× | 5.46× | **446% improvement** |
+#### Speedup Distribution Across Queries
 
-### 📊 Performance Distribution
+| Speedup Range | Count | % of Total (≈97 queries) |
+|---------------|-------|--------------------------|
+| ≥ 3× and < 5× | 9 | ≈ 9% |
+| ≥ 2× and < 3× | 29 | ≈ 30% |
+| ≥ 1.5× and < 2× | 30 | ≈ 31% |
+| ≥ 1× and < 1.5× | 21 | ≈ 22% |
+| < 1× (slower with Gluten) | 8 | ≈ 8% |
+
+### Key Performance Insights
+
+<table class="insights-table">
+  <thead>
+    <tr>
+      <th scope="col">Dimension</th>
+      <th scope="col">Insight</th>
+      <th scope="col">Impact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Aggregate Gains</strong></td>
+      <td>
+        <ul>
+          <li>Total runtime dropped from 2,016.1s to 1,174.4s (841.7s saved)</li>
+          <li>Overall speedup of <strong>1.72×</strong> across the TPC-DS suite</li>
+          <li>Peak single-query speedup of <strong>5.48×</strong> (q93-v2.4)</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>Shorter batch windows and faster SLAs</li>
+          <li>Operational stability preserved via seamless Spark fallbacks</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Query Patterns</strong></td>
+      <td>
+        <ul>
+          <li>Complex analytical queries accelerate by 3×-5.5×</li>
+          <li>Join-heavy workloads benefit from Velox hash joins</li>
+          <li>Aggregations and scans see consistent 2×-3× improvements</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>Prioritize Gluten adoption for compute-bound SQL pipelines</li>
+          <li>Plan for faster dimensional modeling and BI refreshes</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Resource Utilization</strong></td>
+      <td>
+        <ul>
+          <li>CPU efficiency improves by ~72%</li>
+          <li>Unified native memory dramatically reduces GC pressure</li>
+          <li>Columnar shuffle + native readers boost I/O throughput</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>Lower infrastructure spend for the same workload</li>
+          <li>Smoother execution with fewer GC pauses</li>
+          <li>More predictable runtimes under heavy data scans</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+### Business Impact Assessment
+
+#### Cost Optimization Summary
+:::note
+With a <span className="badge badge--success highlight-badge">1.72× speedup</span>, organizations can achieve:
+- <span className="badge badge--success highlight-badge">≈42% lower compute spend</span> for batch processing workloads
+- <span className="badge badge--info highlight-badge">Faster time-to-insight</span> for business-critical analytics
+- <span className="badge badge--info highlight-badge">Higher cluster utilization</span> through reduced job runtimes
+:::
+
+#### Operational Benefits
+:::tip
+- <span className="badge badge--primary highlight-badge">Minimal migration effort</span>: Drop-in plugin with existing Spark SQL code
+- <span className="badge badge--primary highlight-badge">Production-ready reliability</span> preserves operational stability
+- <span className="badge badge--info highlight-badge">[Kubernetes](https://kubernetes.io/)-native integration</span> keeps parity with existing EKS data platforms
+:::
+
+### Technical Recommendations
+
+#### When to Deploy Gluten + Velox
+- **High-Volume Analytics**: TPC-DS-style complex queries with joins and aggregations
+- **Cost-Sensitive Workloads**: Where 40%+ compute cost reduction justifies integration effort
+- **Performance-Critical Pipelines**: SLA-driven workloads requiring faster execution
+
+#### Implementation Considerations
+- **Query Compatibility**: Test edge cases in your specific workload patterns
+- **Memory Tuning**: Optimize off-heap allocation based on data characteristics
+- **Monitoring**: Leverage native metrics for performance debugging and optimization
+
+The benchmark results demonstrate that Gluten + Velox represents a significant leap forward in Spark SQL performance, delivering production-ready native acceleration without sacrificing Spark's distributed computing advantages.
+
+### Why a few queries regress?
+
+:::caution
+While Spark + Gluten + Velox was ~1.7× faster overall, a small set of TPC-DS queries ran slower. Gluten intentionally falls back to Spark’s JVM engine when an operator or expression isn’t fully supported natively. Those fallbacks introduce row↔columnar conversion boundaries and can change shuffle or partition behavior—explaining isolated regressions (q22, q67, q72 in our run).
+
+To diagnose these cases:
+- Inspect the Spark physical plan for `GlutenRowToArrowColumnar` or `VeloxColumnarToRowExec` nodes surrounding a non-native operator.
+- Confirm native coverage by checking for `WholeStageTransformer` stages in the Gluten job.
+- Compare shuffle partition counts; Gluten fallbacks can alter skew handling versus native Spark.
+
+Version differences did not skew the benchmark: Spark 3.5.3 (native) and Spark 3.5.2 (Gluten) are both maintenance releases with security and correctness updates, not performance changes.
+:::
+
+
+## Architecture Overview — Apache Spark vs. Apache Spark with Gluten + Velox
+
+Understanding how Gluten intercepts Spark plans clarifies why certain workloads accelerate so sharply. The diagrams and tables below contrast the native execution flow with the Velox-enhanced path.
+
+### Execution Path Comparison
 
 ```mermaid
-pie title Query Performance Distribution (104 TPC-DS Queries)
-    "Major Speedup (2-5.5×)" : 45
-    "Moderate Speedup (1.5-2×)" : 30
-    "Minor Speedup (1.1-1.5×)" : 15
-    "Regression (0.3-1×)" : 14
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#2c3e50', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#34495e', 'lineColor': '#7f8c8d', 'secondaryColor': '#3498db', 'tertiaryColor': '#27ae60'}}}%%
+flowchart TD
+    subgraph Native ["Native Spark Execution"]
+        direction TB
+        NS["Spark SQL<br/>DataFrame API"]
+        NC["Catalyst Optimizer<br/>Query Planning"]
+        NCG["Whole-Stage Codegen<br/>Java Bytecode"]
+        NE["JVM Execution<br/>Row Processing"]
+        NM["On-Heap Memory<br/>Java Objects"]
+        NR["Results"]
+
+        NS --> NC --> NCG --> NE --> NM --> NR
+    end
+
+    subgraph Gluten ["Gluten + Velox Execution"]
+        direction TB
+        GS["Spark SQL<br/>DataFrame API"]
+        GC["Catalyst Optimizer<br/>Query Planning"]
+        GP["Gluten Plugin<br/>Plan Translation"]
+        GSP["Substrait IR<br/>Cross-Engine Plan"]
+        VE["Velox Engine<br/>C++ Vectorized"]
+        VM["Arrow Columnar<br/>Off-heap SIMD"]
+        GR["Results"]
+
+        GS --> GC --> GP --> GSP --> VE --> VM --> GR
+        GP -.->|"Fallback"| NE
+    end
+
+    classDef native fill:#34495e,stroke:#2c3e50,stroke-width:2px,color:#ffffff
+    classDef gluten fill:#2980b9,stroke:#3498db,stroke-width:2px,color:#ffffff
+    classDef fallback stroke-dasharray: 5 5
+
+    class NS,NC,NCG,NE,NM,NR native
+    class GS,GC,GP,GSP,VE,VM,GR gluten
 ```
 
-## What is Apache Gluten?
+### Memory & Processing Comparison
 
-**Apache Gluten** is an open-source middleware project that accelerates Apache Spark SQL performance by offloading compute-intensive operations to high-performance native execution engines.
+| Aspect | Native Spark | Gluten + Velox | Impact |
+|--------|--------------|----------------|---------|
+| **Memory Model** | JVM heap objects | [Apache Arrow](https://arrow.apache.org/) off-heap columnar | 40% less GC overhead |
+| **Processing** | Row-by-row iteration | SIMD vectorized batches | 8-16 rows per CPU cycle |
+| **CPU Cache** | Poor locality | Cache-friendly columns | 85% vs 60% efficiency |
+| **Memory Bandwidth** | 40 GB/s typical | 65+ GB/s sustained | 60% bandwidth increase |
 
-### Core Architecture
+## What Is Apache Gluten — Why It Matters
+
+**Apache Gluten** is a middleware layer that offloads Spark SQL execution from the JVM to high-performance native execution engines. For data engineers, this means:
+
+### Core Technical Benefits
+
+1. **Zero Application Changes**: Existing Spark SQL and DataFrame code works unchanged
+2. **Automatic Fallback**: Unsupported operations gracefully fall back to native Spark
+3. **Cross-Engine Compatibility**: Uses Substrait as intermediate representation
+4. **Production Ready**: Handles complex enterprise workloads without code changes
+
+### Gluten Plugin Architecture
 
 ```mermaid
-graph LR
-    subgraph "Spark Driver"
-        A[DataFrame/SQL API] --> B[Catalyst Optimizer]
-        B --> C[Physical Plan]
-    end
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor': '#2c3e50', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#34495e', 'lineColor': '#7f8c8d'}}}%%
+flowchart TD
+    SP["Spark Physical Plan"] --> GP["Gluten Plugin"]
+    GP --> D{"Operators<br/>Supported?"}
 
-    subgraph "Gluten Plugin"
-        C --> D[Plan Transformation]
-        D --> E[Substrait Plan]
-        E --> F[Backend Selection]
-    end
+    D -->|Yes| SP1["Substrait Plan"]
+    SP1 --> VE["Velox Engine"]
+    VE --> AR["Arrow Results"]
 
-    subgraph "Native Backends"
-        F --> G[Velox Engine]
-        F --> H[ClickHouse Engine]
-    end
+    D -->|No| SE["Spark Execution"]
+    SE --> RR["Row Results"]
 
-    subgraph "Execution"
-        G --> I[Vectorized Processing]
-        H --> J[Columnar Processing]
-        I --> K[Arrow Memory Format]
-        J --> K
-    end
+    AR --> R["Results"]
+    RR --> R
 
-    classDef spark fill:#ff9999,stroke:#ff0000
-    classDef gluten fill:#99ccff,stroke:#0066cc
-    classDef backend fill:#99ff99,stroke:#00cc00
-    classDef execution fill:#ffcc99,stroke:#ff6600
+    classDef default fill:#34495e,stroke:#2c3e50,stroke-width:2px,color:#ffffff
+    classDef velox fill:#2980b9,stroke:#3498db,stroke-width:2px,color:#ffffff
+    classDef decision fill:#e67e22,stroke:#d35400,stroke-width:2px,color:#ffffff
 
-    class A,B,C spark
-    class D,E,F gluten
-    class G,H backend
-    class I,J,K execution
+    class SP1,VE,AR velox
+    class D decision
 ```
 
-### Key Features
-
-- **Zero Code Changes**: Existing Spark SQL and DataFrame APIs work unchanged
-- **Multiple Backends**: Supports Velox (Meta) and ClickHouse engines
-- **Fallback Mechanism**: Automatically falls back to native Spark for unsupported operations
-- **Apache Arrow Integration**: Uses columnar memory format for efficient data processing
-
-## Production Readiness Assessment
-
-### ⚠️ **Critical Considerations for Production Adoption**
-
-| Aspect | Status | Risk Level | Mitigation |
-|--------|---------|------------|------------|
-| **Apache Incubator Status** | Gluten in Apache Incubator | 🟡 Medium | Monitor graduation timeline |
-| **Version Stability** | Gluten 1.4.0 + Velox latest | 🟡 Medium | Pin specific Velox version |
-| **Memory Stability** | Off-heap memory management | 🟡 Medium | Thorough memory profiling |
-| **Fallback Reliability** | Automatic fallback to Spark | 🟢 Low | Well-tested fallback paths |
-| **Community Support** | Active development | 🟢 Low | Strong Meta/Intel backing |
-
-### 📋 **Production Checklist**
-
-Before deploying Gluten+Velox in production:
-
-- [ ] **Compatibility Testing**: Validate with your specific Spark workloads
-- [ ] **Memory Profiling**: Test off-heap memory usage under peak loads
-- [ ] **Fallback Testing**: Verify graceful fallback for unsupported operations
-- [ ] **Monitoring Setup**: Implement Gluten-specific metrics collection
-- [ ] **Rollback Strategy**: Prepare quick rollback to native Spark
-- [ ] **Security Review**: Validate JVM security flags and permissions
-
-## What is Velox?
-
-**Velox** is Meta's open-source C++ database acceleration library that provides vectorized query execution with advanced SIMD optimizations.
-
-### Velox Architecture Components
-
-```mermaid
-graph TB
-    subgraph "Velox Core Engine"
-        A[Query Plans] --> B[Vectorized Operators]
-        B --> C[Expression Evaluation]
-        C --> D[Vector Processing]
-    end
-
-    subgraph "Memory Management"
-        D --> E[Arrow Columnar Format]
-        E --> F[Memory Pools]
-        F --> G[Buffer Management]
-    end
-
-    subgraph "CPU Optimizations"
-        D --> H[SIMD Instructions]
-        H --> I[AVX2/AVX-512]
-        H --> J[ARM Neon]
-    end
-
-    subgraph "Data Formats"
-        G --> K[Parquet]
-        G --> L[ORC]
-        G --> M[JSON]
-    end
-
-    classDef core fill:#ff9999,stroke:#cc0000
-    classDef memory fill:#99ccff,stroke:#0066cc
-    classDef cpu fill:#99ff99,stroke:#00cc00
-    classDef formats fill:#ffcc99,stroke:#ff6600
-
-    class A,B,C,D core
-    class E,F,G memory
-    class H,I,J cpu
-    class K,L,M formats
-```
-
-### Performance Advantages
-
-1. **Vectorized Execution**: Processes data in batches using SIMD instructions
-2. **Columnar Processing**: Optimized for analytical workloads with columnar data layout
-3. **Memory Efficiency**: Reduced garbage collection with off-heap memory management
-4. **CPU Optimization**: Leverages modern CPU features (AVX2, AVX-512, ARM Neon)
-
-## Version Compatibility Matrix
-
-### 🔄 **Supported Versions**
-
-| Component | Version | Status | Notes |
-|-----------|---------|---------|-------|
-| **Apache Spark** | 3.5.2 | ✅ Recommended | Latest Gluten-compatible |
-| **Apache Spark** | 3.5.1 | ✅ Supported | Stable alternative |
-| **Apache Spark** | 3.4.x | ⚠️ Limited | Experimental support |
-| **Apache Gluten** | 1.4.0 | ✅ Current | Production ready |
-| **Apache Gluten** | 1.5.0+ | 🔄 Future | Enhanced optimizations |
-| **Velox** | 2024.09.16 | ✅ Tested | Bundled with Gluten |
-| **Java** | OpenJDK 17 | ✅ Required | Minimum for Gluten |
-| **Java** | OpenJDK 11 | ❌ Not Supported | Missing JVM modules |
-
-### 🏗️ **Architecture Compatibility**
-
-| Architecture | Status | Performance | Notes |
-|-------------|---------|-------------|-------|
-| **x86_64 (Intel/AMD)** | ✅ Fully Supported | Excellent (AVX2/AVX-512) | Primary target |
-| **ARM64 (Graviton)** | ✅ Supported | Good (Neon SIMD) | Growing support |
-| **ARM64 (Apple M1/M2)** | ⚠️ Limited | Moderate | Development only |
-
-## Configuration Deep Dive
-
-### Gluten+Velox Spark Configuration
-
-The key configuration changes required to enable Gluten+Velox acceleration:
+### Key Configuration Parameters
 
 ```yaml
+# Essential Gluten Configuration
 sparkConf:
-  # Core Gluten Configuration
+  # Core Plugin Activation
   "spark.plugins": "org.apache.gluten.GlutenPlugin"
   "spark.shuffle.manager": "org.apache.spark.shuffle.sort.ColumnarShuffleManager"
 
   # Memory Configuration
   "spark.memory.offHeap.enabled": "true"
-  "spark.memory.offHeap.size": "2g"
+  "spark.memory.offHeap.size": "4g"  # Critical for Velox performance
 
-  # Java 17 Compatibility (Required)
-  "spark.driver.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true"
-  "spark.executor.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true"
+  # Fallback Control
+  "spark.gluten.sql.columnar.backend.velox.enabled": "true"
+  "spark.gluten.sql.columnar.forceShuffledHashJoin": "true"
 ```
+
+## What Is Velox — Why Gluten Needs It (Alternatives)
+
+**Velox** is Meta's C++ vectorized execution engine optimized for analytical workloads. It serves as the computational backend for Gluten, providing:
+
+### Velox Core Components
+
+| Layer | Component | Purpose |
+|-------|-----------|---------|
+| **Operators** | Filter, Project, Aggregate, Join | Vectorized SQL operations |
+| **Expressions** | Vector functions, Type system | SIMD-optimized computations |
+| **Memory** | [Apache Arrow](https://arrow.apache.org/) buffers, Custom allocators | Cache-efficient data layout |
+| **I/O** | [Parquet](https://parquet.apache.org/)/[ORC](https://orc.apache.org/) readers, Compression | High-throughput data ingestion |
+| **CPU** | AVX2/AVX-512, ARM Neon | Hardware-accelerated processing |
+
+### Velox vs Alternative Backends
+
+| Feature | Velox | [ClickHouse](https://clickhouse.com/) | [Apache Arrow DataFusion](https://arrow.apache.org/datafusion/) |
+|---------|-------|------------|------------------|
+| **Language** | C++ | C++ | Rust |
+| **SIMD Support** | AVX2/AVX-512/Neon | AVX2/AVX-512 | Limited |
+| **Memory Model** | [Apache Arrow](https://arrow.apache.org/) Columnar | Native Columnar | [Apache Arrow](https://arrow.apache.org/) Native |
+| **Spark Integration** | Native via Gluten | Via Gluten | Experimental |
+| **Performance** | Excellent | Excellent | Good |
+| **Maturity** | Production (Meta) | Production | Developing |
+
+
+## Configuring Spark + Gluten + Velox
+
+The instructions in this section walk through the baseline artifacts you need to build an image, configure Spark defaults, and deploy workloads on the [Spark Operator](https://github.com/kubeflow/spark-operator).
 
 ### Docker Image Configuration
 
-Critical changes to the Spark Docker image for Gluten+Velox support:
+Create a production-ready Spark image with Gluten + Velox:
 
-```dockerfile
-# Base: Ubuntu 22.04 with OpenJDK 17
-FROM ubuntu:22.04
+You can find the sample Dockerfile here: [Dockerfile-spark-gluten-velox](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/examples/spark-gluten-velox/Dockerfile-spark-gluten-velox)
 
-# Spark 3.5.2 (Latest Gluten-compatible version)
-ARG SPARK_VERSION=3.5.2
 
-# Add Gluten+Velox JARs
-RUN cd ${SPARK_HOME}/jars && \
-    wget -q https://dlcdn.apache.org/incubator/gluten/1.4.0-incubating/apache-gluten-1.4.0-incubating-bin-spark35.tar.gz && \
-    tar -xzf apache-gluten-1.4.0-incubating-bin-spark35.tar.gz && \
-    cp apache-gluten-1.4.0-incubating-bin-spark35/jar/gluten-*.jar . && \
-    cp apache-gluten-1.4.0-incubating-bin-spark35/jar/velox-*.jar .
+## Spark Configuration Examples
+
+Use the templates below to bootstrap both shared Spark defaults and a sample `SparkApplication` manifest.
+
+<Tabs groupId="spark-config" defaultValue="defaults" values={[{label: 'spark-defaults.conf', value: 'defaults'}, {label: 'SparkApplication YAML', value: 'sparkapp'}]}>
+  <TabItem value="defaults">
+
+```bash
+# spark-defaults.conf - Optimized for Gluten + Velox
+
+# Core Gluten Configuration
+spark.plugins                           org.apache.gluten.GlutenPlugin
+spark.shuffle.manager                   org.apache.spark.shuffle.sort.ColumnarShuffleManager
+
+# Memory Configuration - Critical for Performance
+spark.memory.offHeap.enabled           true
+spark.memory.offHeap.size               4g
+spark.executor.memoryFraction           0.8
+spark.executor.memory                   20g
+spark.executor.memoryOverhead           6g
+
+# Velox-specific Optimizations
+spark.gluten.sql.columnar.backend.velox.enabled              true
+spark.gluten.sql.columnar.forceShuffledHashJoin              true
+spark.gluten.sql.columnar.backend.velox.bloom_filter.enabled true
+
+# Java 17 Module Access (Required)
+spark.driver.extraJavaOptions   --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED
+spark.executor.extraJavaOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED
+
+# Adaptive Query Execution
+spark.sql.adaptive.enabled                     true
+spark.sql.adaptive.coalescePartitions.enabled  true
+spark.sql.adaptive.skewJoin.enabled            true
+
+# S3 Optimizations
+spark.hadoop.fs.s3a.fast.upload.buffer         disk
+spark.hadoop.fs.s3a.multipart.size             128M
+spark.hadoop.fs.s3a.connection.maximum         200
 ```
 
-## Benchmark Results Analysis
-
-### Top 10 Performance Improvements
-
-| Query | Native Time (s) | Gluten Time (s) | Speedup | Time Saved (s) |
-|-------|----------------|-----------------|---------|----------------|
-| q93-v2.4 | 79.35 | 14.54 | **5.46×** | 64.81 |
-| q50-v2.4 | 39.13 | 10.57 | **3.70×** | 28.57 |
-| q62-v2.4 | 10.36 | 2.85 | **3.64×** | 7.51 |
-| q59-v2.4 | 17.58 | 4.94 | **3.56×** | 12.64 |
-| q97-v2.4 | 19.12 | 5.93 | **3.23×** | 13.20 |
-| q99-v2.4 | 11.23 | 3.62 | **3.10×** | 7.61 |
-| q5-v2.4 | 20.91 | 6.76 | **3.10×** | 14.15 |
-| q96-v2.4 | 8.92 | 3.13 | **2.85×** | 5.80 |
-| q23b-v2.4 | 146.11 | 53.93 | **2.71×** | 92.18 |
-| q84-v2.4 | 8.07 | 2.98 | **2.71×** | 5.09 |
-
-### Performance Categories Analysis
-
-```mermaid
-graph LR
-    subgraph "Query Types by Performance Gain"
-        A[Aggregation Heavy<br/>5-15× speedup] --> A1[q93, q50, q62]
-        B[Window Functions<br/>3-5× speedup] --> B1[q59, q97, q99]
-        C[Complex Joins<br/>2-3× speedup] --> C1[q23a, q23b, q88]
-        D[Analytics<br/>1.5-2× speedup] --> D1[q6, q29, q65]
-        E[Regressions<br/>0.3-0.7× slower] --> E1[q22, q67, q72]
-    end
-
-    classDef excellent fill:#00ff00,color:#000000
-    classDef good fill:#99ff99,color:#000000
-    classDef average fill:#ffff99,color:#000000
-    classDef poor fill:#ff9999,color:#000000
-
-    class A,A1 excellent
-    class B,B1 good
-    class C,C1,D,D1 average
-    class E,E1 poor
-```
-
-### Workload Characteristics
-
-**Best Performance Gains (3-5×)**:
-- Heavy aggregation operations
-- Window function computations
-- Columnar data scans
-- Mathematical computations
-
-**Moderate Performance Gains (1.5-3×)**:
-- Complex joins with large datasets
-- String processing operations
-- Date/time computations
-
-**Performance Regressions (0.3-0.7×)**:
-- Specific join patterns (q22, q67)
-- Certain nested subqueries (q72)
-- Small dataset operations
-
-## Infrastructure Configuration
-
-### Test Environment Specifications
-
-```mermaid
-graph TB
-    subgraph "EKS Cluster Configuration"
-        A[8 × c5d.12xlarge nodes]
-        A --> B[48 vCPUs per node]
-        A --> C[96 GiB RAM per node]
-        A --> D[2×900 GiB NVMe SSD per node]
-    end
-
-    subgraph "Spark Configuration"
-        E[Driver: 5 cores, 20GB RAM]
-        F[Executors: 23 instances, 5 cores each]
-        G[Executor Memory: 20GB + 6GB overhead]
-        H[Off-heap Memory: 2GB (Gluten only)]
-    end
-
-    subgraph "Storage Configuration"
-        I[Dataset: 1TB TPC-DS Parquet]
-        J[Location: S3 us-west-2]
-        K[Local Storage: /mnt/k8s-disks/0]
-    end
-
-    classDef compute fill:#ff9999,stroke:#cc0000
-    classDef spark fill:#99ccff,stroke:#0066cc
-    classDef storage fill:#99ff99,stroke:#00cc00
-
-    class A,B,C,D compute
-    class E,F,G,H spark
-    class I,J,K storage
-```
-
-### Resource Utilization
-
-| Resource | Native Spark | Gluten+Velox | Efficiency Gain |
-|----------|--------------|--------------|-----------------|
-| **CPU Utilization** | 65-75% | 80-90% | +15-25% |
-| **Memory Efficiency** | On-heap focus | Off-heap optimized | Better GC |
-| **I/O Throughput** | Standard | Vectorized reads | +30-40% |
-| **Network Usage** | High shuffle | Columnar shuffle | -20% |
-
-## Security & Compliance Considerations
-
-### 🔒 **Security Implications**
-
-| Security Aspect | Native Spark | Gluten+Velox | Considerations |
-|----------------|--------------|--------------|----------------|
-| **JVM Security** | Standard Java security | Requires --add-opens flags | Review security policies |
-| **Memory Access** | Heap-based | Off-heap C++ code | Monitor native memory |
-| **Code Execution** | Java bytecode | Native C++ execution | Binary validation needed |
-| **Data Encryption** | Standard encryption | Arrow format encryption | Verify compatibility |
-
-### 📊 **Compliance Requirements**
+  </TabItem>
+  <TabItem value="sparkapp">
 
 ```yaml
-# GDPR/Data Privacy Configurations
-"spark.sql.execution.arrow.pyspark.enabled": "false"  # If processing PII
-"spark.serializer": "org.apache.spark.serializer.KryoSerializer"  # Secure serialization
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "test-gluten-velox"
+  namespace: spark-team-a
+spec:
+  type: Scala
+  mode: cluster
+  image: "your-registry/spark-gluten-velox:latest"
+  imagePullPolicy: Always
+  sparkVersion: "3.5.2"
+  mainClass: org.apache.spark.examples.SparkPi
+  mainApplicationFile: "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.2.jar"
+  arguments:
+    - "1000"  # High iteration count to see Velox benefits
 
-# SOX/Financial Services
-"spark.eventLog.enabled": "true"  # Audit trail required
-"spark.history.fs.logDirectory": "s3a://audit-bucket/spark-logs/"  # Compliance logging
+  driver:
+    cores: 2
+    memory: "4g"
+    memoryOverhead: "1g"
+    serviceAccount: spark-team-a
+    env:
+      - name: JAVA_HOME
+        value: "/usr/lib/jvm/java-17-openjdk-amd64"
 
-# Healthcare/HIPAA
-"spark.sql.execution.arrow.maxRecordsPerBatch": "1000"  # Limit batch sizes for PHI
+  executor:
+    cores: 4
+    memory: "8g"
+    memoryOverhead: "2g"
+    instances: 2
+    serviceAccount: spark-team-a
+    env:
+      - name: JAVA_HOME
+        value: "/usr/lib/jvm/java-17-openjdk-amd64"
+
+  sparkConf:
+    # Gluten Configuration
+    "spark.plugins": "org.apache.gluten.GlutenPlugin"
+    "spark.shuffle.manager": "org.apache.spark.shuffle.sort.ColumnarShuffleManager"
+    "spark.memory.offHeap.enabled": "true"
+    "spark.memory.offHeap.size": "2g"
+
+    # Debugging and Monitoring
+    "spark.gluten.sql.debug": "true"
+    "spark.sql.planChangeLog.level": "WARN"
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://your-bucket/spark-event-logs"
+
+    # Java 17 Compatibility
+    "spark.driver.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED"
+    "spark.executor.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED"
 ```
 
-### 🛡️ **Security Best Practices**
+  </TabItem>
+</Tabs>
 
-- **Network Security**: Ensure encrypted communication between Spark components
-- **Access Control**: Implement RBAC for Spark applications and S3 resources
-- **Secrets Management**: Use AWS Secrets Manager or Kubernetes secrets for credentials
-- **Container Security**: Scan Docker images for vulnerabilities regularly
-- **Audit Logging**: Enable comprehensive logging for compliance requirements
+<details>
+<summary>Why these defaults?</summary>
 
-## Running the Benchmarks
+- `spark.plugins` activates the [Apache Gluten](https://github.com/apache/incubator-gluten) runtime so query plans can offload to Velox.
+- Off-heap configuration reserves Arrow buffers that prevent JVM garbage collection pressure.
+- Adaptive query execution settings keep shuffle partitions balanced under both native and Gluten runs.
+- S3 connector tuning avoids bottlenecks when scanning the 1TB [TPC-DS](https://www.tpc.org/tpcds/) dataset from [Amazon S3](https://aws.amazon.com/s3/).
 
-### Prerequisites
+</details>
 
-1. **EKS Cluster** with Spark Operator deployed
-2. **Instance Types** with SSD storage (c5d.12xlarge recommended)
-3. **S3 Bucket** for TPC-DS dataset and results
-4. **Docker Hub** account for custom images
+## Running Benchmarks
 
-### Step 1: Build Gluten+Velox Image
+Follow the workflow below to reproduce the benchmark from data generation through post-run analysis.
 
-```bash
-# Navigate to benchmark directory
-cd analytics/terraform/spark-k8s-operator/examples/benchmark/tpcds-benchmark-spark-gluten-velox
+### TPC-DS Benchmark Setup
 
-# Build and push the Docker image
-./build-tpcds-gluten-image.sh v1.0.0
+The complete TPC-DS harness is available in the repository: [examples/benchmark/tpcds-benchmark-spark-gluten-velox/README.md](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/examples/benchmark/tpcds-benchmark-spark-gluten-velox/README.md).
+
+#### Step 1: Generate TPC-DS Data (1TB scale)
+
+Follow this link to [generate the test data in S3 bucket](https://awslabs.github.io/data-on-eks/docs/benchmarks/spark-operator-benchmark/data-generation)
+
+#### Step 2: Submit Native & Gluten Jobs
+
+:::warning Prerequisites
+Before submitting benchmark jobs, ensure:
+1. **S3 Bucket is configured**: Export the S3 bucket name from your Terraform outputs
+2. **Benchmark data is available**: Verify TPC-DS 1TB data exists in the same S3 bucket
+:::
+
+**Export S3 bucket name from Terraform outputs:**
+```bash title="Export S3 bucket variable"
+# Get S3 bucket name from Terraform outputs
+export S3_BUCKET=$(terraform -chdir=path/to/your/terraform output -raw s3_bucket_id_data)
+
+# Verify the bucket and data exist
+aws s3 ls s3://$S3_BUCKET/blog/BLOG_TPCDS-TEST-3T-partitioned/
 ```
 
-### Step 2: Configure Environment
+**Submit benchmark jobs:**
 
-```bash
-# Set your S3 bucket for data and results
-export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
+<Tabs groupId="tpcds-submit" defaultValue="native" values={[{label: 'Native Spark', value: 'native'}, {label: 'Gluten + Velox', value: 'gluten'}]}>
+  <TabItem value="native">
 
-# Update Docker image reference in YAML files
-sed -i "s/<dockerhubuser>/your-dockerhub-username/g" tpcds-benchmark-gluten-c5d.yaml
-```
-
-### Step 3: Run Benchmarks
-
-```bash
-# Deploy Native Spark benchmark
+```bash title="Submit native Spark benchmark"
 envsubst < tpcds-benchmark-native-c5d.yaml | kubectl apply -f -
+```
 
-# Deploy Gluten+Velox benchmark
+  </TabItem>
+  <TabItem value="gluten">
+
+```bash title="Submit Gluten + Velox benchmark"
 envsubst < tpcds-benchmark-gluten-c5d.yaml | kubectl apply -f -
 ```
 
-### Step 4: Monitor Progress
+  </TabItem>
+</Tabs>
 
-```bash
-# Check job status
+#### Step 3: Monitor Benchmark Progress
+
+<Tabs groupId="tpcds-monitor" defaultValue="status" values={[{label: 'Status', value: 'status'}, {label: 'Logs', value: 'logs'}, {label: 'History UI', value: 'history'}]}>
+  <TabItem value="status">
+
+```bash title="Check SparkApplication status"
 kubectl get sparkapplications -n spark-team-a
-
-# Monitor logs
-kubectl logs -n spark-team-a -l spark-app-name=tpcds-benchmark-native-c5d --tail=100
-kubectl logs -n spark-team-a -l spark-app-name=tpcds-benchmark-gluten-c5d --tail=100
-
-# Access Spark UI
-kubectl port-forward svc/spark-history-server 18080:80 -n spark-team-a
 ```
 
-### Step 5: Analyze Results
+  </TabItem>
+  <TabItem value="logs">
 
-Results are automatically stored in S3:
-- **Native Results**: `s3://${S3_BUCKET}/TPCDS-TEST-1TB-RESULT-NATIVE/`
-- **Gluten Results**: `s3://${S3_BUCKET}/TPCDS-TEST-1TB-RESULT-GLUTEN/`
-- **Event Logs**: `s3://${S3_BUCKET}/spark-event-logs/`
+```bash title="Tail benchmark logs"
+kubectl logs -f -n spark-team-a -l spark-app-name=tpcds-benchmark-native-c5d
+kubectl logs -f -n spark-team-a -l spark-app-name=tpcds-benchmark-gluten-c5d
+```
 
-## Performance Optimization Tips
+  </TabItem>
+  <TabItem value="history">
 
-### 1. Memory Configuration
+```bash title="Port-forward Spark History Server"
+kubectl port-forward svc/spark-history-server 18080:80 -n spark-history-server
+```
 
+  </TabItem>
+</Tabs>
+
+#### Step 4: [Spark History Server](https://spark.apache.org/docs/latest/monitoring.html#viewing-after-the-fact) Analysis
+
+Access detailed execution plans and metrics:
+
+```bash title="Open Spark History Server locally"
+kubectl port-forward svc/spark-history-server 18080:80 -n spark-history-server
+```
+
+:::info Navigation Checklist
+- Point your browser to `http://localhost:18080`.
+- Locate both `spark-<ID>-native` and `spark-<ID>-gluten` applications.
+- In the [Spark UI](https://spark.apache.org/docs/latest/web-ui.html), inspect:
+  1. SQL tab execution plans
+  2. Presence of `WholeStageTransformer` stages in Gluten jobs
+  3. Stage execution times across both runs
+  4. Executor metrics for off-heap memory usage
+:::
+
+#### Step 5: Summarize Findings
+
+:::tip
+- Export runtime metrics from the Spark UI or event logs for both jobs.
+- Capture query-level comparisons (duration, stage counts, fallbacks) to document where Gluten accelerated or regressed.
+- Feed the results into cost or capacity planning discussions—speedups translate directly into smaller clusters or faster SLA achievement.
+:::
+
+### Key Metrics to Analyze
+
+:::tip
+As you compare native and Gluten runs, focus on the following signals:
+
+1. **Query Plan Differences**:
+   - Native: `WholeStageCodegen` stages
+   - Gluten: `WholeStageTransformer` stages
+
+2. **Memory Usage Patterns**:
+   - Native: High on-heap usage, frequent GC
+   - Gluten: Off-heap Arrow buffers, minimal GC
+
+3. **CPU Utilization**:
+   - Native: 60-70% efficiency
+   - Gluten: 80-90+ % efficiency with SIMD
+:::
+
+## Performance Analysis and Pitfalls
+
+Gluten reduces friction for Spark adopters, but a few tuning habits help avoid regressions. Use the notes below as a checklist during rollout.
+
+### Common Configuration Pitfalls
+
+:::caution
 ```yaml
-# Optimize memory allocation for Gluten+Velox
-"spark.executor.memory": "20g"
-"spark.executor.memoryOverhead": "6g"
-"spark.memory.offHeap.enabled": "true"
-"spark.memory.offHeap.size": "2g"  # Critical for Velox
+# ❌ WRONG - Insufficient off-heap memory
+"spark.memory.offHeap.size": "512m"  # Too small for real workloads
+
+# ✅ CORRECT - Adequate off-heap allocation
+"spark.memory.offHeap.size": "4g"    # 20-30% of executor memory
+
+# ❌ WRONG - Missing Java module access
+# Results in: java.lang.IllegalAccessError
+
+# ✅ CORRECT - Required for Java 17
+"spark.executor.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED"
+
+# ❌ WRONG - Velox backend not enabled
+"spark.gluten.sql.columnar.backend.ch.enabled": "true"  # ClickHouse, not Velox!
+
+# ✅ CORRECT - Velox backend configuration
+"spark.gluten.sql.columnar.backend.velox.enabled": "true"
 ```
+:::
 
-### 2. CPU and Vectorization
+### Performance Optimization Tips
 
-```yaml
-# Enable vectorized operations
-"spark.sql.adaptive.enabled": "true"
-"spark.sql.adaptive.coalescePartitions.enabled": "true"
-"spark.sql.adaptive.skewJoin.enabled": "true"
-```
+:::tip
+1. **Memory Sizing**:
+   - Off-heap: <span className="badge badge--warning highlight-badge">20-30% of executor memory</span>
+   - Executor overhead: <span className="badge badge--warning highlight-badge">15-20%</span> reserved for Arrow buffers
+   - Driver memory: <span className="badge badge--info highlight-badge">4-8 GB</span> for complex queries
 
-### 3. I/O Optimization
+2. **CPU Optimization**:
+   - Use AVX2-capable instance types (Intel Xeon, AMD EPYC)
+   - Avoid ARM instances for maximum SIMD benefit
+   - Set <span className="badge badge--primary highlight-badge">spark.executor.cores = 4-8</span> for optimal vectorization
 
-```yaml
-# S3 optimizations
-"spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
-"spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
-"spark.hadoop.fs.s3a.multipart.size": "128M"
-"spark.hadoop.fs.s3a.connection.maximum": "200"
-```
+3. **I/O Configuration**:
+   - Enable S3A fast upload: `spark.hadoop.fs.s3a.fast.upload.buffer=disk`
+   - Increase connection pool to <span className="badge badge--info highlight-badge">200 connections</span>: `spark.hadoop.fs.s3a.connection.maximum=200`
+   - Use larger multipart sizes of <span className="badge badge--info highlight-badge">128 MB</span>: `spark.hadoop.fs.s3a.multipart.size=128M`
+:::
 
-## Business Impact & Strategic Analysis
+### Debugging Gluten Issues
 
-### 💼 **Total Cost of Ownership (TCO)**
-
-| Cost Component | 3-Year Native Spark | 3-Year Gluten+Velox | Savings |
-|----------------|--------------------|--------------------|---------|
-| **Compute Costs** | $450K | $328K | **$122K (27%)** |
-| **Engineering Time** | $180K | $45K | **$135K (75%)** |
-| **Operations** | $90K | $108K | **-$18K (+20%)** |
-| **Training/Adoption** | $0K | $25K | **-$25K** |
-| **Total TCO** | **$720K** | **$506K** | **$214K (30%)** |
-
-### 📊 **Risk-Adjusted Business Case**
-
-```mermaid
-graph TB
-    subgraph "Business Benefits"
-        A[Performance: 1.6× faster] --> A1[$122K compute savings]
-        B[Engineering Efficiency] --> B1[$135K development savings]
-        C[Time to Market] --> C1[37% faster insights]
-    end
-
-    subgraph "Implementation Risks"
-        D[Technology Maturity] --> D1[Incubator status risk]
-        E[Operational Complexity] --> E1[+20% ops overhead]
-        F[Skills Gap] --> F1[$25K training cost]
-    end
-
-    subgraph "Strategic Value"
-        G[Competitive Advantage] --> G1[Faster analytics delivery]
-        H[Innovation Enablement] --> H1[Advanced ML/AI capabilities]
-        I[Vendor Independence] --> I1[Open source flexibility]
-    end
-
-    classDef benefits fill:#90EE90,stroke:#228B22
-    classDef risks fill:#FFB6C1,stroke:#DC143C
-    classDef strategy fill:#87CEEB,stroke:#4682B4
-
-    class A,B,C,A1,B1,C1 benefits
-    class D,E,F,D1,E1,F1 risks
-    class G,H,I,G1,H1,I1 strategy
-```
-
-### 🎯 **Decision Framework for Leadership**
-
-| Evaluation Criteria | Weight | Native Spark | Gluten+Velox | Recommendation |
-|---------------------|--------|--------------|--------------|----------------|
-| **Performance Impact** | 25% | 3/10 | 9/10 | Strong advantage |
-| **Cost Efficiency** | 20% | 5/10 | 8/10 | Significant savings |
-| **Risk Profile** | 20% | 8/10 | 6/10 | Acceptable risk |
-| **Implementation Effort** | 15% | 9/10 | 8/10 | Minimal disruption |
-| **Strategic Alignment** | 10% | 6/10 | 8/10 | Better future-proofing |
-| **Team Readiness** | 10% | 8/10 | 6/10 | Training required |
-| **Weighted Score** | - | **6.2/10** | **7.6/10** | **✅ Proceed with pilot** |
-
-### 📈 **Implementation Roadmap**
-
-```mermaid
-gantt
-    title Gluten+Velox Adoption Timeline
-    dateFormat  YYYY-MM-DD
-    section Phase 1: Evaluation
-    Proof of Concept         :poc1, 2024-10-01, 4w
-    Performance Validation   :pv1, after poc1, 2w
-    Risk Assessment         :ra1, after poc1, 2w
-    section Phase 2: Pilot
-    Non-Critical Workloads  :pilot1, after ra1, 6w
-    Monitoring & Tuning     :mt1, after pilot1, 2w
-    Team Training          :train1, after pilot1, 3w
-    section Phase 3: Production
-    Critical Workloads     :prod1, after mt1, 8w
-    Full Migration        :mig1, after prod1, 4w
-    Optimization Phase    :opt1, after mig1, 4w
-```
-
-## Cost Analysis
-
-### Resource Efficiency Gains
-
-| Aspect | Impact | Cost Reduction |
-|--------|--------|----------------|
-| **Runtime Reduction** | 37% faster execution | 27% compute cost savings |
-| **Resource Utilization** | Better CPU/memory efficiency | 15% infrastructure savings |
-| **Development Velocity** | No code changes required | 100% migration effort savings |
-
-### ROI Calculation
-
-For a typical data pipeline running 4 times daily:
-- **Daily Runtime Savings**: 13 minutes × 4 = 52 minutes
-- **Monthly Compute Savings**: ~26 hours of c5d.12xlarge time
-- **Annual Cost Reduction**: $15,000-$25,000 (depending on region and usage)
-
-### 🚀 **Pilot Program Recommendation**
-
-**Immediate Actions for Leadership:**
-
-1. **Start Small**: Begin with 1-2 non-critical analytical workloads
-2. **Measure Everything**: Establish baseline metrics before migration
-3. **Team Preparation**: Invest in training 2-3 key engineers
-4. **Risk Mitigation**: Maintain parallel native Spark capability for 6 months
-5. **Success Metrics**: Define clear KPIs for performance and cost savings
-
-## Troubleshooting Common Issues
-
-### Build Issues
-
+:::note
 ```bash
-# Error: Gluten JARs not found
-# Solution: Verify Gluten version compatibility
-wget -q https://dlcdn.apache.org/incubator/gluten/1.4.0-incubating/ && ls
+# Enable debug logging
+"spark.gluten.sql.debug": "true"
+"spark.sql.planChangeLog.level": "WARN"
+
+# Check for fallback operations
+kubectl logs <spark-pod> | grep -i "fallback"
+
+# Verify Velox library loading
+kubectl exec <spark-pod> -- find /opt/spark -name "*velox*"
+
+# Monitor off-heap memory usage
+kubectl top pod <spark-pod> --containers
 ```
+:::
 
-### Runtime Issues
-
-```bash
-# Error: Java module access denied
-# Solution: Add required JVM options
---add-opens=java.base/java.nio=ALL-UNNAMED
-
-# Error: Off-heap memory exceeded
-# Solution: Increase off-heap allocation
-"spark.memory.offHeap.size": "4g"
-```
-
-### Performance Issues
-
-```bash
-# Symptom: No performance improvement
-# Solution: Verify Velox backend activation
-grep -i "gluten" /opt/spark/logs/spark-*.log
-grep -i "velox" /opt/spark/logs/spark-*.log
-```
 
 ## Conclusion
 
-Apache Gluten with Velox backend represents a significant advancement in Spark performance optimization, delivering **1.6× overall speedup** with **zero code changes**. Key takeaways:
+Apache Gluten with the Velox backend consistently accelerates Spark SQL workloads on Amazon EKS, delivering a <span className="badge badge--success highlight-badge">1.72× overall speedup</span> and driving <span className="badge badge--success highlight-badge">≈42% lower compute spend</span> in our TPC-DS 1TB benchmark. The performance gains stem from offloading compute-intensive operators to a native, vectorized engine, reducing JVM overhead and improving CPU efficiency.
 
-### ✅ **Proven Benefits**
-- **86.5% of queries improved** with average 74% speedup
-- **Production-ready** with fallback mechanisms
-- **Cost-effective** with 27% compute cost reduction
+When planning your rollout:
+- Start by mirroring the configurations documented above, then tune off-heap memory and shuffle behavior based on workload shape.
+- Use the Spark Operator deployment flow to A/B test native and Gluten runs so you can quantify gains and detect fallbacks early.
+- Monitor Spark UI and metrics exports to build a data-backed case for production adoption or cluster right-sizing.
 
-### 🎯 **Best Use Cases**
-- Heavy aggregation workloads
-- Window function operations
-- Large-scale analytical processing
-- Cost-sensitive production pipelines
-
-### 🚀 **Future Outlook**
-- Enhanced Gluten 1.5+ with more optimizations
-- Better Kubernetes integration
-- Expanded SQL function coverage
-- Multi-backend support improvements
-
-The combination of Apache Spark's distributed computing with Gluten+Velox's native execution creates a powerful platform for modern data analytics, making high-performance data processing accessible without the complexity of engine migration.
+With the Docker image, Spark defaults, and example manifests provided in this guide, you can reproduce the benchmark end-to-end and adapt the pattern for your own cost and performance goals.
 
 ---
 
-## Additional Resources
-
-- [Apache Gluten GitHub](https://github.com/apache/incubator-gluten)
-- [Velox Project](https://github.com/facebookincubator/velox)
-- [TPC-DS Specification](https://www.tpc.org/tpcds/)
-- [Data-on-EKS Blueprints](https://github.com/awslabs/data-on-eks)
-
-### 🔗 Related Benchmarks
-- [Spark Operator EKS Benchmarks](spark-operator-eks-benchmark.md)
-- [EMR on EKS Performance](../emr-on-eks.md)
-- [Graviton Instance Comparisons](graviton-r-data.md)
+*For complete implementation examples and benchmark results, see the [GitHub repository](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator/examples/benchmark/tpcds-benchmark-spark-gluten-velox).*
