@@ -28,7 +28,7 @@ def load_cat_data():
         reader = csv.DictReader(f)
         for row in reader:
             cat_profile = CatProfile(
-                cat_id=row['cat_id'],
+                cat_id=int(row['cat_id']),
                 name=row['name'],
                 coat_color=row['coat_color'],
                 coat_length=row['coat_length'],
@@ -40,7 +40,7 @@ def load_cat_data():
                 vocalization_level=int(row['vocalization_level']),
                 stress_tendency=row['stress_tendency']
             )
-            cats[row['cat_id']] = cat_profile
+            cats[int(row['cat_id'])] = cat_profile
     return cats
 
 CAT_DATA = load_cat_data()
@@ -78,13 +78,12 @@ async def produce_cat_interactions(producer):
         interaction = CatInteraction(
             interaction_id=str(uuid.uuid4()),
             cat_id=cat_id,
-            visitor_id=f"visitor_{random.randint(1, 500):03d}",
+            visitor_id=f"visitor_{random.randint(1, 3000):03d}",
             interaction_type=random.choice(INTERACTION_TYPES),
             duration_minutes=random.randint(1, 30),
             cat_stress_level=stress_level,
             timestamp=int(datetime.now().timestamp() * 1000)
         )
-        
         producer.send('cat-interactions', key=interaction.interaction_id, value=asdict(interaction))
         print(f"[INTERACTIONS] {interaction.interaction_type} for {cat.name} ({cat_id}) (stress: {interaction.cat_stress_level})")
         
@@ -100,7 +99,7 @@ async def produce_adoption_events(producer):
             event_id=str(uuid.uuid4()),
             cat_id=cat_id,
             event_type=random.choice(EVENT_TYPES),
-            visitor_id=f"visitor_{random.randint(1, 500):03d}",
+            visitor_id=f"visitor_{random.randint(1, 3000):03d}",
             timestamp=int(datetime.now().timestamp() * 1000),
             adoption_fee=random.randint(5000, 25000),
             weight_kg=cat.base_weight_kg,
@@ -164,7 +163,7 @@ async def produce_revenue_events(producer):
             cat_id=cat_id,
             revenue_type=revenue_type,
             amount=amount,
-            visitor_id=f"visitor_{random.randint(1, 500):03d}",
+            visitor_id=f"visitor_{random.randint(1, 3000):03d}",
             timestamp=int(datetime.now().timestamp() * 1000)
         )
         
