@@ -1,6 +1,6 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, fields
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, get_origin, get_args
 
 
 @dataclass
@@ -122,3 +122,33 @@ class BehavioralAlert:
     current_score: int
     baseline_score: int
     score_change: int
+
+
+def generate_flink_schema(dataclass_type):
+    """Generate Flink DDL schema and field list from dataclass"""
+    schema_parts = []
+    field_names = []
+    
+    for field in fields(dataclass_type):
+        field_name = f"`{field.name}`" if field.name == 'timestamp' else field.name
+        
+        # Map Python types to Flink types
+        if field.type == str:
+            flink_type = 'STRING'
+        elif field.type == int:
+            if field.name == 'timestamp':
+                flink_type = 'BIGINT'
+            else:
+                flink_type = 'INT'
+        elif field.type == Decimal:
+            flink_type = 'DECIMAL(4,2)'
+        elif get_origin(field.type) is type(None):  # Optional
+            flink_type = 'STRING'
+        else:
+            flink_type = 'STRING'
+        
+        schema_parts.append(f"{field_name} {flink_type}")
+        field_names.append(field_name)
+    
+    schema_parts.append("date_partition STRING")
+    return ',\n            '.join(schema_parts), field_names

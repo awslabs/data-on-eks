@@ -1,86 +1,26 @@
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment, EnvironmentSettings
 from pyflink.table.expressions import col
+from models import CatInteraction, AdoptionEvent, CatWeightReading, CafeRevenue, generate_flink_schema
 import os
 
-# Table configurations
-TABLES_CONFIG = {
-    'cat_interactions': {
-        'topic': 'cat-interactions',
-        'schema': """
-            interaction_id STRING,
-            cat_id STRING,
-            visitor_id STRING,
-            interaction_type STRING,
-            duration_minutes INT,
-            cat_stress_level INT,
-            `timestamp` BIGINT,
-            date_partition STRING
-        """,
-        'fields': ['interaction_id', 'cat_id', 'visitor_id', 'interaction_type', 'duration_minutes', 'cat_stress_level', '`timestamp`']
-    },
-    'adoption_events': {
-        'topic': 'adoption-events',
-        'schema': """
-            event_id STRING,
-            cat_id STRING,
-            event_type STRING,
-            visitor_id STRING,
-            `timestamp` BIGINT,
-            adoption_fee INT,
-            weight_kg DECIMAL(4,2),
-            coat_length STRING,
-            coat_color STRING,
-            age_months INT,
-            favorite_food STRING,
-            sociability_score INT,
-            favorite_toy STRING,
-            vocalization_level INT,
-            date_partition STRING
-        """,
-        'fields': ['event_id', 'cat_id', 'event_type', 'visitor_id', '`timestamp`', 'adoption_fee', 'weight_kg', 'coat_length', 'coat_color', 'age_months', 'favorite_food', 'sociability_score', 'favorite_toy', 'vocalization_level']
-    },
-    'weight_readings': {
-        'topic': 'cat-weight-readings',
-        'schema': """
-            reading_id STRING,
-            cat_id STRING,
-            weight_kg DECIMAL(4,2),
-            scale_id STRING,
-            `timestamp` BIGINT,
-            date_partition STRING
-        """,
-        'fields': ['reading_id', 'cat_id', 'weight_kg', 'scale_id', '`timestamp`']
-    },
-    'revenue_events': {
-        'topic': 'cafe-revenue',
-        'schema': """
-            transaction_id STRING,
-            cat_id STRING,
-            revenue_type STRING,
-            amount DECIMAL(10,2),
-            visitor_id STRING,
-            `timestamp` BIGINT,
-            date_partition STRING
-        """,
-        'fields': ['transaction_id', 'cat_id', 'revenue_type', 'amount', 'visitor_id', '`timestamp`']
+# Generate table configurations from models
+def create_tables_config():
+    config = {
+        'cat_interactions': {'topic': 'cat-interactions', 'model': CatInteraction},
+        'adoption_events': {'topic': 'adoption-events', 'model': AdoptionEvent},
+        'weight_readings': {'topic': 'cat-weight-readings', 'model': CatWeightReading},
+        'revenue_events': {'topic': 'cafe-revenue', 'model': CafeRevenue}
     }
-}
-
-def get_field_type(field):
-    """Map field names to their expected types"""
-    int_fields = ['duration_minutes', 'cat_stress_level', 'adoption_fee', 'age_months', 'sociability_score', 'vocalization_level']
-    decimal_fields = ['weight_kg', 'amount']
     
-    field_clean = field.strip('`')
-    if field_clean in int_fields:
-        return 'INT'
-    elif field_clean in decimal_fields:
-        return 'DECIMAL(10,2)'
-    elif field_clean == 'timestamp':
-        return 'BIGINT'
-    else:
-        return 'STRING'
+    for table_name, table_config in config.items():
+        schema, fields_list = generate_flink_schema(table_config['model'])
+        table_config['schema'] = schema
+        table_config['fields'] = fields_list
+    
+    return config
+
+TABLES_CONFIG = create_tables_config()
 
 def create_kafka_source_table(table_env, table_name, topic_name):
     """Create Kafka source table"""
@@ -111,7 +51,7 @@ def create_iceberg_sink_table(table_env, table_name, schema_ddl):
         {schema_ddl}
     ) WITH (
         'connector' = 'iceberg',
-        'catalog-name' = 's3_catalog',
+        'catalog-name' = 'workshop',
         'catalog-type' = 'hadoop',
         'warehouse' = '{s3_warehouse}',
         'format-version' = '2'
@@ -140,13 +80,15 @@ def main():
     settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
     table_env = StreamTableEnvironment.create(env, settings)
     
-    # Register Iceberg catalog
+    # Register Iceberg catalog with Glue
     s3_warehouse = os.getenv('S3_WAREHOUSE_PATH', 's3a://your-bucket/iceberg-warehouse/')
     table_env.execute_sql(f"""
-        CREATE CATALOG s3_catalog WITH (
+        CREATE CATALOG workshop WITH (
             'type' = 'iceberg',
             'warehouse' = '{s3_warehouse}',
-            'catalog-impl' = 'org.apache.iceberg.hadoop.HadoopCatalog'
+            'catalog-impl' = 'org.apache.iceberg.aws.glue.GlueCatalog',
+            'io-impl' = 'org.apache.iceberg.aws.s3.S3FileIO',
+            'glue.database' = 'data-on-eks'
         )
     """)
 
@@ -168,12 +110,25 @@ def main():
         if debug_enabled:
             create_debug_table(table_env, table_name, config['schema'])
         
-        # Build JSON field extraction with error handling
+        # Build JSON field extraction with type casting
         json_fields = []
         for field in config['fields']:
-            field_type = get_field_type(field)
             field_clean = field.strip('`')
-            json_fields.append(f"CAST(JSON_VALUE(`data`, '$.{field_clean}') AS {field_type}) AS {field}")
+            
+            # Get the expected type from the schema
+            field_type = 'STRING'  # default
+            for schema_part in config['schema'].split(','):
+                if field in schema_part:
+                    if 'INT' in schema_part:
+                        field_type = 'INT'
+                    elif 'DECIMAL' in schema_part:
+                        field_type = 'DECIMAL(4,2)'
+                    break
+            
+            if field_type == 'STRING':
+                json_fields.append(f"JSON_VALUE(`data`, '$.{field_clean}') AS {field}")
+            else:
+                json_fields.append(f"CAST(JSON_VALUE(`data`, '$.{field_clean}') AS {field_type}) AS {field}")
         
         json_fields_str = ',\n        '.join(json_fields)
         
