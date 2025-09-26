@@ -190,7 +190,7 @@ Flink Operator provides three upgrade modes for Flink jobs. Checkout the [Flink 
 
 <CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/flink), you will provision the following resources required to run Flink Jobs with Flink Operator and Apache YuniKorn.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/emr-eks-flink), you will provision the following resources required to run Flink Jobs with Flink Operator and Apache YuniKorn.
 
 This example deploys an EKS Cluster running the Flink Operator into a new VPC.
 
@@ -435,3 +435,4 @@ cd .. && chmod +x cleanup.sh
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
+
