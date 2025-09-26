@@ -208,7 +208,7 @@ spec:
         maxParallel: 8
     retentionPolicy: "30d"
 
-  resources: 
+  resources:
     requests:
       memory: "512Mi"
       cpu: "1"
@@ -323,7 +323,7 @@ kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-us
 kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 ```
 
-Now, you can go to http://localhost:8080 to log into the Grafana dashboard. 
+Now, you can go to http://localhost:8080 to log into the Grafana dashboard.
 
 ![CloudNativePG Grafana Dashboard](img/cnpg_garfana_dashboard.png)
 
@@ -338,7 +338,7 @@ kubectl port-forward svc/prod-rw 5432:5432 -n demo
 
 ```
 
-First, let's get the `app-auth` secret. 
+First, let's get the `app-auth` secret.
 
 ```bash
 kubectl get secret app-auth -n demo -o=jsonpath='{.data.password}' | base64 --decode ; echo

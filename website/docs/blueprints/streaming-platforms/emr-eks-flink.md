@@ -435,4 +435,3 @@ cd .. && chmod +x cleanup.sh
 :::caution
 To avoid unwanted charges to your AWS account, delete all the AWS resources created during this deployment
 :::
-

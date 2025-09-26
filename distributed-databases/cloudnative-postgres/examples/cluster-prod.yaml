@@ -60,7 +60,7 @@ spec:
         maxParallel: 8
     retentionPolicy: "30d"
 
-  resources: 
+  resources:
     requests:
       memory: "512Mi"
       cpu: "1"
