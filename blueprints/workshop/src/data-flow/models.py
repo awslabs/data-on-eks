@@ -22,11 +22,10 @@ class CatProfile:
 class CatInteraction:
     interaction_id: str
     cat_id: int
-    visitor_id: str
+    visitor_id: int
     interaction_type: str  # pet, play, feed, photo
     duration_minutes: int
     cat_stress_level: int  # 1-10 scale
-    timestamp: int
 
 
 @dataclass
@@ -34,8 +33,7 @@ class AdoptionEvent:
     event_id: str
     cat_id: int
     event_type: str  # inquiry, application, adoption, return
-    visitor_id: str
-    timestamp: int
+    visitor_id: int
     adoption_fee: int  # cents initially, evolves to decimal
     weight_kg: Decimal
     coat_length: str  # short, medium, long
@@ -53,7 +51,6 @@ class CatWeightReading:
     cat_id: int
     weight_kg: Decimal
     scale_id: str
-    timestamp: int
 
 
 @dataclass
@@ -62,8 +59,7 @@ class CafeRevenue:
     cat_id: Optional[int]  # null for non-cat specific revenue
     revenue_type: str  # adoption_fee, cafe_visit, merchandise, photo_session
     amount: Decimal
-    visitor_id: str
-    timestamp: int
+    visitor_id: int
 
 
 # Intermediate/Enriched Models
@@ -72,11 +68,10 @@ class CafeRevenue:
 class EnrichedInteraction:
     interaction_id: str
     cat_id: int
-    visitor_id: str
+    visitor_id: int
     interaction_type: str
     duration_minutes: int
     cat_stress_level: int
-    timestamp: int
     # Enriched fields
     weight_kg: Decimal
     coat_color: str
@@ -105,7 +100,6 @@ class WeightAlert:
     alert_type: str
     message: str
     severity: str  # HIGH, MEDIUM, LOW
-    timestamp: int
     current_weight: Decimal
     previous_weight: Decimal
     weight_change_percent: Decimal
@@ -118,44 +112,113 @@ class BehavioralAlert:
     alert_type: str
     message: str
     severity: str
-    timestamp: int
     current_score: int
     baseline_score: int
     score_change: int
 
 
-def generate_flink_schema(dataclass_type):
-    """Generate Flink DDL schema and field info from dataclass"""
-    schema_parts = []
-    field_info = {}
+@dataclass
+class CatPopularity:
+    cat_id: int
+    like_count: int
+    window_start: int  # timestamp
+    window_end: int    # timestamp
 
-    for field in fields(dataclass_type):
-        field_name = f"`{field.name}`" if field.name == 'timestamp' else field.name
 
-        # Handle Optional types
-        actual_type = field.type
-        if get_origin(field.type) is Union:
-            # Extract non-None type from Optional[T]
-            args = get_args(field.type)
-            non_none_types = [arg for arg in args if arg is not type(None)]
-            if non_none_types:
-                actual_type = non_none_types[0]
+@dataclass
+class PotentialAdopter:
+    alert_id: str
+    visitor_id: int
+    total_likes: int
+    threshold: int
 
-        # Map Python types to Flink types
-        if actual_type == str:
-            flink_type = 'STRING'
-        elif actual_type == int:
-            if field.name == 'timestamp':
-                flink_type = 'BIGINT'
-            else:
-                flink_type = 'INT'
-        elif actual_type == Decimal:
-            flink_type = 'DECIMAL(4,2)'
-        else:
-            flink_type = 'STRING'
 
-        schema_parts.append(f"{field_name} {flink_type}")
-        field_info[field.name] = flink_type
-    
-    schema_parts.append("date_partition STRING")
-    return ',\n            '.join(schema_parts), field_info
+def schema_to_flink_ddl(schema_dict):
+    """Convert schema dictionary to Flink DDL string format"""
+    return ',\n            '.join([f"`{field}` {ftype}" for field, ftype in schema_dict.items()])
+
+
+SCHEMA_MAP = {
+    "cat_profile": {
+        "class": CatProfile,
+        "flink_schema": {
+            "cat_id": "INT",
+            "name": "STRING",
+            "coat_color": "STRING",
+            "coat_length": "STRING",
+            "age_months": "INT",
+            "base_weight_kg": "DECIMAL(10,2)",
+            "favorite_food": "STRING",
+            "favorite_toy": "STRING",
+            "sociability_score": "INT",
+            "vocalization_level": "INT",
+            "stress_tendency": "STRING"
+        }
+    },
+    "cat_interactions": {
+        "class": CatInteraction,
+        "flink_schema": {
+            "interaction_id": "STRING",
+            "cat_id": "INT",
+            "visitor_id": "INT",
+            "interaction_type": "STRING",
+            "duration_minutes": "INT",
+            "cat_stress_level": "INT"
+        }
+    },
+    "adoption_events": {
+        "class": AdoptionEvent,
+        "flink_schema": {
+            "event_id": "STRING",
+            "cat_id": "INT",
+            "event_type": "STRING",
+            "visitor_id": "INT",
+            "adoption_fee": "INT",
+            "weight_kg": "DECIMAL(10,2)",
+            "coat_length": "STRING",
+            "coat_color": "STRING",
+            "age_months": "INT",
+            "favorite_food": "STRING",
+            "sociability_score": "INT",
+            "favorite_toy": "STRING",
+            "vocalization_level": "INT"
+        }
+    },
+    "weight_readings": {
+        "class": CatWeightReading,
+        "flink_schema": {
+            "reading_id": "STRING",
+            "cat_id": "INT",
+            "weight_kg": "DECIMAL(10,2)",
+            "scale_id": "STRING"
+        }
+    },
+    "cafe_revenues": {
+        "class": CafeRevenue,
+        "flink_schema": {
+            "transaction_id": "STRING",
+            "cat_id": "INT",
+            "revenue_type": "STRING",
+            "amount": "DECIMAL(10,2)",
+            "visitor_id": "INT"
+        }
+    },
+    "cat_popularity": {
+        "python_dict": CatPopularity,
+        "flink_schema": {
+            "cat_id": "INT",
+            "like_count": "INT",
+            "window_start": "BIGINT",
+            "window_end": "BIGINT"
+        }
+    },
+    "potential_adopter": {
+        "python_dict": PotentialAdopter,
+        "flink_schema": {
+            "alert_id": "STRING",
+            "visitor_id": "INT",
+            "total_likes": "INT",
+            "threshold": "INT"
+        }
+    }
+}

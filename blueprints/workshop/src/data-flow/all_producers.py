@@ -16,7 +16,7 @@ from models import CatProfile, CatInteraction, AdoptionEvent, CatWeightReading, 
 KAFKA_BOOTSTRAP_SERVERS = ['localhost:9094']
 
 # Sample data
-INTERACTION_TYPES = ['pet', 'play', 'feed', 'photo']
+INTERACTION_TYPES = ['pet', 'play', 'feed', 'photo', 'like', 'like', 'like']
 EVENT_TYPES = ['inquiry', 'application', 'adoption', 'return']
 REVENUE_TYPES = ['adoption_fee', 'cafe_visit', 'merchandise', 'photo_session']
 
@@ -43,8 +43,19 @@ def load_cat_data():
             cats[int(row['cat_id'])] = cat_profile
     return cats
 
+# Load visitor data from CSV
+def load_visitor_data():
+    visitor_ids = []
+    csv_path = os.path.join(os.path.dirname(__file__), 'data', 'visitors.csv')
+    with open(csv_path, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            visitor_ids.append(row['id'])
+    return visitor_ids
+
 CAT_DATA = load_cat_data()
 CAT_IDS = list(CAT_DATA.keys())
+VISITOR_IDS = load_visitor_data()
 
 def create_producer():
     """Create a Kafka producer"""
@@ -78,44 +89,42 @@ async def produce_cat_interactions(producer):
         interaction = CatInteraction(
             interaction_id=str(uuid.uuid4()),
             cat_id=cat_id,
-            visitor_id=f"visitor_{random.randint(1, 3000):03d}",
+            visitor_id=random.choice(VISITOR_IDS),
             interaction_type=random.choice(INTERACTION_TYPES),
             duration_minutes=random.randint(1, 30),
-            cat_stress_level=stress_level,
-            timestamp=int(datetime.now().timestamp() * 1000)
+            cat_stress_level=stress_level
         )
         producer.send('cat-interactions', key=interaction.interaction_id, value=asdict(interaction))
         print(f"[INTERACTIONS] {interaction.interaction_type} for {cat.name} ({cat_id}) (stress: {interaction.cat_stress_level})")
         
-        await asyncio.sleep(random.uniform(0.5, 3))
+        await asyncio.sleep(random.uniform(0.1, 1.0))
 
-async def produce_adoption_events(producer):
-    """Produce adoption events"""
-    while True:
-        cat_id = random.choice(CAT_IDS)
-        cat = CAT_DATA[cat_id]
+# async def produce_adoption_events(producer):
+#     """Produce adoption events"""
+#     while True:
+#         cat_id = random.choice(CAT_IDS)
+#         cat = CAT_DATA[cat_id]
         
-        adoption_event = AdoptionEvent(
-            event_id=str(uuid.uuid4()),
-            cat_id=cat_id,
-            event_type=random.choice(EVENT_TYPES),
-            visitor_id=f"visitor_{random.randint(1, 3000):03d}",
-            timestamp=int(datetime.now().timestamp() * 1000),
-            adoption_fee=random.randint(5000, 25000),
-            weight_kg=cat.base_weight_kg,
-            coat_length=cat.coat_length,
-            coat_color=cat.coat_color,
-            age_months=cat.age_months,
-            favorite_food=cat.favorite_food,
-            sociability_score=cat.sociability_score,
-            favorite_toy=cat.favorite_toy,
-            vocalization_level=cat.vocalization_level
-        )
+#         adoption_event = AdoptionEvent(
+#             event_id=str(uuid.uuid4()),
+#             cat_id=cat_id,
+#             event_type=random.choice(EVENT_TYPES),
+#             visitor_id=f"visitor_{random.randint(1, 3000):03d}",
+#             adoption_fee=random.randint(5000, 25000),
+#             weight_kg=cat.base_weight_kg,
+#             coat_length=cat.coat_length,
+#             coat_color=cat.coat_color,
+#             age_months=cat.age_months,
+#             favorite_food=cat.favorite_food,
+#             sociability_score=cat.sociability_score,
+#             favorite_toy=cat.favorite_toy,
+#             vocalization_level=cat.vocalization_level
+#         )
         
-        producer.send('adoption-events', key=adoption_event.event_id, value=asdict(adoption_event))
-        print(f"[ADOPTION] {adoption_event.event_type} for {cat.name} ({cat_id})")
+#         producer.send('adoption-events', key=adoption_event.event_id, value=asdict(adoption_event))
+#         print(f"[ADOPTION] {adoption_event.event_type} for {cat.name} ({cat_id})")
         
-        await asyncio.sleep(random.uniform(1, 5))
+#         await asyncio.sleep(random.uniform(1, 5))
 
 async def produce_weight_readings(producer):
     """Produce weight readings"""
@@ -131,8 +140,7 @@ async def produce_weight_readings(producer):
             reading_id=str(uuid.uuid4()),
             cat_id=cat_id,
             weight_kg=weight,
-            scale_id=f"scale_{random.randint(1, 5):02d}",
-            timestamp=int(datetime.now().timestamp() * 1000)
+            scale_id=f"scale_{random.randint(1, 5):02d}"
         )
         
         producer.send('cat-weight-readings', key=weight_reading.reading_id, value=asdict(weight_reading))
@@ -163,8 +171,7 @@ async def produce_revenue_events(producer):
             cat_id=cat_id,
             revenue_type=revenue_type,
             amount=amount,
-            visitor_id=f"visitor_{random.randint(1, 3000):03d}",
-            timestamp=int(datetime.now().timestamp() * 1000)
+            visitor_id=random.choice(VISITOR_IDS)
         )
         
         producer.send('cafe-revenue', key=revenue_event.transaction_id, value=asdict(revenue_event))
@@ -185,9 +192,8 @@ async def main():
         # Run all producers concurrently
         await asyncio.gather(
             produce_cat_interactions(producer),
-            produce_adoption_events(producer),
-            produce_weight_readings(producer),
-            produce_revenue_events(producer)
+            # produce_weight_readings(producer),
+            # produce_revenue_events(producer)
         )
     except KeyboardInterrupt:
         print("\nShutting down all producers...")
