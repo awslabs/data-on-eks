@@ -3,14 +3,14 @@ locals {
   karpenter_node_pools = {
     for f in fileset("${path.module}/manifests/karpenter", "nodepool*.yaml") :
     f => templatefile("${path.module}/manifests/karpenter/${f}", {
-      CLUSTER_NAME                  = local.name
+      CLUSTER_NAME                 = local.name
       KARPENTER_NODE_IAM_ROLE_NAME = module.karpenter.node_iam_role_name
     })
   }
 
   ec2nodeclass_manifests = provider::kubernetes::manifest_decode_multi(
     templatefile("${path.module}/manifests/karpenter/ec2nodeclass.yaml", {
-      CLUSTER_NAME                  = local.name
+      CLUSTER_NAME                 = local.name
       KARPENTER_NODE_IAM_ROLE_NAME = module.karpenter.node_iam_role_name
     })
   )
@@ -52,6 +52,9 @@ resource "helm_release" "karpenter" {
   version          = "1.6.1"
   wait             = true
 
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+
   values = [
     <<-EOT
     nodeSelector:
@@ -76,9 +79,9 @@ resource "helm_release" "karpenter" {
 
 resource "kubectl_manifest" "karpenter_resources" {
   for_each = local.karpenter_node_pools
-  
+
   yaml_body = each.value
-  
+
   depends_on = [
     helm_release.karpenter
   ]
@@ -86,9 +89,9 @@ resource "kubectl_manifest" "karpenter_resources" {
 
 resource "kubectl_manifest" "ec2nodeclass" {
   for_each = { for idx, manifest in local.ec2nodeclass_manifests : idx => manifest }
-  
+
   yaml_body = yamlencode(each.value)
-  wait = true
+  wait      = true
   depends_on = [
     helm_release.karpenter
   ]

@@ -8,23 +8,23 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
-  
+
   # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
@@ -45,23 +45,23 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
-  
+
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="//"
@@ -163,20 +163,20 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
@@ -191,20 +191,20 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
@@ -219,23 +219,23 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
-  
+
   # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
@@ -256,20 +256,20 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
@@ -284,20 +284,20 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
@@ -312,23 +312,23 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
-  
+
   # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
@@ -349,23 +349,23 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  
+
   # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  
+
   # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
-        
+
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-        
+
   # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
-  
+
   # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda

@@ -37,4 +37,3 @@ else
   echo "FAILED: Terraform apply of all modules failed"
   exit 1
 fi
-

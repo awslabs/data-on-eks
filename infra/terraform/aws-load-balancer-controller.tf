@@ -1,11 +1,11 @@
 locals {
   aws_load_balancer_controller_service_account = "aws-load-balancer-controller-sa"
   aws_load_balancer_controller_namespace       = "kube-system"
-  
+
   aws_load_balancer_controller_values = templatefile("${path.module}/helm-values/aws-load-balancer-controller.yaml", {
-    cluster_name = module.eks.cluster_name
+    cluster_name    = module.eks.cluster_name
     service_account = local.aws_load_balancer_controller_service_account
-    region = local.region
+    region          = local.region
   })
 }
 
@@ -13,7 +13,7 @@ locals {
 # Pod Identity for AWS Load Balancer Controller
 #---------------------------------------------------------------
 module "aws_load_balancer_controller_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "~> 1.0"
 
   name = "aws-load-balancer-controller"
@@ -42,8 +42,8 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["iam:CreateServiceLinkedRole"]
+        Effect   = "Allow"
+        Action   = ["iam:CreateServiceLinkedRole"]
         Resource = "*"
         Condition = {
           StringEquals = {
@@ -112,8 +112,8 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
         Resource = "*"
       },
       {
-        Effect = "Allow"
-        Action = ["ec2:CreateTags"]
+        Effect   = "Allow"
+        Action   = ["ec2:CreateTags"]
         Resource = "arn:${local.partition}:ec2:*:*:security-group/*"
         Condition = {
           StringEquals = {
@@ -133,7 +133,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
         Resource = "arn:${local.partition}:ec2:*:*:security-group/*"
         Condition = {
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster" = "true"
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
             "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
           }
         }
@@ -188,7 +188,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
         ]
         Condition = {
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster" = "true"
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
             "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
           }
         }

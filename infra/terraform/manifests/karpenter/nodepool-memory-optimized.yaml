@@ -11,44 +11,44 @@ spec:
         node.kubernetes.io/instance-category: memory
         node.kubernetes.io/arch: amd64
         NodeGroupType: SparkMemoryOptimized
-        
+
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: default
-      
+
       requirements:
         # Capacity type - prefer spot for cost optimization
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["spot", "on-demand"]
-          
+
         # Architecture - x86 only
         - key: kubernetes.io/arch
           operator: In
           values: ["amd64"]
-          
+
         # Instance categories - memory optimized
         - key: karpenter.k8s.aws/instance-category
           operator: In
           values: ["r", "x"]
-          
+
         # Instance families - x86 memory families (gen 5+)
         - key: karpenter.k8s.aws/instance-family
           operator: In
           values: ["r5", "r5d", "r5n", "r6a", "r6i", "r6id", "r6idn", "r6in", "r7i", "x1e", "x2iezn"]
-          
+
         # Instance sizes - large to very large for memory workloads
         - key: karpenter.k8s.aws/instance-size
           operator: In
           values: ["large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge", "24xlarge", "32xlarge"]
-          
+
         # Nitro system
         - key: karpenter.k8s.aws/instance-hypervisor
           operator: In
           values: ["nitro"]
-          
+
         # Generation 5+ for modern performance
         - key: karpenter.k8s.aws/instance-generation
           operator: Gt
@@ -58,10 +58,10 @@ spec:
   limits:
     cpu: "3000"
     memory: "12000Gi"
-    
+
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: "600s"  # Longer wait for memory workloads
-    
+
   # Higher weight for memory workloads
   weight: 20

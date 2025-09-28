@@ -63,7 +63,7 @@ def create_producer():
         if isinstance(obj, Decimal):
             return float(obj)
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
-    
+
     return KafkaProducer(
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         value_serializer=lambda v: json.dumps(v, default=decimal_serializer).encode('utf-8'),
@@ -77,7 +77,7 @@ async def produce_cat_interactions(producer):
     while True:
         cat_id = random.choice(CAT_IDS)
         cat = CAT_DATA[cat_id]
-        
+
         # Stress level based on cat's stress tendency
         if cat.stress_tendency == 'high':
             stress_level = random.randint(6, 10)
@@ -85,7 +85,7 @@ async def produce_cat_interactions(producer):
             stress_level = random.randint(3, 7)
         else:  # low
             stress_level = random.randint(1, 4)
-        
+
         interaction = CatInteraction(
             interaction_id=str(uuid.uuid4()),
             cat_id=cat_id,
@@ -96,7 +96,7 @@ async def produce_cat_interactions(producer):
         )
         producer.send('cat-interactions', key=interaction.interaction_id, value=asdict(interaction))
         print(f"[INTERACTIONS] {interaction.interaction_type} for {cat.name} ({cat_id}) (stress: {interaction.cat_stress_level})")
-        
+
         await asyncio.sleep(random.uniform(0.1, 1.0))
 
 # async def produce_adoption_events(producer):
@@ -104,7 +104,7 @@ async def produce_cat_interactions(producer):
 #     while True:
 #         cat_id = random.choice(CAT_IDS)
 #         cat = CAT_DATA[cat_id]
-        
+
 #         adoption_event = AdoptionEvent(
 #             event_id=str(uuid.uuid4()),
 #             cat_id=cat_id,
@@ -120,10 +120,10 @@ async def produce_cat_interactions(producer):
 #             favorite_toy=cat.favorite_toy,
 #             vocalization_level=cat.vocalization_level
 #         )
-        
+
 #         producer.send('adoption-events', key=adoption_event.event_id, value=asdict(adoption_event))
 #         print(f"[ADOPTION] {adoption_event.event_type} for {cat.name} ({cat_id})")
-        
+
 #         await asyncio.sleep(random.uniform(1, 5))
 
 async def produce_weight_readings(producer):
@@ -131,28 +131,28 @@ async def produce_weight_readings(producer):
     while True:
         cat_id = random.choice(CAT_IDS)
         cat = CAT_DATA[cat_id]
-        
+
         # Add variation to base weight (±10%)
         variation = Decimal(str(random.uniform(-0.1, 0.1)))
         weight = (cat.base_weight_kg * (Decimal('1') + variation)).quantize(Decimal('0.01'))
-        
+
         weight_reading = CatWeightReading(
             reading_id=str(uuid.uuid4()),
             cat_id=cat_id,
             weight_kg=weight,
             scale_id=f"scale_{random.randint(1, 5):02d}"
         )
-        
+
         producer.send('cat-weight-readings', key=weight_reading.reading_id, value=asdict(weight_reading))
         print(f"[WEIGHT] {cat.name} ({cat_id}) - {weight_reading.weight_kg}kg (base: {cat.base_weight_kg}kg)")
-        
+
         await asyncio.sleep(random.uniform(5, 15))
 
 async def produce_revenue_events(producer):
     """Produce revenue events"""
     while True:
         revenue_type = random.choice(REVENUE_TYPES)
-        
+
         if revenue_type == 'adoption_fee':
             amount = Decimal(str(round(random.uniform(50.00, 250.00), 2)))
             cat_id = random.choice(CAT_IDS)
@@ -165,7 +165,7 @@ async def produce_revenue_events(producer):
         else:  # photo_session
             amount = Decimal(str(round(random.uniform(20.00, 60.00), 2)))
             cat_id = random.choice(CAT_IDS)
-        
+
         revenue_event = CafeRevenue(
             transaction_id=str(uuid.uuid4()),
             cat_id=cat_id,
@@ -173,7 +173,7 @@ async def produce_revenue_events(producer):
             amount=amount,
             visitor_id=random.choice(VISITOR_IDS)
         )
-        
+
         producer.send('cafe-revenue', key=revenue_event.transaction_id, value=asdict(revenue_event))
         if revenue_event.cat_id:
             cat_name = CAT_DATA[revenue_event.cat_id].name
@@ -181,13 +181,13 @@ async def produce_revenue_events(producer):
         else:
             cat_info = ""
         print(f"[REVENUE] ${revenue_event.amount} {revenue_event.revenue_type}{cat_info}")
-        
+
         await asyncio.sleep(random.uniform(2, 8))
 
 async def main():
     producer = create_producer()
     print("Starting all Cat Cafe data producers...")
-    
+
     try:
         # Run all producers concurrently
         await asyncio.gather(

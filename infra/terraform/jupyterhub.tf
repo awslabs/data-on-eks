@@ -1,5 +1,5 @@
 locals {
-  jupyterhub_name = "jupyterhub"
+  jupyterhub_name            = "jupyterhub"
   jupyterhub_service_account = "${module.eks.cluster_name}-jupyterhub-single-user"
 
   jupyterhub_values = templatefile("${path.module}/helm-values/jupyterhub-single-user.yaml", {
@@ -61,7 +61,7 @@ resource "kubectl_manifest" "jupyterhub_service_account" {
 
   yaml_body = templatefile("${path.module}/manifests/jupyterhub/sa.yaml", {
     service_account_name = local.jupyterhub_service_account
-    namespace           = kubernetes_namespace.jupyterhub[0].metadata[0].name
+    namespace            = kubernetes_namespace.jupyterhub[0].metadata[0].name
   })
 
   depends_on = [
@@ -111,4 +111,3 @@ resource "aws_iam_policy" "bedrock" {
   name_prefix = "${local.name}-bedrock-pod-identity"
   policy      = data.aws_iam_policy_document.bedrock_jupyter[0].json
 }
-

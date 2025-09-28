@@ -10,7 +10,7 @@ resource "kubectl_manifest" "external_secrets_operator" {
 
 resource "aws_iam_policy" "external_secrets_policy" {
   name = "${local.name}-external-secrets-policy"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

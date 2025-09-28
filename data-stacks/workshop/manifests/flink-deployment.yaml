@@ -7,19 +7,19 @@ spec:
   image: public.ecr.aws/m8u6z8z4/manabu-test:flink-2.0-py-3-11@sha256:b38d709e80adecd52e2e063404c7a93f8635b01c0a04a09ed8745afb79b82c57
   flinkVersion: v2_0
   serviceAccount: flink-team-a
-  
+
   jobManager:
     resource:
       memory: "2048m"
       cpu: 1
     replicas: 1
-  
+
   taskManager:
     resource:
       memory: "2048m"
       cpu: 1
     replicas: 2
-  
+
   job:
     jarURI: local:///opt/flink/opt/flink-python-2.1.0.jar
     entryClass: org.apache.flink.client.python.PythonDriver
@@ -35,7 +35,7 @@ spec:
     state.checkpoints.dir: s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-checkpoints/
     execution.checkpointing.interval: 120s
     execution.checkpointing.mode: EXACTLY_ONCE
-    
+
     env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
     env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
 

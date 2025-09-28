@@ -3,14 +3,14 @@ locals {
   spark_history_server_service_account = "spark-history-server-sa"
 
   spark_history_server_values = var.enable_spark_history_server ? yamldecode(templatefile("${path.module}/helm-values/spark-history-server.yaml",
-      {
-        s3_bucket_name   = module.s3_bucket.s3_bucket_id,
-        event_log_prefix = aws_s3_object.this.key,
-        spark_history_server_role = "${module.spark_history_server_irsa[0].iam_role_arn}"
+    {
+      s3_bucket_name            = module.s3_bucket.s3_bucket_id,
+      event_log_prefix          = aws_s3_object.this.key,
+      spark_history_server_role = "${module.spark_history_server_irsa[0].iam_role_arn}"
     })
-  ) : {
+    ) : {
     historyServer = {}
-    logStore = {}
+    logStore      = {}
   }
 }
 
@@ -25,7 +25,7 @@ resource "kubectl_manifest" "spark_history_server" {
     # Place under `helm.valuesObject:` at 8 spaces (adjust if your template indent differs)
     user_values_yaml = indent(8, yamlencode(local.spark_history_server_values))
   })
-  
+
   depends_on = [
     helm_release.argocd,
     module.spark_history_server_irsa,
@@ -45,7 +45,7 @@ module "spark_history_server_irsa" {
   role_name = "${module.eks.cluster_name}-spark-history-server"
 
   role_policy_arns = {
-    policy          = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
+    policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
   }
 
   oidc_providers = {

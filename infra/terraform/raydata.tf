@@ -6,8 +6,8 @@
 # =============================================================================
 
 locals {
-    s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
-    iceberg_database = "raydata_spark_logs"
+  s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
+  iceberg_database = "raydata_spark_logs"
 }
 
 # Only create these resources if Ray Data processing is enabled
