@@ -1,272 +1,287 @@
 ---
-title: Spark with EBS Persistent Volumes
-sidebar_label: EBS Persistent Volumes
+title: Spark with EBS Dynamic PVC Storage
+sidebar_label: EBS Dynamic PVC Storage
 sidebar_position: 1
 ---
 
-# Spark with EBS Persistent Volumes
+# Spark with EBS Dynamic PVC Storage
 
-Learn how to configure Apache Spark applications to use Amazon EBS persistent volumes for data storage and processing.
+Learn to use EBS Dynamic PVC for Spark shuffle storage with automatic provisioning and data recovery.
 
-## Overview
+## Architecture: PVC Reuse & Fault Tolerance
 
-This example demonstrates how to configure Spark applications to use EBS persistent volumes for:
-- Storing large datasets that exceed node local storage
-- Persistent data between job runs
-- Shared storage across multiple Spark executors
-- High-performance storage with gp3 volumes
+```mermaid
+graph TB
+    subgraph "EKS Cluster"
+        subgraph "Node 1"
+            D[Driver Pod<br/>Owns All PVCs]
+            E1[Executor Pod 1]
+            PVC1[PVC-1<br/>100Gi GP3]
+        end
+
+        subgraph "Node 2"
+            E2[Executor Pod 2]
+            PVC2[PVC-2<br/>100Gi GP3]
+        end
+
+        subgraph "Node 3"
+            E3[Executor Pod 3]
+            PVC3[PVC-3<br/>100Gi GP3]
+        end
+    end
+
+    subgraph "EBS Volumes"
+        EBS1[EBS Volume 1<br/>Shuffle Data]
+        EBS2[EBS Volume 2<br/>Shuffle Data]
+        EBS3[EBS Volume 3<br/>Shuffle Data]
+    end
+
+    subgraph "Failure Scenario"
+        X[❌ Node 2 Fails]
+        E2_NEW[New Executor Pod 2<br/>Node 1 or 3]
+        REUSE[♻️ Reuses PVC-2<br/>Data Preserved]
+    end
+
+    D -.-> PVC1
+    D -.-> PVC2
+    D -.-> PVC3
+
+    E1 --> PVC1
+    E2 --> PVC2
+    E3 --> PVC3
+
+    PVC1 --> EBS1
+    PVC2 --> EBS2
+    PVC3 --> EBS3
+
+    X --> E2_NEW
+    E2_NEW --> REUSE
+    REUSE -.-> PVC2
+
+    style D fill:#ff9999
+    style X fill:#ffcccc
+    style REUSE fill:#99ff99
+    style E2_NEW fill:#99ff99
+```
+
+**Key Benefits:**
+- 🎯 **Driver Ownership**: Driver pod owns all PVCs for centralized management
+- ♻️ **PVC Reuse**: Failed executors reuse existing PVCs with preserved shuffle data
+- ⚡ **Faster Recovery**: No volume provisioning delay during executor restart
+- 💰 **Cost Efficient**: Reuses EBS volumes instead of creating new ones
+
+### PVC Reuse Flow
+
+```mermaid
+sequenceDiagram
+    participant D as Driver Pod
+    participant K as Kubernetes API
+    participant E1 as Executor Pod 1
+    participant E2 as Executor Pod 2
+    participant EBS as EBS Volume
+    participant E2_NEW as New Executor Pod 2
+
+    Note over D,EBS: Initial Setup
+    D->>K: Create PVC-1 (OnDemand)
+    D->>K: Create PVC-2 (OnDemand)
+    K->>EBS: Provision EBS Volumes
+    D->>E1: Schedule with PVC-1
+    D->>E2: Schedule with PVC-2
+    E1->>EBS: Write shuffle data
+    E2->>EBS: Write shuffle data
+
+    Note over D,E2_NEW: Failure & Recovery
+    E2->>X: ❌ Pod/Node Fails
+    D->>K: Detect executor failure
+    D->>K: Request new executor
+    Note over D: PVC-2 remains owned by Driver
+    D->>E2_NEW: Schedule with existing PVC-2
+    E2_NEW->>EBS: ♻️ Reuse shuffle data
+
+    Note over E2_NEW: ✅ Faster startup - no volume provisioning!
+```
 
 ## Prerequisites
 
-- Spark on EKS data stack deployed
-- EBS CSI driver enabled in blueprint configuration
-- Appropriate IAM permissions for EBS operations
+- Deploy Spark on EKS infrastructure: [Infrastructure Setup](./infra.md)
+- **EBS CSI Controller** running with storage class `gp2` or `gp3` for dynamic volume creation
 
-## Configuration
+:::warning EBS CSI Requirement
+This example requires the EBS CSI driver to dynamically create volumes for Spark jobs. Ensure your cluster has the EBS CSI controller deployed with appropriate storage classes.
+:::
 
-### Enable EBS CSI Driver
+## What is Shuffle Storage in Spark?
 
-```hcl
-# terraform/blueprint.tfvars
-enable_aws_ebs_csi_driver = true
+**Shuffle storage** holds intermediate data during Spark operations like `groupBy`, `join`, and `reduceByKey`. When data is redistributed across executors, it's temporarily stored before being read by subsequent stages.
+
+## Spark Shuffle Storage Options
+
+| Storage Type | Performance | Cost | Use Case |
+|-------------|-------------|------|----------|
+| **NVMe SSD Instances** | 🔥 Very High | 💰 High | Maximum performance workloads |
+| **EBS Dynamic PVC** | ⚡ High | 💰 Medium | **Featured - Production fault tolerance** |
+| **EBS Node Storage** | 📊 Medium | 💵 Medium | Shared volume per node |
+| **FSx for Lustre** | 📊 Medium | 💵 Low | Parallel filesystem for HPC |
+| **S3 Express + Mountpoint** | 📊 Medium | 💵 Low | Very large datasets |
+| **Remote Shuffle (Celeborn)** | ⚡ High | 💰 Medium | Resource disaggregation |
+
+### Benefits: Performance & Cost
+
+- **NVMe**: Fastest local SSD storage, highest cost per GB
+- **EBS Dynamic PVC**: Balance of performance and cost with fault tolerance
+- **EBS Node Storage**: Cost-effective shared volumes
+- **FSx/S3 Express**: Cost-optimized for large-scale processing
+
+## Example Code
+
+View the complete configuration:
+
+import CodeBlock from '@theme/CodeBlock';
+import EBSConfig from '!!raw-loader!/Users/vara/Documents/github/data-on-eks/data-stacks/spark-on-eks/blueprints/ebs-storage-dynamic-pvc.yaml';
+
+<details>
+<summary><strong>📄 Complete EBS Dynamic PVC Configuration</strong></summary>
+
+<CodeBlock language="yaml" title="blueprints/ebs-storage-dynamic-pvc.yaml" showLineNumbers>
+{EBSConfig}
+</CodeBlock>
+
+</details>
+
+## EBS Dynamic PVC Configuration
+
+**Key configuration for dynamic PVC provisioning:**
+
+```yaml title="Essential Dynamic PVC Settings"
+sparkConf:
+  # Dynamic PVC creation - Driver
+  "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
+  "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp3"
+  "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "100Gi"
+  "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
+
+  # Dynamic PVC creation - Executor
+  "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
+  "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp3"
+  "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "100Gi"
+  "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
+
+  # PVC ownership and reuse for fault tolerance
+  "spark.kubernetes.driver.ownPersistentVolumeClaim": "true"
+  "spark.kubernetes.driver.reusePersistentVolumeClaim": "true"
 ```
 
-### Storage Class Configuration
+**Features:**
+- `OnDemand`: Automatically creates PVCs per pod
+- `gp3`: EBS GP3 storage class (default, better price/performance than GP2)
+- `100Gi`: Storage size per volume (optimized for example workload)
+- Driver ownership enables PVC reuse for fault tolerance
 
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: gp3-spark
-provisioner: ebs.csi.aws.com
-parameters:
-  type: gp3
-  iops: "3000"
-  throughput: "125"
-  fsType: ext4
-allowVolumeExpansion: true
-volumeBindingMode: WaitForFirstConsumer
-```
+## Create Test Data and Run Example
 
-## Example Spark Job
+Process NYC taxi data to demonstrate EBS Dynamic PVC with shuffle operations.
 
-### Persistent Volume Claim
-
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: spark-data-pvc
-  namespace: spark-operator
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: gp3-spark
-  resources:
-    requests:
-      storage: 100Gi
-```
-
-### Spark Application Configuration
-
-```yaml
-apiVersion: "sparkoperator.k8s.io/v1beta2"
-kind: SparkApplication
-metadata:
-  name: spark-ebs-example
-  namespace: spark-operator
-spec:
-  type: Python
-  pythonVersion: "3"
-  mode: cluster
-  image: "apache/spark-py:v3.5.0"
-  imagePullPolicy: Always
-  mainApplicationFile: "local:///opt/spark/examples/src/main/python/pi.py"
-
-  driver:
-    cores: 1
-    coreLimit: "1200m"
-    memory: "1g"
-    serviceAccount: spark-operator-spark
-    volumeMounts:
-      - name: data-volume
-        mountPath: /data
-
-  executor:
-    cores: 2
-    instances: 3
-    memory: "2g"
-    serviceAccount: spark-operator-spark
-    volumeMounts:
-      - name: data-volume
-        mountPath: /data
-
-  volumes:
-    - name: data-volume
-      persistentVolumeClaim:
-        claimName: spark-data-pvc
-```
-
-## Running the Example
-
-### 1. Deploy the Storage Resources
+### 1. Prepare Test Data
 
 ```bash
-# Apply storage class
-kubectl apply -f examples/storage/gp3-storage-class.yaml
+cd data-stacks/spark-on-eks/terraform/_local/
 
-# Create PVC
-kubectl apply -f examples/storage/spark-data-pvc.yaml
+# Export S3 bucket and region from Terraform outputs
+export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
+export REGION=$(terraform output -raw region)
 
-# Verify PVC creation
-kubectl get pvc -n spark-operator
+# Navigate to scripts directory and create test data
+cd ../../scripts/
+./taxi-trip-execute.sh $S3_BUCKET $REGION
 ```
 
-### 2. Submit Spark Application
+*Downloads NYC taxi data (1.1GB total) and uploads to S3*
+
+### 2. Execute Spark Job
 
 ```bash
-# Submit the job
-kubectl apply -f examples/ebs/spark-ebs-pvc-job.yaml
+# Navigate to blueprints directory
+cd ../blueprints/
+
+# Submit the EBS Dynamic PVC job
+envsubst < ebs-storage-dynamic-pvc.yaml | kubectl apply -f -
 
 # Monitor job progress
-kubectl get sparkapplications -n spark-operator -w
-
-# Check pod status
-kubectl get pods -n spark-operator
+kubectl get sparkapplications -n spark-team-a --watch
 ```
 
-### 3. Monitor Storage Usage
+**Expected output:**
+```bash
+NAME       STATUS    ATTEMPTS   START                  FINISH                 AGE
+taxi-trip  COMPLETED 1          2025-09-28T17:03:31Z   2025-09-28T17:08:15Z   4m44s
+```
+
+## Verify Data and Pods
+
+### Monitor PVC Creation
+```bash
+# Watch PVC creation in real-time
+kubectl get pvc -n spark-team-a --watch
+
+# Expected PVCs
+NAME                                      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+taxi-trip-b64d669992344315-driver-pvc-0   Bound    pvc-e891b472-249f-44d9-a9ce-6ab4c3a9a488   100Gi      RWO            gp3            <unset>                 3m34s
+taxi-trip-exec-1-pvc-0                    Bound    pvc-ae09b08b-8a5a-4892-a9ab-9d6ff2ceb6df   100Gi      RWO            gp3            <unset>                 114s
+taxi-trip-exec-2-pvc-0                    Bound    pvc-7a2b4e76-5ab6-435e-989e-2978618a2877   100Gi      RWO            gp3            <unset>                 114s
+```
+
+### Check Pod Status and Storage
+```bash
+# Check driver and executor pods
+kubectl get pods -n spark-team-a -l app=taxi-trip
+
+# Check volume usage inside pods
+kubectl exec -n spark-team-a taxi-trip-driver -- df -h /data1
+
+# View Spark application logs
+kubectl logs -n spark-team-a -l spark-role=driver --follow
+```
+
+### Verify Output Data
+```bash
+# Check processed output in S3
+aws s3 ls s3://$S3_BUCKET/taxi-trip/output/
+
+# Verify event logs
+aws s3 ls s3://$S3_BUCKET/spark-event-logs/
+```
+
+## Cleanup
 
 ```bash
-# Check PVC details
-kubectl describe pvc spark-data-pvc -n spark-operator
+# Delete the Spark application
+kubectl delete sparkapplication taxi-trip -n spark-team-a
 
-# Monitor volume usage
-kubectl exec -n spark-operator <driver-pod> -- df -h /data
+# Check if PVCs are retained (they should be for reuse)
+kubectl get pvc -n spark-team-a
+
+# Optional: Delete PVCs if no longer needed
+kubectl delete pvc -n spark-team-a --all
 ```
 
-## Performance Optimization
+## Benefits
 
-### Storage Performance Tuning
+- **Automatic PVC Management**: No manual volume creation
+- **Fault Tolerance**: Shuffle data survives executor restarts
+- **Cost Optimization**: Dynamic sizing and reuse
+- **Performance**: Faster startup with PVC reuse
+
+## Storage Class Options
 
 ```yaml
-# High-performance storage class
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: gp3-high-performance
-provisioner: ebs.csi.aws.com
-parameters:
-  type: gp3
-  iops: "16000"
-  throughput: "1000"
-  fsType: ext4
+# GP3 - Better price/performance
+storageClass: "gp3"
+
+# IO1 - High IOPS workloads
+storageClass: "io1"
 ```
 
-### Spark Configuration for EBS
+## Next Steps
 
-```yaml
-spec:
-  sparkConf:
-    "spark.sql.adaptive.enabled": "true"
-    "spark.sql.adaptive.coalescePartitions.enabled": "true"
-    "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
-    # EBS-specific optimizations
-    "spark.sql.files.maxPartitionBytes": "268435456"  # 256MB
-    "spark.sql.adaptive.advisoryPartitionSizeInBytes": "268435456"
-```
+- [NVMe Instance Storage](./nvme-storage) - High-performance local SSD
 
-## Cost Optimization
-
-### Volume Lifecycle Management
-
-```yaml
-# Snapshot policy for cost optimization
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: snapshot-policy
-data:
-  policy.yaml: |
-    schedules:
-      - name: daily-snapshots
-        schedule: "0 2 * * *"
-        retention: 7
-```
-
-### Right-sizing Storage
-
-```bash
-# Monitor actual usage
-kubectl top pv
-
-# Resize PVC if needed
-kubectl patch pvc spark-data-pvc -n spark-operator -p '{"spec":{"resources":{"requests":{"storage":"200Gi"}}}}'
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### PVC Stuck in Pending State
-
-```bash
-# Check events
-kubectl describe pvc spark-data-pvc -n spark-operator
-
-# Verify storage class
-kubectl get storageclass
-
-# Check EBS CSI driver
-kubectl get pods -n kube-system | grep ebs
-```
-
-#### Performance Issues
-
-```bash
-# Check EBS metrics
-aws cloudwatch get-metric-statistics \
-  --namespace AWS/EBS \
-  --metric-name VolumeReadOps \
-  --dimensions Name=VolumeId,Value=<volume-id> \
-  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
-  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
-  --period 300 \
-  --statistics Average
-```
-
-#### Volume Mounting Failures
-
-```bash
-# Check driver logs
-kubectl logs -n kube-system deployment/ebs-csi-controller
-
-# Verify IAM permissions
-aws sts get-caller-identity
-```
-
-## Best Practices
-
-### Storage Selection
-
-- **gp3**: Balanced performance and cost
-- **io2**: High IOPS requirements
-- **st1**: Throughput-optimized for large sequential workloads
-
-### Data Patterns
-
-- Use PVCs for datasets larger than node storage
-- Consider S3 for input/output data with EBS for intermediate processing
-- Implement data partitioning strategies for large datasets
-
-### Monitoring
-
-- Set up CloudWatch alarms for EBS metrics
-- Monitor PVC utilization with Prometheus
-- Track cost with AWS Cost Explorer
-
-## Related Examples
-
-- [Infrastructure Deployment](./infra)
-- [Node Local Storage](./node-local-storage)
-- [Back to Examples](/data-on-eks/docs/datastacks/spark-on-eks/)

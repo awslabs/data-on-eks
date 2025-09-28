@@ -71,14 +71,14 @@ spec:
     # EBS Dynamic PVC Config
     # You can mount a dynamically-created persistent volume claim per executor by using OnDemand as a claim name and storageClass and sizeLimit options like the following. This is useful in case of Dynamic Allocation.
     "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
-    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp3"
-    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "100Gi"
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp2"
+    "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "500Gi"
     "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false"
 
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
-    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp3"
-    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "100Gi"
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "gp2"
+    "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "500Gi"
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false"
 
@@ -131,7 +131,7 @@ spec:
             name: "spark-local-dir-1"
     cores: 1
     coreLimit: "1200m"
-    instances: 2
+    instances: 4
     memory: "4g"
     memoryOverhead: "4g"
     serviceAccount: spark-team-a
