@@ -1,10 +1,10 @@
 locals {
   datahub_service_account = "datahub-sa"
-  datahub_namespace = "datahub"
-  
+  datahub_namespace       = "datahub"
+
   datahub_values = templatefile("${path.module}/helm-values/datahub.yaml", {
     s3_bucket_name = module.s3_bucket.s3_bucket_id
-    region = local.region
+    region         = local.region
   })
 
   opensearch_values = templatefile("${path.module}/helm-values/opensearch.yaml", {})
@@ -38,11 +38,11 @@ resource "kubernetes_secret" "postgresql_secrets" {
   data = {
     postgres-password    = random_password.postgres.result
     replication-password = random_password.postgres_replication.result
-    password            = random_password.postgres_user.result
+    password             = random_password.postgres_user.result
   }
 
   type = "Opaque"
-  
+
   depends_on = [kubectl_manifest.datahub_namespace]
 }
 
@@ -65,7 +65,7 @@ resource "random_password" "postgres_user" {
 # Pod Identity for DataHub S3 Access
 #---------------------------------------------------------------
 module "datahub_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "~> 1.0"
 
   name = "datahub"
@@ -106,13 +106,13 @@ resource "aws_iam_policy" "datahub_s3" {
         ]
       },
       {
-      Effect ="Allow",
-      Action =[
-        "glue:GetDatabases",
-        "glue:GetDatabase",
-        "glue:GetTables", 
+        Effect = "Allow",
+        Action = [
+          "glue:GetDatabases",
+          "glue:GetDatabase",
+          "glue:GetTables",
         "glue:GetTable"],
-      Resource =  ["*"]
+        Resource = ["*"]
       }
     ]
   })
@@ -123,9 +123,9 @@ resource "aws_iam_policy" "datahub_s3" {
 #---------------------------------------------------------------
 resource "kubectl_manifest" "postgresql" {
   for_each = { for idx, manifest in local.postgresql_manifests : idx => manifest }
-  
+
   yaml_body = yamlencode(each.value)
-  
+
   depends_on = [
     kubectl_manifest.datahub_namespace,
     kubernetes_secret.postgresql_secrets
@@ -261,11 +261,11 @@ resource "aws_glue_crawler" "iceberg_crawler" {
   role          = aws_iam_role.glue_crawler_role.arn
 
   iceberg_target {
-    paths                     = ["s3://${module.s3_bucket.s3_bucket_id}/iceberg-warehouse/"]
-    maximum_traversal_depth   = 10
+    paths                   = ["s3://${module.s3_bucket.s3_bucket_id}/iceberg-warehouse/"]
+    maximum_traversal_depth = 10
   }
 
-  schedule = "cron(0 * * * ? *)"  # Every hour
+  schedule = "cron(0 * * * ? *)" # Every hour
 
   schema_change_policy {
     update_behavior = "UPDATE_IN_DATABASE"

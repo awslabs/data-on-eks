@@ -34,7 +34,7 @@ if [ ${#targets[@]} -gt 0 ]; then
   for target in "${targets[@]}"; do
     target_args="$target_args -target=$target"
   done
-  
+
   destroy_output=$($TERRAFORM_COMMAND $target_args 2>&1 | tee /dev/tty)
   if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
     echo "SUCCESS: Terraform destroy of kubectl_manifest resources completed successfully"

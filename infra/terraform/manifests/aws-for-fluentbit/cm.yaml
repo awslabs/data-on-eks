@@ -8,14 +8,14 @@ data:
             record.log = string.gsub(record.log, "\t", " ")
             record.log = string.gsub(record.log, '"', '\\"')
         end
-        
+
         if record.message then
             record.message = string.gsub(record.message, "\n", " ")
             record.message = string.gsub(record.message, "\r", " ")
             record.message = string.gsub(record.message, "\t", " ")
             record.message = string.gsub(record.message, '"', '\\"')
         end
-        
+
         return 1, timestamp, record
     end
 

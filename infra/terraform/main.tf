@@ -10,12 +10,16 @@ data "aws_iam_session_context" "current" {
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
+}
+
 locals {
 
-  name = var.name
-  region = var.region
-  partition              = data.aws_partition.current.partition
-  account_id             = data.aws_caller_identity.current.account_id
+  name       = var.name
+  region     = var.region
+  partition  = data.aws_partition.current.partition
+  account_id = data.aws_caller_identity.current.account_id
   tags = merge(var.tags, {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
@@ -52,19 +56,19 @@ locals {
       most_recent = true
       pod_identity_association = [
         {
-          role_arn = aws_iam_role.ebs_csi_pod_identity_role.arn
+          role_arn        = aws_iam_role.ebs_csi_pod_identity_role.arn
           service_account = "ebs-csi-controller-sa"
         }
       ]
     }
 
     amazon-cloudwatch-observability = {
-      preserve                 = true
+      preserve = true
       pod_identity_association = [
         {
-          role_arn = aws_iam_role.cloudwatch_observability_role.arn
+          role_arn        = aws_iam_role.cloudwatch_observability_role.arn
           service_account = "cloudwatch-agent"
-          namespace = "amazon-cloudwatch"
+          namespace       = "amazon-cloudwatch"
         }
       ]
     }
@@ -122,6 +126,13 @@ locals {
     us-west-2      = "895885662937"
   }
 
+}
+
+# ECR always authenticates with `us-east-1` region
+# Docs -> https://docs.aws.amazon.com/AmazonECR/latest/public/public-registries.html
+provider "aws" {
+  alias  = "ecr"
+  region = "us-east-1"
 }
 
 provider "aws" {

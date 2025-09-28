@@ -1,12 +1,12 @@
 locals {
   aws_for_fluentbit_service_account = "aws-for-fluent-bit-sa"
-  aws_for_fluentbit_namespace = "kube-system"
-  
+  aws_for_fluentbit_namespace       = "kube-system"
+
   aws_for_fluentbit_values = templatefile("${path.module}/helm-values/aws-for-fluentbit.yaml", {
-    cluster_name = module.eks.cluster_name
+    cluster_name         = module.eks.cluster_name
     cloudwatch_log_group = aws_cloudwatch_log_group.aws_for_fluentbit.name
-    s3_bucket_name = module.s3_bucket.s3_bucket_id
-    region = local.region
+    s3_bucket_name       = module.s3_bucket.s3_bucket_id
+    region               = local.region
   })
 }
 
@@ -23,7 +23,7 @@ resource "aws_cloudwatch_log_group" "aws_for_fluentbit" {
 # Pod Identity for AWS for Fluent Bit
 #---------------------------------------------------------------
 module "aws_for_fluentbit_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "~> 1.0"
 
   name = "aws-for-fluent-bit"
@@ -80,7 +80,7 @@ resource "aws_iam_policy" "aws_for_fluentbit" {
         ]
       },
       {
-        Sid = "S3Access"
+        Sid    = "S3Access"
         Effect = "Allow"
         Action = [
           "s3:ListBucket",
@@ -124,6 +124,3 @@ resource "kubectl_manifest" "aws_for_fluentbit" {
     aws_cloudwatch_log_group.aws_for_fluentbit
   ]
 }
-
-
-

@@ -1,5 +1,5 @@
 locals {
-    s3_express_supported_az_ids = [
+  s3_express_supported_az_ids = [
     "use1-az4", "use1-az5", "use1-az6", "usw2-az1", "usw2-az3", "usw2-az4", "apne1-az1", "apne1-az4", "eun1-az1", "eun1-az2", "eun1-az3"
   ]
 

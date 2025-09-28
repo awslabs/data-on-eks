@@ -65,6 +65,7 @@ const config = {
           src: 'img/header-icon.png',
         },
         items: [
+          { type: 'doc', docId: 'datastacks/index', position: 'left', label: 'Data Stacks' },
           { type: 'doc', docId: 'blueprints/data-analytics/index', position: 'left', label: 'Blueprints' },
           { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices' },
           { type: 'doc', docId: 'benchmarks/emr-on-eks', position: 'left', label: 'Benchmarks' },

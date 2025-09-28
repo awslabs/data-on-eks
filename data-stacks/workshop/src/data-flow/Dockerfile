@@ -35,7 +35,7 @@ RUN mkdir ./plugins/s3-fs-hadoop && cp ./opt/flink-s3-fs-hadoop-2.0.0.jar ./plug
 # https://www.decodable.co/blog/kafka-to-iceberg-with-flink
 WORKDIR /opt/flink/lib
 RUN wget  https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/4.0.1-2.0/flink-sql-connector-kafka-4.0.1-2.0.jar
-RUN wget  https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-2.0/1.10.0/iceberg-flink-runtime-2.0-1.10.0.jar 
+RUN wget  https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-2.0/1.10.0/iceberg-flink-runtime-2.0-1.10.0.jar
 
 RUN wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.2/hadoop-aws-3.4.2.jar
 
@@ -61,5 +61,3 @@ RUN ln -sf /opt/flink/.local/share/uv/python/cpython-3.11*/bin/python /opt/flink
 ENV PATH="/opt/flink/.local/bin:$PATH"
 ENV VIRTUAL_ENV=.venv
 ENV PATH=.venv/bin:$PATH
-
-

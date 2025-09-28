@@ -1,0 +1,324 @@
+/**
+ * DataStack Tiles - Shared CSS for all DataStack pages
+ *
+ * This file contains all the styling for DataStack tiles to ensure consistency
+ * across all DataStack index pages. Import this file instead of duplicating CSS.
+ *
+ * Usage:
+ * Add this import at the top of your markdown file:
+ * import '@site/src/css/datastack-tiles.css';
+ */
+
+/* =============================================================================
+   GRID LAYOUT SYSTEM
+   ============================================================================= */
+
+.datastacks-grid,
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+  margin: 3rem 0;
+  max-width: 1000px;
+}
+
+@media (min-width: 1000px) {
+  .datastacks-grid,
+  .showcase-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =============================================================================
+   CARD COMPONENTS
+   ============================================================================= */
+
+.datastack-card,
+.showcase-card {
+  border: 2px solid var(--ifm-color-emphasis-200);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--ifm-background-color);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+/* Featured card styling (for special highlighting) */
+.showcase-card.featured {
+  border: 2px solid var(--ifm-color-primary);
+  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
+}
+
+.datastack-card:hover,
+.showcase-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  border-color: var(--ifm-color-primary);
+}
+
+/* =============================================================================
+   CARD HEADER SECTION
+   ============================================================================= */
+
+.datastack-header,
+.showcase-header {
+  padding: 2rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.datastack-icon,
+.showcase-icon {
+  font-size: 3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.datastack-content h3,
+.showcase-content h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ifm-heading-color);
+  line-height: 1.3;
+}
+
+.datastack-description,
+.showcase-description {
+  margin: 0;
+  color: var(--ifm-color-content-secondary);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* =============================================================================
+   FEATURE TAGS SYSTEM
+   ============================================================================= */
+
+.datastack-features,
+.showcase-tags {
+  padding: 0 2rem 1rem 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.feature-tag,
+.tag {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+}
+
+/* Gradient color system for tags */
+.feature-tag:nth-child(1),
+.tag.infrastructure {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.feature-tag:nth-child(2),
+.tag.storage {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.feature-tag:nth-child(3),
+.tag.performance {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.feature-tag:nth-child(4),
+.tag.optimization {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.tag.guide {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* =============================================================================
+   BUTTON SYSTEM
+   ============================================================================= */
+
+.datastack-footer,
+.showcase-footer {
+  padding: 1rem 2rem 2rem 2rem;
+  margin-top: auto;
+}
+
+.datastack-link,
+.showcase-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: var(--ifm-color-primary);
+  border: 1px solid var(--ifm-color-primary);
+}
+
+.datastack-link:hover,
+.showcase-link:hover {
+  color: white;
+  background: var(--ifm-color-primary-dark);
+  text-decoration: none;
+  transform: translateX(2px);
+}
+
+.arrow-icon {
+  transition: transform 0.2s ease;
+}
+
+.datastack-link:hover .arrow-icon,
+.showcase-link:hover .arrow-icon {
+  transform: translateX(2px);
+}
+
+/* =============================================================================
+   GETTING STARTED SECTION (for individual DataStack pages)
+   ============================================================================= */
+
+.getting-started-header {
+  margin: 2rem 0 3rem 0;
+  padding: 2rem 0;
+  background: var(--ifm-background-surface-color);
+  border-radius: 16px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.getting-started-header h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  color: var(--ifm-heading-color);
+  font-weight: 600;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  padding: 0 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.step-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: var(--ifm-background-color);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  transition: all 0.3s ease;
+}
+
+.step-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.step-number {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ifm-color-primary) 0%, var(--ifm-color-primary-dark) 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.step-content h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ifm-heading-color);
+}
+
+.step-content p {
+  margin: 0;
+  color: var(--ifm-color-content-secondary);
+  line-height: 1.6;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .datastacks-grid,
+  .showcase-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .datastack-header,
+  .showcase-header {
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+
+  .datastack-icon,
+  .showcase-icon {
+    font-size: 2.5rem;
+  }
+
+  .datastack-content h3,
+  .showcase-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .steps-grid {
+    grid-template-columns: 1fr;
+    padding: 0 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .step-card {
+    padding: 1.5rem;
+  }
+
+  .getting-started-header {
+    padding: 2rem 1rem;
+  }
+
+  .datastack-features,
+  .showcase-tags {
+    padding: 0 1.5rem 1rem 1.5rem;
+  }
+
+  .datastack-footer,
+  .showcase-footer {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+  }
+}
