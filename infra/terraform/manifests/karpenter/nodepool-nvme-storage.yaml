@@ -1,0 +1,69 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: nvme-storage-x86
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: nvme-storage-x86
+        node.kubernetes.io/instance-category: storage
+        node.kubernetes.io/arch: amd64
+        NodeGroupType: SparkNVMeStorage
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+
+      requirements:
+        # Capacity type - prefer on-demand for reliability with local storage
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand", "spot"]
+
+        # Architecture - x86 only
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+
+        # Instance families with local NVMe storage - Latest generations only
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [
+            # Latest generation compute-optimized with NVMe
+            "c6id", "c7id",
+            # Latest generation memory-optimized with NVMe
+            "r6id", "r7id",
+            # Latest generation general-purpose with NVMe
+            "m6id", "m7id",
+            # Latest generation storage-optimized with NVMe
+            "i4i",
+            # Network-optimized with local storage
+            "c6in"
+          ]
+
+        # Nitro system for better performance
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+        # Generation 5+ for modern performance
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["4"]
+
+  # Resource limits for budget control
+  limits:
+    cpu: "2000"
+    memory: "8000Gi"
+
+  # Node lifecycle settings
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: "300s"  # Faster consolidation for cost optimization
+
+  # Weight for NodePool selection - higher priority for NVMe workloads
+  weight: 20

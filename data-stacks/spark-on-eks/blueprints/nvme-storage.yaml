@@ -3,20 +3,20 @@
 # 2/ Replace $S3_BUCKET with your S3 bucket created by this blueprint(Check Terraform outputs)
 # 3/ execute taxi-trip-execute.sh
 
-# This example demonstrates EBS Node-Level Storage features
-  # Shared EBS volume per node (mounted at /mnt/spark-local)
-  # Cost-effective alternative to per-pod PVCs
-  # Higher performance than individual PVCs but potential noisy neighbor issues
+# This example demonstrates NVMe Instance Store Storage features
+  # Direct access to NVMe SSDs attached to instances
+  # Maximum performance with local storage - no network I/O overhead
+  # Requires latest generation instances with NVMe storage (c6id, c7id, r6id, r7id, m6id, m7id, i4i)
+  # Karpenter RAID0 policy automatically formats and mounts NVMe storage
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: "taxi-trip"
+  name: "taxi-trip-nvme"
   namespace: spark-team-a
   labels:
-    app: "taxi-trip"
-    applicationId: "taxi-trip-ebs"
+    app: "taxi-trip-nvme"
     queue: root.test
 spec:
 #  To create Ingress object for Spark driver.
@@ -38,12 +38,30 @@ spec:
     - "s3a://$S3_BUCKET/taxi-trip/input/"
     - "s3a://$S3_BUCKET/taxi-trip/output/"
   sparkConf:
-    "spark.app.name": "taxi-trip"
-    "spark.kubernetes.driver.pod.name": "taxi-trip"
-    "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
+    "spark.app.name": "taxi-trip-nvme"
+    "spark.kubernetes.driver.pod.name": "taxi-trip-nvme"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip-nvme"
     "spark.local.dir": "/data1"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"
+
+    # NVMe Storage Performance Optimizations
+    "spark.shuffle.spill.diskWriteBufferSize": "1048576"  # 1MB buffer for NVMe
+    "spark.shuffle.file.buffer": "1m"  # Larger buffer for local SSD
+    "spark.io.compression.codec": "lz4"  # Fast compression for NVMe
+    "spark.shuffle.compress": "true"
+    "spark.shuffle.spill.compress": "true"
+    "spark.rdd.compress": "true"
+
+    # Local storage optimizations for NVMe
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+
+    # Optimize for high-performance local storage
+    "spark.sql.files.maxPartitionBytes": "268435456"  # 256MB for NVMe throughput
+    "spark.sql.shuffle.partitions": "400"  # Optimize for parallelism
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
     "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.connection.maximum": "200"
@@ -68,15 +86,15 @@ spec:
     "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
     "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
 
-    # EBS Node-Level Storage Configuration
-    # Use node-level EBS volume mounted at /mnt/spark-local
-    # This provides shared storage per node, reducing costs compared to per-pod PVCs
-    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/spark-local"
+    # NVMe Instance Store Storage Configuration
+    # Use direct NVMe SSD storage mounted by Karpenter RAID0 policy at /mnt/k8s-disks
+    # This provides maximum performance with local SSD access and no network overhead
+    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/k8s-disks"
     "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.type": "Directory"
     "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.mount.readOnly": "false"
 
-    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/spark-local"
+    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/k8s-disks"
     "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.type": "Directory"
     "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.readOnly": "false"
@@ -89,32 +107,26 @@ spec:
     onSubmissionFailureRetryInterval: 20
 
   driver:
-    cores: 1
-    coreLimit: "1200m"
-    memory: "4g"
-    memoryOverhead: "4g"
+    cores: 2  # Increased for NVMe workload coordination
+    coreLimit: "2000m"
+    memory: "8g"  # More memory for large dataset coordination
+    memoryOverhead: "2g"  # 25% overhead, more reasonable
     serviceAccount: spark-team-a
     labels:
       version: 3.5.3
     nodeSelector:
-      node.kubernetes.io/workload-type: "compute-optimized-x86"
+      node.kubernetes.io/workload-type: "nvme-storage-x86"
       karpenter.sh/capacity-type: "on-demand"
-    tolerations:
-      - key: "spark-compute-optimized"
-        operator: "Exists"
-        effect: "NoSchedule"
+    # Driver resource requirements: 2 vCPU, 10GB RAM (minimum c6id.xlarge+)
   executor:
-    cores: 1
-    coreLimit: "1200m"
+    cores: 4  # Utilize NVMe instance capacity better
+    coreLimit: "4000m"
     instances: 2
-    memory: "4g"
-    memoryOverhead: "4g"
+    memory: "15g"  # Scale up for high-performance workload
+    memoryOverhead: "3g"  # 20% overhead for high-throughput
     serviceAccount: spark-team-a
     labels:
       version: 3.5.3
     nodeSelector:
-      node.kubernetes.io/workload-type: "compute-optimized-x86"
-    tolerations:
-      - key: "spark-compute-optimized"
-        operator: "Exists"
-        effect: "NoSchedule"
+      node.kubernetes.io/workload-type: "nvme-storage-x86"
+    # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6id.xlarge+)

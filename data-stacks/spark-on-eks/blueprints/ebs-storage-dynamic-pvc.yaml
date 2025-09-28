@@ -115,7 +115,7 @@ spec:
     labels:
       version: 3.5.3
     nodeSelector:
-      NodeGroupType: "SparkComputeOptimized"
+      node.kubernetes.io/workload-type: "compute-optimized-x86"
       karpenter.sh/capacity-type: "on-demand"
     tolerations:
       - key: "spark-compute-optimized"
@@ -138,7 +138,7 @@ spec:
     labels:
       version: 3.5.3
     nodeSelector:
-      NodeGroupType: "SparkComputeOptimized"
+      node.kubernetes.io/workload-type: "compute-optimized-x86"
     tolerations:
       - key: "spark-compute-optimized"
         operator: "Exists"
