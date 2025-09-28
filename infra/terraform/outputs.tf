@@ -17,6 +17,11 @@ output "configure_kubectl" {
   value       = "aws eks --region ${local.region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
 
+output "region" {
+  description = "AWS region"
+  value       = local.region
+}
+
 ################################################################################
 # Private Subnets
 ################################################################################

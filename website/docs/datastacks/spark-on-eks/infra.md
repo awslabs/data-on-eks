@@ -352,15 +352,23 @@ To remove all resources, use the dedicated cleanup script:
 
 ```bash
 # Navigate to blueprint directory
-cd /path/to/data-on-eks/data-stacks/spark-on-eks
+cd data-on-eks/data-stacks/spark-on-eks
 
 # Run cleanup script
 ./cleanup.sh
 ```
+
+:::note
 
 **If cleanup fails:**
 - Rerun the same command: `./cleanup.sh`
 - Keep rerunning until all resources are deleted
 - Some AWS resources may have dependencies that require multiple cleanup attempts
 
-**⚠️ Warning:** This will delete all resources and data. Make sure to backup any important data first.
+:::
+
+:::warning
+
+This command will delete all resources and data. Make sure to backup any important data first.
+
+:::
