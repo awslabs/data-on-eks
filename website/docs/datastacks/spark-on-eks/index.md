@@ -119,10 +119,10 @@ Production-ready Apache Spark examples and configurations for Amazon EKS. Choose
 
 <div className="showcase-card">
 <div className="showcase-header">
-<div className="showcase-icon">💾</div>
+<div className="showcase-icon">💿</div>
 <div className="showcase-content">
-<h3>EBS Persistent Volumes</h3>
-<p className="showcase-description">Configure Spark with Amazon EBS for persistent data storage and high-performance processing with dynamic volume provisioning</p>
+<h3>EBS Dynamic PVC Storage</h3>
+<p className="showcase-description">Production-ready EBS Dynamic PVC with fault tolerance, PVC reuse, and automatic volume provisioning for Spark shuffle storage</p>
 </div>
 </div>
 <div className="showcase-tags">
@@ -130,7 +130,29 @@ Production-ready Apache Spark examples and configurations for Amazon EKS. Choose
 <span className="tag performance">Performance</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/spark-on-eks/ebs-persistent-volumes" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/ebs-pvc-storage" className="showcase-link">
+<span>Learn More</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="showcase-card">
+<div className="showcase-header">
+<div className="showcase-icon">💾</div>
+<div className="showcase-content">
+<h3>EBS Node Storage</h3>
+<p className="showcase-description">Cost-effective shared EBS volume per node for Spark shuffle storage. ~70% cost reduction vs per-pod PVCs with potential noisy neighbor trade-offs</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag storage">Storage</span>
+<span className="tag optimization">Optimization</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/ebs-node-storage" className="showcase-link">
 <span>Learn More</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -143,16 +165,16 @@ Production-ready Apache Spark examples and configurations for Amazon EKS. Choose
 <div className="showcase-header">
 <div className="showcase-icon">⚡</div>
 <div className="showcase-content">
-<h3>Node Local Storage</h3>
+<h3>NVMe Instance Storage</h3>
 <p className="showcase-description">Leverage instance store NVMe SSDs for maximum I/O performance and cost optimization with local data processing</p>
 </div>
 </div>
 <div className="showcase-tags">
 <span className="tag storage">Storage</span>
-<span className="tag optimization">Optimization</span>
+<span className="tag performance">Performance</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/spark-on-eks/node-local-storage" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/nvme-storage" className="showcase-link">
 <span>Learn More</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

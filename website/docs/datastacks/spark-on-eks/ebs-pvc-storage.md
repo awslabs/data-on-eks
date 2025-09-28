@@ -137,7 +137,7 @@ This example requires the EBS CSI driver to dynamically create volumes for Spark
 View the complete configuration:
 
 import CodeBlock from '@theme/CodeBlock';
-import EBSConfig from '!!raw-loader!/Users/vara/Documents/github/data-on-eks/data-stacks/spark-on-eks/blueprints/ebs-storage-dynamic-pvc.yaml';
+import EBSConfig from '!!raw-loader!../../../../data-stacks/spark-on-eks/blueprints/ebs-storage-dynamic-pvc.yaml';
 
 <details>
 <summary><strong>📄 Complete EBS Dynamic PVC Configuration</strong></summary>
