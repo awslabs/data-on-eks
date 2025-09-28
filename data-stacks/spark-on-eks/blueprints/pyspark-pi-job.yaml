@@ -30,7 +30,7 @@ spec:
 
     # Spark Event logs
     "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.dir": "s3a://$S3_BUCKET/spark-event-logs"
     "spark.eventLog.rolling.enabled": "true"
     "spark.eventLog.rolling.maxFileSize": "64m"
     # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # This is using AWS SDK V1 in maintenance mode
