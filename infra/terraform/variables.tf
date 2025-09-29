@@ -198,3 +198,15 @@ variable "enable_kafka" {
   type        = bool
   default     = false
 }
+
+variable "enable_trino" {
+  description = "Enable Trino via ArgoCD"
+  type        = bool
+  default     = false
+}
+
+variable "enable_trino_keda" {
+  description = "Enable KEDA autoscaling for Trino"
+  type        = bool
+  default     = false
+}

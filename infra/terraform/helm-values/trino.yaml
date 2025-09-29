@@ -1,0 +1,189 @@
+image:
+  repository: trinodb/trino
+  tag: 447
+  pullPolicy: IfNotPresent
+
+server:
+  workers: 1
+  exchangeManager:
+    name: filesystem
+    baseDir: "s3://${exchange_bucket_id}"
+  autoscaling:
+    enabled: false
+  config:
+    query:
+      maxMemory: "280GB"
+      initialHashPartitions: 100
+      maxStageRetries: 3
+      maxExecutionTime: "24h"
+      clientTimeout: "2h"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+coordinator:
+  jvm:
+    maxHeapSize: "32G"
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
+  config:
+    query:
+      maxMemoryPerNode: "6GB"
+      minWorkers: 1
+      initialHashPartitions: 100
+  resources:
+    requests:
+      cpu: "4000m"
+      memory: 40Gi
+    limits:
+      cpu: "6000m"
+      memory: 40Gi
+  annotations:
+    karpenter.sh/do-not-disrupt: "true"
+  nodeSelector:
+    NodePool: trino-control-karpenter
+    karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: coordinator
+
+worker:
+  jvm:
+    maxHeapSize: "12G"
+    extraArguments:
+      - "-XX:+UseG1GC"
+      - "-XX:G1HeapRegionSize=32M"
+      - "-XX:+UseGCOverheadLimit"
+      - "-XX:+ExitOnOutOfMemoryError"
+      - "-XX:ReservedCodeCacheSize=256M"
+      - "-Djdk.attach.allowAttachSelf=true"
+      - "-XX:+UseContainerSupport"
+  config:
+    query:
+      maxMemoryPerNode: "6GB"
+  resources:
+    requests:
+      cpu: "3000m"
+      memory: 14Gi
+    limits:
+      cpu: "6000m"
+      memory: 14Gi
+  nodeSelector:
+    NodePool: trino-sql-karpenter
+    karpenter.sh/capacity-type: on-demand
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          component: worker
+
+additionalConfigProperties:
+  - "retry-policy=TASK"
+  - "exchange.compression-enabled=true"
+  - "query.remote-task.max-error-duration=1m"
+  - "query.max-hash-partition-count=100"
+  - "spill-enabled=false"
+  - "spiller-spill-path=/tmp/spill"
+  - "memory.heap-headroom-per-node=1.6GB"
+  - "optimizer.join-reordering-strategy=AUTOMATIC"
+  - "query.max-history=100"
+  - "query.client.timeout=30m"
+  - "sink.max-buffer-size=1GB"
+
+additionalExchangeManagerProperties:
+  - "exchange-manager.name=filesystem"
+  - "exchange.base-directories=s3://${exchange_bucket_id}"
+  - "exchange.s3.region=${region}"
+  - "exchange.s3.iam-role=${trino_irsa_arn}"
+  - "exchange.s3.max-error-retries=10"
+  - "exchange.s3.upload.part-size=64MB"
+
+additionalCatalogs:
+  hive: |-
+    connector.name=hive
+    hive.metastore=glue
+    hive.metastore.glue.region=${region}
+    hive.metastore.glue.default-warehouse-dir=s3://${trino_s3_bucket_id}/
+    hive.metastore.glue.iam-role=${trino_irsa_arn}
+    hive.s3.iam-role=${trino_irsa_arn}
+    hive.security=allow-all
+  iceberg: |-
+    connector.name=iceberg
+    iceberg.catalog.type=glue
+    iceberg.file-format=PARQUET
+    iceberg.unique-table-location=true
+    iceberg.register-table-procedure.enabled=true
+    hive.metastore.glue.region=${region}
+    hive.metastore.glue.default-warehouse-dir=s3://${trino_s3_bucket_id}/
+    hive.s3.path-style-access=true
+    hive.metastore.glue.iam-role=${trino_irsa_arn}
+    hive.s3.iam-role=${trino_irsa_arn}
+
+serviceAccount:
+  create: true
+  name: ${trino_sa}
+  annotations:
+    eks.amazonaws.com/role-arn: ${trino_irsa_arn}
+
+ingress:
+  enabled: false
+
+jmx:
+  enabled: true
+  registryPort: 9080
+  serverPort: 9081
+  exporter:
+    enabled: true
+    image: bitnami/jmx-exporter:latest
+    pullPolicy: Always
+    port: 5556
+    configProperties: |-
+      hostPort: localhost:{{- .Values.jmx.registryPort }}
+      startDelaySeconds: 0
+      ssl: false
+      lowercaseOutputName: false
+      lowercaseOutputLabelNames: false
+      whitelistObjectNames: ["trino.execution:name=QueryManager","trino.execution:name=ClusterSizeMonitor","trino.execution:name=SqlTaskManager","trino.execution.executor:name=TaskExecutor","trino.memory:name=ClusterMemoryManager","java.lang:type=Runtime","trino.memory:type=ClusterMemoryPool,name=general","java.lang:type=Memory","trino.memory:type=MemoryPool,name=general"]
+      autoExcludeObjectNameAttributes: true
+      excludeObjectNameAttributes:
+        "java.lang:type=OperatingSystem":
+          - "ObjectName"
+        "java.lang:type=Runtime":
+          - "ClassPath"
+          - "SystemProperties"
+      rules:
+      - pattern: ".*"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+serviceMonitor:
+  enabled: true
+  labels:
+    prometheus: kube-prometheus
+  interval: "5s"
+  coordinator:
+    enabled: true
+    labels:
+      prometheus: kube-prometheus
+  worker:
+    enabled: true
+    labels:
+      prometheus: kube-prometheus

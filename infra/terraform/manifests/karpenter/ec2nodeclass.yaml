@@ -384,3 +384,41 @@ spec:
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
+
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: trino-nodeclass
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+
+  # Subnet selection - private secondary subnets for Trino
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+
+  # Instance store optimization - RAID0 for Trino spill data
+  instanceStorePolicy: RAID0
+
+  # Block device mappings - larger storage for Trino spill data
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi  # Larger storage for Trino spill data
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
