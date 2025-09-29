@@ -183,6 +183,117 @@ Production-ready Apache Spark examples and configurations for Amazon EKS. Choose
 </div>
 </div>
 
+<div className="showcase-card featured">
+<div className="showcase-header">
+<div className="showcase-icon">🚀</div>
+<div className="showcase-content">
+<h3>Graviton NVMe Storage</h3>
+<p className="showcase-description">ARM64 Graviton processors with NVMe SSDs for superior price-performance. Up to 40% cost savings with maximum I/O performance</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag storage">Storage</span>
+<span className="tag performance">Performance</span>
+<span className="tag optimization">Optimization</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/nvme-storage-graviton" className="showcase-link">
+<span>Learn More</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="showcase-card">
+<div className="showcase-header">
+<div className="showcase-icon">🎯</div>
+<div className="showcase-content">
+<h3>YuniKorn Gang Scheduling</h3>
+<p className="showcase-description">Apache YuniKorn gang scheduling ensures atomic resource allocation for Spark jobs. Prevents resource fragmentation and eliminates deadlocks</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag performance">Performance</span>
+<span className="tag optimization">Optimization</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/yunikorn-gang-scheduling" className="showcase-link">
+<span>Learn More</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="showcase-card">
+<div className="showcase-header">
+<div className="showcase-icon">🗄️</div>
+<div className="showcase-content">
+<h3>Mountpoint for Amazon S3</h3>
+<p className="showcase-description">High-performance file interface for S3 with native POSIX operations. Optimized for large-scale data processing workloads</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag storage">Storage</span>
+<span className="tag performance">Performance</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/mountpoint-s3" className="showcase-link">
+<span>Learn More</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="showcase-card">
+<div className="showcase-header">
+<div className="showcase-icon">⚡</div>
+<div className="showcase-content">
+<h3>S3 Express One Zone</h3>
+<p className="showcase-description">Ultra-fast S3 storage class with single-digit millisecond latency. Purpose-built for high-performance analytics workloads</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag storage">Storage</span>
+<span className="tag performance">Performance</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/s3-express-one-zone" className="showcase-link">
+<span>Learn More</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="showcase-card">
+<div className="showcase-header">
+<div className="showcase-icon">📊</div>
+<div className="showcase-content">
+<h3>S3 Tables with Iceberg</h3>
+<p className="showcase-description">Fully managed Apache Iceberg tables on S3 with automatic optimization. Purpose-built for analytics at petabyte scale</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag storage">Storage</span>
+<span className="tag optimization">Optimization</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/spark-on-eks/s3-tables" className="showcase-link">
+<span>Learn More</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
 </div>
 
 {/* End of showcase grid - All styles are now in /src/css/datastack-tiles.css */}

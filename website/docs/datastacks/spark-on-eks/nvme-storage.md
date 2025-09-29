@@ -128,9 +128,10 @@ sparkConf:
   "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.path": "/data1"
   "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.readOnly": "false"
 
-# Node selection for NVMe instance types
+# Node selection - uses existing NodePools
 nodeSelector:
-  node.kubernetes.io/workload-type: "nvme-storage-x86"
+  node.kubernetes.io/workload-type: "compute-optimized-x86"  # For c6id, c7id instances
+  # Alternative: "memory-optimized-x86" for r6id, r7id instances
 ```
 
 **Features:**
@@ -143,14 +144,15 @@ nodeSelector:
 
 Process NYC taxi data to demonstrate NVMe storage performance with direct SSD access.
 
-### 1. Deploy NVMe NodePool
+### 1. Verify Existing x86 NodePools
 
 ```bash
-# Apply the NVMe storage NodePool
-kubectl apply -f ../../../../infra/terraform/manifests/karpenter/nodepool-nvme-storage.yaml
+# Check existing x86 NodePools (already include NVMe instances)
+kubectl get nodepools -n karpenter compute-optimized-x86 memory-optimized-x86
 
-# Verify NodePool creation
-kubectl get nodepools -n karpenter nvme-storage-x86
+# These NodePools already include:
+# - compute-optimized-x86: c6id, c7id (compute + NVMe)
+# - memory-optimized-x86: r6id, r7id (memory + NVMe)
 ```
 
 ### 2. Prepare Test Data
@@ -178,8 +180,8 @@ cd ../blueprints/
 # Submit the NVMe Storage job
 envsubst < nvme-storage.yaml | kubectl apply -f -
 
-# Monitor node provisioning (should show c6id/c7id/r6id/r7id/m6id/m7id/i4i instances)
-kubectl get nodes -l node.kubernetes.io/workload-type=nvme-storage-x86 --watch
+# Monitor node provisioning (should show x86 instances: c6id/c7id with NVMe)
+kubectl get nodes -l node.kubernetes.io/workload-type=compute-optimized-x86 --watch
 
 # Monitor job progress
 kubectl get sparkapplications -n spark-team-a --watch
@@ -295,8 +297,7 @@ aws s3 ls s3://$S3_BUCKET/spark-event-logs/
 kubectl delete sparkapplication taxi-trip -n spark-team-a
 
 # NVMe storage is automatically cleaned up when nodes terminate
-# Optional: Remove the NVMe NodePool if no longer needed
-kubectl delete nodepool nvme-storage-x86 -n karpenter
+# Note: x86 NodePools are shared and remain for other workloads
 ```
 
 ## Next Steps
