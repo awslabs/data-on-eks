@@ -34,10 +34,10 @@ spec:
           operator: In
           values: ["c"]
 
-        # Instance families - x86 compute families (gen 5+)
+        # Instance families - x86 compute families (gen 5+) including latest NVMe
         - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["c5", "c5d", "c5n", "c6a", "c6i", "c6id", "c6in", "c7i"]
+          values: ["c5", "c5d", "c5n", "c6a", "c6i", "c6id", "c6in", "c7i", "c7id"]
 
         # Instance sizes - medium to very large
         - key: karpenter.k8s.aws/instance-size
