@@ -35,6 +35,43 @@ html[data-theme="dark"] {
   margin-left: 8px; /* Adjust the spacing between the tagline and the rocket */
 }
 
+.chart-embed {
+  margin: 2.5rem 0;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
+}
+
+.chart-embed iframe {
+  width: 100%;
+  min-height: 760px;
+  border: none;
+  display: block;
+  background: transparent;
+}
+
+@media (max-width: 768px) {
+  .chart-embed iframe {
+    min-height: 600px;
+  }
+}
+
+.quick-snapshot {
+  font-size: 1.08rem;
+  line-height: 1.7;
+  font-weight: 500;
+}
+
+.highlight-badge {
+  font-size: 1.05rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  margin-right: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
 /* Enhance navbar and sidebar styling */
 .navbar__link {
   font-family: 'Amazon Ember', 'Inter', 'Segoe UI', system-ui, sans-serif;

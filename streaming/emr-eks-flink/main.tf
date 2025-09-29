@@ -14,30 +14,17 @@ data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
 }
 
-data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.ecr
-}
-
 data "aws_availability_zones" "available" {}
 
 data "aws_caller_identity" "current" {}
 
-# This data source can be used to get the latest AMI for Managed Node Groups
-data "aws_ami" "x86" {
-  owners      = ["amazon"]
-  most_recent = true
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-${module.eks.cluster_version}-*"] # Update this for ARM ["amazon-eks-arm64-node-${module.eks.cluster_version}-*"]
-  }
-}
 
 #---------------------------------------------------------------
 # EKS Cluster
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.15"
+  version = "~> 20.33"
 
   cluster_name                    = local.name
   cluster_version                 = var.eks_cluster_version
@@ -45,19 +32,10 @@ module "eks" {
   cluster_endpoint_public_access  = true # if true, Your cluster API server is accessible from the internet. You can, optionally, limit the CIDR blocks that can access the public endpoint.
   vpc_id                          = module.vpc.vpc_id
   subnet_ids                      = module.vpc.private_subnets
-  manage_aws_auth_configmap       = true
 
-  aws_auth_roles = [
-    # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
-    {
-      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups = [
-        "system:bootstrappers",
-        "system:nodes",
-      ]
-    }
-  ]
+  # Add the IAM identity that terraform is using as a cluster admin
+  authentication_mode                      = "API_AND_CONFIG_MAP"
+  enable_cluster_creator_admin_permissions = true
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
@@ -117,30 +95,20 @@ module "eks" {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
+
     core_node_group = {
       name        = "core-node-group"
       description = "EKS managed node group example launch template"
-      ami_id      = data.aws_ami.x86.image_id
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
-      # Optional - This is to show how you can pass pre bootstrap data
-      pre_bootstrap_user_data = <<-EOT
-        echo "Node bootstrap process started by Data on EKS"
-      EOT
-      # Optional - Post bootstrap data to verify anything
-      post_bootstrap_user_data = <<-EOT
-        echo "Bootstrap complete.Ready to Go!"
-      EOT
-      subnet_ids               = module.vpc.private_subnets
-      min_size                 = 3
-      max_size                 = 9
-      desired_size             = 3
-      force_update_version     = true
-      instance_types           = ["m5.xlarge"]
-      ebs_optimized            = true
+      subnet_ids  = module.vpc.private_subnets
+
+      min_size     = 1
+      max_size     = 9
+      desired_size = 3
+
+      force_update_version = true
+      instance_types       = ["m5.xlarge"]
+
+      ebs_optimized = true
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
@@ -150,17 +118,17 @@ module "eks" {
           }
         }
       }
-      update_config = {
-        max_unavailable_percentage = 50
-      }
+
       labels = {
         WorkerType    = "ON_DEMAND"
         NodeGroupType = "core"
       }
+
       tags = {
-        Name                     = "core-node-grp",
-        "karpenter.sh/discovery" = local.name
+        Name = "core-node-grp"
       }
     }
+
+
   }
 }
