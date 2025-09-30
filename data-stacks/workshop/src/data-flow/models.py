@@ -1,136 +1,96 @@
 from dataclasses import dataclass, asdict, fields
 from decimal import Decimal
-from typing import Optional, get_origin, get_args, Union
+from typing import Optional, get_origin, get_args, Union, List
+from datetime import datetime
 
+
+ACTIVITIES = ["pet", "play", "feed", "photo", "like"]
+CAFE_ITEMS = [
+    "espresso",
+    "cappuccino",
+    "latte",
+    "americano",
+    "croissant",
+    "muffin",
+    "bagel",
+    "sandwich",
+    "cheesecake",
+    "hot_chocolate"
+]
+
+CAT_LOCATIONS = [
+    "southwest_window",
+    "entrance_couch",
+    "cat_tree_top",
+    "sunny_corner",
+    "bookshelf_middle",
+    "counter_stool",
+    "window_perch",
+    "cozy_nook",
+    "play_area",
+    "feeding_station",
+    "scratching_post",
+    "cushioned_bench",
+    "reading_chair",
+    "corner_hideaway",
+    "cafe_table_under"
+]
+
+COAT_COLORS = ['tabby', 'calico', 'black', 'orange', 'gray', 'white']
+COAT_LENGTHS = ['short', 'medium', 'long']
+ARCHETYPES = ['social_kitten', 'sleepy_senior', 'shy', 'standard']
+VISITOR_ARCHETYPES = ['potential_adopter', 'casual_visitor', 'family', 'cat_lover']
 
 @dataclass
 class CatProfile:
-    cat_id: int
-    name: str
-    coat_color: str
-    coat_length: str
-    age_months: int
-    base_weight_kg: Decimal
-    favorite_food: str
-    favorite_toy: str
-    sociability_score: int
-    vocalization_level: int
-    stress_tendency: str  # high, medium, low
+    cat_id: str
+    name: str 
+    coat_color: str # one of COAT_COLORS
+    coat_length: str # one of COAT_LENGTHS
+    age: int
+    archetype: str
+    status: str # adopted or available
+    admitted_date: datetime
+    adopted_date: datetime
+    last_checkup_time: datetime
+
+@dataclass
+class VisitorCheckIn:
+    visitor_id: str
+    event_time: str
 
 
 @dataclass
 class CatInteraction:
-    interaction_id: str
-    cat_id: int
-    visitor_id: int
-    interaction_type: str  # pet, play, feed, photo
-    duration_minutes: int
-    cat_stress_level: int  # 1-10 scale
+    event_time: str
+    cat_id: str
+    visitor_id: str
+    interaction_type: str  # one of ACTIVITIES
 
 
 @dataclass
-class AdoptionEvent:
-    event_id: str
-    cat_id: int
-    event_type: str  # inquiry, application, adoption, return
-    visitor_id: int
-    adoption_fee: int  # cents initially, evolves to decimal
-    weight_kg: Decimal
-    coat_length: str  # short, medium, long
-    coat_color: str  # tabby, calico, black, orange, gray, white
-    age_months: int
-    favorite_food: str  # salmon, chicken, tuna, beef, turkey
-    sociability_score: int  # 1-10 scale
-    favorite_toy: str  # feather, ball, laser, catnip, string
-    vocalization_level: int  # 1-10 scale
+class CafeOrders:
+    event_time: str
+    order_id: str
+    visitor_id: str
+    items: List[str] # one or more of CAFE_ITEMS
+    total_amount: Decimal
 
 
 @dataclass
-class CatWeightReading:
-    reading_id: str
-    cat_id: int
-    weight_kg: Decimal
-    scale_id: str
+class CatWellness:
+    event_time: str
+    cat_id: str
+    activity_level: float # 0.1 to 10.0
+    heart_rate: int
+    hours_since_last_drink: float
 
 
 @dataclass
-class CafeRevenue:
-    transaction_id: str
-    cat_id: Optional[int]  # null for non-cat specific revenue
-    revenue_type: str  # adoption_fee, cafe_visit, merchandise, photo_session
-    amount: Decimal
-    visitor_id: int
-
-
-# Intermediate/Enriched Models
-
-@dataclass
-class EnrichedInteraction:
-    interaction_id: str
-    cat_id: int
-    visitor_id: int
-    interaction_type: str
-    duration_minutes: int
-    cat_stress_level: int
-    # Enriched fields
-    weight_kg: Decimal
-    coat_color: str
-    coat_length: str
-    age_months: int
-    sociability_score: int
-
-
-@dataclass
-class DailyCatMetrics:
-    cat_id: int
-    date: str  # date format
-    total_interactions: int
-    avg_stress_level: Decimal
-    total_interaction_time: int
-    weight_kg: Decimal
-    behavioral_score_change: Decimal
-
-
-# Alert Models
-
-@dataclass
-class WeightAlert:
-    alert_id: str
-    cat_id: int
-    alert_type: str
-    message: str
-    severity: str  # HIGH, MEDIUM, LOW
-    current_weight: Decimal
-    previous_weight: Decimal
-    weight_change_percent: Decimal
-
-
-@dataclass
-class BehavioralAlert:
-    alert_id: str
-    cat_id: int
-    alert_type: str
-    message: str
-    severity: str
-    current_score: int
-    baseline_score: int
-    score_change: int
-
-
-@dataclass
-class CatPopularity:
-    cat_id: int
-    like_count: int
-    window_start: int  # timestamp
-    window_end: int    # timestamp
-
-
-@dataclass
-class PotentialAdopter:
-    alert_id: str
-    visitor_id: int
-    total_likes: int
-    threshold: int
+class CatLocation:
+    event_time: str
+    cat_id: str
+    location: str # one of CAT_LOCATIONS
 
 
 def schema_to_flink_ddl(schema_dict):
@@ -139,86 +99,63 @@ def schema_to_flink_ddl(schema_dict):
 
 
 SCHEMA_MAP = {
-    "cat_profile": {
+    "visitor_checkins": {
+        "class": VisitorCheckIn,
+        "flink_schema": {
+            "visitor_id": "STRING",
+            "event_time": "STRING"
+        }
+    },
+    "cat_profiles": {
         "class": CatProfile,
         "flink_schema": {
-            "cat_id": "INT",
+            "cat_id": "STRING",
             "name": "STRING",
             "coat_color": "STRING",
             "coat_length": "STRING",
-            "age_months": "INT",
-            "base_weight_kg": "DECIMAL(10,2)",
-            "favorite_food": "STRING",
-            "favorite_toy": "STRING",
-            "sociability_score": "INT",
-            "vocalization_level": "INT",
-            "stress_tendency": "STRING"
+            "age": "INT",
+            "archetype": "STRING",
+            "status": "STRING",
+            "admitted_date": "TIMESTAMP",
+            "adopted_date": "TIMESTAMP",
+            "last_checkup_time": "TIMESTAMP"
         }
     },
     "cat_interactions": {
         "class": CatInteraction,
         "flink_schema": {
-            "interaction_id": "STRING",
-            "cat_id": "INT",
-            "visitor_id": "INT",
-            "interaction_type": "STRING",
-            "duration_minutes": "INT",
-            "cat_stress_level": "INT"
+            "event_time": "STRING",
+            "cat_id": "STRING",
+            "visitor_id": "STRING",
+            "interaction_type": "STRING"
         }
     },
-    "adoption_events": {
-        "class": AdoptionEvent,
+    "cafe_orders": {
+        "class": CafeOrders,
         "flink_schema": {
-            "event_id": "STRING",
-            "cat_id": "INT",
-            "event_type": "STRING",
-            "visitor_id": "INT",
-            "adoption_fee": "INT",
-            "weight_kg": "DECIMAL(10,2)",
-            "coat_length": "STRING",
-            "coat_color": "STRING",
-            "age_months": "INT",
-            "favorite_food": "STRING",
-            "sociability_score": "INT",
-            "favorite_toy": "STRING",
-            "vocalization_level": "INT"
+            "event_time": "STRING",
+            "order_id": "STRING",
+            "visitor_id": "STRING",
+            "items": "ARRAY<STRING>",
+            "total_amount": "DECIMAL(10,2)"
         }
     },
-    "weight_readings": {
-        "class": CatWeightReading,
+    "cat_wellness": {
+        "class": CatWellness,
         "flink_schema": {
-            "reading_id": "STRING",
-            "cat_id": "INT",
-            "weight_kg": "DECIMAL(10,2)",
-            "scale_id": "STRING"
+            "event_time": "STRING",
+            "cat_id": "STRING",
+            "activity_level": "DOUBLE",
+            "heart_rate": "INT",
+            "hours_since_last_drink": "DOUBLE"
         }
     },
-    "cafe_revenues": {
-        "class": CafeRevenue,
+    "cat_locations": {
+        "class": CatLocation,
         "flink_schema": {
-            "transaction_id": "STRING",
-            "cat_id": "INT",
-            "revenue_type": "STRING",
-            "amount": "DECIMAL(10,2)",
-            "visitor_id": "INT"
-        }
-    },
-    "cat_popularity": {
-        "python_dict": CatPopularity,
-        "flink_schema": {
-            "cat_id": "INT",
-            "like_count": "INT",
-            "window_start": "BIGINT",
-            "window_end": "BIGINT"
-        }
-    },
-    "potential_adopter": {
-        "python_dict": PotentialAdopter,
-        "flink_schema": {
-            "alert_id": "STRING",
-            "visitor_id": "INT",
-            "total_likes": "INT",
-            "threshold": "INT"
+            "event_time": "STRING",
+            "cat_id": "STRING",
+            "location": "STRING"
         }
     }
 }
