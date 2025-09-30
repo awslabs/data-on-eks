@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-consumer
+  namespace: flink-team-a
+spec:
+  containers:
+  - name: kafka-consumer
+    image: confluentinc/cp-kafka:latest
+    command: ["kafka-console-consumer"]
+    args:
+      - "--bootstrap-server=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+      - "--topic=cat-interactions"
+      - "--from-beginning"
+  restartPolicy: Never

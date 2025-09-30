@@ -422,14 +422,14 @@ class CatCafeSimulator:
         
         # Base values
         heart_rate = random.randint(80, 120)
-        hours_since_last_drink = random.uniform(0.5, 3.0)
+        hours_since_last_drink = random.uniform(0.5, 4.5)
         
         # Archetype-specific behavior
         if archetype == 'sleepy_senior':
             activity_level = random.uniform(1.0, 3.0)  # Consistently low
             
             # 5% chance for dehydration alert
-            if random.random() < 0.05:
+            if random.random() < 0.001:
                 hours_since_last_drink = random.uniform(4.0, 6.0)
                 self.logger.info(f"Triggering dehydration alert for {cat['name']}")
                 

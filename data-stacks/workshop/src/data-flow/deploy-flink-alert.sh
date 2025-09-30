@@ -1,9 +1,9 @@
 #!/bin/bash
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
-PYTHON_FILE="$REPO_ROOT/data-stacks/workshop/src/data-flow/raw-ingestion.py"
+PYTHON_FILE="$REPO_ROOT/data-stacks/workshop/src/data-flow/alert.py"
 MODELS_FILE="$REPO_ROOT/data-stacks/workshop/src/data-flow/models.py"
-DEPLOYMENT_FILE="$REPO_ROOT/data-stacks/workshop/manifests/flink-deployment.yaml"
+DEPLOYMENT_FILE="$REPO_ROOT/data-stacks/workshop/manifests/flink-deployment-alerts.yaml"
 OUTPUT_FILE="/tmp/flink-deployment-updated.yaml"
 
 # Use awk to replace the placeholders with file content

@@ -1,0 +1,108 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: cat-cafe-alerts
+  namespace: flink-team-a
+spec:
+  image: public.ecr.aws/m8u6z8z4/manabu-test:flink-2.0-py-3-11@sha256:b38d709e80adecd52e2e063404c7a93f8635b01c0a04a09ed8745afb79b82c57
+  flinkVersion: v2_0
+  serviceAccount: flink-team-a
+
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    replicas: 1
+
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    replicas: 2
+
+  job:
+    jarURI: local:///opt/flink/opt/flink-python-2.1.0.jar
+    entryClass: org.apache.flink.client.python.PythonDriver
+    args:
+      - "-py"
+      - "/tmp/alert.py"
+      - "--pyFiles"
+      - "/tmp/models.py"
+    parallelism: 2
+    upgradeMode: stateless
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "2"
+    state.checkpoints.dir: s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-checkpoints/
+    execution.checkpointing.interval: 120s
+    execution.checkpointing.mode: EXACTLY_ONCE
+
+    env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+    env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+
+    # datahub configuration
+    execution.job-status-changed-listeners: "io.openlineage.flink.listener.OpenLineageJobStatusChangedListenerFactory"
+    openlineage.transport.type: "http"
+    openlineage.transport.url: "http://data-on-eks-datahub-gms.datahub.svc.cluster.local:8080/openapi/openlineage/api/v1/lineage"
+    openlineage.transport.auth.type: api_key
+    openlineage.transport.auth.apiKey: "$DATAHUB_TOKEN"
+    openlineage.job.namespace: "workshop"
+  podTemplate:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "RESTART_TIMESTAMP"
+    spec:
+      volumes:
+        - name: python-script
+          configMap:
+            name: alert-py
+      containers:
+        - name: flink-main-container
+          volumeMounts:
+            - name: python-script
+              mountPath: /tmp/alert.py
+              subPath: alert.py
+            - name: python-script
+              mountPath: /tmp/models.py
+              subPath: models.py
+          # args:
+          #   - "bash"
+          #   - "-c"
+          #   - "sleep 3600"
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+            - name: S3_WAREHOUSE_PATH
+              value: "s3a://data-on-eks-spark-logs-20250915164903963600000002/iceberg-warehouse/"
+            - name: AWS_REGION
+              value: "us-west-2"
+            - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
+              value: "true"
+            - name: WORKSHOP_DEBUG
+              value: "false"
+            - name: DATAHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: datahub-token
+                  key: token
+            # - name: ENABLE_BUILT_IN_PLUGINS
+            #   value: "flink-s3-fs-hadoop-2.0.0.jar"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-py
+  namespace: flink-team-a
+data:
+  alert.py: |
+    PYTHON_SCRIPT_CONTENT
+  models.py: |
+    MODELS_SCRIPT_CONTENT
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: datahub-token
+  namespace: flink-team-a
+type: Opaque
+stringData:
+  token: $DATAHUB_TOKEN
