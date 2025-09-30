@@ -429,9 +429,9 @@ class CatCafeSimulator:
             activity_level = random.uniform(1.0, 3.0)  # Consistently low
             
             # 5% chance for dehydration alert
-            # if random.random() < 0.05:
-            #     hours_since_last_drink = random.uniform(4.0, 6.0)
-            #     self.logger.info(f"Triggering dehydration alert for {cat['name']}")
+            if random.random() < 0.05:
+                hours_since_last_drink = random.uniform(4.0, 6.0)
+                self.logger.info(f"Triggering dehydration alert for {cat['name']}")
                 
         elif archetype == 'social_kitten':
             activity_level = random.uniform(7.0, 10.0)  # Consistently high
@@ -440,9 +440,9 @@ class CatCafeSimulator:
             activity_level = random.uniform(2.0, 6.0)  # Normal range
             
             # 3% chance for stress alert (very low activity)
-            # if random.random() < 0.03:
-            #     activity_level = random.uniform(0.1, 0.9)
-            #     self.logger.info(f"Triggering stress alert for {cat['name']}")
+            if random.random() < 0.03:
+                activity_level = random.uniform(0.1, 0.9)
+                self.logger.info(f"Triggering stress alert for {cat['name']}")
                 
         else:  # standard
             activity_level = random.uniform(3.0, 7.0)  # Normal range

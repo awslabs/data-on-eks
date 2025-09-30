@@ -68,7 +68,7 @@ def create_debug_sink(t_env: StreamTableEnvironment, table_name: str, schema_ddl
     """
     t_env.execute_sql(ddl)
 
-def define_cat_wellness_alerts(t_env: StreamTableEnvironment):
+def define_cat_wellness_alerts(t_env: StreamTableEnvironment, statement_set):
     """
     Defines the Flink SQL job for the Cat Wellness Guardian.
     This is a stateless job that filters for anomalies.
@@ -119,9 +119,6 @@ def define_cat_wellness_alerts(t_env: StreamTableEnvironment):
         FROM cat_wellness_source
         WHERE activity_level < 0.1
     """)
-
-    # Use a StatementSet to combine multiple INSERT statements
-    statement_set = t_env.create_statement_set()
     
     insert_sql = """
         INSERT INTO cat_health_alerts_sink
@@ -230,7 +227,7 @@ def main():
     statement_set = t_env.create_statement_set()
 
     # Define the alerting pipelines
-    define_cat_wellness_alerts(t_env)
+    define_cat_wellness_alerts(t_env, statement_set)
     define_potential_adopter_alerts(t_env, statement_set)
 
     # Execute the combined job
@@ -241,4 +238,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
