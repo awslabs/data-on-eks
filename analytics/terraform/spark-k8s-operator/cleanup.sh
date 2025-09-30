@@ -7,6 +7,7 @@ export AWS_DEFAULT_REGION=$region
 export STACK_NAME=$(terraform output -raw cluster_name)
 
 targets=(
+  "module.eks_blueprints_addons.module.ingress_nginx"
   "module.eks_data_addons"
   "module.eks_blueprints_addons"
   "module.eks"
