@@ -1,7 +1,7 @@
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment, EnvironmentSettings
 from pyflink.table.expressions import col
-from models import CatInteraction, AdoptionEvent, CatWeightReading, CafeRevenue, SCHEMA_MAP, schema_to_flink_ddl
+from models import CatInteraction, CafeOrders, CatWellness, CatLocation, VisitorCheckIn, SCHEMA_MAP, schema_to_flink_ddl
 import os
 
 
@@ -14,20 +14,25 @@ def create_tables_config():
             'model': SCHEMA_MAP["cat_interactions"]["class"],
             "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_interactions"]["flink_schema"])
         },
-        'adoption_events': {
-            'topic': 'adoption-events',
-            'model': SCHEMA_MAP["adoption_events"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["adoption_events"]["flink_schema"])
+        'visitor_checkins': {
+            'topic': 'visitor-checkins',
+            'model': SCHEMA_MAP["visitor_checkins"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["visitor_checkins"]["flink_schema"])
         },
-        'weight_readings': {
-            'topic': 'weight-readings',
-            'model': SCHEMA_MAP["weight_readings"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["weight_readings"]["flink_schema"])
+        'cafe_orders': {
+            'topic': 'cafe-orders',
+            'model': SCHEMA_MAP["cafe_orders"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["cafe_orders"]["flink_schema"])
         },
-        'cafe_revenues': {
-            'topic': 'cafe-revenues',
-            'model': SCHEMA_MAP["cafe_revenues"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cafe_revenues"]["flink_schema"])
+        'cat_wellness': {
+            'topic': 'cat-wellness-iot',
+            'model': SCHEMA_MAP["cat_wellness"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_wellness"]["flink_schema"])
+        },
+        'cat_locations': {
+            'topic': 'cat-locations',
+            'model': SCHEMA_MAP["cat_locations"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_locations"]["flink_schema"])
         }
     }
 
