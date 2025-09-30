@@ -164,6 +164,28 @@ def define_potential_adopter_alerts(t_env: StreamTableEnvironment, statement_set
     # 3. Define the INSERT logic
     # This query performs a continuous aggregation.
     # It will emit a new result every time a visitor's like count changes and meets the condition.
+    # ==========================================================================================
+    # ARCHITECTURAL NOTE FOR WORKSHOP PARTICIPANTS:
+    #
+    # The following SQL query is intentionally simple for learning purposes. It creates a "thin"
+    # alert that only contains the cat's ID. The Web UI's backend will be responsible for
+    # looking up the cat's name from the database before displaying the alert.
+    #
+    # In a real-world, production system, this is NOT the recommended approach. The preferred
+    # pattern is to perform the enrichment (the join) here in Flink.
+    #
+    # Why?
+    #   1. Reduced Database Load: Joining in Flink (using a cached view of the database table)
+    #      prevents other backends from hitting the operational database with thousands of
+    #      lookup queries per second during an alert storm.
+    #   2. Lower Latency: The join happens in memory within Flink, which is faster than the
+    #      network round-trip from the backends to the database.
+    #   3. Smarter Data Products: It creates a "rich" and self-contained alert stream. Any other
+    #      downstream service can consume from 'cat-health-alerts' and immediately have all the
+    #      context it needs (like the cat's name) without having to re-implement the lookup logic.
+    #
+    # We have chosen the simpler path here to focus on the core filtering and alerting logic.
+    # ==========================================================================================
     t_env.execute_sql("""
         CREATE TEMPORARY VIEW LikedInteractions AS
         SELECT
