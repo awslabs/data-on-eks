@@ -39,6 +39,8 @@ spec:
     env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
     env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
 
+    json.timestamp-format.standard: ISO-8601
+
     # datahub configuration
     execution.job-status-changed-listeners: "io.openlineage.flink.listener.OpenLineageJobStatusChangedListenerFactory"
     openlineage.transport.type: "http"

@@ -7,7 +7,7 @@ metadata:
   labels:
     strimzi.io/cluster: cluster
 spec:
-  partitions: 3
+  partitions: 1
   replicas: 1
   config:
     retention.ms: 604800000  # 7 days
@@ -16,12 +16,12 @@ spec:
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
-  name: adoption-events
+  name: visitor-checkins
   namespace: kafka
   labels:
     strimzi.io/cluster: cluster
 spec:
-  partitions: 3
+  partitions: 1
   replicas: 1
   config:
     retention.ms: 604800000  # 7 days
@@ -30,12 +30,12 @@ spec:
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
-  name: weight-readings
+  name: cafe-orders
   namespace: kafka
   labels:
     strimzi.io/cluster: cluster
 spec:
-  partitions: 3
+  partitions: 1
   replicas: 1
   config:
     retention.ms: 604800000  # 7 days
@@ -44,12 +44,12 @@ spec:
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
-  name: cafe-revenues
+  name: cat-wellness-iot
   namespace: kafka
   labels:
     strimzi.io/cluster: cluster
 spec:
-  partitions: 3
+  partitions: 1
   replicas: 1
   config:
     retention.ms: 604800000  # 7 days
@@ -58,12 +58,12 @@ spec:
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
-  name: cat-popularity
+  name: cat-locations
   namespace: kafka
   labels:
     strimzi.io/cluster: cluster
 spec:
-  partitions: 3
+  partitions: 1
   replicas: 1
   config:
     retention.ms: 604800000  # 7 days
