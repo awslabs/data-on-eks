@@ -1,10 +1,11 @@
 import csv
 import random
 import uuid
-import os
 from datetime import datetime, timedelta
 from faker import Faker
 import psycopg
+
+fake = Faker()
 
 fake = Faker()
 
@@ -12,33 +13,23 @@ fake = Faker()
 COAT_COLORS = ['tabby', 'calico', 'black', 'orange', 'gray', 'white']
 COAT_LENGTHS = ['short', 'medium', 'long']
 ARCH_TYPES = ['social_kitten', 'sleepy_senior', 'shy', 'standard']
-NUM_ADOPTED_CATS = 10000
-NUM_AVAILABLE_CATS = 1000
 
 """
 read from data/cat_names.txt for cat names. Use all of them by randomly picking one. 
-generate: cat database entity for NUM_ADOPTED_CATS cats with status = adopted where:
-    1. coat_color is random from COAT_COLORS defined above.
-    1. if 'social_kitten' is selected as arch_type, the age must be between 0-12 months.
-    1. age is between 0 - 240 months.
-    1. archtypes is one of ARCH_TYPES defined above.
+generate: data/cats.csv for 3000 cats where:
+coat_color is random from defined above.
+if 'social_kitten' is selected as arch_type, the age must be between 0-12 months.
+age is between 0 - 240 months.
+archtypes is one of arch_types defined above.
+adopted status where:
+    1. The base adoption rate is 30%. That is at the time of generation, there's a 30% chance of it being adopted.
     1. if coat color is black, reduce the chance of this field set by 20%. (multiplier, not addition)
-    1. If the age is more than 120 months, reduce the chance of this field by 9%. For every 12 months, above the 120 months, reduce the chance by 9%. (multiplied)
-    1. if 'social_kitten' is selected, the adoption rate is increased by 70%. (multiplied)
-    1. if the adoption success roll fails according to the chance generated above, start from the start.
-    1. admitted date should be sometime in 2025.
-    1. adopted date should always be after admitted date
-    1. last_checkup_time is now. 
-    1. use uuid for cat_id
-    
-
-once cats with status=adopted are generated, 
-generate NUM_AVAILABLE_CATS cats generate status=available with random chances
-    1. coat_color is random from COAT_COLORS defined above.
-    4. admitted date should be sometime in 2025.
-    5. adopted date should always be after admitted date
-    6. last_checkup_time is now. 
+    2. If the age is more than 120 months, reduce the chance of this field by 9%. For every 12 months, above the 120 months, reduce the chance by 9%.
+    admitted date should be sometime in 2025.
+    adopted date should always be after admitted date
+    last_checkup_time is now. 
     5. use uuid for cat_id
+    6. if 'social_kitten' is selected, the adoption rate is increased by 70%. (multiplied)
 """
 
 
@@ -66,8 +57,7 @@ def generate_cats():
     cat_names = load_cat_names()
     cats = []
     
-    # Generate adopted cats
-    while len([c for c in cats if c['status'] == 'adopted']) < NUM_ADOPTED_CATS:
+    for _ in range(10000):
         cat_id = str(uuid.uuid4())
         name = random.choice(cat_names)
         coat_color = random.choice(COAT_COLORS)
@@ -80,16 +70,16 @@ def generate_cats():
         else:
             age = random.randint(0, 240)
         
-        # Calculate adoption probability
+        # Adoption status
         adoption_rate = calculate_adoption_rate(archetype, coat_color, age)
-        
-        # If adoption roll fails, start over
-        if random.random() >= adoption_rate:
-            continue
+        status = 'adopted' if random.random() < adoption_rate else 'available'
         
         # Dates
         admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
-        adopted_date = fake.date_between(start_date=admitted_date, end_date=datetime(2025, 12, 31))
+        adopted_date = None
+        if status == 'adopted':
+            adopted_date = fake.date_between(start_date=admitted_date, end_date=datetime(2025, 12, 31))
+        
         last_checkup_time = datetime.now()
         
         cats.append({
@@ -99,40 +89,9 @@ def generate_cats():
             'coat_length': coat_length,
             'age': age,
             'archetype': archetype,
-            'status': 'adopted',
+            'status': status,
             'admitted_date': admitted_date.strftime('%Y-%m-%d'),
-            'adopted_date': adopted_date.strftime('%Y-%m-%d'),
-            'last_checkup_time': last_checkup_time.strftime('%Y-%m-%d %H:%M:%S')
-        })
-    
-    # Generate available cats
-    for _ in range(NUM_AVAILABLE_CATS):
-        cat_id = str(uuid.uuid4())
-        name = random.choice(cat_names)
-        coat_color = random.choice(COAT_COLORS)
-        coat_length = random.choice(COAT_LENGTHS)
-        archetype = random.choice(ARCH_TYPES)
-        
-        # Age constraints
-        if archetype == 'social_kitten':
-            age = random.randint(0, 12)
-        else:
-            age = random.randint(0, 240)
-        
-        # Dates
-        admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
-        last_checkup_time = datetime.now()
-        
-        cats.append({
-            'cat_id': cat_id,
-            'name': name,
-            'coat_color': coat_color,
-            'coat_length': coat_length,
-            'age': age,
-            'archetype': archetype,
-            'status': 'available',
-            'admitted_date': admitted_date.strftime('%Y-%m-%d'),
-            'adopted_date': '',
+            'adopted_date': adopted_date.strftime('%Y-%m-%d') if adopted_date else '',
             'last_checkup_time': last_checkup_time.strftime('%Y-%m-%d %H:%M:%S')
         })
     
@@ -144,6 +103,16 @@ def write_csv(data, filename, fieldnames):
         writer.writeheader()
         writer.writerows(data)
 
+"""
+generate data/visitors.csv file where:
+1. the visitor_id is uuid
+2. name is fake.first_name() + " " + fake.last_name()
+3. archetype is one of above.
+4. first visit date is somewhere in 2025.
+5. generate 1000 visitors
+6. date format is yyyy-mm-dd
+
+"""
 
 VISITOR_ARCHETYPES = ['potential_adopter', 'casual_visitor', 'family', 'cat_lover']
 
@@ -166,12 +135,12 @@ def generate_visitors():
     return visitors
 
 
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "workshop")
-DB_USER = os.getenv("DB_USER", "workshop")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "workshop")
-CONN_STRING = f"dbname='{DB_NAME}' user='{DB_USER}' host='{DB_HOST}' port='{DB_PORT}' password='{DB_PASSWORD}'"
+import psycopg2
+
+host = "localhost"
+port = 5432
+username = "workshop"
+password = "workshop"
 
 def create_cats_table(cursor):
     cursor.execute("""
@@ -200,52 +169,73 @@ def create_visitors_table(cursor):
     """)
 
 def create_tables():
-    with psycopg.connect(
-        CONN_STRING
-    ) as conn:
-        with conn.cursor() as cursor:
-            create_cats_table(cursor)
-            create_visitors_table(cursor)
+    conn = psycopg2.connect(
+        host=host,
+        database="workshop",
+        user=username,
+        password=password
+    )
+    cursor = conn.cursor()
+    
+    create_cats_table(cursor)
+    create_visitors_table(cursor)
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 
 def insert_cats_to_db(cats):
-    with psycopg.connect(
-        CONN_STRING
-    ) as conn:
-        with conn.cursor() as cursor:
-            # Batch process in chunks of 1000
-            batch_size = 1000
-            for i in range(0, len(cats), batch_size):
-                batch = cats[i:i + batch_size]
-                data = []
-                for cat in batch:
-                    adopted_date = datetime.strptime(cat['adopted_date'], '%Y-%m-%d') if cat['adopted_date'] else None
-                    data.append((
-                        cat['cat_id'], cat['name'], cat['coat_color'], cat['coat_length'],
-                        cat['age'], cat['archetype'], cat['status'],
-                        datetime.strptime(cat['admitted_date'], '%Y-%m-%d'),
-                        adopted_date,
-                        datetime.strptime(cat['last_checkup_time'], '%Y-%m-%d %H:%M:%S')
-                    ))
-                
-                cursor.executemany("""
-                    INSERT INTO cats (cat_id, name, coat_color, coat_length, age, archetype, status, admitted_date, adopted_date, last_checkup_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, data)
-                print(f"Inserted batch {i//batch_size + 1}/{(len(cats)-1)//batch_size + 1}")
+    conn = psycopg2.connect(
+        host=host,
+        port=5432,
+        database="workshop",
+        user=username,
+        password=password
+    )
+    cursor = conn.cursor()
+    
+    data = []
+    for cat in cats:
+        adopted_date = datetime.strptime(cat['adopted_date'], '%Y-%m-%d') if cat['adopted_date'] else None
+        data.append((
+            cat['cat_id'], cat['name'], cat['coat_color'], cat['coat_length'],
+            cat['age'], cat['archetype'], cat['status'],
+            datetime.strptime(cat['admitted_date'], '%Y-%m-%d'),
+            adopted_date,
+            datetime.strptime(cat['last_checkup_time'], '%Y-%m-%d %H:%M:%S')
+        ))
+    
+    cursor.executemany("""
+        INSERT INTO cats (cat_id, name, coat_color, coat_length, age, archetype, status, admitted_date, adopted_date, last_checkup_time)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, data)
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 def insert_visitors_to_db(visitors):
-    with psycopg.connect(
-        CONN_STRING
-    ) as conn:
-        with conn.cursor() as cursor:
-            data = [(v['visitor_id'], v['name'], v['archetype'], datetime.strptime(v['first_visit_date'], '%Y-%m-%d')) for v in visitors]
-            
-            cursor.executemany("""
-                INSERT INTO visitors (visitor_id, name, archetype, first_visit_date)
-                VALUES (%s, %s, %s, %s)
-            """, data)
+    conn = psycopg2.connect(
+        host=host,
+        port=5432,
+        database="workshop",
+        user=username,
+        password=password
+    )
+    cursor = conn.cursor()
+    
+    data = [(v['visitor_id'], v['name'], v['archetype'], datetime.strptime(v['first_visit_date'], '%Y-%m-%d')) for v in visitors]
+    
+    cursor.executemany("""
+        INSERT INTO visitors (visitor_id, name, archetype, first_visit_date)
+        VALUES (%s, %s, %s, %s)
+    """, data)
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 if __name__ == '__main__':
     cats = generate_cats()

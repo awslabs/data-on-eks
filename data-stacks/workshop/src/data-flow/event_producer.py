@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 # from threading import Thread
 # from http.server import HTTPServer, BaseHTTPRequestHandler
 
-import psycopg
+import psycopg2
 from kafka import KafkaProducer
 
 
@@ -102,10 +102,10 @@ class CatCafeSimulator:
     def _init_database(self):
         """Initialize PostgreSQL connection"""
         try:
-            self.db_conn = psycopg.connect(
+            self.db_conn = psycopg2.connect(
                 host=self.config.DB_HOST,
                 port=self.config.DB_PORT,
-                dbname=self.config.DB_NAME,
+                database=self.config.DB_NAME,
                 user=self.config.DB_USER,
                 password=self.config.DB_PASSWORD
             )
@@ -134,31 +134,33 @@ class CatCafeSimulator:
     
     def _refresh_cache(self):
         """Refresh in-memory cache from database"""
-        with self.db_conn.cursor() as cursor:
-            # Load available cats
-            cursor.execute("""
-                SELECT cat_id, name, coat_color, coat_length, age, archetype, status
-                FROM cats 
-                WHERE status = 'available'
-            """)
-            self.available_cats = [
-                {
-                    'cat_id': row[0], 'name': row[1], 'coat_color': row[2],
-                    'coat_length': row[3], 'age': row[4], 'archetype': row[5], 'status': row[6]
-                }
-                for row in cursor.fetchall()
-            ]
-            
-            # Load visitor personas
-            cursor.execute("""
-                SELECT visitor_id, name, archetype
-                FROM visitors
-            """)
-            self.visitor_personas = [
-                {'visitor_id': row[0], 'name': row[1], 'archetype': row[2]}
-                for row in cursor.fetchall()
-            ]
+        cursor = self.db_conn.cursor()
         
+        # Load available cats
+        cursor.execute("""
+            SELECT cat_id, name, coat_color, coat_length, age, archetype, status
+            FROM cats 
+            WHERE status = 'available'
+        """)
+        self.available_cats = [
+            {
+                'cat_id': row[0], 'name': row[1], 'coat_color': row[2],
+                'coat_length': row[3], 'age': row[4], 'archetype': row[5], 'status': row[6]
+            }
+            for row in cursor.fetchall()
+        ]
+        
+        # Load visitor personas
+        cursor.execute("""
+            SELECT visitor_id, name, archetype
+            FROM visitors
+        """)
+        self.visitor_personas = [
+            {'visitor_id': row[0], 'name': row[1], 'archetype': row[2]}
+            for row in cursor.fetchall()
+        ]
+        
+        cursor.close()
         self.logger.info(f"Cache refreshed: {len(self.available_cats)} available cats, {len(self.visitor_personas)} visitor personas")
     
     def run(self):
@@ -420,16 +422,16 @@ class CatCafeSimulator:
         
         # Base values
         heart_rate = random.randint(80, 120)
-        hours_since_last_drink = random.uniform(0.5, 3.9)
+        hours_since_last_drink = random.uniform(0.5, 3.0)
         
         # Archetype-specific behavior
         if archetype == 'sleepy_senior':
             activity_level = random.uniform(1.0, 3.0)  # Consistently low
             
-            # 0.002% chance for dehydration alert
-            if random.random() < 0.0002:
-                hours_since_last_drink = random.uniform(4.0, 6.0)
-                self.logger.info(f"Triggering dehydration alert for {cat['name']}")
+            # 5% chance for dehydration alert
+            # if random.random() < 0.05:
+            #     hours_since_last_drink = random.uniform(4.0, 6.0)
+            #     self.logger.info(f"Triggering dehydration alert for {cat['name']}")
                 
         elif archetype == 'social_kitten':
             activity_level = random.uniform(7.0, 10.0)  # Consistently high
@@ -437,10 +439,10 @@ class CatCafeSimulator:
         elif archetype == 'shy':
             activity_level = random.uniform(2.0, 6.0)  # Normal range
             
-            # 0.002% chance for stress alert (very low activity)
-            if random.random() < 0.0002:
-                activity_level = random.uniform(0.1, 0.9)
-                self.logger.info(f"Triggering stress alert for {cat['name']}")
+            # 3% chance for stress alert (very low activity)
+            # if random.random() < 0.03:
+            #     activity_level = random.uniform(0.1, 0.9)
+            #     self.logger.info(f"Triggering stress alert for {cat['name']}")
                 
         else:  # standard
             activity_level = random.uniform(3.0, 7.0)  # Normal range

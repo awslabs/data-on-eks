@@ -2,6 +2,9 @@ import os
 import re
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment, EnvironmentSettings
+from pyflink.table.expressions import col
+from models import CatInteraction, CafeOrders, CatWellness, CatLocation, VisitorCheckIn, SCHEMA_MAP, schema_to_flink_ddl
+import os
 
 # ==============================================================================
 #  1. Configuration
@@ -15,55 +18,34 @@ GLUE_DATABASE_NAME = 'data_on_eks'
 #  2. Schema Definitions
 # ==============================================================================
 
-SCHEMA_DEFINITIONS = {
-    'cat_interactions': {
-        'topic': 'cat-interactions',
-        'is_partitioned': True,
-        'ddl': """
-            `event_time` STRING,
-            `cat_id` STRING,
-            `visitor_id` STRING,
-            `interaction_type` STRING
-        """
-    },
-    'visitor_checkins': {
-        'topic': 'visitor-checkins',
-        'is_partitioned': False,
-        'ddl': """
-            `visitor_id` STRING,
-            `event_time` STRING
-        """
-    },
-    'cafe_orders': {
-        'topic': 'cafe-orders',
-        'is_partitioned': False,
-        'ddl': """
-            `event_time` STRING,
-            `order_id` STRING,
-            `visitor_id` STRING,
-            `items` ARRAY<STRING>,
-            `total_amount` DECIMAL(10, 2)
-        """
-    },
-    'cat_wellness': {
-        'topic': 'cat-wellness-iot',
-        'is_partitioned': True,
-        'ddl': """
-            `event_time` STRING,
-            `cat_id` STRING,
-            `activity_level` DOUBLE,
-            `heart_rate` INT,
-            `hours_since_last_drink` DOUBLE
-        """
-    },
-    'cat_locations': {
-        'topic': 'cat-locations',
-        'is_partitioned': False,
-        'ddl': """
-            `event_time` STRING,
-            `cat_id` STRING,
-            `location` STRING
-        """
+# Generate table configurations from models
+def create_tables_config():
+    config = {
+        'cat_interactions': {
+            'topic': 'cat-interactions',
+            'model': SCHEMA_MAP["cat_interactions"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_interactions"]["flink_schema"])
+        },
+        'visitor_checkins': {
+            'topic': 'visitor-checkins',
+            'model': SCHEMA_MAP["visitor_checkins"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["visitor_checkins"]["flink_schema"])
+        },
+        'cafe_orders': {
+            'topic': 'cafe-orders',
+            'model': SCHEMA_MAP["cafe_orders"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["cafe_orders"]["flink_schema"])
+        },
+        'cat_wellness': {
+            'topic': 'cat-wellness-iot',
+            'model': SCHEMA_MAP["cat_wellness"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_wellness"]["flink_schema"])
+        },
+        'cat_locations': {
+            'topic': 'cat-locations',
+            'model': SCHEMA_MAP["cat_locations"]["class"],
+            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_locations"]["flink_schema"])
+        }
     }
 }
 
