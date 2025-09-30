@@ -218,7 +218,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "apache-flink", specifier = ">=2.1.0" },
+    { name = "apache-flink", specifier = "==2.1.0" },
     { name = "boto3", specifier = ">=1.40.32" },
     { name = "faker", specifier = ">=37.8.0" },
     { name = "kafka-python", specifier = ">=2.2.15" },
