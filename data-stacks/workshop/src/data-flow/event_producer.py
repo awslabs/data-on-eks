@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 # from threading import Thread
 # from http.server import HTTPServer, BaseHTTPRequestHandler
 
-import psycopg2
+import psycopg
 from kafka import KafkaProducer
 
 
@@ -102,10 +102,10 @@ class CatCafeSimulator:
     def _init_database(self):
         """Initialize PostgreSQL connection"""
         try:
-            self.db_conn = psycopg2.connect(
+            self.db_conn = psycopg.connect(
                 host=self.config.DB_HOST,
                 port=self.config.DB_PORT,
-                database=self.config.DB_NAME,
+                dbname=self.config.DB_NAME,
                 user=self.config.DB_USER,
                 password=self.config.DB_PASSWORD
             )
@@ -134,33 +134,31 @@ class CatCafeSimulator:
     
     def _refresh_cache(self):
         """Refresh in-memory cache from database"""
-        cursor = self.db_conn.cursor()
+        with self.db_conn.cursor() as cursor:
+            # Load available cats
+            cursor.execute("""
+                SELECT cat_id, name, coat_color, coat_length, age, archetype, status
+                FROM cats 
+                WHERE status = 'available'
+            """)
+            self.available_cats = [
+                {
+                    'cat_id': row[0], 'name': row[1], 'coat_color': row[2],
+                    'coat_length': row[3], 'age': row[4], 'archetype': row[5], 'status': row[6]
+                }
+                for row in cursor.fetchall()
+            ]
+            
+            # Load visitor personas
+            cursor.execute("""
+                SELECT visitor_id, name, archetype
+                FROM visitors
+            """)
+            self.visitor_personas = [
+                {'visitor_id': row[0], 'name': row[1], 'archetype': row[2]}
+                for row in cursor.fetchall()
+            ]
         
-        # Load available cats
-        cursor.execute("""
-            SELECT cat_id, name, coat_color, coat_length, age, archetype, status
-            FROM cats 
-            WHERE status = 'available'
-        """)
-        self.available_cats = [
-            {
-                'cat_id': row[0], 'name': row[1], 'coat_color': row[2],
-                'coat_length': row[3], 'age': row[4], 'archetype': row[5], 'status': row[6]
-            }
-            for row in cursor.fetchall()
-        ]
-        
-        # Load visitor personas
-        cursor.execute("""
-            SELECT visitor_id, name, archetype
-            FROM visitors
-        """)
-        self.visitor_personas = [
-            {'visitor_id': row[0], 'name': row[1], 'archetype': row[2]}
-            for row in cursor.fetchall()
-        ]
-        
-        cursor.close()
         self.logger.info(f"Cache refreshed: {len(self.available_cats)} available cats, {len(self.visitor_personas)} visitor personas")
     
     def run(self):
@@ -422,14 +420,14 @@ class CatCafeSimulator:
         
         # Base values
         heart_rate = random.randint(80, 120)
-        hours_since_last_drink = random.uniform(0.5, 4.5)
+        hours_since_last_drink = random.uniform(0.5, 3.9)
         
         # Archetype-specific behavior
         if archetype == 'sleepy_senior':
             activity_level = random.uniform(1.0, 3.0)  # Consistently low
             
-            # 5% chance for dehydration alert
-            if random.random() < 0.001:
+            # 0.002% chance for dehydration alert
+            if random.random() < 0.0002:
                 hours_since_last_drink = random.uniform(4.0, 6.0)
                 self.logger.info(f"Triggering dehydration alert for {cat['name']}")
                 
@@ -439,8 +437,8 @@ class CatCafeSimulator:
         elif archetype == 'shy':
             activity_level = random.uniform(2.0, 6.0)  # Normal range
             
-            # 3% chance for stress alert (very low activity)
-            if random.random() < 0.03:
+            # 0.002% chance for stress alert (very low activity)
+            if random.random() < 0.0002:
                 activity_level = random.uniform(0.1, 0.9)
                 self.logger.info(f"Triggering stress alert for {cat['name']}")
                 
