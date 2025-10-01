@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webui
+  namespace: workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webui
+  template:
+    metadata:
+      labels:
+        app: webui
+    spec:
+      containers:
+        - name: webui
+          image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-webui@sha256:4c6ebabd5c6e64cc5aba3ae9558c012619c19f307f9e9394f47d29e637f0316a
+          ports:
+            - containerPort: 8088
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "512Mi"
+          env:
+            - name: KAFKA_BROKERS
+              value: cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092
+            - name: DB_HOST
+              value: postgresql-0.postgresql.workshop.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webui
+  namespace: workshop
+spec:
+  selector:
+    app: webui
+  ports:
+  - port: 8088
+    targetPort: 8088
+  type: ClusterIP
