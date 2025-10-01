@@ -1,11 +1,10 @@
 import csv
 import random
 import uuid
+import os
 from datetime import datetime, timedelta
 from faker import Faker
 import psycopg
-
-fake = Faker()
 
 fake = Faker()
 
@@ -167,12 +166,12 @@ def generate_visitors():
     return visitors
 
 
-import psycopg2
-
-host = "localhost"
-port = 5432
-username = "workshop"
-password = "workshop"
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "workshop")
+DB_USER = os.getenv("DB_USER", "workshop")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "workshop")
+CONN_STRING = f"dbname='{DB_NAME}' user='{DB_USER}' host='{DB_HOST}' port='{DB_PORT}' password='{DB_PASSWORD}'"
 
 def create_cats_table(cursor):
     cursor.execute("""
@@ -201,78 +200,52 @@ def create_visitors_table(cursor):
     """)
 
 def create_tables():
-    conn = psycopg2.connect(
-        host=host,
-        database="workshop",
-        user=username,
-        password=password
-    )
-    cursor = conn.cursor()
-    
-    create_cats_table(cursor)
-    create_visitors_table(cursor)
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
+    with psycopg.connect(
+        CONN_STRING
+    ) as conn:
+        with conn.cursor() as cursor:
+            create_cats_table(cursor)
+            create_visitors_table(cursor)
 
 
 
 def insert_cats_to_db(cats):
-    conn = psycopg2.connect(
-        host=host,
-        port=5432,
-        database="workshop",
-        user=username,
-        password=password
-    )
-    cursor = conn.cursor()
-    
-    # Batch process in chunks of 1000
-    batch_size = 1000
-    for i in range(0, len(cats), batch_size):
-        batch = cats[i:i + batch_size]
-        data = []
-        for cat in batch:
-            adopted_date = datetime.strptime(cat['adopted_date'], '%Y-%m-%d') if cat['adopted_date'] else None
-            data.append((
-                cat['cat_id'], cat['name'], cat['coat_color'], cat['coat_length'],
-                cat['age'], cat['archetype'], cat['status'],
-                datetime.strptime(cat['admitted_date'], '%Y-%m-%d'),
-                adopted_date,
-                datetime.strptime(cat['last_checkup_time'], '%Y-%m-%d %H:%M:%S')
-            ))
-        
-        cursor.executemany("""
-            INSERT INTO cats (cat_id, name, coat_color, coat_length, age, archetype, status, admitted_date, adopted_date, last_checkup_time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, data)
-        conn.commit()
-        print(f"Inserted batch {i//batch_size + 1}/{(len(cats)-1)//batch_size + 1}")
-    
-    cursor.close()
-    conn.close()
+    with psycopg.connect(
+        CONN_STRING
+    ) as conn:
+        with conn.cursor() as cursor:
+            # Batch process in chunks of 1000
+            batch_size = 1000
+            for i in range(0, len(cats), batch_size):
+                batch = cats[i:i + batch_size]
+                data = []
+                for cat in batch:
+                    adopted_date = datetime.strptime(cat['adopted_date'], '%Y-%m-%d') if cat['adopted_date'] else None
+                    data.append((
+                        cat['cat_id'], cat['name'], cat['coat_color'], cat['coat_length'],
+                        cat['age'], cat['archetype'], cat['status'],
+                        datetime.strptime(cat['admitted_date'], '%Y-%m-%d'),
+                        adopted_date,
+                        datetime.strptime(cat['last_checkup_time'], '%Y-%m-%d %H:%M:%S')
+                    ))
+                
+                cursor.executemany("""
+                    INSERT INTO cats (cat_id, name, coat_color, coat_length, age, archetype, status, admitted_date, adopted_date, last_checkup_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, data)
+                print(f"Inserted batch {i//batch_size + 1}/{(len(cats)-1)//batch_size + 1}")
 
 def insert_visitors_to_db(visitors):
-    conn = psycopg2.connect(
-        host=host,
-        port=5432,
-        database="workshop",
-        user=username,
-        password=password
-    )
-    cursor = conn.cursor()
-    
-    data = [(v['visitor_id'], v['name'], v['archetype'], datetime.strptime(v['first_visit_date'], '%Y-%m-%d')) for v in visitors]
-    
-    cursor.executemany("""
-        INSERT INTO visitors (visitor_id, name, archetype, first_visit_date)
-        VALUES (%s, %s, %s, %s)
-    """, data)
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
+    with psycopg.connect(
+        CONN_STRING
+    ) as conn:
+        with conn.cursor() as cursor:
+            data = [(v['visitor_id'], v['name'], v['archetype'], datetime.strptime(v['first_visit_date'], '%Y-%m-%d')) for v in visitors]
+            
+            cursor.executemany("""
+                INSERT INTO visitors (visitor_id, name, archetype, first_visit_date)
+                VALUES (%s, %s, %s, %s)
+            """, data)
 
 if __name__ == '__main__':
     cats = generate_cats()
