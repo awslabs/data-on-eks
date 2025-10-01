@@ -17,7 +17,7 @@ singleuser:
   #   GRANT_SUDO: "yes"
   #   NOTEBOOK_ARGS: "--allow-root"
   # uid: 0
-  allowPrivilegeEscalation: true
+  # allowPrivilegeEscalation: true
   profileList:
     - display_name: Data Engineering (CPU)
       description: "PySpark Notebooks | Karpenter AutoScaling"

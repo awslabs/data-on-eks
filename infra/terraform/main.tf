@@ -137,6 +137,9 @@ provider "aws" {
 
 provider "aws" {
   region = local.region
+  default_tags {
+    tags = local.tags
+  }
 }
 
 provider "kubernetes" {
