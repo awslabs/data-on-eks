@@ -2,9 +2,6 @@ import os
 import re
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment, EnvironmentSettings
-from pyflink.table.expressions import col
-from models import CatInteraction, CafeOrders, CatWellness, CatLocation, VisitorCheckIn, SCHEMA_MAP, schema_to_flink_ddl
-import os
 
 # ==============================================================================
 #  1. Configuration
@@ -18,34 +15,55 @@ GLUE_DATABASE_NAME = 'data_on_eks'
 #  2. Schema Definitions
 # ==============================================================================
 
-# Generate table configurations from models
-def create_tables_config():
-    config = {
-        'cat_interactions': {
-            'topic': 'cat-interactions',
-            'model': SCHEMA_MAP["cat_interactions"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_interactions"]["flink_schema"])
-        },
-        'visitor_checkins': {
-            'topic': 'visitor-checkins',
-            'model': SCHEMA_MAP["visitor_checkins"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["visitor_checkins"]["flink_schema"])
-        },
-        'cafe_orders': {
-            'topic': 'cafe-orders',
-            'model': SCHEMA_MAP["cafe_orders"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cafe_orders"]["flink_schema"])
-        },
-        'cat_wellness': {
-            'topic': 'cat-wellness-iot',
-            'model': SCHEMA_MAP["cat_wellness"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_wellness"]["flink_schema"])
-        },
-        'cat_locations': {
-            'topic': 'cat-locations',
-            'model': SCHEMA_MAP["cat_locations"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_locations"]["flink_schema"])
-        }
+SCHEMA_DEFINITIONS = {
+    'cat_interactions': {
+        'topic': 'cat-interactions',
+        'is_partitioned': True,
+        'ddl': """
+            `event_time` STRING,
+            `cat_id` STRING,
+            `visitor_id` STRING,
+            `interaction_type` STRING
+        """
+    },
+    'visitor_checkins': {
+        'topic': 'visitor-checkins',
+        'is_partitioned': False,
+        'ddl': """
+            `visitor_id` STRING,
+            `event_time` STRING
+        """
+    },
+    'cafe_orders': {
+        'topic': 'cafe-orders',
+        'is_partitioned': False,
+        'ddl': """
+            `event_time` STRING,
+            `order_id` STRING,
+            `visitor_id` STRING,
+            `items` ARRAY<STRING>,
+            `total_amount` DECIMAL(10, 2)
+        """
+    },
+    'cat_wellness': {
+        'topic': 'cat-wellness-iot',
+        'is_partitioned': True,
+        'ddl': """
+            `event_time` STRING,
+            `cat_id` STRING,
+            `activity_level` DOUBLE,
+            `heart_rate` INT,
+            `hours_since_last_drink` DOUBLE
+        """
+    },
+    'cat_locations': {
+        'topic': 'cat-locations',
+        'is_partitioned': False,
+        'ddl': """
+            `event_time` STRING,
+            `cat_id` STRING,
+            `location` STRING
+        """
     }
 }
 
@@ -70,18 +88,18 @@ def create_kafka_source_table(t_env, table_name, topic_name, schema_ddl):
     """)
 
 def create_iceberg_sink_table(t_env, table_name, schema_ddl, is_partitioned):
-    """Creates a unified Iceberg sink table idempotently."""
+    """Creates a unified Iceberg sink table, ensuring a fresh schema."""
     
     final_schema = schema_ddl
     partition_clause = ""
-    target_table_name = f"{table_name}_raw"
+    fully_qualified_table_name = f"{ICEBERG_CATALOG_NAME}.{GLUE_DATABASE_NAME}.{table_name}_raw"
 
     if is_partitioned:
         final_schema = f"{schema_ddl},\n            `event_date` DATE"
         partition_clause = "PARTITIONED BY (event_date)"
     
     t_env.execute_sql(f"""
-        CREATE TABLE IF NOT EXISTS {target_table_name} (
+        CREATE TABLE IF NOT EXISTS {fully_qualified_table_name} (
             {final_schema}
         ) {partition_clause}
     """)
@@ -137,7 +155,7 @@ def main():
         insert_sql = ""
         if is_partitioned:
             sink_fields = source_fields + ['event_date']
-            select_fields = source_fields + ["CAST(TO_TIMESTAMP_LTZ(event_time, 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z''') AS DATE)"]
+            select_fields = source_fields + ["TO_DATE(event_time)"]
             insert_sql = f"""
                 INSERT INTO {target_table_name} ({', '.join(sink_fields)})
                 SELECT {', '.join(select_fields)} FROM default_catalog.default_database.{table_name}_source
