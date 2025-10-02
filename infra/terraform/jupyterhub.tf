@@ -45,6 +45,7 @@ module "jupyterhub_single_user_pod_identity" {
     s3_readonly     = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
     s3tables_policy = aws_iam_policy.s3tables.arn
     bedrock_policy  = aws_iam_policy.bedrock[0].arn
+    glue_policy     = aws_iam_policy.glue_jupyter[0].arn
   }
 
   associations = {
@@ -68,6 +69,44 @@ resource "kubectl_manifest" "jupyterhub_service_account" {
     kubernetes_namespace.jupyterhub,
     module.jupyterhub_single_user_pod_identity
   ]
+}
+
+#---------------------------------------------------------------------
+# Example IAM policy for accessing Glue from JupyterHub
+#---------------------------------------------------------------------
+data "aws_iam_policy_document" "glue_jupyter" {
+  count = var.enable_jupyterhub ? 1 : 0
+  statement {
+    sid       = "GlueAccess"
+    effect    = "Allow"
+    resources = ["*"]
+
+    actions = [
+      "glue:GetDatabase",
+      "glue:GetDatabases",
+      "glue:CreateDatabase",
+      "glue:GetTable",
+      "glue:GetTables",
+      "glue:CreateTable",
+      "glue:UpdateTable",
+      "glue:DeleteTable",
+      "glue:GetPartition",
+      "glue:GetPartitions",
+      "glue:CreatePartition",
+      "glue:UpdatePartition",
+      "glue:DeletePartition",
+      "glue:BatchCreatePartition",
+      "glue:BatchDeletePartition",
+      "glue:BatchUpdatePartition"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "glue_jupyter" {
+  count       = var.enable_jupyterhub ? 1 : 0
+  description = "IAM role policy for Glue access from JupyterHub pods"
+  name_prefix = "${local.name}-glue-jupyter-pod-identity"
+  policy      = data.aws_iam_policy_document.glue_jupyter[0].json
 }
 
 #---------------------------------------------------------------------
