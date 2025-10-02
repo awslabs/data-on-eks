@@ -88,18 +88,18 @@ def create_kafka_source_table(t_env, table_name, topic_name, schema_ddl):
     """)
 
 def create_iceberg_sink_table(t_env, table_name, schema_ddl, is_partitioned):
-    """Creates a unified Iceberg sink table, ensuring a fresh schema."""
+    """Creates a unified Iceberg sink table idempotently."""
     
     final_schema = schema_ddl
     partition_clause = ""
-    fully_qualified_table_name = f"{ICEBERG_CATALOG_NAME}.{GLUE_DATABASE_NAME}.{table_name}_raw"
+    target_table_name = f"{table_name}_raw"
 
     if is_partitioned:
         final_schema = f"{schema_ddl},\n            `event_date` DATE"
         partition_clause = "PARTITIONED BY (event_date)"
     
     t_env.execute_sql(f"""
-        CREATE TABLE IF NOT EXISTS {fully_qualified_table_name} (
+        CREATE TABLE IF NOT EXISTS {target_table_name} (
             {final_schema}
         ) {partition_clause}
     """)
@@ -155,7 +155,7 @@ def main():
         insert_sql = ""
         if is_partitioned:
             sink_fields = source_fields + ['event_date']
-            select_fields = source_fields + ["TO_DATE(event_time)"]
+            select_fields = source_fields + ["CAST(TO_TIMESTAMP_LTZ(event_time, 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z''') AS DATE)"]
             insert_sql = f"""
                 INSERT INTO {target_table_name} ({', '.join(sink_fields)})
                 SELECT {', '.join(select_fields)} FROM default_catalog.default_database.{table_name}_source
