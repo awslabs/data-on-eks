@@ -170,7 +170,7 @@ resource "kubectl_manifest" "datahub" {
 # Glue Database for Iceberg Tables
 #---------------------------------------------------------------
 resource "aws_glue_catalog_database" "data_on_eks" {
-  name        = "data-on-eks"
+  name        = "data_on_eks"
   description = "Database for Data on EKS Iceberg tables"
 }
 
