@@ -43,6 +43,7 @@ module "jupyterhub_single_user_pod_identity" {
 
   additional_policy_arns = {
     s3_readonly     = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+    spark_jobs      = aws_iam_policy.s3_write_jupyter[0].arn
     s3tables_policy = aws_iam_policy.s3tables.arn
     bedrock_policy  = aws_iam_policy.bedrock[0].arn
     glue_policy     = aws_iam_policy.glue_jupyter[0].arn
@@ -72,8 +73,43 @@ resource "kubectl_manifest" "jupyterhub_service_account" {
 }
 
 #---------------------------------------------------------------------
+# Example IAM policy for accessing S3 Iceberg files from JupyterHub
+#---------------------------------------------------------------------
+
+data "aws_iam_policy_document" "s3_write_jupyter" {
+  count = var.enable_jupyterhub ? 1 : 0
+  
+  statement {
+    sid    = "S3Access"
+    effect = "Allow"
+    resources = [
+      module.s3_bucket.s3_bucket_arn,
+      "${module.s3_bucket.s3_bucket_arn}/*"
+    ]
+
+    actions = [
+      "s3:DeleteObject",
+      "s3:DeleteObjectVersion",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:PutObject",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "s3_write_jupyter" {
+  count       = var.enable_jupyterhub ? 1 : 0
+  name_prefix = "${local.name}-spark-jobs-jupyter"
+  path        = "/"
+  description = "IAM policy for Spark job execution from JupyterHub"
+  policy      = data.aws_iam_policy_document.s3_write_jupyter[0].json
+  tags        = local.tags
+}
+
+#---------------------------------------------------------------------
 # Example IAM policy for accessing Glue from JupyterHub
 #---------------------------------------------------------------------
+
 data "aws_iam_policy_document" "glue_jupyter" {
   count = var.enable_jupyterhub ? 1 : 0
   statement {
