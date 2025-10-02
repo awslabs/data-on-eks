@@ -1,163 +1,178 @@
+import os
+import re
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment, EnvironmentSettings
-from pyflink.table.expressions import col
-from models import CatInteraction, CafeOrders, CatWellness, CatLocation, VisitorCheckIn, SCHEMA_MAP, schema_to_flink_ddl
-import os
 
+# ==============================================================================
+#  1. Configuration
+# ==============================================================================
+KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'cluster-kafka-brokers.kafka.svc:9092')
+S3_WAREHOUSE_PATH = os.getenv('S3_WAREHOUSE_PATH', 's3a://your-bucket/iceberg-warehouse/')
+ICEBERG_CATALOG_NAME = 'workshop'
+GLUE_DATABASE_NAME = 'data_on_eks'
 
+# ==============================================================================
+#  2. Schema Definitions
+# ==============================================================================
 
-# Generate table configurations from models
-def create_tables_config():
-    config = {
-        'cat_interactions': {
-            'topic': 'cat-interactions',
-            'model': SCHEMA_MAP["cat_interactions"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_interactions"]["flink_schema"])
-        },
-        'visitor_checkins': {
-            'topic': 'visitor-checkins',
-            'model': SCHEMA_MAP["visitor_checkins"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["visitor_checkins"]["flink_schema"])
-        },
-        'cafe_orders': {
-            'topic': 'cafe-orders',
-            'model': SCHEMA_MAP["cafe_orders"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cafe_orders"]["flink_schema"])
-        },
-        'cat_wellness': {
-            'topic': 'cat-wellness-iot',
-            'model': SCHEMA_MAP["cat_wellness"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_wellness"]["flink_schema"])
-        },
-        'cat_locations': {
-            'topic': 'cat-locations',
-            'model': SCHEMA_MAP["cat_locations"]["class"],
-            "schema": schema_to_flink_ddl(SCHEMA_MAP["cat_locations"]["flink_schema"])
-        }
+SCHEMA_DEFINITIONS = {
+    'cat_interactions': {
+        'topic': 'cat-interactions',
+        'is_partitioned': True,
+        'ddl': """
+            `event_time` STRING,
+            `cat_id` STRING,
+            `visitor_id` STRING,
+            `interaction_type` STRING
+        """
+    },
+    'visitor_checkins': {
+        'topic': 'visitor-checkins',
+        'is_partitioned': False,
+        'ddl': """
+            `visitor_id` STRING,
+            `event_time` STRING
+        """
+    },
+    'cafe_orders': {
+        'topic': 'cafe-orders',
+        'is_partitioned': False,
+        'ddl': """
+            `event_time` STRING,
+            `order_id` STRING,
+            `visitor_id` STRING,
+            `items` ARRAY<STRING>,
+            `total_amount` DECIMAL(10, 2)
+        """
+    },
+    'cat_wellness': {
+        'topic': 'cat-wellness-iot',
+        'is_partitioned': True,
+        'ddl': """
+            `event_time` STRING,
+            `cat_id` STRING,
+            `activity_level` DOUBLE,
+            `heart_rate` INT,
+            `hours_since_last_drink` DOUBLE
+        """
+    },
+    'cat_locations': {
+        'topic': 'cat-locations',
+        'is_partitioned': False,
+        'ddl': """
+            `event_time` STRING,
+            `cat_id` STRING,
+            `location` STRING
+        """
     }
+}
 
-    return config
-
-def create_kafka_source_table(table_env, table_name, topic_name, schema):
-    """Create Kafka source table"""
-    kafka_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092')
-
-    ddl = f"""
-    CREATE TABLE IF NOT EXISTS {table_name}_source (
-        {schema},
-        `event_ts` TIMESTAMP(3) METADATA FROM 'timestamp',
-        WATERMARK FOR `event_ts` AS `event_ts` - INTERVAL '5' SECOND
-    ) WITH (
-        'connector' = 'kafka',
-        'topic' = '{topic_name}',
-        'properties.bootstrap.servers' = '{kafka_servers}',
-        'properties.group.id' = 'flink-workshop',
-        'scan.startup.mode' = 'latest-offset',
-        'format' = 'json'
-    )
-    """
-    table_env.execute_sql(ddl)
-
-def create_iceberg_sink_table(table_env, table_name, schema):
-    """Create Iceberg sink table"""
-    s3_warehouse = os.getenv('S3_WAREHOUSE_PATH', 's3a://your-bucket/iceberg-warehouse/')
-
-    ddl = f"""
-    CREATE TABLE IF NOT EXISTS {table_name}_raw (
-        {schema}
-    ) WITH (
-        'connector' = 'iceberg',
-        'catalog-name' = 'workshop',
-        'catalog-type' = 'hadoop',
-        'warehouse' = '{s3_warehouse}',
-        'format-version' = '2'
-    )
-    """
-    table_env.execute_sql(ddl)
-
-def create_debug_table(table_env, table_name, schema):
-    """Create debug print table if enabled"""
-    ddl = f"""
-    CREATE TABLE IF NOT EXISTS {table_name}_debug (
-        {schema}
-    ) WITH (
-        'connector' = 'print',
-        'print-identifier' = 'DEBUG-{table_name}'
-    )
-    """
-    table_env.execute_sql(ddl)
-
-def main():
-
-    TABLES_CONFIG = create_tables_config()
-
-    env = StreamExecutionEnvironment.get_execution_environment()
-    env.set_parallelism(2)
-    env.enable_checkpointing(120000)  # 2 minutes
-
-    settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
-    table_env = StreamTableEnvironment.create(env, settings)
-
-    # Register Iceberg catalog with Glue
-    s3_warehouse = os.getenv('S3_WAREHOUSE_PATH', 's3a://your-bucket/iceberg-warehouse/')
-    table_env.execute_sql(f"""
-        CREATE CATALOG workshop WITH (
-            'type' = 'iceberg',
-            'warehouse' = '{s3_warehouse}',
-            'catalog-impl'='org.apache.iceberg.aws.glue.GlueCatalog',
-            'io-impl' = 'org.apache.iceberg.aws.s3.S3FileIO',
-            'glue.database' = 'data-on-eks'
+# ==============================================================================
+#  3. Helper Functions for Creating Tables
+# ==============================================================================
+def create_kafka_source_table(t_env, table_name, topic_name, schema_ddl):
+    """Creates a unified Kafka source table in the default catalog."""
+    t_env.execute_sql(f"""
+        CREATE TABLE IF NOT EXISTS {table_name}_source (
+            {schema_ddl},
+            `event_ts` TIMESTAMP(3) METADATA FROM 'timestamp',
+            WATERMARK FOR `event_ts` AS `event_ts` - INTERVAL '5' SECOND
+        ) WITH (
+            'connector' = 'kafka',
+            'topic' = '{topic_name}',
+            'properties.bootstrap.servers' = '{KAFKA_BOOTSTRAP_SERVERS}',
+            'properties.group.id' = 'flink-raw-ingestion',
+            'scan.startup.mode' = 'latest-offset',
+            'format' = 'json'
         )
     """)
 
-    debug_enabled = os.getenv('WORKSHOP_DEBUG', 'false').lower() == 'true'
-    print(f"Debug mode: {'enabled' if debug_enabled else 'disabled'}")
+def create_iceberg_sink_table(t_env, table_name, schema_ddl, is_partitioned):
+    """Creates a unified Iceberg sink table, ensuring a fresh schema."""
+    
+    final_schema = schema_ddl
+    partition_clause = ""
+    fully_qualified_table_name = f"{ICEBERG_CATALOG_NAME}.{GLUE_DATABASE_NAME}.{table_name}_raw"
 
-    # Create statement set for batch execution
-    statement_set = table_env.create_statement_set()
+    if is_partitioned:
+        final_schema = f"{schema_ddl},\n            `event_date` DATE"
+        partition_clause = "PARTITIONED BY (event_date)"
+    
+    t_env.execute_sql(f"""
+        CREATE TABLE IF NOT EXISTS {fully_qualified_table_name} (
+            {final_schema}
+        ) {partition_clause}
+    """)
 
-    # Process all tables
-    for table_name, config in TABLES_CONFIG.items():
-        print(f"Setting up {table_name}...")
+# ==============================================================================
+#  4. Main Flink Job Logic
+# ==============================================================================
+def main():
+    print("Starting Flink Raw Ingestion Job...")
+    
+    env = StreamExecutionEnvironment.get_execution_environment()
+    env.set_parallelism(2)
+    env.enable_checkpointing(120000)
+    settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
+    t_env = StreamTableEnvironment.create(env, settings)
 
-        # Create source and sink tables
-        create_kafka_source_table(table_env, table_name, config['topic'], config['schema'])
-        create_iceberg_sink_table(table_env, table_name, config['schema'])
+    # --- Step 1: Create all temporary Kafka source tables in the default catalog. ---
+    print("--- Creating Kafka source tables in default catalog ---")
+    for table_name, config in SCHEMA_DEFINITIONS.items():
+        create_kafka_source_table(t_env, table_name, config['topic'], config['ddl'])
+    print("--- Kafka source tables created successfully ---\n")
 
-        # Create debug table if enabled
-        if debug_enabled:
-            create_debug_table(table_env, table_name, config['schema'])
+    # --- Step 2: Register the persistent Iceberg catalog. ---
+    t_env.execute_sql(f"""
+        CREATE CATALOG {ICEBERG_CATALOG_NAME} WITH (
+            'type' = 'iceberg',
+            'warehouse' = '{S3_WAREHOUSE_PATH}',
+            'catalog-impl' = 'org.apache.iceberg.aws.glue.GlueCatalog',
+            'io-impl' = 'org.apache.iceberg.aws.s3.S3FileIO'
+        )
+    """)
+    
+    # --- Step 3: Create all permanent Iceberg sink tables in the new catalog. ---
+    print("--- Creating Iceberg sink tables in workshop catalog ---")
+    for table_name, config in SCHEMA_DEFINITIONS.items():
+        create_iceberg_sink_table(t_env, table_name, config['ddl'], config['is_partitioned'])
+    print("--- Iceberg sink tables created successfully ---\n")
 
-        # Get field names from schema
-        schema_dict = SCHEMA_MAP[table_name]["flink_schema"]
-        field_names = list(schema_dict.keys())
+    # --- Step 4: Build and submit the INSERT statements. ---
+    statement_set = t_env.create_statement_set()
 
-        # Create INSERT statement for Iceberg sink
-        insert_sql = f"""
-        INSERT INTO {table_name}_raw
-        SELECT {', '.join(field_names)}
-        FROM {table_name}_source
-        """
-
-        statement_set.add_insert_sql(insert_sql)
-        print(f"Added {table_name} to Iceberg sink")
-
-        # Add debug insert if enabled
-        if debug_enabled:
-            debug_sql = f"""
-            INSERT INTO {table_name}_debug
-            SELECT {', '.join(field_names)}
-            FROM {table_name}_source
+    for table_name, config in SCHEMA_DEFINITIONS.items():
+        print(f"--- Setting up pipeline for '{table_name}' ---")
+        
+        schema_ddl = config['ddl']
+        is_partitioned = config['is_partitioned']
+            
+        field_pattern = r'`([^`]+)`'
+        source_fields = re.findall(field_pattern, schema_ddl)
+        
+        target_table_name = f"{ICEBERG_CATALOG_NAME}.{GLUE_DATABASE_NAME}.{table_name}_raw"
+        
+        insert_sql = ""
+        if is_partitioned:
+            sink_fields = source_fields + ['event_date']
+            select_fields = source_fields + ["TO_DATE(event_time)"]
+            insert_sql = f"""
+                INSERT INTO {target_table_name} ({', '.join(sink_fields)})
+                SELECT {', '.join(select_fields)} FROM default_catalog.default_database.{table_name}_source
             """
-            statement_set.add_insert_sql(debug_sql)
-            print(f"Added {table_name} to debug output")
+        else:
+            insert_sql = f"""
+                INSERT INTO {target_table_name} ({', '.join(source_fields)})
+                SELECT {', '.join(source_fields)} FROM default_catalog.default_database.{table_name}_source
+            """
+        
+        print(f"{insert_sql}")
+        statement_set.add_insert_sql(insert_sql)
+        print(f"  > INSERT statement added to job.")
 
-    print("=== STARTING EXECUTION ===")
-    print(f"Processing {len(TABLES_CONFIG)} tables: {', '.join(TABLES_CONFIG.keys())}")
-
-    # Execute all statements
-    result = statement_set.execute()
-    print("Flink job started successfully - check TaskManager logs for data processing")
+    print("\n=== EXECUTING FLINK JOB ===")
+    statement_set.execute()
+    print("Job submitted successfully.")
 
 if __name__ == '__main__':
     main()
