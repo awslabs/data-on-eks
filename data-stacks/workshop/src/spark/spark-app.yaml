@@ -1,0 +1,61 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: batch-ingestion-postgres-to-iceberg
+  namespace: spark-team-a
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  mainApplicationFile: s3a://your-workshop-bucket/scripts/batch_ingestion.py
+  sparkVersion: "3.4.0" 
+  deps:
+    packages:
+      - "org.postgresql:postgresql:42.6.0"
+
+  driver:
+    cores: 1
+    memory: "1048m"
+    serviceAccount: spark-team-a
+    envFrom:
+      - secretRef:
+          name: postgres-credentials
+    env:
+      - name: DB_URL
+        valueFrom:
+          configMapKeyRef:
+            name: spark-job-config
+            key: DB_URL
+      - name: S3_WAREHOUSE_PATH
+        valueFrom:
+          configMapKeyRef:
+            name: spark-job-config
+            key: S3_WAREHOUSE_PATH
+  executor:
+    cores: 1
+    instances: 2
+    memory: "2048m"
+    labels:
+      version: 3.4.1
+    envFrom:
+      - secretRef:
+          name: postgres-credentials
+    env:
+      - name: DB_URL
+        valueFrom:
+          configMapKeyRef:
+            name: spark-job-config
+            key: DB_URL
+      - name: S3_WAREHOUSE_PATH
+        valueFrom:
+          configMapKeyRef:
+            name: spark-job-config
+            key: S3_WAREHOUSE_PATH
+  sparkConf:
+    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+    "spark.sql.catalog.workshop": "org.apache.iceberg.spark.SparkCatalog"
+    "spark.sql.catalog.workshop.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
+    "spark.sql.catalog.workshop.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
+    # Hadoop/S3A configurations for connecting to S3
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
