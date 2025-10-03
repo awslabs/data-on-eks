@@ -1,13 +1,13 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: trino-sql-karpenter
+  name: trino-karpenter
   namespace: karpenter
 spec:
   template:
     metadata:
       labels:
-        NodePool: trino-sql-karpenter
+        NodePool: trino-karpenter
         node.kubernetes.io/workload-type: trino-worker
         node.kubernetes.io/instance-category: memory
         node.kubernetes.io/arch: arm64
@@ -16,7 +16,7 @@ spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: trino-nodeclass
+        name: default
 
       requirements:
         # Capacity type - prefer spot for cost optimization
@@ -29,24 +29,14 @@ spec:
           operator: In
           values: ["arm64"]
 
-        # Instance categories - memory optimized for Trino
-        - key: karpenter.k8s.aws/instance-category
-          operator: In
-          values: ["r"]
-
         # Instance families - ARM64 memory families
         - key: karpenter.k8s.aws/instance-family
           operator: In
           values: ["r6g", "r7g", "r8g"]
 
-        # Instance sizes - workers need more resources
-        - key: karpenter.k8s.aws/instance-size
-          operator: In
-          values: ["2xlarge", "4xlarge"]
-
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
-    consolidateAfter: "60s"
+    consolidateAfter: "180s"
 
   limits:
     cpu: "1000"

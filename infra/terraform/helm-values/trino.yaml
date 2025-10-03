@@ -48,7 +48,7 @@ coordinator:
   annotations:
     karpenter.sh/do-not-disrupt: "true"
   nodeSelector:
-    NodePool: trino-control-karpenter
+    NodePool: trino-karpenter
     karpenter.sh/capacity-type: on-demand
   topologySpreadConstraints:
     - maxSkew: 1
@@ -74,13 +74,13 @@ worker:
       maxMemoryPerNode: "6GB"
   resources:
     requests:
-      cpu: "3000m"
-      memory: 14Gi
+      cpu: "4000m"
+      memory: 40Gi
     limits:
       cpu: "6000m"
-      memory: 14Gi
+      memory: 40Gi
   nodeSelector:
-    NodePool: trino-sql-karpenter
+    NodePool: trino-karpenter
     karpenter.sh/capacity-type: on-demand
   topologySpreadConstraints:
     - maxSkew: 1
