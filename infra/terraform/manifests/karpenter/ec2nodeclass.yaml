@@ -384,4 +384,3 @@ spec:
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
-

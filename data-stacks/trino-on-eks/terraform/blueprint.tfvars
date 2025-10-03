@@ -1,2 +1,2 @@
-name = "trino-v2"
+name   = "trino-v2"
 region = "us-west-2"

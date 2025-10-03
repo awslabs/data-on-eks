@@ -1,6 +1,6 @@
 locals {
   trino_namespace = "trino"
-  trino_sa       = "trino-sa"
+  trino_sa        = "trino-sa"
 }
 
 #---------------------------------------------------------------
@@ -164,12 +164,12 @@ resource "kubectl_manifest" "trino" {
 
   yaml_body = templatefile("${path.module}/argocd-applications/trino.yaml", {
     user_values_yaml = indent(8, yamlencode(yamldecode(templatefile("${path.module}/helm-values/trino.yaml", {
-      region              = local.region
-      trino_s3_bucket_id  = module.trino_s3_bucket.s3_bucket_id
-      exchange_bucket_id  = module.trino_exchange_bucket.s3_bucket_id
-      trino_irsa_arn      = module.trino_irsa.iam_role_arn
-      trino_sa            = local.trino_sa
-      trino_namespace     = local.trino_namespace
+      region             = local.region
+      trino_s3_bucket_id = module.trino_s3_bucket.s3_bucket_id
+      exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
+      trino_irsa_arn     = module.trino_irsa.iam_role_arn
+      trino_sa           = local.trino_sa
+      trino_namespace    = local.trino_namespace
     }))))
   })
 

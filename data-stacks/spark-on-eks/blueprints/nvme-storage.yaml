@@ -129,6 +129,5 @@ spec:
     labels:
       version: 3.5.3
     nodeSelector:
-      node.kubernetes.io/workload-type: "compute-optimized-x86"
-      karpenter.k8s.aws/instance-family: "c6id"
+      node.kubernetes.io/workload-type: "nvme-storage-x86"
     # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6id.xlarge+)
