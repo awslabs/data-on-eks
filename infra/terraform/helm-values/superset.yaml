@@ -1,0 +1,71 @@
+# The official image is bugged because it's missing the postgresql client binary.
+#
+# https://github.com/apache/superset/discussions/31431
+# https://superset.apache.org/docs/installation/docker-builds/#building-your-own-production-docker-image
+image:
+  repository: public.ecr.aws/m8u6z8z4/manabu-test
+  tag: workshop-superset
+  pullPolicy: IfNotPresent
+
+# Superset node configuration
+supersetNode:
+  connections:
+    db_host: "postgresql"
+    db_port: "5432"
+    db_user: superset
+    db_name: superset
+    redis_host: "redis"
+    redis_port: "6379"
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+  resources:
+     limits:
+      memory: 1024Mi
+     requests:
+      cpu: 500m
+      memory: 512Mi
+
+extraEnvRaw:
+  - name: DB_PASS
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-secrets
+        key: password
+  - name: SUPERSET_SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-secrets
+        key: secret-key
+
+
+# Superset Celery worker configuration
+supersetWorker:
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+  resources:
+    limits:
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+  persistence:
+    enabled: true
+
+# init:
+#   loadExamples: true
+
+# We disable postgresql and redis because this chart uses bitnami postgresql and redis charts.
+# The charts and images are no longer maintained.
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+runAsUser: 1000

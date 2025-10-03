@@ -169,6 +169,12 @@ variable "enable_spark_history_server" {
   default     = false
 }
 
+variable "enable_superset" {
+  description = "Enable Apache Superset"
+  type        = bool
+  default     = false
+}
+
 variable "enable_jupyterhub" {
   default     = true
   description = "Enable Jupyter Hub"
