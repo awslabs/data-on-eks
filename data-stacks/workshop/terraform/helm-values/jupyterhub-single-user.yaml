@@ -1,0 +1,70 @@
+hub:
+  db:
+    pvc:
+      storage: 50Gi
+      storageClassName: gp3
+  authenticatePrometheus: false
+proxy:
+  https:
+    enabled: false
+    type: offload
+  service:
+    type: ClusterIP
+
+singleuser:
+  # Enabled root access for debugging purposes. Do not enable root access unless it's absolutely necessary.
+  extraEnv:
+    GRANT_SUDO: "yes"
+    NOTEBOOK_ARGS: "--allow-root"
+  uid: 0
+  allowPrivilegeEscalation: true
+  profileList:
+    - display_name: Data Engineering (CPU)
+      description: "PySpark Notebooks | Karpenter AutoScaling"
+      profile_options:
+        image:
+          display_name: "Image"
+          choices:
+            pyspark40: # Spark 4.0 with native support for aws sdk v2 (needed for pod identity)
+              display_name: "PySpark 4.0.0"
+              kubespawner_override:
+                image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-jupyter-notebook-spark4@sha256:ff5e6cc9f6b9e52f49d64b104119daaf56a9390096cba6ffa5185a77d1770725
+      kubespawner_override:
+        extra_pod_config:
+          dns_policy: ClusterFirst
+        node_selector:
+          NodeGroupType: "SparkComputeOptimized"
+          karpenter.sh/capacity-type: "on-demand"
+        cpu_guarantee: 2
+        mem_guarantee: 8G
+        cpu_limit: 4
+        mem_limit: 8G
+      cmd: null
+  serviceAccountName: ${jupyter_single_user_sa_name}
+  uid: 0
+  cloudMetadata:
+    # CAUTION: This should be set to true for almost all cases.
+    # This is set to false for s3-tables-catalog to assume the node role, because there is an issue with credentials injections through IRSA in the s3 tables catalog library.
+    blockWithIptables: false
+  extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
+    securityContext:
+        fsGroup: 100
+
+# Optimizations configured according to this doc https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+scheduling:
+  userScheduler:
+    enabled: true
+  podPriority:
+    enabled: true
+  userPlaceholder:
+    enabled: false
+    replicas: 1
+prePuller:
+  hook:
+    enabled: false
+  continuous:
+    # NOTE: if used with Karpenter, also add user-placeholders
+    enabled: false
+
+global:
+  safeToShowValues: false
