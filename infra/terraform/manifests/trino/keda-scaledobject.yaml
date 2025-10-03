@@ -1,0 +1,27 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: trino-worker-scaler
+  namespace: ${trino_namespace}
+spec:
+  scaleTargetRef:
+    name: trino-worker
+    kind: StatefulSet
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  cooldownPeriod: 300
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://kube-prometheus-kube-prome-prometheus.kube-prometheus:9090
+        metricName: trino_queued_queries
+        query: |
+          sum(trino_execution_QueryManager_QueuedQueries{job="trino-coordinator"})
+        threshold: "5"
+    - type: prometheus
+      metadata:
+        serverAddress: http://kube-prometheus-kube-prome-prometheus.kube-prometheus:9090
+        metricName: trino_running_queries
+        query: |
+          sum(trino_execution_QueryManager_RunningQueries{job="trino-coordinator"})
+        threshold: "10"
