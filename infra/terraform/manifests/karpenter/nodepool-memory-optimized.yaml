@@ -34,10 +34,10 @@ spec:
           operator: In
           values: ["r", "x"]
 
-        # Instance families - x86 memory families (gen 5+)
+        # Instance families - x86 memory families (gen 5+) including latest NVMe
         - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["r5", "r5d", "r5n", "r6a", "r6i", "r6id", "r6idn", "r6in", "r7i", "x1e", "x2iezn"]
+          values: ["r5", "r5d", "r5n", "r6a", "r6i", "r6id", "r6idn", "r6in", "r7i", "r7id", "x1e", "x2iezn"]
 
         # Instance sizes - large to very large for memory workloads
         - key: karpenter.k8s.aws/instance-size
