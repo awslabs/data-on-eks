@@ -76,6 +76,20 @@
   font-size: 3rem;
   line-height: 1;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--ifm-color-primary), var(--ifm-color-primary-dark));
+  color: white;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+[data-theme='dark'] .datastack-icon,
+[data-theme='dark'] .showcase-icon {
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
 }
 
 .datastack-content h3,
