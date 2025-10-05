@@ -147,8 +147,8 @@ jmx:
   serverPort: 9081
   exporter:
     enabled: true
-    image: bitnami/jmx-exporter:latest
-    pullPolicy: Always
+    image: bitnamisecure/jmx-exporter:latest
+    pullPolicy: IfNotPresent
     port: 5556
     configProperties: |-
       hostPort: localhost:{{- .Values.jmx.registryPort }}
