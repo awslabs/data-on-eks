@@ -623,3 +623,29 @@ code:not([class*="language-"]) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(229, 83, 75, 0.4);
 }
+
+/* Getting Started navbar item with colorful gradient rocket icon */
+.navbar-getting-started::before {
+  content: '🚀';
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 1.1em;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 4px rgba(102, 126, 234, 0.3));
+}
+
+.navbar-getting-started {
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  padding: 8px 16px !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.navbar-getting-started:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+  transform: translateY(-1px);
+}
