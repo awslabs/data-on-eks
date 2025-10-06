@@ -1,28 +1,21 @@
 /* ==========================================
-   TECH MARQUEE ANIMATION SECTION
+   TECH SHOWCASE - ICON GRID LAYOUT
    ========================================== */
 
-.marqueeContainer {
-  width: 100vw;
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
-  padding: 4rem 0;
+.techShowcase {
+  width: 100%;
+  padding: 5rem 2rem;
   background: linear-gradient(135deg,
     rgba(37, 194, 160, 0.03) 0%,
     rgba(20, 110, 180, 0.05) 25%,
     rgba(99, 102, 241, 0.04) 50%,
     rgba(16, 185, 129, 0.03) 75%,
     rgba(6, 182, 212, 0.04) 100%);
-  overflow: hidden;
   border-top: 1px solid rgba(37, 194, 160, 0.1);
   border-bottom: 1px solid rgba(37, 194, 160, 0.1);
-  box-sizing: border-box;
 }
 
-[data-theme='dark'] .marqueeContainer {
+[data-theme='dark'] .techShowcase {
   background: linear-gradient(135deg,
     rgba(37, 194, 160, 0.08) 0%,
     rgba(20, 110, 180, 0.10) 25%,
@@ -33,163 +26,261 @@
   border-bottom: 1px solid rgba(37, 194, 160, 0.2);
 }
 
-.marqueeContent {
+.showcaseHeader {
+  text-align: center;
+  margin-bottom: 4rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.showcaseTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme='dark'] .showcaseTitle {
+  background: linear-gradient(135deg, #93c5fd 0%, #a78bfa 50%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.showcaseSubtitle {
+  font-size: 1.125rem;
+  color: var(--ifm-color-content-secondary);
+  margin: 0;
+}
+
+.techGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.techCard {
   display: flex;
-  flex-direction: column;
-  gap: 3rem;
-}
-
-.marqueeRow {
-  display: flex;
-  gap: 5rem;
-  animation: marqueeScroll 50s linear infinite;
-  white-space: nowrap;
-  justify-content: center;
   align-items: center;
-}
-
-.marqueeRow[data-reverse="true"] {
-  animation-direction: reverse;
-  animation-duration: 40s;
-}
-
-@keyframes marqueeScroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.techItem {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.75rem 3.5rem;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px solid rgba(0, 0, 0, 0.05);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  min-width: 200px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
 }
 
-.techItem:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+[data-theme='dark'] .techCard {
+  background: rgba(30, 30, 30, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
-[data-theme='dark'] .techItem {
-  border: 2px solid rgba(255, 255, 255, 0.15);
+.techCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.techCard:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+[data-theme='dark'] .techCard:hover {
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.5),
-    0 10px 30px rgba(0, 0, 0, 0.3),
-    inset 0 2px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
-    0 0 40px rgba(255, 255, 255, 0.05);
+    0 0 0 3px rgba(147, 197, 253, 0.3),
+    0 0 40px rgba(147, 197, 253, 0.2);
+  border-color: rgba(147, 197, 253, 0.4);
 }
 
-[data-theme='dark'] .techItem:hover {
+.techCard:hover::before {
+  opacity: 1;
+}
+
+.iconWrapper {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.6),
-    0 15px 40px rgba(0, 0, 0, 0.4),
-    inset 0 3px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.25),
-    0 0 50px rgba(255, 255, 255, 0.1),
-    0 0 100px rgba(255, 255, 255, 0.05);
-  filter: brightness(1.25) saturate(1.4) contrast(1.15);
-  border-color: rgba(255, 255, 255, 0.3);
+    0 8px 16px rgba(0, 0, 0, 0.1),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
 }
 
+.techCard:hover .iconWrapper {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+[data-theme='dark'] .iconWrapper {
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] .techCard:hover .iconWrapper {
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    0 0 40px rgba(255, 255, 255, 0.2);
+}
+
+.iconWrapper svg {
+  width: 36px;
+  height: 36px;
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.techInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
 
 .techName {
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 1.375rem;
+  font-size: 1.125rem;
   font-weight: 700;
-  color: white;
-  letter-spacing: 0.025em;
-  text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.6),
-    0 0 15px rgba(255, 255, 255, 0.3),
-    0 1px 0 rgba(255, 255, 255, 0.4);
-  line-height: 1.2;
-  position: relative;
-  z-index: 2;
+  color: var(--ifm-heading-color);
+  margin: 0;
+  line-height: 1.3;
 }
 
-/* Pause animation on hover for better UX */
-.marqueeContainer:hover .marqueeRow {
-  animation-play-state: paused;
+.techCategory {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ifm-color-content-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.techCard:hover .techName {
+  color: #667eea;
+}
+
+[data-theme='dark'] .techCard:hover .techName {
+  color: #93c5fd;
+}
+
+.techCard:hover .techCategory {
+  opacity: 1;
+  color: #667eea;
+}
+
+[data-theme='dark'] .techCard:hover .techCategory {
+  color: #93c5fd;
 }
 
 /* Responsive Design */
-@media screen and (max-width: 1024px) {
-  .marqueeContainer {
-    padding: 3rem 0;
+@media screen and (max-width: 1200px) {
+  .techGrid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .techShowcase {
+    padding: 3rem 1.5rem;
   }
 
-  .marqueeContent {
-    gap: 2.5rem;
+  .showcaseTitle {
+    font-size: 2rem;
   }
 
-  .marqueeRow {
-    gap: 3rem;
+  .showcaseSubtitle {
+    font-size: 1rem;
   }
 
-  .techItem {
-    padding: 1rem 2rem;
+  .showcaseHeader {
+    margin-bottom: 3rem;
+  }
+
+  .techGrid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .techCard {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .iconWrapper {
+    width: 56px;
+    height: 56px;
+  }
+
+  .iconWrapper svg {
+    width: 32px;
+    height: 32px;
   }
 
   .techName {
     font-size: 1rem;
   }
-}
 
-@media screen and (max-width: 768px) {
-  .marqueeContainer {
-    padding: 2.5rem 0;
-  }
-
-  .marqueeContent {
-    gap: 2rem;
-  }
-
-  .marqueeRow {
-    gap: 2.5rem;
-  }
-
-  .techItem {
-    padding: 0.875rem 1.75rem;
-  }
-
-  .techName {
-    font-size: 0.95rem;
+  .techCategory {
+    font-size: 0.8125rem;
   }
 }
 
 @media screen and (max-width: 480px) {
-  .marqueeContainer {
-    padding: 2rem 0;
+  .techShowcase {
+    padding: 2.5rem 1rem;
   }
 
-  .marqueeContent {
-    gap: 1.5rem;
+  .showcaseTitle {
+    font-size: 1.75rem;
   }
 
-  .marqueeRow {
-    gap: 2rem;
+  .techGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
-  .techItem {
-    padding: 0.75rem 1.5rem;
+  .techCard {
+    padding: 1rem;
   }
 
-  .techName {
-    font-size: 0.875rem;
+  .iconWrapper {
+    width: 48px;
+    height: 48px;
+  }
+
+  .iconWrapper svg {
+    width: 28px;
+    height: 28px;
   }
 }
