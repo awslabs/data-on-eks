@@ -6,6 +6,7 @@ set -e
 BLUEPRINT_NAME="spark-operator"
 TERRAFORM_DIR="terraform"
 AWS_REGION="${AWS_REGION:-us-east-1}"
+KUBECONFIG_FILE="kubeconfig"
 
 # Colors for output
 RED='\033[0;31m'
@@ -37,73 +38,6 @@ check_prerequisites() {
     aws sts get-caller-identity >/dev/null 2>&1 || { print_error "AWS credentials not configured."; exit 1; }
 
     print_status "Prerequisites check passed"
-}
-
-# Deploy infrastructure
-deploy_base_infrastructure() {
-    print_status "Deploying $BLUEPRINT_NAME infrastructure..."
-
-    cd $TERRAFORM_DIR
-
-    # Initialize Terraform
-    print_status "Initializing Terraform..."
-    terraform init
-
-    # Plan and deploy VPC and EKS first
-    print_status "Planning VPC and EKS deployment..."
-    terraform plan -target=module.vpc_blueprint -target=module.eks_blueprint
-
-    print_status "Deploying VPC and EKS cluster..."
-    terraform apply -target=module.vpc_blueprint -target=module.eks_blueprint -auto-approve
-
-    # Update kubeconfig
-    print_status "Updating kubeconfig..."
-    aws eks update-kubeconfig --region $AWS_REGION --name $BLUEPRINT_NAME
-
-}
-
-# Deploy infrastructure
-deploy_addons() {
-    print_status "Deploying $BLUEPRINT_NAME ArgoCD Addons..."
-
-    # Deploy remaining resources
-    print_status "Deploying remaining resources and ArgoCD Addons..."
-    terraform apply -auto-approve
-
-    cd ..
-}
-
-# Wait for ArgoCD to be ready
-wait_for_argocd() {
-    print_status "Waiting for ArgoCD to be ready..."
-
-    kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd
-    kubectl wait --for=condition=available --timeout=300s deployment/argocd-repo-server -n argocd
-    kubectl wait --for=condition=available --timeout=300s deployment/argocd-applicationset-controller -n argocd
-
-    print_status "ArgoCD is ready"
-}
-
-# Get ArgoCD credentials
-get_argocd_credentials() {
-    print_status "Getting ArgoCD credentials..."
-
-    # Get initial admin password
-    ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
-
-    echo ""
-    echo "========================================="
-    echo "ArgoCD Access Information"
-    echo "========================================="
-    echo "Username: admin"
-    echo "Password: $ARGOCD_PASSWORD"
-    echo ""
-    echo "To access ArgoCD UI:"
-    echo "kubectl port-forward svc/argocd-server -n argocd 8081:443"
-    echo "Then open: https://localhost:8081"
-    echo "(Accept the self-signed certificate)"
-    echo "========================================="
-    echo ""
 }
 
 # Verify deployment
@@ -141,33 +75,69 @@ print_next_steps() {
     echo ""
     echo "2. Access ArgoCD UI at https://localhost:8080"
     echo "   Username: admin"
-    echo "   Password: (shown above)"
+    echo "   Password: $ARGOCD_PASSWORD"
     echo ""
     echo "3. Monitor application sync status:"
     echo "   kubectl get applications -n argocd"
     echo ""
-    echo "4. Run sample Spark job:"
-    echo "   kubectl apply -f examples/karpenter/pyspark-pi-job.yaml"
-    echo ""
-    echo "5. Monitor Spark applications:"
-    echo "   kubectl get sparkapplications -n spark-operator"
-    echo ""
-    echo "6. Clean up (when done):"
-    echo "   terraform destroy -auto-approve"
+    echo "4. Clean up (when done):"
+    echo "   ./cleaup.sh"
     echo "========================================"
+}
+
+setup_kubeconfig() {
+    print_status "Setting up kubeconfig..."
+    
+    local cluster_name
+    cluster_name=$(terraform -chdir="$TERRAFORM_DIR/_local" output -raw cluster_name)
+    
+    if [ -z "$cluster_name" ]; then
+        echo "Could not get cluster name from terraform output."
+        exit 1
+    fi
+    
+    print_status "Found cluster: $cluster_name"
+    
+    aws eks update-kubeconfig --name "$cluster_name" --region "${AWS_REGION}" --kubeconfig "$KUBECONFIG_FILE"
+    
+    print_status "Kubeconfig created at $KUBECONFIG_FILE"
 }
 
 print_status "Starting $BLUEPRINT_NAME deployment..."
 
 check_prerequisites
 
+# Generate random deployment_id if needed
+# This ID is used to identify and delete AWS resources orphaned by Kubernetes Operators.
+TFVARS_FILE="./terraform/blueprint.tfvars"
+if [ -f "$TFVARS_FILE" ]; then
+    if grep -q 'deployment_id = "abcdefg"' "$TFVARS_FILE"; then
+        print_status "Default deployment_id found. Generating a new random one."
+        RANDOM_ID=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)
+        sed -i "s/deployment_id = \"abcdefg\"/deployment_id = \"$RANDOM_ID\"/" "$TFVARS_FILE"
+        print_status "Updated deployment_id to $RANDOM_ID in $TFVARS_FILE"
+    fi
+else
+    print_warning "$TFVARS_FILE not found. Skipping deployment_id update."
+fi
+
 # Copy base infrastructure files
+print_status "Copying from the infra folder..."
 mkdir -p ./terraform/_local
 cp -r ../../infra/terraform/* ./terraform/_local/
 
 # Apply blueprint files (overwriting matching files)
-tar -C ./terraform --exclude='_local' --exclude='*.tfstate*' --exclude='.terraform' -cf - . | tar -C ./terraform/_local -xf -
+print_status "Overwriting files..."
+tar -C ./terraform --exclude='_local' --exclude='*.tfstate*' --exclude='.terraform' -cf - . | tar -C ./terraform/_local -xvf -
 
 cd terraform/_local
-source ./install.sh
+# source ./install.sh
 cp terraform.tfstate ../../terraform.tfstate.bak
+
+cd ../..
+
+setup_kubeconfig
+export KUBECONFIG=$KUBECONFIG_FILE
+ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
+
+print_next_steps

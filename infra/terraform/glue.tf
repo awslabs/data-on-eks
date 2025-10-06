@@ -31,8 +31,6 @@ resource "aws_iam_role" "glue_crawler_role" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 #---------------------------------------------------------------
@@ -105,6 +103,4 @@ resource "aws_glue_crawler" "iceberg_crawler" {
     update_behavior = "UPDATE_IN_DATABASE"
     delete_behavior = "LOG"
   }
-
-  tags = local.tags
 }

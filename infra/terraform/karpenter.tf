@@ -38,8 +38,6 @@ module "karpenter" {
     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     S3TableAccess                = aws_iam_policy.s3tables_policy.arn
   }
-
-  tags = local.tags
 }
 
 

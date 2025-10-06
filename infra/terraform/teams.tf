@@ -258,7 +258,6 @@ resource "aws_iam_policy" "spark_jobs" {
   path        = "/"
   description = "IAM policy for Spark job execution"
   policy      = data.aws_iam_policy_document.spark_jobs.json
-  tags        = local.tags
 }
 
 data "aws_iam_policy_document" "flink_jobs" {

@@ -48,7 +48,7 @@ coordinator:
   annotations:
     karpenter.sh/do-not-disrupt: "true"
   nodeSelector:
-    NodePool: trino-karpenter
+    karpenter.k8s.aws/instance-family: "r8g"
     karpenter.sh/capacity-type: on-demand
   topologySpreadConstraints:
     - maxSkew: 1
@@ -80,7 +80,7 @@ worker:
       cpu: "6000m"
       memory: 40Gi
   nodeSelector:
-    NodePool: trino-karpenter
+    karpenter.k8s.aws/instance-family: "r8g"
     karpenter.sh/capacity-type: on-demand
   topologySpreadConstraints:
     - maxSkew: 1
@@ -135,8 +135,6 @@ additionalCatalogs:
 serviceAccount:
   create: true
   name: ${trino_sa}
-  annotations:
-    eks.amazonaws.com/role-arn: ${trino_irsa_arn}
 
 ingress:
   enabled: false
