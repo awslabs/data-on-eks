@@ -91,7 +91,7 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Get Started',
+            title: 'Launch',
             items: [{ label: 'Docs', to: '/docs/introduction/intro' }],
           },
           {

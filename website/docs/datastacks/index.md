@@ -7,7 +7,7 @@ sidebar_label: Overview
 import '@site/src/css/datastack-tiles.css';
 import '@site/src/css/getting-started.css';
 import DataStacksHero from '@site/src/components/DataStacks/DataStacksHero';
-import { Cpu, Waves, GitBranch, Database, BookOpen } from 'lucide-react';
+import { Cpu, Waves, GitBranch, Database, BookOpen, Handshake } from 'lucide-react';
 
 <DataStacksHero />
 
@@ -138,6 +138,32 @@ import { Cpu, Waves, GitBranch, Database, BookOpen } from 'lucide-react';
 <div className="datastack-footer">
 <a href="/data-on-eks/docs/datastacks/workshops/" className="datastack-link">
 <span>Start Workshop</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Handshake size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>AWS Partner Solutions</h3>
+<p className="datastack-description">Partner integrations for data platforms on Amazon EKS with enterprise support.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Enterprise Support</span>
+<span className="feature-tag">Production Ready</span>
+<span className="feature-tag">AWS Partners</span>
+<span className="feature-tag">Tested Integrations</span>
+</div>
+<div className="datastack-footer">
+<a href="/data-on-eks/docs/datastacks/partners/" className="datastack-link">
+<span>Explore Partners</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
