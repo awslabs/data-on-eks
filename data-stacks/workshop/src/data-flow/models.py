@@ -44,7 +44,7 @@ VISITOR_ARCHETYPES = ['potential_adopter', 'casual_visitor', 'family', 'cat_love
 @dataclass
 class CatProfile:
     cat_id: str
-    name: str 
+    name: str
     coat_color: str # one of COAT_COLORS
     coat_length: str # one of COAT_LENGTHS
     age: int

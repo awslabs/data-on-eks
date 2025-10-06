@@ -8,7 +8,7 @@ spec:
   pythonVersion: "3"
   mode: cluster
   mainApplicationFile: s3a://your-workshop-bucket/scripts/batch_ingestion.py
-  sparkVersion: "3.4.0" 
+  sparkVersion: "3.4.0"
   deps:
     packages:
       - "org.postgresql:postgresql:42.6.0"

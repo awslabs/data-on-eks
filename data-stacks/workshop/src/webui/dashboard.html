@@ -33,7 +33,7 @@
 
         <!-- Main Content -->
         <main class="flex-1 flex overflow-hidden p-4 lg:p-6 space-x-6 max-w-7xl mx-auto w-full">
-            
+
             <!-- Left Column: Cat Roster -->
             <div class="w-1/2 lg:w-2/3 flex flex-col space-y-6 overflow-y-auto pr-2">
                 <!-- Available Cats -->
@@ -111,7 +111,7 @@
             `;
             return card;
         }
-        
+
         async function renderPage(catType, page = 1) {
             const isAvailable = catType === 'available';
             const grid = isAvailable ? availableGrid : adoptedGrid;
@@ -147,12 +147,12 @@
             renderPage('available');
             renderPage('adopted');
         }
-        
+
         function createNotificationCard(event) {
             const card = document.createElement('div');
             const timestamp = new Date().toLocaleTimeString();
             let borderColor, icon, title, message;
-            
+
             switch (event.type) {
                 case 'potential_adopter':
                     borderColor = 'border-green-400'; icon = '❤️'; title = 'Potential Adopter Alert';
@@ -230,7 +230,7 @@
             document.querySelector('.lg\\:w-1\\/3').addEventListener('click', (e) => {
                 const clickedBtn = e.target.closest('.filter-btn');
                 if (!clickedBtn) return;
-                
+
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.classList.replace('bg-blue-500', 'bg-gray-200');
                     btn.classList.replace('text-white', 'text-gray-700');

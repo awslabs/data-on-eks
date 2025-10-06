@@ -16,7 +16,7 @@ NUM_ADOPTED_CATS = 10000
 NUM_AVAILABLE_CATS = 1000
 
 """
-read from data/cat_names.txt for cat names. Use all of them by randomly picking one. 
+read from data/cat_names.txt for cat names. Use all of them by randomly picking one.
 generate: cat database entity for NUM_ADOPTED_CATS cats with status = adopted where:
     1. coat_color is random from COAT_COLORS defined above.
     1. if 'social_kitten' is selected as arch_type, the age must be between 0-12 months.
@@ -28,16 +28,16 @@ generate: cat database entity for NUM_ADOPTED_CATS cats with status = adopted wh
     1. if the adoption success roll fails according to the chance generated above, start from the start.
     1. admitted date should be sometime in 2025.
     1. adopted date should always be after admitted date
-    1. last_checkup_time is now. 
+    1. last_checkup_time is now.
     1. use uuid for cat_id
-    
 
-once cats with status=adopted are generated, 
+
+once cats with status=adopted are generated,
 generate NUM_AVAILABLE_CATS cats generate status=available with random chances
     1. coat_color is random from COAT_COLORS defined above.
     4. admitted date should be sometime in 2025.
     5. adopted date should always be after admitted date
-    6. last_checkup_time is now. 
+    6. last_checkup_time is now.
     5. use uuid for cat_id
 """
 
@@ -48,24 +48,24 @@ def load_cat_names():
 
 def calculate_adoption_rate(archetype, coat_color, age):
     rate = 0.5  # Base 50%
-    
+
     if archetype == 'social_kitten':
         rate *= 1.7  # Increase by 70%
-    
+
     if coat_color == 'black':
         rate *= 0.8  # Reduce by 20%
-    
+
     if age > 120:
         months_over = age - 120
         reduction_periods = months_over // 12
         rate *= (0.91 ** reduction_periods)  # 9% reduction per 12 months
-    
+
     return min(rate, 1.0)
 
 def generate_cats():
     cat_names = load_cat_names()
     cats = []
-    
+
     # Generate adopted cats
     while len([c for c in cats if c['status'] == 'adopted']) < NUM_ADOPTED_CATS:
         cat_id = str(uuid.uuid4())
@@ -73,25 +73,25 @@ def generate_cats():
         coat_color = random.choice(COAT_COLORS)
         coat_length = random.choice(COAT_LENGTHS)
         archetype = random.choice(ARCH_TYPES)
-        
+
         # Age constraints
         if archetype == 'social_kitten':
             age = random.randint(0, 12)
         else:
             age = random.randint(0, 240)
-        
+
         # Calculate adoption probability
         adoption_rate = calculate_adoption_rate(archetype, coat_color, age)
-        
+
         # If adoption roll fails, start over
         if random.random() >= adoption_rate:
             continue
-        
+
         # Dates
         admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
         adopted_date = fake.date_between(start_date=admitted_date, end_date=datetime(2025, 12, 31))
         last_checkup_time = datetime.now()
-        
+
         cats.append({
             'cat_id': cat_id,
             'name': name,
@@ -104,7 +104,7 @@ def generate_cats():
             'adopted_date': adopted_date.strftime('%Y-%m-%d'),
             'last_checkup_time': last_checkup_time.strftime('%Y-%m-%d %H:%M:%S')
         })
-    
+
     # Generate available cats
     for _ in range(NUM_AVAILABLE_CATS):
         cat_id = str(uuid.uuid4())
@@ -112,17 +112,17 @@ def generate_cats():
         coat_color = random.choice(COAT_COLORS)
         coat_length = random.choice(COAT_LENGTHS)
         archetype = random.choice(ARCH_TYPES)
-        
+
         # Age constraints
         if archetype == 'social_kitten':
             age = random.randint(0, 12)
         else:
             age = random.randint(0, 240)
-        
+
         # Dates
         admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
         last_checkup_time = datetime.now()
-        
+
         cats.append({
             'cat_id': cat_id,
             'name': name,
@@ -135,7 +135,7 @@ def generate_cats():
             'adopted_date': '',
             'last_checkup_time': last_checkup_time.strftime('%Y-%m-%d %H:%M:%S')
         })
-    
+
     return cats
 
 def write_csv(data, filename, fieldnames):
@@ -149,20 +149,20 @@ VISITOR_ARCHETYPES = ['potential_adopter', 'casual_visitor', 'family', 'cat_love
 
 def generate_visitors():
     visitors = []
-    
+
     for _ in range(1000):
         visitor_id = str(uuid.uuid4())
         name = fake.first_name() + " " + fake.last_name()
         archetype = random.choice(VISITOR_ARCHETYPES)
         first_visit_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
-        
+
         visitors.append({
             'visitor_id': visitor_id,
             'name': name,
             'archetype': archetype,
             'first_visit_date': first_visit_date.strftime('%Y-%m-%d')
         })
-    
+
     return visitors
 
 
@@ -228,7 +228,7 @@ def insert_cats_to_db(cats):
                         adopted_date,
                         datetime.strptime(cat['last_checkup_time'], '%Y-%m-%d %H:%M:%S')
                     ))
-                
+
                 cursor.executemany("""
                     INSERT INTO cats (cat_id, name, coat_color, coat_length, age, archetype, status, admitted_date, adopted_date, last_checkup_time)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -241,7 +241,7 @@ def insert_visitors_to_db(visitors):
     ) as conn:
         with conn.cursor() as cursor:
             data = [(v['visitor_id'], v['name'], v['archetype'], datetime.strptime(v['first_visit_date'], '%Y-%m-%d')) for v in visitors]
-            
+
             cursor.executemany("""
                 INSERT INTO visitors (visitor_id, name, archetype, first_visit_date)
                 VALUES (%s, %s, %s, %s)
@@ -250,13 +250,13 @@ def insert_visitors_to_db(visitors):
 if __name__ == '__main__':
     cats = generate_cats()
     visitors = generate_visitors()
-    
+
     # CSV generation (commented out)
     # write_csv(cats, 'data/cats.csv', ['cat_id', 'name', 'coat_color', 'coat_length', 'age', 'archetype', 'status', 'admitted_date', 'adopted_date', 'last_checkup_time'])
     # print(f"Generated {len(cats)} cats in data/cats.csv")
     # write_csv(visitors, 'data/visitors.csv', ['visitor_id', 'name', 'archetype', 'first_visit_date'])
     # print(f"Generated {len(visitors)} visitors in data/visitors.csv")
-    
+
     # Database insertion
     print("creating tables")
     create_tables()

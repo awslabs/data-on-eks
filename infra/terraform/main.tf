@@ -72,6 +72,16 @@ locals {
         }
       ]
     }
+
+    aws-mountpoint-s3-csi-driver = {
+      preserve = true
+      pod_identity_association = [
+        {
+          role_arn        = aws_iam_role.s3_csi_pod_identity_role.arn
+          service_account = "s3-csi-driver-sa"
+        }
+      ]
+    }
   }
 
   # Merge base with overrides

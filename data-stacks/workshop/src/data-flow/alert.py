@@ -55,7 +55,7 @@ def create_kafka_sink_table(t_env: StreamTableEnvironment, table_name: str, topi
     )
     """
     t_env.execute_sql(ddl)
-    
+
 def create_debug_sink(t_env: StreamTableEnvironment, table_name: str, schema_ddl: str):
     """Creates a print sink for debugging purposes."""
     ddl = f"""
@@ -74,11 +74,11 @@ def define_cat_wellness_alerts(t_env: StreamTableEnvironment, statement_set):
     This is a stateless job that filters for anomalies.
     """
     print("Defining Cat Wellness Guardian job...")
-    
+
     # 1. Define Source Table (from cat-wellness-iot topic)
     source_schema = schema_to_flink_ddl(SCHEMA_MAP["cat_wellness"]["flink_schema"])
     create_kafka_source_table(t_env, "cat_wellness", "cat-wellness-iot", source_schema)
-    
+
     # 2. Define Sink Table (to cat-health-alerts topic)
     sink_schema = """
         `alert_time` TIMESTAMP(3),
@@ -119,7 +119,7 @@ def define_cat_wellness_alerts(t_env: StreamTableEnvironment, statement_set):
         FROM cat_wellness_source
         WHERE activity_level < 0.1
     """)
-    
+
     insert_sql = """
         INSERT INTO cat_health_alerts_sink
         SELECT * FROM DehydrationAlerts
@@ -127,7 +127,7 @@ def define_cat_wellness_alerts(t_env: StreamTableEnvironment, statement_set):
         SELECT * FROM StressAlerts
     """
     statement_set.add_insert_sql(insert_sql)
-    
+
     if DEBUG_ENABLED:
         debug_insert_sql = """
             INSERT INTO cat_health_alerts_debug_sink
@@ -143,11 +143,11 @@ def define_potential_adopter_alerts(t_env: StreamTableEnvironment, statement_set
     This is a stateful job that aggregates interaction data.
     """
     print("Defining Adopter Detective job...")
-    
+
     # 1. Define Source Table (from cat-interactions topic)
     source_schema = schema_to_flink_ddl(SCHEMA_MAP["cat_interactions"]["flink_schema"])
     create_kafka_source_table(t_env, "cat_interactions", "cat-interactions", source_schema)
-    
+
     # 2. Define Sink Table (to potential-adopters topic)
     sink_schema = """
         `visitor_id` STRING,
@@ -221,7 +221,7 @@ def define_potential_adopter_alerts(t_env: StreamTableEnvironment, statement_set
         WHERE number_of_likes > 3
     """
     statement_set.add_insert_sql(insert_sql)
-    
+
     if DEBUG_ENABLED:
         debug_insert_sql = """
             INSERT INTO potential_adopters_debug_sink
@@ -244,7 +244,7 @@ def main():
 
     settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
     t_env = StreamTableEnvironment.create(env, settings)
-    
+
     # Create statement set for all jobs
     statement_set = t_env.create_statement_set()
 
