@@ -119,8 +119,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 # Attach the Iceberg policy to the raydata team's IAM role
@@ -141,6 +139,4 @@ resource "aws_glue_catalog_database" "raydata_iceberg" {
   description = "Database for storing processed Spark logs using Iceberg format"
 
   catalog_id = data.aws_caller_identity.current.account_id
-
-  tags = local.tags
 }

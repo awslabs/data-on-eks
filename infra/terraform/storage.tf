@@ -38,8 +38,6 @@ module "s3_bucket" {
       }
     }
   }
-
-  tags = local.tags
 }
 
 # Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags

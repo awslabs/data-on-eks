@@ -37,7 +37,7 @@ spec:
         # Instance families - Graviton memory families (gen 6+)
         - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["r6g", "r6gd", "r7g", "r7gd"]
+          values: ["r6g", "r6gd", "r7g", "r7gd", "r8g", "r8gd"]
 
         # Instance sizes - large to very large for memory workloads
         - key: karpenter.k8s.aws/instance-size

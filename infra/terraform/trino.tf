@@ -27,8 +27,6 @@ module "trino_s3_bucket" {
       }
     }
   }
-
-  tags = local.tags
 }
 
 module "trino_exchange_bucket" {
@@ -52,12 +50,10 @@ module "trino_exchange_bucket" {
       }
     }
   }
-
-  tags = local.tags
 }
 
 #---------------------------------------------------------------
-# IAM Policy Documents
+# IAM Policies
 #---------------------------------------------------------------
 data "aws_iam_policy_document" "trino_s3_access" {
 
@@ -116,7 +112,7 @@ data "aws_iam_policy_document" "trino_exchange_access" {
 }
 
 #---------------------------------------------------------------
-# IAM Policies
+# Pod Identity for Trino
 #---------------------------------------------------------------
 resource "aws_iam_policy" "trino_s3_policy" {
   name        = "${local.name}-trino-s3-policy"
@@ -133,28 +129,27 @@ resource "aws_iam_policy" "trino_exchange_policy" {
 }
 
 #---------------------------------------------------------------
-# IRSA for Trino
+# Pod Identity for Trino
 #---------------------------------------------------------------
-module "trino_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.52"
+module "trino_pod_identity" {
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
+  version = "~> 1.0"
 
-  role_name = "${module.eks.cluster_name}-trino"
+  name = "trino"
 
-  role_policy_arns = {
+  additional_policy_arns = {
     s3_policy       = aws_iam_policy.trino_s3_policy.arn
     exchange_policy = aws_iam_policy.trino_exchange_policy.arn
     glue_policy     = "arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess"
   }
 
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["${local.trino_namespace}:${local.trino_sa}"]
+  associations = {
+    trino = {
+      cluster_name    = module.eks.cluster_name
+      namespace       = local.trino_namespace
+      service_account = local.trino_sa
     }
   }
-
-  tags = local.tags
 }
 
 #---------------------------------------------------------------
@@ -167,7 +162,7 @@ resource "kubectl_manifest" "trino" {
       region             = local.region
       trino_s3_bucket_id = module.trino_s3_bucket.s3_bucket_id
       exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
-      trino_irsa_arn     = module.trino_irsa.iam_role_arn
+      trino_irsa_arn     = module.trino_pod_identity.iam_role_arn
       trino_sa           = local.trino_sa
       trino_namespace    = local.trino_namespace
     }))))
@@ -175,7 +170,7 @@ resource "kubectl_manifest" "trino" {
 
   depends_on = [
     helm_release.argocd,
-    module.trino_irsa,
+    module.trino_pod_identity,
     module.trino_s3_bucket,
     module.trino_exchange_bucket
   ]
@@ -215,15 +210,10 @@ resource "kubectl_manifest" "trino_keda_scaledobject" {
 #---------------------------------------------------------------
 output "trino_s3_bucket_id" {
   description = "Trino S3 data bucket ID"
-  value       = var.enable_trino ? module.trino_s3_bucket.s3_bucket_id : null
+  value       = module.trino_s3_bucket.s3_bucket_id
 }
 
 output "trino_exchange_bucket_id" {
   description = "Trino S3 exchange bucket ID"
-  value       = var.enable_trino ? module.trino_exchange_bucket.s3_bucket_id : null
-}
-
-output "trino_irsa_arn" {
-  description = "IAM Role ARN for Trino IRSA"
-  value       = var.enable_trino ? module.trino_irsa.iam_role_arn : null
+  value       = module.trino_exchange_bucket.s3_bucket_id
 }

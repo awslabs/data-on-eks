@@ -21,6 +21,12 @@ variable "tags" {
   default     = {}
 }
 
+variable "deployment_id" {
+  description = "Deployment ID unique to this stack"
+  type        = string
+  default     = "abcdefg"
+}
+
 
 #---------------------------------------------------------------
 # VPC

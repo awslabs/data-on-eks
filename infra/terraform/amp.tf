@@ -135,6 +135,4 @@ module "amp_ingest_pod_identity" {
       service_account = local.amp_ingest_service_account
     }
   }
-
-  tags = local.tags
 }

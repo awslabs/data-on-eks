@@ -4,7 +4,6 @@ locals {
 }
 
 resource "kubectl_manifest" "flink_operator" {
-  count = var.enable_flink ? 1 : 0
   yaml_body = templatefile("${path.module}/argocd-applications/flink-operator.yaml", {
     user_values_yaml = indent(10, yamlencode(local.flink_operator_values))
   })

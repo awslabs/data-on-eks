@@ -45,5 +45,4 @@ module "vpc" {
     "karpenter.sh/discovery" = var.name
   })
 
-  tags = var.tags
 }

@@ -15,9 +15,15 @@ configs:
               - /spec/resources/requests/storage
               - /metadata/creationTimestamp
               - /status
+  params:
+    "controller.sync.timeout.seconds": "300"
 
 dex:
   enabled: false
 
 notifications:
   enabled: false
+
+controller:
+  nodeSelector:
+    NodeGroupType: core

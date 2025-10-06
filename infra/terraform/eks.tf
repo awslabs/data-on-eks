@@ -8,6 +8,12 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.33"
 
+  depends_on = [
+    aws_iam_role_policy_attachment.ebs_csi_pod_identity_policy,
+    aws_iam_role_policy_attachment.s3_csi_pod_identity_policy,
+    aws_iam_role_policy_attachment.cloudwatch_observability_policy_attachment
+  ]
+
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
 
@@ -94,27 +100,12 @@ module "eks" {
 
   # Merge the default node groups with user-provided node groups
   eks_managed_node_groups = merge(local.default_node_groups, var.managed_node_groups)
-
-  tags = var.tags
 }
 
 
 #---------------------------------------------------------------
 # GP3 Encrypted Storage Class
 #---------------------------------------------------------------
-resource "kubernetes_annotations" "gp3_default" {
-  annotations = {
-    "storageclass.kubernetes.io/is-default-class" : "true"
-  }
-  api_version = "storage.k8s.io/v1"
-  kind        = "StorageClass"
-  metadata {
-    name = "gp3"
-  }
-  force = true
-
-  depends_on = [module.eks, kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class]
-}
 
 resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   metadata {
@@ -132,6 +123,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
     fsType    = "xfs"
     encrypted = true
     type      = "gp3"
+    tagSpecification_1 = "DeploymentId=${var.deployment_id}"
   }
 }
 
@@ -222,8 +214,6 @@ resource "aws_iam_role" "ebs_csi_pod_identity_role" {
       }
     ]
   })
-
-  tags = var.tags
 }
 
 # Attach EBS CSI policy to the role
@@ -253,8 +243,6 @@ resource "aws_iam_role" "s3_csi_pod_identity_role" {
       }
     ]
   })
-
-  tags = var.tags
 }
 
 # Attach S3 CSI policy to the role
@@ -303,6 +291,4 @@ resource "aws_iam_policy" "s3_csi_access_policy" {
       }
     ]
   })
-
-  tags = var.tags
 }
