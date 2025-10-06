@@ -106,7 +106,7 @@ import { Settings, BarChart3, Cpu, Zap } from 'lucide-react';
 <span className="feature-tag">2-3x Speedup</span>
 </div>
 <div className="datastack-footer">
-<a href="https://awslabs.github.io/data-on-eks/docs/benchmarks/spark-gluten-velox-benchmark" className="datastack-link">
+<a href="/data-on-eks/docs/benchmarks/spark-gluten-velox-benchmark" className="datastack-link">
 <span>View Results</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

@@ -1,5 +1,5 @@
 ---
-title: Getting Started
+title: Launch
 sidebar_position: 0
 ---
 
@@ -97,6 +97,7 @@ helm version           # Helm >= 3.0
 | Real-time event streaming | [Kafka on EKS](/data-on-eks/docs/datastacks/streaming/kafka-on-eks/) |
 | Workflow orchestration | [Airflow on EKS](/data-on-eks/docs/datastacks/orchestration/airflow-on-eks/) |
 | AWS-managed Spark | [EMR on EKS](/data-on-eks/docs/datastacks/processing/emr-on-eks/) |
+| Vector databases & AI agents | [AI for Data](/data-on-eks/docs/ai-ml/) |
 
 </div>
 </div>
