@@ -89,7 +89,7 @@ def create_kafka_source_table(t_env, table_name, topic_name, schema_ddl):
 
 def create_iceberg_sink_table(t_env, table_name, schema_ddl, is_partitioned):
     """Creates a unified Iceberg sink table idempotently."""
-    
+
     final_schema = schema_ddl
     partition_clause = ""
     target_table_name = f"{table_name}_raw"
@@ -97,7 +97,7 @@ def create_iceberg_sink_table(t_env, table_name, schema_ddl, is_partitioned):
     if is_partitioned:
         final_schema = f"{schema_ddl},\n            `event_date` DATE"
         partition_clause = "PARTITIONED BY (event_date)"
-    
+
     t_env.execute_sql(f"""
         CREATE TABLE IF NOT EXISTS {target_table_name} (
             {final_schema}
@@ -109,7 +109,7 @@ def create_iceberg_sink_table(t_env, table_name, schema_ddl, is_partitioned):
 # ==============================================================================
 def main():
     print("Starting Flink Raw Ingestion Job...")
-    
+
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(2)
     env.enable_checkpointing(120000)
@@ -131,7 +131,7 @@ def main():
             'io-impl' = 'org.apache.iceberg.aws.s3.S3FileIO'
         )
     """)
-    
+
     # --- Step 3: Create all permanent Iceberg sink tables in the new catalog. ---
     print("--- Creating Iceberg sink tables in workshop catalog ---")
     for table_name, config in SCHEMA_DEFINITIONS.items():
@@ -143,15 +143,15 @@ def main():
 
     for table_name, config in SCHEMA_DEFINITIONS.items():
         print(f"--- Setting up pipeline for '{table_name}' ---")
-        
+
         schema_ddl = config['ddl']
         is_partitioned = config['is_partitioned']
-            
+
         field_pattern = r'`([^`]+)`'
         source_fields = re.findall(field_pattern, schema_ddl)
-        
+
         target_table_name = f"{ICEBERG_CATALOG_NAME}.{GLUE_DATABASE_NAME}.{table_name}_raw"
-        
+
         insert_sql = ""
         if is_partitioned:
             sink_fields = source_fields + ['event_date']
@@ -165,7 +165,7 @@ def main():
                 INSERT INTO {target_table_name} ({', '.join(source_fields)})
                 SELECT {', '.join(source_fields)} FROM default_catalog.default_database.{table_name}_source
             """
-        
+
         print(f"{insert_sql}")
         statement_set.add_insert_sql(insert_sql)
         print(f"  > INSERT statement added to job.")

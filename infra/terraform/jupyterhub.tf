@@ -78,7 +78,7 @@ resource "kubectl_manifest" "jupyterhub_service_account" {
 
 data "aws_iam_policy_document" "s3_write_jupyter" {
   count = var.enable_jupyterhub ? 1 : 0
-  
+
   statement {
     sid    = "S3Access"
     effect = "Allow"

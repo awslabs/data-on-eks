@@ -95,7 +95,7 @@ def consume_kafka_alerts():
     print("Kafka consumer thread started...")
     for message in consumer:
         payload_data = message.value
-        
+
         if message.topic == 'cat-health-alerts':
             cat_id = payload_data.get('cat_id')
             cat_name = "Unknown Cat"
@@ -124,12 +124,12 @@ def consume_kafka_alerts():
                             if result: visitor_name = result[0].split()[0]
                 except Exception as e:
                     print(f"Database lookup failed for visitor_id {visitor_id}: {e}")
-            
+
             payload_data['visitor_name'] = visitor_name
             payload_data['alert_message'] = f"Potential adopter detected: {visitor_name} has liked {payload_data.get('number_of_likes')} cats."
             alert_payload = json.dumps({"type": "potential_adopter", "data": payload_data})
             manager.broadcast(alert_payload)
-            
+
             if random.random() < 0.25:
                 liked_cats_str = payload_data.get('liked_cats', '')
                 if liked_cats_str:
@@ -146,7 +146,7 @@ def consume_kafka_alerts():
                                     cursor.execute("UPDATE cats SET status = 'adopted', adopted_date = NOW() WHERE cat_id = %s", (cat_to_adopt_id,))
                                     conn.commit()
                                     print(f"SUCCESS: {cat_name_to_adopt} ({cat_to_adopt_id}) has been adopted!")
-                                    
+
                                     update_payload = json.dumps({
                                         "type": "cat_status_update",
                                         "data": {"cat_id": cat_to_adopt_id, "cat_name": cat_name_to_adopt, "status": "adopted"}

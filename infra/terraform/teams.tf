@@ -213,6 +213,19 @@ data "aws_iam_policy_document" "spark_jobs" {
   }
 
   statement {
+    sid    = "S3ExpressAccess"
+    effect = "Allow"
+    resources = [
+      aws_s3_directory_bucket.spark_data_bucket_express.arn,
+      "${aws_s3_directory_bucket.spark_data_bucket_express.arn}/*"
+    ]
+
+    actions = [
+      "s3express:CreateSession"
+    ]
+  }
+
+  statement {
     sid       = "CloudWatchLogsAccess"
     effect    = "Allow"
     resources = ["arn:${data.aws_partition.current.partition}:logs:${local.region}:${local.account_id}:log-group:*"]

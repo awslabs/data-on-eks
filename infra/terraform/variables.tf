@@ -121,6 +121,7 @@ DESC
     metrics-server                  = true
     eks-node-monitoring-agent       = true
     amazon-cloudwatch-observability = true
+    aws-mountpoint-s3-csi-driver    = true
   }
 }
 
@@ -128,12 +129,6 @@ variable "managed_node_groups" {
   description = "Map of EKS managed node group definitions to create"
   type        = any
   default     = {}
-}
-
-variable "enable_mountpoint_s3_csi" {
-  description = "Enable Mountpoint S3 CSI driver"
-  type        = bool
-  default     = false
 }
 
 variable "enable_ingress_nginx" {
@@ -189,30 +184,6 @@ variable "enable_raydata" {
 
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
-  type        = bool
-  default     = false
-}
-
-variable "enable_flink" {
-  description = "Enable Flink via ArgoCD"
-  type        = bool
-  default     = false
-}
-
-variable "enable_kafka" {
-  description = "Enable Kafka via ArgoCD"
-  type        = bool
-  default     = false
-}
-
-variable "enable_trino" {
-  description = "Enable Trino via ArgoCD"
-  type        = bool
-  default     = false
-}
-
-variable "enable_trino_keda" {
-  description = "Enable KEDA autoscaling for Trino"
   type        = bool
   default     = false
 }

@@ -65,17 +65,17 @@ def main():
             .schema(cats_schema)
             .load()
         )
-        
+
         print(f"Successfully read {cats_df.count()} rows from 'cats' table.")
-        
+
         target_table_cats = f"workshop.{GLUE_DATABASE_NAME}.cats_profiles_raw"
         print(f"Writing to Iceberg table '{target_table_cats}'...")
-        
+
         (
             cats_df.writeTo(target_table_cats)
             .createOrReplace()
         )
-        
+
         print(f"Successfully created '{target_table_cats}' Iceberg table.")
 
     except Exception as e:
@@ -102,12 +102,12 @@ def main():
 
         target_table_visitors = f"workshop.{GLUE_DATABASE_NAME}.visitors_profiles_raw"
         print(f"Writing to Iceberg table '{target_table_visitors}'...")
-        
+
         (
             visitors_df.writeTo(target_table_visitors)
             .createOrReplace()
         )
-        
+
         print(f"Successfully created '{target_table_visitors}' Iceberg table.")
 
     except Exception as e:
