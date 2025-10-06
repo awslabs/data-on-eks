@@ -1,6 +1,7 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
+const path = require('path');
 const lightCodeTheme = require('prism-react-renderer').themes.github;
 const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 
@@ -12,7 +13,6 @@ const config = {
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   favicon: 'img/header-icon.png',
 
   organizationName: 'awslabs',
@@ -53,6 +53,9 @@ const config = {
 
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
   },
 
   themeConfig:
@@ -65,12 +68,11 @@ const config = {
           src: 'img/header-icon.png',
         },
         items: [
-          { type: 'doc', docId: 'getting-started', position: 'left', label: 'Getting Started', className: 'navbar-getting-started' },
-          { type: 'doc', docId: 'datastacks/index', position: 'left', label: 'Data Stacks' },
-          { type: 'doc', docId: 'benchmarks/index', position: 'left', label: 'Benchmarks' },
-          { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices' },
-          { type: 'doc', docId: 'blueprints/data-analytics/index', position: 'left', label: 'Blueprints (deprecated)' },
-          { type: 'doc', docId: 'resources/intro', position: 'left', label: 'Resources (deprecated)' },
+          { type: 'doc', docId: 'getting-started', position: 'left', label: 'Launch', className: 'navbar-getting-started' },
+          { type: 'doc', docId: 'datastacks/index', position: 'left', label: 'Data Stacks', className: 'navbar-data-stacks' },
+          { type: 'doc', docId: 'ai-ml/index', position: 'left', label: 'AI for Data', className: 'navbar-ai-data' },
+          { type: 'doc', docId: 'benchmarks/index', position: 'left', label: 'Benchmarks', className: 'navbar-benchmarks' },
+          { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices', className: 'navbar-best-practices' },
           { href: 'https://github.com/awslabs/data-on-eks', label: 'GitHub', position: 'right' },
         ],
       },
@@ -117,7 +119,22 @@ const config = {
       },
     }),
 
-    plugins: [require.resolve('docusaurus-lunr-search')],
+  plugins: [
+    require.resolve('docusaurus-lunr-search'),
+    () => ({
+      name: 'layout-elk-alias',
+      configureWebpack: () => ({
+        resolve: {
+          alias: {
+            '@mermaid-js/layout-elk': path.resolve(
+              __dirname,
+              'node_modules/@mermaid-js/layout-elk/dist/mermaid-layout-elk.core.mjs',
+            ),
+          },
+        },
+      }),
+    }),
+  ],
 };
 
 module.exports = config;
