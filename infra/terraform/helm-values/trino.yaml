@@ -1,8 +1,3 @@
-image:
-  repository: trinodb/trino
-  tag: 447
-  pullPolicy: IfNotPresent
-
 server:
   workers: 1
   exchangeManager:
@@ -107,7 +102,6 @@ additionalExchangeManagerProperties:
   - "exchange-manager.name=filesystem"
   - "exchange.base-directories=s3://${exchange_bucket_id}"
   - "exchange.s3.region=${region}"
-  - "exchange.s3.iam-role=${trino_irsa_arn}"
   - "exchange.s3.max-error-retries=10"
   - "exchange.s3.upload.part-size=64MB"
 
@@ -117,9 +111,8 @@ additionalCatalogs:
     hive.metastore=glue
     hive.metastore.glue.region=${region}
     hive.metastore.glue.default-warehouse-dir=s3://${trino_s3_bucket_id}/
-    hive.metastore.glue.iam-role=${trino_irsa_arn}
-    hive.s3.iam-role=${trino_irsa_arn}
     hive.security=allow-all
+    fs.native-s3.enabled=true
   iceberg: |-
     connector.name=iceberg
     iceberg.catalog.type=glue
@@ -128,9 +121,7 @@ additionalCatalogs:
     iceberg.register-table-procedure.enabled=true
     hive.metastore.glue.region=${region}
     hive.metastore.glue.default-warehouse-dir=s3://${trino_s3_bucket_id}/
-    hive.s3.path-style-access=true
-    hive.metastore.glue.iam-role=${trino_irsa_arn}
-    hive.s3.iam-role=${trino_irsa_arn}
+    fs.native-s3.enabled=true
 
 serviceAccount:
   create: true

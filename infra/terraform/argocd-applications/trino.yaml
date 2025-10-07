@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://trinodb.github.io/charts
     chart: trino
-    targetRevision: "0.34.0"
+    targetRevision: "1.41.0"
     helm:
       valuesObject:
         ${user_values_yaml}

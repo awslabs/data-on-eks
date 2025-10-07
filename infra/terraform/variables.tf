@@ -161,21 +161,6 @@ variable "enable_yunikorn" {
   default     = false
 }
 
-#---------------------------------------------------
-# SPARK HISTORY SERVER
-#---------------------------------------------------
-variable "enable_spark_history_server" {
-  description = "Enable Spark History Server add-on"
-  type        = bool
-  default     = false
-}
-
-variable "enable_superset" {
-  description = "Enable Apache Superset"
-  type        = bool
-  default     = false
-}
-
 variable "enable_jupyterhub" {
   default     = true
   description = "Enable Jupyter Hub"

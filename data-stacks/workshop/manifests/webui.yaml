@@ -17,7 +17,7 @@ spec:
         - name: alert-ui
           image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-webui@sha256:4c6ebabd5c6e64cc5aba3ae9558c012619c19f307f9e9394f47d29e637f0316a
           ports:
-            - containerPort: 8088
+            - containerPort: 8788
           resources:
             requests:
               cpu: "0.5"
@@ -27,6 +27,8 @@ spec:
               value: cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092
             - name: DB_HOST
               value: postgresql-0.postgresql.workshop.svc.cluster.local
+            - name: PORT
+              value: "8788"
 ---
 apiVersion: v1
 kind: Service
@@ -37,6 +39,6 @@ spec:
   selector:
     app: alert-ui
   ports:
-  - port: 8088
-    targetPort: 8088
+  - port: 8788
+    targetPort: 8788
   type: ClusterIP

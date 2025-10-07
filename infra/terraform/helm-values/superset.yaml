@@ -4,7 +4,7 @@
 # https://superset.apache.org/docs/installation/docker-builds/#building-your-own-production-docker-image
 image:
   repository: public.ecr.aws/m8u6z8z4/manabu-test
-  tag: workshop-superset
+  tag: workshop-superset@sha256:280398474d5cc673ccdad3628c4f82f63b8e93ca918ba132e43e271c32105d9e
   pullPolicy: IfNotPresent
 
 # Superset node configuration
@@ -51,10 +51,10 @@ supersetWorker:
     targetCPUUtilizationPercentage: 80
   resources:
     limits:
-      memory: 2048Mi
+      memory: 4096Mi
     requests:
       cpu: 500m
-      memory: 1024Mi
+      memory: 2048Mi
   persistence:
     enabled: true
 

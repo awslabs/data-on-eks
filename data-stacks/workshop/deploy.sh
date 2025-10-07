@@ -121,6 +121,12 @@ else
     print_warning "$TFVARS_FILE not found. Skipping deployment_id update."
 fi
 
+# Clean up _local directory before copying files
+if [ -d "./terraform/_local" ]; then
+    print_status "Cleaning up terraform/_local directory..."
+    find ./terraform/_local -mindepth 1 -maxdepth 1 -not -name '.terraform' -not -name '.terraform.lock.hcl' -not -name 'terraform.tfstate*' -exec rm -rf {} +
+fi
+
 # Copy base infrastructure files
 print_status "Copying from the infra folder..."
 mkdir -p ./terraform/_local
