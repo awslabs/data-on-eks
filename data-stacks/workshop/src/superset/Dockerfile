@@ -8,6 +8,6 @@ FROM apachesuperset.docker.scarf.sh/apache/superset:5.0.0
 
 USER root
 
-RUN . /app/.venv/bin/activate && uv pip install psycopg2-binary
+RUN . /app/.venv/bin/activate && uv pip install psycopg2-binary sqlalchemy-trino
 
 USER superset

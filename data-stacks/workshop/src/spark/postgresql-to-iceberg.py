@@ -5,7 +5,7 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 DB_URL = os.getenv('DB_URL', 'jdbc:postgresql://postgresql-0.postgresql.workshop.svc.cluster.local:5432/workshop')
 DB_USER = os.getenv('DB_USER', 'workshop')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'workshop')
-S3_WAREHOUSE_PATH = os.getenv('S3_WAREHOUSE_PATH', 's3a://data-on-eks-spark-logs-20251001184655839600000005/iceberg-warehouse/')
+S3_WAREHOUSE_PATH = os.getenv('S3_WAREHOUSE_PATH', 's3a://$S3_BUCKET/iceberg-warehouse/')
 DB_DRIVER = "org.postgresql.Driver"
 GLUE_DATABASE_NAME = "data_on_eks"
 

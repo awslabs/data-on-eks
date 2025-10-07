@@ -21,7 +21,6 @@ locals {
 # Superset Namespace
 #---------------------------------------------------------------
 resource "kubernetes_namespace" "superset" {
-  count = var.enable_superset ? 1 : 0
   metadata {
     name = local.superset_namespace
   }
@@ -31,7 +30,6 @@ resource "kubernetes_namespace" "superset" {
 # Database Secrets
 #---------------------------------------------------------------
 resource "kubernetes_secret" "superset_postgresql_secrets" {
-  count = var.enable_superset ? 1 : 0
   metadata {
     name      = "postgresql-secrets"
     namespace = local.superset_namespace
@@ -49,19 +47,19 @@ resource "kubernetes_secret" "superset_postgresql_secrets" {
 
 resource "random_password" "superset_postgres" {
   length  = 16
-  special = true
+  special = false
 }
 
 resource "random_password" "superset_secret_key" {
-  length  = 42
-  special = true
+  length  = 32
+  special = false
 }
 
 #---------------------------------------------------------------
 # Redis Deployment and Service
 #---------------------------------------------------------------
 resource "kubectl_manifest" "superset_redis" {
-  count = var.enable_superset ? length(local.superset_redis_manifests) : 0
+  count = length(local.superset_redis_manifests)
 
   yaml_body = yamlencode(local.superset_redis_manifests[count.index])
 
@@ -74,7 +72,7 @@ resource "kubectl_manifest" "superset_redis" {
 # PostgreSQL StatefulSet and Service
 #---------------------------------------------------------------
 resource "kubectl_manifest" "superset_postgresql" {
-  count = var.enable_superset ? length(local.superset_postgresql_manifests) : 0
+  count =  length(local.superset_postgresql_manifests)
 
   yaml_body = yamlencode(local.superset_postgresql_manifests[count.index])
 
@@ -88,8 +86,6 @@ resource "kubectl_manifest" "superset_postgresql" {
 # Apache Superset Application
 #---------------------------------------------------------------
 resource "kubectl_manifest" "superset" {
-  count = var.enable_superset ? 1 : 0
-
   yaml_body = templatefile("${path.module}/argocd-applications/superset.yaml", {
     user_values_yaml = indent(8, local.superset_values)
   })

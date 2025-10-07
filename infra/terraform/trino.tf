@@ -62,7 +62,9 @@ data "aws_iam_policy_document" "trino_s3_access" {
     effect = "Allow"
     resources = [
       "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}",
-      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*"
+      "arn:aws:s3:::${module.trino_s3_bucket.s3_bucket_id}/*",
+      "arn:aws:s3:::${module.s3_bucket.s3_bucket_id}/",
+      "arn:aws:s3:::${module.s3_bucket.s3_bucket_id}/*"
     ]
     actions = [
       "s3:GetObject",
@@ -95,7 +97,8 @@ data "aws_iam_policy_document" "trino_exchange_access" {
     effect = "Allow"
     resources = [
       "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}",
-      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}/*"
+      "arn:aws:s3:::${module.trino_exchange_bucket.s3_bucket_id}/*",
+
     ]
     actions = [
       "s3:GetObject",
@@ -112,7 +115,7 @@ data "aws_iam_policy_document" "trino_exchange_access" {
 }
 
 #---------------------------------------------------------------
-# Pod Identity for Trino
+# IAM policies for Trino
 #---------------------------------------------------------------
 resource "aws_iam_policy" "trino_s3_policy" {
   name        = "${local.name}-trino-s3-policy"

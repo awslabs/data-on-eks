@@ -403,10 +403,10 @@ kubectl get pods -n workshop -l app=alert-ui
 
 Port-forward to the web application:
 ```bash
-kubectl port-forward -n workshop svc/alert-ui 8088:8080
+kubectl port-forward -n workshop svc/alert-ui 8788:8788
 ```
 
-Open your browser to `http://localhost:8088`
+Open your browser to `http://localhost:8788`
 
 ![](./images/alert-webui.png)
 
@@ -424,7 +424,7 @@ You deployed and accessed the "Live Dashboard" web application that consumes ale
 **Key Takeaway:** The Flink jobs you wrote are now pushing notifications to a web browser, which can even influence the original data source. You've built a complete, interactive, end-to-end data loop.
 
 **Success Criteria:**
-- Web UI is accessible at localhost:8088
+- Web UI is accessible at localhost:8788
 - Real-time alerts appear in the Live Cafe Feed
 - Cat status updates reflect adoption events
 - Dashboard shows both health and adoption alerts
@@ -535,3 +535,15 @@ You connected to the Iceberg data lake with Spark, queried raw historical data, 
 **Module 8: BI Dashboard with Superset**
 * **Overview:** The final piece of the platform is the business intelligence dashboard for our cafe "manager." This involves connecting a BI tool like Apache Superset to our data lake to create visualizations and reports based on the clean summary tables we built.
 * **Status:** **WIP**
+
+port-forward to superset service no port 8088 in supserset ns 
+
+`postgresql-0.postgresql.workshop.svc.cluster.local`
+port 5432
+
+database: workshop
+user: worksop
+pass; worksop
+
+
+try to visualize but oh no you can't join data
