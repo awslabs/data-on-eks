@@ -131,7 +131,7 @@ print_status "Overwriting files..."
 tar -C ./terraform --exclude='_local' --exclude='*.tfstate*' --exclude='.terraform' -cf - . | tar -C ./terraform/_local -xvf -
 
 cd terraform/_local
-# source ./install.sh
+source ./install.sh
 cp terraform.tfstate ../../terraform.tfstate.bak
 
 cd ../..
