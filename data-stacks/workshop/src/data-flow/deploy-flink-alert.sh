@@ -26,7 +26,7 @@ awk '
 ' "$DEPLOYMENT_FILE" > "$OUTPUT_FILE"
 
 # Add restart timestamp and replace env vars
-sed -i '' "s/RESTART_TIMESTAMP/$(date +%s)/" "$OUTPUT_FILE"
+sed -i.bak "s/RESTART_TIMESTAMP/$(date +%s)/" "$OUTPUT_FILE" && rm "${OUTPUT_FILE}.bak"
 envsubst < "$OUTPUT_FILE" > "${OUTPUT_FILE}.tmp" && mv "${OUTPUT_FILE}.tmp" "$OUTPUT_FILE"
 
 kubectl apply -f "$OUTPUT_FILE"

@@ -92,17 +92,19 @@ def create_iceberg_sink_table(t_env, table_name, schema_ddl, is_partitioned):
 
     final_schema = schema_ddl
     partition_clause = ""
-    target_table_name = f"{table_name}_raw"
+    target_table_name = f"{ICEBERG_CATALOG_NAME}.{GLUE_DATABASE_NAME}.{table_name}_raw"
 
     if is_partitioned:
         final_schema = f"{schema_ddl},\n            `event_date` DATE"
         partition_clause = "PARTITIONED BY (event_date)"
 
-    t_env.execute_sql(f"""
+    sql = f"""
         CREATE TABLE IF NOT EXISTS {target_table_name} (
             {final_schema}
         ) {partition_clause}
-    """)
+    """
+    print(sql)
+    t_env.execute_sql(sql)
 
 # ==============================================================================
 #  4. Main Flink Job Logic

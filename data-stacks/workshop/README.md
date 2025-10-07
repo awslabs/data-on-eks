@@ -161,7 +161,8 @@ Connect to the producer pod and start the event generator script. The script wil
 # Exec into the pod
 kubectl exec -it event-producer -n workshop -- bash
 
-# Inside the pod, run the following commands:pt update && apt install -y git curl
+# Inside the pod, run the following commands: 
+apt update && apt install -y git curl
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
 
@@ -220,9 +221,7 @@ You should see a continuous stream of JSON events, confirming that the producer 
 Update the S3 bucket name in the Flink deployment files:
 
 ```bash
-# Edit the bucket name in these files to match your environment:
-# - ../../manifests/deploy-flink-raw-ingestion.yaml
-# Replace 'your-bucket-name' with your actual S3 bucket
+export S3_BUCKET=$(terraform -chdir=/home/ubuntu/data-on-eks/data-stacks/workshop/terraform/_local output -raw s3_bucket_id_spark_history_server)
 ```
 
 ### Step 2: Deploy Raw Ingestion Flink Job
@@ -265,9 +264,9 @@ Open your browser to `http://localhost:8081` to view the Flink dashboard.
 ### Step 5: Verify Data Ingestion
 
 In the Flink UI, you should see:
-- A running job named "Raw Kafka to Iceberg Ingestion"
-- Three source operators consuming from Kafka topics
-- Three sink operators writing to Iceberg tables
+- A running job named "cat-cafe-raw-ingestion"
+- Five source operators consuming from Kafka topics
+- Five sink operators writing to Iceberg tables
 
 **Check the job metrics:**
 - Records consumed from each Kafka topic
@@ -276,7 +275,7 @@ In the Flink UI, you should see:
 
 ### What You Accomplished
 
-You learned about Apache Iceberg's role as a modern data lakehouse format and deployed a Flink job that consumes from every raw Kafka topic (`visitor-checkins`, `cat-interactions`, `cat-wellness-iot`) and sinks the data into corresponding Iceberg tables on S3.
+You learned about Apache Iceberg's role as a modern data lakehouse format and deployed a Flink job that consumes from every raw Kafka topic (`visitor-checkins`, `cat-interactions`, `cat-wellness-iot`, etc) and sinks the data into corresponding Iceberg tables on S3.
 
 **Key Takeaway:** You've created an automated pipeline that transforms streaming events into queryable historical data without complex ETL processes. Every event flowing through Kafka is now permanently stored and ready for future analytics.
 
@@ -392,7 +391,7 @@ You built the brain of the real-time platform by deploying two distinct Flink SQ
 Deploy the live dashboard application:
 
 ```bash
-kubectl apply -f ../webui/manifests.yaml
+kubectl apply -f $WORKSHOPDIR/manifests/webui.yaml
 ```
 
 **Validate:** Check the web UI deployment:
@@ -459,7 +458,8 @@ Open your browser to `http://localhost:8000`
 
 Copy the dimension ingestion script to your Jupyter environment:
 ```bash
-# In your Jupyter terminal or notebook
+POD_NAME=$(kubectl get pods -n jupyterhub -l app=jupyterhub,component=singleuser-server -o jsonpath='{.items[0].metadata.name}') && kubectl cp /home/ubuntu/data-on-eks/data-stacks/workshop/src/spark/adhoc.ipynb jupyterhub/$POD_NAME:/home/jovyan/adhoc.ipynb
+
 cp /home/jovyan/data-stacks/workshop/src/spark/postgresql-to-iceberg.py .
 ```
 
@@ -491,8 +491,7 @@ You used a batch Spark job to take snapshots of the `cats` and `visitors` tables
 
 In your Jupyter environment, open the analytics notebook:
 ```bash
-# Copy the analytics notebook
-cp /home/jovyan/data-stacks/workshop/src/spark/adhoc.ipynb .
+POD_NAME=$(kubectl get pods -n jupyterhub -l app=jupyterhub,component=singleuser-server -o jsonpath='{.items[0].metadata.name}') && kubectl cp /home/ubuntu/data-on-eks/data-stacks/workshop/src/spark/adhoc.ipynb jupyterhub/$POD_NAME:/home/jovyan/adhoc.ipynb
 ```
 
 ### Step 2: Execute Analysis Queries

@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webui
+  name: alert-ui
   namespace: workshop
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: webui
+      app: alert-ui
   template:
     metadata:
       labels:
-        app: webui
+        app: alert-ui
     spec:
       containers:
-        - name: webui
+        - name: alert-ui
           image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-webui@sha256:4c6ebabd5c6e64cc5aba3ae9558c012619c19f307f9e9394f47d29e637f0316a
           ports:
             - containerPort: 8088
@@ -31,11 +31,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: webui
+  name: alert-ui
   namespace: workshop
 spec:
   selector:
-    app: webui
+    app: alert-ui
   ports:
   - port: 8088
     targetPort: 8088
