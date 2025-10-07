@@ -35,29 +35,28 @@ The platform follows a modern lakehouse architecture with both streaming and bat
                                      |   PostgreSQL    |  (Source: Cat & Visitor Profiles)
                                      |      (DB)       |
                                      +-----------------+
-                                              |
-                                              | (Profile Lookups)
-                                              v
+                                         |         |
+                              (Profile Lookups)|         | (Batch Dimension Ingestion)
+                                         v         v
       +---------------------+        +-----------------+        +----------------+
-      | Real-Time Producer  |------->|      Kafka      |<-------|   Batch Jobs   |
+      | Real-Time Producer  |------->|      Kafka      |        |   Batch Jobs   |
       | (event_producer.py) |        | (Event Broker)  |        |    (Spark)     |
       +---------------------+        +-----------------+        +----------------+
       (Generates: interactions,       (Topics: raw_events,         |         ^
-       wellness, checkins)            alerts, adopters)            |         |
-                                              |                    |         |
-      (Processes raw events)                  | (Consumes alerts)  |         |
-               |                            |                    v         |
-               v                            v              +-----------------+
+       wellness, checkins)            alerts)                      |         |
+                 |                            | (Alerts)           | (Analytics & Aggregates)
+                 | (Raw Events)               |                    v         |
+                 v                            v             +-----------------+
       +---------------------+        +-----------------+    |   Iceberg Lake  |
       |   Streaming Jobs    |------->|   Alert UI      |    |      (S3)       |
       |     (Flink)         |        |   (WebSocket)   |    +-----------------+
       +---------------------+        +-----------------+         ^        |
-      (Health monitoring,            (Live dashboard)            |        |
-       adoption detection)                                       |        v
-                                                                 |  +---------------+
-                                                                 '--| BI Dashboard  |
-                                                                    |  (Superset)   |
-                                                                    +---------------+
+      (Raw Ingestion, Health         (Consumes alerts            |        |
+       monitoring, adoption detection)   from Kafka)             |        v
+                 |                                              +---------------+
+                 '----------------------------------------------| BI Dashboard  |
+                           (Writes raw events to Lake)          |  (Superset)   |
+                                                                +---------------+
 ```
 
 ## Workshop Modules
@@ -71,13 +70,20 @@ The platform follows a modern lakehouse architecture with both streaming and bat
 Deploy the cafe's operational database containing cat and visitor profiles:
 
 ```bash
-kubectl apply -f ../../manifests/postgresql.yaml
+export WORKSHOPDIR=$(git rev-parse --show-toplevel)/data-stacks/workshop
+
+kubectl apply -f $WORKSHOPDIR/manifests/postgresql.yaml
 ```
 
 Wait for the pod to be ready:
 ```bash
 kubectl wait --for=condition=ready pod/postgresql-0 -n workshop --timeout=300s
 ```
+
+
+
+
+
 
 ### Step 2: Generate Sample Data
 
@@ -88,7 +94,7 @@ Create realistic cat and visitor data in the database:
 kubectl port-forward postgresql-0 5432:5432 -n workshop &
 
 # Generate sample data
-cd data-stacks/workshop/src/data-flow
+cd $WORKSHOPDIR/src/data-flow
 uv sync --frozen
 uv run data-generator.py
 ```
@@ -99,19 +105,28 @@ uv run data-generator.py
 kubectl exec -it postgresql-0 -n workshop -- psql -U workshop
 
 # Run these queries in psql:
-workshop=# SELECT COUNT(*) FROM cats;
-workshop=# SELECT COUNT(*) FROM visitors;
-workshop=# \q
+SELECT COUNT(*) FROM cats;
+SELECT COUNT(*) FROM visitors;
+\q
 ```
 
 You should see ~11,000 cats and ~1,000 visitors.
 
-### Step 3: Create Kafka Topics
+### Step 3: Create Kafka Resources
+
+
+The Kafka operator creates kafka clusters. apply this to make one for this workshop. 
+
+```bash
+kubectl apply -f $WORKSHOPDIR/manifests/kafka-cluster.yaml
+```
+
+GEMINI ADD VALIDATION STEPS
 
 Set up the event streaming topics:
 
 ```bash
-kubectl apply -f ../../manifests/topics.yaml
+kubectl apply -f $WORKSHOPDIR/manifests/topics.yaml
 ```
 
 **Validate:** Check topics were created:
@@ -119,29 +134,38 @@ kubectl apply -f ../../manifests/topics.yaml
 kubectl get kafkatopics -n kafka
 ```
 
+LIST TOPICS AND WHAT THEY DO GEMINI!
+
+
 ### Step 4: Start Event Generation
 
 Deploy a producer pod and start generating live events:
 
 ```bash
-kubectl apply -f data-stacks/workshop/manifests/kafka-debug-pod.yaml
+kubectl apply -f $WORKSHOPDIR/manifests/event-producer.yaml
 ```
+
+GEMINI ADD COMMAND FOR EXEC INTOT this pod
+
+
+
 
 Connect to the producer pod and start the event generator:
 ```bash
-kubectl exec -it kafka-debug-pod -n workshop -- bash
+kubectl exec -it event-producer -n workshop -- bash
 
 # Inside the pod:
+apt update && apt install git curl -f 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
-git clone https://github.com/awslabs/data-on-eks.git
+git clone https://github.com/awslabs/data-on-eks.git --depth 1 --branch v2
 cd data-on-eks/data-stacks/workshop/src/data-flow
 
 export DB_HOST=postgresql-0.postgresql.workshop.svc.cluster.local
 export KAFKA_BROKERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092
 
-uv sync
-uv run event-producer.py
+uv sync --frozen
+nohup uv run event-producer.py
 ```
 
 You should see messages like: `Sent interaction event for cat_id=1234, visitor_id=567`
@@ -151,11 +175,13 @@ You should see messages like: `Sent interaction event for cat_id=1234, visitor_i
 In a new terminal, consume events to verify they're flowing:
 
 ```bash
-kubectl exec -it kafka-debug-pod -n workshop -- \
+
+kubectl apply -f $WORKSHOPDIR/manifests/kafka-debug-pod.yaml
+
+kubectl exec -it kafka-consumer -n workshop -- \
   kafka-console-consumer \
   --bootstrap-server cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092 \
-  --topic cat-interactions \
-  --from-beginning
+  --topic cat-interactions
 ```
 
 You should see JSON events streaming in real-time.
