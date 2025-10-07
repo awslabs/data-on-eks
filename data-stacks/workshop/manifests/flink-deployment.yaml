@@ -32,7 +32,7 @@ spec:
     upgradeMode: stateless
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "2"
-    state.checkpoints.dir: s3a://data-on-eks-spark-logs-20250915164903963600000002/flink-checkpoints/
+    state.checkpoints.dir: s3a://$S3_BUCKET/flink-checkpoints/
     execution.checkpointing.interval: 120s
     execution.checkpointing.mode: EXACTLY_ONCE
 
@@ -74,7 +74,7 @@ spec:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
             - name: S3_WAREHOUSE_PATH
-              value: "s3a://data-on-eks-spark-logs-20250915164903963600000002/iceberg-warehouse/"
+              value: "s3a://$S3_BUCKET/iceberg-warehouse/"
             - name: AWS_REGION
               value: "us-west-2"
             - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
