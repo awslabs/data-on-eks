@@ -114,77 +114,91 @@ You should see ~11,000 cats and ~1,000 visitors.
 
 ### Step 3: Create Kafka Resources
 
-
-The Kafka operator creates kafka clusters. apply this to make one for this workshop. 
+First, deploy the Kafka cluster provided by the Strimzi operator.
 
 ```bash
 kubectl apply -f $WORKSHOPDIR/manifests/kafka-cluster.yaml
 ```
 
-GEMINI ADD VALIDATION STEPS
+**Validate:** Wait for the Kafka cluster to be ready. This may take a few minutes.
+```bash
+kubectl wait kafka/cluster --for=condition=Ready -n kafka --timeout=300s
+```
 
-Set up the event streaming topics:
+Next, set up the event streaming topics required for the workshop:
 
 ```bash
 kubectl apply -f $WORKSHOPDIR/manifests/topics.yaml
 ```
 
-**Validate:** Check topics were created:
+**Validate:** Check that the `KafkaTopic` resources were created successfully in the `kafka` namespace.
 ```bash
 kubectl get kafkatopics -n kafka
 ```
 
-LIST TOPICS AND WHAT THEY DO GEMINI!
+The following topics will be created:
+
+| Topic Name             | Purpose                                            |
+|------------------------|----------------------------------------------------|
+| `cat-interactions`     | Raw events of visitors interacting with cats.      |
+| `cat-wellness-iot`     | Raw IoT sensor data from cat wellness monitors.    |
+| `visitor-checkins`     | Raw events generated when a visitor checks in.     |
+| `cat-health-alerts`    | Alerts generated for cats showing health issues.   |
+| `potential-adopters`   | Alerts for visitors showing strong adoption intent.|
 
 
 ### Step 4: Start Event Generation
 
-Deploy a producer pod and start generating live events:
+Deploy a producer pod which will be used to generate live events:
 
 ```bash
 kubectl apply -f $WORKSHOPDIR/manifests/event-producer.yaml
 ```
 
-GEMINI ADD COMMAND FOR EXEC INTOT this pod
+Connect to the producer pod and start the event generator script. The script will run in the background.
 
-
-
-
-Connect to the producer pod and start the event generator:
 ```bash
+# Exec into the pod
 kubectl exec -it event-producer -n workshop -- bash
 
-# Inside the pod:
-apt update && apt install git curl -f 
+# Inside the pod, run the following commands:pt update && apt install -y git curl
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
+
+# Clone the repo and navigate to the correct directory
 git clone https://github.com/awslabs/data-on-eks.git --depth 1 --branch v2
 cd data-on-eks/data-stacks/workshop/src/data-flow
 
+# Set environment variables for the script
 export DB_HOST=postgresql-0.postgresql.workshop.svc.cluster.local
 export KAFKA_BROKERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092
 
+# Install dependencies and run the producer in the background
 uv sync --frozen
-nohup uv run event-producer.py
+nohup uv run event-producer.py &
 ```
 
-You should see messages like: `Sent interaction event for cat_id=1234, visitor_id=567`
+After running the `nohup` command, you can safely exit the pod shell. The process will continue running. You should see output like `Sent interaction event for cat_id=1234, visitor_id=567` printed to a `nohup.out` file.
 
 ### Step 5: Verify Event Streaming
 
-In a new terminal, consume events to verify they're flowing:
+To verify that events are flowing correctly, deploy a separate debug pod that contains the Kafka command-line tools:
 
 ```bash
-
 kubectl apply -f $WORKSHOPDIR/manifests/kafka-debug-pod.yaml
-
-kubectl exec -it kafka-consumer -n workshop -- \
-  kafka-console-consumer \
-  --bootstrap-server cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092 \
-  --topic cat-interactions
 ```
 
-You should see JSON events streaming in real-time.
+Once the pod is running, use it to consume messages from the `cat-interactions` topic. The `--from-beginning` flag ensures you see all messages in the topic from the start.
+
+```bash
+kubectl exec -it kafka-debug-pod -n workshop -- \
+  kafka-console-consumer \
+  --bootstrap-server cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092 \
+  --topic cat-interactions \
+  --from-beginning
+```
+
+You should see a continuous stream of JSON events, confirming that the producer is working correctly.
 
 **Success Criteria:**
 - PostgreSQL contains cat and visitor data
