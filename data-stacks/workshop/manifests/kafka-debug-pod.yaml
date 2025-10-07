@@ -2,31 +2,14 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: kafka-consumer
-  namespace: flink-team-a
+  namespace: workshop
 spec:
   containers:
   - name: kafka-consumer
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:8.0.1
     command: ["kafka-console-consumer"]
     args:
       - "--bootstrap-server=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
-      - "--topic=cat-interactions"
-      - "--from-beginning"
-  restartPolicy: Never
-
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kafka-producer
-  namespace: flink-team-a
-spec:
-  containers:
-  - name: kafka-consumer
-    image: confluentinc/cp-kafka:latest
-    command: ["kafka-console-consumer"]
-    args:
-      - "--bootstrap-server=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
-      - "--topic=cat-interactions"
+      - "--topic=visitor-checkins"
       - "--from-beginning"
   restartPolicy: Never
