@@ -9,8 +9,6 @@ locals {
 # Spark Operator Application
 #---------------------------------------------------------------
 resource "kubectl_manifest" "spark_operator" {
-  count = var.enable_spark_operator ? 1 : 0
-
   yaml_body = templatefile("${path.module}/argocd-applications/spark-operator.yaml", {
     user_values_yaml = indent(8, yamlencode(local.spark_operator_values))
   })

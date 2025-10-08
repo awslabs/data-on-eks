@@ -144,15 +144,6 @@ variable "enable_ingress_nginx" {
 }
 
 #---------------------------------------------------
-# SPARK K8S OPERATOR
-#---------------------------------------------------
-variable "enable_spark_operator" {
-  description = "Enable Spark on K8s Operator add-on"
-  type        = bool
-  default     = false
-}
-
-#---------------------------------------------------
 # APACHE YUNIKORN
 #---------------------------------------------------
 variable "enable_yunikorn" {

@@ -251,6 +251,31 @@ data "aws_iam_policy_document" "spark_jobs" {
       "ecr:GetAuthorizationToken",
     ]
   }
+
+  statement {
+    sid       = "GlueAccess"
+    effect    = "Allow"
+    resources = ["*"]
+
+    actions = [
+      "glue:GetDatabase",
+      "glue:GetDatabases",
+      "glue:CreateDatabase",
+      "glue:GetTable",
+      "glue:GetTables",
+      "glue:CreateTable",
+      "glue:UpdateTable",
+      "glue:DeleteTable",
+      "glue:GetPartition",
+      "glue:GetPartitions",
+      "glue:CreatePartition",
+      "glue:UpdatePartition",
+      "glue:DeletePartition",
+      "glue:BatchCreatePartition",
+      "glue:BatchDeletePartition",
+      "glue:BatchUpdatePartition"
+    ]
+  }
 }
 
 resource "aws_iam_policy" "spark_jobs" {
