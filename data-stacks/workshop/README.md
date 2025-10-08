@@ -431,119 +431,212 @@ You deployed and accessed the "Live Dashboard" web application that consumes ale
 
 ---
 
-## Module 5: Batch Dimension Data Ingestion
+## Module 5: Interactive Analysis and Batch Transformation with Spark
 
-**Goal:** Use Spark to ingest dimension data (cats and visitors profiles) from PostgreSQL into Iceberg tables for analytical queries.
+**Goal:** Use Spark in a Jupyter environment to interactively explore the Iceberg data lake, understand its powerful metadata features, and run a batch transformation job to create an aggregated summary table.
 
-**Why this matters:** To enrich your analytical queries, you need dimension data. This batch process creates snapshots of operational data that can be joined with your streaming event data for comprehensive analysis.
+**Why this matters:** You're bridging the gap between raw data and business intelligence. This module shows how to leverage the historical data in your lakehouse for deeper analysis. You'll act as a data analyst, using Spark to query raw events, inspect table history, and build clean, aggregated tables that are perfect for BI dashboards.
 
 ### Step 1: Access JupyterHub
+
+First, get access to the JupyterHub environment where you will run Spark.
 
 Port-forward to the JupyterHub service:
 ```bash
 kubectl port-forward -n jupyterhub svc/proxy-public 8000:80
 ```
 
-Open your browser to `http://localhost:8000`
+Open your browser to `http://localhost:8000` and log in.
 
-### Step 2: Start Spark Environment
+### Step 2: Start Your Spark Environment
 
-1. Select the **Spark 4.0** image from the dropdown
-2. Click **Start**
-3. Wait for Karpenter to provision a node (this may take 2-3 minutes)
+On the JupyterHub landing page, you'll be prompted to select a container image for your server.
+
+1.  Select the **Spark 4.0** image from the dropdown menu.
+2.  Click **Start**.
+
+Karpenter will automatically provision a new node for your Spark environment. This may take 2-3 minutes.
 
 ![](./images/jupyter-image-selection.png)
 
-### Step 3: Run Dimension Ingestion
+### Step 3: Upload and Open the Notebook
 
-Copy the dimension ingestion script to your Jupyter environment:
-```bash
-POD_NAME=$(kubectl get pods -n jupyterhub -l app=jupyterhub,component=singleuser-server -o jsonpath='{.items[0].metadata.name}') && kubectl cp /home/ubuntu/data-on-eks/data-stacks/workshop/src/spark/adhoc.ipynb jupyterhub/$POD_NAME:/home/jovyan/adhoc.ipynb
+Next, copy the workshop's analytics notebook into your running Jupyter environment.
 
-cp /home/jovyan/data-stacks/workshop/src/spark/postgresql-to-iceberg.py .
-```
-
-Execute the script to ingest cats and visitors data:
-```python
-# Run the postgresql-to-iceberg.py script
-# This will create iceberg.workshop.cats and iceberg.workshop.visitors tables
-```
-
-### What You Accomplished
-
-You used a batch Spark job to take snapshots of the `cats` and `visitors` tables from the operational PostgreSQL database and wrote them into Iceberg tables, creating dimension data for analytical queries.
-
-**Success Criteria:**
-- JupyterHub environment is running
-- Spark session connects successfully
-- Iceberg tables `cats` and `visitors` are created
-- Data is successfully ingested from PostgreSQL
-
----
-
-## Module 6: Batch Analytics & Transformation
-
-**Goal:** Act as a data analyst using Spark to query historical data, join multiple tables, and create aggregated summary tables.
-
-**Why this matters:** You're leveraging the historical data collected in your Iceberg data lake to perform deeper analysis, joining streaming events with dimension data to create business insights.
-
-### Step 1: Open Analytics Notebook
-
-In your Jupyter environment, open the analytics notebook:
 ```bash
 POD_NAME=$(kubectl get pods -n jupyterhub -l app=jupyterhub,component=singleuser-server -o jsonpath='{.items[0].metadata.name}') && kubectl cp /home/ubuntu/data-on-eks/data-stacks/workshop/src/spark/adhoc.ipynb jupyterhub/$POD_NAME:/home/jovyan/adhoc.ipynb
 ```
 
-### Step 2: Execute Analysis Queries
+Once the file is copied, you will see it in the Jupyter file browser on the left. Double-click `adhoc.ipynb` to open it.
 
-Follow the notebook instructions to:
-1. **Connect to Iceberg:** Query raw event tables and dimension tables
-2. **Join Data:** Combine cat interactions with cat profiles
-3. **Aggregate Metrics:** Calculate daily summaries and adoption patterns
-4. **Create Summary Tables:** Build `daily_cat_summary` for BI reporting
+![](./images/jupyter-adhoc.png)
 
-### Step 3: Validate Results
+### Step 4: Explore Iceberg's Power
 
-Verify your analytical transformations:
-```sql
--- Check the summary table was created
-SHOW TABLES IN iceberg.workshop;
+The first part of the notebook guides you through the power of Iceberg's metadata. Follow the instructions to execute the cells and observe the output.
 
--- Query sample results
-SELECT * FROM iceberg.workshop.daily_cat_summary LIMIT 10;
+To execute a cell, click it and then press the **▶** button in the toolbar.
+
+![Running Cells](./images/jupyter-cell.png)
+
+You will learn how to:
+1.  **Connect to the Glue Catalog:** Configure Spark to use AWS Glue as the Iceberg catalog.
+2.  **Inspect Data Files:** Use the `.files` metadata table to see the underlying Parquet files that make up your table. This reveals how Flink's streaming ingest created multiple small files.
+3.  **View Table History:** Use the `.history` and `.snapshots` tables to get a complete audit trail of every change made to your table, which is the foundation for time-travel queries.
+
+### Step 5: Run the Batch Transformation
+
+The second half of the notebook contains a complete ETL script. This script reads from the raw Iceberg tables, performs aggregations, and writes the results to a new, clean summary table.
+
+Run the cells in this section to:
+1.  **Extract** raw wellness and interaction data from Iceberg.
+2.  **Transform** the data by calculating daily aggregations for each cat (e.g., average activity, total interactions).
+3.  **Load** the results into a new Iceberg table called `daily_cat_summary`.
+
+At the end of the notebook, you will see the final transformed data, which should look like this:
+
+```
++----------+--------------------+-------+------------------+---------------------+-----------------------+----------+
+|       day|              cat_id|   name|avg_activity_level|max_hours_since_drink|total_interaction_count|like_count|
++----------+--------------------+-------+------------------+---------------------+-----------------------+----------+
+|2025-10-07|000d513d-d58c-401...|    Pax|3.9992211547015386|                  3.9|                     69|         3|
+|2025-10-07|001a36ea-d592-464...|Pumpkin| 8.505695667645229|                  3.9|                     86|         5|
+|2025-10-08|00569945-c8a9-495...|  Hazel| 4.982614173228346|                 3.89|                      0|         0|
+|2025-10-07|01411ff6-fcb6-4d2...|   Onyx| 5.000583577973489|                  3.9|                     37|         4|
+|2025-10-08|0167cdf6-85fd-435...|   Luna| 8.578866141732284|                  3.
++----------+--------------------+-------+------------------+---------------------+-----------------------+----------+
 ```
 
 ### What You Accomplished
 
-You connected to the Iceberg data lake with Spark, queried raw historical data, joined multiple tables to find insights, and created clean, aggregated summary tables ready for business intelligence reporting.
+You acted as a data analyst, using Spark and Jupyter to connect to a data lakehouse. You didn't just query data; you explored Iceberg's underlying structure, seeing how it tracks files and history. You then ran a batch ETL job to transform raw, streaming data into a clean, aggregated summary table ready for business intelligence.
 
-**Key Takeaway:** Your streaming platform now supports both real-time alerts and historical batch analytics on the same data, demonstrating the power of a unified lakehouse architecture.
+**Key Takeaway:** Your data platform now supports both real-time streaming and powerful batch analytics on the same data. You've seen how a unified lakehouse architecture allows you to easily move from raw events to valuable business insights.
 
 **Success Criteria:**
-- Successfully query raw Iceberg tables
-- Join streaming events with dimension data
-- Create aggregated `daily_cat_summary` table
-- Validate data quality and completeness
+- Successfully connected to JupyterHub and ran a Spark notebook.
+- Queried Iceberg's metadata tables (`.files`, `.history`).
+- Executed the Spark ETL script to create the `daily_cat_summary` dataframe.
+- Verified that the new summary dataframe contains aggregated data.
 
 ---
 
+## Module 6: BI Dashboard and Federated Queries
 
-**Module 7: Advanced Iceberg Features**
-* **Overview:** We explore the powerful features that make Iceberg a true lakehouse. Using Spark SQL, we learn how to inspect table metadata and history, perform "time travel" queries to see past versions of our data, and demonstrate safe schema evolution by adding a column to our summary table.
-* **Status:** **WIP**
+**Goal:** Connect Apache Superset to the project's data sources and build a dashboard to visualize analytics from the Iceberg data lake. Along the way, you'll discover a common data architecture challenge and learn how federated query engines like Trino solve it.
 
-**Module 8: BI Dashboard with Superset**
-* **Overview:** The final piece of the platform is the business intelligence dashboard for our cafe "manager." This involves connecting a BI tool like Apache Superset to our data lake to create visualizations and reports based on the clean summary tables we built.
-* **Status:** **WIP**
+**Why this matters:** This is the "last mile" of the data platform, where you deliver tangible value to business users. You'll create a user-friendly dashboard for the cafe manager. More importantly, you'll learn why a simple BI connection isn't enough in a modern data stack and understand the critical role of a query federation layer.
 
-port-forward to superset service no port 8088 in supserset ns 
+### Step 1: Access Apache Superset
 
-`postgresql-0.postgresql.workshop.svc.cluster.local`
-port 5432
+First, open the Superset web interface. Use `kubectl` to port-forward the service to your local machine:
 
-database: workshop
-user: worksop
-pass; worksop
+```bash
+kubectl port-forward -n superset svc/superset 8088:8088
+```
+
+Open your browser to `http://localhost:8088`. Log in with the username `admin` and password `admin`.
+
+### Step 2: Connect to the Operational Database
+
+Your first task is to connect Superset to the cafe's operational PostgreSQL database, which holds the raw cat and visitor profiles.
+
+1.  In Superset, go to **Settings** (top right) -> **Database Connections**.
+2.  Click the **+ Database** button.
+3.  Select **PostgreSQL** from the list.
+4.  Fill in the connection details:
+    *   **HOST**: `postgresql-0.postgresql.workshop.svc.cluster.local`
+    *   **PORT**: `5432`
+    *   **DATABASE NAME**: `workshop`
+    *   **USERNAME**: `workshop`
+    *   **PASSWORD**: `workshop`
+5.  Click **Connect** and then **Finish**.
 
 
-try to visualize but oh no you can't join data
+![](./images/superset-workshop-db.png)
+
+You have now connected Superset to the source database where cat profiles are stored.
+
+### Step 3: Connect to the Lakehouse via Trino
+
+Next, you'll connect to the analytics data. The `daily_cat_summary` table you created with Spark lives in the Iceberg data lake. You will connect to it using Trino, our high-performance query engine.
+
+1.  On the **Database Connections** page, click **+ Database** again.
+2.  This time, select **Trino** from the list.
+3.  Instead of the form, switch to the **ADVANCED** tab and enter the following SQLAlchemy URI:
+
+    ```
+    trino://superset@trino.trino.svc.cluster.local:8080
+    ```
+
+4.  Click **Connect** and then **Finish**.
+
+![](./images/superset-trino-connection.png)
+
+Superset is now connected to two independent data sources: the operational PostgreSQL database and the Trino engine for the data lakehouse.
+
+### Step 4: The Challenge: Joining Across Databases
+
+**Scenario:** The cafe manager wants a chart that shows the `like_count` for each cat, but they want to see the cat's **coat color** (from the profiles table) next to the count.
+
+*   The `like_count` is in the `daily_cat_summary` table (in Iceberg, via Trino).
+*   The `coat_color` is in the `cats_profiles_raw` table (in PostgreSQL).
+
+How would you build this? You would need to join the two tables. Let's see what happens when you try.
+
+In Superset, you create charts from **Datasets**. If you try to create a new dataset, you'll see that you must choose *either* the PostgreSQL database or the Trino database. You cannot select tables from both at the same time. **This is the challenge.** Superset, like many BI tools, cannot perform joins across two completely different database connections.
+
+### Step 5: The Solution: Federated Queries with Trino
+
+This is not a mistake—it's a fundamental data architecture concept. The solution is not to find a magic button in Superset, but to use a **federated query engine**. 
+
+This is the true power of Trino. We have configured it to query our Iceberg data lake, but we can *also* configure Trino to connect to our PostgreSQL database. 
+
+If Trino is connected to both, it can perform the join internally. From Superset's perspective, it would only need a single connection—to Trino—and it would see tables from *both* PostgreSQL and Iceberg as if they were in the same place.
+
+For this workshop, we will not perform the Trino-PostgreSQL federation, but now you understand the architectural pattern. The BI tool stays simple, and the powerful query engine does the complex work of federating data across the enterprise.
+
+### Step 6: Visualize the Lakehouse Data
+
+Since you cannot perform the join, your manager agrees to a chart that only uses the analytics data for now. You will now explore the lakehouse data via Trino to confirm the connection is working.
+
+1.  Go to **SQL Lab** via the **SQL** dropdown in the top menu.
+2.  In the query editor, ensure the **Trino** database and the `iceberg` catalog are selected on the left.
+3.  Run the following queries to explore the data available through Trino. This is a great way to confirm that Superset is successfully communicating with your Iceberg data lake.
+
+    **Show all catalogs available in Trino:**
+    ```sql
+    SHOW CATALOGS;
+    ```
+    *You should see `iceberg`, `system`, and `tpch`.*
+
+    **Show all schemas (databases) in the Iceberg catalog:**
+    ```sql
+    SHOW SCHEMAS FROM iceberg;
+    ```
+    *You should see `data_on_eks`.*
+
+    **Show all tables in the `data_on_eks` schema:**
+    ```sql
+    SHOW TABLES FROM iceberg.data_on_eks;
+    ```
+    *You should see all the raw tables created by Flink and the `daily_cat_summary` table you created with Spark.*
+
+    **Run a test query against the summary table:**
+    ```sql
+    SELECT * FROM iceberg.data_on_eks.daily_cat_summary LIMIT 10;
+    ```
+
+4.  Now that you've confirmed you can query the data, you can create charts and build a dashboard to track cat activity over time.
+
+### What You Accomplished
+
+You successfully connected a BI tool, Apache Superset, to two different data sources: a live operational database (PostgreSQL) and a data lakehouse (Iceberg via Trino). More importantly, you encountered a common and critical challenge in data architecture—joining data across disparate systems—and learned how a federated query engine like Trino is the standard solution.
+
+**Success Criteria:**
+- Connected Superset to the PostgreSQL database.
+- Connected Superset to the Trino query engine.
+- Understood why you cannot join tables from two different Superset database connections.
+- Learned that Trino can act as a federation layer to solve this problem.
+- Successfully queried the `daily_cat_summary` table from the Iceberg lakehouse using Superset's SQL Lab.
+
