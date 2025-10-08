@@ -898,3 +898,152 @@ code:not([class*="language-"]) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
 }
+
+/* ==========================================
+   RESPONSIVE / MOBILE FIXES
+   ========================================== */
+
+/* Force mobile hamburger menu earlier to prevent overlap */
+@media screen and (max-width: 1200px) {
+  .navbar__items:not(.navbar__items--right) {
+    display: none;
+  }
+
+  .navbar__toggle {
+    display: inherit !important;
+  }
+
+  .navbar__items--right {
+    flex-shrink: 0;
+  }
+}
+
+/* Tablet and smaller - reduce navbar item sizes */
+@media screen and (max-width: 996px) {
+  :root {
+    --navbar-item-font-size: 15px;
+    --navbar-item-padding-vertical: 8px;
+    --navbar-item-padding-horizontal: 12px;
+    --navbar-icon-size: 18px;
+    --navbar-icon-margin: 6px;
+    --ifm-navbar-height: 4rem;
+  }
+
+  html[data-theme="dark"] {
+    --ifm-navbar-height: 4rem;
+  }
+
+  /* Hide icons on tablets to save space */
+  .navbar-getting-started::before,
+  .navbar-data-stacks::before,
+  .navbar-ai-data::before,
+  .navbar-benchmarks::before,
+  .navbar-best-practices::before {
+    display: none;
+  }
+
+  /* Reduce padding for all navbar items */
+  .navbar__link {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 14px;
+  }
+
+  /* Compact navbar items */
+  .navbar__item {
+    margin: 0 2px;
+  }
+
+  /* Ensure right-side items don't overlap */
+  .navbar__items--right {
+    padding-left: 0.5rem;
+  }
+}
+
+/* Mobile - further reduce sizes and optimize layout */
+@media screen and (max-width: 768px) {
+  :root {
+    --navbar-item-font-size: 14px;
+    --navbar-item-padding-vertical: 6px;
+    --navbar-item-padding-horizontal: 8px;
+    --ifm-navbar-height: 3.5rem;
+  }
+
+  html[data-theme="dark"] {
+    --ifm-navbar-height: 3.5rem;
+  }
+
+  /* Make navbar items stack properly in mobile menu */
+  .navbar__item {
+    margin: 4px 0;
+    width: 100%;
+  }
+
+  .navbar__link {
+    padding: 0.6rem 1rem !important;
+    font-size: 15px;
+    display: block;
+    width: 100%;
+  }
+
+  /* Show icons again in mobile menu since we have vertical space */
+  .navbar__items--right .navbar-getting-started::before,
+  .navbar__items--right .navbar-data-stacks::before,
+  .navbar__items--right .navbar-ai-data::before,
+  .navbar__items--right .navbar-benchmarks::before,
+  .navbar__items--right .navbar-best-practices::before {
+    display: inline-block;
+  }
+}
+
+/* Very small mobile devices */
+@media screen and (max-width: 480px) {
+  :root {
+    --navbar-item-font-size: 13px;
+    --ifm-navbar-height: 3rem;
+  }
+
+  html[data-theme="dark"] {
+    --ifm-navbar-height: 3rem;
+  }
+
+  .navbar__link {
+    font-size: 14px;
+  }
+
+  /* Reduce logo size on very small screens */
+  .navbar__logo img {
+    max-width: 32px;
+  }
+}
+
+/* Prevent text wrapping and overflow in navbar */
+.navbar__item {
+  white-space: nowrap;
+}
+
+/* Ensure hamburger menu works properly */
+@media screen and (max-width: 996px) {
+  .navbar-sidebar {
+    background: var(--ifm-navbar-background-color);
+  }
+
+  .navbar-sidebar__brand {
+    padding: 1rem;
+  }
+
+  .navbar-sidebar__items {
+    padding: 1rem;
+  }
+
+  /* Style mobile menu items */
+  .navbar-sidebar .navbar__link {
+    padding: 0.75rem 1rem !important;
+    margin: 0.25rem 0;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .navbar-sidebar .navbar__link:hover {
+    transform: translateX(4px);
+  }
+}
