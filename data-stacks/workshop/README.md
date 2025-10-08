@@ -547,6 +547,94 @@ You acted as a data analyst, using Spark and Jupyter to connect to a data lakeho
 
 ---
 
+## Module 6: Productionizing Batch Jobs with Spark Operator
+
+**Goal:** Transition from an interactive notebook to a production-style, repeatable batch job using the Spark Operator for Kubernetes.
+
+**Why this matters:** While notebooks are excellent for exploration, production data pipelines need to be robust, repeatable, and manageable. The Spark Operator allows you to define Spark jobs declaratively using Kubernetes custom resources, bringing GitOps and automation best practices to your batch workloads.
+
+### What is the Spark Operator?
+
+The Spark Operator is a Kubernetes controller that manages the lifecycle of Spark applications. Instead of using `spark-submit`, you define your job in a `SparkApplication` YAML manifest, which specifies everything from the application code and dependencies to the driver/executor resources. The operator watches for these resources and handles the complex work of submitting the job to Kubernetes, monitoring its status, and cleaning up resources.
+
+### Step 1: Review the Batch Job Script
+
+First, take a look at the `enriched-cat-summary.py` script located in the `$WORKSHOPDIR/src/spark/` directory. You will notice it implements the exact same transformation logic you ran in the Jupyter notebook in the previous module. The key difference is that this script is designed to be run as a standalone batch job, writing its final output to a production Iceberg table.
+
+### Step 2: Deploy the Spark Application
+
+Now, you will deploy this script as a formal application using the deployment script you created.
+
+```bash
+# Ensure you are in the correct directory
+cd $WORKSHOPDIR/src/spark/
+
+# Run the deployment script
+./deploy-spark-app.sh
+```
+
+This script does three things:
+1.  Injects the Python script into a `ConfigMap`.
+2.  Substitutes the `$S3_WAREHOUSE_PATH` environment variable.
+3.  Applies the resulting `SparkApplication` manifest to the cluster.
+
+### Step 3: Monitor the Application
+
+Check the status of the application you just deployed.
+
+```bash
+kubectl get sparkapplication -n spark-team-a
+```
+
+You should see the `cat-summary` application with a status of `RUNNING`. It will transition to `COMPLETED` after a minute or two.
+
+```
+NAME          STATUS      ATTEMPTS   START TIME           FINISH TIME
+cat-summary   COMPLETED   1          2025-10-08T12:00:00Z   2025-10-08T12:01:30Z
+```
+
+### Step 4: Explore the Spark History Server
+
+Once the job is complete, you can analyze its execution details in the Spark History Server.
+
+First, port-forward to the history server:
+```bash
+kubectl port-forward -n spark-history-server svc/spark-history-server 18080:18080
+```
+
+Now, open your browser to `http://localhost:18080`. You should see your `cat-summary` application in the list of completed applications. Click on it to explore the UI.
+
+**Interesting things to look for:**
+*   **DAG Visualization:** On the **Jobs** tab, click on a job description to see the Directed Acyclic Graph (DAG) of the Spark execution plan. This shows you how Spark broke your transformation into stages and tasks.
+*   **SQL/DataFrame Query:** Go to the **SQL / DataFrame** tab to see the query plan for your `daily_summary_df` dataframe, from the initial reads to the final aggregations and joins.
+*   **Environment:** The **Environment** tab shows all the Spark configuration properties that were used for the run, which is useful for debugging.
+
+![](./images/shs-ui.png)
+
+
+### Step 5: Verify the Output in S3
+
+Finally, verify that the job successfully wrote the new summary table to your data lake.
+
+```bash
+aws s3 ls s3://${S3_BUCKET}/iceberg-warehouse/data_on_eks.db/enriched_daily_cat_summary/
+```
+
+You should see the `data` and `metadata` prefixes, confirming the Iceberg table was created.
+
+### What You Accomplished
+
+You successfully productionized an analytics script by packaging it as a `SparkApplication`. You learned how the Spark Operator for Kubernetes allows you to manage batch jobs declaratively, and you used the Spark History Server to analyze the execution of a completed job. 
+
+**Key Takeaway:** You have now seen the complete journey from interactive, ad-hoc analysis in a notebook to a repeatable, production-ready batch job managed as a Kubernetes resource.
+
+**Success Criteria:**
+- Deployed a `SparkApplication` using the deployment script.
+- Monitored the application until it reached the `COMPLETED` state.
+- Explored the job's execution details in the Spark History Server.
+- Verified that the output data was written to the Iceberg table in S3.
+
+---
 ## Module 6: BI Dashboard and Federated Queries
 
 **Goal:** Connect Apache Superset to the project's data sources and build a dashboard to visualize analytics from the Iceberg data lake. Along the way, you'll discover a common data architecture challenge and learn how federated query engines like Trino solve it.

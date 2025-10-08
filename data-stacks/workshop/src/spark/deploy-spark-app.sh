@@ -10,6 +10,7 @@ cd "$(dirname "$0")"
 
 # Provide a default for S3_WAREHOUSE_PATH if not set, to avoid issues with envsubst.
 export S3_WAREHOUSE_PATH="s3a://${S3_BUCKET}/iceberg-warehouse/"
+export S3_SHS_PATH="s3a://${S3_BUCKET}/spark-event-logs"
 
 # --- Fix for indentation ---
 # Create a temporary file to hold the indented version of the python script.
