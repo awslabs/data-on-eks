@@ -5,8 +5,9 @@ import random
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-import psycopg # MODIFIED: Switched to psycopg3
-from psycopg.rows import dict_row # MODIFIED: New row factory
+from fastapi.staticfiles import StaticFiles
+import psycopg
+from psycopg.rows import dict_row
 import threading
 import math
 import uvicorn
@@ -19,7 +20,6 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "workshop")
 DB_USER = os.getenv("DB_USER", "workshop")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "workshop")
-# MODIFIED: Using a standard connection string for psycopg3
 CONN_STRING = f"dbname='{DB_NAME}' user='{DB_USER}' host='{DB_HOST}' port='{DB_PORT}' password='{DB_PASSWORD}'"
 
 # --- Kafka Configuration ---
@@ -39,6 +39,9 @@ async def lifespan(app: FastAPI):
 # --- FastAPI Application ---
 app = FastAPI(lifespan=lifespan)
 
+# --- Mount Static Files ---
+app.mount("/static/cats", StaticFiles(directory="images"), name="cat_images")
+
 def get_db_connection():
     """Establishes a connection to the PostgreSQL database using psycopg3."""
     return psycopg.connect(CONN_STRING)
@@ -49,16 +52,28 @@ def get_cats(status: str = "available", page: int = 1, limit: int = 6):
     if status not in ['available', 'adopted']:
         return {"error": "Invalid status"}, 400
     with get_db_connection() as conn:
-        # MODIFIED: set the row_factory on the cursor
         with conn.cursor(row_factory=dict_row) as cursor:
             cursor.execute("SELECT COUNT(*) FROM cats WHERE status = %s", (status,))
             total_records = cursor.fetchone()['count']
             total_pages = math.ceil(total_records / limit)
             offset = (page - 1) * limit
             cursor.execute("SELECT * FROM cats WHERE status = %s ORDER BY admitted_date DESC LIMIT %s OFFSET %s", (status, limit, offset))
-            # No need for manual dict conversion, the row_factory handles it
             cats_data = cursor.fetchall()
     return {"cats": cats_data, "total": total_records, "page": page, "totalPages": total_pages}
+
+@app.get("/api/cat-images")
+def get_cat_images():
+    """Returns a list of available cat image filenames."""
+    image_dir = "images"
+    try:
+        if not os.path.isdir(image_dir):
+            print(f"Image directory not found at {image_dir}")
+            return {"images": []}
+        files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
+        return {"images": files}
+    except Exception as e:
+        print(f"Error reading image directory: {e}")
+        return {"images": []}
 
 # --- WebSocket Handling ---
 class ConnectionManager:
@@ -89,7 +104,7 @@ def consume_kafka_alerts():
     consumer = KafkaConsumer(
         *ALERT_TOPICS,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+        value_deserializer=lambda m: json.loads(m.decode('utf-8')) if m is not None else {},
         auto_offset_reset='latest'
     )
     print("Kafka consumer thread started...")
@@ -137,7 +152,6 @@ def consume_kafka_alerts():
                     cat_to_adopt_id = random.choice(liked_cats_list)
                     try:
                         with get_db_connection() as conn:
-                            # MODIFIED: Use dict_row for this cursor too
                             with conn.cursor(row_factory=dict_row) as cursor:
                                 cursor.execute("SELECT status, name FROM cats WHERE cat_id = %s FOR UPDATE", (cat_to_adopt_id,))
                                 result = cursor.fetchone()
