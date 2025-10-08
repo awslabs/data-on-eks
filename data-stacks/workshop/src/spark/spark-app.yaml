@@ -1,61 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cat-summary-script
+  namespace: spark-team-a
+data:
+  cat-summary.py: |
+    # PYTHON_SCRIPT_GOES_HERE
+---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: batch-ingestion-postgres-to-iceberg
+  name: cat-summary
   namespace: spark-team-a
 spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  mainApplicationFile: s3a://your-workshop-bucket/scripts/batch_ingestion.py
-  sparkVersion: "3.4.0"
-  deps:
-    packages:
-      - "org.postgresql:postgresql:42.6.0"
-
+  image: "public.ecr.aws/m8u6z8z4/manabu-test:workshop-spark-job@sha256:a536596591eb6321ef720a9825d4e11b6488326b639972e85d1e7a237c26ff4b"
+  imagePullPolicy: Always
+  mainApplicationFile: local:///mnt/spark-scripts/cat-summary.py
+  sparkVersion: "4.0.0"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 2
+  volumes:
+    - name: spark-scripts
+      configMap:
+        name: cat-summary-script
   driver:
-    cores: 1
-    memory: "1048m"
-    serviceAccount: spark-team-a
-    envFrom:
-      - secretRef:
-          name: postgres-credentials
-    env:
-      - name: DB_URL
-        valueFrom:
-          configMapKeyRef:
-            name: spark-job-config
-            key: DB_URL
-      - name: S3_WAREHOUSE_PATH
-        valueFrom:
-          configMapKeyRef:
-            name: spark-job-config
-            key: S3_WAREHOUSE_PATH
-  executor:
-    cores: 1
-    instances: 2
-    memory: "2048m"
+    cores: 2
+    memory: "4g"
     labels:
-      version: 3.4.1
-    envFrom:
-      - secretRef:
-          name: postgres-credentials
+      version: 4.0.0
+    serviceAccount: spark-team-a
+    volumeMounts:
+      - name: spark-scripts
+        mountPath: /mnt/spark-scripts
     env:
-      - name: DB_URL
-        valueFrom:
-          configMapKeyRef:
-            name: spark-job-config
-            key: DB_URL
       - name: S3_WAREHOUSE_PATH
-        valueFrom:
-          configMapKeyRef:
-            name: spark-job-config
-            key: S3_WAREHOUSE_PATH
+        value: "${S3_WAREHOUSE_PATH}"
+  executor:
+    cores: 2
+    instances: 2
+    memory: "4g"
+    labels:
+      version: 4.0.0
+    env:
+      - name: S3_WAREHOUSE_PATH
+        value: "${S3_WAREHOUSE_PATH}"
   sparkConf:
-    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
-    "spark.sql.catalog.workshop": "org.apache.iceberg.spark.SparkCatalog"
-    "spark.sql.catalog.workshop.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
-    "spark.sql.catalog.workshop.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
-    # Hadoop/S3A configurations for connecting to S3
-    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
+    spark.sql.extensions: org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+    spark.sql.catalog.workshop: org.apache.iceberg.spark.SparkCatalog
+    spark.sql.catalog.workshop.catalog-impl: org.apache.iceberg.aws.glue.GlueCatalog
+    spark.sql.catalog.workshop.warehouse: ${S3_WAREHOUSE_PATH}
+    spark.sql.catalog.workshop.io-impl: org.apache.iceberg.aws.s3.S3FileIO
+    spark.sql.optimizer.excludedRules: org.apache.spark.sql.catalyst.optimizer.SimplifyCasts
+
+
