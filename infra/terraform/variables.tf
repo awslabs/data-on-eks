@@ -143,15 +143,6 @@ variable "enable_ingress_nginx" {
   default     = true
 }
 
-#---------------------------------------------------
-# APACHE YUNIKORN
-#---------------------------------------------------
-variable "enable_yunikorn" {
-  description = "Enable Apache YuniKorn K8s scheduler add-on"
-  type        = bool
-  default     = false
-}
-
 variable "enable_jupyterhub" {
   default     = true
   description = "Enable Jupyter Hub"
