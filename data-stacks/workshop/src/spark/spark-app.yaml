@@ -55,5 +55,8 @@ spec:
     spark.sql.catalog.workshop.warehouse: ${S3_WAREHOUSE_PATH}
     spark.sql.catalog.workshop.io-impl: org.apache.iceberg.aws.s3.S3FileIO
     spark.sql.optimizer.excludedRules: org.apache.spark.sql.catalyst.optimizer.SimplifyCasts
-
-
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "${S3_SHS_PATH}"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
