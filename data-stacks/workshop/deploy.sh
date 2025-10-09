@@ -113,7 +113,7 @@ TFVARS_FILE="./terraform/blueprint.tfvars"
 if [ -f "$TFVARS_FILE" ]; then
     if grep -q 'deployment_id = "abcdefg"' "$TFVARS_FILE"; then
         print_status "Default deployment_id found. Generating a new random one."
-        RANDOM_ID=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)
+        RANDOM_ID=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 8)
         sed -i "s/deployment_id = \"abcdefg\"/deployment_id = \"$RANDOM_ID\"/" "$TFVARS_FILE"
         print_status "Updated deployment_id to $RANDOM_ID in $TFVARS_FILE"
     fi
