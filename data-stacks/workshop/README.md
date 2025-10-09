@@ -63,11 +63,13 @@ The platform follows a modern lakehouse architecture with both streaming and bat
 
 ## Module 1: Data Generation & Kafka Ingestion
 
-**Goal:** Set up the cafe's operational database and start generating live event streams to Kafka.
+**Goal:** Establish the foundational data sources for the cat cafe. You'll deploy a PostgreSQL database to act as the cafe's operational system of record and an Apache Kafka cluster to serve as the central nervous system for all real-time events.
+
+**Why this matters:** This module simulates a real-world scenario where data originates from multiple systems. You'll learn how a relational database holds core business entities (cats, visitors), while a streaming platform like Kafka is used to capture and distribute real-time activities (interactions, sensor data) as they happen. This separation is a core pattern in modern data architectures.
 
 ### Step 1: Deploy PostgreSQL Database
 
-Deploy the cafe's operational database containing cat and visitor profiles:
+First, we'll deploy a simple PostgreSQL `StatefulSet` directly from a manifest. This represents the cafe's primary operational database, which will store the profiles for all our cats and registered visitors.
 
 ```bash
 # Update kubeconfig to use the created cluster
@@ -83,11 +85,9 @@ Wait for the pod to be ready:
 kubectl wait --for=condition=ready pod/postgresql-0 -n workshop --timeout=300s
 ```
 
-
-
 ### Step 2: Generate Sample Data
 
-Create cat and visitor data in the database:
+Next, we'll populate the database with thousands of cat and visitor profiles. To do this, we'll run a local Python script. We use `kubectl port-forward` to create a secure tunnel from our local machine to the PostgreSQL pod running in the Kubernetes cluster, allowing our script to connect to it.
 
 In another terminal open port-forward:
 
@@ -96,7 +96,7 @@ In another terminal open port-forward:
 kubectl port-forward postgresql-0 5432:5432 -n workshop
 ```
 
-Go back to the first terminal, then generate data
+Go back to the first terminal, then generate data:
 
 ```bash
 # Generate sample data
@@ -106,7 +106,6 @@ uv run data-generator.py
 ```
 
 In the second terminal, kill the port-forward process by pressing `ctrl + c`. 
-
 
 **Validate:** Check that data was created:
 
@@ -124,14 +123,13 @@ You should see ~11,000 cats and ~1,000 visitors.
 
 ### Step 3: Create Kafka Resources
 
-First, deploy the Kafka cluster provided by the Strimzi operator.
+With the database ready, we'll deploy our event streaming backbone: Apache Kafka. We use the Strimzi operator, which simplifies managing Kafka on Kubernetes. We define our cluster declaratively in `kafka-cluster.yaml`, and Strimzi handles the complex setup of brokers and other components.
 
 ```bash
 kubectl apply -f $WORKSHOPDIR/manifests/kafka-cluster.yaml
 ```
 
-**Validate:** Wait for the Kafka cluster to be ready. This will take a few minutes because
-nodes are provisioned by Karpenter on demand. Karpenter needs to create new instances and register them for use by the cluster.
+**Validate:** Wait for the Kafka cluster to be ready. This will take a few minutes. The validation step highlights a key feature of our EKS setup: autoscaling with Karpenter. When you request the Kafka cluster, Karpenter sees the pending pods and automatically provisions new EC2 instances (nodes) to run them. This demonstrates how the infrastructure elastically scales to meet workload demands.
 
 ```bash
 # Verify nodeclaims are created
@@ -206,7 +204,9 @@ After running the `nohup` command, you can safely exit the pod shell. The proces
 
 ### Step 5: Verify Event Streaming
 
-To verify that events are flowing correctly, deploy a separate debug pod that contains the Kafka command-line tools:
+To confirm everything is working, we'll use `kafka-console-consumer`, a standard Kafka tool that lets you subscribe to a topic and view its messages in real-time. This is an essential debugging technique for any streaming application.
+
+Deploy a separate debug pod that contains the Kafka command-line tools:
 
 ```bash
 kubectl apply -f $WORKSHOPDIR/manifests/kafka-debug-pod.yaml
@@ -224,6 +224,15 @@ kubectl exec -it kafka-debug -n workshop -- \
 
 You should see a continuous stream of JSON events, confirming that the producer is working correctly.
 
+### What You Accomplished
+
+You successfully set up the two primary data sources for the workshop. You now have:
+- A **PostgreSQL database** acting as the system of record for business entities.
+- An **Apache Kafka cluster** serving as the central hub for real-time event streams.
+- A **data generator** actively producing simulated events that mimic the cafe's daily operations.
+
+**Key Takeaway:** You've established a common and powerful architectural pattern: using a relational database for master data and a streaming platform for event data. This decouples the systems that produce data from the systems that will consume and analyze it in later modules.
+
 **Success Criteria:**
 - PostgreSQL contains cat and visitor data
 - Kafka topics are created
@@ -235,13 +244,18 @@ You should see a continuous stream of JSON events, confirming that the producer 
 
 ## Module 2: Raw Data Ingestion to Iceberg
 
-**Goal:** Deploy a Flink job that continuously reads all Kafka events and writes them to Iceberg tables in S3, creating a permanent data lake.
+**Goal:** Build a streaming pipeline with Apache Flink to ingest all raw Kafka events into an Apache Iceberg data lakehouse on S3.
 
-**Why this matters:** You're establishing the foundation for historical analytics by ensuring all raw data is durably stored. Your real-time data isn't just for immediate alerts—it's also building a massive historical archive automatically, with no complex ETL pipelines.
+**Why this matters:** You're building a "Streaming ELT" (Extract, Load, Transform) pipeline, a modern data pattern where raw data is immediately loaded into a data lake. This ensures all data is durably stored for historical analysis *before* any transformations are applied. This approach provides data resilience and flexibility for future analytics needs.
+
+**The Technology:**
+*   **Apache Flink:** A powerful, open-source stream processing framework ideal for high-throughput, low-latency data pipelines. We use it to read from Kafka and write to Iceberg in a continuous, reliable way.
+*   **Apache Iceberg:** A modern table format for data lakes. It brings the reliability of a traditional database to object storage like S3 by providing ACID transactions, schema evolution, and time-travel capabilities.
+*   **Amazon S3:** A scalable, durable, and cost-effective object store that serves as the storage layer for our data lake.
 
 ### Step 1: Update S3 Configuration
 
-Update the S3 bucket name in the Flink deployment files:
+First, retrieve the S3 bucket name created by Terraform and set it as an environment variable. This bucket will be the home for our Iceberg data lake.
 
 ```bash
 export S3_BUCKET=$(terraform -chdir=$WORKSHOPDIR/terraform/_local output -raw s3_bucket_id_spark_history_server)
@@ -249,138 +263,149 @@ export S3_BUCKET=$(terraform -chdir=$WORKSHOPDIR/terraform/_local output -raw s3
 
 ### Step 2: Deploy Raw Ingestion Flink Job
 
-Deploy the Flink job that ingests raw events to Iceberg:
+Now, deploy the Flink SQL job. The core logic of this job is simple: read from a Kafka topic and insert into an Iceberg table.
+
+```sql
+-- Simplified example of the Flink SQL logic
+INSERT INTO iceberg_raw_table SELECT * FROM kafka_topic;
+```
+
+The `deploy-flink.sh` script wraps this SQL logic into a `FlinkDeployment` custom resource and applies it to the cluster. The Flink Kubernetes Operator sees this resource and automatically deploys and manages the Flink job for us.
 
 ```bash
 export DATAHUB_TOKEN=abc
 bash deploy-flink.sh
 ```
 
-**Validate:** Check the Flink deployment:
+**Validate:** Check that the Flink deployment has been created.
 ```bash
 kubectl get flinkdeployments -n flink-team-a
 ```
 
-You should see `cat-cafe-raw-ingestion` in `RECONCILING` state.
+You should see `cat-cafe-raw-ingestion` in a `RECONCILING` state, which will eventually become `READY`.
 
 ### Step 3: Monitor Flink Job
 
-Check that the Flink pods are running:
+Check that the Flink pods (both JobManager and TaskManager) are running.
+
 ```bash
 kubectl get pods -n flink-team-a
 ```
 
-Wait for both JobManager and TaskManager pods to be ready.
-
 ### Step 4: Access Flink UI
 
-Port-forward to the Flink JobManager:
+Use `port-forward` to access the Flink Dashboard, which provides a detailed view of the running job, including its data flow, metrics, and any potential errors.
+
 ```bash
 kubectl port-forward -n flink-team-a \
   svc/cat-cafe-raw-ingestion-rest 8081:8081
 ```
 
-Open your browser to `http://localhost:8081` to view the Flink dashboard.
+Open your browser to `http://localhost:8081`.
 
 ![](./images/flink-raw-ui.png)
 
 ### Step 5: Verify Data Ingestion
 
-In the Flink UI, you should see:
-- A running job named "cat-cafe-raw-ingestion"
-- Five source operators consuming from Kafka topics
-- Five sink operators writing to Iceberg tables
+In the Flink UI, you should see a running job with several sources (Kafka topics) and sinks (Iceberg tables). Check the metrics to see that records are being consumed and written.
 
-**Check the job metrics:**
-- Records consumed from each Kafka topic
-- Records written to Iceberg tables
-- No failures or restarts
-
-Verify data is written to your S3 bucket
+Next, verify that Flink is writing data to your S3 bucket.
 
 ```bash
 aws s3 ls s3://$S3_BUCKET/iceberg-warehouse/data_on_eks.db/cafe_orders_raw/
 ```
 
-The output of this command should show `data` and `metadata` prefixes, which are created by Iceberg. This confirms that the Flink job is successfully writing data from the Kafka streams to the Iceberg table on S3. We will explore the structure of Iceberg tables in more detail in Module 5.
+You will see `data` and `metadata` prefixes. This separation is a key aspect of Iceberg's design:
+*   **`metadata/`**: Contains manifest files and snapshots that track the table's state, schema, and history, providing transactional guarantees.
+*   **`data/`**: Contains the actual data, stored in an efficient columnar format (Parquet).
+
+This structure is what enables Iceberg's powerful features, which you will explore further in Module 5.
 
 ### What You Accomplished
 
-You learned about Apache Iceberg's role as a modern data lakehouse format and deployed a Flink job that consumes from every raw Kafka topic (`visitor-checkins`, `cat-interactions`, `cat-wellness-iot`, etc) and sinks the data into corresponding Iceberg tables on S3.
+You built a robust, streaming ELT pipeline using Flink and Iceberg. You deployed a Flink SQL job that consumes from every raw Kafka topic and sinks the data into corresponding Iceberg tables on S3, establishing the foundation of your data lakehouse.
 
-**Key Takeaway:** You've created an automated pipeline that transforms streaming events into queryable historical data without complex ETL processes. Every event flowing through Kafka is now permanently stored and ready for future analytics.
+**Key Takeaway:** You've created an automated pipeline that transforms streaming events into a queryable historical archive. Every event flowing through Kafka is now transactionally and durably stored, ready for both real-time alerting and large-scale batch analytics.
 
 **Success Criteria:**
 - Flink deployment is in READY state
 - Flink job is running without errors
 - Data is flowing from Kafka topics to Iceberg tables
-- Flink UI shows active consumption and ingestion metrics
+- The `data` and `metadata` directories are present in S3 for your Iceberg tables
 
 
 ## Module 3: Real-time Alerting with Flink
 
-**Goal:** Deploy Flink jobs that analyze streaming data to generate intelligent alerts for cat health monitoring and adoption detection.
+**Goal:** Deploy Flink SQL jobs that analyze streaming data to generate intelligent, actionable alerts.
 
-**Why this matters:** This is the brain of your real-time platform. You're building two distinct intelligence systems: a Cat Wellness Guardian that detects health anomalies, and an Adopter Detective that identifies potential cat adopters through behavioral analysis.
+**Why this matters:** This is where you move from simply storing data to generating real-time business value. You'll build two intelligence systems that can drive immediate action: a "Cat Wellness Guardian" that can alert staff to check on a cat, and an "Adopter Detective" that can notify the front desk to engage with a potential adopter. This is the brain of the real-time platform.
 
 ### Step 1: Deploy Alert Processing Jobs
 
-Deploy the Flink jobs that process raw events and generate alerts:
+The `deploy-flink-alert.sh` script deploys two Flink SQL jobs. This module introduces two fundamental stream processing concepts: **stateless** and **stateful** processing.
 
+*   **Stateless Processing:** Each event is processed independently, without knowledge of any other event. It's useful for simple filtering and transformations.
+*   **Stateful Processing:** The job maintains a "memory" of past events to detect patterns over time. This is essential for more complex analytics like aggregations, windowing, and pattern detection.
+
+The script will deploy both types of jobs:
+
+1.  **The Cat Wellness Guardian (Stateless):** This job applies a simple filter to each `cat-wellness-iot` event to see if a cat's vitals are outside the normal range.
+
+    ```sql
+    -- Simplified example of the stateless filter logic
+    INSERT INTO cat_health_alerts
+    SELECT cat_id, 'LOW_ACTIVITY' AS alert_type
+    FROM cat_wellness_iot
+    WHERE activity_level < 2;
+    ```
+
+2.  **The Adopter Detective (Stateful):** This job tracks `cat-interactions` events for each visitor, counting how many distinct cats they have "liked." It maintains a running count for each visitor as its state.
+
+    ```sql
+    -- Simplified example of the stateful aggregation logic
+    INSERT INTO potential_adopters
+    SELECT visitor_id, COUNT(DISTINCT cat_id) AS liked_cats
+    FROM cat_interactions
+    WHERE interaction_type = 'like'
+    GROUP BY visitor_id
+    HAVING COUNT(DISTINCT cat_id) > 3;
+    ```
+
+Deploy the jobs now:
 ```bash
 export DATAHUB_TOKEN=abc
 bash deploy-flink-alert.sh
 ```
 
-This script defines and executes two Flink SQL jobs that run in parallel:
-
-1.  **The Cat Wellness Guardian (Stateless):** This job consumes from the `cat-wellness-iot` topic. It applies simple filters to identify cats that are dehydrated (haven't had a drink in over 4 hours) or stressed (activity level is too low) and publishes the findings to the `cat-health-alerts` topic.
-2.  **The Adopter Detective (Stateful):** This job consumes from the `cat-interactions` topic. It performs a stateful aggregation, keeping track of how many distinct cats a visitor has "liked." If a visitor likes more than three cats, the job publishes an alert to the `potential-adopters` topic.
-
-
-**Validate:** Check both Flink deployments:
+**Validate:** Check that the Flink deployment was created.
 ```bash
 kubectl get flinkdeployments -n flink-team-a
 ```
 
-You should see `cat-cafe-alerts` in `RECONCILING` state.
+You should see `cat-cafe-alerts` in a `RECONCILING` state.
 
 ### Step 2: Monitor Alert Jobs
 
-Check that the alert processing pods are running:
+Check that the pods for the alert jobs are running.
 ```bash
 kubectl get pods -n flink-team-a -l app=cat-cafe-alerts
 ```
 
-Wait for both JobManager and TaskManager pods to be ready.
-
 ### Step 3: Access Flink Alert UI
 
-Port-forward to the alert job JobManager:
+Port-forward to the Flink UI to inspect the running jobs. Note that we use port `8082` to avoid conflicting with the UI from Module 2.
 ```bash
 kubectl port-forward -n flink-team-a \
   svc/cat-cafe-alerts-rest 8082:8081
 ```
 
-Open your browser to `http://localhost:8082` to view the alert processing dashboard.
+Open your browser to `http://localhost:8082`. You will see both the "Guardian" and "Detective" jobs running.
 
 ### Step 4: Verify Alert Generation
 
-In the Flink UI, you should see two running jobs:
+Use the `kafka-console-consumer` tool to inspect the output topics and see the alerts as they are generated by Flink.
 
-**Cat Wellness Guardian (Stateless):**
-- Filters `cat-wellness-iot` stream for anomalous readings
-- Detects low activity or dehydration events
-- Publishes alerts to `cat-health-alerts` topic
-
-**Adopter Detective (Stateful):**
-- Tracks visitor 'like' interactions over time
-- Performs continuous aggregation to identify patterns
-- Publishes potential adopters to `potential-adopters` topic
-
-### Step 5: Test Alert Consumption
-
-Verify alerts are being generated:
+First, monitor the health alerts from the stateless "Guardian" job:
 ```bash
 # Monitor health alerts
 kubectl exec -it kafka-debug -n workshop -- \
@@ -390,21 +415,31 @@ kubectl exec -it kafka-debug -n workshop -- \
   --from-beginning
 ```
 
+In another terminal, monitor the adoption alerts from the stateful "Detective" job:
+```bash
+# Monitor adoption alerts
+kubectl exec -it kafka-debug -n workshop -- \
+  kafka-console-consumer \
+  --bootstrap-server data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092 \
+  --topic potential-adopters \
+  --from-beginning
+```
+You should see a stream of JSON events in both terminals.
+
 ### What You Accomplished
 
-You built the brain of the real-time platform by deploying two distinct Flink SQL jobs that process raw streams and generate valuable, actionable alerts:
+You built the intelligence layer of the real-time platform. You deployed two different kinds of Flink SQL jobs that process raw event streams and publish valuable, actionable alerts.
 
-- **The Cat Wellness Guardian:** A stateless job that filters wellness IoT data for health anomalies
-- **The Adopter Detective:** A stateful job that tracks visitor interactions and identifies adoption patterns
+- **The Cat Wellness Guardian:** A stateless job that filters events independently.
+- **The Adopter Detective:** A stateful job that aggregates events over time to find meaningful patterns.
 
-**Key Takeaway:** You experienced the power of Flink to analyze data in motion, handling both simple filtering and complex, stateful aggregations that remember past events. Your streaming platform now generates intelligent alerts from raw sensor data.
+**Key Takeaway:** You experienced the power of Flink to analyze data in motion, handling both simple filtering (stateless) and complex pattern detection (stateful) using only SQL. Your streaming platform is no longer just an ingestion pipeline; it's an active intelligence system.
 
 **Success Criteria:**
 - Alert processing Flink deployment is in READY state
-- Both wellness and adoption detection jobs are running
-- Health alerts appear in `cat-health-alerts` topic
-- Adoption alerts appear in `potential-adopters` topic
-- Flink UI shows processing metrics for both jobs
+- Both wellness and adoption detection jobs are running in the Flink UI
+- Health alerts appear in the `cat-health-alerts` topic
+- Adoption alerts appear in the `potential-adopters` topic
 
 ---
 
