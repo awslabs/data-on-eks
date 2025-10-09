@@ -37,11 +37,14 @@ module "eks" {
     kube-proxy = {}
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      most_recent              = true
+      addon_version            = "v1.48.0-eksbuild.1"
+      most_recent              = false
     }
 
     aws-mountpoint-s3-csi-driver = {
       service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
+      addon_version            = "v1.15.0-eksbuild.1"
+      most_recent              = false
     }
 
     metrics-server = {}
