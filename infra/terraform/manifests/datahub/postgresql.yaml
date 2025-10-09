@@ -14,6 +14,8 @@ spec:
       labels:
         app: postgresql
     spec:
+      nodeSelector:
+        NodeGroupType: general-purpose
       containers:
       - name: postgresql
         image: postgres:16
