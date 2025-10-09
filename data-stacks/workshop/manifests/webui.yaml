@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: alert-ui
-          image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-webui@sha256:4c6ebabd5c6e64cc5aba3ae9558c012619c19f307f9e9394f47d29e637f0316a
+          image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-webui@sha256:1c068fef991d7573c08f7826a8833cca2244e604ac92c6c4054ce5188cfa83cc
           ports:
             - containerPort: 8788
           resources:
