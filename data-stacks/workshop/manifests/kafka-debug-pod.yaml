@@ -9,7 +9,7 @@ spec:
     image: confluentinc/cp-kafka:8.0.1
     command: ["kafka-console-consumer"]
     args:
-      - "--bootstrap-server=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+      - "--bootstrap-server=data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092"
       - "--topic=visitor-checkins"
       - "--from-beginning"
   restartPolicy: Never

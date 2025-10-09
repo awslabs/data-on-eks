@@ -11,7 +11,7 @@ global:
 
   kafka:
     bootstrap:
-      server: "cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+      server: "data-on-eks-kafka-bootstrap.kafka.svc.cluster.local:9092"
   sql:
     datasource:
       host: "postgresql:5432"

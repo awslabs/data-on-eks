@@ -137,9 +137,9 @@ nodes are provisioned by Karpenter on demand. Karpenter needs to create new inst
 # Verify nodeclaims are created
 kubectl get nodeclaim
 
-kubectl wait kafka/cluster --for=condition=Ready -n kafka --timeout=300s
+kubectl wait kafka/data-on-eks --for=condition=Ready -n kafka --timeout=300s
 
-# Once the Kafka cluster is ready, the nodeclaims should alo be ready
+# Once the Kafka cluster is ready, the nodeclaims should also be ready
 kubectl get nodeclaim
 ```
 
@@ -180,9 +180,7 @@ Connect to the producer pod and start the event generator script. The script wil
 kubectl exec -it event-producer -n workshop -- bash
 
 # Inside the pod, run the following commands: 
-apt update && apt install -y git curl
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc
+apt update && apt install -y git
 
 # Clone the repo and navigate to the correct directory
 git clone https://github.com/awslabs/data-on-eks.git --depth 1 --branch v2
@@ -190,12 +188,19 @@ cd data-on-eks/data-stacks/workshop/src/data-flow
 
 # Set environment variables for the script
 export DB_HOST=postgresql-0.postgresql.workshop.svc.cluster.local
-export KAFKA_BROKERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092
+export KAFKA_BROKERS=data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092
 
 # Install dependencies and run the producer in the background
 uv sync --frozen
 nohup uv run event-producer.py &
 ```
+
+The `event-producer.py` script running inside this pod is a simulator that mimics the real-world activity of the cat cafe. It reads cat and visitor profiles from the PostgreSQL database and then continuously generates events to Kafka based on a set of behavioral rules:
+
+*   **Visitor Simulation:** New visitors arrive periodically. Each visitor has a "persona" (e.g., `potential_adopter`, `casual_visitor`, `family`) that determines their behavior, such as how long they stay, what they order from the cafe, and how they interact with the cats.
+*   **Interaction Events:** Based on their persona, visitors generate `cat-interactions` events like 'pet', 'play', and 'like'. The behavior is specifically designed to trigger the "Adopter Detective" Flink job later in the workshop.
+*   **Wellness Events:** The script also generates `cat-wellness-iot` events for each cat, simulating data from a health monitor. It includes logic to occasionally generate anomalous data (e.g., low activity or high hours since last drink) to trigger the "Cat Wellness Guardian" Flink job.
+
 
 After running the `nohup` command, you can safely exit the pod shell. The process will continue running. You should see output like `Sent interaction event for cat_id=1234, visitor_id=567` printed to a `nohup.out` file.
 
@@ -212,7 +217,7 @@ Once the pod is running, use it to consume messages from the `cat-interactions` 
 ```bash
 kubectl exec -it kafka-debug -n workshop -- \
   kafka-console-consumer \
-  --bootstrap-server cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092 \
+  --bootstrap-server data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092 \
   --topic cat-interactions \
   --from-beginning
 ```
@@ -239,7 +244,7 @@ You should see a continuous stream of JSON events, confirming that the producer 
 Update the S3 bucket name in the Flink deployment files:
 
 ```bash
-export S3_BUCKET=$(terraform -chdir=/home/ubuntu/data-on-eks/data-stacks/workshop/terraform/_local output -raw s3_bucket_id_spark_history_server)
+export S3_BUCKET=$(terraform -chdir=$WORKSHOPDIR/terraform/_local output -raw s3_bucket_id_spark_history_server)
 ```
 
 ### Step 2: Deploy Raw Ingestion Flink Job
@@ -380,7 +385,7 @@ Verify alerts are being generated:
 # Monitor health alerts
 kubectl exec -it kafka-debug -n workshop -- \
   kafka-console-consumer \
-  --bootstrap-server cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092 \
+  --bootstrap-server data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092 \
   --topic cat-health-alerts \
   --from-beginning
 ```
@@ -487,17 +492,18 @@ Karpenter will automatically provision a new node for your Spark environment. Th
 
 ### Step 3: Upload and Open the Notebook
 
-Next, copy the workshop's analytics notebook into your running Jupyter environment.
+Next, you will render the workshop's analytics notebook and copy it into your running Jupyter environment. The notebook uses a placeholder for your S3 bucket name. The following command uses `envsubst` to substitute the `$S3_BUCKET` variable (which you set in Module 2) and pipes the result directly into the pod's filesystem.
 
 ```bash
-POD_NAME=$(kubectl get pods -n jupyterhub -l app=jupyterhub,component=singleuser-server -o jsonpath='{.items[0].metadata.name}') && kubectl cp $WORKSHOPDIR/src/spark/adhoc.ipynb jupyterhub/$POD_NAME:/home/jovyan/adhoc.ipynb
+POD_NAME=$(kubectl get pods -n jupyterhub -l app=jupyterhub,component=singleuser-server -o jsonpath='{.items[0].metadata.name}') && \
+cat $WORKSHOPDIR/src/spark/adhoc.ipynb | envsubst | kubectl exec -i -n jupyterhub $POD_NAME -- bash -c 'cat > /home/jovyan/adhoc.ipynb'
 ```
 
 Once the file is copied, you will see it in the Jupyter file browser on the left. Double-click `adhoc.ipynb` to open it.
 
 ![](./images/jupyter-adhoc.png)
 
-### Step 4: Explore Iceberg's Power
+### Step 4: Explore Apache Iceberg
 
 The first part of the notebook guides you through the power of Iceberg's metadata. Follow the instructions to execute the cells and observe the output.
 
@@ -599,7 +605,7 @@ Once the job is complete, you can analyze its execution details in the Spark His
 
 First, port-forward to the history server:
 ```bash
-kubectl port-forward -n spark-history-server svc/spark-history-server 18080:18080
+kubectl port-forward -n spark-history-server svc/spark-history-server 18080:80
 ```
 
 Now, open your browser to `http://localhost:18080`. You should see your `cat-summary` application in the list of completed applications. Click on it to explore the UI.

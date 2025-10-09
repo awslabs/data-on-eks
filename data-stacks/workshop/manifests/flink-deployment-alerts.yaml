@@ -36,8 +36,8 @@ spec:
     execution.checkpointing.interval: 120s
     execution.checkpointing.mode: EXACTLY_ONCE
 
-    env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
-    env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+    env.java.opts.jobmanager: "-DKAFKA_BOOTSTRAP_SERVERS=data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092"
+    env.java.opts.taskmanager: "-DKAFKA_BOOTSTRAP_SERVERS=data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092"
 
     # datahub configuration
     execution.job-status-changed-listeners: "io.openlineage.flink.listener.OpenLineageJobStatusChangedListenerFactory"
@@ -70,7 +70,7 @@ spec:
           #   - "sleep 3600"
           env:
             - name: KAFKA_BOOTSTRAP_SERVERS
-              value: "cluster-broker-0.cluster-kafka-brokers.kafka.svc:9092"
+              value: "data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092"
             - name: S3_WAREHOUSE_PATH
               value: "s3a://$S3_BUCKET/iceberg-warehouse/"
             - name: AWS_REGION

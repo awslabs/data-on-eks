@@ -4,7 +4,7 @@ metadata:
   name: my-rebalance
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   goals:
     - RackAwareGoal
