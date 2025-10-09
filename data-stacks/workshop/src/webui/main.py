@@ -111,6 +111,9 @@ def consume_kafka_alerts():
     for message in consumer:
         payload_data = message.value
 
+        if not payload_data:
+            continue
+
         if message.topic == 'cat-health-alerts':
             cat_id = payload_data.get('cat_id')
             cat_name = "Unknown Cat"
