@@ -13,11 +13,11 @@ proxy:
 
 singleuser:
   # Enabled root access for debugging purposes. Do not enable root access unless it's absolutely necessary.
-  extraEnv:
-    GRANT_SUDO: "yes"
-    NOTEBOOK_ARGS: "--allow-root"
-  uid: 0
-  allowPrivilegeEscalation: true
+  # extraEnv:
+  #   GRANT_SUDO: "yes"
+  #   NOTEBOOK_ARGS: "--allow-root"
+  # uid: 0
+  # allowPrivilegeEscalation: true
   profileList:
     - display_name: Data Engineering (CPU)
       description: "PySpark Notebooks | Karpenter AutoScaling"
