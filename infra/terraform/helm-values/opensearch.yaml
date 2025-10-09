@@ -12,3 +12,6 @@ extraEnvs:
 
 image:
   tag: "2.11.0"
+
+nodeSelector:
+    NodeGroupType: general-purpose

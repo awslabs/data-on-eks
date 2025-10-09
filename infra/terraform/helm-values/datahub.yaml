@@ -25,6 +25,8 @@ global:
         secretKey: password
 
 acryl-datahub-actions:
+  nodeSelector:
+    NodeGroupType: general-purpose
   image:
     registry: public.ecr.aws
     repository: m8u6z8z4/manabu-test
@@ -33,6 +35,8 @@ acryl-datahub-actions:
     name: datahub-sa
 
 datahub-gms:
+  nodeSelector:
+    NodeGroupType: general-purpose
   serviceAccount:
     create: true
     name: datahub-sa
@@ -45,36 +49,50 @@ datahub-gms:
       cpu: 2000m
 
 datahub-frontend:
+  nodeSelector:
+    NodeGroupType: general-purpose
   enabled: true
   service:
     extraLabels: {}
     type: ClusterIP
 
 datahub-mae-consumer:
+  nodeSelector:
+    NodeGroupType: general-purpose
   enabled: true
 
 datahub-mce-consumer:
+  nodeSelector:
+    NodeGroupType: general-purpose
   enabled: true
 
 # Use OpenSearch from prerequisites
 elasticsearchSetupJob:
+  nodeSelector:
+    NodeGroupType: general-purpose
   enabled: true
   extraEnvs:
     - name: USE_AWS_ELASTICSEARCH
       value: "true"
 
 postgresqlSetupJob:
+  nodeSelector:
+    NodeGroupType: general-purpose
   enabled: true
 
 mysqlSetupJob:
   enabled: false
 
 kafkaSetupJob:
+  nodeSelector:
+    NodeGroupType: general-purpose
   resources:
     limits:
       cpu: 5000m
 
 datahubSystemUpdate:
+  nodeSelector:
+    NodeGroupType: general-purpose
   enabled: false
   resources:
     limits:
