@@ -1,7 +1,7 @@
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
-  name: cluster
+  name: data-on-eks
   namespace: kafka
   annotations:
     strimzi.io/kraft: enabled
@@ -52,6 +52,10 @@ spec:
                       operator: In
                       values:
                         - general-purpose
+                    - key: kubernetes.io/arch
+                      operator: In
+                      values:
+                        - arm64
           podAntiAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:

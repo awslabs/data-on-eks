@@ -4,7 +4,7 @@ metadata:
   name: controller
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   replicas: 3
   roles:

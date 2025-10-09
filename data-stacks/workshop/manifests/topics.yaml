@@ -5,7 +5,7 @@ metadata:
   name: cat-interactions
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   partitions: 1
   replicas: 1
@@ -19,7 +19,7 @@ metadata:
   name: visitor-checkins
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   partitions: 1
   replicas: 1
@@ -33,7 +33,7 @@ metadata:
   name: cafe-orders
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   partitions: 1
   replicas: 1
@@ -47,7 +47,7 @@ metadata:
   name: cat-wellness-iot
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   partitions: 1
   replicas: 1
@@ -61,7 +61,7 @@ metadata:
   name: cat-locations
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   partitions: 1
   replicas: 1
@@ -75,7 +75,7 @@ metadata:
   name: cat-health-alerts
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   partitions: 1
   replicas: 1
@@ -89,7 +89,7 @@ metadata:
   name: potential-adopters
   namespace: kafka
   labels:
-    strimzi.io/cluster: cluster
+    strimzi.io/cluster: data-on-eks
 spec:
   partitions: 1
   replicas: 1

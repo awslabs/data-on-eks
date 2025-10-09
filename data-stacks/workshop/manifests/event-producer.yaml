@@ -7,6 +7,15 @@ spec:
   terminationGracePeriodSeconds: 10
   containers:
   - name: event-producer-container
-    image: docker.io/library/ubuntu:24.04
+    image: ghcr.io/astral-sh/uv:python3.12-trixie-slim
     command: ["/bin/sh", "-c"]
-    args: ["sleep 172800"]
+    args: ["sleep 1728000"]
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                  - amd64 # there's a compilation issue with pemja on arm64.
