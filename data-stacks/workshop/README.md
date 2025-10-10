@@ -212,14 +212,13 @@ Deploy a separate debug pod that contains the Kafka command-line tools:
 kubectl apply -f $WORKSHOPDIR/manifests/kafka-debug-pod.yaml
 ```
 
-Once the pod is running, use it to consume messages from the `cat-interactions` topic. The `--from-beginning` flag ensures you see all messages in the topic from the start.
+Once the pod is running, use it to consume messages from the `cat-interactions` topic.
 
 ```bash
 kubectl exec -it kafka-debug -n workshop -- \
   kafka-console-consumer \
   --bootstrap-server data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092 \
-  --topic cat-interactions \
-  --from-beginning
+  --topic cat-interactions
 ```
 
 You should see a continuous stream of JSON events, confirming that the producer is working correctly.
@@ -282,7 +281,7 @@ bash deploy-flink.sh
 kubectl get flinkdeployments -n flink-team-a
 ```
 
-You should see `cat-cafe-raw-ingestion` in a `RECONCILING` state, which will eventually become `READY`.
+You should see `cat-cafe-raw-ingestion` in a `RECONCILING` state, which will eventually become `RUNNING`.
 
 ### Step 3: Monitor Flink Job
 
@@ -531,7 +530,7 @@ Next, you will render the workshop's analytics notebook and copy it into your ru
 
 ```bash
 POD_NAME=$(kubectl get pods -n jupyterhub -l app=jupyterhub,component=singleuser-server -o jsonpath='{.items[0].metadata.name}') && \
-cat $WORKSHOPDIR/src/spark/adhoc.ipynb | envsubst | kubectl exec -i -n jupyterhub $POD_NAME -- bash -c 'cat > /home/jovyan/adhoc.ipynb'
+cat $WORKSHOPDIR/src/spark/adhoc.ipynb | envsubst | kubectl exec -i -n jupyterhub $POD_NAME -- bash -c 'cat > /home/jovyan/adhoc.ipynb' && kubectl exec -i -n jupyterhub $POD_NAME -- chown jovyan:1000 /home/jovyan/adhoc.ipynb
 ```
 
 Once the file is copied, you will see it in the Jupyter file browser on the left. Double-click `adhoc.ipynb` to open it.
@@ -690,7 +689,10 @@ First, open the Superset web interface. Use `kubectl` to port-forward the servic
 kubectl port-forward -n superset svc/superset 8088:8088
 ```
 
-Open your browser to `http://localhost:8088`. Log in with the username `admin` and password `admin`.
+Open your browser to `http://localhost:8088`. Log in with:
+
+* Username: `admin`
+* Password: `admin`
 
 ### Step 2: Connect to the Operational Database
 
@@ -735,7 +737,7 @@ Superset is now connected to two independent data sources: the operational Postg
 **Scenario:** The cafe manager wants a chart that shows the `like_count` for each cat, but they want to see the cat's **coat color** (from the profiles table) next to the count.
 
 *   The `like_count` is in the `daily_cat_summary` table (in Iceberg, via Trino).
-*   The `coat_color` is in the `cats_profiles_raw` table (in PostgreSQL).
+*   The `coat_color` is in the `cats` table (in PostgreSQL).
 
 How would you build this? You would need to join the two tables. Let's see what happens when you try.
 
@@ -743,7 +745,7 @@ In Superset, you create charts from **Datasets**. If you try to create a new dat
 
 ### Step 5: The Solution: Federated Queries with Trino
 
-This is not a mistake—it's a fundamental data architecture concept. The solution is not to find a magic button in Superset, but to use a **federated query engine**. 
+The solution is not to find a magic button in Superset, but to use a **federated query engine**. 
 
 This is the true power of Trino. We have configured it to query our Iceberg data lake, but we can *also* configure Trino to connect to our PostgreSQL database. 
 
@@ -784,18 +786,188 @@ Since you cannot perform the join, your manager agrees to a chart that only uses
 
 4.  Now that you've confirmed you can query the data, you can create charts and build a dashboard to track cat activity over time.
 
+
+### Step 7: Enable Query Federation
+
+To build our final, unified dashboard, we first need to teach Trino how to talk to our PostgreSQL database. Here’s how to do it.
+
+**Step 1: Locate the Trino Configuration File**
+
+Open the Trino Helm values file located at `infra/terraform/helm-values/trino.yaml`.
+
+**Step 2: Add the PostgreSQL Catalog**
+
+Find the `additionalCatalogs` section in the file. You will see entries for `hive` and `iceberg` already. Add a new entry for `postgresql` directly below the `iceberg` catalog.
+
+Copy and paste the following block, ensuring the indentation matches the `iceberg` entry above it:
+
+```yaml
+  postgresql: |-
+    connector.name=postgresql
+    connection-url=jdbc:postgresql://postgresql-0.postgresql.workshop.svc.cluster.local:5432/workshop
+    connection-user=workshop
+    connection-password=workshop
+```
+
+**Step 3: Understand the Configuration**
+
+Let's quickly break down what you just added:
+*   `connector.name=postgresql`: This tells Trino to use its built-in connector for PostgreSQL databases.
+*   `connection-url`: This is the standard JDBC connection string for our workshop's database, using its internal Kubernetes service address (`postgresql-0.postgresql.workshop.svc.cluster.local`).
+*   `connection-user` / `connection-password`: These are the credentials Trino will use to authenticate with the PostgreSQL database.
+
+> **A Note on Production Security**
+> For this workshop, we are placing credentials directly in the configuration file for simplicity. **In a real-world production system, you must never do this.** Instead, you would use a secrets management system, like Kubernetes Secrets or HashiCorp Vault, to handle credentials securely.
+
+**Step 4: Apply the Configuration**
+
+After you save the changes to `trino.yaml`, they must be applied to the cluster.
+
+```bash
+cd $WORKSHOPDIR
+./deploy.sh
+```
+
+**Step 5: Verify the New Catalog**
+
+Once Trino has finished redeploying, you can verify that it recognizes the new PostgreSQL data source.
+
+1.  Navigate to the **SQL Lab** in your Superset UI.
+2.  Select the **Trino** database from the dropdown menu.
+3.  Run the following query:
+    ```sql
+    SHOW CATALOGS;
+    ```
+4.  The result list should now include `postgresql`.
+5.  Verify that tables exist:
+    ```sql
+    SHOW TABLES FROM postgresql.public
+    ```
+
+
 ### What You Accomplished
 
-You successfully connected a BI tool, Apache Superset, to two different data sources: a live operational database (PostgreSQL) and a data lakehouse (Iceberg via Trino). More importantly, you encountered a common and critical challenge in data architecture—joining data across disparate systems—and learned how a federated query engine like Trino is the standard solution.
+You connected a BI tool (Apache Superset) to two disparate data sources: a live operational database (PostgreSQL) and a data lakehouse (Iceberg). You then encountered the challenge of joining data across these systems and successfully solved it by configuring Trino as a federation layer, adding the PostgreSQL database as a new catalog.
 
 **Success Criteria:**
 - Connected Superset to the PostgreSQL database.
 - Connected Superset to the Trino query engine.
 - Understood why you cannot join tables from two different Superset database connections.
-- Learned that Trino can act as a federation layer to solve this problem.
-- Successfully queried the `daily_cat_summary` table from the Iceberg lakehouse using Superset's SQL Lab.
+- Successfully reconfigured Trino to add the PostgreSQL catalog.
+- Verified that the `postgresql` catalog is visible by running `SHOW CATALOGS;` in Superset's SQL Lab.
 
 
+## Module 7: Building a Federated BI Dashboard
+
+**Goal:** Use Superset to build a unified dashboard that combines data from both the PostgreSQL operational database and the Iceberg data lakehouse using Trino's federated query capabilities.
+
+**Why this matters:** This module brings everything together. You will build a single, powerful dashboard that provides a 360° view of the cat cafe's operations, from live cat statistics to historical business trends. This demonstrates the true value of a query federation layer, allowing a single BI tool to seamlessly access data across the enterprise.
+
+### Step 1: Create a Federated Chart
+
+Now that Trino can see both our Iceberg data lake and our PostgreSQL database, we can create charts that join data from both.
+
+1.  In Superset, click on **Charts** in the top menu and then the **+ CHART** button.
+2.  Choose the **Trino** database as your datasource.
+3.  Select **SQL Lab** to write a custom query.
+4.  Enter the following federated query to find out which cat breeds get the most "likes":
+
+    ```sql
+    -- This query joins interaction data (Iceberg) with cat profile data (Postgres)
+    SELECT
+      p.archetype,
+      COUNT(*) AS like_count
+    FROM iceberg.data_on_eks.cat_interactions_raw AS i
+    JOIN postgresql.public.cats AS p
+      ON i.cat_id = p.cat_id
+    WHERE i.interaction_type = 'like'
+    GROUP BY 1
+    ORDER BY 2 DESC;
+    ```
+5. Click **CREATE CHART**. In the chart view, set the **Chart Type** to "Bar Chart" and configure it to your liking. Save the chart with a name like "Most Liked Cat Breeds".
+
+### Step 2: Create a Second Federated Chart
+
+Let's create another chart that analyzes visitor behavior.
+
+1.  Follow the same process to create a new chart using the **Trino** datasource.
+2.  Use the following query to see if certain visitor personas spend more money at the cafe:
+
+    ```sql
+    -- This query joins cafe order data (Iceberg) with visitor profile data (Postgres)
+    SELECT
+      p.archetype AS persona,
+      AVG(o.total_amount) AS avg_spend
+    FROM iceberg.data_on_eks.cafe_orders_raw AS o
+    JOIN postgresql.public.visitors AS p
+      ON o.visitor_id = p.visitor_id
+    GROUP BY 1
+    ORDER BY 2 DESC;
+    ```
+3.  Set the **Chart Type** to "Bar Chart" and save it with a name like "Average Spend by Visitor Persona".
+
+### Step 3: create a Third Federated Chart
+
+Let's create another chart that shows cat popularity profile.
+
+1.  Follow the same process to create a new chart using the **Trino** datasource.
+2.  Use the following query:
+
+    ```sql
+    -- Cat Popularity Profile Query
+    -- Joins cat profiles (Postgres) with daily activity summaries (Iceberg)
+    SELECT
+        c.name,
+        c.age,
+        c.archetype,
+        -- Use AVG() and SUM() to get a single, overall metric per cat across all days
+        AVG(s.avg_activity_level) AS avg_activity,
+        SUM(s.total_interaction_count) AS total_interactions
+    FROM
+        iceberg.data_on_eks.daily_cat_summary AS s
+    JOIN
+        postgresql.public.cats AS c ON s.cat_id = c.cat_id
+    WHERE
+        -- We only want to visualize cats currently in the cafe
+        c.status = 'available'
+    GROUP BY
+        c.name,
+        c.age,
+        c.archetype
+    ORDER BY
+        total_interactions DESC
+    ```
+
+1. Navigate to SQL Lab and run the query above, making sure your database is set to Trino.
+2. Once the results appear, click the CREATE CHART button.
+3. In the chart creation screen, configure the visualization with the following settings:
+    * Visualization Type: Bubble Chart
+    * Series: name (This will label each bubble with the cat's name)
+    * X Axis: age (AVG)
+    * Y Axis: avg_activity (AVG)
+    * Bubble Size: total_interactions (AVG)
+    * Entity (for color): archetype
+
+### Step 3: Assemble Your Dashboard
+
+1.  In Superset, click on **Dashboards** and then the **+ DASHBOARD** button.
+2.  Give your dashboard a name, like "Cat Cafe 360° View".
+3.  Drag and drop the two charts you just created ("Most Liked Cat Breeds" and "Average Spend by Visitor Persona") onto the dashboard canvas.
+4.  Also add some of the non-federated charts you created earlier, such as "Daily Cafe Revenue" and "Daily Health Alerts".
+5.  Arrange and resize the charts to create your perfect manager's dashboard.
+
+![](./images/superset-federated-dashboard.png)
+
+### What You Accomplished
+
+You built a sophisticated, unified BI dashboard that visualizes data from two different database systems. You used Trino's query federation to perform joins across a data lakehouse and a traditional relational database, providing a seamless, 360-degree view of the business.
+
+**Key Takeaway:** You have now experienced the complete, end-to-end flow of a modern data platform. Data was ingested from multiple sources, processed in real-time and batch, stored in a lakehouse, and finally consumed by a BI tool that could access all of it through a powerful federation layer. This architecture provides immense flexibility and power for data analytics.
+
+**Success Criteria:**
+- A Superset dashboard exists containing charts from both federated and non-federated queries.
+- The "Most Liked Cat Breeds" chart correctly displays data joined from PostgreSQL and Iceberg.
+- The "Average Spend by Visitor Persona" chart is present and shows data.
 
 # Work in Progress modules
 
@@ -810,4 +982,5 @@ Use datahub to track data lineages
 ### Ranger
 
 ACL
+---
 
