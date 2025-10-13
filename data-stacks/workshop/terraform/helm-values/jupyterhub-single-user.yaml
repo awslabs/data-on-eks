@@ -28,7 +28,7 @@ singleuser:
             pyspark40: # Spark 4.0 with native support for aws sdk v2 (needed for pod identity)
               display_name: "PySpark 4.0.0"
               kubespawner_override:
-                image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-jupyter-notebook-spark4@sha256:ff5e6cc9f6b9e52f49d64b104119daaf56a9390096cba6ffa5185a77d1770725
+                image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-jupyter-notebook-spark4@sha256:5f819f959578c7b608511dd98dd3d2b92ba0c1efb652ece08ab97d534679ca47
       kubespawner_override:
         extra_pod_config:
           dns_policy: ClusterFirst
