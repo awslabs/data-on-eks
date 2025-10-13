@@ -3,4 +3,3 @@ nodeSelector:
 
 watchNamespaces:
   - kafka
-  - datahub

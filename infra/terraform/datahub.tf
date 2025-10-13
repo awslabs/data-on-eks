@@ -20,6 +20,8 @@ locals {
 # DataHub Namespace
 #---------------------------------------------------------------
 resource "kubectl_manifest" "datahub_namespace" {
+  count = var.enable_datahub ? 1 : 0
+
   yaml_body = templatefile("${path.module}/manifests/datahub/namespace.yaml", {
     namespace = local.datahub_namespace
   })
@@ -30,6 +32,8 @@ resource "kubectl_manifest" "datahub_namespace" {
 #---------------------------------------------------------------
 
 resource "kubernetes_secret" "postgresql_secrets" {
+  count = var.enable_datahub ? 1 : 0
+
   metadata {
     name      = "postgresql-secrets"
     namespace = local.datahub_namespace
@@ -43,7 +47,7 @@ resource "kubernetes_secret" "postgresql_secrets" {
 
   type = "Opaque"
 
-  depends_on = [kubectl_manifest.datahub_namespace]
+  depends_on = [kubectl_manifest.datahub_namespace[0]]
 }
 
 resource "random_password" "postgres" {
@@ -65,13 +69,14 @@ resource "random_password" "postgres_user" {
 # Pod Identity for DataHub S3 Access
 #---------------------------------------------------------------
 module "datahub_pod_identity" {
+  count   = var.enable_datahub ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "~> 1.0"
 
   name = "datahub"
 
   additional_policy_arns = {
-    s3_access = aws_iam_policy.datahub_s3.arn
+    s3_access = aws_iam_policy.datahub_s3[0].arn
   }
 
   associations = {
@@ -87,6 +92,7 @@ module "datahub_pod_identity" {
 # IAM Policy for S3 Read Access
 #---------------------------------------------------------------
 resource "aws_iam_policy" "datahub_s3" {
+  count       = var.enable_datahub ? 1 : 0
   name        = "datahub-s3-policy"
   description = "IAM Policy for DataHub S3 access"
 
@@ -122,13 +128,13 @@ resource "aws_iam_policy" "datahub_s3" {
 # PostgreSQL StatefulSet and Service
 #---------------------------------------------------------------
 resource "kubectl_manifest" "postgresql" {
-  for_each = { for idx, manifest in local.postgresql_manifests : idx => manifest }
+  for_each = { for idx, manifest in local.postgresql_manifests : idx => manifest if var.enable_datahub }
 
   yaml_body = yamlencode(each.value)
 
   depends_on = [
-    kubectl_manifest.datahub_namespace,
-    kubernetes_secret.postgresql_secrets
+    kubectl_manifest.datahub_namespace[0],
+    kubernetes_secret.postgresql_secrets[0]
   ]
 }
 
@@ -136,13 +142,15 @@ resource "kubectl_manifest" "postgresql" {
 # OpenSearch Application
 #---------------------------------------------------------------
 resource "kubectl_manifest" "opensearch" {
+  count = var.enable_datahub ? 1 : 0
+
   yaml_body = templatefile("${path.module}/argocd-applications/opensearch.yaml", {
     user_values_yaml = indent(8, local.opensearch_values)
   })
 
   depends_on = [
     helm_release.argocd,
-    kubectl_manifest.datahub_namespace
+    kubectl_manifest.datahub_namespace[0]
   ]
 }
 
@@ -150,6 +158,8 @@ resource "kubectl_manifest" "opensearch" {
 # DataHub Application
 #---------------------------------------------------------------
 resource "kubectl_manifest" "datahub" {
+  count = var.enable_datahub ? 1 : 0
+
   yaml_body = templatefile("${path.module}/argocd-applications/datahub.yaml", {
     user_values_yaml = indent(8, local.datahub_values)
   })
@@ -157,9 +167,9 @@ resource "kubectl_manifest" "datahub" {
   depends_on = [
     helm_release.argocd,
     kubectl_manifest.postgresql,
-    kubectl_manifest.opensearch,
-    module.datahub_pod_identity,
-    aws_iam_policy.datahub_s3,
+    kubectl_manifest.opensearch[0],
+    module.datahub_pod_identity[0],
+    aws_iam_policy.datahub_s3[0],
     kubectl_manifest.strimzi_kafka_operator
   ]
 }

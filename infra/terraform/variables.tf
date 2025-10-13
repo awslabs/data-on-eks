@@ -160,3 +160,9 @@ variable "enable_amazon_prometheus" {
   type        = bool
   default     = false
 }
+
+variable "enable_datahub" {
+  description = "Enable DataHub for metadata management"
+  type        = bool
+  default     = false
+}
