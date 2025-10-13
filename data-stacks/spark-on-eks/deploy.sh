@@ -28,6 +28,7 @@ print_status "Backed up terraform.tfstate."
 setup_kubeconfig
 
 # Get ArgoCD admin password
+export KUBECONFIG=$KUBECONFIG_FILE
 ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
 
 print_next_steps
