@@ -171,20 +171,30 @@ Deploy a producer pod which will be used to generate live events:
 kubectl apply -f $WORKSHOPDIR/manifests/event-producer.yaml
 ```
 
-Connect to the producer pod and start the event generator script. The script will run in the background.
+#### 1. Copy Application Files into the Pod
 
-```bash
-# Exec into the pod
+Run the following command from your local machine. It will package the necessary application files, copy them into the `event-producer` pod, and unpack them into the `/app` directory.
+
+```sh
+tar cf - -C $WORKSHOPDIR/src/data-flow --exclude='./.venv' --exclude='./data' --exclude='./datahub-action-runner' . | kubectl exec -i -n workshop event-producer -- bash -c "mkdir -p /app && tar xf - -C /app"
+```
+
+#### 2. Access the Pod
+
+Next, get an interactive shell inside the `event-producer` pod:
+```sh
 kubectl exec -it event-producer -n workshop -- bash
+```
 
-# Inside the pod, run the following commands: 
-apt update && apt install -y git
+#### 3. Run the Event Producer (Inside the Pod)
 
-# Clone the repo and navigate to the correct directory
-git clone https://github.com/awslabs/data-on-eks.git --depth 1 --branch v2
-cd data-on-eks/data-stacks/workshop/src/data-flow
+Once you are inside the pod's shell, execute the following commands to start the producer:
 
-# Set environment variables for the script
+```sh
+# Navigate to the application directory
+cd /app
+
+# Set the required environment variables
 export DB_HOST=postgresql-0.postgresql.workshop.svc.cluster.local
 export KAFKA_BROKERS=data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092
 

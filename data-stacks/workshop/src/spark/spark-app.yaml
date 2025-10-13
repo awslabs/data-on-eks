@@ -16,7 +16,7 @@ spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  image: "public.ecr.aws/m8u6z8z4/manabu-test:workshop-spark-job@sha256:a536596591eb6321ef720a9825d4e11b6488326b639972e85d1e7a237c26ff4b"
+  image: "public.ecr.aws/m8u6z8z4/manabu-test:workshop-spark-job@sha256:be617bbc4afbcfb95f543842dc3b99e2af065d6999bd017af7e08273bd412b8f"
   imagePullPolicy: Always
   mainApplicationFile: local:///mnt/spark-scripts/cat-summary.py
   sparkVersion: "4.0.0"
