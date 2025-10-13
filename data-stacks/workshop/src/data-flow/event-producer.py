@@ -337,10 +337,10 @@ class CatCafeSimulator:
 
     def _process_cat_lover(self, visitor_id, session):
         """Process cat_lover archetype behavior"""
-        # Generate 1-2 small cafe orders over long session
-        if session['orders_made'] < 2 and random.random() < 0.05:
-            self._generate_cafe_order(visitor_id, 'small')
-            session['orders_made'] += 1
+        # Generate one medium cafe order during their long session
+        if session['orders_made'] == 0:
+            self._generate_cafe_order(visitor_id, 'medium')
+            session['orders_made'] = 1
 
         # Moderate petting interactions, prefer shy/sleepy cats
         if random.random() < 0.5:
@@ -380,6 +380,8 @@ class CatCafeSimulator:
 
         if size == 'large':
             num_items = random.randint(4, 8)
+        elif size == 'medium':
+            num_items = random.randint(2, 5)
         else:
             num_items = random.randint(1, 3)
 

@@ -910,6 +910,9 @@ Let's create another chart that analyzes visitor behavior.
 
 Let's create another chart that shows cat popularity profile.
 
+This chart helps us understand the relationship between a cat's characteristics and its popularity with visitors.
+
+
 1.  Follow the same process to create a new chart using the **Trino** datasource.
 2.  Use the following query:
 

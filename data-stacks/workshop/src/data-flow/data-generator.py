@@ -20,6 +20,8 @@ read from data/cat_names.txt for cat names. Use all of them by randomly picking 
 generate: cat database entity for NUM_ADOPTED_CATS cats with status = adopted where:
     1. coat_color is random from COAT_COLORS defined above.
     1. if 'social_kitten' is selected as arch_type, the age must be between 0-12 months.
+    1  if 'standard' or 'shy' is selected as arch_type, the age must be between 14-180 months.
+    1  if 'sleepy_senior' is selected as arch_type, the age must be between 180 - 240 months.
     1. age is between 0 - 240 months.
     1. archtypes is one of ARCH_TYPES defined above.
     1. if coat color is black, reduce the chance of this field set by 20%. (multiplier, not addition)
@@ -77,8 +79,12 @@ def generate_cats():
         # Age constraints
         if archetype == 'social_kitten':
             age = random.randint(0, 12)
+        elif archetype == 'standard':
+            age = random.randint(14, 180)
+        elif archetype == 'shy':
+            age = random.randint(14, 180)
         else:
-            age = random.randint(0, 240)
+            age = random.randint(180, 240)
 
         # Calculate adoption probability
         adoption_rate = calculate_adoption_rate(archetype, coat_color, age)
@@ -88,8 +94,8 @@ def generate_cats():
             continue
 
         # Dates
-        admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
-        adopted_date = fake.date_between(start_date=admitted_date, end_date=datetime(2025, 12, 31))
+        admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 10, 1))
+        adopted_date = fake.date_between(start_date=admitted_date, end_date=datetime(2025, 10, 28))
         last_checkup_time = datetime.now()
 
         cats.append({
@@ -116,11 +122,15 @@ def generate_cats():
         # Age constraints
         if archetype == 'social_kitten':
             age = random.randint(0, 12)
+        elif archetype == 'standard':
+            age = random.randint(14, 180)
+        elif archetype == 'shy':
+            age = random.randint(14, 180)
         else:
-            age = random.randint(0, 240)
+            age = random.randint(180, 240)
 
         # Dates
-        admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
+        admitted_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 10, 1))
         last_checkup_time = datetime.now()
 
         cats.append({
@@ -154,7 +164,7 @@ def generate_visitors():
         visitor_id = str(uuid.uuid4())
         name = fake.first_name() + " " + fake.last_name()
         archetype = random.choice(VISITOR_ARCHETYPES)
-        first_visit_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 12, 31))
+        first_visit_date = fake.date_between(start_date=datetime(2025, 1, 1), end_date=datetime(2025, 10, 1))
 
         visitors.append({
             'visitor_id': visitor_id,
