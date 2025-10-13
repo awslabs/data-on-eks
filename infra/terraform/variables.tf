@@ -166,3 +166,9 @@ variable "enable_datahub" {
   type        = bool
   default     = false
 }
+
+variable "enable_superset" {
+  description = "Enable Apache Superset for data exploration and visualization"
+  type        = bool
+  default     = false
+}

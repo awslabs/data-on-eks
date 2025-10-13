@@ -21,6 +21,8 @@ locals {
 # Superset Namespace
 #---------------------------------------------------------------
 resource "kubernetes_namespace" "superset" {
+  count = var.enable_superset ? 1 : 0
+
   metadata {
     name = local.superset_namespace
   }
@@ -30,6 +32,8 @@ resource "kubernetes_namespace" "superset" {
 # Database Secrets
 #---------------------------------------------------------------
 resource "kubernetes_secret" "superset_postgresql_secrets" {
+  count = var.enable_superset ? 1 : 0
+
   metadata {
     name      = "postgresql-secrets"
     namespace = local.superset_namespace
@@ -42,7 +46,7 @@ resource "kubernetes_secret" "superset_postgresql_secrets" {
 
   type = "Opaque"
 
-  depends_on = [kubernetes_namespace.superset]
+  depends_on = [kubernetes_namespace.superset[0]]
 }
 
 resource "random_password" "superset_postgres" {
@@ -59,12 +63,12 @@ resource "random_password" "superset_secret_key" {
 # Redis Deployment and Service
 #---------------------------------------------------------------
 resource "kubectl_manifest" "superset_redis" {
-  count = length(local.superset_redis_manifests)
+  count = var.enable_superset ? length(local.superset_redis_manifests) : 0
 
   yaml_body = yamlencode(local.superset_redis_manifests[count.index])
 
   depends_on = [
-    kubernetes_namespace.superset
+    kubernetes_namespace.superset[0]
   ]
 }
 
@@ -72,13 +76,13 @@ resource "kubectl_manifest" "superset_redis" {
 # PostgreSQL StatefulSet and Service
 #---------------------------------------------------------------
 resource "kubectl_manifest" "superset_postgresql" {
-  count =  length(local.superset_postgresql_manifests)
+  count = var.enable_superset ? length(local.superset_postgresql_manifests) : 0
 
   yaml_body = yamlencode(local.superset_postgresql_manifests[count.index])
 
   depends_on = [
-    kubernetes_namespace.superset,
-    kubernetes_secret.superset_postgresql_secrets
+    kubernetes_namespace.superset[0],
+    kubernetes_secret.superset_postgresql_secrets[0]
   ]
 }
 
@@ -86,6 +90,8 @@ resource "kubectl_manifest" "superset_postgresql" {
 # Apache Superset Application
 #---------------------------------------------------------------
 resource "kubectl_manifest" "superset" {
+  count = var.enable_superset ? 1 : 0
+
   yaml_body = templatefile("${path.module}/argocd-applications/superset.yaml", {
     user_values_yaml = indent(8, local.superset_values)
   })
