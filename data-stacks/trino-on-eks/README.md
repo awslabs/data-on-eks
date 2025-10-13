@@ -1,10 +1,10 @@
-# Trino on EKS Blueprint
+# Trino on EKS Data Stack
 
 ## Introduction
 
 [Trino](https://trino.io/) is an open-source, fast, distributed query engine designed to run SQL queries for big data analytics over multiple data sources including Amazon S3, relational databases, and data warehouses.
 
-This blueprint deploys Trino on Amazon EKS using:
+This data stack deploys Trino on Amazon EKS using:
 - ArgoCD for GitOps-based deployment
 - AWS IAM Roles for Service Accounts (IRSA) for secure AWS service access
 - S3 buckets for data storage and query exchange
@@ -32,13 +32,13 @@ This blueprint deploys Trino on Amazon EKS using:
 
    ```bash
    cd data-stacks/trino-on-eks
-   ./deploy-blueprint.sh
+   ./deploy.sh
    ```
 
    The script will:
    - Check prerequisites (terraform, kubectl, aws cli)
    - Copy base infrastructure files to `terraform/_local`
-   - Apply blueprint-specific configuration (`blueprint.tfvars`)
+   - Apply stack-specific configuration (`data-stack.tfvars`)
    - Deploy VPC and EKS cluster with Trino-specific Karpenter NodePools
    - Install ArgoCD and deploy Trino via GitOps
    - Display ArgoCD and Trino access credentials
@@ -61,13 +61,13 @@ If you prefer manual steps:
 mkdir -p terraform/_local
 cp -r ../../infra/terraform/* terraform/_local/
 
-# Apply blueprint overrides
+# Apply stack overrides
 tar -C ./terraform --exclude='_local' --exclude='*.tfstate*' --exclude='.terraform' -cf - . | tar -C ./terraform/_local -xf -
 
 # Deploy infrastructure
 cd terraform/_local
 terraform init
-terraform apply -var-file="blueprint.tfvars" -auto-approve
+terraform apply -var-file="data-stack.tfvars" -auto-approve
 
 # Update kubeconfig
 aws eks update-kubeconfig --name trino-v2 --region us-west-2
@@ -95,7 +95,7 @@ kubectl get ec2nodeclass -n karpenter | grep trino
 kubectl get nodes --show-labels | grep -E "(NodePool.*trino|trino.*NodePool)"
 ```
 
-### Verify Blueprint Configuration
+### Verify Stack Configuration
 
 ```bash
 # Check terraform outputs
@@ -247,7 +247,7 @@ ORDER BY month;
 
 ### Example 2: Create and Query Iceberg Tables
 
-The blueprint includes Iceberg connector for modern table format.
+The stack includes Iceberg connector for modern table format.
 
 ```sql
 -- Create Iceberg schema

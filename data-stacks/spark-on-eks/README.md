@@ -10,7 +10,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 cd data-on-eks/data-stacks/spark-on-eks
 
 # Deploy infrastructure
-./deploy-blueprint.sh
+./deploy.sh
 ```
 
 ## 📋 Prerequisites
@@ -44,7 +44,7 @@ cd data-on-eks/data-stacks/spark-on-eks
 
 ## ⚙️ Configuration
 
-### Blueprint Configuration (`terraform/blueprint.tfvars`)
+### Data Stack Configuration (`terraform/data-stack.tfvars`)
 
 ```hcl
 # Basic Configuration
@@ -130,13 +130,13 @@ export AWS_REGION=us-west-2
 export CLUSTER_NAME=spark-on-eks
 
 # Run deployment script
-./deploy-blueprint.sh
+./deploy.sh
 ```
 
 ### Deployment Steps (Automated)
 1. **Prerequisites Check** - Validates AWS credentials and tools
 2. **Infrastructure Copy** - Copies base infrastructure from `infra/terraform/`
-3. **Configuration Apply** - Applies `blueprint.tfvars` settings
+3. **Configuration Apply** - Applies `data-stack.tfvars` settings
 4. **VPC & EKS Deployment** - Creates networking and cluster
 5. **ArgoCD Bootstrap** - Installs GitOps controller
 6. **Addon Deployment** - Installs selected components via ArgoCD
