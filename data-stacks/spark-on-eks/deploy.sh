@@ -3,7 +3,7 @@
 set -e
 
 # --- Configuration ---
-STACKS="workshop"
+STACKS="spark-operator"
 TERRAFORM_DIR="terraform"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 KUBECONFIG_FILE="kubeconfig.yaml"

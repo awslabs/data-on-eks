@@ -3,7 +3,7 @@
 set -e
 
 # --- Configuration ---
-STACKS="workshop"
+STACKS="trino-on-eks"
 TERRAFORM_DIR="terraform"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 KUBECONFIG_FILE="kubeconfig.yaml"
@@ -31,3 +31,4 @@ setup_kubeconfig
 ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
 
 print_next_steps
+

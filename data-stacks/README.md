@@ -4,6 +4,27 @@
 
 Welcome to the `data-stacks` directory. This directory contains a collection of pre-configured, independently deployable data stacks that can be provisioned on top of the common EKS infrastructure. Each subdirectory represents a specific, ready-to-use data workload, such as Apache Spark, Apache Flink, or Trino.
 
+## Deployed Open Source Technologies
+
+This repository automates the deployment of a complete, cloud-native data platform using a curated set of powerful open source technologies. Here are the key components that are used across the various data stacks:
+
+*   **[Argo CD](https://argo-cd.readthedocs.io/en/stable/)**: A declarative, GitOps continuous delivery tool that automates the deployment and lifecycle management of applications.
+*   **[Argo Workflows](https://argoproj.github.io/argo-workflows/)**: A Kubernetes-native workflow engine for orchestrating complex data pipelines and machine learning jobs.
+*   **[AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/)**: Manages AWS Elastic Load Balancers for Kubernetes services, automating the provisioning of Application Load Balancers.
+*   **[AWS for Fluent Bit](https://fluentbit.io/)**: A lightweight and extensible log processor and forwarder, used for collecting and routing logs from all nodes and applications.
+*   **[Cert-manager](https://cert-manager.io/)**: Automates the management and issuance of TLS certificates from various issuing sources to secure communication.
+*   **[DataHub](https://datahubproject.io/)**: A modern metadata platform for data discovery, data governance, and end-to-end data lineage observability.
+*   **[Flink Operator](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/)**: A Kubernetes operator to deploy and manage Apache Flink clusters, simplifying the deployment of stream processing applications.
+*   **[JupyterHub](https://jupyter.org/hub)**: A multi-user hub that spawns and manages Jupyter notebook servers, providing an interactive environment for data science.
+*   **[Kubeflow Spark Operator](https://www.kubeflow.org/docs/components/spark-operator/overview/)**: A Kubernetes operator for running Apache Spark applications natively, simplifying job submission and management.
+*   **[Strimzi Kafka Operator](https://strimzi.io/)**: A powerful Kubernetes operator that simplifies the process of running and managing Apache Kafka clusters.
+*   **[Apache Superset](https://superset.apache.org/)**: A modern data exploration and visualization platform, used for building interactive BI dashboards.
+*   **[Trino](https://trino.io/)**: A high-performance, distributed SQL query engine for federated analytics, enabling queries on data across multiple sources.
+*   **[Apache YuniKorn](https://yunikorn.apache.org/)**: A light-weight, universal resource scheduler that provides advanced scheduling capabilities for big data and ML workloads.
+
+
+# Development Notes
+
 ## Core Concepts: The "Base + Stack" Pattern
 
 This repository uses a layering system to combine shared infrastructure with stack-specific customizations. This allows for both consistency and flexibility.
