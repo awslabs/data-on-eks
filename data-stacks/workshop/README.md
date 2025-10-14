@@ -312,7 +312,7 @@ kubectl port-forward -n flink-team-a \
 
 Open your browser to `http://localhost:8081`.
 
-![](./images/flink-raw-ui.png)
+<img src="./images/flink-raw-ui.png" width="600">
 
 ### Step 5: Verify Data Ingestion
 
@@ -480,7 +480,8 @@ kubectl port-forward -n workshop svc/alert-ui 8788:8788
 
 Open your browser to `http://localhost:8788`
 
-![](./images/alert-webui.png)
+<img src="./images/alert-webui.png" width="600">
+
 
 ### Step 3: Observe Real-time Alerts
 
@@ -532,7 +533,8 @@ On the JupyterHub landing page, you'll be prompted to select a container image f
 
 Karpenter will automatically provision a new node for your Spark environment. This may take 2-3 minutes.
 
-![](./images/jupyter-image-selection.png)
+<img src="./images/jupyter-image-selection.png" width="400">
+
 
 ### Step 3: Upload and Open the Notebook
 
@@ -545,7 +547,8 @@ cat $WORKSHOPDIR/src/spark/adhoc.ipynb | envsubst | kubectl exec -i -n jupyterhu
 
 Once the file is copied, you will see it in the Jupyter file browser on the left. Double-click `adhoc.ipynb` to open it.
 
-![](./images/jupyter-adhoc.png)
+<img src="./images/jupyter-adhoc.png" width="300">
+
 
 ### Step 4: Explore Apache Iceberg
 
@@ -553,7 +556,8 @@ The first part of the notebook guides you through the power of Iceberg's metadat
 
 To execute a cell, click it and then press the **▶** button in the toolbar.
 
-![Running Cells](./images/jupyter-cell.png)
+<img src="./images/jupyter-cell.png" width="400">
+
 
 You will learn how to:
 1.  **Connect to the Glue Catalog:** Configure Spark to use AWS Glue as the Iceberg catalog.
@@ -659,7 +663,7 @@ Now, open your browser to `http://localhost:18080`. You should see your `cat-sum
 *   **SQL/DataFrame Query:** Go to the **SQL / DataFrame** tab to see the query plan for your `daily_summary_df` dataframe, from the initial reads to the final aggregations and joins.
 *   **Environment:** The **Environment** tab shows all the Spark configuration properties that were used for the run, which is useful for debugging.
 
-![](./images/shs-ui.png)
+    <img src="./images/shs-ui.png" width="500">
 
 
 ### Step 5: Verify the Output in S3
@@ -719,8 +723,8 @@ Your first task is to connect Superset to the cafe's operational PostgreSQL data
     *   **PASSWORD**: `workshop`
 5.  Click **Connect** and then **Finish**.
 
+    <img src="./images/superset-workshop-db.png" width="300">
 
-![](./images/superset-workshop-db.png)
 
 You have now connected Superset to the source database where cat profiles are stored.
 
@@ -738,7 +742,7 @@ Next, you'll connect to the analytics data. The `daily_cat_summary` table you cr
 
 4.  Click **Connect** and then **Finish**.
 
-![](./images/superset-trino-connection.png)
+    <img src="./images/superset-trino-connection.png" width="300">
 
 Superset is now connected to two independent data sources: the operational PostgreSQL database and the Trino engine for the data lakehouse.
 
