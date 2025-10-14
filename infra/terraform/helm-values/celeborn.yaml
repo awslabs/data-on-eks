@@ -1,0 +1,69 @@
+image:
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: "celeborn"
+
+cluster:
+  name: cluster
+celeborn:
+    celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=100Gi,/mnt/disk2:disktype=SSD:capacity=100Gi
+master:
+  nodeSelector:
+    NodeGroupType: general-purpose # use a different nodepool for better performance if required. networking spec matters a lot.
+  env:
+    - name: CELEBORN_MASTER_MEMORY
+      value: 2g
+    - name: CELEBORN_MASTER_JAVA_OPTS
+      value: -XX:-PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:gc-master.out -Dio.netty.leakDetectionLevel=advanced
+    - name: CELEBORN_NO_DAEMONIZE
+      value: "true"
+    - name: TZ
+      value: Etc/GMT
+
+worker:
+  replicas: 3
+  nodeSelector:
+    NodeGroupType: general-purpose
+  env:
+    - name: CELEBORN_WORKER_MEMORY
+      value: 4g
+    - name: CELEBORN_WORKER_OFFHEAP_MEMORY
+      value: 24g
+    - name: CELEBORN_WORKER_JAVA_OPTS
+      value: -XX:-PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:gc-worker.out -Dio.netty.leakDetectionLevel=advanced
+    - name: CELEBORN_NO_DAEMONIZE
+      value: "true"
+    - name: TZ
+      value: Etc/GMT
+  resources:
+    requests:
+      cpu: "4"
+      memory: "32Gi" 
+    limits:
+      memory: "32Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: disk1
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: gp3-faster # do not use default
+        resources:
+          requests:
+            storage: 100Gi
+    - metadata:
+        name: disk2
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: gp3-faster # do not use default
+        resources:
+          requests:
+            storage: 100Gi
+  volumeMounts:
+    - name: disk1
+      mountPath: /mnt/disk1
+    - name: disk2
+      mountPath: /mnt/disk2

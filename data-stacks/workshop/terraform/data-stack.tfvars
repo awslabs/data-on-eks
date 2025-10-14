@@ -3,3 +3,4 @@ enable_ingress_nginx = true
 deployment_id = "UGtpQo0R"
 enable_datahub = true
 enable_superset = true
+enable_celeborn = true

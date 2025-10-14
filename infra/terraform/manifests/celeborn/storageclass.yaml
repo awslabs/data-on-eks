@@ -1,0 +1,16 @@
+# Disk performance is tied to Celeborn's overall performance.
+# You want to make sure it has enough throughput and iops
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+   name: gp3-faster
+provisioner: ebs.csi.aws.com
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3 # For more performance, use IO2 == $$
+  iops: "6000"
+  throughput: "1000"
+  encrypted: "true"
+  fsType: "xfs"
+  tagSpecification_1:  "DeploymentId=${deployment_id}"
