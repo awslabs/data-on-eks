@@ -172,3 +172,9 @@ variable "enable_superset" {
   type        = bool
   default     = false
 }
+
+variable "enable_celeborn" {
+  description = "Enable Apache Celeborn for remote shuffling service"
+  type        = bool
+  default     = false
+}
