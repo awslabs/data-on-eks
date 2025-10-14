@@ -2,6 +2,8 @@ locals {
   celeborn_namespace       = "celeborn"
   celeborn_service_account = "celeborn"
   celeborn_values = yamldecode(templatefile("${path.module}/helm-values/celeborn.yaml", {
+    s3_bucket = module.s3_bucket.s3_bucket_id
+    s3_bucket_region = module.s3_bucket.s3_bucket_region
   }))
 }
 
