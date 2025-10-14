@@ -8,7 +8,7 @@ website/package-lock.json
 
 # Local .terraform directories
 **/.terraform/*
-**/_local/*
+**/_local
 
 # Ignore _local folders under blueprints
 blueprints/**/_local/
