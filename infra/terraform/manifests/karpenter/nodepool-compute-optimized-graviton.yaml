@@ -10,7 +10,7 @@ spec:
         node.kubernetes.io/workload-type: compute-optimized-graviton
         node.kubernetes.io/instance-category: compute
         node.kubernetes.io/arch: arm64
-        NodeGroupType: SparkGravitonMemoryOptimized
+        NodeGroupType: SparkGravitonComputeOptimized
 
     spec:
       nodeClassRef:
