@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# Apache Pinot on EKS Blueprints
+# Apache Pinot on EKS Stack
 
 Production-ready Apache Pinot real-time OLAP datastore for Amazon EKS. Deploy ultra-low latency analytics for user-facing applications.
 

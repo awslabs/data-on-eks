@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# Apache Superset on EKS Blueprints
+# Apache Superset on EKS Stack
 
 Production-ready Apache Superset BI platform for Amazon EKS. Deploy self-service data exploration and visualization.
 

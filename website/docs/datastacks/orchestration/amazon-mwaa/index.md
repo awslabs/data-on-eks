@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# Amazon MWAA Blueprints
+# Amazon MWAA Stack
 
 Managed Apache Airflow with Amazon MWAA integrated with EKS. Deploy fully managed workflow orchestration with Kubernetes integration.
 

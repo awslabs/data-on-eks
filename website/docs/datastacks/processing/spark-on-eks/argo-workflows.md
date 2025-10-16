@@ -13,7 +13,7 @@ This guide provides three practical examples of how to run Spark jobs on Amazon 
 2.  **Example 2: Using the Spark Operator:** Orchestrate a Spark job by having Argo Workflows create a `SparkApplication` custom resource, which is then managed by the Spark Operator.
 3.  **Example 3: Event-Driven Workflows with Argo Events:** Trigger a Spark job automatically when a message is sent to an Amazon SQS queue.
 
-The Terraform code to provision Argo Workflows can be found in the [schedulers/terraform/argo-workflow](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/argo-workflow) directory. The Kubernetes manifests for the examples in this guide are located in the `data-stacks/spark-on-eks/blueprints/argo-workflows/manifests/` directory.
+The Terraform code to provision Argo Workflows can be found in the [schedulers/terraform/argo-workflow](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/argo-workflow) directory. The Kubernetes manifests for the examples in this guide are located in the `data-stacks/spark-on-eks/examples/argo-workflows/manifests/` directory.
 
 ## Prerequisites
 
@@ -67,19 +67,19 @@ This example demonstrates how to run a basic Spark Pi job by using `spark-submit
 First, apply the `spark-workflow-templates.yaml` file. This contains `WorkflowTemplate` resources, including the `spark-pi` template used in this example. The `envsubst` command substitutes variables required by other templates in the file.
 
 ```bash
-envsubst < $SPARK_DIR/blueprints/argo-workflows/manifests/spark-workflow-templates.yaml | kubectl apply -f -
+envsubst < $SPARK_DIR/examples/argo-workflows/manifests/spark-workflow-templates.yaml | kubectl apply -f -
 ```
 
 Next, apply the `argo-rbac.yaml` file to create the Service Account and Role Binding required for the workflow to execute.
 
 ```bash
-kubectl apply -f $SPARK_DIR/blueprints/argo-workflows/manifests/argo-rbac.yaml
+kubectl apply -f $SPARK_DIR/examples/argo-workflows/manifests/argo-rbac.yaml
 ```
 
 Finally, apply the `argo-spark.yaml` file to create the workflow itself.
 
 ```bash
-kubectl apply -f $SPARK_DIR/blueprints/argo-workflows/manifests/argo-spark.yaml
+kubectl apply -f $SPARK_DIR/examples/argo-workflows/manifests/argo-spark.yaml
 ```
 
 ### 2. Verify the Workflow
@@ -107,7 +107,7 @@ The `spark-workflow-templates.yaml` file, which you applied in the previous exam
 Submit the workflow by applying the `argo-spark-operator.yaml` manifest:
 
 ```bash
-kubectl apply -f $SPARK_DIR/blueprints/argo-workflows/manifests/argo-spark-operator.yaml
+kubectl apply -f $SPARK_DIR/examples/argo-workflows/manifests/argo-spark-operator.yaml
 ```
 
 ### 2. Verify the Workflow
@@ -149,13 +149,13 @@ echo "SQS Queue URL: $QUEUE_URL"
 Next, deploy the Argo Events components. The `eventbus.yaml` manifest creates the `EventBus` resource.
 
 ```bash
-kubectl apply -f $SPARK_DIR/blueprints/argo-workflows/manifests/eventbus.yaml
+kubectl apply -f $SPARK_DIR/examples/argo-workflows/manifests/eventbus.yaml
 ```
 
 The `eventsource-sqs.yaml` manifest configures the `EventSource` to monitor the `data-on-eks` SQS queue. We use `envsubst` to inject the correct AWS region into the manifest.
 
 ```bash
-cat $SPARK_DIR/blueprints/argo-workflows/manifests/eventsource-sqs.yaml | envsubst | kubectl apply -f -
+cat $SPARK_DIR/examples/argo-workflows/manifests/eventsource-sqs.yaml | envsubst | kubectl apply -f -
 ```
 
 ### 2. Deploy the Sensor and RBAC
@@ -163,13 +163,13 @@ cat $SPARK_DIR/blueprints/argo-workflows/manifests/eventsource-sqs.yaml | envsub
 The Sensor needs permission to create Argo Workflows. Apply the `sensor-rbac.yaml` manifest to create the necessary `ServiceAccount`, `Role`, and `RoleBinding`.
 
 ```bash
-kubectl apply -f $SPARK_DIR/blueprints/argo-workflows/manifests/sensor-rbac.yaml
+kubectl apply -f $SPARK_DIR/examples/argo-workflows/manifests/sensor-rbac.yaml
 ```
 
 Now, deploy the `Sensor` itself using the `sqs-spark-jobs.yaml` manifest. This Sensor is configured to listen for events from our SQS EventSource and trigger a workflow that runs the `spark-taxi-app` template.
 
 ```bash
-cat $SPARK_DIR/blueprints/argo-workflows/manifests/sqs-spark-jobs.yaml | envsubst | kubectl apply -f -
+cat $SPARK_DIR/examples/argo-workflows/manifests/sqs-spark-jobs.yaml | envsubst | kubectl apply -f -
 ```
 
 ### 3. Verify the Argo Events Components
@@ -231,8 +231,8 @@ export SPARK_DIR=$(git rev-parse --show-toplevel)/data-stacks/spark-on-eks
 kubectl delete wf --all -n argo-workflows
 
 # Delete the workflow templates and associated RBAC
-kubectl delete -f $SPARK_DIR/blueprints/argo-workflows/manifests/argo-spark.yaml
-kubectl delete -f $SPARK_DIR/blueprints/argo-workflows/manifests/spark-workflow-templates.yaml
+kubectl delete -f $SPARK_DIR/examples/argo-workflows/manifests/argo-spark.yaml
+kubectl delete -f $SPARK_DIR/examples/argo-workflows/manifests/spark-workflow-templates.yaml
 ```
 
 ### Example 3 Resources
@@ -245,10 +245,10 @@ export REGION=$(terraform -chdir=$SPARK_DIR/terraform/_local output --raw region
 QUEUE_URL=$(aws sqs get-queue-url --queue-name data-on-eks --region $REGION --output text 2>/dev/null)
 
 # Delete the Sensor, RBAC, EventSource, and EventBus
-kubectl delete -f $SPARK_DIR/blueprints/argo-workflows/manifests/sqs-spark-jobs.yaml --ignore-not-found=true
-kubectl delete -f $SPARK_DIR/blueprints/argo-workflows/manifests/sensor-rbac.yaml --ignore-not-found=true
-cat $SPARK_DIR/blueprints/argo-workflows/manifests/eventsource-sqs.yaml | envsubst | kubectl delete -f - --ignore-not-found=true
-kubectl delete -f $SPARK_DIR/blueprints/argo-workflows/manifests/eventbus.yaml --ignore-not-found=true
+kubectl delete -f $SPARK_DIR/examples/argo-workflows/manifests/sqs-spark-jobs.yaml --ignore-not-found=true
+kubectl delete -f $SPARK_DIR/examples/argo-workflows/manifests/sensor-rbac.yaml --ignore-not-found=true
+cat $SPARK_DIR/examples/argo-workflows/manifests/eventsource-sqs.yaml | envsubst | kubectl delete -f - --ignore-not-found=true
+kubectl delete -f $SPARK_DIR/examples/argo-workflows/manifests/eventbus.yaml --ignore-not-found=true
 
 # Delete the SQS queue
 if [ -n "$QUEUE_URL" ]; then

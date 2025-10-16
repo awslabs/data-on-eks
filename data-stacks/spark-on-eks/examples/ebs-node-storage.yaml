@@ -1,22 +1,22 @@
 # Pre-requisite before running this job
 # 1/ Open taxi-trip-execute.sh and update $S3_BUCKET and <REGION>
-# 2/ Replace $S3_BUCKET with your S3 bucket created by this blueprint(Check Terraform outputs)
+# 2/ Replace $S3_BUCKET with your S3 bucket created by this example (Check Terraform outputs)
 # 3/ execute taxi-trip-execute.sh
 
-# This example demonstrates Graviton ARM64 with NVMe Instance Store Storage features
-  # Direct access to NVMe SSDs attached to ARM64 Graviton instances
-  # Maximum performance with local storage - no network I/O overhead
-  # Uses latest generation Graviton instances with NVMe storage (c6gd, c7gd, r6gd, r7gd, m6gd, m7gd, i4g, im4gn)
-  # Karpenter RAID0 policy automatically formats and mounts NVMe storage
+# This example demonstrates EBS Node-Level Storage features
+  # Shared EBS volume per node (mounted at /mnt/spark-local)
+  # Cost-effective alternative to per-pod PVCs
+  # Higher performance than individual PVCs but potential noisy neighbor issues
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: "taxi-trip-graviton"
+  name: "taxi-trip"
   namespace: spark-team-a
   labels:
-    app: "taxi-trip-graviton"
+    app: "taxi-trip"
+    applicationId: "taxi-trip-ebs"
     queue: root.test
 spec:
 #  To create Ingress object for Spark driver.
@@ -38,30 +38,12 @@ spec:
     - "s3a://$S3_BUCKET/taxi-trip/input/"
     - "s3a://$S3_BUCKET/taxi-trip/output/"
   sparkConf:
-    "spark.app.name": "taxi-trip-graviton"
-    "spark.kubernetes.driver.pod.name": "taxi-trip-graviton"
-    "spark.kubernetes.executor.podNamePrefix": "taxi-trip-graviton"
+    "spark.app.name": "taxi-trip"
+    "spark.kubernetes.driver.pod.name": "taxi-trip"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
     "spark.local.dir": "/data1"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"
-
-    # NVMe Storage Performance Optimizations for Graviton ARM64
-    "spark.shuffle.spill.diskWriteBufferSize": "1048576"  # 1MB buffer for NVMe
-    "spark.shuffle.file.buffer": "1m"  # Larger buffer for local SSD
-    "spark.io.compression.codec": "lz4"  # Fast compression for NVMe
-    "spark.shuffle.compress": "true"
-    "spark.shuffle.spill.compress": "true"
-    "spark.rdd.compress": "true"
-
-    # Local storage optimizations for NVMe on Graviton
-    "spark.sql.adaptive.enabled": "true"
-    "spark.sql.adaptive.coalescePartitions.enabled": "true"
-    "spark.sql.adaptive.localShuffleReader.enabled": "true"
-    "spark.sql.adaptive.skewJoin.enabled": "true"
-
-    # Optimize for high-performance local storage on ARM64
-    "spark.sql.files.maxPartitionBytes": "268435456"  # 256MB for NVMe throughput
-    "spark.sql.shuffle.partitions": "400"  # Optimize for parallelism
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
     "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.connection.maximum": "200"
@@ -86,15 +68,15 @@ spec:
     "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
     "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
 
-    # Graviton ARM64 NVMe Instance Store Storage Configuration
-    # Use direct NVMe SSD storage mounted by Karpenter RAID0 policy at /mnt/k8s-disks
-    # This provides maximum performance with local SSD access and no network overhead on ARM64
-    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/k8s-disks"
+    # EBS Node-Level Storage Configuration
+    # Use node-level EBS volume mounted at /mnt/spark-local
+    # This provides shared storage per node, reducing costs compared to per-pod PVCs
+    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/spark-local"
     "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.type": "Directory"
     "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.mount.readOnly": "false"
 
-    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/k8s-disks"
+    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/spark-local"
     "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.type": "Directory"
     "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.path": "/data1"
     "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.readOnly": "false"
@@ -107,42 +89,32 @@ spec:
     onSubmissionFailureRetryInterval: 20
 
   driver:
-    initContainers:
-      - name: volume-permissions
-        image: busybox:1.36
-        command: [ 'sh', '-c', 'chown -R 185 /data1' ]
-        volumeMounts:
-          - mountPath: "/data1"
-            name: "spark-local-dir-1"
-    cores: 2  # Increased for NVMe workload coordination on Graviton
-    coreLimit: "2000m"
-    memory: "8g"  # More memory for large dataset coordination
-    memoryOverhead: "2g"  # 25% overhead, more reasonable
+    cores: 1
+    coreLimit: "1200m"
+    memory: "4g"
+    memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
       version: 3.5.3
     nodeSelector:
-      node.kubernetes.io/workload-type: "compute-optimized-graviton"
+      node.kubernetes.io/workload-type: "compute-optimized-x86"
       karpenter.sh/capacity-type: "on-demand"
-      karpenter.k8s.aws/instance-family: "c6gd"
-    # Driver resource requirements: 2 vCPU, 10GB RAM (minimum c6gd.xlarge+)
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"
   executor:
-    initContainers:
-      - name: volume-permissions
-        image: busybox:1.36
-        command: [ 'sh', '-c', 'chown -R 185 /data1' ]
-        volumeMounts:
-          - mountPath: "/data1"
-            name: "spark-local-dir-1"
-    cores: 4  # Utilize Graviton NVMe instance capacity better
-    coreLimit: "4000m"
+    cores: 1
+    coreLimit: "1200m"
     instances: 2
-    memory: "15g"  # Scale up for high-performance workload on ARM64
-    memoryOverhead: "3g"  # 20% overhead for high-throughput
+    memory: "4g"
+    memoryOverhead: "4g"
     serviceAccount: spark-team-a
     labels:
       version: 3.5.3
     nodeSelector:
-      node.kubernetes.io/workload-type: "compute-optimized-graviton"
-      karpenter.k8s.aws/instance-family: "c6gd"
-    # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6gd.xlarge+)
+      node.kubernetes.io/workload-type: "compute-optimized-x86"
+    tolerations:
+      - key: "spark-compute-optimized"
+        operator: "Exists"
+        effect: "NoSchedule"

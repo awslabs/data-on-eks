@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# ClickHouse on EKS Blueprints
+# ClickHouse on EKS Stack
 
 Production-ready ClickHouse OLAP database on Amazon EKS. Deploy high-performance analytical databases with columnar storage.
 

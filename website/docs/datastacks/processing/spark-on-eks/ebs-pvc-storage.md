@@ -137,12 +137,12 @@ This example requires the EBS CSI driver to dynamically create volumes for Spark
 View the complete configuration:
 
 import CodeBlock from '@theme/CodeBlock';
-import EBSConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/blueprints/ebs-storage-dynamic-pvc.yaml';
+import EBSConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/examples/ebs-storage-dynamic-pvc.yaml';
 
 <details>
 <summary><strong>📄 Complete EBS Dynamic PVC Configuration</strong></summary>
 
-<CodeBlock language="yaml" title="blueprints/ebs-storage-dynamic-pvc.yaml" showLineNumbers>
+<CodeBlock language="yaml" title="examples/ebs-storage-dynamic-pvc.yaml" showLineNumbers>
 {EBSConfig}
 </CodeBlock>
 
@@ -200,8 +200,8 @@ cd ../../scripts/
 ### 2. Execute Spark Job
 
 ```bash
-# Navigate to blueprints directory
-cd ../blueprints/
+# Navigate to examples directory
+cd ../examples/
 
 # Submit the EBS Dynamic PVC job
 envsubst < ebs-storage-dynamic-pvc.yaml | kubectl apply -f -

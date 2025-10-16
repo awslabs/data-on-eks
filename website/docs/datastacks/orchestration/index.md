@@ -39,30 +39,6 @@ Workflow orchestration and automation platforms on Amazon EKS. Schedule, coordin
 <div className="datastack-header">
 <div className="datastack-icon">🔀</div>
 <div className="datastack-content">
-<h3>Argo Workflows on EKS</h3>
-<p className="datastack-description">Container-native workflow orchestration with DAGs, steps, and artifact management.</p>
-</div>
-</div>
-<div className="datastack-features">
-<span className="feature-tag">Workflow DAGs</span>
-<span className="feature-tag">Artifact Repository</span>
-<span className="feature-tag">Parallel Execution</span>
-<span className="feature-tag">S3 Integration</span>
-</div>
-<div className="datastack-footer">
-<a href="/data-on-eks/docs/datastacks/orchestration/argoworkflows-on-eks/" className="datastack-link">
-<span>Explore Argo</span>
-<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-</svg>
-</a>
-</div>
-</div>
-
-<div className="datastack-card">
-<div className="datastack-header">
-<div className="datastack-icon">☁️</div>
-<div className="datastack-content">
 <h3>Amazon MWAA</h3>
 <p className="datastack-description">Managed Apache Airflow with AWS integration for fully managed workflow orchestration.</p>
 </div>

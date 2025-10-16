@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# Kafka on EKS Blueprints
+# Kafka on EKS Stack
 
 Production-ready Apache Kafka streaming platform configurations for Amazon EKS. Deploy scalable, fault-tolerant event streaming infrastructure.
 

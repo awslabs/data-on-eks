@@ -280,7 +280,7 @@ This example uses the `spark-team-a` namespace with pre-configured IRSA. In prod
 Upload Spark dependency JARs to S3:
 
 ```bash
-cd data-stacks/spark-on-eks/blueprints/mountpoint-s3
+cd data-stacks/spark-on-eks/examples/mountpoint-s3
 
 # Upload sample JARs (Hadoop AWS, AWS SDK)
 aws s3 cp hadoop-aws-3.3.1.jar s3://${S3_BUCKET}/jars/

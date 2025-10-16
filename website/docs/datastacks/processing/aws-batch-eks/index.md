@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# AWS Batch on EKS Blueprints
+# AWS Batch on EKS Stack
 
 Production-ready AWS Batch configurations for running batch computing workloads on Amazon EKS. Leverage managed batch job orchestration.
 

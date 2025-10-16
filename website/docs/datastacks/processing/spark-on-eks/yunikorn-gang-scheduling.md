@@ -255,7 +255,7 @@ graph TD
 - **Improved SLA compliance** with faster job completion
 - **Enhanced team productivity** with reliable scheduling
 
-## YuniKorn Gang Scheduling Blueprint Deployment
+## YuniKorn Gang Scheduling Stack Deployment
 
 ### 1. Verify YuniKorn Installation
 
@@ -347,17 +347,17 @@ spec:
 - Resource requirements should use `"cpu"` and `"memory"` (Kubernetes standard format)
 - minResource values should match actual pod resource requests
 
-## Complete Gang Scheduling Blueprint
+## Complete Gang Scheduling Stack
 
 View the complete YuniKorn gang scheduling configuration:
 
 import CodeBlock from '@theme/CodeBlock';
-import YuniKornGangConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/blueprints/yunikorn-gang-scheduling.yaml';
+import YuniKornGangConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/examples/yunikorn-gang-scheduling.yaml';
 
 <details>
 <summary><strong>📄 Complete YuniKorn Gang Scheduling Configuration</strong></summary>
 
-<CodeBlock language="yaml" title="blueprints/yunikorn-gang-scheduling.yaml" showLineNumbers>
+<CodeBlock language="yaml" title="examples/yunikorn-gang-scheduling.yaml" showLineNumbers>
 {YuniKornGangConfig}
 </CodeBlock>
 
@@ -365,7 +365,7 @@ import YuniKornGangConfig from '!!raw-loader!../../../../../data-stacks/spark-on
 
 ### 4. Deploy Gang Scheduled Spark Job
 
-Now let's deploy and test the complete gang scheduling blueprint:
+Now let's deploy and test the complete gang scheduling stack:
 
 ```bash
 # Navigate to your Spark on EKS deployment
@@ -375,8 +375,8 @@ cd data-stacks/spark-on-eks/terraform/_local/
 export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
 export REGION=$(terraform output -raw region)
 
-# Navigate to blueprints directory
-cd ../../blueprints/
+# Navigate to example directory
+cd ../../examples/
 
 # Submit the gang scheduled Spark job with NVMe storage
 envsubst < yunikorn-gang-scheduling.yaml | kubectl apply -f -

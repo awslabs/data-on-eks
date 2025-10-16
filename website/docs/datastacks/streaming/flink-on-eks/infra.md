@@ -26,7 +26,7 @@ git clone https://github.com/awslabs/data-on-eks.git
 cd data-on-eks/data-stacks/flink-on-eks
 
 # Deploy the infrastructure
-./deploy-blueprint.sh
+./deploy.sh
 
 # Verify deployment
 kubectl get nodes
@@ -35,7 +35,7 @@ kubectl get pods -n flink-operator
 
 ## Configuration Options
 
-### Blueprint Configuration (`terraform/data-stack.tfvars`)
+### Stack Configuration (`terraform/data-stack.tfvars`)
 
 #### Basic Settings
 ```hcl
@@ -116,7 +116,7 @@ enable_cert_manager  = false  # TLS management
 ### 2. Infrastructure Deployment
 ```bash
 # Automated deployment process
-./deploy-blueprint.sh
+./deploy.sh
 
 # Manual step-by-step deployment
 cd terraform/_local

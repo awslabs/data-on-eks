@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# EMR Spark on EKS Blueprints
+# EMR Spark on EKS Stack
 
 Amazon EMR Spark on EKS with optimized runtime. Run Spark workloads with EMR managed capabilities and EKS flexibility.
 

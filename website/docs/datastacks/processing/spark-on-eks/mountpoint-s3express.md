@@ -5,7 +5,7 @@ sidebar_position: 7
 
 # Mountpoint S3 Express
 
-This blueprint demonstrates ultra-high performance S3 Express One Zone storage with single-digit millisecond latency for high-throughput Spark analytics workloads.
+This example demonstrates ultra-high performance S3 Express One Zone storage with single-digit millisecond latency for high-throughput Spark analytics workloads.
 
 ## Overview
 
@@ -21,7 +21,7 @@ S3 Express One Zone is a high-performance storage class that delivers consistent
 
 ## Prerequisites
 
-Before deploying this blueprint, ensure you have:
+Before deploying this example, ensure you have:
 
 - ✅ [Infrastructure deployed](/data-on-eks/docs/datastacks/processing/spark-on-eks/infra)
 - ✅ `kubectl` configured for your EKS cluster
@@ -328,7 +328,7 @@ spec:
                 --output text | xargs -I {} aws s3api delete-object --bucket $S3_EXPRESS_BUCKET --key {}
 ```
 
-## Related Blueprints
+## Related Examples
 
 - [Mountpoint S3](/data-on-eks/docs/datastacks/processing/spark-on-eks/mountpoint-s3) - Standard S3 with Mountpoint
 - [S3 Tables](/data-on-eks/docs/datastacks/processing/spark-on-eks/s3tables) - Iceberg integration with S3 Express

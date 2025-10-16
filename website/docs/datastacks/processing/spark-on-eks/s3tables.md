@@ -37,7 +37,7 @@ While S3 Tables use Apache Iceberg as an underlying implementation, they offer e
 ## Prerequisites
 
 :::info
-Before proceeding with this blueprint, ensure you have deployed the Spark on EKS infrastructure by following the [Infrastructure Setup Guide](/data-on-eks/docs/datastacks/processing/spark-on-eks/infra).
+Before proceeding with this example, ensure you have deployed the Spark on EKS infrastructure by following the [Infrastructure Setup Guide](/data-on-eks/docs/datastacks/processing/spark-on-eks/infra).
 :::
 
 Ensure that you have:
@@ -52,8 +52,8 @@ Ensure that you have:
 
 Create a Docker image with necessary jars for S3 tables communication.
 
-- Review the sample [Dockerfile](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/blueprints/s3-tables/Dockerfile-S3Table)
-- Note the [key jar files](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/blueprints/s3-tables/Dockerfile-S3Table#L43C1-L48C1) for S3 Tables interaction, including Iceberg, AWS SDK bundle, and S3 Tables Catalog for Iceberg runtime
+- Review the sample [Dockerfile](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/examples/s3-tables/Dockerfile-S3Table)
+- Note the [key jar files](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/examples/s3-tables/Dockerfile-S3Table#L43C1-L48C1) for S3 Tables interaction, including Iceberg, AWS SDK bundle, and S3 Tables Catalog for Iceberg runtime
 - Customize the Dockerfile as needed for your environment
 - Build the Docker image and push the image to your preferred container registry
 
@@ -61,10 +61,10 @@ We have created a docker image and published in ECR for the demo purpose only.
 
 ### Step 2: Create Test Data for the job
 
-Navigate to the example directory and generate sample employee data for Spark job input using this [shell](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/blueprints/s3-tables/input-data-gen.sh) script.
+Navigate to the example directory and generate sample employee data for Spark job input using this [shell](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/examples/s3-tables/input-data-gen.sh) script.
 
 ```sh
-cd data-stacks/spark-on-eks/blueprints/s3-tables
+cd data-stacks/spark-on-eks/examples/s3-tables
 ./input-data-gen.sh
 ```
 
@@ -74,7 +74,7 @@ Note: If you need to adjust the number of records, you can modify the input-data
 
 ### Step 3: Upload Test Input data to Amazon S3 Bucket
 
-Replace `<YOUR_S3_BUCKET>` with the name of the S3 bucket created by your blueprint and run the below command.
+Replace `<YOUR_S3_BUCKET>` with the name of the S3 bucket created by your stack and run the below command.
 
 ```bash
 aws s3 cp employee_data.csv s3://<S3_BUCKET>/s3table-example/input/
@@ -84,7 +84,7 @@ This command will upload the CSV file to your S3 bucket. The Spark job will late
 
 ### Step 4: Upload PySpark Script to S3 Bucket
 
-The following script is the snippet of the [Spark job](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/blueprints/s3-tables/s3table-iceberg-pyspark.py) where you can see the Spark config required to work with S3 Tables.
+The following script is the snippet of the [Spark job](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/examples/s3-tables/s3table-iceberg-pyspark.py) where you can see the Spark config required to work with S3 Tables.
 
 ```python
 def main(args):
@@ -120,7 +120,7 @@ def main(args):
 
 ```
 
-Replace `S3_BUCKET` with the name of the S3 bucket created by your blueprint and run the below command to upload sample [Spark job](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/blueprints/s3-tables/s3table-iceberg-pyspark.py) to S3 buckets.
+Replace `S3_BUCKET` with the name of the S3 bucket created by your stack and run the below command to upload sample [Spark job](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/examples/s3-tables/s3table-iceberg-pyspark.py) to S3 buckets.
 
 ```bash
 aws s3 cp s3table-iceberg-pyspark.py s3://<S3_BUCKET>/s3table-example/scripts/
@@ -149,8 +149,8 @@ aws s3tables create-table-bucket \
 
 Update the Spark Operator YAML file as below:
 
-- Open [s3table-spark-operator.yaml](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/blueprints/s3-tables/s3table-spark-operator.yaml) file in your preferred text editor.
-- Replace `<S3_BUCKET>` with your S3 bucket created by this blueprint(Check Terraform outputs). S3 bucket is the place where you copied the test data and sample spark job in the above steps.
+- Open [s3table-spark-operator.yaml](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/examples/s3-tables/s3table-spark-operator.yaml) file in your preferred text editor.
+- Replace `<S3_BUCKET>` with your S3 bucket created by this stack (Check Terraform outputs). S3 bucket is the place where you copied the test data and sample spark job in the above steps.
 - REPLACE `<S3TABLE_BUCKET_ARN>` with your S3 table bucket ARN captured in the previous step.
 
 You can see the snippet of Spark Operator Job config below.
@@ -205,7 +205,7 @@ spec:
 Apply the updated YAML configuration file to your Kubernetes cluster to submit and execute the Spark job:
 
 ```bash
-cd data-stacks/spark-on-eks/blueprints/s3-tables
+cd data-stacks/spark-on-eks/examples/s3-tables
 kubectl apply -f s3table-spark-operator.yaml
 ```
 
@@ -349,7 +349,7 @@ Please note that these policies can further be adjusted and make it more granula
 
 <CollapsibleContent header={<h2><span>Using S3 Tables with JupyterLab </span></h2>}>
 
-If you'd like to use JupyterLab to work with S3 Tables interactively, this blueprint allows you to deploy JupyterLab single user instances to your cluster.
+If you'd like to use JupyterLab to work with S3 Tables interactively, this stack allows you to deploy JupyterLab single user instances to your cluster.
 
 > :warning: JupyterHub configurations available here are for testing purposes only.
 >
@@ -367,13 +367,13 @@ echo 'enable_jupyterhub = true' >> data-stack.tfvars
 
 # Redeploy
 cd ../
-./deploy-blueprint.sh
+./deploy.sh
 ```
 
 ### Ensure you have test data available in your S3 bucket
 
 ```bash
-cd data-stacks/spark-on-eks/blueprints/s3-tables
+cd data-stacks/spark-on-eks/examples/s3-tables
 ./input-data-gen.sh
 aws s3 cp employee_data.csv s3://${S3_BUCKET}/s3table-example/input/
 ```
@@ -394,7 +394,7 @@ aws s3 cp employee_data.csv s3://${S3_BUCKET}/s3table-example/input/
 
     ![select](./img/s3tables-jupyter-select.png)
 
-1. Copy examples from the [example Jupyter Notebook](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/blueprints/s3-tables/s3table-iceberg-pyspark.ipynb) as a starting point to test S3 Tables features interactively.
+1. Copy examples from the [example Jupyter Notebook](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/examples/s3-tables/s3table-iceberg-pyspark.ipynb) as a starting point to test S3 Tables features interactively.
 
     **Be sure to update `S3_BUCKET` and `s3table_arn` values in the notebook**
 

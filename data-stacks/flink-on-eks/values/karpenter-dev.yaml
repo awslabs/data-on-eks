@@ -1,5 +1,5 @@
 # Flink on EKS - Karpenter Overrides (Different from Spark!)
-# Shows how same base addon can be configured differently per blueprint
+# Shows how same base addon can be configured differently per example
 
 # Same base Karpenter, different configuration
 karpenter:
@@ -21,7 +21,7 @@ flinkNodePools:
     metadata:
       labels:
         workload-type: streaming
-        blueprint: flink-on-eks
+        stack: flink-on-eks
     spec:
       template:
         spec:
@@ -60,7 +60,7 @@ flinkNodePools:
     metadata:
       labels:
         workload-type: checkpoint-storage
-        blueprint: flink-on-eks
+        stack: flink-on-eks
     spec:
       template:
         spec:
@@ -117,7 +117,7 @@ flinkEC2NodeClasses:
         fi
 
       tags:
-        Blueprint: flink-on-eks
+        stack: flink-on-eks
         Environment: dev
         WorkloadType: streaming
         OptimizedFor: low-latency
@@ -163,7 +163,7 @@ flinkEC2NodeClasses:
         fi
 
       tags:
-        Blueprint: flink-on-eks
+        stack: flink-on-eks
         Environment: dev
         WorkloadType: checkpoint-storage
         OptimizedFor: high-iops

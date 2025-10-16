@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# Apache Airflow on EKS Blueprints
+# Apache Airflow on EKS Stack
 
 Production-ready Apache Airflow orchestration platform on Amazon EKS. Deploy scalable workflow automation with Kubernetes executor.
 

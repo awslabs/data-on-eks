@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# EMR Spark Rapids on EKS Blueprints
+# EMR Spark Rapids on EKS Stack
 
 GPU-accelerated Apache Spark on Amazon EMR with NVIDIA Rapids. Run ETL workloads with massive performance gains on GPU instances.
 

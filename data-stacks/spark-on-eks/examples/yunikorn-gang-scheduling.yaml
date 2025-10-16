@@ -1,24 +1,28 @@
 # Pre-requisite before running this job
 # 1/ Open taxi-trip-execute.sh and update $S3_BUCKET and <REGION>
-# 2/ Replace $S3_BUCKET with your S3 bucket created by this blueprint(Check Terraform outputs)
+# 2/ Replace $S3_BUCKET with your S3 bucket created by this example (Check Terraform outputs)
 # 3/ execute taxi-trip-execute.sh
 
-# This example demonstrates NVMe Instance Store Storage features
-  # Direct access to NVMe SSDs attached to instances
-  # Maximum performance with local storage - no network I/O overhead
-  # Requires latest generation instances with NVMe storage (c6id, c7id, r6id, r7id, m6id, m7id, i4i)
-  # Karpenter RAID0 policy automatically formats and mounts NVMe storage
+# This example demonstrates YuniKorn Gang Scheduling with NVMe Instance Store Storage
+  # Gang scheduling ensures all Spark components (driver + executors) are scheduled atomically
+  # Prevents partial allocations and resource fragmentation in multi-tenant environments
+  # Combined with NVMe storage for maximum performance
+  # Uses Apache YuniKorn 1.7.0+ with enhanced gang scheduling features
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: "taxi-trip-nvme"
+  name: "taxi-trip-yunikorn-gang"
   namespace: spark-team-a
   labels:
-    app: "taxi-trip-nvme"
-    queue: root.test
+    app: "taxi-trip-yunikorn-gang"
+    queue: root.spark.spark-team-a
 spec:
+  # YuniKorn Gang Scheduling Configuration
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.spark.spark-team-a
 #  To create Ingress object for Spark driver.
 #  Ensure Spark Operator Helm Chart deployed with Ingress enabled to use this feature
 #  sparkUIOptions:
@@ -38,12 +42,10 @@ spec:
     - "s3a://$S3_BUCKET/taxi-trip/input/"
     - "s3a://$S3_BUCKET/taxi-trip/output/"
   sparkConf:
-    "spark.app.name": "taxi-trip-nvme"
-    "spark.kubernetes.driver.pod.name": "taxi-trip-nvme"
-    "spark.kubernetes.executor.podNamePrefix": "taxi-trip-nvme"
+    "spark.app.name": "taxi-trip-yunikorn-gang"
+    "spark.kubernetes.driver.pod.name": "taxi-trip-yunikorn-gang"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip-yunikorn-gang"
     "spark.local.dir": "/data1"
-    "spark.speculation": "false"
-    "spark.network.timeout": "2400"
 
     # NVMe Storage Performance Optimizations
     "spark.shuffle.spill.diskWriteBufferSize": "1048576"  # 1MB buffer for NVMe
@@ -62,6 +64,8 @@ spec:
     # Optimize for high-performance local storage
     "spark.sql.files.maxPartitionBytes": "268435456"  # 256MB for NVMe throughput
     "spark.sql.shuffle.partitions": "400"  # Optimize for parallelism
+    "spark.speculation": "false"
+    "spark.network.timeout": "2400"
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
     "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.connection.maximum": "200"
@@ -107,28 +111,74 @@ spec:
     onSubmissionFailureRetryInterval: 20
 
   driver:
-    cores: 2  # Increased for NVMe workload coordination
+    initContainers:
+      - name: volume-permission
+        image: busybox:1.36
+        command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    cores: 2  # Increased for YuniKorn gang scheduling coordination
     coreLimit: "2000m"
     memory: "8g"  # More memory for large dataset coordination
     memoryOverhead: "2g"  # 25% overhead, more reasonable
     serviceAccount: spark-team-a
-    labels:
-      version: 3.5.3
+    annotations:
+      yunikorn.apache.org/task-group-name: "spark-driver"
+      yunikorn.apache.org/task-groups: |-
+        [
+          {
+            "name": "spark-driver",
+            "minMember": 1,
+            "minResource": {
+              "cpu": "2000m",
+              "memory": "10Gi"
+            },
+            "nodeSelector": {
+              "node.kubernetes.io/workload-type": "compute-optimized-x86",
+              "karpenter.sh/capacity-type": "on-demand",
+              "karpenter.k8s.aws/instance-family": "c6id"
+            }
+          },
+          {
+            "name": "spark-executor",
+            "minMember": 10,
+            "minResource": {
+              "cpu": "4000m",
+              "memory": "18Gi"
+            },
+            "nodeSelector": {
+              "node.kubernetes.io/workload-type": "compute-optimized-x86",
+              "karpenter.k8s.aws/instance-family": "c6id"
+            }
+          }
+        ]
+      karpenter.sh/do-not-disrupt: "true"
     nodeSelector:
       node.kubernetes.io/workload-type: "compute-optimized-x86"
       karpenter.sh/capacity-type: "on-demand"
-      karpenter.k8s.aws/instance-family: "c6id"
-    # Driver resource requirements: 2 vCPU, 10GB RAM (minimum c6id.xlarge+)
+      karpenter.k8s.aws/instance-family: "c6id"  # Ensures NVMe instances
+    labels:
+      version: 3.5.3
   executor:
+    initContainers:
+      - name: volume-permission
+        image: busybox:1.36
+        command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
     cores: 4  # Utilize NVMe instance capacity better
     coreLimit: "4000m"
-    instances: 2
+    instances: 10
     memory: "15g"  # Scale up for high-performance workload
     memoryOverhead: "3g"  # 20% overhead for high-throughput
     serviceAccount: spark-team-a
-    labels:
-      version: 3.5.3
+    annotations:
+      yunikorn.apache.org/task-group-name: "spark-executor"
     nodeSelector:
       node.kubernetes.io/workload-type: "compute-optimized-x86"
-      karpenter.k8s.aws/instance-family: "c6id"
+      karpenter.k8s.aws/instance-family: "c6id"  # Ensures NVMe instances
+    labels:
+      version: 3.5.3
     # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6id.xlarge+)

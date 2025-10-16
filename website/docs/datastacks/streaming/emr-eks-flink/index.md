@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# EMR Flink on EKS Blueprints
+# EMR Flink on EKS Stack
 
 Amazon EMR Flink on EKS for real-time stream processing. Run Flink applications with EMR managed runtime on EKS.
 

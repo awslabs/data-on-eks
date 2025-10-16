@@ -18,7 +18,7 @@ import '@site/src/css/datastack-tiles.css';
   🌟 Featured tiles: Add "featured" class to highlight special examples
 */}
 
-# Flink on EKS Blueprints
+# Flink on EKS Stack
 
 Production-ready Apache Flink streaming examples and configurations for Amazon EKS. Choose from infrastructure deployment and streaming use cases.
 
