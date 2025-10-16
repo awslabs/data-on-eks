@@ -1,5 +1,5 @@
 ---
-title: Argo Workflows on EKS
+title: Argo Workflows
 sidebar_position: 12
 ---
 
