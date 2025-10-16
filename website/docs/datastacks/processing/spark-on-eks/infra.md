@@ -42,7 +42,7 @@ vi terraform/data-stack.tfvars
 
 ## Addons Configuration
 
-The blueprint automatically deploys core infrastructure and platform addons. You only need to configure Spark-specific and optional addons.
+The data stack automatically deploys core infrastructure and platform addons. You only need to configure Spark-specific and optional addons.
 
 To see all available addons and customize this stack, check `infra/terraform/variables.tf`.
 
@@ -92,13 +92,13 @@ enable_ingress_nginx
 Run the deployment script:
 
 ```bash
-./deploy-blueprint.sh
+./deploy.sh
 ```
 
 :::note
 
 **If deployment fails:**
-- Rerun the same command: `./deploy-blueprint.sh`
+- Rerun the same command: `./deploy.sh`
 - If it still fails, debug using kubectl commands or [raise an issue](https://github.com/awslabs/data-on-eks/issues)
 
 :::

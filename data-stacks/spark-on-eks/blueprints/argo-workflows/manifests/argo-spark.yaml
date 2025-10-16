@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: spark-pi-
+  namespace: argo-workflows
+spec:
+  arguments: {}
+  entrypoint: spark-pi
+  serviceAccountName: spark-test
+  templates:
+    - name: spark-pi
+      dag:
+        tasks:
+          - name: spark-pi
+            templateRef:
+              name: spark-pi
+              template: spark-pi-local
