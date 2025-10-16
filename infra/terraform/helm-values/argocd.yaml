@@ -2,6 +2,13 @@ configs:
   cm:
     kustomize.buildOptions: --enable-helm
     application.resourceTrackingMethod: annotation
+    resource.customizations.ignoreDifferences.apiextensions.k8s.io_CustomResourceDefinition: |
+      jqPathExpressions:
+        - .spec.versions[].additionalPrinterColumns[].priority | select(. == 0)
+    resource.customizations.ignoreDifferences.apps_StatefulSet: |
+       jqPathExpressions:
+        - .spec.volumeClaimTemplates[] | select(.kind == "PersistentVolumeClaim") | .apiVersion
+        - .spec.volumeClaimTemplates[] | select(.kind == "PersistentVolumeClaim") | .kind
     resource.compareoptions: |
       ignoreAggregatedRoles: true
       ignoreDifferences:

@@ -139,19 +139,7 @@ resource "helm_release" "argocd" {
   create_namespace = true
 
   values = [
-    <<-EOT
-    configs:
-      cm:
-        kustomize.buildOptions: --enable-helm
-        application.resourceTrackingMethod: annotation
-
-    dex:
-      enabled: false
-
-    notifications:
-      enabled: false
-
-    EOT
+    templatefile("${path.module}/helm-values/argocd.yaml", {}) 
   ]
 
   depends_on = [module.eks.eks_cluster_id]
