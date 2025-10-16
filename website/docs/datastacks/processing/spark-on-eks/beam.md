@@ -85,7 +85,7 @@ USER 185
 **Build and Push Image:**
 
 ```bash
-cd data-stacks/spark-on-eks/blueprints/beam
+cd data-stacks/spark-on-eks/examples/beam
 
 # Set your AWS account and region
 export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)

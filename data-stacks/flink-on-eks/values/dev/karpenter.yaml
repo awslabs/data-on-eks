@@ -21,7 +21,7 @@ flinkNodePools:
     metadata:
       labels:
         workload-type: streaming
-        blueprint: flink-on-eks
+        stack: flink-on-eks
         environment: dev
     spec:
       template:
@@ -67,7 +67,7 @@ flinkNodePools:
     metadata:
       labels:
         workload-type: checkpoint-storage
-        blueprint: flink-on-eks
+        stack: flink-on-eks
         environment: dev
     spec:
       template:
@@ -103,7 +103,7 @@ flinkEC2NodeClasses:
   - name: flink-streaming-optimized
     metadata:
       labels:
-        blueprint: flink-on-eks
+        stack: flink-on-eks
         workload-type: streaming
         environment: dev
     spec:
@@ -150,7 +150,7 @@ flinkEC2NodeClasses:
         fi
 
       tags:
-        Blueprint: flink-on-eks
+        stack: flink-on-eks
         Environment: dev
         WorkloadType: streaming
         OptimizedFor: low-latency-networking
@@ -158,7 +158,7 @@ flinkEC2NodeClasses:
   - name: flink-checkpoint-optimized
     metadata:
       labels:
-        blueprint: flink-on-eks
+        stack: flink-on-eks
         workload-type: checkpoint-storage
         environment: dev
     spec:
@@ -206,7 +206,7 @@ flinkEC2NodeClasses:
         fi
 
       tags:
-        Blueprint: flink-on-eks
+        stack: flink-on-eks
         Environment: dev
         WorkloadType: checkpoint-storage
         OptimizedFor: high-iops-small-files

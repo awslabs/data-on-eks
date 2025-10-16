@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# PostgreSQL on EKS Blueprints
+# PostgreSQL on EKS Stack
 
 Production-ready PostgreSQL database on Amazon EKS with CloudNativePG. Deploy highly available relational databases with automated backups.
 

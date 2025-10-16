@@ -18,7 +18,7 @@ import '@site/src/css/datastack-tiles.css';
   🌟 Featured tiles: Add "featured" class to highlight special examples
 */}
 
-# DataHub on EKS Blueprints
+# DataHub on EKS Stack
 
 Production-ready DataHub metadata management and data governance examples for Amazon EKS. Enterprise data catalog and lineage tracking solutions.
 

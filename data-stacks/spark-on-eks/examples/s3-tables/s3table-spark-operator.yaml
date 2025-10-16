@@ -1,5 +1,5 @@
 # Pre-requisite before running this job
-# Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
+# Replace <S3_BUCKET> with your S3 bucket created by this example (Check Terraform outputs)
 # REPLACE <S3TABLE_ARN> with actual S3 Table ARN
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"

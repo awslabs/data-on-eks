@@ -86,7 +86,7 @@ Extend your data platform with AWS Partner solutions built for Amazon EKS. These
 Get commercial support and SLAs from AWS Partners for mission-critical workloads.
 
 ### Tested Integrations
-Partner solutions are designed to work seamlessly with Data on EKS blueprints.
+Partner solutions are designed to work seamlessly with Data on EKS data stacks.
 
 ### Accelerated Deployment
 Leverage pre-built integrations to reduce time-to-production for complex data platforms.

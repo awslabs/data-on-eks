@@ -10,7 +10,7 @@ Deploy a production-ready Apache Spark platform on Amazon EKS with GitOps, auto-
 
 ## Architecture
 
-This blueprint deploys Spark Operator on EKS with Karpenter for elastic node provisioning and ArgoCD for GitOps-based application management.
+This stack deploys Spark Operator on EKS with Karpenter for elastic node provisioning and ArgoCD for GitOps-based application management.
 
 ![img.png](img/eks-spark-operator-karpenter.png)
 
@@ -33,7 +33,7 @@ cd data-on-eks/data-stacks/spark-on-eks
 
 ## Step 2: Customize Stack
 
-Edit the blueprint configuration file to customize addons and settings:
+Edit the stack configuration file to customize addons and settings:
 
 ```bash
 # Edit configuration file
@@ -289,8 +289,8 @@ cd data-stacks/spark-on-eks/terraform/_local/
 # Export S3 bucket from Terraform outputs
 export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
 
-# Navigate to blueprints directory
-cd ../../blueprints/
+# Navigate to examples directory
+cd ../../examples/
 
 # Replace S3 bucket placeholder in YAML file
 envsubst < pyspark-pi-job.yaml | kubectl apply -f -
@@ -339,7 +339,7 @@ kubectl describe application spark-operator -n argocd
 
 ## Next Steps
 
-With infrastructure deployed, you can now run any Spark blueprint:
+With infrastructure deployed, you can now run any Spark examples:
 
 - [EBS PVC Storage](/data-on-eks/docs/datastacks/processing/spark-on-eks/ebs-pvc-storage)
 - [NVMe Storage](/data-on-eks/docs/datastacks/processing/spark-on-eks/nvme-storage)
@@ -351,7 +351,7 @@ With infrastructure deployed, you can now run any Spark blueprint:
 To remove all resources, use the dedicated cleanup script:
 
 ```bash
-# Navigate to blueprint directory
+# Navigate to stack directory
 cd data-on-eks/data-stacks/spark-on-eks
 
 # Run cleanup script

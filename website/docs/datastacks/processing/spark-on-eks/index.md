@@ -18,7 +18,7 @@ import '@site/src/css/datastack-tiles.css';
   🌟 Featured tiles: Add "featured" class to highlight special examples
 */}
 
-# Spark on EKS Blueprints
+# Spark on EKS Stack
 
 Production-ready Apache Spark examples and configurations for Amazon EKS. Choose from infrastructure deployment and advanced use cases.
 

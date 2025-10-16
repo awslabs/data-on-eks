@@ -7,8 +7,8 @@ This document provides a step-by-step guide to execute Spark benchmarks on Gravi
 
 ## Steps to Execute the Job
 
-### Step 1: Deploy the Spark Operator Blueprint
-Deploy the Spark Operator Blueprint with YuniKorn scheduler. Follow the instructions provided in the [Data on EKS - Spark Operator with YuniKorn documentation](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/spark-operator-yunikorn).
+### Step 1: Deploy the Spark on EKS tack
+Deploy the Spark Operator stack with YuniKorn scheduler. Follow the instructions provided in the [Data on EKS - Spark Operator with YuniKorn documentation](https://awslabs.github.io/data-on-eks/docs/).
 
 ### Step 2: Create an S3 Bucket for TPC-DS Data
 Set up a dedicated S3 bucket to store the TPC-DS data output.

@@ -1,4 +1,4 @@
-# Flink on EKS - Blueprint Composition
+# Flink on EKS - Example Application Set
 # Uses SAME base addons as Spark, but with different configurations
 
 apiVersion: argoproj.io/v1alpha1
@@ -7,7 +7,7 @@ metadata:
   name: flink-on-eks
   namespace: argocd
   labels:
-    blueprint: flink-on-eks
+    stack: flink-on-eks
     category: composition
 spec:
   generators:
@@ -58,7 +58,7 @@ spec:
       name: "{{addon}}-{{env}}"
       namespace: argocd
       labels:
-        blueprint: flink-on-eks
+        stack: flink-on-eks
         addon: "{{addon}}"
         category: "{{category}}"
         environment: "{{env}}"
@@ -78,7 +78,7 @@ spec:
           valueFiles:
             - values.yaml  # SAME base defaults
             # Flink-specific overrides (different from Spark)
-            - ../../../blueprints/flink-on-eks/values/{{env}}/{{addon}}.yaml
+            - ../../../examples/flink-on-eks/values/{{env}}/{{addon}}.yaml
 
           # Different global parameters for Flink
           parameters:
@@ -88,7 +88,7 @@ spec:
               value: "{{env}}"
             - name: global.region
               value: "eu-west-1"  # Different region than Spark
-            - name: global.blueprint
+            - name: global.stack
               value: "flink-on-eks"
             - name: global.replicas
               value: "{{replicas}}"

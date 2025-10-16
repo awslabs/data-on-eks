@@ -1,5 +1,5 @@
 # Pre-requisite before running this job
-# Replace <S3_BUCKET_NAME> with your S3 bucket created by this blueprint(Check Terraform outputs)
+# Replace <S3_BUCKET_NAME> with your S3 bucket created by this example (Check Terraform outputs)
 # Verify that the version for spark matches
 
 ---

@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# EMR on EKS Blueprints
+# EMR on EKS Stack
 
 Production-ready Amazon EMR on EKS configurations. Run big data frameworks on EKS with managed EMR capabilities.
 

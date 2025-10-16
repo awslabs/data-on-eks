@@ -99,12 +99,12 @@ graph TB
 View the complete configuration:
 
 import CodeBlock from '@theme/CodeBlock';
-import NVMeConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/blueprints/nvme-storage.yaml';
+import NVMeConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/examples/nvme-storage.yaml';
 
 <details>
 <summary><strong>📄 Complete NVMe Storage Configuration</strong></summary>
 
-<CodeBlock language="yaml" title="blueprints/nvme-storage.yaml" showLineNumbers>
+<CodeBlock language="yaml" title="examples/nvme-storage.yaml" showLineNumbers>
 {NVMeConfig}
 </CodeBlock>
 
@@ -174,8 +174,8 @@ cd ../../scripts/
 ### 3. Execute Spark Job
 
 ```bash
-# Navigate to blueprints directory
-cd ../blueprints/
+# Navigate to example directory
+cd ../examples/
 
 # Submit the NVMe Storage job
 envsubst < nvme-storage.yaml | kubectl apply -f -

@@ -7,7 +7,7 @@ sidebar_label: Spark Observability
 
 ## Overview
 
-This blueprint demonstrates production-grade observability for Apache Spark on EKS using native Spark metrics exporters, Prometheus for time-series data collection, Grafana for visualization, and Spark History Server for post-execution analysis.
+This example demonstrates production-grade observability for Apache Spark on EKS using native Spark metrics exporters, Prometheus for time-series data collection, Grafana for visualization, and Spark History Server for post-execution analysis.
 
 **Key Components:**
 - **Spark UI**: Real-time application monitoring (active jobs only)
@@ -89,7 +89,7 @@ sparkConf:
 Use the reference PySpark job with observability pre-configured:
 
 ```bash
-cd data-stacks/spark-on-eks/blueprints
+cd data-stacks/spark-on-eks/examples
 
 # Replace <S3_BUCKET> with your bucket from Terraform outputs
 export S3_BUCKET=$(kubectl get cm -n spark-team-a spark-s3-config -o jsonpath='{.data.bucket}' 2>/dev/null || echo "your-s3-bucket-name")
@@ -101,7 +101,7 @@ sed "s/\$S3_BUCKET/${S3_BUCKET}/g" pyspark-pi-job.yaml | kubectl apply -f -
 **Available Example Jobs:**
 - `pyspark-pi-job.yaml` - Simple Pi calculation with metrics
 - `spark-app-graviton.yaml` - ARM-based Graviton workload
-- Additional examples in `data-stacks/spark-on-eks/blueprints/`
+- Additional examples in `data-stacks/spark-on-eks/examples/`
 
 ### Step 2: Access Real-Time Spark Web UI
 

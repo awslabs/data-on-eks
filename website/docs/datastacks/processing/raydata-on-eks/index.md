@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# Ray Data on EKS Blueprints
+# Ray Data on EKS Stack
 
 Production-ready Ray Data for scalable ML and data processing on Amazon EKS. Deploy distributed Python workloads with Ray's unified compute framework.
 

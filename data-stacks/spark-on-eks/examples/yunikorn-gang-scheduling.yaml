@@ -1,6 +1,6 @@
 # Pre-requisite before running this job
 # 1/ Open taxi-trip-execute.sh and update $S3_BUCKET and <REGION>
-# 2/ Replace $S3_BUCKET with your S3 bucket created by this blueprint(Check Terraform outputs)
+# 2/ Replace $S3_BUCKET with your S3 bucket created by this example (Check Terraform outputs)
 # 3/ execute taxi-trip-execute.sh
 
 # This example demonstrates YuniKorn Gang Scheduling with NVMe Instance Store Storage

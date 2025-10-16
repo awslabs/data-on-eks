@@ -5,7 +5,7 @@ sidebar_position: 0
 
 import '@site/src/css/datastack-tiles.css';
 
-# Spark on EKS with IPv6 Blueprints
+# Spark on EKS with IPv6 Stack
 
 Apache Spark on Amazon EKS with IPv6-only networking. Run Spark workloads at scale without IPv4 address exhaustion.
 

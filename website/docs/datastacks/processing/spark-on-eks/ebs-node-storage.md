@@ -96,12 +96,12 @@ graph TB
 View the complete configuration:
 
 import CodeBlock from '@theme/CodeBlock';
-import NodeStorageConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/blueprints/ebs-node-storage.yaml';
+import NodeStorageConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/examples/ebs-node-storage.yaml';
 
 <details>
 <summary><strong>📄 Complete EBS Node Storage Configuration</strong></summary>
 
-<CodeBlock language="yaml" title="blueprints/ebs-node-storage.yaml" showLineNumbers>
+<CodeBlock language="yaml" title="examples/ebs-node-storage.yaml" showLineNumbers>
 {NodeStorageConfig}
 </CodeBlock>
 
@@ -155,8 +155,8 @@ cd ../../scripts/
 ### 2. Execute Spark Job
 
 ```bash
-# Navigate to blueprints directory
-cd ../blueprints/
+# Navigate to example directory
+cd ../examples/
 
 # Submit the EBS Node Storage job
 envsubst < ebs-node-storage.yaml | kubectl apply -f -

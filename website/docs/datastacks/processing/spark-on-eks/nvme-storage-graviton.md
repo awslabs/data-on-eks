@@ -85,12 +85,12 @@ For detailed Graviton performance benchmarks and comparisons:
 View the complete configuration:
 
 import CodeBlock from '@theme/CodeBlock';
-import GravitonNVMeConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/blueprints/nvme-storage-graviton.yaml';
+import GravitonNVMeConfig from '!!raw-loader!../../../../../data-stacks/spark-on-eks/examples/nvme-storage-graviton.yaml';
 
 <details>
 <summary><strong>📄 Complete Graviton NVMe Storage Configuration</strong></summary>
 
-<CodeBlock language="yaml" title="blueprints/nvme-storage-graviton.yaml" showLineNumbers>
+<CodeBlock language="yaml" title="examples/nvme-storage-graviton.yaml" showLineNumbers>
 {GravitonNVMeConfig}
 </CodeBlock>
 
@@ -159,8 +159,8 @@ cd data-stacks/spark-on-eks/terraform/_local/
 export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
 export REGION=$(terraform output -raw region)
 
-# Navigate to blueprints directory
-cd ../../blueprints/
+# Navigate to example directory
+cd ../../examples/
 
 # Submit the Graviton NVMe Storage job
 envsubst < nvme-storage-graviton.yaml | kubectl apply -f -
