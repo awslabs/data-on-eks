@@ -18,6 +18,7 @@ celeborn:
 master:
   nodeSelector:
     NodeGroupType: general-purpose # use a different nodepool for better performance if required. networking spec matters a lot.
+    topology.kubernetes.io/zone: ${az}
   env:
     - name: CELEBORN_MASTER_MEMORY
       value: 2g
@@ -32,6 +33,7 @@ worker:
   replicas: 3
   nodeSelector:
     NodeGroupType: general-purpose
+    topology.kubernetes.io/zone: ${az}
   env:
     - name: CELEBORN_WORKER_MEMORY
       value: 4g

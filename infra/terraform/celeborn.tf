@@ -4,6 +4,7 @@ locals {
   celeborn_values = yamldecode(templatefile("${path.module}/helm-values/celeborn.yaml", {
     s3_bucket = module.s3_bucket.s3_bucket_id
     s3_bucket_region = module.s3_bucket.s3_bucket_region
+    az = local.s3_express_zone_name # does NOT need to be the same as local express zone. This is done for convenience only.
   }))
 }
 
