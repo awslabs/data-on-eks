@@ -10,10 +10,6 @@ data "aws_iam_session_context" "current" {
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
-data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.ecr
-}
-
 locals {
 
   name       = var.name
@@ -137,13 +133,6 @@ locals {
     us-west-2      = "895885662937"
   }
 
-}
-
-# ECR always authenticates with `us-east-1` region
-# Docs -> https://docs.aws.amazon.com/AmazonECR/latest/public/public-registries.html
-provider "aws" {
-  alias  = "ecr"
-  region = "us-east-1"
 }
 
 provider "aws" {
