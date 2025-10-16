@@ -75,3 +75,4 @@ worker:
       mountPath: /mnt/disk1
     - name: disk2
       mountPath: /mnt/disk2
+  volumes: {}
