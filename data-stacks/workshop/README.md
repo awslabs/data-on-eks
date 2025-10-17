@@ -105,7 +105,7 @@ uv sync --frozen
 uv run data-generator.py
 ```
 
-In the second terminal, kill the port-forward process by pressing `ctrl + c`. 
+In the second terminal, kill the port-forward process by pressing `ctrl + c`.
 
 **Validate:** Check that data was created:
 
@@ -678,7 +678,7 @@ You should see the `data` and `metadata` prefixes, confirming the Iceberg table 
 
 ### What You Accomplished
 
-You successfully productionized an analytics script by packaging it as a `SparkApplication`. You learned how the Spark Operator for Kubernetes allows you to manage batch jobs declaratively, and you used the Spark History Server to analyze the execution of a completed job. 
+You successfully productionized an analytics script by packaging it as a `SparkApplication`. You learned how the Spark Operator for Kubernetes allows you to manage batch jobs declaratively, and you used the Spark History Server to analyze the execution of a completed job.
 
 **Key Takeaway:** You have now seen the complete journey from interactive, ad-hoc analysis in a notebook to a repeatable, production-ready batch job managed as a Kubernetes resource.
 
@@ -759,9 +759,9 @@ In Superset, you create charts from **Datasets**. If you try to create a new dat
 
 ### Step 5: The Solution: Federated Queries with Trino
 
-The solution is not to find a magic button in Superset, but to use a **federated query engine**. 
+The solution is not to find a magic button in Superset, but to use a **federated query engine**.
 
-This is the true power of Trino. We have configured it to query our Iceberg data lake, but we can *also* configure Trino to connect to our PostgreSQL database. 
+This is the true power of Trino. We have configured it to query our Iceberg data lake, but we can *also* configure Trino to connect to our PostgreSQL database.
 
 If Trino is connected to both, it can perform the join internally. From Superset's perspective, it would only need a single connection—to Trino—and it would see tables from *both* PostgreSQL and Iceberg as if they were in the same place.
 
@@ -1000,4 +1000,3 @@ Use datahub to track data lineages
 
 ACL
 ---
-

@@ -45,20 +45,20 @@ trap cleanup EXIT
 
 setup_kubeconfig() {
     echo "[INFO] Setting up kubeconfig..."
-    
+
     local cluster_name
     cluster_name=$(terraform -chdir="$TERRAFORM_DIR/_local" output -raw cluster_name)
-    
+
     if [ -z "$cluster_name" ]; then
         echo "[ERROR] Could not get cluster name from terraform output."
         exit 1
     fi
-    
+
     echo "[INFO] Found cluster: $cluster_name"
-    
+
     aws eks update-kubeconfig --name "$cluster_name" --region "${AWS_REGION:-us-east-1}" --kubeconfig "$KUBECONFIG_FILE"
     export KUBECONFIG="$KUBECONFIG_FILE"
-    
+
     echo "[INFO] Kubeconfig created at $KUBECONFIG_FILE"
 }
 
@@ -92,7 +92,7 @@ prompt_for_config() {
         echo "[INFO] Getting ArgoCD admin password from Kubernetes secret..."
         local argocd_password
         argocd_password=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
-        
+
         if [ -z "$argocd_password" ]; then
             echo "[ERROR] Could not get ArgoCD admin password."
             exit 1
@@ -101,7 +101,7 @@ prompt_for_config() {
         echo "[INFO] Obtaining ArgoCD auth token..."
         local response
         response=$(curl -sS -k -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"'"$argocd_password"'"}' "$ARGOCD_SERVER/api/v1/session")
-        
+
         ARGOCD_TOKEN=$(echo "$response" | jq -r .token)
 
         if [ -z "$ARGOCD_TOKEN" ] || [ "$ARGOCD_TOKEN" == "null" ]; then
@@ -116,7 +116,7 @@ prompt_for_config() {
 get_all_app_names() {
     local response
     response=$(curl -s -k -H "Authorization: Bearer $ARGOCD_TOKEN" "$ARGOCD_SERVER/api/v1/applications")
-    
+
     if echo "$response" | jq -e '.items' > /dev/null; then
         echo "$response" | jq -r '.items[].metadata.name'
     else
@@ -135,10 +135,10 @@ is_app_syncing() {
     local app_name=$1
     local response
     response=$(curl -sS -k -H "Authorization: Bearer $ARGOCD_TOKEN" "$ARGOCD_SERVER/api/v1/applications/$app_name")
-    
+
     local phase
     phase=$(echo "$response" | jq -r '.status.operationState.phase // "Succeeded"')
-    
+
     if [ "$phase" == "Running" ]; then
         return 0 # 0 is true in bash
     else
