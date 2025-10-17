@@ -111,8 +111,8 @@
             }
             const coatLength = cat.coat_length.toLowerCase();
             const coatColor = cat.coat_color.toLowerCase();
-            
-            const matchingImages = catImages.filter(img => 
+
+            const matchingImages = catImages.filter(img =>
                 img.toLowerCase().includes(coatLength) && img.toLowerCase().includes(coatColor)
             );
 

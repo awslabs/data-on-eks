@@ -1,9 +1,9 @@
 #!/bin/bash
 
 TERRAFORM_COMMAND="terraform destroy -auto-approve"
-# Check if blueprint.tfvars exists and add it to the command if it does
-if [ -f "../blueprint.tfvars" ]; then
-  TERRAFORM_COMMAND="$TERRAFORM_COMMAND -var-file=../blueprint.tfvars"
+# Check if data-stack.tfvars exists and add it to the command if it does
+if [ -f "../data-stack.tfvars" ]; then
+  TERRAFORM_COMMAND="$TERRAFORM_COMMAND -var-file=../data-stack.tfvars"
 fi
 
 # Get cluster info from terraform output

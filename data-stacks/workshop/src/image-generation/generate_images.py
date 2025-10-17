@@ -54,7 +54,7 @@ def generate_image(client, prompt, seed, height, width):
                 contentType='application/json'
             )
             response_body = json.loads(response.get('body').read())
-            
+
             if 'image' in response_body:
                 return response_body['image']
             elif 'images' in response_body and response_body['images']:
@@ -74,7 +74,7 @@ def generate_image(client, prompt, seed, height, width):
         except Exception as e:
             logging.error(f"An unexpected error occurred during image generation: {e}")
             return None
-    
+
     logging.error("Failed to generate image after multiple retries.")
     return None
 
@@ -101,7 +101,7 @@ def main():
     args = parser.parse_args()
 
     logging.info(f"Starting cat image generation script with size {args.width}x{args.height}.")
-    
+
     bedrock_client = get_bedrock_client()
     if not bedrock_client:
         logging.error("Could not create Bedrock client. Exiting.")
@@ -133,19 +133,19 @@ def main():
         if generation_count >= args.num_images:
             logging.info(f"Reached generation limit of {args.num_images} images for this run.")
             break
-        
+
         length, color, variant = tasks[i]
         prompt = f"a full-body portrait of a {length}-haired {color} cat with detailed fur texture, in soft natural lighting"
         logging.info(f"Generating image for task {i+1}/{len(tasks)}: {length}-{color} variant {variant+1}")
-        
+
         image_base64 = generate_image(bedrock_client, prompt, seed=i, height=args.height, width=args.width)
-        
+
         if image_base64:
             timestamp = int(time.time())
             file_name = f"{length}_{color}_{timestamp}_variant_{variant+1}.png"
             file_path = os.path.join(OUTPUT_DIR, file_name)
             save_image(image_base64, file_path)
-            
+
             with open(state_file_path, 'w') as f:
                 json.dump({'last_successful_index': i}, f)
 
