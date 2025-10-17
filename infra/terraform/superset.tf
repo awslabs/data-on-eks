@@ -1,5 +1,4 @@
 locals {
-  superset_name      = "superset"
   superset_namespace = "superset"
 
   superset_values = file("${path.module}/helm-values/superset.yaml")

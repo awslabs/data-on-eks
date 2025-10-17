@@ -2,9 +2,9 @@ locals {
   celeborn_namespace       = "celeborn"
   celeborn_service_account = "celeborn"
   celeborn_values = yamldecode(templatefile("${path.module}/helm-values/celeborn.yaml", {
-    s3_bucket = module.s3_bucket.s3_bucket_id
+    s3_bucket        = module.s3_bucket.s3_bucket_id
     s3_bucket_region = module.s3_bucket.s3_bucket_region
-    az = local.s3_express_zone_name # does NOT need to be the same as local express zone. This is done for convenience only.
+    az               = local.s3_express_zone_name # does NOT need to be the same as local express zone. This is done for convenience only.
   }))
 }
 
@@ -25,7 +25,7 @@ resource "kubernetes_namespace" "celeborn" {
 module "celeborn_pod_identity" {
   count   = var.enable_celeborn ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name = "celeborn"
 
@@ -74,7 +74,7 @@ resource "aws_iam_policy" "celeborn_s3" {
 # Celeborn Manifests
 #---------------------------------------------------------------
 resource "kubectl_manifest" "celeborn_manifests" {
-  count     = var.enable_celeborn ? 1 : 0
+  count = var.enable_celeborn ? 1 : 0
   yaml_body = templatefile("${path.module}/manifests/celeborn/storageclass.yaml", {
     deployment_id = var.deployment_id
   })
@@ -88,7 +88,7 @@ resource "kubectl_manifest" "celeborn_manifests" {
 # Celeborn Application
 #---------------------------------------------------------------
 resource "kubectl_manifest" "celeborn" {
-  count     = var.enable_celeborn ? 1 : 0
+  count = var.enable_celeborn ? 1 : 0
   yaml_body = templatefile("${path.module}/argocd-applications/celeborn.yaml", {
     user_values_yaml = indent(8, yamlencode(local.celeborn_values))
   })

@@ -50,7 +50,12 @@ cp -r "$REPO_PATH/infra/terraform/"* "$LOCAL_DIR/"
 print_status "Overlaying blueprint files from $STACKS_DIR/$TERRAFORM_DIR..."
 tar -C "$STACKS_DIR/$TERRAFORM_DIR" --exclude='_local' --exclude='*.tfstate*' --exclude='.terraform' -cf - . | tar -C "$LOCAL_DIR" -xvf -
 
+# --- Clear Helm and Docker creds ---
+
+helm registry logout public.ecr.aws
+
 # --- Terraform Execution ---
+export TF_LOG=ERROR
 print_status "Changing directory to $LOCAL_DIR"
 cd "$LOCAL_DIR"
 

@@ -6,6 +6,7 @@ locals {
     cluster_name    = module.eks.cluster_name
     service_account = local.aws_load_balancer_controller_service_account
     region          = local.region
+    vpc_id          = module.vpc.vpc_id
   })
 }
 
@@ -14,7 +15,7 @@ locals {
 #---------------------------------------------------------------
 module "aws_load_balancer_controller_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name = "aws-load-balancer-controller"
 

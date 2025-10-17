@@ -119,15 +119,11 @@ DESC
 
   type = map(bool)
   default = {
-    coredns                         = true
-    kube-proxy                      = true
-    vpc-cni                         = true
-    eks-pod-identity-agent          = true
     aws-ebs-csi-driver              = true
+    aws-mountpoint-s3-csi-driver    = true
     metrics-server                  = true
     eks-node-monitoring-agent       = true
-    amazon-cloudwatch-observability = true
-    aws-mountpoint-s3-csi-driver    = true
+    amazon-cloudwatch-observability = false
   }
 }
 

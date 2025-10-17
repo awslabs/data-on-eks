@@ -77,18 +77,18 @@ print_next_steps() {
 
 setup_kubeconfig() {
     print_status "Setting up kubeconfig..."
-    
+
     local cluster_name
     cluster_name=$(terraform -chdir="$TERRAFORM_DIR/_local" output -raw cluster_name)
-    
+
     if [ -z "$cluster_name" ]; then
         echo "Could not get cluster name from terraform output."
         exit 1
     fi
-    
+
     print_status "Found cluster: $cluster_name"
-    
+
     aws eks update-kubeconfig --name "$cluster_name" --region "${AWS_REGION}" --kubeconfig "$KUBECONFIG_FILE"
-    
+
     print_status "Kubeconfig created at $KUBECONFIG_FILE"
 }

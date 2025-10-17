@@ -8,7 +8,7 @@ locals {
 #---------------------------------------------------------------
 module "trino_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   bucket_prefix = "${local.name}-trino-data-"
 
@@ -31,7 +31,7 @@ module "trino_s3_bucket" {
 
 module "trino_exchange_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 4.0"
+  version = "~> 5.0"
 
   bucket_prefix = "${local.name}-trino-exchange-"
 
@@ -136,7 +136,7 @@ resource "aws_iam_policy" "trino_exchange_policy" {
 #---------------------------------------------------------------
 module "trino_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name = "trino"
 

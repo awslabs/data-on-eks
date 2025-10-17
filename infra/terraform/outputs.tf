@@ -23,6 +23,7 @@ output "region" {
 }
 
 output "deployment_id" {
+  description = "Deployment ID unique to this stack"
   value = var.deployment_id
 }
 
