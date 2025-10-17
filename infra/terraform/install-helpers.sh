@@ -92,3 +92,23 @@ setup_kubeconfig() {
 
     print_status "Kubeconfig created at $KUBECONFIG_FILE"
 }
+
+refresh_argocd_apps() {
+    print_status "Refreshing all ArgoCD applications..."
+
+    local apps
+    apps=$(kubectl --kubeconfig "$KUBECONFIG_FILE" get applications -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name --no-headers)
+
+    if [ -z "$apps" ]; then
+        print_warning "No ArgoCD applications found to refresh."
+        return
+    fi
+
+    echo "$apps" | while read -r namespace name; do
+        if [ -n "$namespace" ] && [ -n "$name" ]; then
+            kubectl --kubeconfig "$KUBECONFIG_FILE" annotate application "$name" -n "$namespace" argocd.argoproj.io/refresh=hard
+        fi
+    done
+
+    print_status "Finished adding refresh annotation to all ArgoCD applications."
+}
