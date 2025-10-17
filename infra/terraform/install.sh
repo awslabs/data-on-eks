@@ -103,3 +103,6 @@ print_status "Deployment engine finished successfully."
 # --- Return to original directory ---
 print_status "Returning to $ORIGINAL_DIR"
 cd "$ORIGINAL_DIR"
+
+setup_kubeconfig
+refresh_argocd_apps
