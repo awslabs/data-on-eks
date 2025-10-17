@@ -1,6 +1,4 @@
 locals {
-  spark_operator_name            = "spark-operator"
-  spark_operator_service_account = "spark-operator-sa"
   spark_operator_values = yamldecode(templatefile("${path.module}/helm-values/spark-operator.yaml", {})
   )
 }

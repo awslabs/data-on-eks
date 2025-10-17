@@ -40,7 +40,7 @@ resource "aws_iam_policy" "external_secrets_policy" {
 
 module "external_secrets_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name = "external-secrets"
 

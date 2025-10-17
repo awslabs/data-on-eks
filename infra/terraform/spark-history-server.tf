@@ -6,9 +6,9 @@ locals {
     {
       s3_bucket_name            = module.s3_bucket.s3_bucket_id,
       event_log_prefix          = aws_s3_object.this.key,
-      spark_history_server_role = "${module.spark_history_server_irsa.iam_role_arn}"
+      spark_history_server_role = module.spark_history_server_irsa.arn
     })
-    )
+  )
 }
 
 
@@ -34,11 +34,11 @@ resource "kubectl_manifest" "spark_history_server" {
 #---------------------------------------------------------------
 
 module "spark_history_server_irsa" {
-  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version   = "~> 5.52"
-  role_name = "${module.eks.cluster_name}-spark-history-server"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "~> 6.0"
+  name    = "${module.eks.cluster_name}-spark-history-server"
 
-  role_policy_arns = {
+  policies = {
     policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
   }
 

@@ -23,7 +23,7 @@ resource "kubectl_manifest" "argo_events_manifests" {
 #---------------------------------------------------------------
 module "argo_events_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name = "data-on-eks-argo-events"
 

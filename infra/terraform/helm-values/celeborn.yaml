@@ -48,7 +48,7 @@ worker:
   resources:
     requests:
       cpu: "4"
-      memory: "32Gi" 
+      memory: "32Gi"
     limits:
       memory: "32Gi"
   volumeClaimTemplates:

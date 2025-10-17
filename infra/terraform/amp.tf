@@ -120,7 +120,7 @@ module "amp_ingest_pod_identity" {
   count = var.enable_amazon_prometheus ? 1 : 0
 
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name = "amp-ingest"
 

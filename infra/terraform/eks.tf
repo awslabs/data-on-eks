@@ -6,26 +6,19 @@
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.33"
+  version = "~> 21.0"
 
-  depends_on = [
-    aws_iam_role_policy_attachment.ebs_csi_pod_identity_policy,
-    aws_iam_role_policy_attachment.s3_csi_pod_identity_policy,
-    aws_iam_role_policy_attachment.cloudwatch_observability_policy_attachment
-  ]
-
-  cluster_name    = local.name
-  cluster_version = var.eks_cluster_version
+  name               = local.name
+  kubernetes_version = var.eks_cluster_version
 
   #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
-  cluster_endpoint_public_access = var.cluster_endpoint_public_access
+  endpoint_public_access = var.cluster_endpoint_public_access
 
   # Add the IAM identity that terraform is using as a cluster admin
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
 
-  # EKS Add-ons
-  cluster_addons = local.cluster_addons
+  addons = local.eks_core_addons
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
@@ -44,7 +37,7 @@ module "eks" {
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
   # Extend cluster security group rules
-  cluster_security_group_additional_rules = {
+  security_group_additional_rules = {
     ingress_nodes_ephemeral_ports_tcp = {
       description                = "Nodes on ephemeral ports"
       protocol                   = "tcp"
@@ -78,26 +71,6 @@ module "eks" {
     }
   }
 
-  eks_managed_node_group_defaults = {
-    iam_role_additional_policies = {
-      # Not required, but used in the example to access the nodes to inspect mounted volumes
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-    }
-
-    ebs_optimized = true
-    # This block device is used only for root volume. Adjust volume according to your size.
-    # NOTE: Don't use this volume for Spark workloads
-    block_device_mappings = {
-      xvda = {
-        device_name = "/dev/xvda"
-        ebs = {
-          volume_size = 100
-          volume_type = "gp3"
-        }
-      }
-    }
-  }
-
   # Merge the default node groups with user-provided node groups
   eks_managed_node_groups = merge(local.default_node_groups, var.managed_node_groups)
 }
@@ -120,9 +93,9 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   allow_volume_expansion = true
   volume_binding_mode    = "WaitForFirstConsumer"
   parameters = {
-    fsType    = "xfs"
-    encrypted = true
-    type      = "gp3"
+    fsType             = "xfs"
+    encrypted          = true
+    type               = "gp3"
     tagSpecification_1 = "DeploymentId=${var.deployment_id}"
   }
 }
@@ -139,10 +112,10 @@ resource "helm_release" "argocd" {
   create_namespace = true
 
   values = [
-    templatefile("${path.module}/helm-values/argocd.yaml", {}) 
+    templatefile("${path.module}/helm-values/argocd.yaml", {})
   ]
 
-  depends_on = [module.eks.eks_cluster_id]
+  depends_on = [aws_eks_addon.aws_ebs_csi_driver]
 }
 
 resource "kubectl_manifest" "quay_io_repo" {

@@ -8,7 +8,7 @@ enableServiceMutatorWebhook: false
 
 region: ${region}
 
-vpcId: ""
+vpcId: ${vpc_id}
 
 image:
   repository: public.ecr.aws/eks/aws-load-balancer-controller

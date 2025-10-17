@@ -77,4 +77,3 @@ if [ -n "$VOLUME_IDS" ]; then
 else
   echo "No EBS volumes found with deployment_id: $DEPLOYMENT_ID"
 fi
-

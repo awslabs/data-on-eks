@@ -24,7 +24,7 @@ resource "aws_cloudwatch_log_group" "aws_for_fluentbit" {
 #---------------------------------------------------------------
 module "aws_for_fluentbit_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name = "aws-for-fluent-bit"
 
