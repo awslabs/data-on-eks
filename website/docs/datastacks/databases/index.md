@@ -107,6 +107,30 @@ OLTP, OLAP, and query engines on Amazon EKS. Deploy production-ready databases a
 </div>
 </div>
 
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">🔍</div>
+<div className="datastack-content">
+<h3>Trino on EKS</h3>
+<p className="datastack-description">Distributed SQL query engine for querying data lakes, warehouses, and multiple data sources.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Query Engine</span>
+<span className="feature-tag">Federated Queries</span>
+<span className="feature-tag">KEDA Autoscaling</span>
+<span className="feature-tag">Fault Tolerance</span>
+</div>
+<div className="datastack-footer">
+<a href="/data-on-eks/docs/datastacks/databases/trino-on-eks/" className="datastack-link">
+<span>Explore Trino</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
 </div>
 
 {/* End of DataStacks grid */}
