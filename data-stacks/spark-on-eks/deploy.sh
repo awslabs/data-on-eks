@@ -3,9 +3,9 @@
 set -e
 
 # --- Configuration ---
-STACKS="spark-operator"
+STACKS="spark-on-eks"
 TERRAFORM_DIR="terraform"
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-us-west-2}"
 KUBECONFIG_FILE="kubeconfig.yaml"
 
 
