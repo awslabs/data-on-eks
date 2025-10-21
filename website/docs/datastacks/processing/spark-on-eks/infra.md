@@ -40,52 +40,79 @@ Edit the stack configuration file to customize addons and settings:
 vi terraform/data-stack.tfvars
 ```
 
-## Addons Configuration
+## What Gets Deployed
 
-The data stack automatically deploys core infrastructure and platform addons. You only need to configure Spark-specific and optional addons.
+This stack deploys a complete data platform with **30+ components** automatically via GitOps (ArgoCD).
 
-To see all available addons and customize this stack, check `infra/terraform/variables.tf`.
+### EKS Managed Addons
+
+Deployed and managed by AWS EKS:
+
+| Component | Purpose | Managed By |
+|-----------|---------|------------|
+| `coredns` | DNS resolution | EKS |
+| `kube-proxy` | Network proxy | EKS |
+| `vpc-cni` | Pod networking with prefix delegation | EKS |
+| `eks-pod-identity-agent` | IAM roles for service accounts | EKS |
+| `aws-ebs-csi-driver` | Persistent block storage | EKS |
+| `aws-mountpoint-s3-csi-driver` | S3 as volumes | EKS |
+| `metrics-server` | Resource metrics API | EKS |
+| `eks-node-monitoring-agent` | Node-level monitoring | EKS |
+
+### Core Platform Addons
+
+Infrastructure components deployed via ArgoCD:
+
+| Component | Purpose | Category |
+|-----------|---------|----------|
+| **Karpenter** | Node autoscaling and bin-packing | Compute |
+| **ArgoCD** | GitOps application deployment | Platform |
+| **cert-manager** | TLS certificate automation | Security |
+| **external-secrets** | AWS Secrets Manager integration | Security |
+| **ingress-nginx** | Ingress controller | Networking |
+| **aws-load-balancer-controller** | ALB/NLB integration | Networking |
+| **kube-prometheus-stack** | Prometheus + Grafana monitoring | Observability |
+| **aws-for-fluentbit** | Log aggregation to CloudWatch | Observability |
+
+### Data Platform Addons
+
+Data processing and analytics tools:
+
+| Component | Purpose | Use Case |
+|-----------|---------|----------|
+| **spark-operator** | Apache Spark on Kubernetes | Batch Processing |
+| **spark-history-server** | Spark job history and metrics | Observability |
+| **yunikorn** | Gang scheduling for batch jobs | Scheduling |
+| **jupyterhub** | Interactive notebooks (Python/Scala) | Data Science |
+| **flink-operator** | Stream processing framework | Real-time Analytics |
+| **strimzi-kafka** | Event streaming platform | Event Streaming |
+| **trino** | Distributed SQL query engine | Data Lakehouse |
+| **argo-workflows** | Workflow orchestration (DAGs) | Orchestration |
+| **argo-events** | Event-driven workflow triggers | Event Processing |
+| **keda** | Event-driven pod autoscaling | Autoscaling |
+
+### Optional Addons
+Configure in `terraform/data-stack.tfvars`:
 
 ```hcl title="terraform/data-stack.tfvars"
-region = "us-west-2"
 name   = "spark-on-eks"
+region = "us-west-2"
 
-#----------------------------------
-# Required for Spark
-#----------------------------------
-enable_spark_operator = true
-enable_spark_history_server = true
+# Optional - disable if not needed
+enable_ingress_nginx = true      # Ingress controller (default: true)
+enable_jupyterhub    = true      # Notebooks (default: true)
 
-#----------------------------------
-# Optional addons
-#----------------------------------
-enable_yunikorn = false             # Gang scheduling
-enable_mountpoint_s3_csi = false    # High-performance S3 access
-enable_flink = false                # Stream processing
-enable_kafka = false                # Event streaming
-
-#----------------------------------
-# EKS Addons deployed by default
-#----------------------------------
-coredns                         = true
-kube-proxy                      = true
-vpc-cni                         = true
-eks-pod-identity-agent          = true
-aws-ebs-csi-driver              = true
-metrics-server                  = true
-eks-node-monitoring-agent       = true
-amazon-cloudwatch-observability = true
-
-#----------------------------------
-# Default Addons deployed by default
-#----------------------------------
-karpenter
-argocd
-kube-prometheus-stack
-external-secrets-system
-cert-manager
-enable_ingress_nginx
+# Optional - enable for specific use cases
+enable_celeborn      = false     # Remote shuffle service
+enable_datahub       = false     # Metadata management
+enable_superset      = false     # Data visualization
+enable_raydata       = false     # Distributed ML/AI
+enable_amazon_prometheus = false # Managed Prometheus
 ```
+
+:::info Customization
+To see all available options, check [`infra/terraform/variables.tf`](https://github.com/awslabs/data-on-eks/blob/main/infra/terraform/variables.tf)
+:::
 
 ## Step 3: Deploy Infrastructure
 
@@ -109,210 +136,155 @@ Run the deployment script:
 
 :::
 
-## Step 4: Configure kubectl & Verify
+## Step 4: Verify Deployment
 
-Update kubeconfig and verify deployment:
+The deployment script automatically configures kubectl. Verify the cluster is ready:
 
 ```bash
-cd terraform/_local/
+# Set kubeconfig (done automatically by deploy.sh)
+export KUBECONFIG=kubeconfig.yaml
 
-# Update kubeconfig
-aws eks update-kubeconfig --region us-west-2 --name spark-on-eks
-
-# Verify nodes
+# Verify cluster nodes
 kubectl get nodes
 
-# Verify core components
+# Check all namespaces
 kubectl get namespaces
+
+# Verify ArgoCD applications
 kubectl get applications -n argocd
 ```
 
-<details>
-<summary><strong>✅ Expected Verification Results (Click to expand)</strong></summary>
+:::tip Quick Verification
 
-**Cluster Nodes:**
+Run these commands to verify successful deployment:
+
 ```bash
+# 1. Check nodes are ready
 kubectl get nodes
+# Expected: 4-5 nodes with STATUS=Ready
 
-# success-start
-NAME                                          STATUS   ROLES    AGE   VERSION
-ip-100-64-28-122.us-west-2.compute.internal   Ready    <none>   18h   v1.33.5-eks-113cf36
-ip-100-64-57-46.us-west-2.compute.internal    Ready    <none>   18h   v1.33.5-eks-113cf36
-ip-100-64-76-121.us-west-2.compute.internal   Ready    <none>   18h   v1.33.5-eks-113cf36
-ip-100-64-98-68.us-west-2.compute.internal    Ready    <none>   18h   v1.33.5-eks-113cf36
-# success-end
-```
-
-**ArgoCD Applications Status:**
-```bash
-# success-start
-NAMESPACE                 NAME                                                              READY   STATUS
-amazon-cloudwatch         amazon-cloudwatch-observability-controller-manager-6b5bdc5bch6n   1/1     Running
-amazon-cloudwatch         cloudwatch-agent-hhptn                                            1/1     Running
-amazon-cloudwatch         cloudwatch-agent-mwr8j                                            1/1     Running
-amazon-cloudwatch         cloudwatch-agent-t27j4                                            1/1     Running
-amazon-cloudwatch         cloudwatch-agent-zhxd5                                            1/1     Running
-amazon-cloudwatch         fluent-bit-bg5sw                                                  1/1     Running
-amazon-cloudwatch         fluent-bit-fzmhd                                                  1/1     Running
-amazon-cloudwatch         fluent-bit-hr7vq                                                  1/1     Running
-amazon-cloudwatch         fluent-bit-hszqv                                                  1/1     Running
-argocd                    argocd-application-controller-0                                   1/1     Running
-argocd                    argocd-applicationset-controller-68557bd74f-rczkb                 1/1     Running
-argocd                    argocd-redis-7f855978d6-h7js5                                     1/1     Running
-argocd                    argocd-repo-server-7986569554-6pcv6                               1/1     Running
-argocd                    argocd-server-664456c54d-qsvjq                                    1/1     Running
-cert-manager              cert-manager-cainjector-55cd9f77b5-8r2b7                          1/1     Running
-cert-manager              cert-manager-d4f586975-ctk6p                                      1/1     Running
-cert-manager              cert-manager-webhook-7987476d56-mwql5                             1/1     Running
-external-secrets-system   external-secrets-operator-8465bfd6f7-7z2xs                        1/1     Running
-external-secrets-system   external-secrets-operator-cert-controller-774cffdcb7-8lx95        1/1     Running
-external-secrets-system   external-secrets-operator-webhook-5745d54555-m29gj                1/1     Running
-ingress-nginx             ingress-nginx-controller-6dc8d7d55d-2bsvd                         1/1     Running
-jupyterhub                hub-76bf869c99-lv88r                                              1/1     Running
-jupyterhub                proxy-579b6c8b6d-n2rzs                                            1/1     Running
-jupyterhub                user-scheduler-59ffc6c676-hvlcn                                   1/1     Running
-jupyterhub                user-scheduler-59ffc6c676-lvlmv                                   1/1     Running
-karpenter                 karpenter-67f7cdc578-jvv5j                                        1/1     Running
-karpenter                 karpenter-67f7cdc578-qqd7x                                        1/1     Running
-kube-prometheus-stack     kube-prometheus-stack-grafana-c4b7f8b8c-8dz45                     3/3     Running
-kube-prometheus-stack     kube-prometheus-stack-kube-state-metrics-7f498cd54f-248hg         1/1     Running
-kube-prometheus-stack     kube-prometheus-stack-operator-659dc79b7c-zlwpq                   1/1     Running
-kube-prometheus-stack     kube-prometheus-stack-prometheus-node-exporter-gcj59              1/1     Running
-kube-prometheus-stack     kube-prometheus-stack-prometheus-node-exporter-j85ct              1/1     Running
-kube-prometheus-stack     kube-prometheus-stack-prometheus-node-exporter-kd72d              1/1     Running
-kube-prometheus-stack     kube-prometheus-stack-prometheus-node-exporter-npx6x              1/1     Running
-kube-prometheus-stack     prometheus-kube-prometheus-stack-prometheus-0                     2/2     Running
-kube-system               aws-for-fluentbit-aws-for-fluent-bit-4d546                        1/1     Running
-kube-system               aws-for-fluentbit-aws-for-fluent-bit-gx9kn                        1/1     Running
-kube-system               aws-for-fluentbit-aws-for-fluent-bit-kmj2q                        1/1     Running
-kube-system               aws-for-fluentbit-aws-for-fluent-bit-mnnwz                        1/1     Running
-kube-system               aws-load-balancer-controller-576d947768-rqkkc                     1/1     Running
-kube-system               aws-load-balancer-controller-576d947768-s8xvv                     1/1     Running
-kube-system               aws-node-5m6dg                                                    2/2     Running
-kube-system               aws-node-cqhnd                                                    2/2     Running
-kube-system               aws-node-qcjhn                                                    2/2     Running
-kube-system               aws-node-zwdgc                                                    2/2     Running
-kube-system               coredns-7bf648ff5d-kxgsc                                          1/1     Running
-kube-system               coredns-7bf648ff5d-wgfr4                                          1/1     Running
-kube-system               ebs-csi-controller-9cd4474bd-fbckb                                6/6     Running
-kube-system               ebs-csi-controller-9cd4474bd-n5vt8                                6/6     Running
-kube-system               ebs-csi-node-5znsb                                                3/3     Running
-kube-system               ebs-csi-node-dgqcb                                                3/3     Running
-kube-system               ebs-csi-node-h6zsx                                                3/3     Running
-kube-system               ebs-csi-node-hc4nt                                                3/3     Running
-kube-system               eks-node-monitoring-agent-4vdb2                                   1/1     Running
-kube-system               eks-node-monitoring-agent-9v66d                                   1/1     Running
-kube-system               eks-node-monitoring-agent-cstll                                   1/1     Running
-kube-system               eks-node-monitoring-agent-nzznb                                   1/1     Running
-kube-system               eks-pod-identity-agent-77d52                                      1/1     Running
-kube-system               eks-pod-identity-agent-hqzfm                                      1/1     Running
-kube-system               eks-pod-identity-agent-ld449                                      1/1     Running
-kube-system               eks-pod-identity-agent-svl6l                                      1/1     Running
-kube-system               kube-proxy-df52p                                                  1/1     Running
-kube-system               kube-proxy-jvrb4                                                  1/1     Running
-kube-system               kube-proxy-ll7fx                                                  1/1     Running
-kube-system               kube-proxy-tnlzj                                                  1/1     Running
-kube-system               metrics-server-7fb96f5556-l67qh                                   1/1     Running
-kube-system               metrics-server-7fb96f5556-qg4lg                                   1/1     Running
-spark-history-server      spark-history-server-0                                            1/1     Running
-spark-operator            spark-operator-controller-556ff74f5c-z6pbg                        1/1     Running
-spark-operator            spark-operator-webhook-5d7ff45749-z94g4                           1/1     Running
-yunikorn-system           yunikorn-admission-controller-6b86bc76b4-qs4wg                    1/1     Running
-yunikorn-system           yunikorn-scheduler-85dc96ffbc-c2lt6                               2/2     Running
-# success-end
-```
-
-**Spark Components:**
-```bash
-# Spark Operator
+# 2. Verify Spark Operator is running
 kubectl get pods -n spark-operator
-# success-start
-NAME                                         READY   STATUS
-spark-operator-controller-556ff74f5c-z6pbg   1/1     Running   0          5h52m
-spark-operator-webhook-5d7ff45749-z94g4      1/1     Running   0          5h52m
-# success-end
+# Expected: spark-operator-controller and webhook pods Running
 
-# Spark CRDs
+# 3. Check ArgoCD applications are synced
+kubectl get applications -n argocd
+# Expected: All apps showing "Synced" and "Healthy"
+
+# 4. Verify Spark CRDs installed
 kubectl get crds | grep spark
-# success-start
-scheduledsparkapplications.sparkoperator.k8s.io         2025-09-27T22:46:45Z
-sparkapplications.sparkoperator.k8s.io                  2025-09-27T22:46:45Z
-# success-end
+# Expected: sparkapplications.sparkoperator.k8s.io
+
+# 5. Check Karpenter NodePools ready
+kubectl get nodepools
+# Expected: 5 pools with READY=True
 ```
 
-**Karpenter Node Pools:**
-```bash
-kubectl get nodepools -n karpenter
-# success-start
+:::
+
+<details>
+<summary><b>Expected Output Examples</b></summary>
+
+**Nodes:**
+```
+NAME                                           STATUS   ROLES    AGE     VERSION
+ip-100-64-106-144.us-west-2.compute.internal   Ready    <none>   5m44s   v1.33.5-eks-113cf36
+ip-100-64-37-76.us-west-2.compute.internal     Ready    <none>   5m43s   v1.33.5-eks-113cf36
+...
+```
+
+**Spark Operator:**
+```
+NAME                                         READY   STATUS    RESTARTS   AGE
+spark-operator-controller-6bc54d4658-hg2qd   1/1     Running   0          6m20s
+spark-operator-webhook-5b5f58597d-hh6b2      1/1     Running   0          6m20s
+```
+
+**ArgoCD Applications:**
+```
+NAME                           SYNC STATUS   HEALTH STATUS
+spark-operator                 Synced        Healthy
+spark-history-server           Synced        Healthy
+kube-prometheus-stack          Synced        Healthy
+karpenter                      Synced        Healthy
+cert-manager                   Synced        Healthy
+...
+```
+
+**Karpenter NodePools:**
+```
 NAME                         NODECLASS   NODES   READY   AGE
-compute-optimized-graviton   default     0       True    3h7m
-compute-optimized-x86        default     0       True    3h7m
-general-purpose              default     0       True    3h7m
-memory-optimized-graviton    default     0       True    3h7m
-memory-optimized-x86         default     0       True    3h7m
-# success-end
+general-purpose              default     0       True    13m
+compute-optimized-x86        default     0       True    13m
+compute-optimized-graviton   default     0       True    13m
+memory-optimized-x86         default     0       True    13m
+memory-optimized-graviton    default     0       True    13m
 ```
 
 </details>
 
-## Step 5: Access ArgoCD & Verify Addons
+## Step 5: Access ArgoCD UI
 
-Access ArgoCD web UI to verify all addons:
+The deployment script displays ArgoCD credentials at the end. Access the UI:
 
 ```bash
-# Port forward to ArgoCD
+# Port forward ArgoCD server
 kubectl port-forward svc/argocd-server -n argocd 8080:443
-
-# Get admin password
-kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d
 ```
 
-**Login Details:**
-- **URL:** https://localhost:8080
-- **Username:** admin
-- **Password:** Use command above
+Open https://localhost:8080 in your browser:
+- **Username:** `admin`
+- **Password:** Displayed at end of `deploy.sh` output
 
-**Verify in ArgoCD UI:**
-- All applications should be "Synced" and "Healthy"
-- Check: spark-operator, kube-prometheus-stack
+:::info
+All applications should show **Synced** and **Healthy** status.
+:::
 
-![ArgoCD Addons](img/argocdaddons.png)
+![ArgoCD Applications](img/argocdaddons.png)
 
 
-## Step 6: Test with Simple Spark Job
+## Step 6: Run Test Spark Job
 
-Run a test Spark job to verify everything works:
+Validate the deployment with a sample PySpark job:
 
 ```bash
-cd data-stacks/spark-on-eks/terraform/_local/
-
-# Export S3 bucket from Terraform outputs
+# Get S3 bucket for Spark logs
+cd terraform/_local
 export S3_BUCKET=$(terraform output -raw s3_bucket_id_spark_history_server)
 
-# Navigate to examples directory
-cd ../../examples/
-
-# Replace S3 bucket placeholder in YAML file
+# Submit test job
+cd ../../examples
 envsubst < pyspark-pi-job.yaml | kubectl apply -f -
 
-# Monitor job progress
-kubectl get sparkapplications -n spark-team-a --watch
-
-# Check logs
-kubectl logs -n spark-team-a -l spark-role=driver --follow
+# Watch job status
+kubectl get sparkapplications -n spark-team-a -w
 ```
 
-**Expected Result:**
-- Job completes successfully with Pi calculation
-- Karpenter automatically provisions compute nodes
-- Logs show successful Spark execution
+**What happens:**
+1. **Karpenter provisions nodes** - Takes ~60s to launch compute-optimized instances
+2. **Driver pod starts** - Coordinates the Spark job execution
+3. **Executor pods run** - Perform the Pi calculation in parallel
+4. **Job completes** - Result: `Pi is roughly 3.141640`
+5. **Logs stored in S3** - Accessible via Spark History Server
 
+**Expected output:**
+```
+NAME                   STATUS      ATTEMPTS   START                  FINISH                 DURATION
+pyspark-pi-karpenter   COMPLETED   1          2025-10-21T20:08:52Z   2025-10-21T20:11:49Z   ~3 min
+```
+
+:::tip View Job Details
 ```bash
-kubectl get sparkapplications -n spark-team-a --watch
+# Watch job status in real-time
+kubectl get sparkapplications -n spark-team-a -w
 
-NAME                   STATUS      ATTEMPTS   START                  FINISH                 AGE
-pyspark-pi-karpenter   COMPLETED   1          2025-09-28T17:03:31Z   2025-09-28T17:05:02Z   108s
+# View driver logs (shows Pi calculation result)
+kubectl logs -n spark-team-a pyspark-pi-karpenter-driver
+
+# Check detailed job status
+kubectl describe sparkapplication pyspark-pi-karpenter -n spark-team-a
 ```
+:::
 
 
 ## Troubleshooting
