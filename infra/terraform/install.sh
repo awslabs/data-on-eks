@@ -27,7 +27,7 @@ if [ -f "$TFVARS_FILE" ]; then
     if grep -q 'deployment_id = "abcdefg"' "$TFVARS_FILE"; then
         print_status "Default deployment_id found. Generating a new random one."
         RANDOM_ID=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 8)
-        sed -i "s/deployment_id = \"abcdefg\"/deployment_id = \"$RANDOM_ID\"/" "$TFVARS_FILE"
+        sed -i '' "s/deployment_id = \"abcdefg\"/deployment_id = \"$RANDOM_ID\"/" "$TFVARS_FILE"
         print_status "Updated deployment_id to $RANDOM_ID in $TFVARS_FILE"
     fi
 else
@@ -52,7 +52,7 @@ tar -C "$STACKS_DIR/$TERRAFORM_DIR" --exclude='_local' --exclude='*.tfstate*' --
 
 # --- Clear Helm and Docker creds ---
 
-helm registry logout public.ecr.aws
+helm registry logout public.ecr.aws || true
 
 # --- Terraform Execution ---
 export TF_LOG=ERROR
@@ -79,7 +79,14 @@ fi
 for target in "${targets[@]}"
 do
   print_status "Applying module $target..."
-  apply_output=$( $TERRAFORM_COMMAND -target="$target" 2>&1 | tee /dev/tty)
+  if [ -t 1 ]; then
+    # Interactive terminal - use tee to show output
+    apply_output=$( $TERRAFORM_COMMAND -target="$target" 2>&1 | tee /dev/tty)
+  else
+    # Non-interactive (background) - just capture output
+    apply_output=$( $TERRAFORM_COMMAND -target="$target" 2>&1)
+    echo "$apply_output"
+  fi
   if [[ ${PIPESTATUS[0]} -eq 0 && $apply_output == *"Apply complete"* ]]; then
     echo "SUCCESS: Terraform apply of $target completed successfully"
   else
@@ -90,7 +97,14 @@ done
 
 # Final apply to catch any remaining resources
 print_status "Applying remaining resources..."
-apply_output=$( $TERRAFORM_COMMAND 2>&1 | tee /dev/tty)
+if [ -t 1 ]; then
+  # Interactive terminal - use tee to show output
+  apply_output=$( $TERRAFORM_COMMAND 2>&1 | tee /dev/tty)
+else
+  # Non-interactive (background) - just capture output
+  apply_output=$( $TERRAFORM_COMMAND 2>&1)
+  echo "$apply_output"
+fi
 if [[ ${PIPESTATUS[0]} -eq 0 && $apply_output == *"Apply complete"* ]]; then
   echo "SUCCESS: Terraform apply of all modules completed successfully"
 else
