@@ -1,5 +1,5 @@
 name = "spark-on-eks"
 region = "us-west-2"
 enable_ingress_nginx = true
-deployment_id = "poiuy"
+deployment_id = "rOOMTbDP"
 enable_celeborn = false
