@@ -14,9 +14,9 @@ NC='\033[0m'
 # =============================================================================
 
 # These should match your parent Terraform module configuration
-S3_BUCKET="<S3_BUCKET>"  # Replace with your S3 Bucket (get from terraform output)
-S3_PREFIX="<CLUSTER_NAME>/spark-application-logs/spark-team-a" # Replace <CLUSTER_NAME> with your EKS cluster name
-AWS_REGION="<AWS_REGION>" # Replace with your AWS region (e.g., us-west-2)
+S3_BUCKET="${S3_BUCKET:-}"  # Will use exported environment variable
+S3_PREFIX="${CLUSTER_NAME}/spark-application-logs/spark-team-a" # Will use exported CLUSTER_NAME
+AWS_REGION="${AWS_REGION:-}" # Will use exported environment variable
 
 NAMESPACE="raydata"
 
@@ -35,26 +35,21 @@ INITIAL_WORKERS="2"
 # END CONFIGURATION SECTION
 # =============================================================================
 
-
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
-
 
 print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-
 print_header() {
     echo -e "${BLUE}==== $1 ====${NC}"
 }
-
 
 # Function to validate prerequisites
 validate_prerequisites() {
@@ -94,34 +89,44 @@ validate_prerequisites() {
     print_status "✅ Ray service account found"
 }
 
-
 # Function to validate configuration
 validate_config() {
     print_header "Validating Configuration"
 
     local errors=0
 
-    if [[ -z "$S3_BUCKET" || "$S3_BUCKET" == "<S3_BUCKET>" ]]; then
-        print_error "S3_BUCKET needs to be updated"
-        print_error "Please replace <S3_BUCKET> with your actual S3 bucket name"
+    if [[ -z "$S3_BUCKET" ]]; then
+        print_error "S3_BUCKET environment variable is not set"
+        print_error "Please export S3_BUCKET with your actual S3 bucket name"
+        print_error "Example: export S3_BUCKET=\"my-spark-logs-bucket\""
         errors=$((errors + 1))
     fi
 
-    if [[ "$S3_PREFIX" == *"<CLUSTER_NAME>"* ]]; then
-        print_error "S3_PREFIX contains placeholder <CLUSTER_NAME>"
-        print_error "Please replace <CLUSTER_NAME> with your actual cluster name"
+    if [[ -z "$CLUSTER_NAME" ]]; then
+        print_error "CLUSTER_NAME environment variable is not set"
+        print_error "Please export CLUSTER_NAME with your actual cluster name"
+        print_error "Example: export CLUSTER_NAME=\"my-eks-cluster\""
+        errors=$((errors + 1))
+    fi
+
+    if [[ -z "$AWS_REGION" ]]; then
+        print_error "AWS_REGION environment variable is not set"
+        print_error "Please export AWS_REGION with your AWS region"
+        print_error "Example: export AWS_REGION=\"us-west-2\""
         errors=$((errors + 1))
     fi
 
     if [[ $errors -gt 0 ]]; then
-        print_error "Please update the configuration section in this script"
+        print_error "Please set the required environment variables"
         exit 1
     fi
 
     print_status "✅ Configuration validation passed"
+    print_status "✅ Using S3 bucket: $S3_BUCKET"
+    print_status "✅ Using cluster: $CLUSTER_NAME"
+    print_status "✅ Using region: $AWS_REGION"
     print_status "✅ Iceberg will use AWS Glue catalog and S3 storage"
 }
-
 
 # Function to update YAML files with variables
 update_yaml_files() {
@@ -163,7 +168,6 @@ update_yaml_files() {
     done
 }
 
-
 # Function to deploy Ray job components
 deploy_components() {
     print_header "Deploying Ray Job Components"
@@ -179,7 +183,6 @@ deploy_components() {
 
     print_status "✅ Ray job components deployed successfully"
 }
-
 
 # Function to check status
 check_status() {
@@ -275,7 +278,6 @@ monitor_job() {
     done
 }
 
-
 # Function to show dashboard access
 show_dashboard() {
     print_header "Ray Dashboard Access"
@@ -290,13 +292,11 @@ show_dashboard() {
     echo "kubectl port-forward svc/$service_name 8265:8265 -n $NAMESPACE"
 }
 
-
 # Function to cleanup temp files
 cleanup_temp_files() {
     print_status "Cleaning up temporary files..."
     rm -f *.tmp *.bak 2>/dev/null || true
 }
-
 
 # Function to cleanup Ray job only
 cleanup_rayjob() {
@@ -321,6 +321,8 @@ cleanup_rayjob() {
 show_config() {
     print_header "Current Configuration"
     echo "AWS Region: $AWS_REGION"
+    echo "Cluster Name: $CLUSTER_NAME"
+    echo "S3 Bucket: $S3_BUCKET"
     echo "Namespace: $NAMESPACE"
     echo "Iceberg Database: $ICEBERG_DATABASE"
     echo "Iceberg Table: $ICEBERG_TABLE"
@@ -329,7 +331,6 @@ show_config() {
     echo "Workers: $MIN_WORKERS-$MAX_WORKERS (initial: $INITIAL_WORKERS)"
     echo ""
 }
-
 
 # Main function
 main() {
@@ -371,13 +372,10 @@ main() {
             echo ""
             echo "PREREQUISITES: Deploy Terraform module in parent EKS project first!"
             echo ""
-            echo "Parent project structure:"
-            echo "  your-eks-project/"
-            echo "  ├── main.tf                 # Contains raydata_pipeline module"
-            echo "  ├── raydata-pipeline/       # Ray Data Terraform module"
-            echo "  └── examples/               # This script location"
-            echo ""
-            echo "Deploy module: terraform apply  # From parent project root"
+            echo "Required Environment Variables:"
+            echo "  export S3_BUCKET=\"your-bucket-name\""
+            echo "  export CLUSTER_NAME=\"your-cluster-name\""
+            echo "  export AWS_REGION=\"your-region\""
             echo ""
             echo "Usage: $0 <command>"
             echo ""
@@ -391,9 +389,6 @@ main() {
             echo "  cleanup    Remove Ray job only (preserve infrastructure)"
             echo "  help       Show this help message"
             echo ""
-            echo "Required configuration updates:"
-            echo "  - S3_BUCKET: Replace <S3_BUCKET> with your bucket name"
-            echo ""
             echo "Features:"
             echo "  - Uses Apache Iceberg for ACID transactions"
             echo "  - AWS Glue catalog for metadata management"
@@ -403,24 +398,5 @@ main() {
             ;;
     esac
 }
-
-
-# Check configuration before deployment
-if [[ "${1:-deploy}" == "deploy" ]]; then
-    if [[ "$S3_BUCKET" == "<S3_BUCKET>" ]]; then
-        print_error "Please update the configuration section in this script before deployment!"
-        echo ""
-        echo "Required updates:"
-        echo "  - S3_BUCKET: Replace <S3_BUCKET> with your actual bucket name"
-        echo ""
-        echo "Example:"
-        echo "  S3_BUCKET=\"my-spark-logs-bucket\""
-        echo ""
-        echo "Note: AWS credentials and Iceberg warehouse are automatically managed by Terraform."
-        echo ""
-        exit 1
-    fi
-fi
-
 
 main "$@"
