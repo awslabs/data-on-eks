@@ -2,6 +2,9 @@ global:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
 
+image:
+  tag: 3.0.0
+
 serviceAccount:
   create: true
   name: aws-for-fluent-bit-sa
