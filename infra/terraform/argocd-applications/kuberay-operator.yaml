@@ -1,23 +1,24 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: aws-for-fluentbit
+  name: kuberay-operator
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://aws.github.io/eks-charts
-    chart: aws-for-fluent-bit
-    targetRevision: "0.1.35"
+    repoURL: https://ray-project.github.io/kuberay-helm/
+    chart: kuberay-operator
+    targetRevision: "1.4.2"
     helm:
-      values: |
+      valuesObject:
         ${user_values_yaml}
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: kube-system
+    namespace: kuberay-operator
+
   syncPolicy:
     syncOptions:
       - CreateNamespace=true

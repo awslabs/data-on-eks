@@ -66,7 +66,7 @@ Production-ready Ray Data for scalable ML and data processing on Amazon EKS. Dep
 <span className="tag guide">Guide</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/raydata-on-eks/infra" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/processing/raydata-on-eks/infra" className="showcase-link">
 <span>Deploy Infrastructure</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -77,19 +77,19 @@ Production-ready Ray Data for scalable ML and data processing on Amazon EKS. Dep
 
 <div className="showcase-card">
 <div className="showcase-header">
-<div className="showcase-icon">🤖</div>
+<div className="showcase-icon">📊</div>
 <div className="showcase-content">
-<h3>Distributed ML Training</h3>
-<p className="showcase-description">Scale PyTorch and TensorFlow training across multiple GPUs with Ray Train and distributed data parallelism</p>
+<h3>Spark Logs Processing with Ray Data</h3>
+<p className="showcase-description">Process Spark application logs from S3 and store in Apache Iceberg format using Ray Data for scalable data transformation</p>
 </div>
 </div>
 <div className="showcase-tags">
-<span className="tag performance">ML</span>
-<span className="tag guide">Example</span>
+<span className="tag data-processing">Data Processing</span>
+<span className="tag example">Example</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/raydata-on-eks/distributed-training" className="showcase-link">
-<span>Learn More</span>
+<a href="/data-on-eks/docs/datastacks/processing/raydata-on-eks/spark-logs-processing" className="showcase-link">
+<span>View Example</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>

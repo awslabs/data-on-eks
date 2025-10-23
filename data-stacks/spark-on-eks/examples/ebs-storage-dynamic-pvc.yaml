@@ -12,11 +12,10 @@
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: "taxi-trip"
+  name: "taxi-trip-ebs-pvc"
   namespace: spark-team-a
   labels:
-    app: "taxi-trip"
-    applicationId: "taxi-trip-ebs"
+    app: "taxi-trip-ebs-pvc"
     queue: root.test
 spec:
 #  To create Ingress object for Spark driver.
@@ -38,9 +37,9 @@ spec:
     - "s3a://$S3_BUCKET/taxi-trip/input/"
     - "s3a://$S3_BUCKET/taxi-trip/output/"
   sparkConf:
-    "spark.app.name": "taxi-trip"
-    "spark.kubernetes.driver.pod.name": "taxi-trip"
-    "spark.kubernetes.executor.podNamePrefix": "taxi-trip"
+    "spark.app.name": "taxi-trip-ebs-pvc"
+    "spark.kubernetes.driver.pod.name": "taxi-trip-ebs-pvc"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip-ebs-pvc"
     "spark.local.dir": "/data1"
     "spark.speculation": "false"
     "spark.network.timeout": "2400"

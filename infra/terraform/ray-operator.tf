@@ -1,14 +1,37 @@
 # =============================================================================
-# Ray Data Spark Log Processing
+# KubeRay Operator and Ray Data Resources
 # =============================================================================
-# This file contains Ray Data specific configurations that extend the base
-# spark-team infrastructure for processing Spark logs.
+# This file contains:
+# 1. KubeRay Operator deployment via ArgoCD
+# 2. Ray Data specific configurations for processing Spark logs
+# 3. IAM policies and Glue resources for Iceberg operations
 # =============================================================================
 
+#---------------------------------------------------------------
+# KubeRay Operator
+#---------------------------------------------------------------
 locals {
+  kuberay_operator_values = yamldecode(templatefile("${path.module}/helm-values/kuberay-operator.yaml", {})
+  )
   s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
   iceberg_database = "raydata_spark_logs"
 }
+
+resource "kubectl_manifest" "kuberay_operator" {
+  count = var.enable_raydata ? 1 : 0
+
+  yaml_body = templatefile("${path.module}/argocd-applications/kuberay-operator.yaml", {
+    user_values_yaml = indent(8, yamlencode(local.kuberay_operator_values))
+  })
+
+  depends_on = [
+    helm_release.argocd,
+  ]
+}
+
+#---------------------------------------------------------------
+# Ray Data IAM and Glue Resources
+#---------------------------------------------------------------
 
 # Only create these resources if Ray Data processing is enabled
 resource "aws_iam_policy" "raydata_iceberg" {
