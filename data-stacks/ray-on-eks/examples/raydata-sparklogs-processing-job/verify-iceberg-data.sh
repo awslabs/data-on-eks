@@ -3,17 +3,20 @@
 # Ray Data Iceberg Verification Script
 # This script creates a Python virtual environment and verifies Ray Data processed logs in Iceberg
 
+# How to execute
+# export S3_BUCKET="spark-on-eks-spark-logs-123456789"
+# export AWS_REGION="us-west-2"
+# ./verify-iceberg-data.sh
+
 set -euo pipefail
 
 #---------------------------------------------------------------
 # Configuration Variables
 #---------------------------------------------------------------
-S3_BUCKET=<S3_BUCKET>                 # Replace with your S3 bucket name
-# replace with your AWS region                 # Iceberg table name
-AWS_REGION=<AWS_REGION>
+S3_BUCKET="${S3_BUCKET:-}"                     # Uses environment variable
+AWS_REGION="${AWS_REGION:-}"                   # Uses environment variable
 ICEBERG_DATABASE="raydata_spark_logs"          # Glue database name
-ICEBERG_TABLE="spark_logs"
-                       # AWS region
+ICEBERG_TABLE="spark_logs"                     # Iceberg table name
 
 #---------------------------------------------------------------
 # Colors for output
@@ -53,12 +56,32 @@ print_header() {
 validate_config() {
     print_header "Validating Configuration"
 
-    if [[ "$S3_BUCKET" == "<S3_BUCKET>" ]]; then
-        print_error "Please update S3_BUCKET in the script with your actual bucket name"
+    local errors=0
+
+    if [[ -z "$S3_BUCKET" ]]; then
+        print_error "S3_BUCKET environment variable is not set"
+        print_error "Please export S3_BUCKET with your actual S3 bucket name"
+        print_error "Example: export S3_BUCKET=\"my-spark-logs-bucket\""
+        errors=$((errors + 1))
+    fi
+
+    if [[ -z "$AWS_REGION" ]]; then
+        print_error "AWS_REGION environment variable is not set"
+        print_error "Please export AWS_REGION with your AWS region"
+        print_error "Example: export AWS_REGION=\"us-west-2\""
+        errors=$((errors + 1))
+    fi
+
+    if [[ $errors -gt 0 ]]; then
+        print_error "Please set the required environment variables"
         exit 1
     fi
 
     print_success "Configuration validated"
+    print_info "Using S3 bucket: $S3_BUCKET"
+    print_info "Using AWS region: $AWS_REGION"
+    print_info "Iceberg database: $ICEBERG_DATABASE"
+    print_info "Iceberg table: $ICEBERG_TABLE"
 }
 
 check_prerequisites() {
@@ -127,7 +150,6 @@ setup_venv() {
     export VENV_DIR="$venv_dir"
 }
 
-
 #---------------------------------------------------------------
 # Main Verification Function
 #---------------------------------------------------------------
@@ -137,7 +159,20 @@ run_verification() {
     # Activate virtual environment
     source "$VENV_DIR/bin/activate"
 
+    # Check if verification script exists
+    if [[ ! -f "iceberg_verification.py" ]]; then
+        print_error "iceberg_verification.py not found in current directory"
+        print_error "Please ensure the verification Python script is present"
+        exit 1
+    fi
+
     # Run the verification script
+    print_info "Running verification with parameters:"
+    print_info "  AWS Region: $AWS_REGION"
+    print_info "  S3 Bucket: $S3_BUCKET"
+    print_info "  Database: $ICEBERG_DATABASE"
+    print_info "  Table: $ICEBERG_TABLE"
+
     python3 iceberg_verification.py "$AWS_REGION" "$S3_BUCKET" "$ICEBERG_DATABASE" "$ICEBERG_TABLE"
 }
 
@@ -162,19 +197,54 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 #---------------------------------------------------------------
+# Help Function
+#---------------------------------------------------------------
+show_help() {
+    echo "Ray Data Iceberg Verification Tool"
+    echo ""
+    echo "This script verifies that Ray Data has successfully processed Spark logs into Iceberg format"
+    echo ""
+    echo "Required Environment Variables:"
+    echo "  export S3_BUCKET=\"your-bucket-name\""
+    echo "  export AWS_REGION=\"your-region\""
+    echo ""
+    echo "Usage: $0 [help]"
+    echo ""
+    echo "Prerequisites:"
+    echo "  - Python 3 with pip"
+    echo "  - AWS CLI configured with credentials"
+    echo "  - iceberg_verification.py in current directory"
+    echo ""
+    echo "The script will:"
+    echo "  1. Validate configuration and prerequisites"
+    echo "  2. Create a Python virtual environment"
+    echo "  3. Install PyIceberg and dependencies"
+    echo "  4. Run verification against Iceberg table"
+    echo "  5. Clean up virtual environment"
+}
+
+#---------------------------------------------------------------
 # Main Execution
 #---------------------------------------------------------------
 main() {
-    print_header "Ray Data Iceberg Verification Tool"
-    echo "This script verifies that Ray Data has successfully processed Spark logs into Iceberg format"
-    echo ""
+    case "${1:-run}" in
+        "help"|"-h"|"--help")
+            show_help
+            exit 0
+            ;;
+        *)
+            print_header "Ray Data Iceberg Verification Tool"
+            echo "This script verifies that Ray Data has successfully processed Spark logs into Iceberg format"
+            echo ""
 
-    validate_config
-    check_prerequisites
-    setup_venv
-    run_verification
+            validate_config
+            check_prerequisites
+            setup_venv
+            run_verification
 
-    print_success "Verification completed successfully!"
+            print_success "Verification completed successfully!"
+            ;;
+    esac
 }
 
 # Run main function

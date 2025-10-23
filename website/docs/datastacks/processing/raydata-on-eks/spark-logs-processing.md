@@ -152,15 +152,6 @@ cd data-stacks/ray-on-eks/examples/raydata-sparklogs-processing-job
 Edit `execute-rayjob.sh` and update these values:
 
 ```bash
-# Your S3 bucket (from Terraform output above)
-S3_BUCKET="<YOUR_S3_BUCKET_NAME>"
-
-# S3 prefix for Spark logs (replace <CLUSTER_NAME> with your cluster)
-S3_PREFIX="<CLUSTER_NAME>/spark-application-logs/spark-team-a"
-
-# AWS region (from Terraform output)
-AWS_REGION="us-west-2"
-
 # Ray worker scaling (adjust based on log volume)
 MIN_WORKERS="2"
 MAX_WORKERS="10"
@@ -252,6 +243,10 @@ workerGroupSpecs:
 ### Deploy the Job
 
 ```bash
+export S3_BUCKET="<S3_BCUKET>"
+export CLUSTER_NAME="ray-on-eks"
+export AWS_REGION="<REGION>"
+
 cd data-stacks/ray-on-eks/examples/raydata-sparklogs-processing-job/
 
 # Make script executable
