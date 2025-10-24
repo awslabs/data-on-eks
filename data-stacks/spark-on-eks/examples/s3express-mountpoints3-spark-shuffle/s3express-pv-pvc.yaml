@@ -1,0 +1,52 @@
+
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: spark-s3-shuffle-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  csi:
+    driver: s3.csi.aws.com
+    volumeHandle: spark-s3-shuffle-pv-handle
+    volumeAttributes:
+      # S3 Express One Zone directory bucket for shuffle data
+      bucketName: "BUCKET_NAME_PLACEHOLDER"
+      region: "REGION_PLACEHOLDER"
+  mountOptions:
+    - uid=1001
+    - gid=185
+    - allow-other
+    - allow-delete
+    - allow-overwrite
+    - incremental-upload
+    - region REGION_PLACEHOLDER
+    - prefix shuffle-dir/
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.kubernetes.io/zone
+            operator: In
+            values:
+            # Must match S3 Express bucket AZ
+            - "AVAILABILITY_ZONE_PLACEHOLDER"
+
+---         
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spark-s3-shuffle-pvc
+  namespace: spark-s3-express
+spec:
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  storageClassName: "" # required for static provisioning
+  resources:
+    requests:
+      storage: 10Gi # ignored, required
+  volumeName: spark-s3-shuffle-pv

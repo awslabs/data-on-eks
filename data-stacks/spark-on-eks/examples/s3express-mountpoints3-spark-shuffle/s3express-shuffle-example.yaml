@@ -1,0 +1,142 @@
+
+
+---
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+ name: taxi-trip-s3express
+ namespace: spark-s3-express
+ labels:
+   app: taxi-trip-s3express
+   queue: root.test
+spec:
+ type: Python
+ sparkVersion: "3.5.3"
+ mode: cluster
+ image: public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu
+ imagePullPolicy: IfNotPresent
+ mainApplicationFile: s3a://S3_BUCKET_PLACEHOLDER/taxi-trip/scripts/pyspark-taxi-trip.py
+ arguments:
+   - s3a://S3_BUCKET_PLACEHOLDER/taxi-trip/input/
+   - s3a://S3_BUCKET_PLACEHOLDER/taxi-trip-large-test/output/
+
+ # Hadoop/S3 config
+ hadoopConf:
+   fs.s3a.aws.credentials.provider.mapping: "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+   fs.s3a.aws.credentials.provider: "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+   fs.s3.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+   fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+   mapreduce.fileoutputcommitter.algorithm.version: "2"
+
+ sparkConf:
+   spark.app.name: taxi-trip-s3express
+   spark.kubernetes.driver.pod.name: taxi-trip-s3express-driver
+   spark.kubernetes.executor.podNamePrefix: taxi-trip-s3express-executor
+
+   # Testing: Spark shuffle writes to S3 Express One Zone via Mountpoint CSI
+   spark.local.dir: /data1/shuffle
+   spark.driver.extraJavaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
+   spark.speculation: "false"
+   spark.network.timeout: "2400"
+   spark.hadoop.fs.s3a.connection.timeout: "1200000"
+   spark.hadoop.fs.s3a.path.style.access: "true"
+   spark.hadoop.fs.s3a.connection.maximum: "200"
+   spark.hadoop.fs.s3a.fast.upload: "true"
+   spark.hadoop.fs.s3a.readahead.range: "256K"
+   spark.hadoop.fs.s3a.input.fadvise: random
+   spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version: "2"
+   spark.executor.defaultJavaOptions: "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
+
+   # Event logs
+   spark.eventLog.enabled: "true"
+   spark.eventLog.dir: s3a://S3_BUCKET_PLACEHOLDER/spark-event-logs
+   spark.eventLog.rolling.enabled: "true"
+   spark.eventLog.rolling.maxFileSize: 64m
+
+   # Prometheus metrics
+   spark.ui.prometheus.enabled: "true"
+   spark.executor.processTreeMetrics.enabled: "true"
+   spark.kubernetes.driver.annotation.prometheus.io/scrape: "true"
+   spark.kubernetes.driver.annotation.prometheus.io/path: /metrics/executors/prometheus/
+   spark.kubernetes.driver.annotation.prometheus.io/port: "4040"
+   spark.kubernetes.driver.service.annotation.prometheus.io/scrape: "true"
+   spark.kubernetes.driver.service.annotation.prometheus.io/path: /metrics/driver/prometheus/
+   spark.kubernetes.driver.service.annotation.prometheus.io/port: "4040"
+   spark.kubernetes.driver.service.label.spark_role: driver
+   spark.kubernetes.executor.service.label.spark_role: driver
+   spark.metrics.conf.*.sink.prometheusServlet.class: org.apache.spark.metrics.sink.PrometheusServlet
+   spark.metrics.conf.*.sink.prometheusServlet.path: /metrics/driver/prometheus/
+   spark.metrics.conf.master.sink.prometheusServlet.path: /metrics/master/prometheus/
+   spark.metrics.conf.applications.sink.prometheusServlet.path: /metrics/applications/prometheus/
+
+   # Network / submission timeouts
+   spark.kubernetes.submission.connectionTimeout: "120000"
+   spark.kubernetes.submission.requestTimeout: "120000"
+   spark.kubernetes.driver.connectionTimeout: "120000"
+   spark.kubernetes.driver.requestTimeout: "120000"
+
+   # S3 performance tuning
+   spark.hadoop.fs.s3a.multipart.size: "67108864"
+   spark.hadoop.fs.s3a.threads.max: "40"
+   spark.hadoop.fs.s3a.multipart.purge: "true"
+   spark.hadoop.fs.s3a.multipart.threshold: "134217728"
+   spark.shuffle.file.buffer: "1m"
+   spark.reducer.maxSizeInFlight: "48m"
+
+ restartPolicy:
+   type: Never
+
+ # Still mount the S3 PVC (corrected options) for data staging if needed
+ volumes:
+   - name: spark-local-dir-1
+     persistentVolumeClaim:
+       claimName: spark-s3-shuffle-pvc
+
+ driver:
+   initContainers:
+     - name: init-mount
+       image: busybox
+       command: ["sh","-c","mkdir -p /data1/shuffle"]
+       volumeMounts:
+         - name: spark-local-dir-1
+           mountPath: /data1
+   podSecurityContext:
+     fsGroup: 185
+   volumeMounts:
+     - name: spark-local-dir-1
+       mountPath: /data1
+   cores: 2
+   coreLimit: "4200m"
+   memory: 8g
+   memoryOverhead: 4g
+   serviceAccount: spark-s3-express
+   nodeSelector:
+     karpenter.sh/capacity-type: on-demand
+     topology.kubernetes.io/zone: AVAILABILITY_ZONE_PLACEHOLDER
+     node.kubernetes.io/workload-type: compute-optimized-x86
+     karpenter.k8s.aws/instance-family: c6i
+
+ executor:
+   initContainers:
+     - name: init-mount
+       image: busybox
+       command: ["sh","-c","mkdir -p /data1/shuffle"]
+       volumeMounts:
+         - name: spark-local-dir-1
+           mountPath: /data1
+   podSecurityContext:
+     fsGroup: 185
+   volumeMounts:
+     - name: spark-local-dir-1
+       mountPath: /data1
+   cores: 2
+   coreLimit: "4000m"
+   instances: 4
+   memory: 8g
+   memoryOverhead: 4g
+   serviceAccount: spark-s3-express
+   nodeSelector:
+     karpenter.sh/capacity-type: on-demand
+     topology.kubernetes.io/zone: AVAILABILITY_ZONE_PLACEHOLDER
+     node.kubernetes.io/workload-type: compute-optimized-x86
+     karpenter.k8s.aws/instance-family: c6i
