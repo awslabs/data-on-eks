@@ -174,3 +174,9 @@ variable "enable_celeborn" {
   type        = bool
   default     = false
 }
+
+variable "enable_airflow" {
+  description = "Enable Apache Airflow for workflow orchestration"
+  type        = bool
+  default     = false
+}

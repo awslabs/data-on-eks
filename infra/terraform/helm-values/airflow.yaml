@@ -1,0 +1,161 @@
+
+executor: "KubernetesExecutor"
+webserverSecretKeySecretName: ${webserver_secret_name}
+
+postgresql:
+  enabled: false
+
+createUserJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+migrateDatabaseJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+
+images:
+  airflow:
+    tag: '3.1.0'
+    pullPolicy: IfNotPresent
+
+data:
+  metadataSecretName: airflow-config # postgresql://user:pass@pgbouncer_svc_name.deployment_namespace:6543/airflow-metadata
+
+apiServer:
+  serviceAccount:
+    name: ${api_service_account}
+  podDisruptionBudget:
+    enabled: true
+    config:
+      maxUnavailable: 1
+  resources:
+    limits:
+      memory: 1024Mi
+    requests:
+      cpu: 1000m
+      memory: 1024Mi
+  nodeSelector:
+    NodeGroupType: general-purpose
+  extraVolumes:
+    - name: connection-config
+      secret:
+        secretName: airflow-connection-config
+  extraVolumeMounts:
+    - name: connection-config
+      mountPath: "/opt/airflow/config/connection-config.yaml"
+      subPath: connection-config.yaml
+  nodeSelector:
+    NodeGroupType: general-purpose
+
+workers:
+  serviceAccount:
+    name: ${worker_service_account}
+  safeToEvict: false
+  extraVolumes:
+    - name: connection-config
+      secret:
+        secretName: airflow-connection-config
+  extraVolumeMounts:
+    - name: connection-config
+      mountPath: "/opt/airflow/config/connection-config.yaml"
+      subPath: connection-config.yaml
+  nodeSelector:
+    NodeGroupType: general-purpose
+
+scheduler:
+  serviceAccount:
+    name: ${scheduler_service_account}
+  replicas: 1
+  revisionHistoryLimit: 5
+  podDisruptionBudget:
+    enabled: true
+    config:
+      maxUnavailable: 1
+  resources:
+    limits:
+     memory: 1024Mi
+    requests:
+     cpu: 500m
+     memory: 1024Mi
+  extraVolumes:
+    - name: connection-config
+      secret:
+        secretName: airflow-connection-config
+  extraVolumeMounts:
+    - name: connection-config
+      mountPath: "/opt/airflow/config/connection-config.yaml"
+      subPath: connection-config.yaml
+  nodeSelector:
+    NodeGroupType: general-purpose
+
+pgbouncer:
+  enabled: true
+  configSecretName: pgbouncer-config
+  podDisruptionBudget:
+    enabled: true
+    config:
+      maxUnavailable: 1
+  nodeSelector:
+    NodeGroupType: general-purpose
+  metricsExporterSidecar:
+    statsSecretName: pgbouncer-stats # postgresql://user:pass@127.0.0.1:6543/pgbouncer?sslmode=disable
+
+dagProcessor:
+  serviceAccount:
+   name: ${dag_service_account}
+  extraVolumes:
+    - name: connection-config
+      secret:
+        secretName: airflow-connection-config
+  extraVolumeMounts:
+    - name: connection-config
+      mountPath: "/opt/airflow/config/connection-config.yaml"
+      subPath: connection-config.yaml  
+  nodeSelector:
+    NodeGroupType: general-purpose
+
+config:
+  core:
+    remote_logging: 'True'
+    test_connection: 'Enabled'
+  secrets:
+    backend: 'airflow.secrets.local_filesystem.LocalFilesystemBackend'
+    backend_kwargs: '{"connections_file_path": "/opt/airflow/config/connection-config.yaml"}'
+  logging:
+    remote_logging: 'True'
+    logging_level: 'INFO'
+    remote_base_log_folder: "s3://${s3_bucket_name}/airflow-logs"
+    # aws_s3_conn is the name of the connection that needs to be created using Airflow admin UI once the deployment is complete
+    # Steps can be seen in the docs link here -> https://github.com/apache/airflow/issues/25322
+    remote_log_conn_id: 'pod_identity'
+    delete_worker_pods: 'False'
+    # Use server-side encryption for logs stored in S3
+    encrypt_s3_logs: False
+  dag_processor:
+    # indentation is important here.
+    # Git bundle is somewhat broken as of 3.1.0: https://github.com/apache/airflow/issues/56165
+    dag_bundle_config_list: |
+      [
+              {
+                "name": "doeks-dags",
+                "classpath": "airflow.providers.git.bundles.git.GitDagBundle",
+                "kwargs": {
+                  "tracking_ref": "823ea3a79622acb0173c6dbafdf7d5ebc63c172e",
+                  "git_conn_id": "data-on-eks",
+                  "subdir": "schedulers/terraform/dags",
+                  "repo_url": "https://github.com/nabuskey/data-on-eks"
+                }
+              }
+            ]
+    # S3 sync. broken as of 3.1.0 
+    # dag_bundle_config_list: |
+    #             [
+    #               {
+    #                 "name": "s3_dags",
+    #                 "classpath": "airflow.providers.amazon.aws.bundles.s3.S3DagBundle",
+    #                 "kwargs": {
+    #                   "aws_conn_id": "aws_s3_conn",
+    #                   "bucket_name": "${s3_bucket_name}",
+    #                   "prefix": "dags/"
+    #                 }
+    #               }
+    #             ]
