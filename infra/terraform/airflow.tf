@@ -302,10 +302,10 @@ resource "kubernetes_secret" "airflow_webserver_secret" {
 #---------------------------------------------------------------
 resource "kubectl_manifest" "airflow_argocd_application" {
   count = var.enable_airflow ? 1 : 0
-
   yaml_body = templatefile("${path.module}/argocd-applications/airflow.yaml", {
     user_values_yaml = indent(8, local.airflow_values)
   })
+  wait = true
 
   depends_on = [
     kubernetes_namespace_v1.airflow[0],
