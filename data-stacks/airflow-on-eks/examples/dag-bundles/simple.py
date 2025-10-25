@@ -16,7 +16,7 @@ with DAG(
     dag_id='simple_example_dag',
     start_date=datetime.datetime.now(),
     catchup=False,
-    tags=["example", "doeks"],
+    tags=["example", "data-on-eks"],
 ) as dag:
     start_task = BashOperator(
         task_id='start_message',

@@ -19,6 +19,9 @@ spec:
     cores: 1
     memory: 512m
     serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+      karpenter.sh/capacity-type: "on-demand"
     securityContext:
       capabilities:
         drop:
@@ -36,6 +39,9 @@ spec:
     cores: 1
     memory: 512m
     serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+      karpenter.sh/capacity-type: "spot"
     securityContext:
       capabilities:
         drop:

@@ -8,27 +8,26 @@ from airflow.providers.cncf.kubernetes.sensors.spark_kubernetes import SparkKube
 
 with DAG(  
     dag_id="spark_pi",
-    start_date=datetime.now(),
+    start_date=datetime(2025, 10, 24),
     description="submit spark-pi as sparkApplication on kubernetes",
     catchup=False,
     dagrun_timeout=timedelta(minutes=10),
     schedule=timedelta(days=1),
-    tags=["example", "doeks"],
+    tags=["example", "data-on-eks"],
 ) as dag:
     t1 = SparkKubernetesOperator(  
         task_id="pyspark_pi_submit",
         namespace="spark-team-a",
         application_file="spark-pi.yaml",
-        do_xcom_push=True,
         dag=dag,
         get_logs=False,
     )
+    # xcom in SparkKubernetesOperator is broken as of 3.1.0: https://github.com/apache/airflow/pull/52051
+    # t2 = SparkKubernetesSensor(
+    #     task_id="pyspark_pi_monitor",
+    #     namespace="spark-team-a",
+    #     application_name="{{ task_instance.xcom_pull(task_ids='pyspark_pi_submit')['metadata']['name'] }}",
+    #     dag=dag,
+    # )
 
-    t2 = SparkKubernetesSensor(  
-        task_id="pyspark_pi_monitor",
-        namespace="spark-team-a",
-        application_name="{{ task_instance.xcom_pull(task_ids='pyspark_pi_submit')['metadata']['name'] }}",
-        dag=dag,
-    )
-
-    t1 >> t2
+    t1
