@@ -2,9 +2,9 @@ locals {
   airflow_name                      = "airflow"
   airflow_namespace                 = "airflow"
   airflow_scheduler_service_account = "airflow-scheduler"
-  airflow_api_service_account = "airflow-api-server"
+  airflow_api_service_account       = "airflow-api-server"
   airflow_workers_service_account   = "airflow-worker"
-  airflow_dag_service_account   = "airflow-dag-processor"
+  airflow_dag_service_account       = "airflow-dag-processor"
   airflow_webserver_secret_name     = "airflow-webserver-secret-key"
 
   # PostgreSQL in-cluster
@@ -13,16 +13,16 @@ locals {
   airflow_db_host = "airflow-postgresql" # Default service name for in-cluster postgres
 
   airflow_values = var.enable_airflow ? templatefile("${path.module}/helm-values/airflow.yaml", {
-    airflow_db_user      = local.airflow_db_user
-    airflow_db_pass      = random_password.airflow_postgres_user[0].result
-    airflow_db_host      = local.airflow_db_host
-    airflow_db_name      = local.airflow_db_name
-    webserver_secret_name = kubernetes_secret.airflow_webserver_secret[0].metadata[0].name
-    worker_service_account = local.airflow_workers_service_account
+    airflow_db_user           = local.airflow_db_user
+    airflow_db_pass           = random_password.airflow_postgres_user[0].result
+    airflow_db_host           = local.airflow_db_host
+    airflow_db_name           = local.airflow_db_name
+    webserver_secret_name     = kubernetes_secret.airflow_webserver_secret[0].metadata[0].name
+    worker_service_account    = local.airflow_workers_service_account
     scheduler_service_account = local.airflow_scheduler_service_account
-    api_service_account = local.airflow_api_service_account
-    dag_service_account = local.airflow_dag_service_account
-    s3_bucket_name       = module.airflow_s3_bucket[0].s3_bucket_id
+    api_service_account       = local.airflow_api_service_account
+    dag_service_account       = local.airflow_dag_service_account
+    s3_bucket_name            = module.airflow_s3_bucket[0].s3_bucket_id
   }) : ""
 
   airflow_postgresql_manifests = provider::kubernetes::manifest_decode_multi(
@@ -66,7 +66,7 @@ resource "kubernetes_secret" "airflow_postgresql_secrets" {
   }
 
   data = {
-    "postgresql-password"    = random_password.airflow_postgres_user[0].result
+    "postgresql-password" = random_password.airflow_postgres_user[0].result
   }
 
   type = "Opaque"
@@ -240,7 +240,7 @@ module "airflow_s3_bucket" {
 }
 
 resource "aws_s3_object" "dags" {
-  count   = var.enable_airflow ? 1 : 0
+  count        = var.enable_airflow ? 1 : 0
   bucket       = module.airflow_s3_bucket[0].s3_bucket_id
   key          = "dags/"
   content_type = "application/x-directory"
@@ -381,7 +381,7 @@ resource "kubernetes_secret" "airflow_pgbouncer_config" {
 
   data = {
     "pgbouncer.ini" = templatefile("${path.module}/manifests/airflow/pgbouncer.ini", {
-      external_database_host = local.airflow_db_host
+      external_database_host   = local.airflow_db_host
       external_database_dbname = local.airflow_db_name
     })
     "users.txt" = format("\"%s\" \"%s\"",
