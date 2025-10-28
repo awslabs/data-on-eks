@@ -4,9 +4,19 @@ sidebar_label: Infrastructure
 sidebar_position: 2
 ---
 
-# Flink on EKS Infrastructure Deployment
+## Flink on EKS Infrastructure Deployment
 
 Complete guide for deploying and configuring the Flink on EKS infrastructure for streaming workloads.
+
+### Prerequisites
+
+Before deploying, ensure you have the following tools installed:
+
+- **AWS CLI** - [Install Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- **Terraform** (>= 1.0) - [Install Guide](https://developer.hashicorp.com/terraform/install)
+- **kubectl** - [Install Guide](https://kubernetes.io/docs/tasks/tools/)
+- **Helm** (>= 3.0) - [Install Guide](https://helm.sh/docs/intro/install/)
+- **AWS credentials configured** - Run `aws configure` or use IAM roles
 
 ## Overview
 
@@ -33,43 +43,6 @@ kubectl get nodes
 kubectl get pods -n flink-operator
 ```
 
-## Configuration Options
-
-### Stack Configuration (`terraform/data-stack.tfvars`)
-
-#### Basic Settings
-```hcl
-# Deployment configuration
-region = "us-west-2"
-name   = "flink-on-eks"
-
-# Cluster settings
-eks_cluster_version = "1.33"
-vpc_cidr           = "10.0.0.0/16"
-secondary_cidrs    = ["100.64.0.0/16"]
-```
-
-#### Flink-Specific Components
-```hcl
-# Flink platform
-enable_flink_operator       = true   # Flink job management
-enable_kafka               = true    # Event streaming
-enable_flink_history_server = true   # Job monitoring
-```
-
-#### Monitoring & Observability
-```hcl
-# Monitoring stack
-enable_kube_prometheus_stack = true   # Prometheus + Grafana
-enable_aws_for_fluentbit    = false  # Log aggregation
-```
-
-#### Networking
-```hcl
-# Networking
-enable_ingress_nginx = true   # Load balancing
-enable_cert_manager  = false  # TLS management
-```
 
 ## Architecture Components
 
@@ -82,13 +55,6 @@ enable_cert_manager  = false  # TLS management
 - Checkpoint coordination
 - Recovery and scaling
 
-#### Kafka Cluster
-- Event streaming platform
-- Topic management
-- Consumer group coordination
-- Schema registry integration
-- High availability setup
-
 #### State Management
 - S3-backed state storage
 - RocksDB local state
@@ -98,199 +64,65 @@ enable_cert_manager  = false  # TLS management
 
 ## Deployment Process
 
-### 1. Prerequisites Check
-```bash
-# Required tools
-- AWS CLI configured
-- Terraform >= 1.0
-- kubectl >= 1.28
-- Git
-
-# AWS permissions
-- EKS management
-- VPC and EC2 operations
-- IAM role management
-- S3 access for state storage
-```
-
-### 2. Infrastructure Deployment
+### 1. Infrastructure Deployment
 ```bash
 # Automated deployment process
 ./deploy.sh
-
-# Manual step-by-step deployment
-cd terraform/_local
-terraform init
-terraform plan
-terraform apply
 ```
 
-### 3. Post-Deployment Verification
+:::note
+
+**If deployment fails:**
+- Rerun the same command: `./deploy.sh`
+- If it still fails, debug using kubectl commands or [raise an issue](https://github.com/awslabs/data-on-eks/issues)
+
+:::
+
+:::info
+
+**Expected deployment time:** 15-20 minutes
+
+:::
+
+
+### 2. Post-Deployment Verification
+
+The deployment script automatically configures kubectl. Verify the cluster is ready:
+
 ```bash
-# Verify cluster
+# Set kubeconfig
+export KUBECONFIG=kubeconfig.yaml
+
+# Verify cluster nodes
 kubectl get nodes
-kubectl get pods --all-namespaces
 
-# Check Flink Operator
-kubectl get flinkdeployment -n flink-operator
+# Check all namespaces
+kubectl get namespaces
 
-# Check Kafka cluster
-kubectl get pods -n kafka
-
-# Access Flink UI
-kubectl port-forward svc/flink-jobmanager-ui -n flink-operator 8081:8081
+# Verify ArgoCD applications
+kubectl get applications -n argocd
 ```
 
-## Flink Configuration
+:::tip Quick Verification
 
-### JobManager Configuration
-```yaml
-# JobManager deployment
-apiVersion: flink.apache.org/v1beta1
-kind: FlinkDeployment
-metadata:
-  name: basic-example
-spec:
-  image: flink:1.18-java11
-  flinkVersion: v1_18
-  jobManager:
-    replicas: 1
-    resource:
-      memory: "2048m"
-      cpu: 1
-  taskManager:
-    replicas: 3
-    resource:
-      memory: "2048m"
-      cpu: 1
-```
+Run these commands to verify successful deployment:
 
-### State Backend Configuration
-```yaml
-# S3 state backend
-flinkConfiguration:
-  state.backend: rocksdb
-  state.checkpoints.dir: s3://your-bucket/checkpoints
-  state.savepoints.dir: s3://your-bucket/savepoints
-  execution.checkpointing.interval: 60000
-  execution.checkpointing.mode: EXACTLY_ONCE
-```
-
-## Kafka Integration
-
-### Kafka Cluster Setup
-```yaml
-# Kafka cluster configuration
-apiVersion: kafka.strimzi.io/v1beta2
-kind: Kafka
-metadata:
-  name: my-cluster
-spec:
-  kafka:
-    version: 3.7.0
-    replicas: 3
-    listeners:
-      - name: plain
-        port: 9092
-        type: internal
-        tls: false
-    config:
-      offsets.topic.replication.factor: 3
-      transaction.state.log.replication.factor: 3
-      transaction.state.log.min.isr: 2
-```
-
-### Topic Management
-```yaml
-# Kafka topic for Flink
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaTopic
-metadata:
-  name: flink-input-topic
-  labels:
-    strimzi.io/cluster: my-cluster
-spec:
-  partitions: 12
-  replicas: 3
-  config:
-    retention.ms: 604800000
-    segment.ms: 86400000
-```
-
-## Monitoring & Observability
-
-### Flink Metrics
-- Job execution metrics
-- TaskManager resource utilization
-- Checkpoint duration and success rate
-- Backpressure indicators
-- State size monitoring
-
-### Grafana Dashboards
-- Flink Job Overview
-- TaskManager Metrics
-- Kafka Integration Metrics
-- State Backend Performance
-- Resource Utilization
-
-### Alerting Rules
-- FlinkJobFailed
-- CheckpointFailure
-- HighBackpressure
-- TaskManagerDown
-- KafkaConsumerLag
-
-## Troubleshooting
-
-### Common Issues
-
-#### Flink Jobs Not Starting
 ```bash
-# Check Flink Operator logs
-kubectl logs -n flink-operator deployment/flink-kubernetes-operator
+# 1. Check nodes are ready
+kubectl get nodes
+# Expected: 4-5 nodes with STATUS=Ready
 
-# Check job status
-kubectl describe flinkdeployment <job-name> -n flink-operator
+# 2. Check ArgoCD applications are synced
+kubectl get applications -n argocd
+# Expected: All apps showing "Synced" and "Healthy"
+
+# 3. Check Karpenter NodePools ready
+kubectl get nodepools
+
 ```
 
-#### Checkpoint Failures
-```bash
-# Check S3 permissions
-aws s3 ls s3://your-bucket/checkpoints/
+:::
 
-# Verify state backend configuration
-kubectl logs <jobmanager-pod> -n flink-operator
-```
-
-#### Kafka Connection Issues
-```bash
-# Check Kafka cluster status
-kubectl get kafka -n kafka
-
-# Test connectivity
-kubectl exec -n kafka my-cluster-kafka-0 -- \
-  bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
-```
-
-## Best Practices
-
-### Resource Management
-- Right-size JobManager and TaskManager resources
-- Configure appropriate parallelism
-- Use slot sharing for resource efficiency
-- Monitor memory usage and garbage collection
-
-### State Management
-- Choose appropriate state backend
-- Configure checkpoint intervals wisely
-- Monitor state size growth
-- Implement state cleanup strategies
-
-### Fault Tolerance
-- Enable exactly-once processing
-- Configure appropriate restart strategies
-- Use savepoints for job updates
-- Implement proper error handling
 
 ## Cleanup
 
@@ -298,22 +130,10 @@ kubectl exec -n kafka my-cluster-kafka-0 -- \
 ```bash
 # Complete cleanup
 ./cleanup.sh
-
-# Manual cleanup
-cd terraform/_local
-terraform destroy -auto-approve
 ```
 
 ## Next Steps
 
 After deploying the infrastructure:
 
-1. **Submit Streaming Jobs** - Deploy Flink streaming applications
-2. **Configure State Backend** - Set up S3 state storage
-3. **Monitor Performance** - Set up custom dashboards and alerts
-4. **Integrate with Kafka** - Connect to event streams
-
-## Related Examples
-
-- [Real-time WordCount](./wordcount-streaming)
-- [Back to Examples](/data-on-eks/docs/datastacks/streaming/flink-on-eks/)
+- [Getting Started with Flink Jobs](./getting-started)

@@ -8,7 +8,7 @@ spec:
   sources:
     - repoURL: https://downloads.apache.org/flink/flink-kubernetes-operator-1.12.1/
       chart: flink-kubernetes-operator
-      targetRevision: 1.12.1
+      targetRevision: 1.13.0
       helm:
         values: |
           ${user_values_yaml}
