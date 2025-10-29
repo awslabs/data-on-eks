@@ -325,7 +325,7 @@ Expected results:
 Apply PodMonitors to enable Prometheus scraping:
 
 ```bash
-kubectl apply -f ../../infra/terraform/manifests/kafka/monitoring-manifests/
+kubectl apply -f ../../data-stacks/kafka-on-eks/monitoring-manifests/
 ```
 
 This creates:
