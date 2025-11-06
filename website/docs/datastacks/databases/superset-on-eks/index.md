@@ -66,7 +66,7 @@ Production-ready Apache Superset BI platform for Amazon EKS. Deploy self-service
 <span className="tag guide">Guide</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/superset-on-eks/infra" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/databases/superset-on-eks/infra" className="showcase-link">
 <span>Deploy Infrastructure</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -80,7 +80,7 @@ Production-ready Apache Superset BI platform for Amazon EKS. Deploy self-service
 <div className="showcase-icon">📊</div>
 <div className="showcase-content">
 <h3>S3 Data Lake Dashboards</h3>
-<p className="showcase-description">Connect Superset to S3 data lakes via Athena for interactive analytics and visualization</p>
+<p className="showcase-description">Connect Superset to S3 data lakes via Trino for interactive analytics and visualization</p>
 </div>
 </div>
 <div className="showcase-tags">
@@ -88,7 +88,7 @@ Production-ready Apache Superset BI platform for Amazon EKS. Deploy self-service
 <span className="tag guide">Example</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/superset-on-eks/s3-datalake" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/databases/superset-on-eks/superset" className="showcase-link">
 <span>Learn More</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
