@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://downloads.apache.org/flink/flink-kubernetes-operator-1.12.1/
+    - repoURL: https://downloads.apache.org/flink/flink-kubernetes-operator-1.13.0/
       chart: flink-kubernetes-operator
       targetRevision: 1.13.0
       helm:
