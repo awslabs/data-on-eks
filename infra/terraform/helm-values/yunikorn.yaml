@@ -30,7 +30,7 @@ yunikornDefaults:
                     vcore: 400
                   max:
                     memory: 8000G
-                    vcore: 800
+                    vcore: 1600
                 queues:
                   - name: spark-team-a
                     resources:
@@ -39,7 +39,7 @@ yunikornDefaults:
                         vcore: 100
                       max:
                         memory: 2000G
-                        vcore: 200
+                        vcore: 400
                   - name: spark-team-b
                     resources:
                       guaranteed:
@@ -47,7 +47,7 @@ yunikornDefaults:
                         vcore: 100
                       max:
                         memory: 2000G
-                        vcore: 200
+                        vcore: 400
                   - name: spark-team-c
                     resources:
                       guaranteed:
@@ -55,7 +55,7 @@ yunikornDefaults:
                         vcore: 100
                       max:
                         memory: 2000G
-                        vcore: 200
+                        vcore: 400
                   - name: spark-s3-express
                     resources:
                       guaranteed:
@@ -63,7 +63,7 @@ yunikornDefaults:
                         vcore: 100
                       max:
                         memory: 2000G
-                        vcore: 200
+                        vcore: 400
               - name: prod
                 resources:
                   guaranteed:
