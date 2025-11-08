@@ -6,7 +6,7 @@ import os
 from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 from airflow.providers.cncf.kubernetes.sensors.spark_kubernetes import SparkKubernetesSensor
 
-with DAG(  
+with DAG(
     dag_id="spark_pi",
     start_date=datetime(2025, 10, 24),
     description="submit spark-pi as sparkApplication on kubernetes",
@@ -15,7 +15,7 @@ with DAG(
     schedule=timedelta(days=1),
     tags=["example", "data-on-eks"],
 ) as dag:
-    t1 = SparkKubernetesOperator(  
+    t1 = SparkKubernetesOperator(
         task_id="pyspark_pi_submit",
         namespace="spark-team-a",
         application_file="spark-pi.yaml",

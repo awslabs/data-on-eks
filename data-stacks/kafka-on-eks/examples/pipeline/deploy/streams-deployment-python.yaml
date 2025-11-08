@@ -1,0 +1,226 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: python-streams-processor-script
+  namespace: kafka
+data:
+  clickstream_processor.py: |
+    #!/usr/bin/env python3
+    """
+    Clickstream Analytics with Python Kafka Streams
+    Uses kstreams library for stream processing with windowing and aggregation
+    """
+
+    import json
+    import asyncio
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+    from kstreams import create_engine, ConsumerRecord
+    from kstreams.backends.kafka import Kafka
+    from kstreams.streams import Stream
+
+    # Configuration
+    KAFKA_BOOTSTRAP_SERVERS = "data-on-eks-kafka-bootstrap:9092"
+    SOURCE_TOPIC = "clickstream-events"
+    SINK_TOPIC = "clickstream-metrics"
+    WINDOW_SIZE_MINUTES = 5
+
+    # Create Kafka backend and stream engine
+    backend = Kafka(bootstrap_servers=[KAFKA_BOOTSTRAP_SERVERS])
+    stream_engine = create_engine(
+        title="clickstream-processor",
+        backend=backend
+    )
+
+
+    class WindowedMetrics:
+        """Aggregator for clickstream metrics within a time window"""
+
+        def __init__(self):
+            self.total_events = 0
+            self.unique_users = set()
+            self.unique_sessions = set()
+            self.event_types = {}
+            self.devices = {}
+            self.referrers = {}
+            self.pages = {}
+            self.total_duration = 0
+            self.window_start = None
+            self.window_end = None
+
+        def add_event(self, event):
+            """Process a single clickstream event"""
+            # Set window boundaries on first event
+            if self.window_start is None:
+                self.window_start = datetime.utcnow()
+                self.window_end = self.window_start + timedelta(minutes=WINDOW_SIZE_MINUTES)
+
+            # Aggregate metrics
+            self.total_events += 1
+            self.unique_users.add(event['user_id'])
+            self.unique_sessions.add(event['session_id'])
+
+            # Event types
+            event_type = event['event_type']
+            self.event_types[event_type] = self.event_types.get(event_type, 0) + 1
+
+            # Devices
+            device = event['device_type']
+            self.devices[device] = self.devices.get(device, 0) + 1
+
+            # Referrers
+            referrer = event['referrer']
+            self.referrers[referrer] = self.referrers.get(referrer, 0) + 1
+
+            # Pages
+            page = event['page_url']
+            self.pages[page] = self.pages.get(page, 0) + 1
+
+            self.total_duration += event['duration_ms']
+
+        def should_emit(self):
+            """Check if window should be closed and metrics emitted"""
+            if self.window_start is None:
+                return False
+            return datetime.utcnow() >= self.window_end
+
+        def to_json(self):
+            """Convert metrics to JSON for Kafka output"""
+            if self.total_events == 0:
+                return None
+
+            # Get top N items
+            top_referrers = dict(sorted(self.referrers.items(), key=lambda x: x[1], reverse=True)[:3])
+            top_pages = dict(sorted(self.pages.items(), key=lambda x: x[1], reverse=True)[:5])
+
+            avg_duration = int(self.total_duration / self.total_events) if self.total_events > 0 else 0
+
+            metrics = {
+                "window_start": self.window_start.isoformat() + "Z",
+                "window_end": self.window_end.isoformat() + "Z",
+                "total_events": self.total_events,
+                "unique_users": len(self.unique_users),
+                "unique_sessions": len(self.unique_sessions),
+                "event_types": self.event_types,
+                "devices": self.devices,
+                "top_referrers": top_referrers,
+                "top_pages": top_pages,
+                "avg_duration_ms": avg_duration
+            }
+
+            return json.dumps(metrics)
+
+        def reset(self):
+            """Reset metrics for next window"""
+            self.__init__()
+
+
+    # Global window aggregator
+    window_aggregator = WindowedMetrics()
+
+
+    @stream_engine.stream(SOURCE_TOPIC, group_id="clickstream-processor")
+    async def process_clickstream(stream: Stream):
+        """
+        Stream processing function - processes each event from clickstream-events topic
+        """
+        global window_aggregator
+
+        async for cr in stream:
+            # Deserialize the event
+            event = json.loads(cr.value.decode('utf-8'))
+
+            # Add event to current window
+            window_aggregator.add_event(event)
+
+            # Check if window should be closed
+            if window_aggregator.should_emit():
+                # Generate metrics JSON
+                metrics_json = window_aggregator.to_json()
+
+                if metrics_json:
+                    # Produce to metrics topic
+                    await stream_engine.send(
+                        SINK_TOPIC,
+                        value=metrics_json.encode('utf-8')
+                    )
+
+                    print(f"✅ Window completed: {window_aggregator.window_start} → {window_aggregator.window_end}")
+                    print(f"   Events processed: {window_aggregator.total_events}")
+                    print(f"   Unique users: {len(window_aggregator.unique_users)}")
+                    print("")
+
+                # Reset for next window
+                window_aggregator.reset()
+
+
+    async def start_engine():
+        """Start the stream processing application"""
+        print("🚀 Starting Clickstream Analytics Processor")
+        print(f"📥 Source: {SOURCE_TOPIC}")
+        print(f"📤 Sink: {SINK_TOPIC}")
+        print(f"⏱️  Window Size: {WINDOW_SIZE_MINUTES} minutes")
+        print(f"🔌 Bootstrap Servers: {KAFKA_BOOTSTRAP_SERVERS}")
+        print("")
+        await stream_engine.start()
+
+    async def shutdown():
+        """Graceful shutdown"""
+        await stream_engine.stop()
+
+
+    if __name__ == "__main__":
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(start_engine())
+            loop.run_forever()  # Keep running to consume messages
+        except KeyboardInterrupt:
+            print("\n⚠️  Shutting down...")
+        finally:
+            loop.run_until_complete(shutdown())
+            loop.close()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickstream-streams-processor
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickstream-streams-processor
+  template:
+    metadata:
+      labels:
+        app: clickstream-streams-processor
+    spec:
+      containers:
+      - name: processor
+        image: python:3.11-slim
+        command:
+        - /bin/bash
+        - -c
+        - |
+          pip install --no-cache-dir kstreams==0.26.9 kafka-python==2.0.2
+          python -u /scripts/clickstream_processor.py
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "data-on-eks-kafka-bootstrap:9092"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+      volumes:
+      - name: script
+        configMap:
+          name: python-streams-processor-script
+          defaultMode: 0755
+      restartPolicy: Always

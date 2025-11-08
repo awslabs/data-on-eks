@@ -66,7 +66,7 @@ Production-ready Apache Kafka streaming platform configurations for Amazon EKS. 
 <span className="tag guide">Guide</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/kafka-on-eks/infra" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/streaming/kafka-on-eks/infra" className="showcase-link">
 <span>Deploy Infrastructure</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
