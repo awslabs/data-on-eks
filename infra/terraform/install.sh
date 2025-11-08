@@ -9,7 +9,7 @@ set -e
 REPO_PATH=$(git rev-parse --show-toplevel)
 STACKS_DIR=$(pwd)
 ORIGINAL_DIR=$(pwd) # Save the original directory
-source $REPO_PATH/infra/terraform/install-helpers.sh
+source "$REPO_PATH/infra/terraform/install-helpers.sh"
 
 print_status "Starting deployment engine from: $STACKS_DIR"
 check_prerequisites

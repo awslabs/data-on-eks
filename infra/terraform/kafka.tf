@@ -1,5 +1,6 @@
 locals {
   strimzi_kafka_operator_values = templatefile("${path.module}/helm-values/strimzi-kafka-operator.yaml", {})
+  kafka_manifests_base_path     = "${path.root}/../data-stacks/kafka-on-eks/kafka-cluster"
 }
 
 resource "kubectl_manifest" "strimzi_kafka_operator" {
@@ -16,16 +17,16 @@ resource "kubectl_manifest" "strimzi_kafka_operator" {
 # Kafka Namespace
 #---------------------------------------------------------------
 resource "kubectl_manifest" "kafka_namespace" {
-  yaml_body = templatefile("${path.module}/manifests/kafka/namespace.yaml", {})
+  yaml_body = templatefile("${local.kafka_manifests_base_path}/namespace.yaml", {})
 }
 
 #---------------------------------------------------------------
 # Kafka Manifests
 #---------------------------------------------------------------
 resource "kubectl_manifest" "kafka_manifests" {
-  for_each = fileset("${path.module}/manifests/kafka", "*.yaml")
+  for_each = fileset(local.kafka_manifests_base_path, "*.yaml")
 
-  yaml_body = templatefile("${path.module}/manifests/kafka/${each.value}", {})
+  yaml_body = templatefile("${local.kafka_manifests_base_path}/${each.value}", {})
 
   depends_on = [
     kubectl_manifest.strimzi_kafka_operator,

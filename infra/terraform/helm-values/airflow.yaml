@@ -109,7 +109,7 @@ dagProcessor:
   extraVolumeMounts:
     - name: connection-config
       mountPath: "/opt/airflow/config/connection-config.yaml"
-      subPath: connection-config.yaml  
+      subPath: connection-config.yaml
   nodeSelector:
     NodeGroupType: general-purpose
 
@@ -146,7 +146,7 @@ config:
                 }
               }
             ]
-    # S3 sync. broken as of 3.1.0 
+    # S3 sync. broken as of 3.1.0
     # dag_bundle_config_list: |
     #             [
     #               {
