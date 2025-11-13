@@ -22,7 +22,7 @@ spec:
     - "s3a://<S3_BUCKET>/order/input/"
     - "s3a://<S3_BUCKET>/order/output/ebs-pvc/"
   sparkConf:
-    # Dynamic PVC for spark shuffle data 
+    # Dynamic PVC for spark shuffle data
     "spark.local.dir": "/data1"
     # You can mount a dynamically-created persistent volume claim per executor by using OnDemand as a claim name and storageClass and sizeLimit options like the following. This is useful in case of Dynamic Allocation.
     "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand"
@@ -48,7 +48,7 @@ spec:
     "spark.storage.decommission.fallbackStorage.path": "s3a://<S3_BUCKET>/shuffleFallback/order-ebs-pvc"
     # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html\
     # Use Pod Identity Credentials or IAM Roles for Service Account credentials
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider,software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider" 
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider,software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "spark.hadoop.fs.s3a.connection.timeout": "1200000"
     "spark.hadoop.fs.s3a.path.style.access": "true"
