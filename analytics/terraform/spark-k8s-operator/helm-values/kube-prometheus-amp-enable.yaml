@@ -19,8 +19,8 @@ prometheus:
           maxShards: 200
           capacity: 2500
     retention: 5h
-    scrapeInterval: 30s
-    evaluationInterval: 30s
+    scrapeInterval: 15s
+    evaluationInterval: 15s
     scrapeTimeout: 10s
     storageSpec:
       volumeClaimTemplate:
@@ -42,8 +42,8 @@ prometheus:
       # Scrape metrics for Yunikorn
       - job_name: yunikorn
         honor_labels: true
-        scrape_interval: 15s
-        scrape_timeout: 10s
+        scrape_interval: 10s
+        scrape_timeout: 8s
         metrics_path: /ws/v1//metrics
         scheme: http
         dns_sd_configs:
@@ -65,7 +65,6 @@ prometheus:
           action: keep
           regex: karpenter;http-metrics
       # Additional EKS Control plane metrics
-      # NOTE: you will need to patch the service account for prometheus as described here:  https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
       # Scheduler metrics
       - job_name: 'ksh-metrics'
         kubernetes_sd_configs:
@@ -119,10 +118,10 @@ prometheus:
           - spark-s3-express
       podMetricsEndpoints:
         - port: "spark-ui"
-          interval: 30s
+          interval: 10s
           path: /metrics/driver/prometheus/
         - port: "spark-ui"
-          interval: 30s
+          interval: 10s
           path: /metrics/executors/prometheus/
 
 # add ethtool metrics to node-exporter https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-network-performance-ena.html
@@ -169,10 +168,10 @@ grafana:
   dashboards:
     default:
       karpenter-capacity-dashboard:
-        url: https://raw.githubusercontent.com/aws/karpenter-provider-aws/d389d3c82f93b9abd713746ed3fefd3ef8f34d72/website/content/en/v1.2/getting-started/getting-started-with-karpenter/karpenter-capacity-dashboard.json
+        url: https://github.com/aws/karpenter-provider-aws/blob/ef943b197961c91fcb888d5194c15e3d769555d3/website/content/en/preview/getting-started/getting-started-with-karpenter/karpenter-capacity-dashboard.json
       karpenter-performance-dashboard:
-        url: https://raw.githubusercontent.com/aws/karpenter-provider-aws/d389d3c82f93b9abd713746ed3fefd3ef8f34d72/website/content/en/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
+        url: https://github.com/aws/karpenter-provider-aws/blob/ef943b197961c91fcb888d5194c15e3d769555d3/website/content/en/preview/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
       spark-job-dashboard:
-        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/emr-eks-grafana-dashboard.json
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/spark-workshop/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/emr-eks-grafana-dashboard.json
       spark-operator-dashboard:
-        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/kubeflow-spark-operator-dashboard.json
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/spark-workshop/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/kubeflow-spark-operator-dashboard.json
