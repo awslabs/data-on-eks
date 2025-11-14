@@ -31,7 +31,7 @@ spec:
     # K8s Pod naming
     "spark.app.name": "order-spot-cmr"
     "spark.kubernetes.driver.pod.name": "order-spot-cmr-driver"
-    "spark.kubernetes.executor.podNamePrefix": "order-spot-cmr-executor"
+    "spark.kubernetes.executor.podNamePrefix": "order-spot-cmr"
     # Spark Event logs
     "spark.eventLog.enabled": "true"
     "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"

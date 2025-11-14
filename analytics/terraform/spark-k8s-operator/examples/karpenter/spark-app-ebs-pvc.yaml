@@ -45,7 +45,7 @@ spec:
     "spark.storage.decommission.enabled": "true"
     "spark.storage.decommission.rddBlocks.enabled": "true"
     "spark.storage.decommission.shuffleBlocks.enabled": "true"
-    "spark.storage.decommission.fallbackStorage.path": "s3a://<S3_BUCKET>/shuffleFallback/order-ebs-pvc"
+    "spark.storage.decommission.fallbackStorage.path": "s3a://spark-workshop-spark-logs-20251114162441837100000001/shuffleFallback/order-ebs-pvc/"
     # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html\
     # Use Pod Identity Credentials or IAM Roles for Service Account credentials
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider,software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
@@ -59,7 +59,7 @@ spec:
     # K8s Pod naming
     "spark.app.name": "order-ebs-pvc"
     "spark.kubernetes.driver.pod.name": "order-ebs-pvc-driver"
-    "spark.kubernetes.executor.podNamePrefix": "order-ebs-pvc-executor"
+    "spark.kubernetes.executor.podNamePrefix": "order-ebs-pvc"
     # Spark Event logs
     "spark.eventLog.enabled": "true"
     "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
@@ -97,6 +97,9 @@ spec:
     terminationGracePeriodSeconds: 100
     memoryOverhead: "2g"
     serviceAccount:  spark-team-a
+    # fix permissions on volume for spark
+    podSecurityContext:
+      fsGroup: 185
     nodeSelector:
       karpenter.sh/capacity-type: "spot"
       NodeGroupType: "SparkGravitonMemoryOptimized"

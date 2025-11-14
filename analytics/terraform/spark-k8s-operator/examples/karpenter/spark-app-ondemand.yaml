@@ -31,7 +31,7 @@ spec:
     # K8s Pod naming
     "spark.app.name": "order-ondemand"
     "spark.kubernetes.driver.pod.name": "order-ondemand-driver"
-    "spark.kubernetes.executor.podNamePrefix": "order-ondemand-executor"
+    "spark.kubernetes.executor.podNamePrefix": "order-ondemand"
     # Spark Event logs
     "spark.eventLog.enabled": "true"
     "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
