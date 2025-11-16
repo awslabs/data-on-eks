@@ -22,6 +22,22 @@ module "eks" {
     node_pools = ["system","general-purpose"]
   }
 
+  access_entries = {
+    # One access entry with a policy associated
+    custom_nodeclass_access = {
+      principal_arn = aws_iam_role.custom_nodeclass_role.arn
+      type          = "EC2"
+
+      policy_associations = {
+        auto = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAutoNodePolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
   #---------------------------------------
   # Amazon EKS Managed Add-ons
   #---------------------------------------
@@ -41,25 +57,6 @@ module "eks" {
           WARM_PREFIX_TARGET       = "1"
         }
       })
-    }
-
-    kube-proxy = {}
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-      addon_version            = "v1.48.0-eksbuild.1"
-      most_recent              = false
-    }
-
-    aws-mountpoint-s3-csi-driver = {
-      service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
-      addon_version            = "v1.15.0-eksbuild.1"
-      most_recent              = false
-    }
-
-    metrics-server = {}
-    amazon-cloudwatch-observability = {
-      preserve                 = true
-      service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
     }
   }
 
@@ -193,8 +190,8 @@ locals {
     f => templatefile("${path.module}/manifests/automode/${f}", {
       CLUSTER_NAME       = module.eks.cluster_name
       NODE_IAM_ROLE_NAME = aws_iam_role.custom_nodeclass_role.name
-  })
-}
+    })
+  }
 
   auto_mode_nodeclass_manifests = provider::kubernetes::manifest_decode_multi(
     templatefile("${path.module}/manifests/automode/nodeclass.yaml", {

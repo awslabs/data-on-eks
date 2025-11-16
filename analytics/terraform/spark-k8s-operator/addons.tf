@@ -29,7 +29,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   volume_binding_mode    = "WaitForFirstConsumer"
   parameters = {
     fsType    = "xfs"
-    encrypted = true
+    encrypted = "true"
     type      = "gp3"
   }
 
@@ -44,14 +44,36 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   depends_on = [kubernetes_annotations.gp2_default]
 }
 
+
 #---------------------------------------------------------------
-# Karpenter Node instance role Access Entry
+# Additional EKS Add-ons
 #---------------------------------------------------------------
-resource "aws_eks_access_entry" "karpenter_nodes" {
-  cluster_name  = module.eks.cluster_name
-  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-  type          = "EC2_LINUX"
+resource "aws_eks_addon" "aws_ebs_csi_driver" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "aws-ebs-csi-driver"
+
+  service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
 }
+
+resource "aws_eks_addon" "metrics_server" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "metrics-server"
+}
+
+resource "aws_eks_addon" "amazon_cloudwatch_observability" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "amazon-cloudwatch-observability"
+
+  service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
+}
+
+resource "aws_eks_addon" "aws_mountpoint_s3_csi_driver" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "aws-mountpoint-s3-csi-driver"
+
+  service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+}
+
 
 #---------------------------------------------------------------
 # Data on EKS Kubernetes Addons
@@ -103,7 +125,9 @@ module "eks_data_addons" {
   enable_kubecost = true
   kubecost_helm_config = {
     version             = "2.8.4"
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
+    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {
+      kubecost_irsa_role = module.kubecost_irsa.iam_role_arn
+    })]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
