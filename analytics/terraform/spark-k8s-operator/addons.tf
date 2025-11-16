@@ -124,8 +124,8 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    version             = "2.8.4"
-    values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {
+    version = "2.8.4"
+    values = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {
       kubecost_irsa_role = module.kubecost_irsa.iam_role_arn
     })]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
@@ -274,4 +274,3 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
 }
-

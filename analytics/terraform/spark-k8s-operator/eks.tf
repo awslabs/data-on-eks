@@ -14,12 +14,12 @@ module "eks" {
   # Add the IAM identity that terraform is using as a cluster admin
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
-  enable_irsa = true
+  enable_irsa                              = true
 
   # Enable EKS Auto Mode
   cluster_compute_config = {
     enabled    = true
-    node_pools = ["system","general-purpose"]
+    node_pools = ["system", "general-purpose"]
   }
 
   access_entries = {

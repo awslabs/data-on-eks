@@ -62,5 +62,3 @@ spec:
     size: 1000Gi
     iops: 6000
     throughput: 1000
-
-
