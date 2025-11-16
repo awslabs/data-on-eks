@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "spark-operator-doeks"
+  default     = "spark-on-eks"
   type        = string
 }
 
