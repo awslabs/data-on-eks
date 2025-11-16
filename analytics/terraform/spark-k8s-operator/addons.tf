@@ -680,8 +680,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "2.2.0"
-    timeout = "120"
+    version = "2.3.0"
     values = [
       <<-EOT
         controller:
@@ -754,7 +753,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
-    version = "1.6.3"
+    version = "1.7.0"
     values  = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {})]
   }
 
@@ -771,7 +770,6 @@ module "eks_data_addons" {
         s3_bucket_name   = module.s3_bucket.s3_bucket_id,
         event_log_prefix = aws_s3_object.this.key,
     })]
-    timeout = 600 # add timeout(extra time) for EBS provisioning
   }
 
   #---------------------------------------------------------------
@@ -779,7 +777,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    version             = "2.7.0"
+    version             = "2.8.4"
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
@@ -818,7 +816,7 @@ module "eks_data_addons" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.20"
+  version = "1.22.0"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -837,7 +835,7 @@ module "eks_blueprints_addons" {
     }
   }
   karpenter = {
-    chart_version       = "1.2.1"
+    chart_version       = "1.8.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
@@ -852,7 +850,7 @@ module "eks_blueprints_addons" {
     retention_in_days = 30
   }
   aws_for_fluentbit = {
-    chart_version = "0.1.34"
+    chart_version = "0.1.35"
     s3_bucket_arns = [
       module.s3_bucket.s3_bucket_arn,
       "${module.s3_bucket.s3_bucket_arn}/*"
@@ -867,7 +865,7 @@ module "eks_blueprints_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.11.0"
+    chart_version = "1.14.1"
     set = [{
       name  = "enableServiceMutatorWebhook"
       value = "false"
@@ -876,8 +874,8 @@ module "eks_blueprints_addons" {
 
   enable_ingress_nginx = true
   ingress_nginx = {
-    version = "4.12.0"
-    values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
+    chart_version = "4.14.0"
+    values        = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -900,7 +898,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "69.5.2"
+    chart_version = "79.5.0"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
@@ -918,7 +916,7 @@ module "eks_blueprints_addons" {
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 4.6"
+  version = "4.11.0"
 
   bucket_prefix = "${local.name}-spark-logs-"
 

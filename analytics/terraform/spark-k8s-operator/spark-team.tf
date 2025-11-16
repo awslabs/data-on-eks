@@ -44,7 +44,7 @@ module "spark_team_irsa" {
   for_each = toset(local.teams)
 
   source  = "aws-ia/eks-blueprints-addon/aws"
-  version = "~> 1.1"
+  version = "1.1.1"
 
   create_release = false
   create_role    = true

@@ -55,7 +55,7 @@ locals {
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.19"
+  version = "5.21.0"
 
   name = local.name
   cidr = var.vpc_cidr
@@ -89,7 +89,7 @@ module "vpc" {
 
 module "vpc_endpoints_sg" {
   source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 5.3"
+  version = "5.3.1"
 
   create = var.enable_vpc_endpoints
 
@@ -118,7 +118,7 @@ module "vpc_endpoints_sg" {
 
 module "vpc_endpoints" {
   source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 5.21"
+  version = "5.21.0"
 
   create = var.enable_vpc_endpoints
 
