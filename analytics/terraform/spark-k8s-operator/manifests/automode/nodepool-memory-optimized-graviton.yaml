@@ -1,0 +1,67 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: memory-optimized-graviton
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: memory-optimized-graviton
+        node.kubernetes.io/instance-category: memory
+        node.kubernetes.io/arch: arm64
+        NodeGroupType: SparkGravitonMemoryOptimized
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: ebs-gp3-1000gi-6000iops-1000tp
+
+      requirements:
+        # Capacity type - prefer spot for even better cost optimization
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+
+        # Architecture - ARM64 only
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+
+        # Instance categories - memory optimized
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["r"]
+
+        # Instance families - Graviton memory families (gen 6+)
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["r6g", "r6gd", "r7g", "r7gd", "r8g", "r8gd"]
+
+        # Instance sizes - large to very large for memory workloads
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge"]
+
+        # Nitro system
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+        # Generation 5+ (Graviton starts at gen 6)
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["5"]
+
+  # Higher limits for memory-intensive workloads with cost optimization
+  limits:
+    cpu: "3000"
+    memory: "12000Gi"
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: "60s"
+
+  # High weight for cost-optimized memory workloads
+  weight: 25

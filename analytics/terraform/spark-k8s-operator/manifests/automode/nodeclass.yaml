@@ -1,0 +1,66 @@
+# Default EKS Auto Mode Nodeclass
+# apiVersion: eks.amazonaws.com/v1
+# kind: NodeClass
+# metadata:
+#   name: default
+# spec:
+#   ephemeralStorage:
+#     iops: 3000
+#     size: 80Gi
+#     throughput: 125
+#   networkPolicy: DefaultAllow
+#   networkPolicyEventLogs: Disabled
+#   role: spark-workshop-eks-auto-20251115203822140900000005
+#   securityGroupSelectorTerms:
+#   - id: sg-0d614860fc442d818
+#   snatPolicy: Random
+#   subnetSelectorTerms:
+#   - id: subnet-0c070258d877ad514
+#   - id: subnet-0c89c41b9cbc193c7
+
+
+apiVersion: eks.amazonaws.com/v1
+kind: NodeClass
+metadata:
+  name: ebs-gp3-100gi
+  namespace: karpenter
+spec:
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${NODE_IAM_ROLE_NAME}"
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+  # Auto Mode enables the RAID0 setting by default
+  # instanceStorePolicy: RAID0
+  # use small root volume to save costs when using NVMe
+  ephemeralStorage:
+    size: 100Gi
+
+---
+apiVersion: eks.amazonaws.com/v1
+kind: NodeClass
+metadata:
+  name: ebs-gp3-1000gi-6000iops-1000tp
+  namespace: karpenter
+spec:
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${NODE_IAM_ROLE_NAME}"
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+  ephemeralStorage:
+    size: 1000Gi
+    iops: 6000
+    throughput: 1000
+
+
