@@ -210,6 +210,7 @@ module "eks" {
       ]
 
       ami_type = "AL2023_x86_64_STANDARD" # x86
+      # ami_type = "AL2023_ARM_64_STANDARD" # arm64
 
       # Node group will be created with zero instances when you deploy the blueprint.
       # You can change the min_size and desired_size to 6 instances
@@ -244,149 +245,39 @@ module "eks" {
         NodeGroupType = "spark_benchmark_ssd"
       }
     }
-
-    spark_operator_bench = {
-      name        = "spark_operator_bench"
-      description = "Managed node group for Spark Operator Benchmarks with EBS using x86 or ARM"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
-
-      ami_type = "AL2023_x86_64_STANDARD"
-
-      cloudinit_pre_nodeadm = [
-        {
-          content_type = "application/node.eks.aws"
-          content      = <<-EOT
-            ---
-            apiVersion: node.eks.aws/v1alpha1
-            kind: NodeConfig
-            spec:
-              kubelet:
-                config:
-                  maxPods: 220
-          EOT
-        }
-      ]
-
-      min_size     = 0
-      max_size     = 200
-      desired_size = 0
-
-      instance_types = ["m6a.4xlarge"]
-
-      labels = {
-        NodeGroupType = "spark-operator-benchmark-ng"
-      }
-
-      taints = {
-        benchmark = {
-          key      = "spark-operator-benchmark-ng"
-          effect   = "NO_SCHEDULE"
-          operator = "EXISTS"
-        }
-      }
-
-      tags = {
-        Name          = "spark-operator-benchmark-ng"
-        NodeGroupType = "spark-operator-benchmark-ng"
-      }
-    }
   }
 }
 
-#---------------------------------------------------------------
-# EKS Amazon CloudWatch Observability Role
-#---------------------------------------------------------------
-resource "aws_iam_role" "cloudwatch_observability_role" {
-  name_prefix = "${local.name}-eks-cw-agent-"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"
-        Principal = {
-          Federated = module.eks.oidc_provider_arn
-        }
-        Condition = {
-          StringEquals = {
-            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" : "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent",
-            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" : "sts.amazonaws.com"
-          }
-        }
-      }
-    ]
+#---------------------------------------------------------------
+# EKS Auto Mode Node Pools and Classes
+#---------------------------------------------------------------
+locals {
+  auto_mode_nodepool_manifests = {
+    for f in fileset("${path.module}/manifests/automode", "nodepool*.yaml") :
+    f => templatefile("${path.module}/manifests/automode/${f}", {
+      CLUSTER_NAME       = module.eks.cluster_name
+      NODE_IAM_ROLE_NAME = aws_iam_role.custom_nodeclass_role.name
   })
 }
 
-resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attachment" {
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-  role       = aws_iam_role.cloudwatch_observability_role.name
+  auto_mode_nodeclass_manifests = provider::kubernetes::manifest_decode_multi(
+    templatefile("${path.module}/manifests/automode/nodeclass.yaml", {
+      CLUSTER_NAME       = module.eks.cluster_name
+      NODE_IAM_ROLE_NAME = aws_iam_role.custom_nodeclass_role.name
+    })
+  )
 }
 
-#---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "5.60.0"
-  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
-  }
-  tags = local.tags
+resource "kubectl_manifest" "auto_mode_nodeclass" {
+  for_each = { for idx, manifest in local.auto_mode_nodeclass_manifests : idx => manifest }
+
+  yaml_body = yamlencode(each.value)
 }
 
-#---------------------------------------------------------------
-# IRSA for Mountpoint S3 CSI Driver
-#---------------------------------------------------------------
-module "s3_csi_driver_irsa" {
-  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version          = "5.60.0"
-  role_name_prefix = format("%s-%s-", local.name, "s3-csi-driver")
-  role_policy_arns = {
-    # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
-    s3_access = aws_iam_policy.s3_irsa_access_policy.arn
-    #kms_access = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
-  }
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:s3-csi-driver-sa"]
-    }
-  }
-  tags = local.tags
-}
 
-resource "aws_iam_policy" "s3_irsa_access_policy" {
-  name_prefix = "${local.name}-S3Access-"
-  path        = "/"
-  description = "S3 Access for Nodes"
+resource "kubectl_manifest" "auto_mode_nodepools" {
+  for_each = local.auto_mode_nodepool_manifests
 
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  # checkov:skip=CKV_AWS_288: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_290: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_289: Demo purpose IAM policy
-  # checkov:skip=CKV_AWS_355: Demo purpose IAM policy
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:*",
-          "s3express:*"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-    ]
-  })
+  yaml_body = each.value
 }

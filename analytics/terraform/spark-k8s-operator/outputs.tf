@@ -17,6 +17,11 @@ output "configure_kubectl" {
   value       = "aws eks --region ${local.region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
 
+output "node_iam_role_name" {
+  description = "EKS Auto node IAM role name"
+  value       = module.eks.node_iam_role_name
+}
+
 ################################################################################
 # Private Subnets
 ################################################################################

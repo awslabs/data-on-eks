@@ -681,71 +681,7 @@ module "eks_data_addons" {
   enable_spark_operator = true
   spark_operator_helm_config = {
     version = "2.3.0"
-    values = [
-      <<-EOT
-        controller:
-          # -- Number of replicas of controller.
-          replicas: 1
-          # -- Reconcile concurrency, higher values might increase memory usage.
-          # -- Increased from 10 to 20 to leverage more cores from the instance
-          workers: 20
-          # -- Change this to True when YuniKorn is deployed
-          batchScheduler:
-            enable: false
-            # default: "yunikorn"
-        #   -- Uncomment this for Spark Operator scale test
-        #   -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
-        #   nodeSelector:
-        #     NodeGroupType: spark-operator-benchmark
-        #   resources:
-        #     requests:
-        #       cpu: 33000m
-        #       memory: 50Gi
-        # webhook:
-        #   nodeSelector:
-        #     NodeGroupType: spark-operator-benchmark
-        #   resources:
-        #     requests:
-        #       cpu: 1000m
-        #       memory: 10Gi
-        spark:
-          # -- List of namespaces where to run spark jobs.
-          # If empty string is included, all namespaces will be allowed.
-          # Make sure the namespaces have already existed.
-          jobNamespaces:
-            - default
-            - spark-team-a
-            - spark-team-b
-            - spark-team-c
-            - spark-s3-express
-          serviceAccount:
-            # -- Specifies whether to create a service account for the controller.
-            create: false
-          rbac:
-            # -- Specifies whether to create RBAC resources for the controller.
-            create: false
-        prometheus:
-          metrics:
-            enable: true
-            port: 8080
-            portName: metrics
-            endpoint: /metrics
-            prefix: ""
-          # Prometheus pod monitor for controller pods
-          # Note: The kube-prometheus-stack addon must deploy before the PodMonitor CRD is available.
-          #       This can cause the terraform apply to fail since the addons are deployed in parallel
-          podMonitor:
-            # -- Specifies whether to create pod monitor.
-            create: true
-            labels: {}
-            # -- The label to use to retrieve the job name from
-            jobLabel: spark-operator-podmonitor
-            # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
-            podMetricsEndpoint:
-              scheme: http
-              interval: 5s
-      EOT
-    ]
+    values  = [templatefile("${path.module}/helm-values/spark-operator.yaml", {})]
   }
 
   #---------------------------------------------------------------
@@ -911,37 +847,6 @@ module "eks_blueprints_addons" {
 }
 
 #---------------------------------------------------------------
-# S3 bucket for Spark Event Logs and Example Data
-#---------------------------------------------------------------
-#tfsec:ignore:*
-module "s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "4.11.0"
-
-  bucket_prefix = "${local.name}-spark-logs-"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
-
-  tags = local.tags
-}
-
-# Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
-resource "aws_s3_object" "this" {
-  bucket       = module.s3_bucket.s3_bucket_id
-  key          = "spark-event-logs/"
-  content_type = "application/x-directory"
-}
-
-#---------------------------------------------------------------
 # Grafana Admin credentials resources
 #---------------------------------------------------------------
 data "aws_secretsmanager_secret_version" "admin_password_version" {
@@ -966,49 +871,3 @@ resource "aws_secretsmanager_secret_version" "grafana" {
   secret_string = random_password.grafana.result
 }
 
-#---------------------------------------------------------------
-# S3Table IAM policy for Karpenter nodes
-# The S3 tables library does not fully support IRSA and Pod Identity as of this writing.
-# We give the node role access to S3tables to work around this limitation.
-#---------------------------------------------------------------
-resource "aws_iam_policy" "s3tables_policy" {
-  name_prefix = "${local.name}-s3tables"
-  path        = "/"
-  description = "S3Tables Metadata access for Nodes"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "VisualEditor0"
-        Effect = "Allow"
-        Action = [
-          "s3tables:UpdateTableMetadataLocation",
-          "s3tables:GetNamespace",
-          "s3tables:ListTableBuckets",
-          "s3tables:ListNamespaces",
-          "s3tables:GetTableBucket",
-          "s3tables:GetTableBucketMaintenanceConfiguration",
-          "s3tables:GetTableBucketPolicy",
-          "s3tables:CreateNamespace",
-          "s3tables:CreateTable"
-        ]
-        Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*"
-      },
-      {
-        Sid    = "VisualEditor1"
-        Effect = "Allow"
-        Action = [
-          "s3tables:GetTableMaintenanceJobStatus",
-          "s3tables:GetTablePolicy",
-          "s3tables:GetTable",
-          "s3tables:GetTableMetadataLocation",
-          "s3tables:UpdateTableMetadataLocation",
-          "s3tables:GetTableData",
-          "s3tables:GetTableMaintenanceConfiguration"
-        ]
-        Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*/table/*"
-      }
-    ]
-  })
-}
