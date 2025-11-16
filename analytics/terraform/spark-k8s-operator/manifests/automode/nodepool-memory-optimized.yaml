@@ -15,7 +15,7 @@ spec:
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
-        kind: EC2NodeClass
+        kind: NodeClass
         name: ebs-gp3-1000gi-6000iops-1000tp
 
       requirements:
