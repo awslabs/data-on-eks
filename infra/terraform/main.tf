@@ -28,8 +28,8 @@ locals {
       before_compute = true
     }
     vpc-cni = {
-      before_compute = true
-      preserve       = true
+      before_compute              = true
+      preserve                    = true
       resolve_conflicts_on_create = "OVERWRITE"
       configuration_values = jsonencode({
         env = {
