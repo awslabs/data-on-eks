@@ -5,7 +5,7 @@ prometheus:
     resources: [ "kcm/metrics", "ksh/metrics" ]
     verbs: [ "get" ]
   prometheusSpec:
-    retention: 5h
+    retention: 30d
     scrapeInterval: 30s
     evaluationInterval: 30s
     scrapeTimeout: 10s
