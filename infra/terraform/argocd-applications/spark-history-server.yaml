@@ -12,7 +12,7 @@ spec:
     chart: spark-history-server
     targetRevision: "1.5.1"
     helm:
-      valuesObject:
+      values: |
         ${user_values_yaml}
 
   destination:

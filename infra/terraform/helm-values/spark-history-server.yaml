@@ -1,9 +1,25 @@
 historyServer:
   store:
+    maxDiskUsage: 25g
     hybridStore:
       enabled: true
+sparkDaemon:
+  memory: 10g
 logStore:
   s3:
     bucket: ${s3_bucket_name}
     eventLogsPath: ${event_log_prefix}
     irsaRoleArn: ${spark_history_server_role}
+resources:
+  limits:
+    memory: 12Gi
+sparkConf: |-
+  # Storage backend optimizations for S3/ABFS (non-conflicting settings)
+  spark.hadoop.fs.s3a.connection.maximum=200
+  spark.hadoop.fs.s3a.threads.max=50
+  spark.hadoop.fs.s3a.max.total.tasks=100
+  spark.hadoop.fs.s3a.connection.establish.timeout=10000
+  spark.hadoop.fs.s3a.connection.timeout=20000
+  # Show up to 10000 jobs and stages in the UI
+  spark.ui.retainedJobs=10000
+  spark.ui.retainedStages=10000
