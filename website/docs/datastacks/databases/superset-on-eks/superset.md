@@ -44,7 +44,7 @@ copy data:
 aws s3 cp yellow_tripdata_2025-01.parquet s3://${S3_BUCKET}/example-data/
 ```
 
-## Login to Superset Configuration 
+## Login to Superset Configuration
 
 ### Login to the UI
 
