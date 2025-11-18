@@ -11,3 +11,24 @@ resource "kubectl_manifest" "strimzi_kafka_operator" {
     helm_release.argocd,
   ]
 }
+
+#---------------------------------------------------------------
+# Kafka Namespace
+#---------------------------------------------------------------
+resource "kubectl_manifest" "kafka_namespace" {
+  yaml_body = templatefile("${path.module}/manifests/kafka/namespace.yaml", {})
+}
+
+#---------------------------------------------------------------
+# Kafka Manifests
+#---------------------------------------------------------------
+resource "kubectl_manifest" "kafka_manifests" {
+  for_each = fileset("${path.module}/manifests/kafka", "*.yaml")
+
+  yaml_body = templatefile("${path.module}/manifests/kafka/${each.value}", {})
+
+  depends_on = [
+    kubectl_manifest.strimzi_kafka_operator,
+    kubectl_manifest.kafka_namespace
+  ]
+}
