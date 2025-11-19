@@ -41,7 +41,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
     }
   }
 
-  depends_on = [kubernetes_annotations.gp2_default]
+  depends_on = [kubernetes_annotations.gp2_default, module.ebs_csi_driver_irsa]
 }
 
 
@@ -71,7 +71,7 @@ resource "aws_eks_addon" "aws_mountpoint_s3_csi_driver" {
   cluster_name = module.eks.cluster_name
   addon_name   = "aws-mountpoint-s3-csi-driver"
 
-  service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+  service_account_role_arn = module.s3_csi_driver_irsa.iam_role_arn
 }
 
 
