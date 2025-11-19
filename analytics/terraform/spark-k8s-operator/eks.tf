@@ -19,7 +19,7 @@ module "eks" {
   # Enable EKS Auto Mode
   cluster_compute_config = {
     enabled    = true
-    node_pools = ["system", "general-purpose"]
+    node_pools = ["system"]
   }
 
   access_entries = {
