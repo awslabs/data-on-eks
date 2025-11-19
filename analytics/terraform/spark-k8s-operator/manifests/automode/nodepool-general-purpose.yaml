@@ -1,0 +1,62 @@
+# Similar to the built in general-purpose nodepool but with a higher weight so controllers run here by default.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: general-purpose
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: general-purpose
+        node.kubernetes.io/instance-category: general
+        NodeGroupType: general-purpose
+    spec:
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: default
+
+      requirements:
+        # Capacity type - on demand to avoid interruptions
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+
+        # Architecture - amd64 in case there are still controllers without arm64 images
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+
+        # Instance categories - general purpose
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values: ["c", "m", "r"]
+
+        # Instance sizes - small to large
+        - key: eks.amazonaws.com/instance-size
+          operator: In
+          values: ["medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge"]
+
+        # Nitro system
+        - key: eks.amazonaws.com/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+        # Generation 4+
+        - key: eks.amazonaws.com/instance-generation
+          operator: Gt
+          values: ["4"]
+
+  # Moderate limits for general workloads
+  limits:
+    cpu: "1500"
+    memory: "6000Gi"
+
+  disruption:
+    budgets:
+    - nodes: 10%
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: "600s"
+
+  # highest wight - workloads run here by default.
+  weight: 50

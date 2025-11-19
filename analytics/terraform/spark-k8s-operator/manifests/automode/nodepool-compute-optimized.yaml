@@ -2,7 +2,6 @@ apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: compute-optimized-x86
-  namespace: karpenter
 spec:
   template:
     metadata:
@@ -10,11 +9,11 @@ spec:
         node.kubernetes.io/workload-type: compute-optimized-x86
         node.kubernetes.io/instance-category: compute
         node.kubernetes.io/arch: amd64
-        NodeGroupType: SparkComputeOptimized
+        NodeGroupType: "SparkComputeOptimized"
 
     spec:
       nodeClassRef:
-        group: karpenter.k8s.aws
+        group: eks.amazonaws.com
         kind: NodeClass
         name: ebs-gp3-1000gi-6000iops-1000tp
 
@@ -30,29 +29,29 @@ spec:
           values: ["amd64"]
 
         # Instance categories - compute optimized
-        - key: karpenter.k8s.aws/instance-category
+        - key: eks.amazonaws.com/instance-category
           operator: In
           values: ["c"]
 
         # Instance families - x86 compute families (gen 5+) including latest NVMe
-        - key: karpenter.k8s.aws/instance-family
+        - key: eks.amazonaws.com/instance-family
           operator: In
           values: ["c5", "c5d", "c5n", "c6a", "c6i", "c6id", "c6in", "c7i", "c7id"]
 
         # Instance sizes - medium to very large
-        - key: karpenter.k8s.aws/instance-size
+        - key: eks.amazonaws.com/instance-size
           operator: In
           values: ["large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge", "24xlarge"]
 
         # Nitro system for better performance
-        - key: karpenter.k8s.aws/instance-hypervisor
+        - key: eks.amazonaws.com/instance-hypervisor
           operator: In
           values: ["nitro"]
 
-        # Generation 5+ for modern performance
-        - key: karpenter.k8s.aws/instance-generation
+        # Generation 4+
+        - key: eks.amazonaws.com/instance-generation
           operator: Gt
-          values: ["5"]
+          values: ["4"]
 
   # Resource limits for budget control
   limits:

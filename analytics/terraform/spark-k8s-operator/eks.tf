@@ -187,10 +187,7 @@ module "eks" {
 locals {
   auto_mode_nodepool_manifests = {
     for f in fileset("${path.module}/manifests/automode", "nodepool*.yaml") :
-    f => templatefile("${path.module}/manifests/automode/${f}", {
-      CLUSTER_NAME       = module.eks.cluster_name
-      NODE_IAM_ROLE_NAME = aws_iam_role.custom_nodeclass_role.name
-    })
+    f => templatefile("${path.module}/manifests/automode/${f}", {})
   }
 
   auto_mode_nodeclass_manifests = provider::kubernetes::manifest_decode_multi(

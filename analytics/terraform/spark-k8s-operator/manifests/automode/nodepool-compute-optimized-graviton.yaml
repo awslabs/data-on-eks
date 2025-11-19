@@ -2,7 +2,6 @@ apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: compute-optimized-graviton
-  namespace: karpenter
 spec:
   template:
     metadata:
@@ -14,7 +13,7 @@ spec:
 
     spec:
       nodeClassRef:
-        group: karpenter.k8s.aws
+        group: eks.amazonaws.com
         kind: NodeClass
         name: ebs-gp3-1000gi-6000iops-1000tp
 
@@ -30,29 +29,29 @@ spec:
           values: ["arm64"]
 
         # Instance categories - compute optimized
-        - key: karpenter.k8s.aws/instance-category
+        - key: eks.amazonaws.com/instance-category
           operator: In
           values: ["c"]
 
         # Instance families - Graviton compute families (gen 6+)
-        - key: karpenter.k8s.aws/instance-family
+        - key: eks.amazonaws.com/instance-family
           operator: In
           values: ["c6g", "c6gd", "c6gn", "c7g", "c7gd", "c7gn"]
 
         # Instance sizes - medium to very large
-        - key: karpenter.k8s.aws/instance-size
+        - key: eks.amazonaws.com/instance-size
           operator: In
           values: ["medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge"]
 
         # Nitro system
-        - key: karpenter.k8s.aws/instance-hypervisor
+        - key: eks.amazonaws.com/instance-hypervisor
           operator: In
           values: ["nitro"]
 
-        # Generation 5+ (Graviton starts at gen 6)
-        - key: karpenter.k8s.aws/instance-generation
+        # Generation 4+ (Graviton starts at gen 5)
+        - key: eks.amazonaws.com/instance-generation
           operator: Gt
-          values: ["5"]
+          values: ["4"]
 
   # Resource limits for budget control
   limits:

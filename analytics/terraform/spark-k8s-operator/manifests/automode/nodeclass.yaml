@@ -23,7 +23,6 @@ apiVersion: eks.amazonaws.com/v1
 kind: NodeClass
 metadata:
   name: ebs-gp3-100gi
-  namespace: karpenter
 spec:
   # IAM role for Karpenter nodes - from EKS module output
   role: "${NODE_IAM_ROLE_NAME}"
@@ -46,7 +45,6 @@ apiVersion: eks.amazonaws.com/v1
 kind: NodeClass
 metadata:
   name: ebs-gp3-1000gi-6000iops-1000tp
-  namespace: karpenter
 spec:
   # IAM role for Karpenter nodes - from EKS module output
   role: "${NODE_IAM_ROLE_NAME}"
