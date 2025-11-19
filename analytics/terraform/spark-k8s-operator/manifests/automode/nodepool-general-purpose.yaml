@@ -55,7 +55,7 @@ spec:
   disruption:
     budgets:
     - nodes: 10%
-    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidationPolicy: WhenEmpty # don't disrupt controllers where possible
     consolidateAfter: "600s"
 
   # highest wight - workloads run here by default.
