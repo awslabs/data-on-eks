@@ -192,6 +192,7 @@ locals {
   auto_mode_nodeclass_manifests = provider::kubernetes::manifest_decode_multi(
     templatefile("${path.module}/manifests/automode/nodeclass.yaml", {
       CLUSTER_NAME       = module.eks.cluster_name
+      CLUSTER_SG         = module.eks.cluster_primary_security_group_id
       NODE_IAM_ROLE_NAME = aws_iam_role.custom_nodeclass_role.name
     })
   )

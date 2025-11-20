@@ -32,8 +32,7 @@ spec:
         Name: "${CLUSTER_NAME}-private-secondary*"
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
-    - tags:
-        Name: "${CLUSTER_NAME}-node"
+    - id: "${CLUSTER_SG}"
   # Auto Mode enables the RAID0 setting by default
   # instanceStorePolicy: RAID0
   # use small root volume to save costs when using NVMe
@@ -54,8 +53,7 @@ spec:
         Name: "${CLUSTER_NAME}-private-secondary*"
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
-    - tags:
-        Name: "${CLUSTER_NAME}-node"
+    - id: "${CLUSTER_SG}"
   ephemeralStorage:
     size: 1000Gi
     iops: 6000
