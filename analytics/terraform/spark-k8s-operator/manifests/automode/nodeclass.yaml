@@ -32,13 +32,15 @@ spec:
         Name: "${CLUSTER_NAME}-private-secondary*"
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
-    - id: "${CLUSTER_SG}"
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
   # Auto Mode enables the RAID0 setting by default
   # instanceStorePolicy: RAID0
   # use small root volume to save costs when using NVMe
   ephemeralStorage:
+    iops: 3000
     size: 100Gi
-
+    throughput: 125
 ---
 apiVersion: eks.amazonaws.com/v1
 kind: NodeClass
@@ -53,7 +55,8 @@ spec:
         Name: "${CLUSTER_NAME}-private-secondary*"
   # Security group selection - use the node security group
   securityGroupSelectorTerms:
-    - id: "${CLUSTER_SG}"
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
   ephemeralStorage:
     size: 1000Gi
     iops: 6000

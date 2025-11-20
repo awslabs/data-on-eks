@@ -14,7 +14,7 @@ spec:
       nodeClassRef:
         group: eks.amazonaws.com
         kind: NodeClass
-        name: default
+        name: ebs-gp3-100gi
 
       requirements:
         # Capacity type - on demand to avoid interruptions
