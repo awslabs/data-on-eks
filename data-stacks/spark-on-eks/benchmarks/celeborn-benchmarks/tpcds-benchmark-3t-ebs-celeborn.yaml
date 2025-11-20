@@ -39,7 +39,7 @@ spec:
     # Scale factor (in GB)
     - "3000"
     # Number of iterations
-    - "3"
+    - "10"
     # Optimize queries with hive tables
     - "false"
     # Filter queries, will run all if empty - "q98-v2.4,q99-v2.4,ss_max-v2.4,q95-v2.4"
