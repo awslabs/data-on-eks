@@ -42,7 +42,6 @@ module "eks" {
   # Amazon EKS Managed Add-ons
   #---------------------------------------
   cluster_addons = {
-    coredns    = {}
     kube-proxy = {}
     eks-pod-identity-agent = {
       before_compute = true

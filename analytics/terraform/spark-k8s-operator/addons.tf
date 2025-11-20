@@ -60,6 +60,11 @@ resource "aws_eks_addon" "metrics_server" {
   addon_name   = "metrics-server"
 }
 
+resource "aws_eks_addon" "coredns" {
+  cluster_name = module.eks.cluster_name
+  addon_name   = "coredns"
+}
+
 resource "aws_eks_addon" "amazon_cloudwatch_observability" {
   cluster_name = module.eks.cluster_name
   addon_name   = "amazon-cloudwatch-observability"
@@ -81,6 +86,7 @@ resource "aws_eks_addon" "aws_mountpoint_s3_csi_driver" {
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
   version = "1.38.0" # ensure to update this to the latest/desired version
+
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_karpenter_resources = false # disabled for Auto-Mode
@@ -166,6 +172,8 @@ module "eks_data_addons" {
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "1.22.0"
+  # # ensure ebs and other eks addons are ready before installing helm charts
+  depends_on = [ aws_eks_addon.aws_ebs_csi_driver, aws_eks_addon.metrics_server, aws_eks_addon.amazon_cloudwatch_observability, aws_eks_addon.aws_mountpoint_s3_csi_driver, aws_eks_addon.coredns]
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
