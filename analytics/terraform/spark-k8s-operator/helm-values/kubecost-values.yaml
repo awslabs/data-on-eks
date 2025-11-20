@@ -22,6 +22,18 @@ global:
   prometheus:
     fqdn: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090
     enabled: false
+  additionalLabels:
+    k8s-critical: controller
+
+## Assign custom affinity rules to spread critical addons
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: k8s-critical
+          operator: Exists
+      topologyKey: kubernetes.io/hostname
 
 # enable scraping for kubecost metrics in kube-prometheus-stack
 serviceMonitor:
@@ -53,6 +65,10 @@ kubecostFrontend:
 
 kubecostModel:
   image: public.ecr.aws/kubecost/cost-model
+  resources:
+    requests:
+      cpu: "1"
+      memory: "256Mi"
 
 forecasting:
   image:

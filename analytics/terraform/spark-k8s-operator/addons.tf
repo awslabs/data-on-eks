@@ -112,6 +112,7 @@ module "eks_data_addons" {
 
   spark_history_server_helm_config = {
     version = "1.5.1"
+    timeout = "600" # allow 10m to stabilize
     values = [templatefile("${path.module}/helm-values/shs-values.yaml",
       {
         s3_bucket_name   = module.s3_bucket.s3_bucket_id,
@@ -125,6 +126,7 @@ module "eks_data_addons" {
   enable_kubecost = true
   kubecost_helm_config = {
     version = "2.8.4"
+    timeout = "600" # allow 10m to stabilize
     values = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {
       kubecost_irsa_role = module.kubecost_irsa.iam_role_arn
     })]
@@ -151,7 +153,6 @@ module "eks_data_addons" {
   # JupyterHub Add-on
   #---------------------------------------------------------------
   enable_jupyterhub = var.enable_jupyterhub
-
   jupyterhub_helm_config = {
     values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
       jupyter_single_user_sa_name = var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "not-used"
@@ -229,6 +230,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------
   enable_kube_prometheus_stack = true
   kube_prometheus_stack = {
+    timeout = "600" # allow 10m to stabilize
     values = [
       var.enable_amazon_prometheus ? templatefile("${path.module}/helm-values/kube-prometheus-amp-enable.yaml", {
         region              = local.region

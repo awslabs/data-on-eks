@@ -32,10 +32,10 @@ spec:
           operator: In
           values: ["c", "m", "r"]
 
-        # Instance sizes - small to large
+        # Instance sizes
         - key: eks.amazonaws.com/instance-size
           operator: In
-          values: ["medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge"]
+          values: ["xlarge", "2xlarge", "4xlarge", "8xlarge"]
 
         # Nitro system
         - key: eks.amazonaws.com/instance-hypervisor
