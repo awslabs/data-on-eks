@@ -17,36 +17,24 @@ module "ebs_csi_driver_irsa" {
 }
 
 #---------------------------------------------------------------
-# EKS Amazon CloudWatch Observability Role
+# IRSA for CloudWatch Observability
 #---------------------------------------------------------------
-resource "aws_iam_role" "cloudwatch_observability_role" {
-  name_prefix = "${local.name}-eks-cw-agent-"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"
-        Principal = {
-          Federated = module.eks.oidc_provider_arn
-        }
-        Condition = {
-          StringEquals = {
-            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" : "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent",
-            "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" : "sts.amazonaws.com"
-          }
-        }
-      }
-    ]
-  })
+module "cloudwatch_irsa" {
+  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version          = "5.60.0"
+  role_name_prefix = format("%s-%s-", local.name, "cw-obser")
+  role_policy_arns = {
+    # WARNING: Demo purpose only. Bring your own IAM policy with least privileges
+    kms_access = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  }
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["amazon-cloudwatch:cloudwatch-agent"]
+    }
+  }
+  tags = local.tags
 }
-
-resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attachment" {
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-  role       = aws_iam_role.cloudwatch_observability_role.name
-}
-
 
 #---------------------------------------------------------------
 # IRSA for Mountpoint S3 CSI Driver
@@ -141,7 +129,7 @@ resource "aws_iam_policy" "kubecost_ec2_access" {
 #---------------------------------------------------------------
 # Create nodeclass role and associate with IAM policies
 resource "aws_iam_role" "custom_nodeclass_role" {
-  name = "${local.name}-AmazonEKSAutoNodeRole"
+  name_prefix = "${local.name}-CustomAutoNodeRole-"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

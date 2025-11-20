@@ -64,7 +64,7 @@ resource "aws_eks_addon" "amazon_cloudwatch_observability" {
   cluster_name = module.eks.cluster_name
   addon_name   = "amazon-cloudwatch-observability"
 
-  service_account_role_arn = aws_iam_role.cloudwatch_observability_role.arn
+  service_account_role_arn = module.cloudwatch_irsa.iam_role_arn
 }
 
 resource "aws_eks_addon" "aws_mountpoint_s3_csi_driver" {
@@ -81,7 +81,6 @@ resource "aws_eks_addon" "aws_mountpoint_s3_csi_driver" {
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
   version = "1.38.0" # ensure to update this to the latest/desired version
-
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   enable_karpenter_resources = false # disabled for Auto-Mode
