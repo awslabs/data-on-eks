@@ -26,7 +26,7 @@ controller:
           matchExpressions:
           - key: k8s-critical
             operator: Exists
-        topologyKey: kubernetes.io/hostname 
+        topologyKey: kubernetes.io/hostname
 webhook:
 #   nodeSelector:
 #     NodeGroupType: spark-operator-benchmark

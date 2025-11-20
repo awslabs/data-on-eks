@@ -173,7 +173,7 @@ module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "1.22.0"
   # # ensure ebs and other eks addons are ready before installing helm charts
-  depends_on = [ aws_eks_addon.aws_ebs_csi_driver, aws_eks_addon.metrics_server, aws_eks_addon.amazon_cloudwatch_observability, aws_eks_addon.aws_mountpoint_s3_csi_driver, aws_eks_addon.coredns]
+  depends_on = [aws_eks_addon.aws_ebs_csi_driver, aws_eks_addon.metrics_server, aws_eks_addon.amazon_cloudwatch_observability, aws_eks_addon.aws_mountpoint_s3_csi_driver, aws_eks_addon.coredns]
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint

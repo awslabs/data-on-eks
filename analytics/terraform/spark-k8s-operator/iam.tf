@@ -135,9 +135,9 @@ resource "aws_iam_role" "custom_nodeclass_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        "Action": [
-            "sts:TagSession",
-            "sts:AssumeRole"
+        "Action" : [
+          "sts:TagSession",
+          "sts:AssumeRole"
         ]
         Effect = "Allow"
         Sid    = ""
