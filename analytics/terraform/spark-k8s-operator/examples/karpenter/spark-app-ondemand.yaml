@@ -58,7 +58,7 @@ spec:
     serviceAccount:  spark-team-a
     nodeSelector:
       karpenter.sh/capacity-type: "on-demand"
-      NodeGroupType: SparkComputeOptimized
+      NodeGroupType: SparkComputeGeneral
   executor:
     annotations:
       karpenter.sh/do-not-disrupt: "true"
@@ -69,7 +69,7 @@ spec:
     serviceAccount:  spark-team-a
     nodeSelector:
       karpenter.sh/capacity-type: "on-demand"
-      NodeGroupType: SparkComputeOptimized
+      NodeGroupType: SparkComputeGeneral
     affinity:
       podAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
