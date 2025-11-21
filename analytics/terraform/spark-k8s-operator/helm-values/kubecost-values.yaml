@@ -20,8 +20,20 @@ global:
   # This Prometheus setup is reusing the existing Prometheus deployment
   # https://docs.kubecost.com/install-and-configure/advanced-configuration/custom-prom
   prometheus:
-    fqdn: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc:9090
+    fqdn: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090
     enabled: false
+  additionalLabels:
+    k8s-critical: controller
+
+## Assign custom affinity rules to spread critical addons
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: k8s-critical
+          operator: Exists
+      topologyKey: kubernetes.io/hostname
 
 # enable scraping for kubecost metrics in kube-prometheus-stack
 serviceMonitor:
@@ -53,6 +65,10 @@ kubecostFrontend:
 
 kubecostModel:
   image: public.ecr.aws/kubecost/cost-model
+  resources:
+    requests:
+      cpu: "1"
+      memory: "256Mi"
 
 forecasting:
   image:
@@ -72,11 +88,10 @@ clusterController:
     repository: public.ecr.aws/kubecost/cluster-controller
 
 # Set this to false if you're bringing your own service account.
-#serviceAccount:
+serviceAccount:
 #  create: false
-#  name: kubecost-cost-analyzer
-#  annotations:
-#    eks.amazonaws.com/role-arn: <iam-role-arn>
+  annotations:
+    eks.amazonaws.com/role-arn: ${kubecost_irsa_role}
 
 # Define persistence volume for cost-analyzer
 persistentVolume:

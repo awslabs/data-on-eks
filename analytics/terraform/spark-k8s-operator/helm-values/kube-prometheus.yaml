@@ -5,6 +5,33 @@ prometheus:
     resources: [ "kcm/metrics", "ksh/metrics" ]
     verbs: [ "get" ]
   prometheusSpec:
+    podMetadata:
+      labels:
+        k8s-critical: controller
+        app: prometheus
+        k8s-app: prometheus
+    ## Pod anti-affinity can prevent the scheduler from placing Prometheus replicas on the same node.
+    ## The default value "soft" means that the scheduler should *prefer* to not schedule two replica pods onto the same node but no guarantee is provided.
+    ## The value "hard" means that the scheduler is *required* to not schedule two replica pods onto the same node.
+    ## The value "" will disable pod anti-affinity so that no anti-affinity rules will be configured.
+    podAntiAffinity: ""
+
+    ## Assign custom affinity rules to spread critical addons
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: k8s-critical
+              operator: Exists
+          topologyKey: kubernetes.io/hostname
+
+    resources:
+      # limits:
+      #   memory: 6Gi
+      requests:
+        cpu: "2"
+        memory: 1Gi
     retention: 5h
     scrapeInterval: 15s
     evaluationInterval: 15s
@@ -125,6 +152,22 @@ alertmanager:
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+  resources:
+    # limits:
+    #   memory: 250Mi
+    requests:
+      cpu: "1"
+      memory: 512Mi
+  extraLabels:
+    k8s-critical: controller
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: k8s-critical
+            operator: Exists
+        topologyKey: kubernetes.io/hostname
   dashboardProviders:
     dashboardproviders.yaml:
       apiVersion: 1

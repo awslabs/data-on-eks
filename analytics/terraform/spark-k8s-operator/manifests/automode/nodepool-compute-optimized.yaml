@@ -1,0 +1,67 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: compute-optimized-x86
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: compute-optimized-x86
+        node.kubernetes.io/instance-category: compute
+        node.kubernetes.io/arch: amd64
+        NodeGroupType: "SparkComputeOptimized"
+
+    spec:
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: ebs-gp3-1000gi-6000iops-1000tp
+
+      requirements:
+        # Capacity type - prefer spot for cost optimization
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+
+        # Architecture - x86 only
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+
+        # Instance categories - compute optimized
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values: ["c"]
+
+        # Instance families - x86 compute families (gen 5+) including latest NVMe
+        - key: eks.amazonaws.com/instance-family
+          operator: In
+          values: ["c5", "c5d", "c5n", "c6a", "c6i", "c6id", "c6in", "c7i", "c7id"]
+
+        # Instance sizes - medium to very large
+        - key: eks.amazonaws.com/instance-size
+          operator: In
+          values: ["large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge", "24xlarge"]
+
+        # Nitro system for better performance
+        - key: eks.amazonaws.com/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+        # Generation 4+
+        - key: eks.amazonaws.com/instance-generation
+          operator: Gt
+          values: ["4"]
+
+  # Resource limits for budget control
+  limits:
+    cpu: "2000"
+    memory: "8000Gi"
+
+  # Node lifecycle settings
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: "60s"
+
+  # Weight for NodePool selection
+  weight: 10

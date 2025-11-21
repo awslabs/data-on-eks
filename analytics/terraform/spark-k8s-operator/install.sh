@@ -9,6 +9,8 @@ targets=(
   "module.vpc_endpoints_sg"
   "module.vpc_endpoints"
   "module.eks"
+  "kubectl_manifest.auto_mode_nodeclass"
+  "kubectl_manifest.auto_mode_nodepools"
   "kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class" # install EBS CSI resources before addons which need PVCs
   "module.eks_blueprints_addons" # install kube-prometheus-stack first so addons can use CRDs
 )

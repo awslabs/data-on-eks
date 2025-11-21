@@ -75,7 +75,7 @@ spec:
         requiredDuringSchedulingIgnoredDuringExecution:
           nodeSelectorTerms:
             - matchExpressions:
-              - key: karpenter.k8s.aws/instance-local-nvme
+              - key: eks.amazonaws.com/instance-local-nvme
                 operator: Exists
       podAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:

@@ -10,6 +10,8 @@ targets=(
   "module.eks_blueprints_addons.module.ingress_nginx"
   "module.eks_data_addons"
   "module.eks_blueprints_addons"
+  "kubectl_manifest.auto_mode_nodepools"
+  "kubectl_manifest.auto_mode_nodeclass"
   "module.eks"
 )
 
