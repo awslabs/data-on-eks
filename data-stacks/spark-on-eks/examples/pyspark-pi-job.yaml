@@ -38,6 +38,9 @@ spec:
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"  # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
 
+    # ipv6 configurations
+    # "spark.kubernetes.driver.service.ipFamilies": "IPv6"
+    # "spark.kubernetes.driver.service.ipFamilyPolicy": "SingleStack"
   restartPolicy:
     type: OnFailure
     onFailureRetries: 1
@@ -51,6 +54,10 @@ spec:
     labels:
       version: 3.5.3
     serviceAccount: spark-team-a
+    # instruct java sdk to use ipv6 when talking to the IMDS
+    # env:
+    #   - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
+    #     value: IPv6
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod
     # we do not need to leverage a hostPath mount or volume to leverage that storage.
     # ephemeral-storage requests and limits can be used to manage the storage utilization
@@ -66,6 +73,10 @@ spec:
     instances: 2
     memory: "512m"
     serviceAccount: spark-team-a
+    # instruct java sdk to use ipv6 when talking to the IMDS
+    # env:
+    #   - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
+    #     value: IPv6
     labels:
       version: 3.5.3
     # the c5d instances that Karpenter will launch will have the NVMe storage preformatted and available to the pod

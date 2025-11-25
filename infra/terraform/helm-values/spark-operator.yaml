@@ -4,6 +4,13 @@ controller:
   # -- Reconcile concurrency, higher values might increase memory usage.
   # -- Increased from 10 to 20 to leverage more cores from the instance
   workers: 20
+%{ if enable_ipv6 ~}
+  env:
+    - name: _JAVA_OPTIONS
+      value: "-Djava.net.preferIPv6Addresses=true"
+    - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION
+      value: "true"
+%{ endif ~}
   nodeSelector:
     NodeGroupType: core
 batchScheduler:
