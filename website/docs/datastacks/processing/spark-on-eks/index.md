@@ -339,6 +339,28 @@ Production-ready Apache Spark examples and configurations for Amazon EKS. Choose
 </div>
 </div>
 
+<div className="showcase-card">
+<div className="showcase-header">
+<div className="showcase-icon">🌐</div>
+<div className="showcase-content">
+<h3>IPv6 Networking</h3>
+<p className="showcase-description">Deploy Spark on an IPv6-enabled EKS cluster for modern cloud networking.</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag infrastructure">Infrastructure</span>
+<span className="tag guide">Guide</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/processing/spark-on-eks/ipv6" className="showcase-link">
+<span>Learn More</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
 </div>
 
 {/* End of showcase grid - All styles are now in /src/css/datastack-tiles.css */}
