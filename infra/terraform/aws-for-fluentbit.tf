@@ -7,6 +7,8 @@ locals {
     cloudwatch_log_group = aws_cloudwatch_log_group.aws_for_fluentbit.name
     s3_bucket_name       = module.s3_bucket.s3_bucket_id
     region               = local.region
+    enable_ipv6          = var.enable_ipv6
+    fluent_bit_irsa_arn  = module.aws_for_fluentbit_irsa.arn
   })
 }
 
@@ -20,23 +22,22 @@ resource "aws_cloudwatch_log_group" "aws_for_fluentbit" {
 }
 
 #---------------------------------------------------------------
-# Pod Identity for AWS for Fluent Bit
+# IRSA for AWS for Fluent Bit
 #---------------------------------------------------------------
-module "aws_for_fluentbit_pod_identity" {
-  source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+# We need to us IRSA for this because of problems with IPv6 and Pod Identity in Fluent bit. This needs to be resolved: https://github.com/aws/aws-for-fluent-bit/issues/983
+module "aws_for_fluentbit_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "~> 6.0"
+  name    = "${module.eks.cluster_name}-fluent-bit"
 
-  name = "aws-for-fluent-bit"
-
-  additional_policy_arns = {
-    cloudwatch_logs = aws_iam_policy.aws_for_fluentbit.arn
+  policies = {
+    fluent_bit_policy = aws_iam_policy.aws_for_fluentbit.arn
   }
 
-  associations = {
-    aws_for_fluentbit = {
-      cluster_name    = module.eks.cluster_name
-      namespace       = local.aws_for_fluentbit_namespace
-      service_account = local.aws_for_fluentbit_service_account
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["${local.aws_for_fluentbit_namespace}:${local.aws_for_fluentbit_service_account}"]
     }
   }
 }
@@ -119,7 +120,7 @@ resource "kubectl_manifest" "aws_for_fluentbit" {
 
   depends_on = [
     helm_release.argocd,
-    module.aws_for_fluentbit_pod_identity,
+    module.aws_for_fluentbit_irsa,
     aws_iam_policy.aws_for_fluentbit,
     aws_cloudwatch_log_group.aws_for_fluentbit
   ]

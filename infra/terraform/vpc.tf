@@ -35,6 +35,16 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
 
+  # IPv6 Settings
+  enable_ipv6            = true
+  create_egress_only_igw = true
+
+  public_subnet_ipv6_prefixes  = [for k, v in local.azs : k]
+  private_subnet_ipv6_prefixes = [for i in range(length(local.azs) * 2) : i + length(local.azs)] # Start after public prefixes
+
+  public_subnet_assign_ipv6_address_on_creation  = true
+  private_subnet_assign_ipv6_address_on_creation = true
+
   public_subnet_tags = merge(var.public_subnet_tags, {
     "kubernetes.io/role/elb" = 1
   })

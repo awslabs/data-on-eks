@@ -36,6 +36,7 @@ module "karpenter" {
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     S3TableAccess                = aws_iam_policy.s3tables_policy.arn
+    CniIpv6Policy                = aws_iam_policy.cni_ipv6_policy.arn
   }
 }
 
