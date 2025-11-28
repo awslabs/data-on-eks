@@ -1,0 +1,13 @@
+.bar-chart-container {
+  position: relative;
+  margin: auto;
+  height: 400px; /* Default height */
+  width: 100%; /* Take full width of parent */
+  margin-bottom: 20px; /* Add some space below the chart */
+}
+
+/* Ensure the canvas element respects its container dimensions */
+.bar-chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
