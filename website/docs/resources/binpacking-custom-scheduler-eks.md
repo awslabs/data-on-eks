@@ -12,7 +12,7 @@ In this post, we will show you how to enable a custom scheduler with Amazon EKS 
 ### Why bin packing
 By default, the [scheduling-plugin](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins) NodeResourcesFit use the ```LeastAllocated``` for score strategies. For the long running workloads, that is good because of high availability. But for batch jobs, like Spark workloads, this would lead high cost. By changing the from ```LeastAllocated``` to ```MostAllocated```, it avoids spreading pods across all running nodes, leading to higher resource utilization and better cost efficiency.
 
-Batch jobs like Spark are running on demand with limited or predicted time. With ```MostAllocated``` strategy, Spark executors are always bin packing into one node util the node can not host any pods. You can see the following picture shows the
+Batch jobs like Spark are running on demand with limited or predicted time. With ```MostAllocated``` strategy, Spark executors are always bin packing into one node until the node cannot host any pods. You can see the following picture shows the
 
 ```MostAllocated``` in EMR on EKS.
 
