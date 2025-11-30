@@ -38,7 +38,7 @@ Data on EKS(DoEKS) solution is categorized into the following focus areas.
 
 🎯  [Distributed Databases & Query Engine](https://awslabs.github.io/data-on-eks/docs/blueprints/distributed-databases) on EKS
 
-## 🏃‍♀️Getting Started
+## 🏃‍♀️ Getting Started
 In this repository, you'll find a variety of deployment blueprints for creating Data/ML platforms with Amazon EKS clusters. These examples are just a small selection of the available blueprints - visit the [DoEKS website](https://awslabs.github.io/data-on-eks/) for the complete list of options.
 
 
