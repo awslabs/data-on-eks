@@ -189,8 +189,17 @@ grafana:
     create: false
     name: ${amp_sa}
   grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s/proxy/3000/"
+      serve_from_sub_path: false
+    security:
+      cookie_secure: false
+      allow_embedding: true
     auth:
       sigv4_auth_enabled: true
+  env:
+    GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/proxy/3000/"
+    GF_SERVER_SERVE_FROM_SUB_PATH: "false"
   additionalDataSources:
     - name: AMP
       editable: true
