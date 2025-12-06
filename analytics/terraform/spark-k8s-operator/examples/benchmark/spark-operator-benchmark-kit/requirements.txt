@@ -33,7 +33,7 @@ rsa==4.9
 six==1.17.0
 tomli==2.2.1
 typing_extensions==4.12.2
-urllib3==2.5.0
+urllib3==2.6.0
 websocket-client==1.8.0
 Werkzeug==3.1.4
 zope.event==5.0
