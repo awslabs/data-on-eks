@@ -61,6 +61,30 @@ OLTP, OLAP, and query engines on Amazon EKS. Deploy production-ready databases a
 
 <div className="datastack-card">
 <div className="datastack-header">
+<div className="datastack-icon">🧭</div>
+<div className="datastack-content">
+<h3>DataHub on EKS</h3>
+<p className="datastack-description">An open-source metadata platform for data discovery, data observability, and data governance.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Data Discovery</span>
+<span className="feature-tag">Data Observability</span>
+<span className="feature-tag">Data Governance</span>
+<span className="feature-tag">Metadata Management</span>
+</div>
+<div className="datastack-footer">
+<a href="/data-on-eks/docs/datastacks/databases/datahub-on-eks/" className="datastack-link">
+<span>Explore DataHub</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
 <div className="datastack-icon">📊</div>
 <div className="datastack-content">
 <h3>Pinot on EKS</h3>
