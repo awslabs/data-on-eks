@@ -130,5 +130,3 @@ To remove all resources, use the dedicated cleanup script:
 cd data-on-eks/data-stacks/emr-on-eks
 ./cleanup.sh
 ```
-
-

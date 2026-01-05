@@ -72,7 +72,7 @@ module "flink_irsa_operator" {
 # Creates a log group
 #---------------------------------------------------------------
 resource "aws_cloudwatch_log_group" "flink_team_a" {
-  name_prefix              = "/aws/emr-flink/${local.name}-${local.flink_team}-"
+  name_prefix       = "/aws/emr-flink/${local.name}-${local.flink_team}-"
   retention_in_days = 7
 }
 

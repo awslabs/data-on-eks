@@ -145,7 +145,7 @@ This result demonstrates that for a broad, mixed workload like TPC-DS, the overh
 
 ### Per-Query Performance Analysis
 
-While the overall time increased, performance at the individual query level was highly variable. 
+While the overall time increased, performance at the individual query level was highly variable.
 
 <BarChart
   title="Per-Query Performance: Top 10 Gains and Regressions"
@@ -361,7 +361,7 @@ Conversely, a substantial number of queries experienced performance degradation 
 
 ### Conclusion on Configuration Adjustments
 
-Overall, the specific adjustments to `CELEBORN_WORKER_MEMORY`, `CELEBORN_WORKER_OFFHEAP_MEMORY`, and `celeborn.worker.flusher.buffer.size` did not lead to a net positive performance improvement for the TPC-DS 3TB benchmark. While a few queries showed minor gains, the majority experienced performance degradation, with some regressions being quite significant. This suggests that these particular optimizations, while potentially beneficial in other contexts, were not effective for this specific mixed workload and could even be detrimental. Further fine-tuning or a different approach to Celeborn configuration might be necessary to achieve overall positive results.		
+Overall, the specific adjustments to `CELEBORN_WORKER_MEMORY`, `CELEBORN_WORKER_OFFHEAP_MEMORY`, and `celeborn.worker.flusher.buffer.size` did not lead to a net positive performance improvement for the TPC-DS 3TB benchmark. While a few queries showed minor gains, the majority experienced performance degradation, with some regressions being quite significant. This suggests that these particular optimizations, while potentially beneficial in other contexts, were not effective for this specific mixed workload and could even be detrimental. Further fine-tuning or a different approach to Celeborn configuration might be necessary to achieve overall positive results.
 ## Overall Conclusion
 
 This benchmark report aimed to evaluate the performance characteristics of Apache Celeborn with Apache Spark on a 3TB TPC-DS workload. The initial comparison against native Spark shuffle revealed that while Celeborn offers significant operational stability benefits (e.g., fault tolerance for large shuffle operations), it introduced an overall 16% performance regression for this mixed workload. Performance was highly query-dependent, with some queries improving modestly and others regressing severely.
