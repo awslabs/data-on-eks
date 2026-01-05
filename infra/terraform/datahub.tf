@@ -125,6 +125,15 @@ resource "aws_iam_policy" "datahub_s3" {
 }
 
 #---------------------------------------------------------------
+# Note:
+# For DataHub to function, you need:
+# 1. A SQL database
+# 2. A ElasticSearch cluster
+# 3. A Kafka Cluster
+# Configurations for these are set in the values file
+#---------------------------------------------------------------
+
+#---------------------------------------------------------------
 # PostgreSQL StatefulSet and Service
 #---------------------------------------------------------------
 resource "kubectl_manifest" "postgresql" {
@@ -153,6 +162,22 @@ resource "kubectl_manifest" "opensearch" {
     kubectl_manifest.datahub_namespace[0]
   ]
 }
+
+#---------------------------------------------------------------
+# Kafka Cluster Manifest
+#---------------------------------------------------------------
+resource "kubectl_manifest" "kafka_cluster" {
+  count = var.enable_datahub ? 1 : 0
+
+  yaml_body = templatefile("${path.module}/manifests/datahub/kafka-cluster.yaml", {
+  })
+
+  depends_on = [
+    helm_release.argocd,
+    kubectl_manifest.datahub_namespace[0]
+  ]
+}
+
 
 #---------------------------------------------------------------
 # DataHub Application
