@@ -1,0 +1,74 @@
+# NOTE: Make sure you replace <ENTER_S3_BUCKET> with your S3 Bucket before running this job.
+# Replace the <JOB_EXECUTION_ROLE_ARN> with the flink_job_execution_role_arn output.
+---
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: basic-example-karpenter-flink
+  namespace: flink-team-a-ns
+spec:
+  imagePullPolicy: Always
+  emrReleaseLabel: "emr-7.9.0-flink-latest"
+  flinkVersion: v1_18
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "2"
+    # Autotuning parameters
+    kubernetes.operator.job.autoscaler.autotune.enable: "true"
+    kubernetes.operator.job.autoscaler.autotune.metrics.history.max.count: "2"
+    kubernetes.operator.job.autoscaler.autotune.metrics.restart.count: "1"
+    metrics.job.status.enable: TOTAL_TIME
+
+    # Autoscaler parameters
+    kubernetes.operator.job.autoscaler.enabled: "true"
+    kubernetes.operator.job.autoscaler.scaling.enabled: "true"
+    kubernetes.operator.job.autoscaler.stabilization.interval: "5s"
+    kubernetes.operator.job.autoscaler.metrics.window: "1m"
+
+    jobmanager.scheduler: adaptive
+    # Replace with s3 bucket in your own account
+    state.checkpoints.dir: s3://$S3_BUCKET/checkpoints
+    state.savepoints.dir: s3://$S3_BUCKET/savepoints
+
+  # Replace this execution role ARN with your own
+  executionRoleArn: $FLINK_JOB_ROLE
+
+  podTemplate:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: pod-template
+    spec:
+      nodeSelector:
+        NodeGroupType: "StreamingOptimized"
+
+  jobManager:
+    # Replace with s3 bucket in your own account
+    storageDir: s3://$S3_BUCKET/data/basic-example-app-cluster/jobmanager
+    resource:
+      memory: "2048m"
+      cpu: 1
+
+  taskManager:
+    replicas: 2
+    resource:
+      memory: "2048m"
+      cpu: 1
+
+  job:
+    # if you have your job jar in S3 bucket you can use that path as well
+    jarURI: local:///opt/flink/examples/streaming/StateMachineExample.jar
+    parallelism: 4
+    upgradeMode: savepoint
+    savepointTriggerNonce: 0
+  monitoringConfiguration:
+    s3MonitoringConfiguration:
+      logUri: $S3_BUCKET/logs
+    cloudWatchMonitoringConfiguration:
+       logGroupName: /aws/emr-flink/flink-team-a
+    sideCarResources:
+      limits:
+        cpuLimit: 500m
+        memoryLimit: 250Mi
+    containerLogRotationConfiguration:
+        rotationSize: 2GB
+        maxFilesToKeep: "10"

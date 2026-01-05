@@ -1,0 +1,111 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: pyspark-pi-karpenter-yunikorn
+  namespace: spark-team-a
+  labels:
+    app: "pyspark-pi"
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu"
+  imagePullPolicy: Always
+  mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
+  sparkVersion: "3.5.3"
+  sparkConf:
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://spark-operator-doeks-spark-logs-20251010151952658500000009/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+    # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider" # This is using AWS SDK V1 in maintenance mode
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"  # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 1
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.test
+
+  driver:
+    annotations:
+      yunikorn.apache.org/task-group-name: "spark-driver"
+      yunikorn.apache.org/task-groups: |-
+          [
+            {
+              "name": "spark-executor",
+              "minMember": 4,
+              "minResource": {
+                "cpu": "4",
+                "memory": "6Gi"
+              },
+              "nodeSelector": {
+                "NodeGroupType": "SparkComputeSpotCMR"
+              },
+              "labels": {
+                "role" : "executor"
+              }
+            },
+            {
+              "name": "spark-driver",
+              "minMember": 1,
+              "minResource": {
+                "cpu": "2",
+                "memory": "4Gi"
+              },
+              "nodeSelector": {
+                "NodeGroupType": "SparkComputeOnDemand"
+              },
+              "affinity": {
+                "podAffinity": {
+                  "requiredDuringSchedulingIgnoredDuringExecution": [
+                    {
+                      "labelSelector": {
+                        "matchExpressions": [
+                          { "key": "role", "operator": "In", "values": ["executor"] }
+                        ]
+                      },
+                      "topologyKey": "topology.kubernetes.io/zone"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+    cores: 2
+    coreLimit: "4200m"
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.2.1
+    nodeSelector:
+      NodeGroupType: "SparkComputeOnDemand"
+  executor:
+    annotations:
+      yunikorn.apache.org/task-group-name: "spark-executor"
+    cores: 2
+    coreLimit: "2000m"
+    instances: 4
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    labels:
+      version: 3.2.1
+    nodeSelector:
+      NodeGroupType: "SparkComputeSpotCMR"
