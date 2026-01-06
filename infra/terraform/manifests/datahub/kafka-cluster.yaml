@@ -1,0 +1,96 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: data-on-eks
+  namespace: kafka
+  annotations:
+    strimzi.io/kraft: enabled
+    strimzi.io/node-pools: enabled
+spec:
+  kafka:
+    version: 3.9.0
+    metadataVersion: 3.9-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+    resources:
+      requests:
+        memory: 58Gi
+        cpu: "6"
+      limits:
+        memory: 64Gi
+        cpu: "8"
+    jvmOptions:
+      "-Xmx": "6g"
+      "-Xms": "4g"
+    storage:
+      type: jbod
+      volumes:
+        - id: 0
+          type: persistent-claim
+          size: 1000Gi
+          class: gp3
+          deleteClaim: false
+    template:
+      pod:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: karpenter.k8s.aws/instance-family
+                      operator: In
+                      values:
+                        - r8g
+                    - key: karpenter.sh/capacity-type
+                      operator: In
+                      values:
+                        - on-demand
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: "strimzi.io/pool-name"
+                  operator: In
+                  values:
+                  - broker
+                  - controller
+              topologyKey: "kubernetes.io/hostname"
+        topologySpreadConstraints:
+          - labelSelector:
+              matchExpressions:
+              - key: "strimzi.io/pool-name"
+                operator: In
+                values:
+                  - broker
+                  - controller
+            maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: kafka-metrics-config.yml
+    rack:
+      topologyKey: topology.kubernetes.io/zone
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  cruiseControl: {}
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
