@@ -4,6 +4,19 @@ sidebar_label: Contribution Guide
 
 ## Contributing to Data Stacks
 
+<details>
+<summary>TL;DR</summary>
+
+*   **Core Idea:** The repository uses a "Base + Overlay" pattern. A common `infra/terraform` base provides the foundation, and each directory in `data-stacks/` is an "overlay" that customizes it.
+*   **Deployment:** To deploy a stack, navigate to its directory (e.g., `data-stacks/spark-on-eks/`) and run `./deploy.sh`. This script copies the base to a temporary `_local` directory, overlays your stack-specific files, and then runs `terraform apply`.
+*   **Customization:**
+    *   **To create a new stack,** copy an existing one.
+    *   **For simple changes** (like instance counts), edit the `.tfvars` files within your stack's `terraform` directory.
+    *   **For complex changes** (like modifying a resource), create a file in your stack's `terraform` directory with the *same path and name* as the base file you want to replace.
+*   **Lifecycle:** Use `./deploy.sh` to create/update and `./cleanup.sh` to destroy a stack. The cleanup script is essential as it also removes orphaned resources like EBS volumes.
+
+</details>
+
 This guide explains the repository's structure and the design patterns used for defining and deploying data stacks. The primary goal is to enable developers to easily customize existing stacks or create new ones.
 
 ### Core Concept: The Base and Overlay Pattern
