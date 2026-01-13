@@ -87,7 +87,7 @@ variable "private_subnet_tags" {
 variable "eks_cluster_version" {
   description = "Kubernetes `<major>.<minor>` version to use for the EKS cluster (i.e.: `1.31`)"
   type        = string
-  default     = "1.33"
+  default     = "1.34"
 
   validation {
     condition     = can(regex("^[0-9]+\\.[0-9]+$", var.eks_cluster_version))
@@ -183,6 +183,12 @@ variable "enable_airflow" {
 
 variable "enable_ipv6" {
   description = "Enable IPv6 for the EKS cluster and its components"
+  type        = bool
+  default     = false
+}
+
+variable "enable_nvidia_device_plugin" {
+  description = "Enable NVIDIA Device plugin addon for GPU workloads"
   type        = bool
   default     = false
 }
