@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://kubeflow.github.io/spark-operator
     chart: spark-operator
-    targetRevision: "2.2.0"
+    targetRevision: "2.4.0"
     helm:
       valuesObject:
         ${user_values_yaml}

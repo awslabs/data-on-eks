@@ -66,50 +66,23 @@ Production-ready DataHub metadata management and data governance examples for Am
 
 <div className="showcase-grid">
 
-{/*
-  📋 TEMPLATE: Copy this structure to add a new DataHub example tile
-
-  <div className="showcase-card">
-  <div className="showcase-header">
-  <div className="showcase-icon">🎯</div>
-  <div className="showcase-content">
-  <h3>Example Title</h3>
-  <p className="showcase-description">Detailed description of this example or use case.</p>
-  </div>
-  </div>
-  <div className="showcase-tags">
-  <span className="tag infrastructure">Infrastructure</span>
-  <span className="tag storage">Storage</span>
-  <span className="tag performance">Performance</span>
-  </div>
-  <div className="showcase-footer">
-  <a href="/data-on-eks/docs/datastacks/datahub-on-eks/example/" className="showcase-link">
-  <span>Learn More</span>
-  <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-  <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-  </a>
-  </div>
-  </div>
-
-  💡 For featured tiles, add "featured" class: <div className="showcase-card featured">
-*/}
-
 <div className="showcase-card featured">
 <div className="showcase-header">
-<div className="showcase-icon">🚧</div>
+<div className="showcase-icon">🏗️</div>
 <div className="showcase-content">
-<h3>Coming Soon</h3>
-<p className="showcase-description">DataHub on EKS examples are currently under development. This will include metadata management and data governance solutions.</p>
+<h3>Infrastructure Deployment</h3>
+<p className="showcase-description">Deploy a scalable DataHub platform on Amazon EKS with Terraform, Karpenter for node auto-scaling, and ArgoCD for GitOps management.</p>
 </div>
 </div>
 <div className="showcase-tags">
 <span className="tag infrastructure">Infrastructure</span>
-<span className="tag guide">Coming Soon</span>
+<span className="tag">EKS</span>
+<span className="tag">Terraform</span>
+<span className="tag">ArgoCD</span>
 </div>
 <div className="showcase-footer">
-<a href="https://datahubproject.io/docs/" className="showcase-link">
-<span>View DataHub Docs</span>
+<a href="infra" className="showcase-link">
+<span>View Guide</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
@@ -119,19 +92,21 @@ Production-ready DataHub metadata management and data governance examples for Am
 
 <div className="showcase-card">
 <div className="showcase-header">
-<div className="showcase-icon">📊</div>
+<div className="showcase-icon">🔂</div>
 <div className="showcase-content">
-<h3>Data Catalog & Governance</h3>
-<p className="showcase-description">Comprehensive metadata discovery, lineage tracking, and enterprise data governance with search and discovery capabilities.</p>
+<h3>CLI Metadata Ingestion</h3>
+<p className="showcase-description">Use the DataHub CLI to ingest sample metadata into your DataHub instance and learn how to verify the results in the UI.</p>
 </div>
 </div>
 <div className="showcase-tags">
-<span className="tag storage">Data Catalog</span>
-<span className="tag optimization">Governance</span>
+<span className="tag guide">Guide</span>
+<span className="tag">CLI</span>
+<span className="tag">Ingestion</span>
+<span className="tag">Metadata</span>
 </div>
 <div className="showcase-footer">
-<a href="https://datahubproject.io/docs/features" className="showcase-link">
-<span>Learn More</span>
+<a href="cli-ingestion" className="showcase-link">
+<span>View Guide</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>

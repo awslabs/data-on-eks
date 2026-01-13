@@ -1,6 +1,7 @@
 locals {
-  spark_operator_values = yamldecode(templatefile("${path.module}/helm-values/spark-operator.yaml", {})
-  )
+  spark_operator_values = yamldecode(templatefile("${path.module}/helm-values/spark-operator.yaml", {
+    enable_ipv6 = var.enable_ipv6
+  }))
 }
 
 #---------------------------------------------------------------

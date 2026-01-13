@@ -180,3 +180,9 @@ variable "enable_airflow" {
   type        = bool
   default     = false
 }
+
+variable "enable_ipv6" {
+  description = "Enable IPv6 for the EKS cluster and its components"
+  type        = bool
+  default     = false
+}

@@ -1,5 +1,7 @@
 locals {
-  ingress_nginx_values = file("${path.module}/helm-values/ingress-nginx.yaml")
+  ingress_nginx_values = templatefile("${path.module}/helm-values/ingress-nginx.yaml", {
+    enable_ipv6 = var.enable_ipv6
+  })
 }
 
 #---------------------------------------------------------------

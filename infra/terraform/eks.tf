@@ -20,6 +20,12 @@ module "eks" {
 
   addons = local.eks_core_addons
 
+  ip_family = var.enable_ipv6 ? "ipv6" : "ipv4"
+  # This creates a hardcoded policy named "AmazonEKS_CNI_IPv6_Policy"
+  # This is necessary, otherwise the node group creation fails.
+  # This needs to be fixed in upstream.
+  create_cni_ipv6_iam_policy = true
+
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
@@ -74,7 +80,6 @@ module "eks" {
   # Merge the default node groups with user-provided node groups
   eks_managed_node_groups = merge(local.default_node_groups, var.managed_node_groups)
 }
-
 
 #---------------------------------------------------------------
 # GP3 Encrypted Storage Class
@@ -251,5 +256,38 @@ resource "aws_iam_policy" "s3_csi_access_policy" {
         Resource = "arn:aws:s3express:${local.region}:${local.account_id}:bucket/*"
       }
     ]
+  })
+}
+
+#---------------------------------------------------------------
+# CNI IPv6 Policy
+# Used by Karpenter nodes only currently. This will need to used by core node gorup as well once issues with create_cni_ipv6_iam_policy is resolved.
+#---------------------------------------------------------------
+resource "aws_iam_policy" "cni_ipv6_policy" {
+  name_prefix = "${local.name}-cni-ipv6"
+  path        = "/"
+  description = "CNI IPv6 Policy for Karpenter Nodes"
+  policy = jsonencode({
+    "Statement" : [
+      {
+        "Action" : [
+          "ec2:DescribeTags",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceTypes",
+          "ec2:AssignIpv6Addresses"
+        ],
+        "Effect" : "Allow",
+        "Resource" : "*",
+        "Sid" : "AssignDescribe"
+      },
+      {
+        "Action" : "ec2:CreateTags",
+        "Effect" : "Allow",
+        "Resource" : "arn:aws:ec2:*:*:network-interface/*",
+        "Sid" : "CreateTags"
+      }
+    ],
+    "Version" : "2012-10-17"
   })
 }
