@@ -301,10 +301,9 @@ spec:
     sysctl -p
 
     --//--
-  
+
   tags:
     stack: flink-on-eks
     Environment: dev
     WorkloadType: streaming
     OptimizedFor: low-latency-networking
-

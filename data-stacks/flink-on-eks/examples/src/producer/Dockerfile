@@ -16,4 +16,3 @@ ENV VIRTUAL_ENV=.venv
 ENV PATH=.venv/bin:$PATH
 
 RUN uv pip install --only-binary=all apache-flink==2.1.0 kafka-python==2.2.15
-
