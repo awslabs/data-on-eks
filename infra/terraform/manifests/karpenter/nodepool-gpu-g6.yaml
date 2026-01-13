@@ -1,0 +1,62 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: gpu
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: gpu
+        node.kubernetes.io/instance-category: accelerated
+        NodeGroupType: GPU
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+
+      requirements:
+        # Capacity type - on-demand preferred for GPU (spot can be used for dev/test)
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand", "spot"]
+
+        # Architecture - x86_64 only for g6 instances
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+
+        # Instance categories - accelerated computing
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["g"]
+
+        # Instance families - g6 family (NVIDIA L4 Tensor Core GPUs)
+        # g6: Standard GPU instances
+        # g6e: Cost-optimized GPU instances
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["g5", "g6", "g6e"]
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "24xlarge", "48xlarge"]
+
+        # Nitro system - all g6 instances use Nitro
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+  # Resource limits for GPU nodes - conservative limits due to cost
+  limits:
+    cpu: "1000"
+    nvidia.com/gpu: 8
+
+  # Node lifecycle settings - longer consolidation time for GPU nodes
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 15m
+  # Higher weight to prioritize GPU nodes when GPU resources are requested
+  weight: 20
