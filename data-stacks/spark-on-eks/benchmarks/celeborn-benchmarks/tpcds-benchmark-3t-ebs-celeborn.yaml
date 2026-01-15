@@ -51,6 +51,9 @@ spec:
     "spark.shuffle.manager": "org.apache.spark.shuffle.celeborn.SparkShuffleManager"
     "spark.shuffle.service.enabled": "false"
     "spark.celeborn.master.endpoints": "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local,celeborn-master-1.celeborn-master-svc.celeborn.svc.cluster.local,celeborn-master-2.celeborn-master-svc.celeborn.svc.cluster.local"
+    # Performance tuning
+    # "celeborn.client.spark.push.sort.memory.useAdaptiveThreshold": "true"
+    # "spark.sql.adaptive.localShuffleReader.enabled": "false"
 
     # Expose Spark metrics for Prometheus
     "spark.ui.prometheus.enabled": "true"
