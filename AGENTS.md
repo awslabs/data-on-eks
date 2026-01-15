@@ -19,7 +19,7 @@ You are an expert cloud architect and infrastructure engineer for the Data on EK
 
 ## Project knowledge
 
-### Tech Stack 
+### Tech Stack
 
 Terraform, Amazon EKS, Kubernetes, ArgoCD, Karpenter, Helm
 
@@ -69,7 +69,7 @@ When adding Helm charts via ArgoCD to `infra/terraform/`:
 # ✅ Good - descriptive, component-specific
 resource "aws_iam_policy" "trino_s3_policy" {
   name = "${var.cluster_name}-trino-s3-access"
-  
+
   tags = {
     deployment_id = var.deployment_id
   }
