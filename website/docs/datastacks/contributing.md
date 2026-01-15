@@ -1,5 +1,6 @@
 ---
 sidebar_label: Contribution Guide
+sidebar_position: 8
 ---
 
 ## Contributing to Data Stacks
