@@ -48,7 +48,7 @@ aws s3 ls s3://$S3_BUCKET/TPCDS-TEST-1TB/ --recursive --summarize
 
 ```bash
 # Use the pre-built image
-docker pull varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.0.0
+docker pull varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.1.0
 ```
 
 **Option B: Build Your Own Image**
@@ -69,7 +69,7 @@ docker push your-registry/spark-rapids-tpcds:v1.0.0
 - Apache Spark 3.5.2
 - NVIDIA RAPIDS 25.12.0
 - CUDA 12.9
-- TPC-DS toolkit v4.0.0
+- TPC-DS toolkit v4.0 (with v2.4 and v4.0 query specifications)
 - Benchmark application
 
 ### Step 3: Run the Benchmark
@@ -195,7 +195,11 @@ Approximate costs for running this benchmark in us-west-2 (on-demand pricing):
 - [TPC-DS Benchmark Specification](http://www.tpc.org/tpcds/)
 - [Benchmark Results Documentation](/docs/benchmarks/spark-rapids-gpu-benchmark)
 - [Dockerfile](./Dockerfile-spark352-rapids25-tpcds4-cuda12-9)
-- [Benchmark Results CSV](./results/sparkrapids-benchmark-results.csv)
+
+**Benchmark Results:**
+- [TPC-DS v2.4 Results](./results/sparkrapids-benchmark-tpcds24-results.csv) - Primary benchmark results
+- [TPC-DS v4.0 Results](./results/sparkrapids-benchmark-tpcds40-results.csv) - Comparison run results
+- [v2.4 vs v4.0 Comparison](./results/sparkrapids-benchmark-tpcds24-vs-tpcds40-comparison.csv) - Performance comparison
 
 ## Need Help?
 
