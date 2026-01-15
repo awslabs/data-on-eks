@@ -1,5 +1,5 @@
 # ============================================================
-# Spark RAPIDS + TPC-DS v4.0 benchmark image for EKS / G5 / G6
+# Spark RAPIDS + TPC-DS v4.0 benchmark image for K8s with GPU Instances
 #
 # Bundles:
 #   - Spark 3.5.2 + Hadoop3
@@ -7,7 +7,7 @@
 #   - Hadoop 3.4.1 with AWS SDK v2 (for S3A)
 #   - TPC-DS toolkit 4.0.0
 #   - Patched spark-sql-perf (support-tpcds-v4.0 branch)
-#   - Updated EMR benchmark compiled against Spark 3.5.2 / Scala 2.12
+#   - spark-k8s-benchmarks (clean TPC-DS benchmark runner)
 #   - UID 185 user (matching gluten-velox pattern)
 # ============================================================
 # WARNING:
@@ -15,7 +15,9 @@
 # It is NOT intended for production use.
 # ============================================================
 
+# ============================================================
 ### Stage 1 – build spark-sql-perf
+# ============================================================
 FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS spark_sql_perf_builder
 ARG SCALA_VERSION=2.12.15
 ARG SPARK_VERSION=3.5.2
@@ -67,36 +69,22 @@ EOF
 # Compile spark-sql-perf with override flag
 RUN sbt -Dsbt.override.build.repos=true -batch clean package
 
-### Stage 2 – build EMR benchmark using the compiled spark-sql-perf jar
+# ============================================================
+### Stage 2 – build spark-k8s-benchmarks using the compiled spark-sql-perf jar
+# ============================================================
 FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS benchmark_builder
-ARG SCALA_VERSION=2.12.15
+ARG SCALA_VERSION=2.12.18
 ARG SPARK_VERSION=3.5.2
-ARG SBT_VERSION=1.5.5
+ARG SBT_VERSION=1.9.9
 
-# Clone delta branch of EMR benchmark
-RUN git clone --depth 1 --branch delta \
-      https://github.com/aws-samples/emr-on-eks-benchmark.git /build/emr-benchmark
-WORKDIR /build/emr-benchmark
+# Clone spark-k8s-benchmarks (clean TPC-DS benchmark implementation)
+RUN git clone --depth 1 \
+      https://github.com/KubedAI/spark-k8s-benchmarks.git /build/spark-k8s-benchmarks
+WORKDIR /build/spark-k8s-benchmarks
 
-# Remove bundled spark-sql-perf and create libs dir
-RUN rm -rf spark-sql-perf && mkdir -p benchmark/libs
-
-# Copy compiled spark-sql-perf jar from Stage 1
-COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar \
-     /build/emr-benchmark/benchmark/libs/
-
-# Patch benchmark/build.sbt: upgrade scalaVersion / sparkVersion, remove HTTP resolvers, fix sbt 1.x syntax
-RUN cd benchmark && \
-    sed -i 's/scalaVersion := .*$/scalaVersion := "'${SCALA_VERSION}'"/' build.sbt && \
-    sed -i 's/"org.apache.spark" %% "spark-core" % "[^"]*"/"org.apache.spark" %% "spark-core" % "'${SPARK_VERSION}'"/' build.sbt && \
-    sed -i 's/"org.apache.spark" %% "spark-sql" % "[^"]*"/"org.apache.spark" %% "spark-sql" % "'${SPARK_VERSION}'"/' build.sbt && \
-    sed -i '/resolvers +=/d' build.sbt && \
-    sed -i '/Resolver.url/d' build.sbt && \
-    sed -i 's/unmanagedBase <<= baseDirectory { base => base \/ "libs" }/unmanagedBase := baseDirectory.value \/ "libs"/' build.sbt
-
-# Use sbt 1.5.5 and sbt-assembly 0.15.0 (modern versions)
-RUN echo "sbt.version=${SBT_VERSION}" > benchmark/project/build.properties && \
-    echo 'addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.15.0")' > benchmark/project/plugins.sbt
+# Create lib directory and copy spark-sql-perf jar from Stage 1
+RUN mkdir -p lib
+COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar lib/
 
 # Fix repository configuration - use only Maven Central and avoid dead repos
 RUN mkdir -p ~/.sbt && \
@@ -107,10 +95,12 @@ maven-central: https://repo1.maven.org/maven2/
 typesafe-ivy-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
 EOF
 
-# Build the benchmark fat jar with override flag
-RUN cd benchmark && sbt -Dsbt.override.build.repos=true -batch clean assembly
+# Build the benchmark assembly jar
+RUN sbt -Dsbt.override.build.repos=true -batch clean assembly
 
+# ============================================================
 ### Stage 3 – assemble the runtime image
+# ============================================================
 FROM nvidia/cuda:12.9.0-devel-ubuntu24.04
 
 ARG SPARK_VERSION=3.5.2
@@ -181,7 +171,7 @@ RUN git clone -b v4.0.0 https://github.com/heyujiao99/tpcds-kit.git /opt/tpcds-k
 RUN mkdir -p ${SPARK_HOME}/examples/jars && chown -R spark:spark ${SPARK_HOME}/examples
 COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar \
     ${SPARK_HOME}/examples/jars/
-COPY --from=benchmark_builder /build/emr-benchmark/benchmark/target/scala-2.12/*.jar \
+COPY --from=benchmark_builder /build/spark-k8s-benchmarks/target/scala-2.12/*.jar \
     ${SPARK_HOME}/examples/jars/
 
 # Spark defaults: JDK17 module opens for RAPIDS compatibility

@@ -1,6 +1,6 @@
 ---
 sidebar_position: 4
-sidebar_label: Apache Spark with Gluten + Velox Benchmarks
+sidebar_label: Spark with Gluten+Velox Benchmarks
 ---
 
 import Tabs from '@theme/Tabs';
