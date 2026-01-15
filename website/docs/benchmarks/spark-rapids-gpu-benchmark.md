@@ -1,6 +1,6 @@
 ---
 sidebar_position: 5
-sidebar_label: Apache Spark with NVIDIA RAPIDS GPU Acceleration Benchmarks
+sidebar_label: Spark RAPIDS GPU Benchmarks
 ---
 
 # Apache Spark with NVIDIA RAPIDS GPU Acceleration Benchmarks
@@ -743,7 +743,7 @@ The production RAPIDS image bundles Spark, RAPIDS, CUDA toolkit, and TPC-DS benc
 - **RAPIDS**: rapids-4-spark_2.12-25.jar (includes cuDF)
 - **Java**: OpenJDK 17.0.17 with module access for RAPIDS
 - **Scala**: 2.12.18
-- **TPC-DS**: v4.0.0 toolkit (dsdgen/dsqgen)
+- **TPC-DS**: v4.0 toolkit (dsdgen/dsqgen) with **v2.4 query specification**
 - **CUDA**: 12.9 runtime and libraries
 
 ### Spark Configuration Example
@@ -1099,12 +1099,94 @@ This Dockerfile demonstrates:
 
 Complete benchmark results from the January 12, 2026 run (timestamp: 1768275682804) including median, min, and max execution times for all 104 TPC-DS queries across 3 iterations:
 
-**[sparkrapids-benchmark-results.csv](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/benchmarks/spark-rapids-benchmarks/results/sparkrapids-benchmark-results.csv)**
+**TPC-DS v2.4 Query Results (Primary Benchmark):**
+**[sparkrapids-benchmark-tpcds24-results.csv](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/benchmarks/spark-rapids-benchmarks/results/sparkrapids-benchmark-tpcds24-results.csv)**
 
-The CSV contains:
-- Query name (TPC-DS v2.4 queries)
+**TPC-DS v4.0 Query Results (Comparison Run):**
+**[sparkrapids-benchmark-tpcds40-results.csv](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/benchmarks/spark-rapids-benchmarks/results/sparkrapids-benchmark-tpcds40-results.csv)**
+
+**TPC-DS v2.4 vs v4.0 Comparison:**
+**[sparkrapids-benchmark-tpcds24-vs-tpcds40-comparison.csv](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/benchmarks/spark-rapids-benchmarks/results/sparkrapids-benchmark-tpcds24-vs-tpcds40-comparison.csv)**
+
+Each CSV contains:
+- Query name (TPC-DS queries)
 - Median execution time (seconds)
 - Minimum execution time across iterations (seconds)
 - Maximum execution time across iterations (seconds)
+
+## TPC-DS Query Specification Comparison: v2.4 vs v4.0
+
+We ran the same RAPIDS GPU benchmark using both TPC-DS v2.4 and v4.0 query specifications to understand how query complexity changes affect GPU-accelerated performance.
+
+### Summary: TPC-DS v2.4 vs v4.0 Performance
+
+| Metric | TPC-DS v2.4 | TPC-DS v4.0 | Difference |
+|--------|-------------|-------------|------------|
+| **Total Execution Time** | 1,819.39 sec (30.32 min) | 1,865.12 sec (31.09 min) | +45.73 sec (+2.5%) |
+| **Queries Where v4.0 is Faster** | - | 38 queries (37%) | - |
+| **Queries Where v4.0 is Slower** | - | 65 queries (63%) | - |
+
+**Key Finding:** TPC-DS v4.0 queries are generally **2.5% slower** than v2.4 on RAPIDS GPU. This is expected as v4.0 includes more complex query patterns designed to stress modern analytical systems.
+
+### Top 20 Queries Where TPC-DS v4.0 is Faster
+
+| Query | v2.4 Median (s) | v4.0 Median (s) | Improvement | Speedup |
+|-------|-----------------|-----------------|-------------|---------|
+| q56 | 3.92 | 2.84 | -1.08s | **27.6% faster** |
+| q20 | 1.60 | 1.28 | -0.32s | **19.9% faster** |
+| q54 | 4.07 | 3.38 | -0.69s | **17.0% faster** |
+| q9 | 21.98 | 18.83 | -3.16s | **14.4% faster** |
+| q83 | 1.92 | 1.65 | -0.27s | **14.1% faster** |
+| q10 | 3.14 | 2.79 | -0.35s | **11.1% faster** |
+| q5 | 12.11 | 11.00 | -1.11s | **9.2% faster** |
+| q55 | 2.01 | 1.83 | -0.18s | **8.7% faster** |
+| q2 | 25.56 | 23.49 | -2.07s | **8.1% faster** |
+| q81 | 4.82 | 4.43 | -0.39s | **8.1% faster** |
+| q19 | 3.33 | 3.09 | -0.24s | **7.2% faster** |
+| q94 | 24.03 | 22.30 | -1.73s | **7.2% faster** |
+| q98 | 1.83 | 1.71 | -0.13s | **6.9% faster** |
+| q68 | 3.44 | 3.21 | -0.24s | **6.9% faster** |
+| q96 | 11.22 | 10.54 | -0.68s | **6.1% faster** |
+| q26 | 4.76 | 4.49 | -0.27s | **5.7% faster** |
+| q77 | 4.00 | 3.78 | -0.22s | **5.6% faster** |
+| q74 | 13.71 | 12.96 | -0.75s | **5.5% faster** |
+| q84 | 6.71 | 6.46 | -0.26s | **3.8% faster** |
+| q35 | 4.71 | 4.53 | -0.18s | **3.9% faster** |
+
+### Top 20 Queries Where TPC-DS v4.0 is Slower
+
+| Query | v2.4 Median (s) | v4.0 Median (s) | Regression | Slowdown |
+|-------|-----------------|-----------------|------------|----------|
+| q33 | 2.47 | 3.43 | +0.96s | **38.9% slower** |
+| q86 | 1.94 | 2.66 | +0.72s | **36.8% slower** |
+| q1 | 4.19 | 5.42 | +1.23s | **29.4% slower** |
+| q7 | 5.90 | 7.35 | +1.45s | **24.6% slower** |
+| q18 | 5.08 | 6.05 | +0.97s | **19.1% slower** |
+| q28 | 78.86 | 92.08 | +13.22s | **16.8% slower** |
+| q52 | 1.76 | 2.03 | +0.27s | **15.6% slower** |
+| q23a | 75.84 | 86.87 | +11.03s | **14.5% slower** |
+| q53 | 3.11 | 3.54 | +0.43s | **13.7% slower** |
+| q32 | 1.51 | 1.71 | +0.20s | **13.2% slower** |
+| q25 | 5.36 | 6.02 | +0.66s | **12.4% slower** |
+| q49 | 24.63 | 27.60 | +2.98s | **12.1% slower** |
+| q66 | 7.15 | 8.00 | +0.85s | **11.9% slower** |
+| q48 | 4.09 | 4.56 | +0.47s | **11.5% slower** |
+| q36 | 4.30 | 4.78 | +0.48s | **11.1% slower** |
+| q23b | 81.42 | 90.41 | +8.98s | **11.0% slower** |
+| q39a | 1.60 | 1.76 | +0.16s | **10.1% slower** |
+| q92 | 1.36 | 1.50 | +0.13s | **9.9% slower** |
+| q79 | 3.11 | 3.42 | +0.31s | **9.9% slower** |
+| q13 | 6.28 | 6.89 | +0.61s | **9.7% slower** |
+
+### Why TPC-DS v4.0 Queries Run Slower
+
+TPC-DS v4.0 introduced several query modifications that increase computational complexity:
+
+1. **More Complex Joins**: v4.0 queries use additional join predicates that increase shuffle operations
+2. **Enhanced Aggregations**: Some queries include additional grouping columns and window functions
+3. **Stricter Filtering**: Date range filters and WHERE clauses are more selective, requiring more precise computation
+4. **GPU Memory Pressure**: Complex query plans require more GPU memory for intermediate results
+
+**Recommendation**: For benchmarking RAPIDS GPU performance, use TPC-DS v2.4 as the baseline for consistent comparisons with published benchmarks. Use v4.0 for stress testing modern query optimizers.
 
 ---

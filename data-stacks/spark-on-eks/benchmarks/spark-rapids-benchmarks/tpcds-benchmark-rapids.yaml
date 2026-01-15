@@ -17,11 +17,11 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.0.0 # "varabonthu/spark-rapids25-tpcds4:v3.1.0"
+  image: varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.1.0
   imagePullPolicy: Always
   sparkVersion: "3.5.2"
-  mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
-  mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
+  mainClass: com.k8s.spark.benchmark.BenchmarkSQL
+  mainApplicationFile: local:///opt/spark/examples/jars/spark-k8s-benchmarks-assembly-1.0.0.jar
   arguments:
     # TPC-DS data location (1TB parquet data)
     - "s3a://$S3_BUCKET/TPCDS-TEST-1TB"
@@ -103,6 +103,10 @@ spec:
         operator: "Exists"
         effect: "NoSchedule"
   sparkConf:
+    # ==================== Additional JARs ====================
+    # spark-sql-perf jar needed for TPCDSTables class (not bundled in assembly)
+    "spark.jars": "local:///opt/spark/examples/jars/spark-sql-perf_2.12-0.5.1-SNAPSHOT.jar"
+
     # ==================== RAPIDS GPU Configuration ====================
     "spark.plugins": "com.nvidia.spark.SQLPlugin"
     "spark.rapids.sql.enabled": "true"

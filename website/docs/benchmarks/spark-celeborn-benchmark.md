@@ -1,6 +1,6 @@
 ---
 sidebar_position: 4
-sidebar_label: Apache Spark with Apache Celeborn Benchmarks
+sidebar_label: Spark with Apache Celeborn Benchmarks
 ---
 
 import Tabs from '@theme/Tabs';
