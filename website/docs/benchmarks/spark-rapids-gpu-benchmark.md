@@ -103,7 +103,7 @@ To ensure reliable GPU-accelerated execution, we carefully tuned memory allocati
 | **cuDF Library** | Bundled | GPU DataFrame library (included in RAPIDS) |
 | **Java Runtime** | [OpenJDK](https://openjdk.org/) 17.0.17 | Ubuntu build with JVM module access for RAPIDS |
 | **Scala Version** | 2.12.18 | Binary compatibility with Spark |
-| **Container Image** | varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.0.0 | Custom RAPIDS-enabled Spark image |
+| **Container Image** | varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.1.0 | Custom RAPIDS-enabled Spark image |
 
 #### Critical RAPIDS GPU Configuration
 
@@ -735,7 +735,7 @@ The instructions in this section walk through the Docker image build, Spark conf
 
 The production RAPIDS image bundles Spark, RAPIDS, CUDA toolkit, and TPC-DS benchmark tools.
 
-**Container Image:** `varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.0.0`
+**Container Image:** `varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.1.0`
 
 **Key Image Components:**
 - **Base**: `nvidia/cuda:12.9-devel` (Ubuntu-based)
@@ -759,7 +759,7 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: "varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.0.0"
+  image: "varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.1.0"
   imagePullPolicy: Always
   sparkVersion: "3.5.2"
   mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
