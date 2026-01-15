@@ -1,0 +1,112 @@
+image:
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: "celeborn"
+
+cluster:
+  name: cluster
+celeborn:
+    celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=700Gi,/mnt/disk2:disktype=SSD:capacity=700Gi,/mnt/disk3:disktype=SSD:capacity=700Gi,/mnt/disk4:disktype=SSD:capacity=700Gi
+    celeborn.worker.flusher.ssd.threads: "64"
+    celeborn.worker.fetch.io.threads: "64"
+    celeborn.worker.push.io.threads: "64"
+    celeborn.worker.clean.threads: "128"
+    celeborn.worker.commitFiles.threads: "128"
+    celeborn.worker.disk.clean.threads: "16"
+    celeborn.worker.sortPartition.threads: "128"
+    celeborn.worker.flusher.buffer.size: "10m"
+    # wait for official releaes before enabling. Following enables tiered storage memory -> ssd -> s3. https://celeborn.apache.org/docs/latest/developers/storage/#multi-layered-storage
+    # celeborn.storage.availableTypes: MEMORY,SSD,S3
+    # celeborn.worker.storage.storagePolicy.evictPolicy: MEMORY,SSD,S3
+    # celeborn.worker.storage.storagePolicy.createFilePolicy: MEMORY,SSD,S3
+    # celeborn.storage.s3.dir: s3://${s3_bucket}/celeborn
+    # celeborn.storage.s3.endpoint.region: ${s3_bucket_region}
+master:
+  nodeSelector:
+    NodeGroupType: general-purpose # use a different nodepool for better performance if required. networking spec matters a lot.
+    topology.kubernetes.io/zone: ${az}
+  env:
+    - name: CELEBORN_MASTER_MEMORY
+      value: 2g
+    - name: CELEBORN_MASTER_JAVA_OPTS
+      value: -XX:-PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:gc-master.out -Dio.netty.leakDetectionLevel=advanced
+    - name: CELEBORN_NO_DAEMONIZE
+      value: "true"
+    - name: TZ
+      value: Etc/GMT
+
+worker:
+  replicas: 3
+  labels:
+    yunikorn.apache.org/queue: root.spark.spark-team-a
+  nodeSelector:
+    NodeGroupType: EphemeralStorageLocalProvisioner
+    topology.kubernetes.io/zone: ${az}
+    karpenter.sh/capacity-type: "on-demand"
+    karpenter.k8s.aws/instance-family: "i4i"
+    karpenter.k8s.aws/instance-size: "16xlarge" # need 4 ephemeral disks
+  env:
+    - name: CELEBORN_WORKER_MEMORY
+      value: 48g # benchmarking
+    - name: CELEBORN_WORKER_OFFHEAP_MEMORY
+      value: 256g # benchmarking
+    - name: CELEBORN_WORKER_JAVA_OPTS
+      value: -XX:-PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:gc-worker.out -Dio.netty.leakDetectionLevel=advanced
+    - name: CELEBORN_NO_DAEMONIZE
+      value: "true"
+    - name: TZ
+      value: Etc/GMT
+  resources:
+    requests:
+      cpu: "60" # benchmarking
+      memory: "400Gi"
+    limits:
+      memory: "500Gi" # benchmarking
+  volumeClaimTemplates:
+    - metadata:
+        name: disk1
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-storage # benchmarking with ephemeral storage
+        resources:
+          requests:
+            storage: 700Gi # benchmarking with ephemeral storage
+    - metadata:
+        name: disk2
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-storage # benchmarking with ephemeral storage
+        resources:
+          requests:
+            storage: 700Gi # benchmarking with ephemeral storage
+    - metadata:
+        name: disk3
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-storage # benchmarking with ephemeral storage
+        resources:
+          requests:
+            storage: 700Gi
+    - metadata:
+        name: disk4
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-storage # benchmarking with ephemeral storage
+        resources:
+          requests:
+            storage: 700Gi
+  volumeMounts:
+    - name: disk1
+      mountPath: /mnt/disk1
+    - name: disk2
+      mountPath: /mnt/disk2
+    - name: disk3
+      mountPath: /mnt/disk3
+    - name: disk4
+      mountPath: /mnt/disk4

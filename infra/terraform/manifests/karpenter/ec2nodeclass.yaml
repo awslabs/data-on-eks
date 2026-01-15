@@ -307,3 +307,46 @@ spec:
     Environment: dev
     WorkloadType: streaming
     OptimizedFor: low-latency-networking
+
+---
+# used by the Local Persistence Volume Static Provisioner
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: ephemeral-nvme-local-provisioner
+  namespace: karpenter
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+  # If Raid0 is used, you need to remove the user data below because RAID configuration is handled by karpenter and mounted automatically. You will need to change the mount path to "/mnt/k8s-disks/" in the Local Persistence Volume Static Provisioner helm values.
+  # instanceStorePolicy: RAID0
+  #
+  # We make individual ephemeral disk available for the Local Persistence Volume Static Provisioner in user data.
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
+    #!/bin/bash
+
+    set -ex
+
+    cat <<EOF > /etc/udev/rules.d/90-kubernetes-discovery.rules
+    # Discover Instance Storage disks so kubernetes local provisioner can pick them up from /dev/disk/kubernetes
+    KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTRS{model}=="Amazon EC2 NVMe Instance Storage", ATTRS{serial}=="?*", SYMLINK+="disk/kubernetes/nvme-\\\$attr{model}_\\\$attr{serial}", OPTIONS="string_escape=replace"
+    EOF
+
+    udevadm control --reload && udevadm trigger
+
+    --//--

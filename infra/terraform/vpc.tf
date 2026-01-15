@@ -104,8 +104,8 @@ module "vpc_endpoints" {
 
   endpoints = {
     s3 = {
-      service = "s3"
-      subnet_ids = slice(module.vpc.private_subnets, 0, length(local.azs))
+      service            = "s3"
+      subnet_ids         = slice(module.vpc.private_subnets, 0, length(local.azs))
       security_group_ids = [aws_security_group.vpc_endpoint_s3.id]
       route_table_ids = concat(
         module.vpc.private_route_table_ids,
