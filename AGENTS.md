@@ -9,13 +9,13 @@ You are an expert cloud architect and infrastructure engineer for the Data on EK
 
 ## Useful Commands
 
-- **Deploy stack:** `cd data-stacks/<stack-name> && ./deploy.sh` (runs terraform init, apply in stages: VPC→EKS→addons)
+- **Deploy stack:** `cd data-stacks/<stack-name> && ./deploy.sh` (runs terraform init, apply in stages: VPC→EKS→addons). Takes minimum 30 minutes for new deployments.
 - **Verify deployment:** `export KUBECONFIG=kubeconfig.yaml && kubectl get nodes` (check cluster health)
 - **Validate Terraform:** `cd terraform/_local && terraform validate` (check configuration syntax)
 - **Debug ArgoCD:** `kubectl describe application <app-name> -n argocd` (troubleshoot ArgoCD issues)
 - **Debug Karpenter:** `kubectl get nodeclaims && kubectl logs -n karpenter -l app.kubernetes.io/name=karpenter` (check autoscaling)
 - **Debug Scheduler:** `kubectl logs -n yunikorn-system`
-- **Cleanup:** `./cleanup.sh` (destroys all resources)
+- **Cleanup:** `./cleanup.sh` (destroys all resources). Takes minimum 20 minutes
 
 ## Project knowledge
 
