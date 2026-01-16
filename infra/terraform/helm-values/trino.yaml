@@ -102,6 +102,7 @@ additionalExchangeManagerProperties:
   - "exchange-manager.name=filesystem"
   - "exchange.base-directories=s3://${exchange_bucket_id}"
   - "exchange.s3.region=${region}"
+  - "exchange.s3.endpoint=https://s3.${region}.amazonaws.com"
   - "exchange.s3.max-error-retries=10"
   - "exchange.s3.upload.part-size=64MB"
 
