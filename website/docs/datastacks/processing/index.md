@@ -63,7 +63,7 @@ Scalable data processing and analytics platforms on Amazon EKS. Run batch proces
 <div className="datastack-header">
 <div className="datastack-icon">⚡</div>
 <div className="datastack-content">
-<h3>EMR on EKS</h3>
+<h3>Amazon EMR on EKS</h3>
 <p className="datastack-description">Amazon EMR virtual cluster on EKS for managed Spark and big data frameworks.</p>
 </div>
 </div>
@@ -74,32 +74,8 @@ Scalable data processing and analytics platforms on Amazon EKS. Run batch proces
 <span className="feature-tag">Cost Optimized</span>
 </div>
 <div className="datastack-footer">
-<a href="/data-on-eks/docs/datastacks/processing/emr-on-eks/" className="datastack-link">
-<span>Explore EMR</span>
-<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-</svg>
-</a>
-</div>
-</div>
-
-<div className="datastack-card">
-<div className="datastack-header">
-<div className="datastack-icon">⚡</div>
-<div className="datastack-content">
-<h3>EMR Spark on EKS</h3>
-<p className="datastack-description">EMR Spark with optimized runtime for high-performance data processing on EKS.</p>
-</div>
-</div>
-<div className="datastack-features">
-<span className="feature-tag">EMR Runtime</span>
-<span className="feature-tag">Performance Tuning</span>
-<span className="feature-tag">Spark 3.x</span>
-<span className="feature-tag">S3 Optimized</span>
-</div>
-<div className="datastack-footer">
-<a href="/data-on-eks/docs/datastacks/processing/emr-eks-spark/" className="datastack-link">
-<span>Explore EMR Spark</span>
+<a href="/data-on-eks/docs/blueprints/amazon-emr-on-eks" className="datastack-link">
+<span>Explore Amazon EMR</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
@@ -111,19 +87,19 @@ Scalable data processing and analytics platforms on Amazon EKS. Run batch proces
 <div className="datastack-header">
 <div className="datastack-icon">🚀</div>
 <div className="datastack-content">
-<h3>EMR Spark Rapids on EKS</h3>
-<p className="datastack-description">GPU-accelerated Spark with NVIDIA Rapids for 7x faster ETL on EMR and EKS.</p>
+<h3>EMR Spark RAPIDS on EKS</h3>
+<p className="datastack-description">GPU-accelerated Spark with NVIDIA RAPIDS for 7x faster ETL on EMR and EKS.</p>
 </div>
 </div>
 <div className="datastack-features">
 <span className="feature-tag">GPU Acceleration</span>
-<span className="feature-tag">NVIDIA Rapids</span>
+<span className="feature-tag">NVIDIA RAPIDS</span>
 <span className="feature-tag">7x Performance</span>
 <span className="feature-tag">CUDA Support</span>
 </div>
 <div className="datastack-footer">
-<a href="/data-on-eks/docs/datastacks/processing/emr-eks-spark-rapids/" className="datastack-link">
-<span>Explore Rapids</span>
+<a href="/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-spark-rapids/" className="datastack-link">
+<span>Explore RAPIDS</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
