@@ -2,9 +2,10 @@
 #
 # https://github.com/apache/superset/discussions/31431
 # https://superset.apache.org/docs/installation/docker-builds/#building-your-own-production-docker-image
+# Dockerfile is available here: data-stacks/workshop/src/superset/Dockerfile
 image:
-  repository: public.ecr.aws/m8u6z8z4/manabu-test
-  tag: workshop-superset@sha256:280398474d5cc673ccdad3628c4f82f63b8e93ca918ba132e43e271c32105d9e
+  repository: public.ecr.aws/data-on-eks/data-stacks
+  tag: superset-v0.0.2
   pullPolicy: IfNotPresent
 
 # Superset node configuration
