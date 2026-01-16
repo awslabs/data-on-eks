@@ -50,7 +50,7 @@ Scalable data processing and analytics platforms on Amazon EKS. Run batch proces
 <span className="feature-tag">S3 Integration</span>
 </div>
 <div className="datastack-footer">
-<a href="/data-on-eks/docs/datastacks/processing/spark-eks-ipv6/" className="datastack-link">
+<a href="/data-on-eks/docs/datastacks/processing/spark-on-eks/ipv6" className="datastack-link">
 <span>Explore IPv6 Spark</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
