@@ -84,7 +84,7 @@ First, let's establish the connection to the Trino database running in our EKS c
 
 Before creating our table, let's verify that Superset can connect to Trino and see the available schemas.
 
-1.  In Superset, navigate to **SQL Lab** -> **SQL Editor**.
+1.  In Superset, navigate to **SQL** -> **SQL Lab**.
 2.  Ensure your Trino database is selected.
 3.  Run the following query to see available schemas:
 
