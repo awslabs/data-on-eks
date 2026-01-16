@@ -66,7 +66,7 @@ Amazon EMR Flink on EKS for real-time stream processing. Run Flink applications 
 <span className="tag guide">Guide</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/emr-eks-flink/infra" className="showcase-link">
+<a href="/data-on-eks/docs/blueprints/streaming-platforms/emr-eks-flink" className="showcase-link">
 <span>Deploy Infrastructure</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -89,7 +89,7 @@ Amazon EMR Flink on EKS for real-time stream processing. Run Flink applications 
 </div>
 <div className="showcase-footer">
 <a href="/data-on-eks/docs/datastacks/emr-eks-flink/kafka-streaming" className="showcase-link">
-<span>Learn More</span>
+<span>Coming Soon</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
