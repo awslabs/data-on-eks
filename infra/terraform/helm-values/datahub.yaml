@@ -29,11 +29,10 @@ acryl-datahub-actions:
     NodeGroupType: general-purpose
   image:
     registry: public.ecr.aws
-    repository: m8u6z8z4/manabu-test
-    tag: datahub-action-iceberg
+    repository: data-on-eks/data-stacks
+    tag: datahub-action-iceberg-v0.0.1
   serviceAccount:
     name: datahub-sa
-
 datahub-gms:
   nodeSelector:
     NodeGroupType: general-purpose
