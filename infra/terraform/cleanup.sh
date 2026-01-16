@@ -8,11 +8,42 @@ fi
 
 # Get cluster info from terraform output
 CLUSTERNAME=$(terraform output -raw cluster_name)
-REGION=$(terraform output -raw region)
-echo "Destroying Terraform $CLUSTERNAME"
+REGION=$(terraform output -raw region 2>/dev/null || true)
+
+# Check if region contains error/warning messages or is empty
+if [[ -z "$REGION" || "$REGION" == *"Warning"* || "$REGION" == *"Error"* || "$REGION" == *"No outputs"* ]]; then
+  REGION=""
+fi
+
+# Fallback: get region from tfvars if terraform output fails
+if [ -z "$REGION" ] && [ -f "../data-stack.tfvars" ]; then
+  REGION=$(grep -E '^\s*region\s*=' ../data-stack.tfvars | sed 's/.*=\s*"\(.*\)".*/\1/')
+fi
+
+# Final fallback: use AWS CLI default region
+if [ -z "$REGION" ]; then
+  REGION=$(aws configure get region 2>/dev/null || true)
+fi
+
+if [ -z "$REGION" ]; then
+  echo "ERROR: Could not determine AWS region"
+  exit 1
+fi
+
+echo "Destroying Terraform ${CLUSTERNAME:-unknown} in region $REGION"
 
 # Get the deployment_id from terraform output
-DEPLOYMENT_ID=$(terraform output -raw deployment_id)
+DEPLOYMENT_ID=$(terraform output -raw deployment_id 2>/dev/null || true)
+
+# Check if deployment_id contains error/warning messages or is empty
+if [[ -z "$DEPLOYMENT_ID" || "$DEPLOYMENT_ID" == *"Warning"* || "$DEPLOYMENT_ID" == *"Error"* || "$DEPLOYMENT_ID" == *"No outputs"* ]]; then
+  DEPLOYMENT_ID=""
+fi
+
+# Fallback: get deployment_id from tfvars if terraform output fails
+if [ -z "$DEPLOYMENT_ID" ] && [ -f "../data-stack.tfvars" ]; then
+  DEPLOYMENT_ID=$(grep -E '^\s*deployment_id\s*=' ../data-stack.tfvars | sed 's/.*=\s*"\(.*\)".*/\1/')
+fi
 
 
 echo "Destroying RayService..."
