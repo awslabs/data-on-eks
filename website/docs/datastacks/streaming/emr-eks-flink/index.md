@@ -1,5 +1,5 @@
 ---
-title: EMR Flink on EKS
+title: Amazon EMR Flink on EKS
 sidebar_position: 0
 ---
 

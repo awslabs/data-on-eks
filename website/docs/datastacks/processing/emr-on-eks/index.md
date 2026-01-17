@@ -1,5 +1,5 @@
 ---
-title: EMR on EKS
+title: Amazon EMR on EKS
 sidebar_position: 0
 ---
 
