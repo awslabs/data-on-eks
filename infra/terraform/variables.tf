@@ -192,3 +192,9 @@ variable "enable_nvidia_device_plugin" {
   type        = bool
   default     = false
 }
+
+variable "enable_emr_on_eks" {
+  description = "Enable EMR on EKS Virtual Clusters for running Spark jobs"
+  type        = bool
+  default     = false
+}

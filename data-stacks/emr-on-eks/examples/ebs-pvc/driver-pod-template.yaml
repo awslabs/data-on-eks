@@ -1,0 +1,14 @@
+# EMR on EKS Driver Pod Template - EBS PVC Storage
+# Uses dynamic EBS PersistentVolumeClaims for Spark shuffle data
+# The driver uses a pre-created PVC while executors use dynamic PVCs
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emr-driver
+  namespace: emr-data-team-a
+spec:
+  nodeSelector:
+    # Use compute-optimized nodepool
+    NodeGroupType: SparkComputeOptimized
+  containers:
+    - name: spark-kubernetes-driver # Don't change this name - EMR on EKS requires it

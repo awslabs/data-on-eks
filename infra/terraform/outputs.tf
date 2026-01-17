@@ -87,3 +87,24 @@ output "grafana_password" {
   value       = kubernetes_secret.grafana_admin.data["admin-password"]
   sensitive   = true
 }
+
+################################################################################
+# EMR on EKS
+################################################################################
+
+output "emr_on_eks" {
+  description = "EMR on EKS Virtual Cluster configuration"
+  value = var.enable_emr_on_eks ? {
+    for k, v in module.emr_containers : k => {
+      virtual_cluster_id        = v.virtual_cluster_id
+      virtual_cluster_arn       = v.virtual_cluster_arn
+      job_execution_role_arn    = v.iam_role_arn
+      cloudwatch_log_group_name = v.cloudwatch_log_group_name
+    }
+  } : {}
+}
+
+output "emr_s3_bucket_name" {
+  description = "S3 bucket for EMR job artifacts and logs"
+  value       = var.enable_emr_on_eks ? module.s3_bucket.s3_bucket_id : null
+}
