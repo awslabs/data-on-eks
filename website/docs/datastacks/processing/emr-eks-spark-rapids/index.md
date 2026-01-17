@@ -1,5 +1,5 @@
 ---
-title: EMR Spark RAPIDS on EKS
+title: Amazon EMR Spark RAPIDS on EKS
 sidebar_position: 0
 ---
 

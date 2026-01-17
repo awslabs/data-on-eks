@@ -63,7 +63,7 @@ Real-time data streaming and event-driven platforms on Amazon EKS. Process conti
 <div className="datastack-header">
 <div className="datastack-icon">🌊</div>
 <div className="datastack-content">
-<h3>EMR Flink on EKS</h3>
+<h3>Amazon EMR Flink on EKS</h3>
 <p className="datastack-description">Amazon EMR managed Flink runtime for enterprise-grade stream processing on EKS.</p>
 </div>
 </div>

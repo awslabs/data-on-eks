@@ -87,7 +87,7 @@ Scalable data processing and analytics platforms on Amazon EKS. Run batch proces
 <div className="datastack-header">
 <div className="datastack-icon">🚀</div>
 <div className="datastack-content">
-<h3>EMR Spark RAPIDS on EKS</h3>
+<h3>Amazon EMR Spark RAPIDS on EKS</h3>
 <p className="datastack-description">GPU-accelerated Spark with NVIDIA RAPIDS for 7x faster ETL on EMR and EKS.</p>
 </div>
 </div>
