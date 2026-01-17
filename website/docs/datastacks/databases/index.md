@@ -50,12 +50,12 @@ OLTP, OLAP, and query engines on Amazon EKS. Deploy production-ready databases a
 <span className="feature-tag">S3 Integration</span>
 </div>
 <div className="datastack-footer">
-<a href="/data-on-eks/docs/datastacks/databases/clickhouse-on-eks/" className="datastack-link">
-<span>Explore ClickHouse</span>
+<button className="datastack-link" disabled>
+<span>Coming Soon</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
-</a>
+</button>
 </div>
 </div>
 
