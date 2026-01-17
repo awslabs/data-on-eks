@@ -15,7 +15,7 @@ Hands-on learning experiences for Data on EKS. Build end-to-end data platforms w
 <div className="datastack-header">
 <div className="datastack-icon">⚡</div>
 <div className="datastack-content">
-<h3>Spark on EKS</h3>
+<h3>Spark on EKS Workshop</h3>
 <p className="datastack-description">Optimize Apache Spark workloads on EKS Auto Mode with hands-on exercises for performance and cost optimization using Spot instances, Graviton processors, and various EC2 configurations.</p>
 </div>
 </div>
