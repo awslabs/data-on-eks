@@ -1,5 +1,5 @@
-# EMR on EKS Driver Pod Template - EBS Hostpath Storage
-# Uses EBS root volume for Spark shuffle data - suitable for non-SSD instance types
+# EMR on EKS Driver Pod Template - EBS Hostpath Storage (Graviton)
+# Uses EBS root volume for Spark shuffle data - Graviton memory-optimized instances (NO SSD)
 # The root volume provides /mnt/k8s-disks/0 directory for shuffle storage
 apiVersion: v1
 kind: Pod
@@ -13,14 +13,25 @@ spec:
         path: /mnt/k8s-disks/0  # EBS Hostpath on root volume
         type: DirectoryOrCreate
   nodeSelector:
-    # Use general-purpose nodepool with EBS storage
-    NodeGroupType: general-purpose
+    # Use memory-optimized Graviton nodepool with EBS storage (r6g, r7g, r8g - NO SSD)
+    NodeGroupType: SparkGravitonMemoryOptimized
+    node.kubernetes.io/arch: arm64
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          # Only non-SSD instance families (r6g, r7g, r8g - NO 'd' suffix)
+          - key: karpenter.k8s.aws/instance-family
+            operator: In
+            values: ["r6g", "r7g", "r8g"]
 
   # Don't use "/mnt" path as mountPath with EMR pod Templates as its reserved
   initContainers:
     - name: volume-permission
       image: public.ecr.aws/docker/library/busybox
-      # Grant volume access to hadoop user (UID 999, GID 1000)
+      # Grant volume access to hadoop user (UID 999, GID 999, GID 1000)
       command: ['sh', '-c', 'mkdir -p /data1; chown -R 999:1000 /data1']
       volumeMounts:
         - name: spark-local-dir-1

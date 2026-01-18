@@ -1,34 +1,31 @@
-# EMR on EKS Driver Pod Template - NVMe SSD Storage
-# Uses compute-optimized instances with NVMe SSDs for high-performance shuffle
-# Karpenter automatically configures RAID0 for NVMe drives under /mnt/k8s-disks/0
+# EMR on EKS Driver Pod Template - Graviton Memory Optimized (NO SSD)
+# Drivers should use memory-optimized Graviton instances WITHOUT SSD
 apiVersion: v1
 kind: Pod
 metadata:
   name: emr-driver
   namespace: emr-data-team-a
 spec:
-  volumes:
-    # NVMe SSD storage - Karpenter configures RAID0 under /mnt/k8s-disks/0
-    - name: spark-local-dir-1
-      hostPath:
-        path: /mnt/k8s-disks/0
-        type: Directory
   nodeSelector:
-    # Use compute-optimized nodepool with NVMe SSD instances (c5d, c6id, etc.)
-    NodeGroupType: SparkComputeOptimized
+    # Use memory-optimized Graviton nodepool for drivers
+    NodeGroupType: SparkGravitonMemoryOptimized
+    node.kubernetes.io/arch: arm64
 
-  # Don't use "/mnt" path as mountPath with EMR pod Templates as its reserved
-  initContainers:
-    - name: volume-permission
-      image: public.ecr.aws/docker/library/busybox
-      # Grant volume access to hadoop user (UID 999, GID 1000)
-      command: ['sh', '-c', 'mkdir -p /data1; chown -R 999:1000 /data1']
-      volumeMounts:
-        - name: spark-local-dir-1
-          mountPath: /data1
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          # Only non-SSD instance families (r6g, r7g, r8g - NO 'd' suffix)
+          - key: karpenter.k8s.aws/instance-family
+            operator: In
+            values: ["r6g", "r7g", "r8g"]
+
+  tolerations:
+    - key: spark-driver
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+
   containers:
     - name: spark-kubernetes-driver # Don't change this name - EMR on EKS requires it
-      volumeMounts:
-        - name: spark-local-dir-1
-          mountPath: /data1
-          readOnly: false

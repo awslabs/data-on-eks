@@ -1,5 +1,5 @@
-# EMR on EKS Executor Pod Template - EBS Hostpath Storage
-# Uses EBS root volume for Spark shuffle data - suitable for non-SSD instance types
+# EMR on EKS Executor Pod Template - EBS Hostpath Storage (Graviton)
+# Uses EBS root volume for Spark shuffle data - Graviton compute-optimized instances (NO SSD)
 # The root volume provides /mnt/k8s-disks/0 directory for shuffle storage
 apiVersion: v1
 kind: Pod
@@ -13,8 +13,19 @@ spec:
         path: /mnt/k8s-disks/0  # EBS Hostpath on root volume
         type: DirectoryOrCreate
   nodeSelector:
-    # Use general-purpose nodepool with EBS storage
-    NodeGroupType: general-purpose
+    # Use compute-optimized Graviton nodepool with EBS storage (c6g, c7g - NO SSD)
+    NodeGroupType: SparkGravitonComputeOptimized
+    node.kubernetes.io/arch: arm64
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          # Only non-SSD instance families (c6g, c7g - NO 'd' suffix)
+          - key: karpenter.k8s.aws/instance-family
+            operator: In
+            values: ["c6g", "c7g"]
 
   initContainers:
     - name: volume-permission

@@ -21,10 +21,10 @@ module "eks" {
   addons = local.eks_core_addons
 
   ip_family = var.enable_ipv6 ? "ipv6" : "ipv4"
-  # This creates a hardcoded policy named "AmazonEKS_CNI_IPv6_Policy"
-  # This is necessary, otherwise the node group creation fails.
-  # This needs to be fixed in upstream.
-  create_cni_ipv6_iam_policy = true
+  # Only create CNI IPv6 policy when IPv6 is enabled
+  # Note: This creates a hardcoded policy named "AmazonEKS_CNI_IPv6_Policy" which will conflict
+  # if multiple clusters are deployed in the same AWS account with IPv6 enabled
+  create_cni_ipv6_iam_policy = var.enable_ipv6
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created

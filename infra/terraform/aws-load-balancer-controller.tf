@@ -36,7 +36,7 @@ module "aws_load_balancer_controller_pod_identity" {
 # IAM Policy for AWS Load Balancer Controller
 #---------------------------------------------------------------
 resource "aws_iam_policy" "aws_load_balancer_controller" {
-  name        = "aws-load-balancer-controller-policy"
+  name        = "${local.name}-load-balancer-controller-policy"
   description = "IAM Policy for AWS Load Balancer Controller"
 
   policy = jsonencode({

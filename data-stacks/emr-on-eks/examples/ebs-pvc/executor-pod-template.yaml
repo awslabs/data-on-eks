@@ -1,6 +1,7 @@
-# EMR on EKS Executor Pod Template - EBS PVC Storage
+# EMR on EKS Executor Pod Template - EBS PVC Storage (Graviton)
 # Uses dynamic EBS PersistentVolumeClaims for Spark shuffle data
 # Executors get dynamically provisioned EBS volumes
+# Graviton compute-optimized instances (NO SSD)
 apiVersion: v1
 kind: Pod
 metadata:
@@ -8,7 +9,19 @@ metadata:
   namespace: emr-data-team-a
 spec:
   nodeSelector:
-    # Use compute-optimized nodepool
-    NodeGroupType: SparkComputeOptimized
+    # Use compute-optimized Graviton nodepool (c6g, c7g - NO SSD)
+    NodeGroupType: SparkGravitonComputeOptimized
+    node.kubernetes.io/arch: arm64
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          # Only non-SSD instance families (c6g, c7g - NO 'd' suffix)
+          - key: karpenter.k8s.aws/instance-family
+            operator: In
+            values: ["c6g", "c7g"]
+
   containers:
     - name: spark-kubernetes-executor # Don't change this name - EMR on EKS requires it

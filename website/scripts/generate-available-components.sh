@@ -26,7 +26,7 @@ parse_variables() {
         default_val = ""
         next
     }
-    
+
     in_var && /description/ {
         # Extract description text between quotes
         match($0, /description[[:space:]]*=[[:space:]]*"([^"]*)"/, arr)
@@ -43,12 +43,12 @@ parse_variables() {
             }
         }
     }
-    
+
     in_var && /default[[:space:]]*=/ {
         if ($0 ~ /true/) default_val = "true"
         else if ($0 ~ /false/) default_val = "false"
     }
-    
+
     in_var && /^}/ {
         if (var_name && description) {
             # Clean up description
@@ -61,9 +61,9 @@ parse_variables() {
             cmd = "echo \"" component "\" | awk '"'"'{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1'"'"'"
             cmd | getline component
             close(cmd)
-            
+
             default_icon = (default_val == "true") ? "✅" : "❌"
-            
+
             print component "|" description "|" var_name "|" default_icon
         }
         in_var = 0
@@ -86,19 +86,19 @@ parse_core_variables() {
         var_type = ""
         next
     }
-    
+
     in_var && /description/ {
         match($0, /description[[:space:]]*=[[:space:]]*"([^"]*)"/, arr)
         if (arr[1]) {
             description = arr[1]
         }
     }
-    
+
     in_var && /type[[:space:]]*=/ {
         if ($0 ~ /string/) var_type = "string"
         else if ($0 ~ /map/) var_type = "map(string)"
     }
-    
+
     in_var && /default[[:space:]]*=/ {
         # Extract default value
         if ($0 ~ /"[^"]*"/) {
@@ -108,7 +108,7 @@ parse_core_variables() {
             default_val = "{}"
         }
     }
-    
+
     in_var && /^}/ {
         if (var_name && description) {
             # Capitalize variable name for display
@@ -116,9 +116,9 @@ parse_core_variables() {
             cmd = "echo \"" display_name "\" | awk '"'"'{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1'"'"'"
             cmd | getline display_name
             close(cmd)
-            
+
             if (default_val == "") default_val = "(none)"
-            
+
             print display_name "|" description "|" var_name "|" var_type "|" default_val
         }
         in_var = 0
@@ -137,17 +137,17 @@ parse_cluster_addons() {
         in_addons = 1
         next
     }
-    
+
     in_addons && /default[[:space:]]*=/ {
         in_default = 1
         next
     }
-    
+
     in_default && /^[[:space:]]*}[[:space:]]*$/ {
         in_default = 0
         in_addons = 0
     }
-    
+
     in_default && /=/ {
         # Parse addon lines like: aws-ebs-csi-driver = true
         gsub(/^[[:space:]]+|[[:space:]]+$/, "")
@@ -156,16 +156,16 @@ parse_cluster_addons() {
         value = parts[2]
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", addon)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-        
+
         # Clean up addon name for display
         display_name = addon
         gsub(/-/, " ", display_name)
         cmd = "echo \"" display_name "\" | awk '"'"'{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1'"'"'"
         cmd | getline display_name
         close(cmd)
-        
+
         default_icon = (value == "true") ? "✅" : "❌"
-        
+
         # Generate descriptions
         if (addon ~ /ebs/) desc = "Amazon EBS CSI driver for persistent volumes"
         else if (addon ~ /mountpoint/) desc = "Mountpoint for Amazon S3 CSI driver"
@@ -173,7 +173,7 @@ parse_cluster_addons() {
         else if (addon ~ /monitoring/) desc = "EKS node monitoring agent"
         else if (addon ~ /cloudwatch/) desc = "Amazon CloudWatch observability"
         else desc = "EKS cluster addon"
-        
+
         print display_name "|" desc "|enable_cluster_addons[\"" addon "\"]|" default_icon
     }
     ' "$TERRAFORM_DIR/variables.tf"

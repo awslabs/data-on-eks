@@ -1,7 +1,7 @@
 #---------------------------------------------------------------
-# EMR on EKS Virtual Clusters
+# EMR on EKS - Spark Virtual Clusters and Spark Operator
 # Creates EMR virtual clusters for running Spark jobs on EKS
-# Module handles: namespace, IAM role, CloudWatch log group, RBAC
+# Optionally deploys EMR Spark Operator for declarative job management
 #---------------------------------------------------------------
 
 locals {
@@ -15,6 +15,10 @@ locals {
       namespace = "emr-data-team-b"
     }
   } : {}
+
+  emr_spark_operator_values = yamldecode(templatefile("${path.module}/helm-values/emr-spark-operator-values.yaml", {
+    aws_region = local.region
+  }))
 }
 
 #---------------------------------------------------------------
@@ -63,5 +67,31 @@ module "emr_containers" {
     Team = each.key
   })
 
-  depends_on = [module.eks]
+  # Ensure EKS cluster and core addons are ready before creating EMR resources
+  depends_on = [
+    module.eks,
+    helm_release.argocd,
+    aws_eks_addon.aws_ebs_csi_driver
+  ]
+}
+
+#---------------------------------------------------------------
+# EMR Spark Operator
+# Deploys AWS EMR Spark Operator for declarative Spark job management
+# Note: This is different from the open-source Kubeflow Spark Operator
+# Deployed via ArgoCD using public ECR image: public.ecr.aws/emr-on-eks/spark-operator:7.12.0
+# Docs: https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/spark-operator-gs.html
+#---------------------------------------------------------------
+
+# Deploy EMR Spark Operator via ArgoCD
+resource "kubectl_manifest" "emr_spark_operator_application" {
+  count = var.enable_emr_spark_operator ? 1 : 0
+
+  yaml_body = templatefile("${path.module}/argocd-applications/emr-spark-operator.yaml", {
+    user_values_yaml = indent(10, yamlencode(local.emr_spark_operator_values))
+  })
+
+  depends_on = [
+    helm_release.argocd
+  ]
 }

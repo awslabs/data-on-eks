@@ -71,8 +71,7 @@ aws emr-containers start-job-run \
   --job-driver '{
     "sparkSubmitJobDriver": {
       "entryPoint": "'"$SCRIPTS_S3_PATH"'/pyspark-taxi-trip.py",
-      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'", "'"$OUTPUT_DATA_S3_PATH"'"],
-      "sparkSubmitParameters": "--conf spark.executor.instances=2"
+      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'", "'"$OUTPUT_DATA_S3_PATH"'"]
     }
   }' \
   --configuration-overrides '{
@@ -80,13 +79,24 @@ aws emr-containers start-job-run \
       {
         "classification": "spark-defaults",
         "properties": {
-          "spark.driver.cores": "1",
-          "spark.executor.cores": "1",
-          "spark.driver.memory": "4g",
-          "spark.executor.memory": "4g",
+          "spark.driver.cores": "2",
+          "spark.executor.cores": "4",
+          "spark.driver.memory": "8g",
+          "spark.executor.memory": "16g",
           "spark.kubernetes.driver.podTemplateFile": "'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
           "spark.kubernetes.executor.podTemplateFile": "'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
           "spark.local.dir": "/data1",
+
+          "spark.dynamicAllocation.enabled": "true",
+          "spark.dynamicAllocation.shuffleTracking.enabled": "true",
+          "spark.dynamicAllocation.minExecutors": "2",
+          "spark.dynamicAllocation.maxExecutors": "10",
+          "spark.dynamicAllocation.initialExecutors": "2",
+
+          "spark.sql.adaptive.enabled": "true",
+          "spark.sql.adaptive.coalescePartitions.enabled": "true",
+          "spark.sql.adaptive.skewJoin.enabled": "true",
+
           "spark.kubernetes.submission.connectionTimeout": "60000000",
           "spark.kubernetes.submission.requestTimeout": "60000000",
           "spark.kubernetes.driver.connectionTimeout": "60000000",

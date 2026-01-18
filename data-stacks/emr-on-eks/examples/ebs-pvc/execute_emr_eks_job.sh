@@ -77,8 +77,7 @@ aws emr-containers start-job-run \
   --job-driver '{
     "sparkSubmitJobDriver": {
       "entryPoint": "'"$SCRIPTS_S3_PATH"'/pyspark-taxi-trip.py",
-      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'", "'"$OUTPUT_DATA_S3_PATH"'"],
-      "sparkSubmitParameters": "--conf spark.executor.instances=4"
+      "entryPointArguments": ["'"$INPUT_DATA_S3_PATH"'", "'"$OUTPUT_DATA_S3_PATH"'"]
     }
   }' \
   --configuration-overrides '{
@@ -86,30 +85,34 @@ aws emr-containers start-job-run \
       {
         "classification": "spark-defaults",
         "properties": {
-          "spark.driver.cores": "1",
-          "spark.executor.cores": "1",
-          "spark.driver.memory": "4g",
-          "spark.executor.memory": "4g",
+          "spark.driver.cores": "2",
+          "spark.executor.cores": "4",
+          "spark.driver.memory": "8g",
+          "spark.executor.memory": "16g",
           "spark.kubernetes.driver.podTemplateFile": "'"$SCRIPTS_S3_PATH"'/driver-pod-template.yaml",
           "spark.kubernetes.executor.podTemplateFile": "'"$SCRIPTS_S3_PATH"'/executor-pod-template.yaml",
           "spark.local.dir": "/data",
           "spark.kubernetes.executor.podNamePrefix": "'"$JOB_NAME"'",
 
-          "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.options.claimName": "spark-driver-pvc",
-          "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.mount.readOnly": "false",
-          "spark.kubernetes.driver.volumes.persistentVolumeClaim.data.mount.path": "/data",
+          "spark.dynamicAllocation.enabled": "true",
+          "spark.dynamicAllocation.shuffleTracking.enabled": "true",
+          "spark.dynamicAllocation.minExecutors": "2",
+          "spark.dynamicAllocation.maxExecutors": "10",
+          "spark.dynamicAllocation.initialExecutors": "2",
 
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.options.claimName": "OnDemand",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.options.storageClass": "emr-ebs-sc",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.options.sizeLimit": "50Gi",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.mount.path": "/data",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.data.mount.readOnly": "false",
+          "spark.sql.adaptive.enabled": "true",
+          "spark.sql.adaptive.coalescePartitions.enabled": "true",
+          "spark.sql.adaptive.skewJoin.enabled": "true",
 
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.claimName": "OnDemand",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.storageClass": "emr-ebs-sc",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.options.sizeLimit": "50Gi",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.mount.path": "/var/data/spill",
-          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-spill.mount.readOnly": "false",
+          "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "spark-driver-pvc",
+          "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false",
+          "spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data",
+
+          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.claimName": "OnDemand",
+          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.storageClass": "emr-ebs-sc",
+          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.options.sizeLimit": "50Gi",
+          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.path": "/data",
+          "spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-local-dir-1.mount.readOnly": "false",
 
           "spark.ui.prometheus.enabled": "true",
           "spark.executor.processTreeMetrics.enabled": "true",

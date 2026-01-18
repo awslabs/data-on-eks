@@ -198,3 +198,9 @@ variable "enable_emr_on_eks" {
   type        = bool
   default     = false
 }
+
+variable "enable_emr_spark_operator" {
+  description = "Enable EMR Spark Operator for declarative Spark job management"
+  type        = bool
+  default     = false
+}
