@@ -1,0 +1,27 @@
+# EBS StorageClass for EMR on EKS
+# Uses gp3 volumes with WaitForFirstConsumer binding for better zone awareness
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: emr-ebs-sc
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3
+  fsType: ext4
+  encrypted: "true"
+---
+# Pre-created PVC for Spark Driver
+# Executors use dynamic PVCs configured via Spark properties
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spark-driver-pvc
+  namespace: emr-data-team-a
+spec:
+  storageClassName: emr-ebs-sc
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi

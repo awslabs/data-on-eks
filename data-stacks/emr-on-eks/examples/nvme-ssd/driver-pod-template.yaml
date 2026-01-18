@@ -1,0 +1,31 @@
+# EMR on EKS Driver Pod Template - Graviton Memory Optimized (NO SSD)
+# Drivers should use memory-optimized Graviton instances WITHOUT SSD
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emr-driver
+  namespace: emr-data-team-a
+spec:
+  nodeSelector:
+    # Use memory-optimized Graviton nodepool for drivers
+    NodeGroupType: SparkGravitonMemoryOptimized
+    node.kubernetes.io/arch: arm64
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          # Only non-SSD instance families (r6g, r7g, r8g - NO 'd' suffix)
+          - key: karpenter.k8s.aws/instance-family
+            operator: In
+            values: ["r6g", "r7g", "r8g"]
+
+  tolerations:
+    - key: spark-driver
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+
+  containers:
+    - name: spark-kubernetes-driver # Don't change this name - EMR on EKS requires it

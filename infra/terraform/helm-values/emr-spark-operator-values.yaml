@@ -1,0 +1,34 @@
+# EMR Spark Operator Helm Values
+# AWS EMR Spark Operator for declarative Spark job management
+# Version: 7.12.0
+# Docs: https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/spark-operator-gs.html
+
+replicaCount: 1
+
+webhook:
+  # Enable webhook server for SparkApplication validation
+  enable: true
+  # Webhook service port
+  port: 8080
+
+emrContainers:
+  # AWS Region where EMR virtual clusters are deployed
+  awsRegion: ${aws_region}
+
+# Resource limits for the operator
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Node selector for operator pod placement
+nodeSelector: {}
+
+# Tolerations for operator pod scheduling
+tolerations: []
+
+# Affinity rules for operator pod placement
+affinity: {}

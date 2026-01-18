@@ -50,7 +50,7 @@ data "aws_s3_bucket" "logs" {
 # IAM Policy for CloudWatch Logs and S3
 #---------------------------------------------------------------
 resource "aws_iam_policy" "aws_for_fluentbit" {
-  name        = "aws-for-fluent-bit-policy"
+  name        = "${local.name}-fluent-bit-policy"
   description = "IAM Policy for AWS Fluentbit"
 
   policy = jsonencode({
