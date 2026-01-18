@@ -63,7 +63,7 @@ data "aws_iam_policy_document" "sqs_argo_events" {
 }
 
 resource "aws_iam_policy" "sqs_argo_events" {
-  name        = "data-on-eks-argo-events-sqs-policy"
+  name        = "${local.name}-argo-events-sqs-policy"
   description = "IAM policy for Argo Events SQS access"
   policy      = data.aws_iam_policy_document.sqs_argo_events.json
 }

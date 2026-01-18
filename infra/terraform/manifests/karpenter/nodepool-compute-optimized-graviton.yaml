@@ -37,7 +37,7 @@ spec:
         # Instance families - Graviton compute families (gen 6+)
         - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["c6g", "c6gd", "c6gn", "c7g", "c7gd", "c7gn"]
+          values: ["c6g", "c6gd", "c6gn", "c7g", "c7gd", "c7gn", "c8g", "c8gd"]
 
         # Instance sizes - medium to very large
         - key: karpenter.k8s.aws/instance-size
