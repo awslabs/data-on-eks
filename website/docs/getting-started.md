@@ -27,28 +27,28 @@ import { Cloud, Link2, Code, Sparkles, Globe, Users, Zap, TrendingUp, FlaskConic
     <div className="info-box-title">
       <Cloud size={20} className="inline-block mr-2" /> CNCF Ecosystem
     </div>
-    <p>Leverages graduated and incubating CNCF projects (Kubernetes, Prometheus, Strimzi, Argo)</p>
+    <div>Leverages graduated and incubating CNCF projects (Kubernetes, Prometheus, Strimzi, Argo)</div>
   </div>
 
   <div className="info-box info-box-info">
     <div className="info-box-title">
       <Link2 size={20} className="inline-block mr-2" /> AWS Integration
     </div>
-    <p>Deep integration with Amazon EKS, S3, EMR, and AWS data services</p>
+    <div>Deep integration with Amazon EKS, S3, EMR, and AWS data services</div>
   </div>
 
   <div className="info-box info-box-warning">
     <div className="info-box-title">
       <Code size={20} className="inline-block mr-2" /> Infrastructure as Code
     </div>
-    <p>Terraform-based, GitOps-ready deployments with ArgoCD</p>
+    <div>Terraform-based, GitOps-ready deployments with ArgoCD</div>
   </div>
 
   <div className="info-box info-box-success">
     <div className="info-box-title">
       <Sparkles size={20} className="inline-block mr-2" /> Production Patterns
     </div>
-    <p>Battle-tested configurations from real AWS customer workloads</p>
+    <div>Battle-tested configurations from real AWS customer workloads</div>
   </div>
 </div>
 
@@ -252,9 +252,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <Globe size={20} /> Portability
     </h4>
-    <p style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
       Run anywhere Kubernetes runs (on-prem, multi-cloud)
-    </p>
+    </div>
   </div>
 
   <div style={{
@@ -266,9 +266,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <Users size={20} /> Community Innovation
     </h4>
-    <p style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
       Benefit from thousands of contributors
-    </p>
+    </div>
   </div>
 
   <div style={{
@@ -280,9 +280,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <Zap size={20} /> AWS Optimization
     </h4>
-    <p style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
       Tight integration with EKS, S3, IAM, CloudWatch
-    </p>
+    </div>
   </div>
 
   <div style={{
@@ -294,9 +294,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <TrendingUp size={20} /> Hybrid Workloads
     </h4>
-    <p style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
       Mix open-source (Spark) + managed (EMR on EKS)
-    </p>
+    </div>
   </div>
 </div>
 
@@ -389,9 +389,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h3 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <BookOpen size={24} /> Tutorials
     </h3>
-    <p style={{ color: 'var(--ifm-color-content-secondary)', marginBottom: '1.5rem' }}>
+    <div style={{ color: 'var(--ifm-color-content-secondary)', marginBottom: '1.5rem' }}>
       Step-by-step guides for deploying data platforms
-    </p>
+    </div>
     <ul style={{ paddingLeft: '1.5rem', margin: 0 }}>
       <li><a href="/data-on-eks/docs/datastacks/processing/spark-on-eks/infra">Spark on EKS: From Zero to Production</a></li>
       <li><a href="/data-on-eks/docs/datastacks/streaming/kafka-on-eks/">Kafka Streaming with Strimzi</a></li>
@@ -403,9 +403,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h3 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <Zap size={24} /> Deep Dives
     </h3>
-    <p style={{ color: 'var(--ifm-color-content-secondary)', marginBottom: '1.5rem' }}>
+    <div style={{ color: 'var(--ifm-color-content-secondary)', marginBottom: '1.5rem' }}>
       Advanced topics for production optimization
-    </p>
+    </div>
     <ul style={{ paddingLeft: '1.5rem', margin: 0 }}>
       <li><a href="/data-on-eks/docs/datastacks/processing/spark-on-eks/spark-gluten-velox-gpu">Spark Performance with Gluten & Velox</a></li>
       <li><a href="/data-on-eks/docs/datastacks/processing/spark-on-eks/spark-ebs-pvc">Storage Optimization with EBS</a></li>
@@ -417,9 +417,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h3 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <TrendingUp size={24} /> Benchmarks
     </h3>
-    <p style={{ color: 'var(--ifm-color-content-secondary)', marginBottom: '1.5rem' }}>
+    <div style={{ color: 'var(--ifm-color-content-secondary)', marginBottom: '1.5rem' }}>
       Real-world performance testing results
-    </p>
+    </div>
     <ul style={{ paddingLeft: '1.5rem', margin: 0 }}>
       <li><a href="/data-on-eks/docs/benchmarks/emr-on-eks">TPCDS 3TB: Spark vs EMR on EKS</a></li>
       <li><a href="/data-on-eks/docs/datastacks/processing/spark-on-eks/spark-graviton">Graviton3 Performance Analysis</a></li>
@@ -430,10 +430,10 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
 
 <div className="cta-section">
   <h2 className="cta-section-title">Ready to Build Your Data Platform?</h2>
-  <p className="cta-section-description">
+  <div className="cta-section-description">
     Join thousands of data engineers using Data on EKS to run production workloads on Amazon EKS.
     Deploy your first stack in 15 minutes.
-  </p>
+  </div>
   <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
     <a
       href="#quick-start"
@@ -495,9 +495,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', color: 'var(--ifm-heading-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <BookOpen size={20} /> Documentation
     </h4>
-    <p style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
       Comprehensive guides, tutorials, and API reference
-    </p>
+    </div>
   </a>
 
   <a
@@ -507,9 +507,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', color: 'var(--ifm-heading-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <Bug size={20} /> GitHub Issues
     </h4>
-    <p style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
       Bug reports, feature requests, and discussions
-    </p>
+    </div>
   </a>
 
   <a
@@ -519,9 +519,9 @@ Data on EKS is **CNCF-native**, using cloud-native patterns while optimizing for
     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', color: 'var(--ifm-heading-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
       <MessageCircle size={20} /> Discussions
     </h4>
-    <p style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ margin: 0, color: 'var(--ifm-color-content-secondary)' }}>
       Q&A, show-and-tell, and community ideas
-    </p>
+    </div>
   </a>
 </div>
 

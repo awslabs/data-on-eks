@@ -14,9 +14,9 @@ import { Handshake, Database, Zap } from 'lucide-react';
       <Handshake size={56} className="inline-block mr-3" strokeWidth={2.5} />
       AWS Partner Solutions
     </h1>
-    <p className="hero-subtitle">
+    <div className="hero-subtitle">
       Partner integrations for data platforms on Amazon EKS
-    </p>
+    </div>
   </div>
 </div>
 
@@ -33,7 +33,7 @@ Extend your data platform with AWS Partner solutions built for Amazon EKS. These
 </div>
 <div className="datastack-content">
 <h3>Altinity ClickHouse</h3>
-<p className="datastack-description">Enterprise-grade ClickHouse on EKS with advanced features, support, and optimizations from Altinity.</p>
+<div className="datastack-description">Enterprise-grade ClickHouse on EKS with advanced features, support, and optimizations from Altinity.</div>
 </div>
 </div>
 <div className="datastack-features">
@@ -59,7 +59,7 @@ Extend your data platform with AWS Partner solutions built for Amazon EKS. These
 </div>
 <div className="datastack-content">
 <h3>Aerospike</h3>
-<p className="datastack-description">High-performance NoSQL database for real-time applications requiring ultra-low latency at scale.</p>
+<div className="datastack-description">High-performance NoSQL database for real-time applications requiring ultra-low latency at scale.</div>
 </div>
 </div>
 <div className="datastack-features">

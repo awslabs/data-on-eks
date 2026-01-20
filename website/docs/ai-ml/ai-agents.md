@@ -36,14 +36,14 @@ import { Cpu, Construction } from 'lucide-react';
     Under Construction
   </h1>
 
-  <p style={{
+  <div style={{
     fontSize: '1.25rem',
     color: 'var(--ifm-color-content-secondary)',
     maxWidth: '600px',
     marginBottom: '2rem'
   }}>
     We're building production-ready examples for AI agents on Amazon EKS. Check back soon!
-  </p>
+  </div>
 
   <div style={{
     background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 51, 234, 0.05))',
@@ -65,9 +65,9 @@ import { Cpu, Construction } from 'lucide-react';
       Coming Soon
     </h3>
 
-    <p style={{ marginBottom: '1rem', color: 'var(--ifm-color-content-secondary)' }}>
+    <div style={{ marginBottom: '1rem', color: 'var(--ifm-color-content-secondary)' }}>
       Intelligent agents that automatically monitor, diagnose, and optimize your data workloads using AI.
-    </p>
+    </div>
 
     <h4 style={{ fontSize: '1.1rem', fontWeight: '600', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
       Planned Examples:
