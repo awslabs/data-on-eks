@@ -1,6 +1,6 @@
 ---
 sidebar_position: 4
-sidebar_label: Spark with Gluten+Velox Benchmarks
+sidebar_label: Apache Spark with Gluten + Velox Benchmarks
 ---
 
 import Tabs from '@theme/Tabs';
@@ -9,9 +9,9 @@ import PerformanceDashboard from '@site/src/components/BenchmarkDashboard/Perfor
 
 # Apache Spark with Apache Gluten + Velox Benchmarks
 
-[Apache Spark](https://spark.apache.org/) powers much of today's large-scale analytics, but its default SQL engine is still JVM-bound and row-oriented. Even with [Project Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten)'s code generation and vectorized readers, operators often pay heavy costs for Java object creation, garbage collection, and row-to-column conversions. These costs become visible on analytic workloads that scan large [Parquet](https://parquet.apache.org/) or [ORC](https://orc.apache.org/) tables, perform wide joins, or run memory-intensive aggregations—leading to slower queries and inefficient CPU use.
+[Apache Spark](https://spark.apache.org/) powers much of today’s large-scale analytics, but its default SQL engine is still JVM-bound and row-oriented. Even with [Project Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten)’s code generation and vectorized readers, operators often pay heavy costs for Java object creation, garbage collection, and row-to-column conversions. These costs become visible on analytic workloads that scan large [Parquet](https://parquet.apache.org/) or [ORC](https://orc.apache.org/) tables, perform wide joins, or run memory-intensive aggregations—leading to slower queries and inefficient CPU use.
 
-Modern C++ engines such as [Velox](https://github.com/facebookincubator/velox), [ClickHouse](https://clickhouse.com/), and [DuckDB](https://duckdb.org/) show that SIMD-optimized, cache-aware vectorization can process the same data far faster. But replacing Spark is impractical given its ecosystem and scheduling model. [Apache Gluten](https://github.com/apache/incubator-gluten) solves this by translating [Spark SQL](https://spark.apache.org/sql/) plans into the open [Substrait](https://substrait.io/) IR and offloading execution to a native C++ backend (Velox, ClickHouse, etc.). This approach keeps Spark's APIs and [Kubernetes](https://kubernetes.io/) deployment model while accelerating the CPU-bound SQL layer—the focus of this deep dive and benchmark study on [Amazon EKS](https://aws.amazon.com/eks/).
+Modern C++ engines such as [Velox](https://github.com/facebookincubator/velox), [ClickHouse](https://clickhouse.com/), and [DuckDB](https://duckdb.org/) show that SIMD-optimized, cache-aware vectorization can process the same data far faster. But replacing Spark is impractical given its ecosystem and scheduling model. [Apache Gluten](https://github.com/apache/incubator-gluten) solves this by translating [Spark SQL](https://spark.apache.org/sql/) plans into the open [Substrait](https://substrait.io/) IR and offloading execution to a native C++ backend (Velox, ClickHouse, etc.). This approach keeps Spark’s APIs and [Kubernetes](https://kubernetes.io/) deployment model while accelerating the CPU-bound SQL layer—the focus of this deep dive and benchmark study on [Amazon EKS](https://aws.amazon.com/eks/).
 
 In this guide you will:
 - Understand how the Spark + Gluten + Velox stack is assembled on [Amazon EKS](https://aws.amazon.com/eks/)
@@ -84,7 +84,7 @@ spark.executor.extraJavaOptions: "--add-opens=java.base/java.nio=ALL-UNNAMED --a
 
 ### Performance Analysis: Top 20 Query Improvements
 
-Gluten's native execution path shines on wide, compute-heavy SQL. The table highlights the largest gains across the 104 TPC-DS queries, comparing median runtimes over multiple iterations.
+Gluten’s native execution path shines on wide, compute-heavy SQL. The table highlights the largest gains across the 104 TPC-DS queries, comparing median runtimes over multiple iterations.
 
 | Rank | TPC-DS Query | Native Spark (s) | Gluten + Velox (s) | Speedup | % Improvement |
 |------|-------------|-----------------|-----------------|---------|---------------|
@@ -216,7 +216,7 @@ The benchmark results demonstrate that Gluten + Velox represents a significant l
 ### Why a few queries regress?
 
 :::caution
-While Spark + Gluten + Velox was ~1.7× faster overall, a small set of TPC-DS queries ran slower. Gluten intentionally falls back to Spark's JVM engine when an operator or expression isn't fully supported natively. Those fallbacks introduce row↔columnar conversion boundaries and can change shuffle or partition behavior—explaining isolated regressions (q22, q67, q72 in our run).
+While Spark + Gluten + Velox was ~1.7× faster overall, a small set of TPC-DS queries ran slower. Gluten intentionally falls back to Spark’s JVM engine when an operator or expression isn’t fully supported natively. Those fallbacks introduce row↔columnar conversion boundaries and can change shuffle or partition behavior—explaining isolated regressions (q22, q67, q72 in our run).
 
 To diagnose these cases:
 - Inspect the Spark physical plan for `GlutenRowToArrowColumnar` or `VeloxColumnarToRowExec` nodes surrounding a non-native operator.
