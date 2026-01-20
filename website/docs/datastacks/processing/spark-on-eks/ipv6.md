@@ -6,7 +6,7 @@ sidebar_position: 13
 This guide explains how to deploy and run Apache Spark on an IPv6-enabled Amazon EKS cluster.
 
 :::info Prerequisites
-This guide assumes you have cloned the `data-on-eks` repository and have all the necessary [CLI tools installed](/docs/getting-started/quick-start#step-1-clone-the-repository-and-install-cli-tools).
+This guide assumes you have cloned the `data-on-eks` repository and deployed the Spark stack.
 :::
 
 ---

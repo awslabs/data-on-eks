@@ -29,7 +29,7 @@ const stacks = [
     color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
     stacks: [
       { name: 'Airflow on EKS', description: 'DAG-based workflows', link: '/data-on-eks/docs/datastacks/orchestration/airflow-on-eks/' },
-      { name: 'Argo Workflows', description: 'K8s-native pipelines', link: '/data-on-eks/docs/datastacks/orchestration/argoworkflows-on-eks/' },
+      { name: 'Argo Workflows', description: 'K8s-native pipelines', link: '/data-on-eks/docs/datastacks/processing/spark-on-eks/argo-workflows' },
       { name: 'Amazon MWAA', description: 'Managed Airflow', link: '/data-on-eks/docs/datastacks/orchestration/amazon-mwaa/' },
     ]
   },

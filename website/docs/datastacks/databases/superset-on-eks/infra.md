@@ -204,8 +204,7 @@ kubectl describe application Superset-operator -n argocd
 
 With infrastructure deployed, you can now run any Superset examples:
 
-- [Spark Applications with Superset DAGs](/data-on-eks/docs/datastacks/orchestration/Superset-on-eks/Superset)
-
+- [Spark Applications with Superset DAGs](/data-on-eks/docs/datastacks/databases/superset-on-eks/superset)
 
 ## Cleanup
 

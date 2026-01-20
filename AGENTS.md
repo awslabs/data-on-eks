@@ -34,7 +34,7 @@ This repository uses a **"Base + Overlay"** pattern for managing data stack depl
 - `infra/terraform/manifests/`: Terraform-templated YAML files applied directly by Terraform (not ArgoCD)
 - `infra/terraform/argocd-applications/`: ArgoCD Application manifests for GitOps
 - `data-stacks/<stack-name>/examples/`: Usage examples and sample code for the stack
-- `infra/terraform/datahub.tf` is a good example showcasing yaml templating, manifest file usage, and ArgoCD applciation deployment.
+- `infra/terraform/datahub.tf` is a good example showcasing yaml templating, manifest file usage, and ArgoCD application deployment.
 
 ### Common Tasks
 
