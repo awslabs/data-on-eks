@@ -71,7 +71,7 @@ print_next_steps() {
     echo "   kubectl get applications -n argocd"
     echo ""
     echo "4. Clean up (when done):"
-    echo "   ./cleaup.sh"
+    echo "   ./cleanup.sh"
     echo "========================================"
 }
 

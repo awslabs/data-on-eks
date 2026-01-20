@@ -261,7 +261,7 @@ resource "aws_iam_policy" "s3_csi_access_policy" {
 
 #---------------------------------------------------------------
 # CNI IPv6 Policy
-# Used by Karpenter nodes only currently. This will need to used by core node gorup as well once issues with create_cni_ipv6_iam_policy is resolved.
+# Used by Karpenter nodes only currently. This will need to used by core node group as well once issues with create_cni_ipv6_iam_policy is resolved.
 #---------------------------------------------------------------
 resource "aws_iam_policy" "cni_ipv6_policy" {
   name_prefix = "${local.name}-cni-ipv6"

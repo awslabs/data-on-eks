@@ -140,7 +140,7 @@ Coda
 Dash
 Echo
 Faye
-Gage
+Gauge
 Halo
 Iris
 Jade

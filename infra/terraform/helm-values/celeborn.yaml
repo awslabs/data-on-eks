@@ -9,7 +9,7 @@ cluster:
   name: cluster
 celeborn:
     celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=100Gi,/mnt/disk2:disktype=SSD:capacity=100Gi
-    # wait for official releaes before enabling. Following enables tiered storage memory -> ssd -> s3. https://celeborn.apache.org/docs/latest/developers/storage/#multi-layered-storage
+    # wait for official release before enabling. Following enables tiered storage memory -> ssd -> s3. https://celeborn.apache.org/docs/latest/developers/storage/#multi-layered-storage
     # celeborn.storage.availableTypes: MEMORY,SSD,S3
     # celeborn.worker.storage.storagePolicy.evictPolicy: MEMORY,SSD,S3
     # celeborn.worker.storage.storagePolicy.createFilePolicy: MEMORY,SSD,S3

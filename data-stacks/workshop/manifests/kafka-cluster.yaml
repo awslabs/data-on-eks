@@ -15,7 +15,7 @@ spec:
         port: 9092
         type: internal
         tls: false
-      - name: locahost
+      - name: localhost
         port: 9094
         type: internal
         tls: false

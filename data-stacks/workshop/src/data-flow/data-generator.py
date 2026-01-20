@@ -23,7 +23,7 @@ generate: cat database entity for NUM_ADOPTED_CATS cats with status = adopted wh
     1  if 'standard' or 'shy' is selected as arch_type, the age must be between 14-180 months.
     1  if 'sleepy_senior' is selected as arch_type, the age must be between 180 - 240 months.
     1. age is between 0 - 240 months.
-    1. archtypes is one of ARCH_TYPES defined above.
+    1. archetypes is one of ARCH_TYPES defined above.
     1. if coat color is black, reduce the chance of this field set by 20%. (multiplier, not addition)
     1. If the age is more than 120 months, reduce the chance of this field by 9%. For every 12 months, above the 120 months, reduce the chance by 9%. (multiplied)
     1. if 'social_kitten' is selected, the adoption rate is increased by 70%. (multiplied)
