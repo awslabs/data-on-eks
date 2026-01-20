@@ -1,29 +1,142 @@
 ---
+title: Best Practices
 sidebar_position: 1
-sidebar_label: Introduction
+sidebar_label: Overview
 ---
 
-# Introduction
+import '@site/src/css/datastack-tiles.css';
+import '@site/src/css/getting-started.css';
+import BestPracticesHero from '@site/src/components/BestPractices/BestPracticesHero';
+import { Shield, Layers, TrendingUp, Database, Zap, Lock } from 'lucide-react';
 
-:::info
+<BestPracticesHero />
 
-COMING SOON
+## Overview
 
-Please note that this section is currently a work in progress and will provide a collection of best practices for running Data and ML workloads on EKS.
-These best practices will cover various aspects, including cluster configuration, resource management, data storage, security, monitoring, and more.
-By following these recommended practices, you can optimize the performance, reliability, and security of your data and ML workloads on EKS.
+Through working with AWS customers, we've identified production-proven best practices for running data and ML workloads on EKS. These recommendations are continuously updated based on real-world deployments and customer feedback.
 
-Stay tuned for valuable insights and guidance on how to achieve the best outcomes in your EKS environment.
+These Data on EKS Best Practices expand upon the [EKS Best Practices Guide](https://aws.github.io/aws-eks-best-practices/) for data-centric use cases (batch processing, stream processing, machine learning). We recommend reviewing the EKS Best Practices as a primer before diving into these recommendations.
 
+## Best Practice Categories
+
+<div className="datastacks-grid">
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Layers size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Cluster Architecture</h3>
+<p className="datastack-description">Design patterns for dynamic and static clusters, scaling strategies, and resource management.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Dynamic Clusters</span>
+<span className="feature-tag">Static Clusters</span>
+<span className="feature-tag">High Churn</span>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <TrendingUp size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Performance Optimization</h3>
+<p className="datastack-description">Tuning strategies for Spark, Karpenter autoscaling, and resource allocation patterns.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Spark Tuning</span>
+<span className="feature-tag">Autoscaling</span>
+<span className="feature-tag">Cost Optimization</span>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Database size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Data Storage</h3>
+<p className="datastack-description">Storage strategies for S3, EBS, EFS, and ephemeral storage optimization.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">S3 Integration</span>
+<span className="feature-tag">EBS Volumes</span>
+<span className="feature-tag">Shuffle Data</span>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Lock size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Security & Compliance</h3>
+<p className="datastack-description">IRSA, network policies, encryption at rest, and security hardening.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">IRSA</span>
+<span className="feature-tag">Network Policies</span>
+<span className="feature-tag">Encryption</span>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Zap size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Observability</h3>
+<p className="datastack-description">Monitoring, logging, and alerting strategies for data workloads.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Prometheus</span>
+<span className="feature-tag">CloudWatch</span>
+<span className="feature-tag">Dashboards</span>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Shield size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Production Readiness</h3>
+<p className="datastack-description">High availability, disaster recovery, and operational excellence.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">HA Setup</span>
+<span className="feature-tag">Backup/Restore</span>
+<span className="feature-tag">GitOps</span>
+</div>
+</div>
+
+</div>
+
+## Cluster Design Patterns
+
+The recommendations are built from working with customers using one of two cluster designs:
+
+* **Dynamic Clusters** - Scale with high "churn" rates. Run batch processing (Spark) with pods created for short periods. These clusters create/delete resources (pods, nodes) at high rates, adding unique pressures to Kubernetes components.
+
+* **Static Clusters** - Large but stable scaling behavior. Run longer-lived jobs (streaming, training). Avoiding interruptions is critical, requiring careful change management.
+
+### Scale Considerations
+
+Large clusters typically have >500 nodes and >5000 pods, or create/destroy hundreds of resources per minute. However, scalability constraints differ per workload due to [Kubernetes scalability complexity](https://github.com/kubernetes/community/blob/master/sig-scalability/configs-and-limits/thresholds.md).
+
+:::info Coming Soon
+Detailed best practice guides are being developed. Check back for updates on cluster configuration, resource management, security, monitoring, and optimization strategies.
 :::
-
-Through working with AWS customers, we’ve identified a number of Best Practices that we have recommended for Spark or other large data workloads. We continue to collect and post those recommendations here. Because this is an ongoing effort, please open an Issue or Pull Request if you find something outdated so we can update it.
-
-These Data on EKS Best Practices are meant to expand upon the [EKS Best Practices Guide](https://aws.github.io/aws-eks-best-practices/) for data-centric use cases (e.g., batch processing, stream processing, and machine learning) and we recommend reviewing the EKS Best Practices as a primer before diving into these. The Data on EKS Best Practices are not comprehensive and we recommend you read through the guidance and determine what’s best for your environment.
-
-The recommendations here were built from working with customers one of two designs (listed below). Each data use case (e.g., batch processing, stream processing) aligns more closely to one of the two cluster designs, which we will call out in our recommendations.
-
-* The first design is **dynamic clusters** that scale, or “churn”, a lot. These clusters run batch processing with Spark, or other workloads that create pods for a relatively short time but can vary greatly on the scale at any given time. These clusters create and delete resources like pods and nodes, or churn, at a high rate which adds unique pressures to Kubernetes and critical components.
-* The other design is **“static” clusters**. These clusters are often large but have less volatile scaling behavior and are generally running longer-lived jobs, like streaming or training. Avoid interruptions for these workloads is a key concern and care must be taken when making changes.
-
-When we talk about large clusters or high rates of churn, it’s difficult to put a specific number to those phrases because of the [complexity of kubernetes scalability](https://github.com/kubernetes/community/blob/master/sig-scalability/configs-and-limits/thresholds.md). In general, these clusters have >500 nodes and >5000 pods, or are creating/destroying hundreds of resources a minute; however, the scalability constraints are different for every workload (even between two different Spark jobs).

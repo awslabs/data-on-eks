@@ -68,10 +68,11 @@ const config = {
           src: 'img/header-icon.png',
         },
         items: [
-          { type: 'doc', docId: 'blueprints/data-analytics/index', position: 'left', label: 'Blueprints' },
-          { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices' },
-          { type: 'doc', docId: 'benchmarks/emr-on-eks', position: 'left', label: 'Benchmarks' },
-          { type: 'doc', docId: 'resources/intro', position: 'left', label: 'Resources' },
+          { type: 'doc', docId: 'getting-started', position: 'left', label: 'Launch', className: 'navbar-getting-started' },
+          { type: 'doc', docId: 'datastacks/index', position: 'left', label: 'Data Stacks', className: 'navbar-data-stacks' },
+          { type: 'doc', docId: 'ai-ml/index', position: 'left', label: 'AI for Data', className: 'navbar-ai-data' },
+          { type: 'doc', docId: 'benchmarks/index', position: 'left', label: 'Benchmarks', className: 'navbar-benchmarks' },
+          { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices', className: 'navbar-best-practices' },
           { href: 'https://github.com/awslabs/data-on-eks', label: 'GitHub', position: 'right' },
         ],
       },
@@ -90,7 +91,7 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Get Started',
+            title: 'Launch',
             items: [{ label: 'Docs', to: '/docs/introduction/intro' }],
           },
           {

@@ -1,0 +1,37 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: streaming-optimized
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: network-optimized
+        NodeGroupType: StreamingOptimized
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: streaming-optimized
+
+      requirements:
+        - key: "karpenter.k8s.aws/instance-family"
+          operator: In
+          values: ["c5n", "c6in", "m5n", "m6in"]  # Network optimized
+        - key: "karpenter.k8s.aws/instance-size"
+          operator: In
+          values: ["xlarge", "2xlarge", "4xlarge", "8xlarge"]
+        - key: "karpenter.sh/capacity-type"
+          operator: In
+          values: ["on-demand"]  # Streaming needs reliability
+
+  # Resource limits for budget control
+  limits:
+    cpu: "2000"
+    memory: "8000Gi"
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: "600s"
+  weight: 10

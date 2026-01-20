@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: spark-operator-
+  namespace: argo-workflows
+spec:
+  arguments: {}
+  entrypoint: spark-dag
+  serviceAccountName: spark-test
+  tolerations:
+    - key: "spark-compute-optimized"
+      operator: "Exists"
+      effect: "NoSchedule"
+  templates:
+  - name: spark-dag
+    dag:
+      tasks:
+      - name: data-prep-1
+        templateRef:
+          name: wait
+          template: wait
+        arguments:
+          parameters:
+          - name: duration
+            value: '10'
+      - name: data-prep-2
+        templateRef:
+          name: wait
+          template: wait
+        arguments:
+          parameters:
+          - name: duration
+            value: '30'
+      - name: submit-spark-app
+        dependencies: [data-prep-1, data-prep-2]
+        templateRef:
+          name: submit-spark-pi-app
+          template: spark-pi-app

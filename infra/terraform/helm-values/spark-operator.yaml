@@ -1,0 +1,70 @@
+controller:
+  # -- Number of replicas of controller.
+  replicas: 1
+  # -- Reconcile concurrency, higher values might increase memory usage.
+  # -- Increased from 10 to 20 to leverage more cores from the instance
+  workers: 20
+%{ if enable_ipv6 ~}
+  env:
+    - name: _JAVA_OPTIONS
+      value: "-Djava.net.preferIPv6Addresses=true"
+    - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION
+      value: "true"
+%{ endif ~}
+  nodeSelector:
+    NodeGroupType: core
+batchScheduler:
+  # -- Enable batch scheduler support
+  enable: false
+  # -- Default batch scheduler (will be overridden by user values)
+  default: "yunikorn"
+#   -- Uncomment this for Spark Operator scale test
+#   -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
+#   nodeSelector:
+#     NodeGroupType: spark-operator-benchmark
+#   resources:
+#     requests:
+#       cpu: 33000m
+#       memory: 50Gi
+webhook:
+  nodeSelector:
+    NodeGroupType: core
+#   resources:
+#     requests:
+#       cpu: 1000m
+#       memory: 10Gi
+spark:
+  # -- List of namespaces where to run spark jobs.
+  # If empty string is included, all namespaces will be allowed.
+  jobNamespaces:
+    - default
+    - spark-team-a
+    - spark-team-b
+    - spark-team-c
+    - spark-s3-express
+  serviceAccount:
+    # -- Specifies whether to create a service account for spark applications.
+    create: false
+  rbac:
+    # -- Specifies whether to create RBAC resources for spark applications.
+    create: false
+prometheus:
+  metrics:
+    enable: true
+    port: 8080
+    portName: metrics
+    endpoint: /metrics
+    prefix: ""
+  # Prometheus pod monitor for controller pods
+  # Note: The kube-prometheus-stack addon must deploy before the PodMonitor CRD is available.
+  #       This can cause the terraform apply to fail since the addons are deployed in parallel
+  podMonitor:
+    # -- Specifies whether to create pod monitor.
+    create: true
+    labels: {}
+    # -- The label to use to retrieve the job name from
+    jobLabel: spark-operator-podmonitor
+    # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
+    podMetricsEndpoint:
+      scheme: http
+      interval: 5s

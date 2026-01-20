@@ -1,0 +1,90 @@
+yunikornDefaults:
+  # The default volume bind timeout value of 10 seconds may be too short for EBS
+  service.volumeBindTimeout: "60s"
+  service.placeholderImage: registry.k8s.io/pause:3.7
+  service.operatorPlugins: "general,spark-k8s-operator"
+  admissionController.filtering.bypassNamespaces: "^kube-system$"
+  # Use this configuration to configure absolute capacities for yunikorn queues
+  # The Default partition uses BinPacking on Nodes by default
+  queues.yaml: |
+    partitions:
+      - name: default
+        nodesortpolicy:
+          type: binpacking
+        queues:
+          - name: root
+            submitacl: '*'
+            queues:
+              - name: default
+                resources:
+                  guaranteed:
+                    memory: 500G
+                    vcore: 50
+                  max:
+                    memory: 1000G
+                    vcore: 100
+              - name: spark
+                resources:
+                  guaranteed:
+                    memory: 4000000G
+                    vcore: 400000
+                  max:
+                    memory: 4000000G
+                    vcore: 400000
+                queues:
+                  - name: spark-team-a
+                    resources:
+                      guaranteed:
+                        memory: 400000G
+                        vcore: 40000
+                      max:
+                        memory: 400000G
+                        vcore: 40000
+                  - name: spark-team-b
+                    resources:
+                      guaranteed:
+                        memory: 1000G
+                        vcore: 100
+                      max:
+                        memory: 20000G
+                        vcore: 1000
+                  - name: spark-team-c
+                    resources:
+                      guaranteed:
+                        memory: 1000G
+                        vcore: 100
+                      max:
+                        memory: 20000G
+                        vcore: 1000
+                  - name: spark-s3-express
+                    resources:
+                      guaranteed:
+                        memory: 1000G
+                        vcore: 100
+                      max:
+                        memory: 2000G
+                        vcore: 1000
+              - name: prod
+                resources:
+                  guaranteed:
+                    memory: 1000G
+                    vcore: 100
+                  max:
+                    memory: 2000G
+                    vcore: 200
+              - name: test
+                resources:
+                  guaranteed:
+                    memory: 500G
+                    vcore: 50
+                  max:
+                    memory: 1000G
+                    vcore: 100
+              - name: dev
+                resources:
+                  guaranteed:
+                    memory: 200G
+                    vcore: 20
+                  max:
+                    memory: 500G
+                    vcore: 50

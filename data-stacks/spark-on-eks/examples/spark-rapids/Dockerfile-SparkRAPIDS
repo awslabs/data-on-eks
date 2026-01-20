@@ -1,0 +1,116 @@
+# -------------------------------------------------------------------
+# Dockerfile for Spark RAPIDS on Kubernetes with CUDA Support
+# Base Image: NVIDIA CUDA 11.8
+# Description: Configures Spark 3.5.1, Java, RAPIDS Accelerator, Python, and GPU support for Kubernetes
+# Image Size Uncompressed for this Dockerfile: 11.3GB
+# -------------------------------------------------------------------
+
+# Base image with CUDA
+FROM nvidia/cuda:11.8.0-devel-ubuntu20.04
+# Arguments for version numbers
+ARG SPARK_VERSION=3.5.1
+ARG RAPIDS_VERSION=24.08.1
+ARG HADOOP_VERSION=3.3.4    # Compatible with Spark 3.5.1
+ARG AWS_SDK_VERSION=1.12.773 # Compatible with Hadoop 3.x
+ARG SPARK_UID=1001
+ARG TINI_VERSION=v0.18.0
+ARG JAVA_VERSION=openjdk-8
+
+# -------------------------------------------------------------------
+# Set up environment variables
+# -------------------------------------------------------------------
+ENV DEBIAN_FRONTEND="noninteractive"
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
+ENV SPARK_HOME /opt/spark
+ENV PATH $PATH:/usr/lib/jvm/java-1.8.0-openjdk-amd64/jre/bin:/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin:$SPARK_HOME/bin
+
+# -------------------------------------------------------------------
+# Install Dependencies and Java
+# -------------------------------------------------------------------
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    $JAVA_VERSION-jdk \
+    $JAVA_VERSION-jre \
+    curl \
+    wget \
+    ca-certificates \
+    python3 \
+    python3-pip \
+    jq && \
+    rm -rf /var/lib/apt/lists/*
+
+# -------------------------------------------------------------------
+# Download and Set Up Apache Spark
+# -------------------------------------------------------------------
+RUN wget -q -O /tmp/spark-${SPARK_VERSION}-bin-hadoop3.tgz https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz && \
+    mkdir -p /opt/spark && \
+    tar -xzf /tmp/spark-${SPARK_VERSION}-bin-hadoop3.tgz -C /opt && \
+    mv /opt/spark-${SPARK_VERSION}-bin-hadoop3/* /opt/spark/ && \
+    rm /tmp/spark-${SPARK_VERSION}-bin-hadoop3.tgz
+
+# -------------------------------------------------------------------
+# Add the AWS Java SDK and Hadoop-AWS package to enable S3A support
+# -------------------------------------------------------------------
+RUN cd /opt/spark/jars && \
+    wget -q "https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/${AWS_SDK_VERSION}/aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar" && \
+    wget -q "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar"
+
+# -------------------------------------------------------------------
+# Copy Entrypoint Script from Spark Distribution
+# -------------------------------------------------------------------
+RUN cp /opt/spark/kubernetes/dockerfiles/spark/entrypoint.sh /opt/ && \
+    chmod +x /opt/entrypoint.sh
+
+# -------------------------------------------------------------------
+# Download RAPIDS Accelerator JAR and GPU Discovery Script
+# -------------------------------------------------------------------
+RUN wget -q https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${RAPIDS_VERSION}/rapids-4-spark_2.12-${RAPIDS_VERSION}.jar -P /opt/spark/jars/ && \
+    wget -q https://raw.githubusercontent.com/apache/spark/master/examples/src/main/scripts/getGpusResources.sh -P /opt/sparkRapidsPlugin/ && \
+    chmod +x /opt/sparkRapidsPlugin/getGpusResources.sh
+
+# -------------------------------------------------------------------
+# Set Up Python Environment
+# -------------------------------------------------------------------
+RUN python3 -m pip install --upgrade pip setuptools && \
+    rm -r /root/.cache
+
+# -------------------------------------------------------------------
+# Create Spark and Necessary Directories
+# -------------------------------------------------------------------
+RUN set -ex && \
+    ln -s /lib /lib64 && \
+    mkdir -p /opt/sparkRapidsPlugin && \
+    mkdir -p /opt/spark/work-dir && \
+    touch /opt/spark/RELEASE && \
+    rm /bin/sh && \
+    ln -sv /bin/bash /bin/sh && \
+    echo "auth required pam_wheel.so use_uid" >> /etc/pam.d/su && \
+    chgrp root /etc/passwd && chmod ug+rw /etc/passwd
+
+# -------------------------------------------------------------------
+# Install Tini for Container Initialization
+# -------------------------------------------------------------------
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
+RUN chmod +rx /usr/bin/tini
+
+# -------------------------------------------------------------------
+# Copy gpu_rapids_performance_test.py to the container
+# -------------------------------------------------------------------
+COPY gpu_rapids_performance_test.py /opt/sparkRapidsPlugin/gpu_rapids_performance_test.py
+
+# -------------------------------------------------------------------
+# Set the working directory for Spark and Update Permissions
+# -------------------------------------------------------------------
+WORKDIR /opt/spark/work-dir
+RUN chmod -R g+w /opt/spark/work-dir /opt/sparkRapidsPlugin /opt/spark
+
+# -------------------------------------------------------------------
+# Specify the User That the Actual Main Process Will Run As
+# -------------------------------------------------------------------
+USER ${SPARK_UID}
+
+# -------------------------------------------------------------------
+# Set Entrypoint Script
+# -------------------------------------------------------------------
+ENTRYPOINT [ "/usr/bin/tini", "--", "/opt/entrypoint.sh" ]

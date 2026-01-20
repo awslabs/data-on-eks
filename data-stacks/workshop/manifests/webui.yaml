@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-ui
+  namespace: workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alert-ui
+  template:
+    metadata:
+      labels:
+        app: alert-ui
+    spec:
+      containers:
+        - name: alert-ui
+          image: public.ecr.aws/m8u6z8z4/manabu-test:workshop-webui@sha256:1c068fef991d7573c08f7826a8833cca2244e604ac92c6c4054ce5188cfa83cc
+          ports:
+            - containerPort: 8788
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "512Mi"
+          env:
+            - name: KAFKA_BROKERS
+              value: data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092
+            - name: DB_HOST
+              value: postgresql-0.postgresql.workshop.svc.cluster.local
+            - name: PORT
+              value: "8788"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-ui
+  namespace: workshop
+spec:
+  selector:
+    app: alert-ui
+  ports:
+  - port: 8788
+    targetPort: 8788
+  type: ClusterIP

@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s3-mount-script
+  namespace: spark-team-a
+data:
+  monitor_s3_mount.sh: |
+    #!/bin/bash
+
+    set -e  # Exit immediately if a command exits with a non-zero status
+
+    # ENVIRONMENT VARIABLES
+    LOG_FILE="/var/log/s3-mount.log"
+    S3_BUCKET_NAME="<S3_BUCKET_NAME>"  # Replace with your S3 Bucket Name before applying to EKS cluster
+    MOUNT_POINT="/mnt/s3"
+    CACHE_DIR="/tmp"
+    MOUNT_S3_BIN="/usr/bin/mount-s3"
+    MOUNT_S3_URL="https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.rpm"
+
+    # Function to install mount-s3
+    install_mount_s3() {
+      echo "$(date): Installing mount-s3" | tee -a $LOG_FILE
+      yum update -y | tee -a $LOG_FILE
+      yum install -y wget util-linux | tee -a $LOG_FILE
+      wget $MOUNT_S3_URL -O /tmp/mount-s3.rpm | tee -a $LOG_FILE
+      yum install -y /tmp/mount-s3.rpm | tee -a $LOG_FILE
+    }
+
+    # Function to mount S3 bucket
+    mount_s3_bucket() {
+      echo "$(date): Mounting S3 bucket: $S3_BUCKET_NAME to $MOUNT_POINT" | tee -a $LOG_FILE
+      $MOUNT_S3_BIN --metadata-ttl indefinite --allow-other --cache $CACHE_DIR $S3_BUCKET_NAME $MOUNT_POINT | tee -a $LOG_FILE
+      if [ $? -ne 0 ]; then
+        echo "$(date): Failed to mount S3 bucket: $S3_BUCKET_NAME" | tee -a $LOG_FILE
+        exit 1
+      fi
+    }
+
+    # Ensure the mount point directory exists
+    ensure_mount_point() {
+      if [ ! -d $MOUNT_POINT ]; then
+        echo "$(date): Creating mount point directory: $MOUNT_POINT" | tee -a $LOG_FILE
+        mkdir -p $MOUNT_POINT
+      fi
+    }
+
+    # Install mount-s3
+    install_mount_s3
+
+    # Continuous monitoring and remounting loop
+    while true; do
+      echo "$(date): Checking if S3 bucket is mounted" | tee -a $LOG_FILE
+      ensure_mount_point
+      if mount | grep $MOUNT_POINT > /dev/null; then
+        echo "$(date): S3 bucket is already mounted" | tee -a $LOG_FILE
+        if ! ls $MOUNT_POINT > /dev/null 2>&1; then
+          echo "$(date): Transport endpoint is not connected, remounting S3 bucket" | tee -a $LOG_FILE
+          fusermount -u $MOUNT_POINT || echo "$(date): Failed to unmount S3 bucket" | tee -a $LOG_FILE
+          rm -rf $MOUNT_POINT || echo "$(date): Failed to remove mount point directory" | tee -a $LOG_FILE
+          ensure_mount_point
+          mount_s3_bucket
+        fi
+      else
+        echo "$(date): S3 bucket is not mounted, mounting now" | tee -a $LOG_FILE
+        mount_s3_bucket
+      fi
+      sleep 60  # Check every 60 seconds
+    done
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: s3-mount-daemonset
+  namespace: spark-team-a
+spec:
+  selector:
+    matchLabels:
+      name: s3-mount-daemonset
+  template:
+    metadata:
+      labels:
+        name: s3-mount-daemonset
+    spec:
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      volumes:
+      - name: script
+        configMap:
+          name: s3-mount-script
+      - name: host-root
+        hostPath:
+          path: /
+          type: Directory
+      restartPolicy: Always
+      containers:
+      - name: s3-mount
+        image: amazonlinux:2
+        volumeMounts:
+        - name: script
+          mountPath: /config
+        - name: host-root
+          mountPath: /host
+          mountPropagation: Bidirectional
+        securityContext:
+          privileged: true
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "Starting s3-mount"
+          yum install -y util-linux
+          echo "Copying script to /usr/bin"
+          cp /config/monitor_s3_mount.sh /host/usr/bin/monitor_s3_mount.sh
+          chmod +x /host/usr/bin/monitor_s3_mount.sh
+          echo "Verifying the copied script"
+          ls -lha /host/usr/bin/monitor_s3_mount.sh
+          echo "Running the script in Host space"
+          nsenter --target 1 --mount --uts --ipc --net --pid ./usr/bin/monitor_s3_mount.sh
+          echo "Done"

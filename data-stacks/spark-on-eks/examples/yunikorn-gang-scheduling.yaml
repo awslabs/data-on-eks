@@ -1,0 +1,184 @@
+# Pre-requisite before running this job
+# 1/ Open taxi-trip-execute.sh and update $S3_BUCKET and <REGION>
+# 2/ Replace $S3_BUCKET with your S3 bucket created by this example (Check Terraform outputs)
+# 3/ execute taxi-trip-execute.sh
+
+# This example demonstrates YuniKorn Gang Scheduling with NVMe Instance Store Storage
+  # Gang scheduling ensures all Spark components (driver + executors) are scheduled atomically
+  # Prevents partial allocations and resource fragmentation in multi-tenant environments
+  # Combined with NVMe storage for maximum performance
+  # Uses Apache YuniKorn 1.7.0+ with enhanced gang scheduling features
+
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "taxi-trip-yunikorn-gang"
+  namespace: spark-team-a
+  labels:
+    app: "taxi-trip-yunikorn-gang"
+    queue: root.spark.spark-team-a
+spec:
+  # YuniKorn Gang Scheduling Configuration
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.spark.spark-team-a
+#  To create Ingress object for Spark driver.
+#  Ensure Spark Operator Helm Chart deployed with Ingress enabled to use this feature
+#  sparkUIOptions:
+#    servicePort: 4040
+#    servicePortName: taxi-trip-ui-svc
+#    serviceType: ClusterIP
+#    ingressAnnotations:
+#      kubernetes.io/ingress.class: nginx
+#      nginx.ingress.kubernetes.io/use-regex: "true"
+  type: Python
+  sparkVersion: "3.5.3"
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://$S3_BUCKET/taxi-trip/scripts/pyspark-taxi-trip.py"  # MainFile is the path to a bundled JAR, Python, or R file of the application
+  arguments:
+    - "s3a://$S3_BUCKET/taxi-trip/input/"
+    - "s3a://$S3_BUCKET/taxi-trip/output/"
+  sparkConf:
+    "spark.app.name": "taxi-trip-yunikorn-gang"
+    "spark.kubernetes.driver.pod.name": "taxi-trip-yunikorn-gang"
+    "spark.kubernetes.executor.podNamePrefix": "taxi-trip-yunikorn-gang"
+    "spark.local.dir": "/data1"
+
+    # NVMe Storage Performance Optimizations
+    "spark.shuffle.spill.diskWriteBufferSize": "1048576"  # 1MB buffer for NVMe
+    "spark.shuffle.file.buffer": "1m"  # Larger buffer for local SSD
+    "spark.io.compression.codec": "lz4"  # Fast compression for NVMe
+    "spark.shuffle.compress": "true"
+    "spark.shuffle.spill.compress": "true"
+    "spark.rdd.compress": "true"
+
+    # Local storage optimizations for NVMe
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+
+    # Optimize for high-performance local storage
+    "spark.sql.files.maxPartitionBytes": "268435456"  # 256MB for NVMe throughput
+    "spark.sql.shuffle.partitions": "400"  # Optimize for parallelism
+    "spark.speculation": "false"
+    "spark.network.timeout": "2400"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"  # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://$S3_BUCKET/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+    # "spark.history.fs.eventLog.rolling.maxFilesToRetain": 100
+
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # NVMe Instance Store Storage Configuration
+    # Use direct NVMe SSD storage mounted by Karpenter RAID0 policy at /mnt/k8s-disks
+    # This provides maximum performance with local SSD access and no network overhead
+    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/k8s-disks"
+    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.type": "Directory"
+    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.mount.path": "/data1"
+    "spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.mount.readOnly": "false"
+
+    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path": "/mnt/k8s-disks"
+    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.type": "Directory"
+    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.path": "/data1"
+    "spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.readOnly": "false"
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+
+  driver:
+    initContainers:
+      - name: volume-permission
+        image: busybox:1.36
+        command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    cores: 2  # Increased for YuniKorn gang scheduling coordination
+    coreLimit: "2000m"
+    memory: "8g"  # More memory for large dataset coordination
+    memoryOverhead: "2g"  # 25% overhead, more reasonable
+    serviceAccount: spark-team-a
+    annotations:
+      yunikorn.apache.org/task-group-name: "spark-driver"
+      yunikorn.apache.org/task-groups: |-
+        [
+          {
+            "name": "spark-driver",
+            "minMember": 1,
+            "minResource": {
+              "cpu": "2000m",
+              "memory": "10Gi"
+            },
+            "nodeSelector": {
+              "node.kubernetes.io/workload-type": "compute-optimized-x86",
+              "karpenter.sh/capacity-type": "on-demand",
+              "karpenter.k8s.aws/instance-family": "c6id"
+            }
+          },
+          {
+            "name": "spark-executor",
+            "minMember": 10,
+            "minResource": {
+              "cpu": "4000m",
+              "memory": "18Gi"
+            },
+            "nodeSelector": {
+              "node.kubernetes.io/workload-type": "compute-optimized-x86",
+              "karpenter.k8s.aws/instance-family": "c6id"
+            }
+          }
+        ]
+      karpenter.sh/do-not-disrupt: "true"
+    nodeSelector:
+      node.kubernetes.io/workload-type: "compute-optimized-x86"
+      karpenter.sh/capacity-type: "on-demand"
+      karpenter.k8s.aws/instance-family: "c6id"  # Ensures NVMe instances
+    labels:
+      version: 3.5.3
+  executor:
+    initContainers:
+      - name: volume-permission
+        image: busybox:1.36
+        command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    cores: 4  # Utilize NVMe instance capacity better
+    coreLimit: "4000m"
+    instances: 10
+    memory: "15g"  # Scale up for high-performance workload
+    memoryOverhead: "3g"  # 20% overhead for high-throughput
+    serviceAccount: spark-team-a
+    annotations:
+      yunikorn.apache.org/task-group-name: "spark-executor"
+    nodeSelector:
+      node.kubernetes.io/workload-type: "compute-optimized-x86"
+      karpenter.k8s.aws/instance-family: "c6id"  # Ensures NVMe instances
+    labels:
+      version: 3.5.3
+    # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6id.xlarge+)

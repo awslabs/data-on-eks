@@ -1,0 +1,10 @@
+[project]
+name = "s3"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "apache-airflow>=3.1.0",
+    "apache-airflow-providers-cncf-kubernetes>=10.8.2",
+]
