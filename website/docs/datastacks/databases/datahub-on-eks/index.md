@@ -81,7 +81,7 @@ Production-ready DataHub metadata management and data governance examples for Am
 <span className="tag">ArgoCD</span>
 </div>
 <div className="showcase-footer">
-<a href="infra" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/databases/datahub-on-eks/infra" className="showcase-link">
 <span>View Guide</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -105,7 +105,7 @@ Production-ready DataHub metadata management and data governance examples for Am
 <span className="tag">Metadata</span>
 </div>
 <div className="showcase-footer">
-<a href="cli-ingestion" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/databases/datahub-on-eks/cli-ingestion" className="showcase-link">
 <span>View Guide</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
