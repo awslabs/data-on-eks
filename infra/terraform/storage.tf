@@ -47,6 +47,35 @@ resource "aws_s3_object" "this" {
   content_type = "application/x-directory"
 }
 
+#---------------------------------------------------------------
+# S3 bucket for Data Stacks (Pinot DeepStore, etc.)
+# This bucket is shared across data stacks. Use prefixes to organize data like this: <stack-name>/some-data
+# Example:
+# pinot-on-eks/deepstore
+#---------------------------------------------------------------
+#tfsec:ignore:*
+module "data_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 5.0"
+
+  bucket_prefix = "data-on-eks-"
+
+  # For example only - please evaluate for your environment
+  force_destroy = true
+
+  versioning = {
+    enabled = true
+  }
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+}
+
 resource "aws_s3_directory_bucket" "spark_data_bucket_express" {
   bucket        = "${local.name}-${local.account_id}--${local.s3_express_zone_id}--x-s3"
   force_destroy = true
