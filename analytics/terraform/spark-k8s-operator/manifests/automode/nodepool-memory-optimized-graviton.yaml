@@ -33,7 +33,7 @@ spec:
           operator: In
           values: ["r"]
 
-        # Instance families - Graviton memory families (gen 6+)
+        # Instance families - Graviton memory families (gen 7+)
         - key: eks.amazonaws.com/instance-family
           operator: In
           values: ["r7g", "r7gd", "r8g", "r8gd"]
@@ -48,7 +48,7 @@ spec:
           operator: In
           values: ["nitro"]
 
-        # Generation 6+ (Graviton starts at gen 5)
+        # Generation 7+ (Graviton starts at gen 5)
         - key: eks.amazonaws.com/instance-generation
           operator: Gt
           values: ["6"]

@@ -8,7 +8,7 @@ spec:
       labels:
         node.kubernetes.io/workload-type: compute-general-graviton
         node.kubernetes.io/instance-category: general
-        node.kubernetes.io/arch: amd64
+        node.kubernetes.io/arch: arm64
         NodeGroupType: "SparkGravitonComputeGeneral"
 
     spec:
@@ -43,7 +43,7 @@ spec:
           operator: In
           values: ["nitro"]
 
-        # Generation 6+
+        # Generation 7+
         - key: eks.amazonaws.com/instance-generation
           operator: Gt
           values: ["6"]
