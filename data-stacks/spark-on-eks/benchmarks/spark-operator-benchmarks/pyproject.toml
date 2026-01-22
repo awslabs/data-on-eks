@@ -32,7 +32,7 @@ dependencies = [
     "python-dotenv==1.0.1",
     "pyyaml==6.0.1",
     "pyzmq==26.2.1",
-    "requests==2.32.3",
+    "requests==2.32.4",
     "requests-oauthlib==2.0.0",
     "roundrobin==0.0.4",
     "rsa==4.9",
