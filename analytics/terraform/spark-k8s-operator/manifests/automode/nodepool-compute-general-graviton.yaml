@@ -43,10 +43,10 @@ spec:
           operator: In
           values: ["nitro"]
 
-        # Generation 4+
+        # Generation 6+
         - key: eks.amazonaws.com/instance-generation
           operator: Gt
-          values: ["4"]
+          values: ["6"]
 
   # Resource limits for budget control
   limits:
