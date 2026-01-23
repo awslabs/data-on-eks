@@ -101,3 +101,17 @@ output "emr_s3_bucket_name" {
   description = "S3 bucket for EMR job artifacts and logs"
   value       = var.enable_emr_on_eks ? module.s3_bucket.s3_bucket_id : null
 }
+
+################################################################################
+# Data Stacks S3 Bucket
+################################################################################
+
+output "data_bucket_id" {
+  description = "Shared S3 bucket for data stacks when data-stack-specific buckets are generally not required. Use prefixes to organize: pinot/segments/, etc."
+  value       = module.data_bucket.s3_bucket_id
+}
+
+output "data_bucket_arn" {
+  description = "ARN of the shared data stacks S3 bucket"
+  value       = module.data_bucket.s3_bucket_arn
+}

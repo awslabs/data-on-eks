@@ -1,0 +1,109 @@
+image:
+  repository: apachepinot/pinot
+  tag: "1.4.0"
+cluster:
+  name: ${name}
+
+broker:
+  replicaCount: 3
+  external:
+    enabled: false
+  persistence:
+    storageClass: "gp3"
+  resources:
+    limits:
+      memory: 2G
+    requests:
+      cpu: 1
+  nodeSelector:
+    NodeGroupType: general-purpose
+    karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: m7g.2xlarge
+  service:
+    extraPorts:
+    - containerPort: 8008
+      protocol: TCP
+      name: metrics
+  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms256M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-broker.log -Djute.maxbuffer=4000000"
+  serviceAccountName: ${service_account}
+
+controller:
+  replicaCount: 3
+  external:
+    enabled: false
+  persistence:
+    storageClass: "gp3"
+  resources:
+    limits:
+      memory: 2G
+  nodeSelector:
+    NodeGroupType: general-purpose
+    karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: m7g.2xlarge
+  service:
+    extraPorts:
+    - containerPort: 8008
+      protocol: TCP
+      name: metrics
+  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms256M -Xmx1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-controller.log -Djute.maxbuffer=4000000"
+  serviceAccountName: ${service_account}
+  extra:
+    configs: |-
+      pinot.set.instance.id.to.hostname=true
+      controller.task.scheduler.enabled=true
+      pinot.controller.storage.factory.class.s3=org.apache.pinot.plugin.filesystem.S3PinotFS
+      pinot.controller.storage.factory.s3.region=${s3_region}
+      pinot.controller.segment.fetcher.protocols=file,http,s3
+      pinot.controller.segment.fetcher.s3.class=org.apache.pinot.common.utils.fetcher.PinotFSSegmentFetcher
+
+minionStateless:
+  replicaCount: 3
+  persistence:
+    storageClass: "gp3"
+  resources:
+    limits:
+      memory: 2G
+    requests:
+      cpu: 1
+  nodeSelector:
+    NodeGroupType: general-purpose
+  serviceAccountName: ${service_account}
+
+server:
+  replicaCount: 6
+  persistence:
+    storageClass: "gp3"
+    size: 100G
+  resources:
+    limits:
+      memory: 10G
+    requests:
+      cpu: 4
+  nodeSelector:
+    karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: r7g.2xlarge
+  service:
+    extraPorts:
+    - containerPort: 8008
+      protocol: TCP
+      name: metrics
+  jvmOpts: "-javaagent:/opt/pinot/etc/jmx_prometheus_javaagent/jmx_prometheus_javaagent.jar=8008:/opt/pinot/etc/jmx_prometheus_javaagent/configs/pinot.yml -Xms512M -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/opt/pinot/gc-pinot-server.log -Djute.maxbuffer=4000000"
+  serviceAccountName: ${service_account}
+  extra:
+    configs: |-
+      pinot.set.instance.id.to.hostname=true
+      pinot.server.instance.realtime.alloc.offheap=true
+      pinot.query.server.port=7321
+      pinot.query.runner.port=7732
+      pinot.server.storage.factory.class.s3=org.apache.pinot.plugin.filesystem.S3PinotFS
+      pinot.server.storage.factory.s3.region=${s3_region}
+      pinot.server.segment.fetcher.protocols=file,http,s3
+      pinot.server.segment.fetcher.s3.class=org.apache.pinot.common.utils.fetcher.PinotFSSegmentFetcher
+      pinot.server.instance.segment.store.uri=s3://${s3_bucket}/pinot/segments
+      pinot.server.instance.enable.split.commit=true
+
+# This configuration option enables bitnami Helm chart and bitnami container image. They are now deprecated and should not be used.
+# We create a zookeeper cluster with manifests instead.
+zookeeper:
+  enabled: false
+  urlOverride: "zookeeper.pinot.svc.cluster.local:2181"

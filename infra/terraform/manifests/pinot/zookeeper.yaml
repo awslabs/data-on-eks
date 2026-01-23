@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zookeeper
+  namespace: ${namespace}
+spec:
+  serviceName: zookeeper-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      nodeSelector:
+        NodeGroupType: general-purpose
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: zookeeper
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: zookeeper
+        image: zookeeper:3.9
+        ports:
+        - containerPort: 2181
+          name: client
+        - containerPort: 2888
+          name: follower
+        - containerPort: 3888
+          name: election
+        env:
+        - name: ZOO_MY_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+        - name: ZOO_SERVERS
+          value: "server.0=zookeeper-0.zookeeper-headless.${namespace}.svc.cluster.local:2888:3888;2181 server.1=zookeeper-1.zookeeper-headless.${namespace}.svc.cluster.local:2888:3888;2181 server.2=zookeeper-2.zookeeper-headless.${namespace}.svc.cluster.local:2888:3888;2181"
+        - name: ZOO_4LW_COMMANDS_WHITELIST
+          value: "srvr,mntr,ruok"
+        - name: JVMFLAGS
+          value: "-Djute.maxbuffer=4000000"
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: datalog
+          mountPath: /datalog
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+  - metadata:
+      name: datalog
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-headless
+  namespace: ${namespace}
+spec:
+  clusterIP: None
+  selector:
+    app: zookeeper
+  ports:
+  - port: 2181
+    name: client
+  - port: 2888
+    name: follower
+  - port: 3888
+    name: election
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+  namespace: ${namespace}
+spec:
+  selector:
+    app: zookeeper
+  ports:
+  - port: 2181
+    name: client

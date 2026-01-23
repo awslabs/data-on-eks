@@ -163,6 +163,12 @@ variable "enable_datahub" {
   default     = false
 }
 
+variable "enable_pinot" {
+  description = "Enable Apache Pinot for real-time analytics"
+  type        = bool
+  default     = false
+}
+
 variable "enable_superset" {
   description = "Enable Apache Superset for data exploration and visualization"
   type        = bool
