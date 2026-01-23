@@ -33,10 +33,10 @@ spec:
           operator: In
           values: ["r"]
 
-        # Instance families - Graviton memory families (gen 6+)
+        # Instance families - Graviton memory families (gen 7+)
         - key: eks.amazonaws.com/instance-family
           operator: In
-          values: ["r6g", "r6gd", "r7g", "r7gd", "r8g", "r8gd"]
+          values: ["r7g", "r7gd", "r8g", "r8gd"]
 
         # Instance sizes - large to very large for memory workloads
         - key: eks.amazonaws.com/instance-size
@@ -48,10 +48,10 @@ spec:
           operator: In
           values: ["nitro"]
 
-        # Generation 4+ (Graviton starts at gen 5)
+        # Generation 7+ (Graviton starts at gen 5)
         - key: eks.amazonaws.com/instance-generation
           operator: Gt
-          values: ["4"]
+          values: ["6"]
 
   # Higher limits for memory-intensive workloads with cost optimization
   limits:

@@ -33,10 +33,10 @@ spec:
           operator: In
           values: ["c"]
 
-        # Instance families - Graviton compute families (gen 6+)
+        # Instance families - Graviton compute families (gen 7+)
         - key: eks.amazonaws.com/instance-family
           operator: In
-          values: ["c6g", "c6gd", "c6gn", "c7g", "c7gd", "c7gn"]
+          values: ["c7g", "c7gd", "c7gn", "c8g", "c8gd", "c8gn"]
 
         # Instance sizes - medium to very large
         - key: eks.amazonaws.com/instance-size
@@ -48,10 +48,10 @@ spec:
           operator: In
           values: ["nitro"]
 
-        # Generation 4+ (Graviton starts at gen 5)
+        # Generation 7+ (Graviton starts at gen 5)
         - key: eks.amazonaws.com/instance-generation
           operator: Gt
-          values: ["4"]
+          values: ["6"]
 
   # Resource limits for budget control
   limits:
