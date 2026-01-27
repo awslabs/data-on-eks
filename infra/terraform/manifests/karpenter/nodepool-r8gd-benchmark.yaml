@@ -1,0 +1,157 @@
+# NodePools for r8gd Contention Benchmark
+# Purpose: Investigate performance differences between running 1 Spark executor per node
+# (r8gd.8xlarge) vs 3 executors per node (r8gd.24xlarge)
+#
+# Test configuration:
+# - r8gd.8xlarge: 24 nodes x 1 executor (31 vCPU each) = 744 total vCPU
+# - r8gd.24xlarge: 8 nodes x 3 executors (31 vCPU each) = 744 total vCPU
+
+---
+# NodePool for r8gd.8xlarge Benchmark
+# Purpose: Test single Spark executor pod per node
+# Also used for 10TB TPC-DS data generation (50 executors)
+#
+# r8gd.8xlarge specs:
+# - 32 vCPU (Graviton3)
+# - 256 GiB memory
+# - 1 x 1900 GB NVMe SSD
+# - Network: Up to 12.5 Gbps
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: r8gd-8xlarge-benchmark
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: r8gd-benchmark-8xlarge
+        node.kubernetes.io/instance-size: 8xlarge
+        node.kubernetes.io/arch: arm64
+        benchmark: r8gd-contention
+        benchmark-role: single-pod-per-node
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: r8gd-benchmark
+
+      # No expiry for benchmark - manual cleanup
+      expireAfter: Never
+
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["r8gd"]
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["8xlarge"]
+
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+      taints:
+        - key: benchmark
+          value: r8gd-8xlarge
+          effect: NoSchedule
+
+  # Limits: Allow up to 30 nodes (24 executors + driver + buffer)
+  limits:
+    cpu: "1000"
+    memory: "8000Gi"
+
+  # Keep nodes for 15 min after becoming empty for metrics sync
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 900s
+
+  weight: 100
+
+---
+# NodePool for r8gd.24xlarge Benchmark
+# Purpose: Test multiple Spark executor pods per node (3 pods x 31 vCPU each)
+# Expected: 8 nodes, 3 executors each, total 24 executors
+#
+# r8gd.24xlarge specs:
+# - 96 vCPU (Graviton3)
+# - 768 GiB memory
+# - 4 x 1425 GB NVMe SSD (RAID0 = ~5700 GB)
+# - Network: 37.5 Gbps
+#
+# Potential contention sources to investigate:
+# - L3 cache sharing across NUMA nodes
+# - Memory bandwidth saturation
+# - NVMe controller contention
+# - Network stack contention during shuffle
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: r8gd-24xlarge-benchmark
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: r8gd-benchmark-24xlarge
+        node.kubernetes.io/instance-size: 24xlarge
+        node.kubernetes.io/arch: arm64
+        benchmark: r8gd-contention
+        benchmark-role: multi-pod-per-node
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: r8gd-benchmark
+
+      # No expiry for benchmark - manual cleanup
+      expireAfter: Never
+
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["r8gd"]
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["24xlarge"]
+
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+      taints:
+        - key: benchmark
+          value: r8gd-24xlarge
+          effect: NoSchedule
+
+  # Limits: Allow up to 20 nodes (17 for 10TB data gen + buffer)
+  limits:
+    cpu: "2000"
+    memory: "16000Gi"
+
+  # Disable consolidation during benchmark
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 900s
+
+  weight: 100

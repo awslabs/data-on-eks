@@ -1,0 +1,247 @@
+# TPC-DS Benchmark for r8gd.24xlarge - Multi-Pod Per Node Configuration
+#
+# PURPOSE: Investigate performance degradation when packing multiple Spark executors
+# on larger instances compared to single-pod-per-node on smaller instances
+#
+# Configuration:
+# - Instance: r8gd.24xlarge (96 vCPU, 768 GiB, 4x1425GB NVMe RAID0)
+# - Executors: 24 total, 3 per node (on 8 nodes)
+# - Resources per executor: 31 vCPU, 200GB memory
+# - Total: 744 vCPU, 4800GB memory across 8 nodes
+#
+# POTENTIAL CONTENTION SOURCES TO INVESTIGATE:
+# 1. L3 Cache Sharing:
+#    - Graviton3 has 64MB L3 cache shared across all cores
+#    - 3 JVMs competing for cache space → increased cache misses
+#
+# 2. NUMA Effects:
+#    - r8gd.24xlarge may have 2 NUMA nodes (48 cores each)
+#    - Pods may cross NUMA boundaries → remote memory access penalties
+#
+# 3. Memory Bandwidth Saturation:
+#    - 3 JVMs doing shuffle simultaneously → memory bus contention
+#    - Watch for stalled-cycles-backend in perf stats
+#
+# 4. NVMe Controller Contention:
+#    - 4 NVMe drives in RAID0
+#    - 3 executors writing shuffle data simultaneously
+#
+# 5. Network Stack Contention:
+#    - Single NIC shared by 3 executors during shuffle
+#
+# Before running:
+# 1. Apply EC2NodeClass and NodePool: kubectl apply -f ec2nodeclass-r8gd-benchmark.yaml nodepool-r8gd-24xlarge.yaml
+# 2. Replace <S3_BUCKET> with your bucket
+# 3. Run AFTER r8gd.8xlarge benchmark for comparison
+
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-benchmark-r8gd-24xlarge
+  namespace: spark-team-a
+  labels:
+    benchmark: r8gd-contention
+    instance-type: r8gd-24xlarge
+    pods-per-node: "3"
+spec:
+  type: Scala
+  mode: cluster
+  image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
+  imagePullPolicy: IfNotPresent
+  sparkVersion: 3.5.3
+  mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
+  mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
+  arguments:
+    # TPC-DS data location (1TB dataset)
+    - "s3a://S3_BUCKET/TPCDS-TEST-10TB"
+    # Results location
+    - "s3a://S3_BUCKET/benchmark-results/r8gd-contention/r8gd-24xlarge-10tb"
+    # Path to TPC-DS kit
+    - "/opt/tpcds-kit/tools"
+    # Data format
+    - "parquet"
+    # Scale factor (1TB)
+    - "1000"
+    # Number of iterations
+    - "3"
+    # Optimize with hive tables
+    - "false"
+    # Filter queries (empty = all queries)
+    - ""
+    # Logging level WARN
+    - "true"
+
+  sparkConf:
+    # === IDENTIFICATION ===
+    "spark.app.name": "tpcds-r8gd-24xlarge-3pods-per-node"
+    "spark.kubernetes.driver.pod.name": "tpcds-r8gd-24xlarge-driver"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-r8gd-24xlarge-exec"
+
+    # === LOCAL STORAGE (NVMe SSD) ===
+    "spark.local.dir": "/data1"
+    "spark.shuffle.file.buffer": "1m"
+    "spark.shuffle.spill.diskWriteBufferSize": "1048576"
+    "spark.io.compression.codec": "lz4"
+    "spark.shuffle.compress": "true"
+    "spark.shuffle.spill.compress": "true"
+    "spark.rdd.compress": "true"
+    "spark.reducer.maxSizeInFlight": "96m"
+
+    # === ADAPTIVE QUERY EXECUTION ===
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+    "spark.sql.adaptive.skewJoin.skewedPartitionFactor": "5"
+    "spark.sql.adaptive.advisoryPartitionSizeInBytes": "256m"
+
+    # === PARALLELISM (tuned for 24 executors x 31 cores = 744 cores) ===
+    "spark.sql.shuffle.partitions": "2000"
+    "spark.default.parallelism": "1488"
+    "spark.sql.files.maxPartitionBytes": "256m"
+
+    # === MEMORY TUNING ===
+    "spark.memory.fraction": "0.8"
+    "spark.memory.storageFraction": "0.3"
+    "spark.sql.autoBroadcastJoinThreshold": "256m"
+
+    # === JVM TUNING (CRITICAL - same as 8xlarge for fair comparison) ===
+    # Using G1GC with NUMA awareness
+    "spark.executor.defaultJavaOptions": >-
+      -XX:+UseG1GC
+      -XX:+UnlockExperimentalVMOptions
+      -XX:G1HeapRegionSize=32m
+      -XX:InitiatingHeapOccupancyPercent=35
+      -XX:ConcGCThreads=8
+      -XX:ParallelGCThreads=16
+      -XX:+ParallelRefProcEnabled
+      -XX:+AlwaysPreTouch
+      -XX:+UseNUMA
+      -XX:+UseTransparentHugePages
+      -XX:+PerfDisableSharedMem
+      -Djdk.nio.maxCachedBufferSize=2000000
+      -verbose:gc
+      -Xlog:gc*:file=/tmp/gc.log:time,uptime:filecount=5,filesize=100m
+    "spark.driver.defaultJavaOptions": >-
+      -XX:+UseG1GC
+      -XX:InitiatingHeapOccupancyPercent=35
+      -XX:+AlwaysPreTouch
+      -verbose:gc
+
+    # === S3 CONFIGURATION ===
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M"
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+
+    # === EVENT LOGGING ===
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://S3_BUCKET/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    # === PROMETHEUS METRICS ===
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # === NETWORK TIMEOUT ===
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    "spark.kubernetes.submission.connectionTimeout": "120000"
+    "spark.kubernetes.submission.requestTimeout": "120000"
+    "spark.kubernetes.driver.connectionTimeout": "120000"
+    "spark.kubernetes.driver.requestTimeout": "120000"
+
+    # === SPECULATION (disable for benchmark consistency) ===
+    "spark.speculation": "false"
+
+  # === DRIVER CONFIGURATION ===
+  driver:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "4g"
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    annotations:
+      yunikorn.apache.org/queue: root.spark.spark-team-a
+    labels:
+      benchmark: r8gd-contention
+      component: driver
+    # Driver on separate node (not r8gd.24xlarge to avoid skewing results)
+    nodeSelector:
+      node.kubernetes.io/workload-type: memory-optimized-graviton
+    volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /data1
+    initContainers:
+      - name: volume-permission
+        image: public.ecr.aws/docker/library/busybox
+        command: ['sh', '-c', 'mkdir -p /data1/s3a; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
+
+  # === EXECUTOR CONFIGURATION ===
+  executor:
+    # 31 cores per executor = 3 executors per r8gd.24xlarge (96 vCPU)
+    cores: 31
+    # 200GB memory = 3 executors fit in 768GB (with headroom)
+    memory: "200g"
+    memoryOverhead: "20g"
+    # 24 executors on 8 nodes = 3 per node
+    instances: 24 # 12 nodes for next test
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    annotations:
+      yunikorn.apache.org/queue: root.spark.spark-team-a
+    labels:
+      benchmark: r8gd-contention
+      component: executor
+      instance-type: r8gd-24xlarge
+    # Node selector with toleration for benchmark taint
+    nodeSelector:
+      node.kubernetes.io/workload-type: r8gd-benchmark-24xlarge
+    tolerations:
+      - key: benchmark
+        operator: Equal
+        value: r8gd-24xlarge
+        effect: NoSchedule
+    volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /data1
+    initContainers:
+      - name: volume-permission
+        image: public.ecr.aws/docker/library/busybox
+        command: ['sh', '-c', 'mkdir -p /data1/s3a; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
+
+  restartPolicy:
+    type: Never
+
+  volumes:
+    - name: spark-local-dir-1
+      hostPath:
+        path: "/mnt/k8s-disks/0"
+        type: DirectoryOrCreate

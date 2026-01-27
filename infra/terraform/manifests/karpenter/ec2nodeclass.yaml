@@ -350,3 +350,150 @@ spec:
     udevadm control --reload && udevadm trigger
 
     --//--
+
+---
+# EC2NodeClass for r8gd Contention Benchmark
+# This configuration includes advanced settings to investigate CPU stalls and cache contention
+# when running multiple Spark executor pods on large instances (r8gd.24xlarge vs r8gd.8xlarge)
+#
+# Key features:
+# - AL2023 with cgroupsv2 and MemoryQoS enabled (prevents page cache counting as usage)
+# - Instance store RAID0 for NVMe SSD storage (auto-mounted to /mnt/k8s-disks)
+# - Tuned sysctl and kubelet settings for high-performance Spark workloads
+# - SOCI snapshotter for fast container image pulls
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: r8gd-benchmark
+  namespace: karpenter
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+
+  # Instance store RAID0 - automatically mounts NVMe to /mnt/k8s-disks
+  instanceStorePolicy: RAID0
+
+  # Root volume configuration
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 300Gi
+        volumeType: gp3
+        iops: 6000
+        throughput: 500
+        encrypted: true
+        deleteOnTermination: true
+
+  # Metadata options for IMDSv2
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
+
+  # Tags for identification
+  tags:
+    benchmark: r8gd-contention
+    Environment: benchmark
+    WorkloadType: spark-benchmark
+
+  # Advanced userData with NodeConfig for kubelet tuning, containerd SOCI, and sysctl settings
+  # Key features:
+  # - MemoryQoS: Prevents Spark's page cache from counting as memory usage (cgroupsv2)
+  # - FastImagePull: Faster container image pulls
+  # - SOCI snapshotter: Lazy-loading container images
+  # - High file/pid limits for Spark workloads
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+    --BOUNDARY
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      featureGates:
+        FastImagePull: true
+      kubelet:
+        config:
+          featureGates:
+            # Very important! Spark can use hundreds of GB of memory in linux page cache without being throttled,
+            # and kube counts this as resource usage. AL2023 has cgroupsv2 which supports cgroup level memory.high,
+            # where it will evict caches and raise memory pressure when the cgroup is over its limit.
+            MemoryQoS: true
+            KubeletCrashLoopBackOffMax: true
+          podPidsLimit: 100000
+          # memory.max throttling is 70% of the _difference_ between limit and request
+          memoryThrottlingFactor: .7
+          crashLoopBackOff:
+            maxContainerRestartPeriod: 2s
+
+      containerd:
+        # High file limits consistent with Spark workload requirements
+        baseRuntimeSpec:
+          process:
+            rlimits:
+              - type: RLIMIT_NOFILE
+                soft: 1048576
+                hard: 1048576
+
+        config: |
+          [proxy_plugins.soci.exports]
+          root = "/var/lib/containerd/io.containerd.snapshotter.v1.soci"
+
+      instance:
+        init:
+          sysctl:
+            # High limits for Spark workloads
+            kernel.pid_max: "4194304"
+            fs.file-max: "12000000"
+            fs.inotify.max_user_instances: "8192"
+            fs.inotify.max_user_watches: "524288"
+
+    --BOUNDARY
+    Content-Type: text/x-shellscript
+
+    #!/bin/bash
+    set -ex
+
+    # Setup SOCI snapshotter directory (required for FastImagePull with SOCI)
+    mkdir -p /var/lib/containerd/io.containerd.snapshotter.v1.soci
+    sed -i "s;^ExecStart=.*;ExecStart=/usr/bin/soci-snapshotter-grpc --root /var/lib/containerd/io.containerd.snapshotter.v1.soci --address fd://;" /etc/systemd/system/soci-snapshotter.service
+    systemctl daemon-reload
+
+    # Apply sysctl settings not available in NodeConfig (network tuning, vm settings)
+    cat > /etc/sysctl.d/99-spark-benchmark.conf << 'SYSCTL'
+    # Memory tuning for Spark workloads
+    vm.swappiness = 1
+    vm.dirty_ratio = 40
+    vm.dirty_background_ratio = 10
+    vm.vfs_cache_pressure = 50
+
+    # Network tuning for shuffle traffic
+    net.core.rmem_max = 134217728
+    net.core.wmem_max = 134217728
+    net.ipv4.tcp_rmem = 4096 87380 134217728
+    net.ipv4.tcp_wmem = 4096 16384 134217728
+    net.core.netdev_max_backlog = 30000
+    net.ipv4.tcp_slow_start_after_idle = 0
+    SYSCTL
+    sysctl -p /etc/sysctl.d/99-spark-benchmark.conf
+
+    echo "r8gd-benchmark node setup complete"
+
+    --BOUNDARY--

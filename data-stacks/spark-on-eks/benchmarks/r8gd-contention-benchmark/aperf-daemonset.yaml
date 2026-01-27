@@ -1,0 +1,251 @@
+# APerf DaemonSet for r8gd Benchmark Nodes
+# Deploys aperf as a privileged container on benchmark nodes
+# for collecting CPU/memory performance metrics during Spark tests
+#
+# Features:
+# - Runs on nodes using r8gd-benchmark EC2NodeClass
+# - Uses spark-team-a service account for S3 access
+# - Privileged access for perf counters and system metrics
+# - Collects PSI, NUMA, and CPU stall metrics
+# - Auto-syncs results to S3
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aperf-collector
+  namespace: spark-team-a
+  labels:
+    app: aperf
+    component: collector
+spec:
+  selector:
+    matchLabels:
+      app: aperf
+      component: collector
+  template:
+    metadata:
+      labels:
+        app: aperf
+        component: collector
+    spec:
+      serviceAccountName: spark-team-a
+      hostPID: true
+      hostNetwork: true
+
+      # Only run on r8gd benchmark nodes (all nodes using r8gd-benchmark EC2NodeClass)
+      nodeSelector:
+        karpenter.k8s.aws/ec2nodeclass: r8gd-benchmark
+
+      # Tolerate benchmark taints
+      tolerations:
+        - key: benchmark
+          operator: Exists
+          effect: NoSchedule
+
+      containers:
+        - name: aperf
+          image: public.ecr.aws/amazonlinux/amazonlinux:2023
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: S3_BUCKET
+              value: "spark-on-eks-spark-logs-20260109020521080900000001"
+            - name: S3_PREFIX
+              value: "aperf-results"
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+
+              echo "=== APerf Collector Starting ==="
+              TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+              INSTANCE_TYPE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-type)
+              INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+              echo "Instance: $INSTANCE_TYPE ($INSTANCE_ID)"
+
+              # Install dependencies
+              yum install -y perf numactl tar gzip procps-ng awscli
+
+              # Download and install aperf
+              echo "Installing aperf v1.0.0..."
+              ARCH=$(uname -m)
+              cd /tmp
+              if [ "$ARCH" = "aarch64" ]; then
+                curl -L -o aperf.tar.gz https://github.com/aws/aperf/releases/download/v1.0.0/aperf-v1.0.0-aarch64.tar.gz
+                tar -xzf aperf.tar.gz
+                mv aperf-v1.0.0-aarch64/aperf /usr/local/bin/aperf
+              else
+                curl -L -o aperf.tar.gz https://github.com/aws/aperf/releases/download/v1.0.0/aperf-v1.0.0-x86_64.tar.gz
+                tar -xzf aperf.tar.gz
+                mv aperf-v1.0.0-x86_64/aperf /usr/local/bin/aperf
+              fi
+              chmod +x /usr/local/bin/aperf
+              rm -rf aperf.tar.gz aperf-v1.0.0-*
+
+              # Verify installation
+              /usr/local/bin/aperf --version
+              echo "APerf installed successfully"
+
+              # Create output directory
+              mkdir -p /var/log/aperf
+
+              # Create collection script with S3 sync
+              cat > /usr/local/bin/collect-metrics.sh << 'SCRIPT'
+              #!/bin/bash
+              DURATION=${1:-60}
+              TEST_NAME=${2:-"benchmark"}
+
+              # Get instance info for unique naming
+              TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+              INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+              INSTANCE_TYPE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-type)
+
+              OUTPUT_DIR="/var/log/aperf/${TEST_NAME}-${INSTANCE_TYPE}-${INSTANCE_ID}-$(date +%Y%m%d-%H%M%S)"
+              mkdir -p $OUTPUT_DIR
+
+              echo "Starting metrics collection for ${DURATION}s on ${INSTANCE_TYPE} (${INSTANCE_ID})..."
+              echo "Output directory: ${OUTPUT_DIR}"
+
+              # Save instance metadata
+              echo "instance_id: ${INSTANCE_ID}" > ${OUTPUT_DIR}/metadata.txt
+              echo "instance_type: ${INSTANCE_TYPE}" >> ${OUTPUT_DIR}/metadata.txt
+              echo "test_name: ${TEST_NAME}" >> ${OUTPUT_DIR}/metadata.txt
+              echo "start_time: $(date -Iseconds)" >> ${OUTPUT_DIR}/metadata.txt
+              echo "duration: ${DURATION}" >> ${OUTPUT_DIR}/metadata.txt
+
+              # Collect PSI metrics
+              (for i in $(seq 1 $DURATION); do
+                echo "=== $(date -Iseconds) ===" >> ${OUTPUT_DIR}/psi.log
+                cat /proc/pressure/cpu >> ${OUTPUT_DIR}/psi.log
+                cat /proc/pressure/memory >> ${OUTPUT_DIR}/psi.log
+                cat /proc/pressure/io >> ${OUTPUT_DIR}/psi.log
+                sleep 1
+              done) &
+              PSI_PID=$!
+
+              # Collect NUMA stats
+              (for i in $(seq 1 $((DURATION/5))); do
+                echo "=== $(date -Iseconds) ===" >> ${OUTPUT_DIR}/numa.log
+                numastat -m >> ${OUTPUT_DIR}/numa.log 2>/dev/null || true
+                cat /proc/vmstat | grep -E "numa|thp" >> ${OUTPUT_DIR}/numa.log
+                sleep 5
+              done) &
+              NUMA_PID=$!
+
+              # Run aperf
+              /usr/local/bin/aperf record --run-name ${TEST_NAME} --period ${DURATION} 2>&1 | tee ${OUTPUT_DIR}/aperf.log || true
+
+              # Wait for background collectors
+              wait $PSI_PID $NUMA_PID 2>/dev/null || true
+
+              echo "end_time: $(date -Iseconds)" >> ${OUTPUT_DIR}/metadata.txt
+              echo "Collection complete: ${OUTPUT_DIR}"
+              ls -la ${OUTPUT_DIR}/
+
+              # Sync to S3
+              if [ -n "$S3_BUCKET" ]; then
+                echo "Syncing results to S3..."
+                aws s3 cp --recursive ${OUTPUT_DIR}/ s3://${S3_BUCKET}/${S3_PREFIX}/${TEST_NAME}/${INSTANCE_TYPE}-${INSTANCE_ID}/
+                echo "Results uploaded to: s3://${S3_BUCKET}/${S3_PREFIX}/${TEST_NAME}/${INSTANCE_TYPE}-${INSTANCE_ID}/"
+              fi
+              SCRIPT
+              chmod +x /usr/local/bin/collect-metrics.sh
+
+              # Create sync-all script for manual bulk sync
+              cat > /usr/local/bin/sync-to-s3.sh << 'SYNCSCRIPT'
+              #!/bin/bash
+              if [ -z "$S3_BUCKET" ]; then
+                echo "S3_BUCKET not set"
+                exit 1
+              fi
+              echo "Syncing all aperf results to S3..."
+              aws s3 sync /var/log/aperf/ s3://${S3_BUCKET}/${S3_PREFIX}/
+              echo "Sync complete: s3://${S3_BUCKET}/${S3_PREFIX}/"
+              SYNCSCRIPT
+              chmod +x /usr/local/bin/sync-to-s3.sh
+
+              # Verify S3 access
+              echo "Testing S3 access..."
+              if aws s3 ls s3://${S3_BUCKET}/ > /dev/null 2>&1; then
+                echo "S3 access verified: s3://${S3_BUCKET}/"
+              else
+                echo "WARNING: Cannot access S3 bucket. Results will only be stored locally."
+              fi
+
+              echo "=== APerf Collector Ready ==="
+              echo "To collect metrics, exec into this pod and run:"
+              echo "  /usr/local/bin/collect-metrics.sh <duration_seconds> <test_name>"
+              echo ""
+              echo "Or run aperf directly:"
+              echo "  /usr/local/bin/aperf record --run-name mytest --period 60"
+              echo ""
+              echo "To manually sync all results to S3:"
+              echo "  /usr/local/bin/sync-to-s3.sh"
+              echo ""
+
+              # Keep container running and periodically log system status
+              while true; do
+                echo "=== $(date -Iseconds) - System Status ===" >> /var/log/aperf/system-status.log
+                echo "CPU Pressure:" >> /var/log/aperf/system-status.log
+                cat /proc/pressure/cpu >> /var/log/aperf/system-status.log
+                echo "Memory Pressure:" >> /var/log/aperf/system-status.log
+                cat /proc/pressure/memory >> /var/log/aperf/system-status.log
+                sleep 60
+              done
+
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - SYS_ADMIN
+                - SYS_PTRACE
+                - NET_ADMIN
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+
+          volumeMounts:
+            - name: aperf-output
+              mountPath: /var/log/aperf
+            - name: host-proc
+              mountPath: /proc
+              readOnly: true
+            - name: host-sys
+              mountPath: /sys
+              readOnly: true
+            - name: debugfs
+              mountPath: /sys/kernel/debug
+            - name: host-boot
+              mountPath: /boot
+              readOnly: true
+            - name: aperf-shared
+              mountPath: /tmp/aperf
+
+      volumes:
+        - name: aperf-output
+          hostPath:
+            path: /var/log/aperf
+            type: DirectoryOrCreate
+        - name: host-proc
+          hostPath:
+            path: /proc
+        - name: host-sys
+          hostPath:
+            path: /sys
+        - name: debugfs
+          hostPath:
+            path: /sys/kernel/debug
+        - name: host-boot
+          hostPath:
+            path: /boot
+            type: Directory
+        - name: aperf-shared
+          hostPath:
+            path: /tmp/aperf
+            type: DirectoryOrCreate

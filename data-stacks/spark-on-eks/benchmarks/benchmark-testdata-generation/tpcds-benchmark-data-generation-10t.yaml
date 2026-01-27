@@ -1,17 +1,21 @@
 # NOTE: This example requires the following prerequisites before executing the jobs
-# 1. Ensure spark-team-a name space exists
-# 2. replace `<S3_BUCKET>`  with your bucket name
+# 1. Ensure spark-team-a namespace exists
+# 2. Ensure r8gd-24xlarge-benchmark NodePool is deployed
+# 3. Uses r8gd.24xlarge instances (96 vCPU, 768 GiB RAM, 4x1425GB NVMe RAID0)
+#
+# Configuration for 10TB TPC-DS data generation:
+# - Scale factor: 10000 (10TB)
+# - 17 nodes × 3 executors = 51 total executors
+# - Each executor: 28 cores, 220GB memory
+# - Conservative memory settings to prevent OOM
+# - Expected runtime: 2-4 hours depending on S3 throughput
 
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: tpcds-data-generation-3tb
+  name: tpcds-data-generation-10tb
   namespace: spark-team-a
 spec:
-  # Temporarily commented out until the YuniKorn issue is resolved; falls back to the default Kubernetes scheduler
-  # batchScheduler: yunikorn
-  # batchSchedulerOptions:
-  #   queue: root.default
   type: Scala
   mode: cluster
   image: public.ecr.aws/data-on-eks/spark3.5.3-scala2.12-java17-python3-ubuntu-tpcds:v2
@@ -20,16 +24,16 @@ spec:
   mainClass: com.amazonaws.eks.tpcds.DataGeneration
   mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
   arguments:
-  # TPC-DS data location
-  - "s3a://<S3_BUCKET>/TPCDS-TEST-3TB"
+  # TPC-DS data location - 10TB output bucket
+  - "s3a://<S3_BUCKET>/TPCDS-TEST-10TB"
   # Path to kit in the docker image
   - "/opt/tpcds-kit/tools"
   # Data Format
   - "parquet"
-  # Scale factor (in GB) - S3 output size shows  309.4GB for 1000GB Input
-  - "3000"
-  # Generate data num partitions
-  - "200"
+  # Scale factor (in GB) - 10TB = 10000GB
+  - "10000"
+  # Generate data num partitions - scaled up proportionally for 10TB
+  - "600"
   # Create the partitioned fact tables
   - "true"
   # Shuffle to get partitions coalesced into single files.
@@ -50,16 +54,16 @@ spec:
     "spark.eventLog.rolling.enabled": "true"
     "spark.eventLog.rolling.maxFileSize": "64m"
 
-    "spark.kubernetes.driver.service.ipFamilies": "IPv6"
-    "spark.kubernetes.driver.service.ipFamilyPolicy": "SingleStack"
-
     "spark.executorEnv.JAVA_HOME": "/opt/java/openjdk"
     "spark.driverEnv.JAVA_HOME": "/opt/java/openjdk"
-    "spark.network.timeout": "2000s"
-    "spark.executor.heartbeatInterval": "300s"
-    # Bug: memoryOverheadFactor is not calculated correctly with Spark Operator when used with YuniKorn Gang Scheduling. Just use memoryOverhead for driver and executor instead.
-    # "spark.kubernetes.memoryOverheadFactor": "0.3"
-    # AQE
+
+    # Extended timeouts for large data generation
+    "spark.network.timeout": "3600s"
+    "spark.executor.heartbeatInterval": "600s"
+    "spark.rpc.askTimeout": "600s"
+    "spark.rpc.lookupTimeout": "600s"
+
+    # AQE - Adaptive Query Execution
     "spark.sql.adaptive.enabled": "true"
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
@@ -67,53 +71,58 @@ spec:
     "spark.sql.files.maxRecordsPerFile": "30000000"
     "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
 
-    # S3 Optimizations
+    # S3 Optimizations for large data writes
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
-    # AWS SDK V1 is in maintenance mode hence commented and enabled AWS SDK V2 Class with S3 CRT support
-    # "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
-    # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3a.fast.upload": "true"
     "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
     "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
-    "spark.hadoop.fs.s3a.multipart.size": "128M" # Good for large files
-    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
-    "spark.hadoop.fs.s3a.threads.max": "50"
-    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.multipart.size": "256M"
+    "spark.hadoop.fs.s3a.multipart.threshold": "512M"
+    "spark.hadoop.fs.s3a.threads.max": "100"
+    "spark.hadoop.fs.s3a.connection.maximum": "400"
     "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
-    "spark.kubernetes.executor.podNamePrefix": "tpcds-data-generation-3tb"
-    "spark.sql.shuffle.partitions": "2000" # Adjust according to your job size
-    # "spark.hadoop.fs.s3a.committer.staging.conflict-mode": "append"
-    # Data writing and shuffle tuning
+
+    # Shuffle partitions - scaled for 10TB
+    "spark.sql.shuffle.partitions": "6000"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-data-generation-10tb"
+
+    # Shuffle and data writing tuning for large data
     "spark.shuffle.file.buffer": "1m"
-    "spark.reducer.maxSizeInFlight": "128m"
-    # Java options for driver and executor
-    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseG1GC"
-    "spark.driver.defaultJavaOptions": "-XX:+UseG1GC"
-    # -----------------------------------------------------
-    # This block is very critical when you get errors like
-    #     Exception in thread \"main\" io.fabric8.kubernetes.client.KubernetesClientException: An error has occurred
-    #     Caused by: java.net.SocketTimeoutException: timeout
-    # Timeout settings for large data generation
-    spark.kubernetes.submission.connectionTimeout: "60000000"
-    spark.kubernetes.submission.requestTimeout: "60000000"
-    spark.kubernetes.driver.connectionTimeout: "60000000"
-    spark.kubernetes.driver.requestTimeout: "60000000"
+    "spark.reducer.maxSizeInFlight": "256m"
+    "spark.shuffle.io.maxRetries": "10"
+    "spark.shuffle.io.retryWait": "60s"
+
+    # Memory management - conservative settings to prevent OOM
+    "spark.memory.fraction": "0.6"
+    "spark.memory.storageFraction": "0.3"
+    "spark.sql.adaptive.coalescePartitions.minPartitionSize": "64m"
+
+    # GC settings optimized for large heap
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseG1GC -XX:G1HeapRegionSize=32m -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=500 -XX:+UnlockDiagnosticVMOptions -XX:+G1SummarizeConcMark"
+    "spark.driver.defaultJavaOptions": "-XX:+UseG1GC -XX:G1HeapRegionSize=32m"
+
+    # Kubernetes connection timeouts for long-running job
+    spark.kubernetes.submission.connectionTimeout: "120000000"
+    spark.kubernetes.submission.requestTimeout: "120000000"
+    spark.kubernetes.driver.connectionTimeout: "120000000"
+    spark.kubernetes.driver.requestTimeout: "120000000"
+
   restartPolicy:
     type: Never
+
   batchScheduler: yunikorn
   batchSchedulerOptions:
     queue: root.spark.spark-team-a
+
   driver:
     labels:
       yunikorn.apache.org/queue: root.spark.spark-team-a
-    cores: 11
-    # The maximum memory size of the container to the running executor is determined by the sum of
-    #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
-    memory: "15g"
-    memoryOverhead: "4g"
+    cores: 7
+    memory: "20g"
+    memoryOverhead: "8g"
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -123,8 +132,6 @@ spec:
     env:
     - name: JAVA_HOME
       value: "/opt/java/openjdk"
-    - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
-      value: IPv6
     initContainers:
     - name: volume-permission
       image: public.ecr.aws/docker/library/busybox
@@ -132,19 +139,24 @@ spec:
       volumeMounts:
       - name: spark-local-dir-1
         mountPath: /data1
+    # Driver on general purpose nodes (no special requirements)
     nodeSelector:
       NodeGroupType: general-purpose
       topology.kubernetes.io/zone: us-west-2a
       karpenter.sh/capacity-type: "on-demand"
+
   executor:
     labels:
       yunikorn.apache.org/queue: root.spark.spark-team-a
-    cores: 14
-    # The maximum memory size of the container to the running executor is determined by the sum of
-    #  spark.executor.memoryoverHead, spark.executor.memory, spark.memory.offHeap.size, spark.executor.pyspark.memory
-    memory: "20g"
-    memoryOverhead: "4g"
-    instances: 22
+    # r8gd.24xlarge has 96 vCPU - with 3 executors per node: 28 cores each
+    # (28 * 3 = 84 cores used, 12 cores for system/kubelet)
+    cores: 28
+    # Memory allocation for r8gd.24xlarge (768 GiB total, 3 executors per node):
+    # - Each executor: 220g memory + 30g overhead = 250g
+    # - 3 executors: 750 GiB, leaving ~18 GiB for system/kubelet
+    memory: "220g"
+    memoryOverhead: "30g"
+    instances: 51
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -161,14 +173,17 @@ spec:
     env:
     - name: JAVA_HOME
       value: "/opt/java/openjdk"
-    - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
-      value: IPv6
+    # Target r8gd.24xlarge nodes from the benchmark nodepool
     nodeSelector:
-      NodeGroupType: SparkGravitonComputeOptimized
+      node.kubernetes.io/workload-type: r8gd-benchmark-24xlarge
       kubernetes.io/arch: arm64
-      topology.kubernetes.io/zone: us-west-2a
-      karpenter.k8s.aws/instance-family: "c7g"
-      karpenter.k8s.aws/instance-size: "8xlarge"
+    # Tolerate the nodepool taint
+    tolerations:
+    - key: benchmark
+      operator: Equal
+      value: r8gd-24xlarge
+      effect: NoSchedule
+
   volumes:
   - name: spark-local-dir-1
     hostPath:
