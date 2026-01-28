@@ -34,7 +34,7 @@ article > header > h1 {
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
   padding: 4rem 2rem;
-  margin: 1rem -2rem 3rem -2rem;
+  margin: 1rem 0 3rem 0;
   border-radius: 24px;
   position: relative;
   overflow: hidden;
@@ -700,7 +700,7 @@ article > header > h1 {
 
   .hero-section {
     padding: 3rem 1.5rem;
-    margin: -1rem -1rem 2rem -1rem;
+    margin: 1rem 0 2rem 0;
   }
 
   /* Make 2-column grids single column on mobile */
