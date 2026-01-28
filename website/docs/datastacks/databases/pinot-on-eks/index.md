@@ -66,7 +66,7 @@ Production-ready Apache Pinot real-time OLAP datastore for Amazon EKS. Deploy ul
 <span className="tag guide">Guide</span>
 </div>
 <div className="showcase-footer">
-<a href="./infra" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/databases/pinot-on-eks/infra" className="showcase-link">
 <span>Deploy Infrastructure</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -88,7 +88,7 @@ Production-ready Apache Pinot real-time OLAP datastore for Amazon EKS. Deploy ul
 <span className="tag guide">Example</span>
 </div>
 <div className="showcase-footer">
-<a href="./kafka-integration" className="showcase-link">
+<a href="/data-on-eks/docs/datastacks/databases/pinot-on-eks/kafka-integration" className="showcase-link">
 <span>Learn More</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
