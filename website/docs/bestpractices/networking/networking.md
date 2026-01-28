@@ -16,6 +16,29 @@ The AWS VPC CNI maintains this “warm pool” of IP addresses on the EKS worker
 During periods of high churn or large scale out, these EC2 API calls can be rate throttled, which will delay the provisioning of Pods and thus delay the execution of workloads. Also, configuring the VPC CNI to minimize this warm pool can increase the EC2 API calls from your nodes and increase the risk of rate throttling.
 
 
+### Monitor Network Address Usage (NAU) to avoid VPC capacity limits
+
+[Network Address Usage (NAU)](https://docs.aws.amazon.com/vpc/latest/userguide/network-address-usage.html) is a metric that tracks the total size of your VPC. Each VPC has a default limit of 64,000 NAU units (increasable to 256,000), and peered VPCs in the same Region share a combined limit of 128,000 NAU units (increasable to 512,000).
+
+For data workloads on EKS, NAU consumption can grow quickly because:
+
+- **Each Pod IP address counts as 1 NAU unit** - Large Spark jobs with hundreds or thousands of executors can consume significant NAU
+- **Warm IP pools amplify usage** - The VPC CNI's warm pool means nodes hold more IPs than active pods, multiplying NAU consumption
+
+Data platforms that scale to thousands of pods can cause resource provisioning failures due to limited available NAUs, not IP addresses. You may have plenty of unused IP addresses in your subnets but still hit NAU limits because each IP counts toward the VPC-wide NAU quota. Monitor your VPC's NAU usage via the `NetworkAddressUsage` CloudWatch metric and plan capacity accordingly, especially when running large-scale batch jobs or streaming workloads.
+
+To reduce NAU consumption from Pod IPs, consider enabling [VPC CNI prefix mode](https://docs.aws.amazon.com/eks/latest/best-practices/prefix-mode-linux.html). With prefix mode, the CNI assigns /28 IPv4 prefixes (16 addresses) to ENIs instead of individual IPs. **Each prefix counts as only 1 NAU unit** rather than 16 individual units, effectively reducing NAU consumption by up to 16x for Pod IPs.
+
+However, prefix mode requires contiguous /28 blocks of IP addresses. Fragmented subnets with scattered IP allocations may cause prefix assignment failures. To avoid this, create new subnets dedicated to your EKS cluster or use [VPC subnet CIDR reservations](https://docs.aws.amazon.com/vpc/latest/userguide/subnet-cidr-reservation.html) to reserve contiguous space for prefixes. 
+
+When using prefix mode, configure `WARM_PREFIX_TARGET=1` on the VPC CNI to minimize unused IP addresses while maintaining fast pod startup times. The configuration option:
+- Maintains a defined number of prefixes (/28 CIDR blocks) available on the instance's network interface for immediate pod assignment
+- Allocates one full /28 prefix even if only a single IP is consumed from the existing prefix
+- Creates a new ENI if the current ENI has no space to allocate another prefix
+
+For detailed VPC CNI configuration guidance, see [How do I configure the Amazon VPC CNI plugin to use fewer IP addresses?](https://repost.aws/knowledge-center/eks-configure-cni-plugin-use-ip-address) and the [Tuning the VPC CNI](#tuning-the-vpc-cni) section below.
+
+
 ### Consider using a secondary CIDR if your IP space is constrained.
 
 If you are working with a network that spans multiple connected VPCs or sites the routable address space may be limited.
