@@ -15,7 +15,7 @@ resource "kubernetes_annotations" "gp2_default" {
   depends_on = [module.eks]
 }
 
-resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
+resource "kubernetes_storage_class_v1" "ebs_csi_encrypted_gp3_storage_class" {
   metadata {
     name = "gp3"
     annotations = {
@@ -41,15 +41,16 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
 #---------------------------------------------------------------
 
 module "ebs_csi_driver_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.20"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "~> 6.4"
 
-  role_name_prefix = "${module.eks.cluster_name}-ebs-csi-driver-"
+  name            = "${module.eks.cluster_name}-ebs-csi-driver-"
+  use_name_prefix = true
 
   attach_ebs_csi_policy = true
 
   oidc_providers = {
-    main = {
+    this = {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
     }
@@ -63,7 +64,7 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "~> 1.23"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -75,16 +76,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   eks_addons = {
     aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      preserve = true
-    }
-    kube-proxy = {
-      preserve = true
+      service_account_role_arn = module.ebs_csi_driver_irsa.arn
     }
   }
 
@@ -108,7 +100,7 @@ module "eks_blueprints_addons" {
   #---------------------------------------
   enable_karpenter = true
   karpenter = {
-    chart_version       = "1.6.2" # Compatible with Kubernetes 1.33
+    chart_version       = "1.8.6" # Latest version compatible with Kubernetes 1.35
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
     timeout             = 600 # 10 minutes
@@ -143,7 +135,7 @@ module "eks_blueprints_addons" {
         amp_irsa            = module.amp_ingest_irsa[0].iam_role_arn
         amp_remotewrite_url = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write"
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
-        storage_class_type  = kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class.id
+        storage_class_type  = kubernetes_storage_class_v1.ebs_csi_encrypted_gp3_storage_class.id
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
     chart_version   = "48.1.1"
@@ -194,7 +186,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.35.0" # Updated for better Kubernetes 1.33 support
+  version = "1.35.0" # Updated for better Kubernetes 1.35 support
 
   oidc_provider_arn = module.eks.oidc_provider_arn
   #---------------------------------------------------------------
@@ -206,7 +198,7 @@ module "eks_data_addons" {
       operating_system = "linux"
       node_group_type  = "core"
     })],
-    version         = "0.46.0" # Latest version with EKS 1.33 compatibility
+    version         = "0.50.0" # Latest version with EKS 1.35 compatibility
     timeout         = 900      # 15 minutes
     wait            = true
     wait_for_jobs   = true
