@@ -8,14 +8,14 @@ const FeatureList = [
     title: 'Data Analytics',
     Svg: require('@site/static/img/green-da.svg').default,
     description: 'Transform your data with enterprise-grade analytics solutions. Deploy Apache Spark, Ray, Dask, and Jupyter environments with production-ready configurations. Scale from terabytes to petabytes with confidence using battle-tested architectures.',
-    link: 'https://awslabs.github.io/data-on-eks/docs/category/data-analytics-on-eks',
+    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/processing',
     imagePosition: 'left'
   },
   {
     title: 'Streaming Data Platforms',
     Svg: require('@site/static/img/green-stream.svg').default,
     description: 'Build real-time data pipelines that never sleep. Process millions of events per second with Apache Kafka, Flink, and Kinesis. From IoT sensors to financial transactions, handle any streaming workload at any scale.',
-    link: 'https://awslabs.github.io/data-on-eks/docs/category/streaming-platforms-on-eks',
+    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/streaming',
     imagePosition: 'right'
   },
   {
@@ -29,14 +29,14 @@ const FeatureList = [
     title: 'Workflow Orchestration',
     Svg: require('@site/static/img/green-schd.svg').default,
     description: 'Orchestrate complex data workflows with precision. Deploy Apache Airflow, Argo Workflows, and Amazon MWAA to automate ETL pipelines, ML training, and data quality checks. Never miss a dependency again.',
-    link: 'https://awslabs.github.io/data-on-eks/docs/category/job-schedulers-on-eks',
+    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/orchestration',
     imagePosition: 'right'
   },
   {
     title: 'Distributed Databases & Query Engines',
     Svg: require('@site/static/img/green-dd.svg').default,
     description: 'Query anything, anywhere, anytime. Deploy Trino, Presto, and ClickHouse for lightning-fast analytics across data lakes, warehouses, and real-time streams. Join data across 50+ sources in milliseconds.',
-    link: 'https://awslabs.github.io/data-on-eks/docs/category/distributed-databases-on-eks',
+    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/databases',
     imagePosition: 'left'
   },
 ];
