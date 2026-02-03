@@ -1,0 +1,22 @@
+apiVersion: v2
+name: mcp-apache-spark-history-server
+description: A Helm chart for Spark History Server MCP
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - spark
+  - mcp
+  - analytics
+  - performance
+  - history-server
+home: https://github.com/kubeflow/mcp-apache-spark-history-server
+sources:
+  - https://github.com/kubeflow/mcp-apache-spark-history-server
+maintainers:
+  - name: Manabu McCloskey
+    email: Manabu.McCloskey@gmail.com
+  - name: Vara Bonthu
+    email: vara.bonthu@gmail.com
+annotations:
+  category: Analytics

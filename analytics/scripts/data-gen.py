@@ -1,43 +1,44 @@
+import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-
 import pyarrow as pa
+import pyarrow.parquet as pq
 
-# Define the schema as a dictionary
-schema_dict = {
+NUM_RECORDS = 7_000_000
+
+# Define the schema
+schema = pa.schema({
     'order_id': pa.int64(),
     'customer_id': pa.int64(),
     'order_date': pa.string(),
     'item_id': pa.int64(),
     'quantity': pa.int64(),
     'price': pa.float64()
-}
+})
 
-# Convert the dictionary to a PyArrow Schema
-schema = pa.schema(schema_dict)
+print(f"Generating {NUM_RECORDS:,} records...")
 
-# Generate sample data
-orders = []
-for i in range(1000):
-    order_id = i + 1
-    customer_id = (order_id - 1) % 100 + 1
-    order_date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
-    item_id = (order_id - 1) % 10 + 1
-    quantity = (order_id - 1) % 5 + 1
-    price = (order_id - 1) % 100 + 10.0
+# Generate data using numpy (vectorized, much faster)
+order_ids = np.arange(1, NUM_RECORDS + 1)
+customer_ids = (order_ids - 1) % 100 + 1
+item_ids = (order_ids - 1) % 10 + 1
+quantities = (order_ids - 1) % 5 + 1
+prices = ((order_ids - 1) % 100 + 10.0).astype(np.float64)
 
-    order = {
-        'order_id': order_id,
-        'customer_id': customer_id,
-        'order_date': order_date,
-        'item_id': item_id,
-        'quantity': quantity,
-        'price': price
-    }
-    orders.append(order)
+# Generate dates
+base_date = datetime.now()
+dates = [(base_date - timedelta(days=int(i % 365))).strftime('%Y-%m-%d') for i in range(NUM_RECORDS)]
 
-# Create a Pandas DataFrame from the sample data
-df = pd.DataFrame(orders)
+# Create DataFrame
+df = pd.DataFrame({
+    'order_id': order_ids,
+    'customer_id': customer_ids,
+    'order_date': dates,
+    'item_id': item_ids,
+    'quantity': quantities,
+    'price': prices
+})
 
-# Write the DataFrame to a Parquet file
-df.to_parquet('sample_orders.parquet', schema=schema, index=False)
+print("Writing to parquet...")
+df.to_parquet('order.parquet', schema=schema, index=False)
+print(f"Done! Created order.parquet with {NUM_RECORDS:,} records")

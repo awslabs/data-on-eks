@@ -1,0 +1,229 @@
+# Default values for spark-history-mcp
+# This is a YAML-formatted file.
+
+# Image configuration
+image:
+  repository: ghcr.io/kubeflow/mcp-apache-spark-history-server
+  pullPolicy: IfNotPresent
+  tag: "v0.1.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Pod replica count (used when autoscaling is disabled)
+replicaCount: 2
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 18888
+  targetPort: http
+  # nodePort: 31888  # Uncomment and set when service.type is NodePort
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: spark-mcp.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: spark-mcp-tls
+  #    hosts:
+  #      - spark-mcp.local
+
+# Resource configuration
+resources:
+  limits:
+    memory: 2Gi
+    cpu: 1000m
+  requests:
+    memory: 512Mi
+    cpu: 250m
+
+# Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# MCP server configuration
+config:
+  port: 18888
+  debug: false
+
+  # Spark History Server configuration
+  servers:
+    default:
+      default: true
+      url: "http://spark-history-server:18080"
+    # Example: Additional servers
+    # staging:
+    #   url: "http://staging-spark-history:18080"
+    # production:
+    #   url: "http://prod-spark-history:18080"
+
+# Authentication configuration
+auth:
+  enabled: false
+
+  # secret: use Kubernetes Secret to store spark history server credentials as environment variables
+  secret:
+    create: false
+    name: ""
+    username: ""
+    password: ""
+    token: ""
+
+  # externalsecret: use External Secrets Operator to sync a Secret from a secret provider.
+  # Requiring External Secrets Operator to be installed in the k8s cluster.
+  externalsecret:
+    create: false
+    secretStoreRef:
+      name: ""           # e.g. my-secret-store
+      kind: ClusterSecretStore  # or SecretStore
+    secretPath: ""        # e.g. path/to/secret containing username/password/token properties
+
+  # csisecretstore: use Secret Store CSI Driver to mount secrets and (optionally) sync to a Kubernetes Secret.
+  # Requires the Secret Store CSI Driver to be installed in the cluster, and the relevant provider.
+  # Note: SecretProviderClass must be created separately by platform/security team.
+  csisecretstore:
+    enabled: false
+    # Reference to existing SecretProviderClass (must be created separately)
+    secretProviderClassName: ""
+    # mountPath: /mnt/secrets-store
+
+# Environment variables
+env: []
+  # - name: CUSTOM_VAR
+  #   value: "custom_value"
+
+# Environment variables from secrets/configmaps
+envFrom: []
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 12
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - spark-history-mcp
+        topologyKey: kubernetes.io/hostname
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Monitoring configuration
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    interval: 30s
+    path: /metrics
+    labels: {}
+    annotations: {}
+
+# Persistence (for logs, if needed)
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /app/logs
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Extra volumes
+extraVolumes: []
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Init containers
+initContainers: []
+
+# Sidecar containers
+sidecars: []
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
