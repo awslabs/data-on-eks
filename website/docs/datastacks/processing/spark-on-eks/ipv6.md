@@ -30,6 +30,81 @@ After enabling the setting, run the deployment script from the `data-stacks/spar
 ./deploy.sh
 ```
 
+<details>
+<summary>Common Problems</summary>
+
+#### Error: AmazonEKS_CNI_IPv6_Policy does not exist
+
+**When this occurs:** During the first IPv6 deployment in an AWS account, or if the policy was previously deleted.
+
+You encounter the error below when deploying a solution that supports IPv6:
+
+```
+Error: attaching IAM Policy (arn:aws:iam::1234567890:policy/AmazonEKS_CNI_IPv6_Policy)
+to IAM Role (core-node-group-eks-node-group-20241111182906854800000003):
+operation error IAM: AttachRolePolicy, https response error StatusCode: 404,
+RequestID: 9c99395a-ce3d-4a05-b119-538470a3a9f7,
+NoSuchEntity: Policy arn:aws:iam::1234567890:policy/AmazonEKS_CNI_IPv6_Policy
+does not exist or is not attachable.
+```
+
+The Amazon VPC CNI plugin requires IAM permission to assign IPv6 addresses so you must create an IAM policy and associate it with the role that the CNI will use. However, each IAM policy name must be unique in the same AWS account. This causes a conflict if the policy is created as part of the terraform stack and it is deployed multiple times.
+
+To resolve this error, create the policy manually using the commands below. This only needs to be done once per AWS account, as the policy can be reused across multiple EKS clusters.
+
+
+#### Solution:
+
+1. Copy the following text and save it to a file named vpc-cni-ipv6-policy.json.
+
+```sh
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:AssignIpv6Addresses",
+                "ec2:DescribeInstances",
+                "ec2:DescribeTags",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeInstanceTypes"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateTags"
+            ],
+            "Resource": [
+                "arn:aws:ec2::*:network-interface/*"
+            ]
+        }
+    ]
+}
+```
+
+2. Create the IAM policy.
+
+```sh
+aws iam create-policy --policy-name AmazonEKS_CNI_IPv6_Policy --policy-document file://vpc-cni-ipv6-policy.json
+```
+
+3. Verify the policy was created successfully:
+
+```sh
+aws iam get-policy --policy-arn arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):policy/AmazonEKS_CNI_IPv6_Policy
+```
+
+4. Run the deployment script again
+
+```bash
+./deploy.sh
+```
+
+</details>
+
 ---
 
 ## Step 2: Verify the Deployment (Optional)
