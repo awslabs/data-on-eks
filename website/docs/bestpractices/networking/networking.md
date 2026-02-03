@@ -29,7 +29,7 @@ Data platforms that scale to thousands of pods can cause resource provisioning f
 
 To reduce NAU consumption from Pod IPs, consider enabling [VPC CNI prefix mode](https://docs.aws.amazon.com/eks/latest/best-practices/prefix-mode-linux.html). With prefix mode, the CNI assigns /28 IPv4 prefixes (16 addresses) to ENIs instead of individual IPs. **Each prefix counts as only 1 NAU unit** rather than 16 individual units, effectively reducing NAU consumption by up to 16x for Pod IPs.
 
-However, prefix mode requires contiguous /28 blocks of IP addresses. Fragmented subnets with scattered IP allocations may cause prefix assignment failures. To avoid this, create new subnets dedicated to your EKS cluster or use [VPC subnet CIDR reservations](https://docs.aws.amazon.com/vpc/latest/userguide/subnet-cidr-reservation.html) to reserve contiguous space for prefixes. 
+However, prefix mode requires contiguous /28 blocks of IP addresses. Fragmented subnets with scattered IP allocations may cause prefix assignment failures. To avoid this, create new subnets dedicated to your EKS cluster or use [VPC subnet CIDR reservations](https://docs.aws.amazon.com/vpc/latest/userguide/subnet-cidr-reservation.html) to reserve contiguous space for prefixes.
 
 When using prefix mode, configure `WARM_PREFIX_TARGET=1` on the VPC CNI to minimize unused IP addresses while maintaining fast pod startup times. The configuration option:
 - Maintains a defined number of prefixes (/28 CIDR blocks) available on the instance's network interface for immediate pod assignment
