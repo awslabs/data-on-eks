@@ -13,7 +13,7 @@ variable "name" {
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
   type        = string
-  default     = "1.33"
+  default     = "1.35"
 }
 
 # VPC

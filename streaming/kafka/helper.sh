@@ -157,7 +157,7 @@ case "$1" in
       --bootstrap-server cluster-kafka-bootstrap:9092
     ;;
   send-messages-to-kafka-failover-topic-from-producer)
-    kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.43.0-kafka-3.8.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic-failover
+    kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.50.0-kafka-4.1.1 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server cluster-kafka-bootstrap:9092 --topic test-topic-failover
     ;;
   read-messages-from-kafka-failover-topic-consumer)
     kubectl exec -it kafka-cli -n kafka -- bin/kafka-console-consumer.sh \
