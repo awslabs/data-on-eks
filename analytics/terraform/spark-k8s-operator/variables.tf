@@ -97,3 +97,9 @@ variable "enable_spark_history_server" {
   type        = bool
   default     = true
 }
+
+variable "enable_spark_history_mcp" {
+  description = "Enable Spark History MCP Server for AI agent integration"
+  type        = bool
+  default     = true
+}

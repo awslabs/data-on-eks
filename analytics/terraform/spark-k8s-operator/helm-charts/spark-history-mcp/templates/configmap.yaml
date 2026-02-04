@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mcp-apache-spark-history-server.configMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mcp-apache-spark-history-server.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    mcp:
+      transports:
+        - streamable-http
+      port: "{{ .Values.config.port }}"
+      debug: {{ .Values.config.debug }}
+      address: 0.0.0.0
+    servers:
+      {{- range $name, $server := .Values.config.servers }}
+      {{ $name }}:
+        {{- if $server.default }}
+        default: {{ $server.default }}
+        {{- end }}
+        url: {{ $server.url | quote }}
+        {{- if $server.auth }}
+        auth:
+          {{- toYaml $server.auth | nindent 10 }}
+        {{- end }}
+      {{- end }}

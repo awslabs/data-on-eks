@@ -1,0 +1,59 @@
+# Spark History MCP Server - AI agent bridge to Spark History Server
+image:
+  repository: ghcr.io/kubeflow/mcp-apache-spark-history-server
+  tag: "0.1.5"
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 18888
+
+config:
+  port: 18888
+  debug: false
+  servers:
+    default:
+      default: true
+      url: "http://spark-history-server.spark-history-server:80"
+
+resources:
+  limits:
+    memory: 1Gi
+    cpu: 500m
+  requests:
+    memory: 256Mi
+    cpu: 100m
+
+monitoring:
+  enabled: ${monitoring_enabled}
+  serviceMonitor:
+    enabled: ${monitoring_enabled}
+    namespace: kube-prometheus-stack
+    interval: 30s
+
+nodeSelector:
+  eks.amazonaws.com/compute-type: auto
+
+# Disable health probes - MCP server doesn't expose /health or /ready endpoints yet
+# See: https://github.com/kubeflow/mcp-apache-spark-history-server/issues
+# Default probes from chart values.yaml:
+# livenessProbe:
+#   httpGet:
+#     path: /health
+#     port: http
+#   initialDelaySeconds: 30
+#   periodSeconds: 10
+#   timeoutSeconds: 5
+#   failureThreshold: 3
+# readinessProbe:
+#   httpGet:
+#     path: /ready
+#     port: http
+#   initialDelaySeconds: 5
+#   periodSeconds: 5
+#   timeoutSeconds: 3
+#   failureThreshold: 3
+livenessProbe: null
+readinessProbe: null
+startupProbe: null
