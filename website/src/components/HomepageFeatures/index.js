@@ -1,5 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
+import Link from '@docusaurus/Link';
 import Translate, {translate} from '@docusaurus/Translate';
 import styles from './styles.module.css';
 import TechMarquee from '../TechMarquee/TechMarquee';
@@ -47,12 +48,12 @@ function Feature({Svg, title, description, link, imagePosition, isLast}) {
     <div className={styles.featureContent}>
       <h2 className={styles.featureTitle}>{title}</h2>
       <p className={styles.featureDescription}>{description}</p>
-      <a href={link} className={styles.featureLink}>
+      <Link to={link} className={styles.featureLink}>
         <Translate id="features.learnMore">Learn more</Translate>
         <svg className={styles.featureLinkIcon} width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      </a>
+      </Link>
     </div>
   );
 
