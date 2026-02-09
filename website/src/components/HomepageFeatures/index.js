@@ -9,35 +9,35 @@ const FeatureList = [
     title: translate({id: 'features.dataAnalytics.title', message: 'Data Analytics'}),
     Svg: require('@site/static/img/green-da.svg').default,
     description: translate({id: 'features.dataAnalytics.description', message: 'Transform your data with enterprise-grade analytics solutions. Deploy Apache Spark, Ray, Dask, and Jupyter environments with production-ready configurations. Scale from terabytes to petabytes with confidence using battle-tested architectures.'}),
-    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/processing',
+    link: '/docs/datastacks/processing',
     imagePosition: 'left'
   },
   {
     title: translate({id: 'features.streaming.title', message: 'Streaming Data Platforms'}),
     Svg: require('@site/static/img/green-stream.svg').default,
     description: translate({id: 'features.streaming.description', message: 'Build real-time data pipelines that never sleep. Process millions of events per second with Apache Kafka, Flink, and Kinesis. From IoT sensors to financial transactions, handle any streaming workload at any scale.'}),
-    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/streaming',
+    link: '/docs/datastacks/streaming',
     imagePosition: 'right'
   },
   {
     title: translate({id: 'features.emr.title', message: 'Amazon EMR on EKS'}),
     Svg: require('@site/static/img/green-emr.svg').default,
     description: translate({id: 'features.emr.description', message: 'Run enterprise-grade Spark workloads on Kubernetes with Amazon EMR on EKS. Get optimized Spark runtime, automatic scaling, simplified job management, and seamless integration with AWS services for faster, more cost-effective big data processing.'}),
-    link: 'https://awslabs.github.io/data-on-eks/docs/category/amazon-emr-on-eks',
+    link: '/docs/category/amazon-emr-on-eks',
     imagePosition: 'left'
   },
   {
     title: translate({id: 'features.orchestration.title', message: 'Workflow Orchestration'}),
     Svg: require('@site/static/img/green-schd.svg').default,
     description: translate({id: 'features.orchestration.description', message: 'Orchestrate complex data workflows with precision. Deploy Apache Airflow, Argo Workflows, and Amazon MWAA to automate ETL pipelines, ML training, and data quality checks. Never miss a dependency again.'}),
-    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/orchestration',
+    link: '/docs/datastacks/orchestration',
     imagePosition: 'right'
   },
   {
     title: translate({id: 'features.databases.title', message: 'Distributed Databases & Query Engines'}),
     Svg: require('@site/static/img/green-dd.svg').default,
     description: translate({id: 'features.databases.description', message: 'Query anything, anywhere, anytime. Deploy Trino, Presto, and ClickHouse for lightning-fast analytics across data lakes, warehouses, and real-time streams. Join data across 50+ sources in milliseconds.'}),
-    link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/databases',
+    link: '/docs/datastacks/databases',
     imagePosition: 'left'
   },
 ];

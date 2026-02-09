@@ -11,8 +11,10 @@ import styles from './index.module.css';
 
 
 function HomepageHeader() {
- const { siteConfig } = useDocusaurusContext();
-
+ const { siteConfig, i18n } = useDocusaurusContext();
+ const aiOnEksUrl = i18n.currentLocale === 'ko'
+   ? 'https://atom-oh.github.io/ai-on-eks/ko'
+   : 'https://atom-oh.github.io/ai-on-eks/';
 
  return (
    <header className={clsx('hero', styles.heroBanner)}>
@@ -53,7 +55,7 @@ function HomepageHeader() {
          </Link>
          <Link
            className={clsx(styles.secondaryButton)}
-           to="https://awslabs.github.io/ai-on-eks/">
+           to={aiOnEksUrl}>
            <Translate id="homepage.cta.explore">Explore AI on EKS</Translate>
          </Link>
        </div>
