@@ -195,7 +195,23 @@ Flink Operator provides three upgrade modes for Flink jobs. Check out the [Flink
 <div className="step-number">1</div>
 <div className="step-content">
 <h4>Deploy Infrastructure</h4>
-<p>Set up EMR-on-EKS cluster for Flink streaming</p>
+<p>Start with the infrastructure deployment guide to set up your EMR on EKS foundation</p>
+</div>
+</div>
+
+</div>
+
+</div>
+
+<div className="showcase-grid">
+
+<div className="showcase-card featured">
+<div className="showcase-header">
+<div className="showcase-icon">🏗️</div>
+<div className="showcase-content">
+<h3>Infrastructure Deployment</h3>
+<p className="showcase-description">Complete infrastructure deployment guide for EMR on EKS with virtual cluster setup, IAM roles, and Karpenter configuration</p>
+</div>
 </div>
 <div className="showcase-tags">
 <span className="tag infrastructure">Infrastructure</span>
@@ -218,6 +234,7 @@ Flink Operator provides three upgrade modes for Flink jobs. Check out the [Flink
 <h3>Sample FLink Job</h3>
 <p className="showcase-description">Executing sample flink job using Flink operators</p>
 </div>
+</div>
 <div className="showcase-tags">
 <span className="tag performance">Streaming</span>
 <span className="tag optimization">Real-time</span>
@@ -238,6 +255,7 @@ Flink Operator provides three upgrade modes for Flink jobs. Check out the [Flink
 <div className="showcase-content">
 <h3>Flink Autoscaler</h3>
 <p className="showcase-description">Enabling Flink Autoscaler to automatically scale Flink applications</p>
+</div>
 </div>
 <div className="showcase-tags">
 <span className="tag performance">Performance</span>
