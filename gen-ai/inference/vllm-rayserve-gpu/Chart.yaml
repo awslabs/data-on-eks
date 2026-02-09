@@ -1,6 +1,0 @@
-apiVersion: v2
-name: rayserve-vllm-gpu
-description: Helm chart for deploy RayService for vLLM inference on GPU
-type: application
-version: "1.0.0"
-appVersion: "2.32.0"    # Ray version 

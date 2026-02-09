@@ -10,13 +10,9 @@ sidebar_position: 4
 
 ## Autoscaler Example
 
-Get the role arn linked to the job execution service account.
+Set the env variables for the job execution role and s3 bucket name :
 ```bash
-export FLINK_JOB_ROLE=$( terraform output -state=./terraform/_local/terraform.tfstate flink_job_execution_role_arn )
-```
-Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
-```bash
-export S3_BUCKET="${$( terraform output -state=./terraform/_local/terraform.tfstate flink_operator_bucket )//\"/}"
+source env.sh
 ```
 
 Navigate to example directory and submit the Flink job.
@@ -90,7 +86,7 @@ autoscaler-example-taskmanager-1-8               2/2     Running   0          38
 Access the Flink WebUI for the job by running this command:
 
 ```bash
-kubectl port-forward svc/autoscaler-example-rest 8081 -n flink-team-a-ns
+kubectl port-forward svc/autoscaler-example-rest 8081 -n emr-data-team-a
 ```
 
 Then browse to http://localhost:8081:

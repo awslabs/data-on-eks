@@ -38,7 +38,7 @@ Monitor the job status using the below command.
 You should see the new nodes triggered by the karpenter and the YuniKorn will schedule one Job manager pod and one Taskmanager pods on this node.
 
 ```bash
-kubectl get deployments -n flink-team-a-ns
+kubectl get deployments -n emr-data-team-a
 ```
 ```
 NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
@@ -46,7 +46,7 @@ basic-example-karpenter-flink   2/2     2            2           3h6m
 ```
 
 ```bash
-kubectl get pods -n flink-team-a-ns
+kubectl get pods -n emr-data-team-a
 ```
 ```
 NAME                                               READY   STATUS    RESTARTS   AGE
@@ -65,7 +65,7 @@ basic-example-karpenter-flink-rest   ClusterIP   172.20.17.152   <none>        8
 To access the Flink WebUI for the job, run this command locally.
 
 ```bash
-kubectl port-forward svc/basic-example-karpenter-flink-rest 8081 -n flink-team-a-ns
+kubectl port-forward svc/basic-example-karpenter-flink-rest 8081 -n emr-data-team-a
 ```
 
 ![Flink Job UI](img/flink1.png)
