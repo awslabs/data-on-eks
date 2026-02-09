@@ -4,7 +4,7 @@ sidebar_label: Trino on EKS Best Practices
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # Trino on EKS Best Practices
 [Trino](https://trino.io/) deployment on [Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) delivers distributed query processing with cloud-native scalability. Organizations can optimize costs by selecting specific compute instances and storage solutions that match their workload requirements while they  combine the power of Trino with the scalability and flexibility of EKS using [Karpenter](https://karpenter.sh/).

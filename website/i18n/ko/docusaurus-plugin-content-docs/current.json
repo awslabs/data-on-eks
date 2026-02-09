@@ -1,0 +1,50 @@
+{
+  "sidebar.datastacks.category.Processing": {
+    "message": "프로세싱",
+    "description": "The label for category Processing in sidebar datastacks"
+  },
+  "sidebar.datastacks.category.Streaming": {
+    "message": "스트리밍",
+    "description": "The label for category Streaming in sidebar datastacks"
+  },
+  "sidebar.datastacks.category.Databases": {
+    "message": "데이터베이스",
+    "description": "The label for category Databases in sidebar datastacks"
+  },
+  "sidebar.datastacks.category.Orchestration": {
+    "message": "오케스트레이션",
+    "description": "The label for category Orchestration in sidebar datastacks"
+  },
+  "sidebar.blueprints.category.Data Analytics": {
+    "message": "데이터 분석",
+    "description": "The label for category Data Analytics in sidebar blueprints"
+  },
+  "sidebar.blueprints.category.Streaming Platforms": {
+    "message": "스트리밍 플랫폼",
+    "description": "The label for category Streaming Platforms in sidebar blueprints"
+  },
+  "sidebar.blueprints.category.Distributed Databases": {
+    "message": "분산 데이터베이스",
+    "description": "The label for category Distributed Databases in sidebar blueprints"
+  },
+  "sidebar.blueprints.category.Amazon EMR on EKS": {
+    "message": "Amazon EMR on EKS",
+    "description": "The label for category Amazon EMR on EKS in sidebar blueprints"
+  },
+  "sidebar.blueprints.category.Job Schedulers": {
+    "message": "작업 스케줄러",
+    "description": "The label for category Job Schedulers in sidebar blueprints"
+  },
+  "sidebar.benchmarks.category.Spark Operator Benchmark": {
+    "message": "Spark Operator 벤치마크",
+    "description": "The label for category Spark Operator Benchmark in sidebar benchmarks"
+  },
+  "sidebar.bestpractices.category.Analytics": {
+    "message": "분석",
+    "description": "The label for category Analytics in sidebar bestpractices"
+  },
+  "sidebar.bestpractices.category.Scalability": {
+    "message": "확장성",
+    "description": "The label for category Scalability in sidebar bestpractices"
+  }
+}

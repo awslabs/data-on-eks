@@ -1,0 +1,189 @@
+{
+  "homepage.tagline": {
+    "message": "Amazon EKS로 데이터 여정을 가속화하세요",
+    "description": "The tagline displayed on the homepage"
+  },
+  "homepage.description": {
+    "message": "Amazon EKS에서 데이터 워크로드를 실행하기 위한 종합 도구 세트입니다.",
+    "description": "First line of homepage description"
+  },
+  "homepage.description2": {
+    "message": "자신감 있게 데이터 인프라를 구축, 배포 및 확장하세요.",
+    "description": "Second line of homepage description"
+  },
+  "homepage.cta.launch": {
+    "message": "시작하기",
+    "description": "Launch CTA button"
+  },
+  "homepage.cta.explore": {
+    "message": "AI on EKS 탐색하기",
+    "description": "Explore AI on EKS CTA button"
+  },
+  "homepage.trust.datastacks": {
+    "message": "즉시 사용 가능한 데이터 스택",
+    "description": "Trust indicator - data stacks"
+  },
+  "homepage.trust.stars": {
+    "message": "GitHub 스타",
+    "description": "Trust indicator - GitHub stars"
+  },
+  "homepage.trust.official": {
+    "message": "공식 프로젝트",
+    "description": "Trust indicator - official project"
+  },
+  "homepage.videos.title": {
+    "message": "주요 동영상",
+    "description": "Featured videos section title"
+  },
+  "features.whatIs.title": {
+    "message": "Data on EKS란?",
+    "description": "What is Data on EKS section title"
+  },
+  "features.whatIs.description": {
+    "message": "Data on EKS는 Amazon EKS에서 확장 가능한 데이터 플랫폼을 운영하기 위한 오픈소스 엔터프라이즈급 프레임워크입니다. 오픈소스 데이터 도구를 AWS 인프라와 통합하고, Terraform 및 ArgoCD 템플릿, 검증된 블루프린트, 성능 벤치마크, 그리고 모범 사례를 제공합니다. 확장성과 복원력을 위해 설계되어 팀이 EKS에서 수천 개의 노드로 복잡한 데이터 워크로드를 자신 있게 배포하고 운영할 수 있도록 돕습니다.",
+    "description": "What is Data on EKS section description"
+  },
+  "features.dataAnalytics.title": {
+    "message": "데이터 분석",
+    "description": "Data Analytics feature title"
+  },
+  "features.dataAnalytics.description": {
+    "message": "엔터프라이즈급 분석 솔루션으로 데이터를 변환하세요. 프로덕션 준비된 구성으로 Apache Spark, Ray, Dask 및 Jupyter 환경을 배포합니다. 실전에서 검증된 아키텍처로 테라바이트에서 페타바이트까지 자신 있게 확장할 수 있습니다.",
+    "description": "Data Analytics feature description"
+  },
+  "features.streaming.title": {
+    "message": "스트리밍 데이터 플랫폼",
+    "description": "Streaming Data Platforms feature title"
+  },
+  "features.streaming.description": {
+    "message": "멈추지 않는 실시간 데이터 파이프라인을 구축하세요. Apache Kafka, Flink 및 Kinesis로 초당 수백만 건의 이벤트를 처리합니다. IoT 센서에서 금융 거래까지, 어떤 규모의 스트리밍 워크로드도 처리할 수 있습니다.",
+    "description": "Streaming Data Platforms feature description"
+  },
+  "features.emr.title": {
+    "message": "Amazon EMR on EKS",
+    "description": "Amazon EMR on EKS feature title"
+  },
+  "features.emr.description": {
+    "message": "Amazon EMR on EKS로 Kubernetes에서 엔터프라이즈급 Spark 워크로드를 실행하세요. 최적화된 Spark 런타임, 자동 스케일링, 간소화된 작업 관리, 그리고 AWS 서비스와의 원활한 통합을 통해 더 빠르고 비용 효율적인 빅데이터 처리를 제공합니다.",
+    "description": "Amazon EMR on EKS feature description"
+  },
+  "features.orchestration.title": {
+    "message": "워크플로우 오케스트레이션",
+    "description": "Workflow Orchestration feature title"
+  },
+  "features.orchestration.description": {
+    "message": "복잡한 데이터 워크플로우를 정밀하게 오케스트레이션하세요. Apache Airflow, Argo Workflows 및 Amazon MWAA를 배포하여 ETL 파이프라인, ML 훈련 및 데이터 품질 검사를 자동화합니다. 더 이상 의존성을 놓치지 마세요.",
+    "description": "Workflow Orchestration feature description"
+  },
+  "features.databases.title": {
+    "message": "분산 데이터베이스 & 쿼리 엔진",
+    "description": "Distributed Databases feature title"
+  },
+  "features.databases.description": {
+    "message": "언제, 어디서나, 무엇이든 쿼리하세요. Trino, Presto 및 ClickHouse를 배포하여 데이터 레이크, 웨어하우스 및 실시간 스트림 전체에서 초고속 분석을 수행합니다. 밀리초 단위로 50개 이상의 소스에서 데이터를 조인할 수 있습니다.",
+    "description": "Distributed Databases feature description"
+  },
+  "features.learnMore": {
+    "message": "자세히 알아보기",
+    "description": "Learn more link text"
+  },
+  "theme.NotFound.title": {
+    "message": "페이지를 찾을 수 없습니다"
+  },
+  "theme.NotFound.p1": {
+    "message": "요청하신 페이지를 찾을 수 없습니다."
+  },
+  "theme.NotFound.p2": {
+    "message": "이 페이지로 연결한 사이트 소유자에게 링크가 깨졌음을 알려주세요."
+  },
+  "theme.common.skipToMainContent": {
+    "message": "본문으로 건너뛰기"
+  },
+  "theme.docs.sidebar.collapseButtonTitle": {
+    "message": "사이드바 접기"
+  },
+  "theme.docs.sidebar.expandButtonTitle": {
+    "message": "사이드바 펼치기"
+  },
+  "theme.docs.sidebar.collapseButtonAriaLabel": {
+    "message": "사이드바 접기"
+  },
+  "theme.docs.sidebar.expandButtonAriaLabel": {
+    "message": "사이드바 펼치기"
+  },
+  "theme.docs.sidebar.navAriaLabel": {
+    "message": "문서 사이드바"
+  },
+  "theme.docs.paginator.next": {
+    "message": "다음"
+  },
+  "theme.docs.paginator.previous": {
+    "message": "이전"
+  },
+  "theme.docs.tagDocListPageTitle.nDocsTagged": {
+    "message": "{count}개의 문서가 태그됨",
+    "description": "Pluralized label for \"{count} docs tagged\""
+  },
+  "theme.docs.tagDocListPageTitle": {
+    "message": "\"{tagName}\" 태그가 있는 {nDocsTagged}",
+    "description": "The title of the page for a docs tag"
+  },
+  "theme.docs.versionBadge.label": {
+    "message": "버전: {versionLabel}"
+  },
+  "theme.colorToggle.ariaLabel": {
+    "message": "어두운 모드와 밝은 모드 간 전환 (현재 {mode})",
+    "description": "The ARIA label for the navbar color mode toggle"
+  },
+  "theme.colorToggle.ariaLabel.mode.dark": {
+    "message": "어두운 모드"
+  },
+  "theme.colorToggle.ariaLabel.mode.light": {
+    "message": "밝은 모드"
+  },
+  "theme.lastUpdated.atDate": {
+    "message": "{date}에",
+    "description": "The words used to describe on which date a page has been last updated"
+  },
+  "theme.lastUpdated.byUser": {
+    "message": "{user}에 의해",
+    "description": "The words used to describe by who the page has been last updated"
+  },
+  "theme.lastUpdated.lastUpdatedAtBy": {
+    "message": "{atDate}{byUser} 마지막 업데이트",
+    "description": "The sentence used to display when a page has been last updated, and by who"
+  },
+  "theme.navbar.mobileLanguageDropdown.label": {
+    "message": "언어"
+  },
+  "theme.TOCCollapsible.toggleButtonLabel": {
+    "message": "이 페이지에서"
+  },
+  "theme.tags.tagsListLabel": {
+    "message": "태그:"
+  },
+  "theme.SearchBar.label": {
+    "message": "검색"
+  },
+  "theme.SearchBar.seeAll": {
+    "message": "모든 결과 보기"
+  },
+  "theme.admonition.note": {
+    "message": "참고"
+  },
+  "theme.admonition.tip": {
+    "message": "팁"
+  },
+  "theme.admonition.danger": {
+    "message": "위험"
+  },
+  "theme.admonition.info": {
+    "message": "정보"
+  },
+  "theme.admonition.warning": {
+    "message": "주의"
+  },
+  "theme.admonition.caution": {
+    "message": "주의"
+  }
+}

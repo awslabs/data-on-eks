@@ -2,7 +2,7 @@
 sidebar_position: 3
 sidebar_label: EMR Runtime with Spark Operator
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # EMR Runtime with Spark Operator
 

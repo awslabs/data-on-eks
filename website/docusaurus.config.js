@@ -12,7 +12,7 @@ const config = {
   url: 'https://awslabs.github.io',
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   favicon: 'img/header-icon.png',
 
   organizationName: 'awslabs',
@@ -27,7 +27,11 @@ const config = {
 
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'ko'],
+    localeConfigs: {
+      en: { label: 'English', htmlLang: 'en-US' },
+      ko: { label: '한국어', htmlLang: 'ko-KR' },
+    },
   },
 
   presets: [
@@ -74,6 +78,7 @@ const config = {
           { type: 'doc', docId: 'benchmarks/index', position: 'left', label: 'Benchmarks', className: 'navbar-benchmarks' },
           { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices', className: 'navbar-best-practices' },
           { href: 'https://github.com/awslabs/data-on-eks', label: 'GitHub', position: 'right' },
+          { type: 'localeDropdown', position: 'right' },
         ],
       },
       colorMode: {

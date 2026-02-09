@@ -1,0 +1,30 @@
+{
+  "title": {
+    "message": "Data on EKS",
+    "description": "The title in the navbar"
+  },
+  "item.label.Launch": {
+    "message": "시작하기",
+    "description": "Navbar item with label Launch"
+  },
+  "item.label.Data Stacks": {
+    "message": "데이터 스택",
+    "description": "Navbar item with label Data Stacks"
+  },
+  "item.label.AI for Data": {
+    "message": "데이터를 위한 AI",
+    "description": "Navbar item with label AI for Data"
+  },
+  "item.label.Benchmarks": {
+    "message": "벤치마크",
+    "description": "Navbar item with label Benchmarks"
+  },
+  "item.label.Best Practices": {
+    "message": "모범 사례",
+    "description": "Navbar item with label Best Practices"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  }
+}
