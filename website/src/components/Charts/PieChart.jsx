@@ -4,7 +4,9 @@ import {
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  DoughnutController,
+  PieController
 } from 'chart.js';
 import './PieChart.css';
 
@@ -13,7 +15,9 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  DoughnutController,
+  PieController
 );
 
 /**
