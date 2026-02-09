@@ -22,14 +22,12 @@ module "karpenter" {
 
 # Deploy Karpenter using Helm
 resource "helm_release" "karpenter" {
-  namespace           = "kube-system"
-  name                = "karpenter"
-  repository          = "oci://public.ecr.aws/karpenter"
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
-  chart               = "karpenter"
-  version             = "1.0.6"
-  wait                = false
+  namespace  = "kube-system"
+  name       = "karpenter"
+  repository = "oci://public.ecr.aws/karpenter"
+  chart      = "karpenter"
+  version    = "1.1.1"
+  wait       = false
 
   values = [
     <<-EOT
@@ -61,7 +59,6 @@ resource "helm_release" "karpenter" {
   ]
 }
 
-# Define an EC2NodeClass for AL2023 node instances
 resource "kubectl_manifest" "karpenter_node_class" {
   yaml_body = <<-YAML
     apiVersion: karpenter.k8s.aws/v1
@@ -92,12 +89,12 @@ resource "kubectl_manifest" "karpenter_node_class" {
   YAML
 
   depends_on = [
-    helm_release.karpenter
+    module.eks_blueprints_addons
   ]
 }
 
 # Create a Karpenter NodePool using the AL2023 NodeClass
-resource "kubectl_manifest" "karpenter_node_pool" {
+resource "kubectl_manifest" "karpenter_worker_pool" {
   yaml_body = <<-YAML
     apiVersion: karpenter.sh/v1
     kind: NodePool
@@ -108,6 +105,53 @@ resource "kubectl_manifest" "karpenter_node_pool" {
         metadata:
           labels:
             NodePool: trino-sql-karpenter
+        spec:
+          nodeClassRef:
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+            name: trino-karpenter
+          requirements:
+            - key: "karpenter.sh/capacity-type"
+              operator: In
+              values: ["on-demand", "spot"]
+            - key: "kubernetes.io/arch"
+              operator: In
+              values: ["arm64"]
+            - key: "karpenter.k8s.aws/instance-category"
+              operator: In
+              values: ["r"]
+            - key: "karpenter.k8s.aws/instance-family"
+              operator: In
+              values: ["r6g", "r7g", "r8g"]
+            - key: "karpenter.k8s.aws/instance-size"
+              operator: In
+              values: ["2xlarge", "4xlarge"]
+      disruption:
+        consolidationPolicy: WhenEmptyOrUnderutilized
+        consolidateAfter: 60s
+      limits:
+        cpu: "1000"
+        memory: 1000Gi
+      weight: 100
+  YAML
+
+  depends_on = [
+    kubectl_manifest.karpenter_node_class
+  ]
+}
+
+# Create a Karpenter NodePool using the AL2023 NodeClass
+resource "kubectl_manifest" "karpenter_ctl_pool" {
+  yaml_body = <<-YAML
+    apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
+      name: trino-control-karpenter
+    spec:
+      template:
+        metadata:
+          labels:
+            NodePool: trino-control-karpenter
         spec:
           nodeClassRef:
             group: karpenter.k8s.aws
@@ -130,12 +174,12 @@ resource "kubectl_manifest" "karpenter_node_pool" {
               operator: In
               values: ["2xlarge", "4xlarge"]
       disruption:
-        consolidationPolicy: WhenEmptyOrUnderutilized
+        consolidationPolicy: WhenEmpty
         consolidateAfter: 60s
       limits:
-        cpu: "1000"
-        memory: 1000Gi
-      weight: 100
+        cpu: "128"
+        memory: 256Gi
+      weight: 10
   YAML
 
   depends_on = [

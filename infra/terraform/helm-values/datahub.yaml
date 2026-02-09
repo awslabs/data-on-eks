@@ -1,0 +1,111 @@
+global:
+  datahub:
+    version: v1.2.0
+
+  # Disable tutorial popups and onboarding
+  datahub_analytics_enabled: false
+
+  elasticsearch:
+    host: "opensearch-cluster-master"
+    port: "9200"
+
+  kafka:
+    bootstrap:
+      server: "data-on-eks-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  sql:
+    datasource:
+      host: "postgresql:5432"
+      hostForpostgresqlClient: "postgresql"
+      port: "5432"
+      url: "jdbc:postgresql://postgresql:5432/datahub"
+      driver: "org.postgresql.Driver"
+      username: "datahub"
+      password:
+        secretRef: postgresql-secrets
+        secretKey: password
+
+acryl-datahub-actions:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  image:
+    registry: public.ecr.aws
+    repository: data-on-eks/data-stacks
+    tag: datahub-action-iceberg-v0.0.1
+  serviceAccount:
+    name: datahub-sa
+datahub-gms:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  serviceAccount:
+    create: true
+    name: datahub-sa
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      memory: 4Gi
+    requests:
+      cpu: 2000m
+
+datahub-frontend:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  enabled: true
+  service:
+    extraLabels: {}
+    type: ClusterIP
+
+datahub-mae-consumer:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  enabled: true
+
+datahub-mce-consumer:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  enabled: true
+
+# Use OpenSearch from prerequisites
+elasticsearchSetupJob:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  enabled: true
+  extraEnvs:
+    - name: USE_AWS_ELASTICSEARCH
+      value: "true"
+
+postgresqlSetupJob:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  enabled: true
+
+mysqlSetupJob:
+  enabled: false
+
+kafkaSetupJob:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  resources:
+    limits:
+      cpu: 5000m
+
+datahubSystemUpdate:
+  nodeSelector:
+    NodeGroupType: general-purpose
+  enabled: false
+  resources:
+    limits:
+      cpu: 5000m
+
+# Disable embedded services
+elasticsearch:
+  enabled: false
+
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+mysql:
+  enabled: false

@@ -1,0 +1,64 @@
+# Pre-requisite before running this job
+# Replace <S3_BUCKET> with your S3 bucket created by this blueprint(Check Terraform outputs)
+# REPLACE <S3TABLE_ARN> with actual S3 Table ARN
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "s3table-example"
+  namespace: spark-team-a
+  labels:
+    app: "s3table-example"
+    applicationId: "s3table-example-nvme"
+spec:
+  type: Python
+  sparkVersion: "3.5.3"
+  mode: cluster
+  # CAUTION: Unsupported test image
+  # This image is created solely for testing and reference purposes.
+  # Before use, please:
+  # 1. Review the Dockerfile used to create this image
+  # 2. Create your own image that meets your organization's security requirements
+  image: "public.ecr.aws/data-on-eks/spark:3.5.3-scala2.12-java17-python3-ubuntu-s3table0.1.3-iceberg1.6.1"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://<S3_BUCKET>/s3table-example/scripts/s3table-iceberg-pyspark.py"
+  arguments:
+  - "s3a://<S3_BUCKET>/s3table-example/input/"
+  - "<S3TABLE_ARN>"
+  sparkConf:
+    "spark.app.name": "s3table-example"
+    "spark.kubernetes.driver.pod.name": "s3table-example"
+    "spark.kubernetes.executor.podNamePrefix": "s3table-example"
+    "spark.local.dir": "/data"
+    "spark.speculation": "false"
+    "spark.network.timeout": "2400"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider" # AWS SDK V2 https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/aws_sdk_upgrade.html
+
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 1
+
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "4g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+      karpenter.sh/capacity-type: "on-demand"
+
+  executor:
+    cores: 1
+    coreLimit: "1200m"
+    instances: 1
+    memory: "4g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"

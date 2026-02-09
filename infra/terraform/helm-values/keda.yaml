@@ -1,0 +1,32 @@
+# KEDA Operator Configuration
+prometheus:
+  metricServer:
+    enabled: true
+    port: 9022
+    portName: metrics
+
+nodeSelector:
+  NodeGroupType: core
+
+resources:
+  operator:
+    limits:
+      cpu: 1
+      memory: 1000Mi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+  metricServer:
+    limits:
+      cpu: 1
+      memory: 1000Mi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+
+# Enable ServiceMonitor for Prometheus scraping
+serviceMonitor:
+  operator:
+    enabled: true
+  metricServer:
+    enabled: true

@@ -1,0 +1,73 @@
+# Test Gluten+Velox with same image - just add Gluten config
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "test-gluten-velox"
+  namespace: spark-team-a
+  labels:
+    app: "test-gluten"
+spec:
+  type: Python
+  sparkVersion: "3.5.2"
+  mode: cluster
+  image: "<dockerhubuser>/spark-gluten-velox:v2.0.0-clean"
+  imagePullPolicy: Always
+  mainApplicationFile: "s3a://$S3_BUCKET/benchmarks/analytical-benchmark.py"
+  arguments:
+    - "gluten"
+    - "1.0"  # Larger scale to show performance differences
+  sparkConf:
+    "spark.app.name": "test-gluten-velox"
+    "spark.kubernetes.driver.pod.name": "test-gluten-driver"
+    "spark.kubernetes.executor.podNamePrefix": "test-gluten"
+
+    # Gluten + Velox Configuration - Official Apache Gluten Setup
+    "spark.plugins": "org.apache.gluten.GlutenPlugin"
+    "spark.shuffle.manager": "org.apache.spark.shuffle.sort.ColumnarShuffleManager"
+    "spark.memory.offHeap.enabled": "true"
+    "spark.memory.offHeap.size": "4g"
+    "spark.sql.execution.arrow.pyspark.enabled": "true"
+
+    # Required JVM options for Gluten-Velox compatibility (Java 17+)
+    "spark.driver.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true"
+    "spark.executor.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true"
+
+    # Same performance configurations as native
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+    "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
+
+    # S3 Configuration for Velox/Gluten with IRSA
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+
+    # Same event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://$S3_BUCKET/spark-event-logs"
+
+  restartPolicy:
+    type: Never
+  driver:
+    cores: 2
+    coreLimit: "2400m"
+    memory: "4g"
+    memoryOverhead: "1g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"
+      karpenter.sh/capacity-type: "on-demand"
+  executor:
+    cores: 2
+    coreLimit: "3400m"
+    instances: 3  # Same as native test
+    memory: "4g"
+    memoryOverhead: "1g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      NodeGroupType: "SparkComputeOptimized"

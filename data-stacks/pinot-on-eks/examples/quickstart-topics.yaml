@@ -1,0 +1,27 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: flights-realtime
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: data-on-eks
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 604800000  # 7 days
+    cleanup.policy: delete
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: flights-realtime-avro
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: data-on-eks
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 604800000  # 7 days
+    cleanup.policy: delete

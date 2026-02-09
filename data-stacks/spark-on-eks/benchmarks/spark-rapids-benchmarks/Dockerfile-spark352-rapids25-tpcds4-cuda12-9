@@ -1,0 +1,202 @@
+# ============================================================
+# Spark RAPIDS + TPC-DS v4.0 benchmark image for K8s with GPU Instances
+#
+# Bundles:
+#   - Spark 3.5.2 + Hadoop3
+#   - RAPIDS accelerator + cuDF for CUDA12
+#   - Hadoop 3.4.1 with AWS SDK v2 (for S3A)
+#   - TPC-DS toolkit 4.0.0
+#   - Patched spark-sql-perf (support-tpcds-v4.0 branch)
+#   - spark-k8s-benchmarks (clean TPC-DS benchmark runner)
+#   - UID 185 user (matching gluten-velox pattern)
+# ============================================================
+# WARNING:
+# This Dockerfile is provided for sample and demonstration purposes only.
+# It is NOT intended for production use.
+# ============================================================
+
+# ============================================================
+### Stage 1 – build spark-sql-perf
+# ============================================================
+FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS spark_sql_perf_builder
+ARG SCALA_VERSION=2.12.15
+ARG SPARK_VERSION=3.5.2
+ARG SBT_VERSION=1.9.7
+
+# Clone support-tpcds-v4.0 fork and patch it
+RUN git clone --depth 1 --branch support-tpcds-v4.0 \
+      https://github.com/heyujiao99/spark-sql-perf.git /build/spark-sql-perf
+WORKDIR /build/spark-sql-perf
+
+# Remove legacy plugins, add only sbt-assembly
+RUN rm -f project/plugins.sbt && \
+    mkdir -p project && \
+    echo 'addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.2.0")' > project/plugins.sbt
+
+# Force sbt 1.9.7
+RUN echo "sbt.version=${SBT_VERSION}" > project/build.properties
+
+# Replace build.sbt with minimal version
+RUN rm -f build.sbt && \
+    cat > build.sbt <<SBT
+name := "spark-sql-perf"
+organization := "com.databricks"
+scalaVersion := "${SCALA_VERSION}"
+crossScalaVersions := Seq("${SCALA_VERSION}")
+
+val sparkVer = "${SPARK_VERSION}"
+
+libraryDependencies ++= Seq(
+  "org.apache.spark" %% "spark-sql"   % sparkVer % "provided",
+  "org.apache.spark" %% "spark-hive"  % sparkVer % "provided",
+  "org.apache.spark" %% "spark-mllib" % sparkVer % "provided",
+  "com.github.scopt" %% "scopt"       % "3.7.1",
+  "com.twitter"     %% "util-jvm"    % "6.45.0" % "provided",
+  "org.scalatest"   %% "scalatest"   % "3.0.5" % Test,
+  "org.yaml"        %  "snakeyaml"   % "1.23"
+)
+SBT
+
+# Fix repository configuration - use only Maven Central and avoid dead repos
+RUN mkdir -p ~/.sbt && \
+    cat > ~/.sbt/repositories <<'EOF'
+[repositories]
+local
+maven-central: https://repo1.maven.org/maven2/
+typesafe-ivy-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+EOF
+
+# Compile spark-sql-perf with override flag
+RUN sbt -Dsbt.override.build.repos=true -batch clean package
+
+# ============================================================
+### Stage 2 – build spark-k8s-benchmarks using the compiled spark-sql-perf jar
+# ============================================================
+FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS benchmark_builder
+ARG SCALA_VERSION=2.12.18
+ARG SPARK_VERSION=3.5.2
+ARG SBT_VERSION=1.9.9
+
+# Clone spark-k8s-benchmarks (clean TPC-DS benchmark implementation)
+RUN git clone --depth 1 \
+      https://github.com/KubedAI/spark-k8s-benchmarks.git /build/spark-k8s-benchmarks
+WORKDIR /build/spark-k8s-benchmarks
+
+# Create lib directory and copy spark-sql-perf jar from Stage 1
+RUN mkdir -p lib
+COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar lib/
+
+# Fix repository configuration - use only Maven Central and avoid dead repos
+RUN mkdir -p ~/.sbt && \
+    cat > ~/.sbt/repositories <<'EOF'
+[repositories]
+local
+maven-central: https://repo1.maven.org/maven2/
+typesafe-ivy-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+EOF
+
+# Build the benchmark assembly jar
+RUN sbt -Dsbt.override.build.repos=true -batch clean assembly
+
+# ============================================================
+### Stage 3 – assemble the runtime image
+# ============================================================
+FROM nvidia/cuda:12.9.0-devel-ubuntu24.04
+
+ARG SPARK_VERSION=3.5.2
+ARG HADOOP_VERSION=3.4.1
+ARG AWS_SDK_VERSION=2.29.0
+ARG RAPIDS_VERSION=25.12.0
+ARG SCALA_BINARY=2.12
+ARG SPARK_UID=185
+ARG SPARK_GID=185
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jdk-headless python3 python3-pip curl wget \
+    ca-certificates tzdata libgomp1 numactl tini gcc make flex bison git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Spark
+RUN set -eux; \
+    wget -q https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz -O /tmp/spark.tgz; \
+    tar -xzf /tmp/spark.tgz -C /opt; \
+    ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop3 ${SPARK_HOME}; \
+    rm -f /tmp/spark.tgz
+
+# Create non-root Spark user (UID 185 like gluten-velox)
+RUN groupadd -g ${SPARK_GID} spark && \
+    useradd -m -u ${SPARK_UID} -g ${SPARK_GID} -s /bin/bash spark && \
+    chown -R spark:spark /opt/spark-${SPARK_VERSION}-bin-hadoop3 && \
+    chown -R spark:spark ${SPARK_HOME}
+
+# Complete Hadoop upgrade to 3.4.1 (matching hadoop-aws version)
+# Remove ALL existing Hadoop and AWS jars to avoid version conflicts
+RUN cd ${SPARK_HOME}/jars && \
+    find . -maxdepth 1 -type f -name 'hadoop-*.jar' -delete || true && \
+    find . -maxdepth 1 -type f -name 'aws-java-sdk-*.jar' -delete || true && \
+    # Core Hadoop 3.4.1 jars
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-auth/${HADOOP_VERSION}/hadoop-auth-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar && \
+    # S3A + AWS SDK v2 (bundle)
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar && \
+    # Hadoop 3.4.x requires commons-configuration2 on classpath
+    wget -q https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.9.0/commons-configuration2-2.9.0.jar && \
+    # Spark cloud committers (match Spark version)
+    wget -q https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_${SCALA_BINARY}/${SPARK_VERSION}/spark-hadoop-cloud_${SCALA_BINARY}-${SPARK_VERSION}.jar && \
+    # XML deps to satisfy jackson-dataformat-xml
+    wget -q https://repo1.maven.org/maven2/com/fasterxml/woodstox/woodstox-core/6.5.1/woodstox-core-6.5.1.jar && \
+    wget -q https://repo1.maven.org/maven2/org/codehaus/woodstox/stax2-api/4.2.2/stax2-api-4.2.2.jar
+
+# Install RAPIDS plugin (cuDF is bundled inside - do NOT download separately)
+# Downloading cuDF separately causes "Multiple cudf jars" warning and JNI conflicts
+RUN wget -q https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_${SCALA_BINARY}/${RAPIDS_VERSION}/rapids-4-spark_${SCALA_BINARY}-${RAPIDS_VERSION}.jar \
+       -P ${SPARK_HOME}/jars/
+
+# Build TPC-DS toolkit v4.0.0 (dsdgen/dsqgen)
+RUN git clone -b v4.0.0 https://github.com/heyujiao99/tpcds-kit.git /opt/tpcds-kit && \
+    cd /opt/tpcds-kit/tools && \
+    make OS=LINUX CFLAGS="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DYYDEBUG -DLINUX -g -Wall -fcommon" && \
+    install -m 0755 dsdgen dsqgen /usr/local/bin
+
+# Copy compiled jars from previous stages into Spark examples
+RUN mkdir -p ${SPARK_HOME}/examples/jars && chown -R spark:spark ${SPARK_HOME}/examples
+COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar \
+    ${SPARK_HOME}/examples/jars/
+COPY --from=benchmark_builder /build/spark-k8s-benchmarks/target/scala-2.12/*.jar \
+    ${SPARK_HOME}/examples/jars/
+
+# Spark defaults: JDK17 module opens for RAPIDS compatibility
+RUN mkdir -p $SPARK_HOME/conf && cat >> $SPARK_HOME/conf/spark-defaults.conf <<'CONF'
+spark.driver.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+spark.executor.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+CONF
+
+# Create GPU discovery script for RAPIDS
+RUN mkdir -p /opt/sparkRapidsPlugin && cat > /opt/sparkRapidsPlugin/getGpusResources.sh <<'EOF'
+#!/usr/bin/env bash
+# GPU discovery script for RAPIDS on Kubernetes
+# Returns GPU addresses in the format expected by Spark
+
+ADDRS=$(nvidia-smi --query-gpu=index --format=csv,noheader | awk '{print $1}' | paste -sd "," -)
+echo "{\"name\": \"gpu\", \"addresses\": [\"$ADDRS\"]}"
+EOF
+
+RUN chmod +x /opt/sparkRapidsPlugin/getGpusResources.sh
+
+# Adjust ownership and set entrypoint
+RUN chown -R spark:spark ${SPARK_HOME} && \
+    chown -R spark:spark /opt/sparkRapidsPlugin
+
+USER ${SPARK_UID}
+WORKDIR ${SPARK_HOME}
+
+ENTRYPOINT ["/opt/spark/kubernetes/dockerfiles/spark/entrypoint.sh"]

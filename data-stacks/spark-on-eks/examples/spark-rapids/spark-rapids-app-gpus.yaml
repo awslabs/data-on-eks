@@ -1,0 +1,90 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: spark-rapids-yunikorn
+  namespace: spark-team-a
+spec:
+  batchScheduler: yunikorn
+  batchSchedulerOptions:
+    queue: root.default
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: kubedai/spark-rapids-k8s-cuda:spark-3.5.1_rapids-24.08.1_cuda-11.8_java-8  # Replace with your image URI
+  imagePullPolicy: Always
+  mainApplicationFile: "local:///opt/sparkRapidsPlugin/gpu_rapids_performance_test.py"
+  mainClass: org.apache.spark.deploy.PythonRunner
+  sparkVersion: "3.5.1"
+  restartPolicy:
+    type: Never
+  sparkConf:
+    "spark.ui.port": "4045"
+    "spark.rapids.sql.concurrentGpuTasks": "2"
+    "spark.executor.resource.gpu.amount": "1"
+    "spark.task.resource.gpu.amount": "1"
+    "spark.executor.memory": "10g"
+    "spark.rapids.memory.pinnedPool.size": "2g"
+    "spark.executor.memoryOverhead": "3g"
+    "spark.sql.files.maxPartitionBytes": "512m"
+    "spark.sql.shuffle.partitions": "10"
+    "spark.plugins": "com.nvidia.spark.SQLPlugin"
+    "spark.shuffle.manager": "com.nvidia.spark.rapids.spark351.RapidsShuffleManager"
+    "spark.executor.resource.gpu.discoveryScript": "/opt/sparkRapidsPlugin/getGpusResources.sh"
+    "spark.executor.resource.gpu.vendor": "nvidia.com"
+    "spark.executor.extraLibraryPath": "/usr/local/cuda/lib:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:/usr/local/cuda/targets/x86_64-linux/lib:/usr/lib/hadoop/lib/native:/usr/lib/hadooplzo/lib/native:/docker/usr/lib/hadoop/lib/native:/docker/usr/lib/hadoop-lzo/lib/native"
+    "spark.task.cpus": "1"
+    "spark.dynamicAllocation.enabled": "false"
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "2g"
+    labels:
+      version: "3.5.1"
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    volumeMounts:
+      - name: "test-volume"
+        mountPath: "/tmp"
+    nodeSelector:
+      NodeGroupType: general-purpose
+      kubernetes.io/arch: amd64
+  executor:
+    cores: 1
+    instances: 1
+    memory: "10g"
+    gpu:
+      name: "nvidia.com/gpu"
+      quantity: 1
+    labels:
+      version: "3.5.1"
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /data1
+    initContainers:
+      - name: volume-permission
+        image: public.ecr.aws/docker/library/busybox
+        command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    nodeSelector:
+      NodeGroupType: GPU
+      # karpenter.k8s.aws/instance-family: "g6"
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+  volumes:
+    - name: spark-local-dir-1
+      hostPath:
+        path: "/mnt/k8s-disks/0"
+        type: DirectoryOrCreate
+    - name: "test-volume"
+      hostPath:
+        path: "/tmp"
+        type: Directory

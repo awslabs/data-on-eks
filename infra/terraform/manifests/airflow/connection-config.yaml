@@ -1,0 +1,3 @@
+pod_identity:
+  conn_type: aws
+  description: 'uses Pod Identity from the service account'

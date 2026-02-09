@@ -119,7 +119,7 @@ benchmark-exec-ebs-exec-9        1/1     Running   0          73s     100.64.238
 tpcds-benchmark-1tb-ebs-driver   1/1     Running   0          2m33s   100.64.228.162   ip-100-64-213-174.ec2.internal   <none>           <none>
 ```
 
-The benchmark is also configured to export metrics and logs so you can review the benchmark using the [Spark Observability tools explained here](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/observability-spark-on-eks#spark-history-server).
+The benchmark is also configured to export metrics and logs so you can review the benchmark using the [Spark Observability tools explained here](/data-on-eks/docs/datastacks/processing/spark-on-eks/observability#spark-history-server).
 
 To get an idea how far along the benchmark is, you can use the Spark Web UI to review which query is currently being executed.
 Port forward to the Benchmark Driver to see the UI:
@@ -146,7 +146,7 @@ When you enter the results directory you will see a list of folders which corres
 
 ![S3 bucket showing timestamp directories for results](./img/results-s3-timestamps.png)
 
-You can find the latest result by selecting the timestamp thats largest, or find the folder that corresponds to the time of your test.
+You can find the latest result by selecting the timestamp that's largest, or find the folder that corresponds to the time of your test.
 Inside this folder you will see a file with a name like `part-00000-000000000-0000-0000-0000-000000000-0000.json`, this file includes the full spark configuration used for the job.
 ![S3 bucket showing results files](./img/results-s3-result-folder.png)
 

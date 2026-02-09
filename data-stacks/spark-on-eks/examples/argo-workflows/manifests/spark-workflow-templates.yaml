@@ -1,0 +1,220 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: wait
+  namespace: argo-workflows
+spec:
+  entrypoint: wait
+  templates:
+  - name: wait
+    inputs:
+      parameters:
+      - name: duration
+        default: '10s'
+    container:
+      image: docker.io/library/alpine:latest
+      command: [sleep]
+      args: ["{{inputs.parameters.duration}}"]
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: submit-spark-pi-app
+  namespace: argo-workflows
+spec:
+  entrypoint: spark-pi-app
+  templates:
+  - name: spark-pi-app
+    resource:
+      action: create
+      successCondition: status.applicationState.state == COMPLETED
+      failureCondition: status.applicationState.state == FAILED
+      manifest: |
+        apiVersion: sparkoperator.k8s.io/v1beta2
+        kind: SparkApplication
+        metadata:
+          generateName: spark-pi-python-
+          namespace: spark-team-a
+        spec:
+          type: Python
+          pythonVersion: "3"
+          mode: cluster
+          image: docker.io/library/spark:4.0.0
+          imagePullPolicy: IfNotPresent
+          mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
+          sparkVersion: 4.0.0
+          timeToLiveSeconds: 300
+          driver:
+            cores: 1
+            memory: 512m
+            serviceAccount: spark-team-a
+            securityContext:
+              capabilities:
+                drop:
+                - ALL
+              runAsGroup: 185
+              runAsUser: 185
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              seccompProfile:
+                type: RuntimeDefault
+          executor:
+            instances: 1
+            cores: 1
+            memory: 512m
+            securityContext:
+              capabilities:
+                drop:
+                - ALL
+              runAsGroup: 185
+              runAsUser: 185
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              seccompProfile:
+                type: RuntimeDefault
+  - name: spark-taxi-app
+    resource:
+      action: create
+      successCondition: status.applicationState.state == COMPLETED
+      failureCondition: status.applicationState.state == FAILED
+      manifest: |
+        apiVersion: "sparkoperator.k8s.io/v1beta2"
+        kind: SparkApplication
+        metadata:
+          generateName: event-wf-sparkapp-taxi-yunikorn-
+          namespace: spark-team-a
+        spec:
+          type: Python
+          sparkVersion: "4.0.0"
+          pythonVersion: "3"
+          mode: cluster
+          image: "public.ecr.aws/m8u6z8z4/manabu-test:workshop-spark-job@sha256:be617bbc4afbcfb95f543842dc3b99e2af065d6999bd017af7e08273bd412b8f"
+          imagePullPolicy: IfNotPresent
+          mainApplicationFile: "s3a://${S3_BUCKET}/taxi-trip/scripts/pyspark-taxi-trip.py"
+          arguments:
+            - "s3a://${S3_BUCKET}/taxi-trip/input/"
+            - "s3a://${S3_BUCKET}/taxi-trip/output/"
+          hadoopConf:
+            "fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+            "mapreduce.fileoutputcommitter.algorithm.version": "2"
+          sparkConf:
+            "spark.local.dir": "/data1"
+            "spark.speculation": "false"
+            "spark.network.timeout": "2400"
+            "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+            "spark.hadoop.fs.s3a.path.style.access": "true"
+            "spark.hadoop.fs.s3a.connection.maximum": "200"
+            "spark.hadoop.fs.s3a.fast.upload": "true"
+            "spark.hadoop.fs.s3a.readahead.range": "256K"
+            "spark.hadoop.fs.s3a.input.fadvise": "random"
+            "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+            # Spark Event logs
+            "spark.eventLog.enabled": "true"
+            "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
+            "spark.eventLog.rolling.enabled": "true"
+            "spark.eventLog.rolling.maxFileSize": "64m"
+            # Expose Spark metrics for Prometheus
+            "spark.ui.prometheus.enabled": "true"
+            "spark.executor.processTreeMetrics.enabled": "true"
+            "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
+            "spark.kubernetes.driver.annotation.prometheus.io/path": "/metrics/executors/prometheus/"
+            "spark.kubernetes.driver.annotation.prometheus.io/port": "4040"
+            "spark.kubernetes.driver.service.annotation.prometheus.io/scrape": "true"
+            "spark.kubernetes.driver.service.annotation.prometheus.io/path": "/metrics/driver/prometheus/"
+            "spark.kubernetes.driver.service.annotation.prometheus.io/port": "4040"
+            "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+            "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+            "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
+            "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
+          restartPolicy:
+            type: OnFailure
+            onFailureRetries: 3
+            onFailureRetryInterval: 10
+            onSubmissionFailureRetries: 5
+            onSubmissionFailureRetryInterval: 20
+          driver:
+            cores: 1
+            coreLimit: "1200m"
+            memory: "4g"
+            memoryOverhead: "4g"
+            serviceAccount: spark-team-a
+            nodeSelector:
+              NodeGroupType: "SparkGravitonComputeOptimized"
+              karpenter.sh/capacity-type: "on-demand"
+            tolerations:
+              - key: "spark-graviton-compute-optimized"
+                operator: "Exists"
+                effect: "NoSchedule"
+            labels:
+              version: 4.0.0
+            annotations:
+              yunikorn.apache.org/schedulingPolicyParameters: "placeholderTimeoutSeconds=30 gangSchedulingStyle=Hard"
+              yunikorn.apache.org/task-group-name: "spark-driver"
+              # minMember should match with driver and executor instances
+              # minResource cpu and memory should match with driver and executor cpu and memory
+              yunikorn.apache.org/task-groups: |-
+                [{
+                    "name": "spark-driver",
+                    "minMember": 1,
+                    "nodeSelector": {
+                      "NodeGroupType": "SparkGravitonComputeOptimized",
+                      "karpenter.sh/capacity-type": "on-demand"
+                    },
+                    "tolerations": [{"key": "spark-graviton-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
+                  },
+                  {
+                    "name": "spark-executor",
+                    "minMember": 4,
+                    "nodeSelector": {
+                      "NodeGroupType": "SparkGravitonComputeOptimized",
+                      "karpenter.sh/capacity-type": "spot"
+                    },
+                    "tolerations": [{"key": "spark-graviton-compute-optimized", "operator": "Exists", "effect": "NoSchedule"}]
+                }]
+          executor:
+            podSecurityContext:
+              fsGroup: 185
+            cores: 1
+            coreLimit: "1200m"
+            instances: 2
+            memory: "4g"
+            memoryOverhead: "4g"
+            serviceAccount: spark-team-a
+            labels:
+              version: 4.0.0
+            annotations:
+              yunikorn.apache.org/task-group-name: "spark-executor"
+            nodeSelector:
+              NodeGroupType: "SparkGravitonComputeOptimized"
+              karpenter.sh/capacity-type: "spot"
+            tolerations:
+              - key: "spark-graviton-compute-optimized"
+                operator: "Exists"
+                effect: "NoSchedule"
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: spark-pi
+  namespace: argo-workflows
+spec:
+  entrypoint: sparkapp
+  templates:
+    - arguments: {}
+      name: spark-pi-local
+      container:
+        securityContext:
+          runAsUser: 0
+        command: [
+            "/bin/sh",
+            "-c",
+            "/opt/spark/bin/spark-submit \
+            --master local[*] \
+            --class org.apache.spark.examples.SparkPi \
+            /opt/spark/examples/jars/spark-examples_2.13-4.0.1.jar"
+          ]
+        image: docker.io/apache/spark:4.0.1
+        imagePullPolicy: IfNotPresent
+        resources: {}

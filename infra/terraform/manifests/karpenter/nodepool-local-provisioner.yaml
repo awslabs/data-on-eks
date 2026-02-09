@@ -1,0 +1,44 @@
+
+# Used by the local storage provisioner to provision PVCs backed by local ephemeral disks.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: ephemeral-nvme-local-provisioner
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: storage
+        node.kubernetes.io/instance-category: ephemeral-storage
+        NodeGroupType: EphemeralStorageLocalProvisioner
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: ephemeral-nvme-local-provisioner
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [
+            "c5d", "c5ad", "c5n", "c6gd", "c6id", "c7gd", "c8gd",
+            "m5d", "m5dn", "m5ad", "m6gd", "m6id", "m7gd", "m8gd",
+            "r5d", "r5dn", "r5ad", "r6gd", "r6id", "r7gd", "r8gd",
+            "i3", "i3en", "i4g", "i4i", "i7i",
+            "im4gn", "is4gen",
+            "x2gd", "x2iezn", "z1d"
+          ]
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["3"]
+  limits:
+    cpu: "2000"
+    memory: "16000Gi"
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: "600s"
+  weight: 5

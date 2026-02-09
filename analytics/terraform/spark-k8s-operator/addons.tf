@@ -33,7 +33,7 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
     type      = "gp3"
   }
 
-  depends_on = [kubernetes_annotations.gp2_default]
+  depends_on = [kubernetes_annotations.gp2_default, module.ebs_csi_driver_irsa]
 }
 
 #---------------------------------------------------------------
@@ -50,7 +50,7 @@ resource "aws_eks_access_entry" "karpenter_nodes" {
 #---------------------------------------------------------------
 module "eks_data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.34" # ensure to update this to the latest/desired version
+  version = "1.38.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
@@ -69,7 +69,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -123,7 +123,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -183,7 +183,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -236,7 +236,7 @@ module "eks_data_addons" {
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           tags:
-            Name: "${module.eks.cluster_name}-private*"
+            Name: "${module.eks.cluster_name}-private-secondary*"
         securityGroupSelectorTerms:
           tags:
             Name: ${module.eks.cluster_name}-node
@@ -356,21 +356,359 @@ module "eks_data_addons" {
       EOT
       ]
     }
+    spark-operator-benchmark = {
+      values = [
+        <<-EOT
+      name: spark-operator-benchmark
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private-secondary*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: spark-operator-benchmark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["8", "36"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
+    spark-compute-ondemand = {
+      values = [
+        <<-EOT
+      name: spark-compute-ondemand
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private-secondary*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkComputeOnDemand
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+        limits:
+          cpu: 2000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
+    spark-compute-spot-cmr = {
+      values = [
+        <<-EOT
+      name: spark-compute-spot-cmr
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private-secondary*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkComputeSpotCMR
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c","m","r"]
+        limits:
+          cpu: 2000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
+    spark-compute-spot-r = {
+      values = [
+        <<-EOT
+      name: spark-compute-spot-r
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private-secondary*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkComputeSpotR
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["r"]
+          - key: karpenter.k8s.aws/instance-family
+            operator: In
+            values: ["r5","r5n", "r6i", "r6in", "r7i"]
+        limits:
+          cpu: 2000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
+    spark-compute-graviton-od-memory = {
+      values = [
+        <<-EOT
+      name: spark-compute-graviton-od-memory
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private-secondary*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkComputeGravitonODMemory
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["arm64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["r"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["4", "8", "16", "32"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 2000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
+    spark-compute-graviton = {
+      values = [
+        <<-EOT
+      name: spark-compute-graviton
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private-secondary*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkGravitonMemoryOptimized
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["arm64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["r"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["r6gd"]
+          - key: "karpenter.k8s.aws/instance-cpu"
+            operator: In
+            values: ["4", "8", "16", "32"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 2000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
+    spark-compute-nitro-nvme = {
+      values = [
+        <<-EOT
+      name: spark-compute-nitro-nvme
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2023
+        amiSelectorTerms:
+          - alias: al2023@latest # Amazon Linux 2023
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          tags:
+            Name: "${module.eks.cluster_name}-private-secondary*"
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: SparkComputeNitroNvme
+          - multiArch: Spark
+        requirements:
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["spot", "on-demand"]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.k8s.aws/instance-category"
+            operator: In
+            values: ["c"]
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["c5d"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["4xlarge", "9xlarge", "12xlarge", "18xlarge", "24xlarge"]
+          - key: "karpenter.k8s.aws/instance-hypervisor"
+            operator: In
+            values: ["nitro"]
+          - key: "karpenter.k8s.aws/instance-generation"
+            operator: Gt
+            values: ["2"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmptyOrUnderutilized
+          consolidateAfter: 1m
+        weight: 100
+      EOT
+      ]
+    }
   }
 
   #---------------------------------------------------------------
   # Spark Operator Add-on
-  # Add this to enable YuniKorn as Default Scheduler
-  #    controller:
-  #      batchScheduler:
-  #        enable: true
-  #        default: "yunikorn"
   #---------------------------------------------------------------
   enable_spark_operator = true
   spark_operator_helm_config = {
-    version = "2.0.2"
+    version = "2.2.0"
+    timeout = "120"
     values = [
       <<-EOT
+        controller:
+          # -- Number of replicas of controller.
+          replicas: 1
+          # -- Reconcile concurrency, higher values might increase memory usage.
+          # -- Increased from 10 to 20 to leverage more cores from the instance
+          workers: 20
+          # -- Change this to True when YuniKorn is deployed
+          batchScheduler:
+            enable: false
+            # default: "yunikorn"
+        #   -- Uncomment this for Spark Operator scale test
+        #   -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
+        #   nodeSelector:
+        #     NodeGroupType: spark-operator-benchmark
+        #   resources:
+        #     requests:
+        #       cpu: 33000m
+        #       memory: 50Gi
+        # webhook:
+        #   nodeSelector:
+        #     NodeGroupType: spark-operator-benchmark
+        #   resources:
+        #     requests:
+        #       cpu: 1000m
+        #       memory: 10Gi
         spark:
           # -- List of namespaces where to run spark jobs.
           # If empty string is included, all namespaces will be allowed.
@@ -380,12 +718,33 @@ module "eks_data_addons" {
             - spark-team-a
             - spark-team-b
             - spark-team-c
+            - spark-s3-express
           serviceAccount:
             # -- Specifies whether to create a service account for the controller.
             create: false
           rbac:
             # -- Specifies whether to create RBAC resources for the controller.
             create: false
+        prometheus:
+          metrics:
+            enable: true
+            port: 8080
+            portName: metrics
+            endpoint: /metrics
+            prefix: ""
+          # Prometheus pod monitor for controller pods
+          # Note: The kube-prometheus-stack addon must deploy before the PodMonitor CRD is available.
+          #       This can cause the terraform apply to fail since the addons are deployed in parallel
+          podMonitor:
+            # -- Specifies whether to create pod monitor.
+            create: true
+            labels: {}
+            # -- The label to use to retrieve the job name from
+            jobLabel: spark-operator-podmonitor
+            # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
+            podMetricsEndpoint:
+              scheme: http
+              interval: 5s
       EOT
     ]
   }
@@ -395,7 +754,7 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_yunikorn = var.enable_yunikorn
   yunikorn_helm_config = {
-    version = "1.6.0"
+    version = "1.6.3"
     values  = [templatefile("${path.module}/helm-values/yunikorn-values.yaml", {})]
   }
 
@@ -403,14 +762,16 @@ module "eks_data_addons" {
   # Spark History Server Add-on
   #---------------------------------------------------------------
   # Spark history server is required only when EMR Spark Operator is enabled
-  enable_spark_history_server = true
+  enable_spark_history_server = var.enable_spark_history_server
+
   spark_history_server_helm_config = {
-    chart_version = "1.2.0"
-    values = [
-      <<-EOT
-      sparkHistoryOpts: "-Dspark.history.fs.logDirectory=s3a://${module.s3_bucket.s3_bucket_id}/${aws_s3_object.this.key}"
-      EOT
-    ]
+    version = "1.5.1"
+    values = [templatefile("${path.module}/helm-values/shs-values.yaml",
+      {
+        s3_bucket_name   = module.s3_bucket.s3_bucket_id,
+        event_log_prefix = aws_s3_object.this.key,
+    })]
+    timeout = 600 # add timeout(extra time) for EBS provisioning
   }
 
   #---------------------------------------------------------------
@@ -418,29 +779,38 @@ module "eks_data_addons" {
   #---------------------------------------------------------------
   enable_kubecost = true
   kubecost_helm_config = {
-    chart_version       = "2.3.3"
+    version             = "2.7.0"
     values              = [templatefile("${path.module}/helm-values/kubecost-values.yaml", {})]
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
   }
 
-}
-
-#---------------------------------------------------------------
-# IRSA for EBS CSI Driver
-#---------------------------------------------------------------
-module "ebs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "~> 5.34"
-  role_name_prefix      = format("%s-%s-", local.name, "ebs-csi-driver")
-  attach_ebs_csi_policy = true
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
-    }
+  #---------------------------------------------------------------
+  # Kuberay Operator Add-on
+  #---------------------------------------------------------------
+  enable_kuberay_operator = var.enable_raydata
+  kuberay_operator_helm_config = {
+    version = "1.4.0"
+    # Enabling Volcano as Batch scheduler for KubeRay Operator
+    values = [
+      <<-EOT
+      batchScheduler:
+        enabled: false
+    EOT
+    ]
   }
-  tags = local.tags
+
+  #---------------------------------------------------------------
+  # JupyterHub Add-on
+  #---------------------------------------------------------------
+  enable_jupyterhub = var.enable_jupyterhub
+
+  jupyterhub_helm_config = {
+    values = [templatefile("${path.module}/helm-values/jupyterhub-singleuser-values.yaml", {
+      jupyter_single_user_sa_name = var.enable_jupyterhub ? kubernetes_service_account_v1.jupyterhub_single_user_sa[0].metadata[0].name : "not-used"
+    })]
+    version = "3.3.8"
+  }
 }
 
 #---------------------------------------------------------------
@@ -448,51 +818,12 @@ module "ebs_csi_driver_irsa" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
+  version = "~> 1.20"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
-
-  #---------------------------------------
-  # Amazon EKS Managed Add-ons
-  #---------------------------------------
-  eks_addons = {
-    aws-ebs-csi-driver = {
-      service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
-    coredns = {
-      preserve = true
-    }
-    vpc-cni = {
-      preserve = true
-    }
-    kube-proxy = {
-      preserve = true
-    }
-  }
-
-  #---------------------------------------
-  # Metrics Server
-  #---------------------------------------
-  enable_metrics_server = true
-  metrics_server = {
-    chart_version = "3.12.2"
-    values        = [templatefile("${path.module}/helm-values/metrics-server-values.yaml", {})]
-  }
-
-  #---------------------------------------
-  # Cluster Autoscaler
-  #---------------------------------------
-  enable_cluster_autoscaler = true
-  cluster_autoscaler = {
-    chart_version = "9.43.1"
-    values = [templatefile("${path.module}/helm-values/cluster-autoscaler-values.yaml", {
-      aws_region     = var.region,
-      eks_cluster_id = module.eks.cluster_name
-    })]
-  }
 
   #---------------------------------------
   # Karpenter Autoscaler for EKS Cluster
@@ -502,21 +833,13 @@ module "eks_blueprints_addons" {
   karpenter_node = {
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      S3TableAccess                = aws_iam_policy.s3tables_policy.arn
     }
   }
   karpenter = {
-    chart_version       = "1.0.6"
+    chart_version       = "1.2.1"
     repository_username = data.aws_ecrpublic_authorization_token.token.user_name
     repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------
-  # CloudWatch metrics for EKS
-  #---------------------------------------
-  enable_aws_cloudwatch_metrics = true
-  aws_cloudwatch_metrics = {
-    chart_version = "0.0.11"
-    values        = [templatefile("${path.module}/helm-values/aws-cloudwatch-metrics-values.yaml", {})]
   }
 
   #---------------------------------------
@@ -544,7 +867,7 @@ module "eks_blueprints_addons" {
 
   enable_aws_load_balancer_controller = true
   aws_load_balancer_controller = {
-    chart_version = "1.9.2"
+    chart_version = "1.11.0"
     set = [{
       name  = "enableServiceMutatorWebhook"
       value = "false"
@@ -553,7 +876,7 @@ module "eks_blueprints_addons" {
 
   enable_ingress_nginx = true
   ingress_nginx = {
-    version = "4.11.3"
+    version = "4.12.0"
     values  = [templatefile("${path.module}/helm-values/nginx-values.yaml", {})]
   }
 
@@ -577,7 +900,7 @@ module "eks_blueprints_addons" {
         amp_url             = "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}"
       }) : templatefile("${path.module}/helm-values/kube-prometheus.yaml", {})
     ]
-    chart_version = "65.5.1"
+    chart_version = "69.5.2"
     set_sensitive = [
       {
         name  = "grafana.adminPassword"
@@ -595,7 +918,7 @@ module "eks_blueprints_addons" {
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
+  version = "~> 4.6"
 
   bucket_prefix = "${local.name}-spark-logs-"
 
@@ -636,11 +959,58 @@ resource "random_password" "grafana" {
 
 #tfsec:ignore:aws-ssm-secret-use-customer-key
 resource "aws_secretsmanager_secret" "grafana" {
-  name                    = "${local.name}-grafana"
+  name_prefix             = "${local.name}-grafana-"
   recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
 }
 
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id     = aws_secretsmanager_secret.grafana.id
   secret_string = random_password.grafana.result
+}
+
+#---------------------------------------------------------------
+# S3Table IAM policy for Karpenter nodes
+# The S3 tables library does not fully support IRSA and Pod Identity as of this writing.
+# We give the node role access to S3tables to work around this limitation.
+#---------------------------------------------------------------
+resource "aws_iam_policy" "s3tables_policy" {
+  name_prefix = "${local.name}-s3tables"
+  path        = "/"
+  description = "S3Tables Metadata access for Nodes"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "VisualEditor0"
+        Effect = "Allow"
+        Action = [
+          "s3tables:UpdateTableMetadataLocation",
+          "s3tables:GetNamespace",
+          "s3tables:ListTableBuckets",
+          "s3tables:ListNamespaces",
+          "s3tables:GetTableBucket",
+          "s3tables:GetTableBucketMaintenanceConfiguration",
+          "s3tables:GetTableBucketPolicy",
+          "s3tables:CreateNamespace",
+          "s3tables:CreateTable"
+        ]
+        Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*"
+      },
+      {
+        Sid    = "VisualEditor1"
+        Effect = "Allow"
+        Action = [
+          "s3tables:GetTableMaintenanceJobStatus",
+          "s3tables:GetTablePolicy",
+          "s3tables:GetTable",
+          "s3tables:GetTableMetadataLocation",
+          "s3tables:UpdateTableMetadataLocation",
+          "s3tables:GetTableData",
+          "s3tables:GetTableMaintenanceConfiguration"
+        ]
+        Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*/table/*"
+      }
+    ]
+  })
 }

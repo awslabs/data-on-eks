@@ -1,0 +1,14 @@
+.pie-chart-container {
+  position: relative;
+  margin: auto;
+  height: 400px; /* Default height */
+  width: 100%; /* Default width */
+  max-width: 500px; /* Pie charts look better when not too wide */
+  margin-bottom: 20px; /* Add some space below the chart */
+}
+
+/* Ensure the canvas element respects its container dimensions */
+.pie-chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}

@@ -177,7 +177,7 @@ To get the most out of Flink on Kubernetes, here are some best practices to foll
 - **Store checkpoints and savepoints in the right places**: Store checkpoints in distributed file systems or key-value stores like Amazon S3 or another durable external storage. Store savepoints in a durable external storage like Amazon S3.
 
 ## Flink Upgrade
-Flink Operator provides three upgrade modes for Flink jobs. Checkout the [Flink upgrade docs](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/custom-resource/job-management/#stateful-and-stateless-application-upgrades) for up-to-date information.
+Flink Operator provides three upgrade modes for Flink jobs. Check out the [Flink upgrade docs](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/custom-resource/job-management/#stateful-and-stateless-application-upgrades) for up-to-date information.
 
 1. **stateless**: Stateless application upgrades from empty state
 2. **last-state**: Quick upgrades in any application state (even for failing jobs), does not require a healthy job as it always uses the latest checkpoint information. Manual recovery may be necessary if HA metadata is lost.
@@ -190,7 +190,7 @@ Flink Operator provides three upgrade modes for Flink jobs. Checkout the [Flink 
 
 <CollapsibleContent header={<h2><span>Deploying the Solution</span></h2>}>
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/flink), you will provision the following resources required to run Flink Jobs with Flink Operator and Apache YuniKorn.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/streaming/emr-eks-flink), you will provision the following resources required to run Flink Jobs with Flink Operator and Apache YuniKorn.
 
 This example deploys an EKS Cluster running the Flink Operator into a new VPC.
 
@@ -266,21 +266,26 @@ To list all the resources created for Flink team to run Flink jobs using this na
 
 <CollapsibleContent header={<h2><span>Execute Sample Flink job with Karpenter</span></h2>}>
 
+Get the role arn linked to the job execution service account.
+```bash
+export FLINK_JOB_ROLE=$( terraform output flink_job_execution_role_arn )
+```
+Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
+```bash
+export S3_BUCKET="${$( terraform output flink_operator_bucket )//\"/}"
+```
+
 Navigate to example directory and submit the Flink job.
 
 ```bash
 cd data-on-eks/streaming/emr-eks-flink/examples/karpenter
 ```
-Get the role arn linked to the job execution service account.
-```bash
-terraform output flink_job_execution_role_arn
-```
-Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
-```bash
-terraform output flink_operator_bucket
-```
 
-Open the basic-example-app-cluster.yaml in any editor and replace the place holder for **JOB_EXECUTION_ROLE_ARN** with the flink_job_execution_role_arn terraform output command. Replace the **ENTER_S3_BUCKET** placeholder with the flink_operator_bucket output.
+Modify the basic-example-app-cluster.yaml by replacing the placeholders with values from the two env variables above.
+
+```bash
+envsubst < basic-example-app-cluster.yaml > basic-example-app-cluster.yaml
+```
 
 Deploy the job by running the kubectl deploy command.
 
@@ -294,23 +299,23 @@ You should see the new nodes triggered by the karpenter and the YuniKorn will sc
 ```bash
 kubectl get deployments -n flink-team-a-ns
 NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
-basic-example-app-cluster-flink   2/2     2            2           3h6m
+basic-example-karpenter-flink   2/2     2            2           3h6m
 
 kubectl get pods -n flink-team-a-ns
 NAME                                               READY   STATUS    RESTARTS   AGE
-basic-example-app-cluster-flink-7c7d9c6fd9-cdfmd   2/2     Running   0          3h7m
-basic-example-app-cluster-flink-7c7d9c6fd9-pjxj2   2/2     Running   0          3h7m
-basic-example-app-cluster-flink-taskmanager-1-1    2/2     Running   0          3h6m
+basic-example-karpenter-flink-7c7d9c6fd9-cdfmd   2/2     Running   0          3h7m
+basic-example-karpenter-flink-7c7d9c6fd9-pjxj2   2/2     Running   0          3h7m
+basic-example-karpenter-flink-taskmanager-1-1    2/2     Running   0          3h6m
 
 kubectl get services -n flink-team-a-ns
 NAME                                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-basic-example-app-cluster-flink-rest   ClusterIP   172.20.17.152   <none>        8081/TCP   3h7m
+basic-example-karpenter-flink-rest   ClusterIP   172.20.17.152   <none>        8081/TCP   3h7m
 ```
 
-To access the Flink WebUI for the job run this command locally.
+To access the Flink WebUI for the job, run this command locally.
 
 ```bash
-kubectl port-forward svc/basic-example-app-cluster-flink-rest 8081 -n flink-team-a-ns
+kubectl port-forward svc/basic-example-karpenter-flink-rest 8081 -n flink-team-a-ns
 ```
 
 ![Flink Job UI](img/flink1.png)
@@ -318,6 +323,100 @@ kubectl port-forward svc/basic-example-app-cluster-flink-rest 8081 -n flink-team
 ![Flink Job UI](img/flink3.png)
 ![Flink Job UI](img/flink4.png)
 ![Flink Job UI](img/flink5.png)
+
+</CollapsibleContent>
+
+
+<CollapsibleContent header={<h2><span>Autoscaler Example</span></h2>}>
+
+Get the role arn linked to the job execution service account.
+```bash
+export FLINK_JOB_ROLE=$( terraform output flink_job_execution_role_arn )
+```
+Get the S3 bucket name for checkpoint,savepoint,logs and job storage data.
+```bash
+export S3_BUCKET="${$( terraform output flink_operator_bucket )//\"/}"
+```
+
+Navigate to example directory and submit the Flink job.
+
+```bash
+cd data-on-eks/streaming/emr-eks-flink/examples/karpenter
+```
+
+Modify the basic-example-app-cluster.yaml by replacing the placeholders with values from the two env variables above.
+
+```bash
+envsubst < autoscaler-example.yaml > autoscaler-example.yaml
+```
+
+The job example contains Autoscaler configuration:
+
+```
+...
+flinkConfiguration:
+
+    taskmanager.numberOfTaskSlots: "4"
+    # Autotuning parameters
+    kubernetes.operator.job.autoscaler.enabled: "true"
+    kubernetes.operator.job.autoscaler.stabilization.interval: 1m
+    kubernetes.operator.job.autoscaler.metrics.window: 1m
+    kubernetes.operator.job.autoscaler.target.utilization: "0.5"
+    kubernetes.operator.job.autoscaler.target.utilization.boundary: "0.2"
+    kubernetes.operator.job.autoscaler.restart.time: 1m
+    kubernetes.operator.job.autoscaler.catch-up.duration: 5m
+    kubernetes.operator.job.autoscaler.vertex.exclude.ids: ""
+
+...
+```
+
+
+It starts a [LoadSimulationPipeline](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/api/java/autoscaling/LoadSimulationPipeline.html) job that simulates flucating loads from zero to the max (1,2,4, and 8) loads:
+
+```
+job:
+    # if you have your job jar in S3 bucket you can use that path as well
+    jarURI: local:///opt/flink/examples/streaming/AutoscalingExample.jar
+    entryClass: org.apache.flink.streaming.examples.autoscaling.LoadSimulationPipeline
+    args:
+      - "--maxLoadPerTask"
+      - "1;2;4;8;16;"
+      - "--repeatsAfterMinutes"
+      - "60"
+```
+
+Deploy the job with the kubectl deploy command.
+
+```bash
+kubectl apply -f autoscaler-example.yaml
+```
+
+Monitor the job status using the below command. You should see the new nodes triggered by the karpenter and the YuniKorn will schedule Job manager pods and two Taskmanager pods.  As the load increases, autoscaler changes the parallelism of the tasks and more task manager pods are added as needed:
+
+```bash
+NAME                                             READY   STATUS    RESTARTS   AGE
+autoscaler-example-5cbd4c9864-bt2qj              2/2     Running   0          81m
+autoscaler-example-5cbd4c9864-r4gbg              2/2     Running   0          81m
+autoscaler-example-taskmanager-1-1               2/2     Running   0          80m
+autoscaler-example-taskmanager-1-2               2/2     Running   0          80m
+autoscaler-example-taskmanager-1-4               2/2     Running   0          78m
+autoscaler-example-taskmanager-1-5               2/2     Running   0          78m
+autoscaler-example-taskmanager-1-6               2/2     Running   0          38m
+autoscaler-example-taskmanager-1-7               2/2     Running   0          38m
+autoscaler-example-taskmanager-1-8               2/2     Running   0          38m
+```
+
+Access the Flink WebUI for the job by running this command:
+
+```bash
+kubectl port-forward svc/basic-example-karpenter-flink-rest 8081 -n flink-team-a-ns
+```
+
+Then browse to http://localhost:8081:
+
+![Flink Job UI](img/flink6.png)
+
+Examine the `max_load` and `parallelism` of each task.
 
 </CollapsibleContent>
 

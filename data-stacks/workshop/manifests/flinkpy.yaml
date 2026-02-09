@@ -1,0 +1,16 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: python-flink-job
+spec:
+  image: flink:1.17-python  # Use Python-enabled Flink image
+  flinkVersion: v1_17
+  mode: application
+  job:
+    jarURI: local:///opt/flink/opt/flink-python-1.17.0.jar  # PyFlink JAR
+    entryClass: org.apache.flink.client.python.PythonDriver
+    args:
+      - "-py"
+      - "s3://my-bucket/my_python_job.py"  # External Python file
+      - "--input"
+      - "s3://input-data/"

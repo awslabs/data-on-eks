@@ -6,7 +6,11 @@ export AWS_DEFAULT_REGION=$region
 # List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
+  "module.vpc_endpoints_sg"
+  "module.vpc_endpoints"
   "module.eks"
+  "kubernetes_storage_class.ebs_csi_encrypted_gp3_storage_class" # install EBS CSI resources before addons which need PVCs
+  "module.eks_blueprints_addons" # install kube-prometheus-stack first so addons can use CRDs
 )
 
 # Initialize Terraform

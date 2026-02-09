@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flink-operator
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://downloads.apache.org/flink/flink-kubernetes-operator-1.13.0/
+      chart: flink-kubernetes-operator
+      targetRevision: 1.13.0
+      helm:
+        values: |
+          ${user_values_yaml}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flink-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

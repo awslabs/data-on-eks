@@ -63,7 +63,7 @@ module "aws_ebs_csi_pod_identity" {
 #---------------------------------------------------------------
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "1.3"
+  version = "1.19"
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
@@ -151,6 +151,17 @@ module "eks_blueprints_addons" {
         value = data.aws_secretsmanager_secret_version.admin_password_version.secret_string
       }
     ],
+  }
+
+  helm_releases = {
+    keda = {
+      chart            = "keda"
+      chart_version    = "2.16.0"
+      repository       = "https://kedacore.github.io/charts"
+      description      = "Keda helm Chart deployment"
+      namespace        = "keda"
+      create_namespace = true
+    }
   }
 
   tags = local.tags

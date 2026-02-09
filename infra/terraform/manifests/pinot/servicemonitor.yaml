@@ -1,0 +1,50 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pinot-controller
+  namespace: ${namespace}
+  labels:
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: pinot
+      component: controller
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pinot-broker
+  namespace: ${namespace}
+  labels:
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: pinot
+      component: broker
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pinot-server
+  namespace: ${namespace}
+  labels:
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: pinot
+      component: server
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

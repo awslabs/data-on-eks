@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: event-producer
+  namespace: workshop
+spec:
+  terminationGracePeriodSeconds: 10
+  containers:
+  - name: event-producer-container
+    image: ghcr.io/astral-sh/uv:python3.12-trixie-slim
+    command: ["/bin/sh", "-c"]
+    args: ["sleep 1728000"]
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                  - amd64 # there's a compilation issue with pemja on arm64.

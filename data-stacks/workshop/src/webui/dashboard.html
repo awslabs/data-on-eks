@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Cafe - Live Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .live-dot { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        #feed-container::-webkit-scrollbar { width: 8px; }
+        #feed-container::-webkit-scrollbar-track { background: #f1f5f9; }
+        #feed-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        #feed-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="flex flex-col h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm p-4 border-b border-gray-200">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-700">The Holistic Cat Cafe</h1>
+                <div id="connection-status" class="flex items-center space-x-2 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span>Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex overflow-hidden p-4 lg:p-6 space-x-6 max-w-7xl mx-auto w-full">
+
+            <!-- Left Column: Cat Roster -->
+            <div class="w-1/2 lg:w-2/3 flex flex-col space-y-6 overflow-y-auto pr-2">
+                <!-- Available Cats -->
+                <section>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-600">Available for Adoption</h2>
+                    <div id="available-cats-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 min-h-[300px]"></div>
+                    <div id="available-pagination" class="mt-4 flex justify-between items-center"></div>
+                </section>
+
+                <!-- Adopted Cats -->
+                <section>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-600">Happily Adopted</h2>
+                    <div id="adopted-cats-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 min-h-[300px]"></div>
+                    <div id="adopted-pagination" class="mt-4 flex justify-between items-center"></div>
+                </section>
+            </div>
+
+            <!-- Right Column: Live Feed -->
+            <div class="w-1/2 lg:w-1/3 flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-600">Live Cafe Feed</h2>
+                    <div id="filter-controls" class="mt-3 flex space-x-2">
+                        <button class="filter-btn bg-blue-500 text-white px-3 py-1 rounded-full text-sm" data-filter="all">All</button>
+                        <button class="filter-btn bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm" data-filter="adopter">Adoptions</button>
+                        <button class="filter-btn bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm" data-filter="health">Health</button>
+                    </div>
+                </div>
+                <div id="feed-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div class="text-center text-gray-400 pt-8">Awaiting real-time events...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const availableGrid = document.getElementById('available-cats-grid');
+        const adoptedGrid = document.getElementById('adopted-cats-grid');
+        const availablePagination = document.getElementById('available-pagination');
+        const adoptedPagination = document.getElementById('adopted-pagination');
+        const feedContainer = document.getElementById('feed-container');
+        const connectionStatus = document.getElementById('connection-status');
+
+        // --- State ---
+        let catImages = [];
+
+        // --- Configuration ---
+        const API_BASE_URL = window.location.origin;
+        const WEBSOCKET_URL = `ws://${window.location.host}/ws`;
+
+        async function fetchCatImages() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/cat-images`);
+                const data = await response.json();
+                catImages = data.images || [];
+                console.log(`Loaded ${catImages.length} cat images.`);
+            } catch (error) {
+                console.error("Could not load cat images:", error);
+            }
+        }
+
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = (hash << 5) - hash + char;
+                hash |= 0; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+
+        function getCatImageUrl(cat) {
+            if (!cat || !cat.coat_length || !cat.coat_color || !cat.cat_id) {
+                return `https://placehold.co/64x64/E2E8F0/4A5568?text=N/A`;
+            }
+            const coatLength = cat.coat_length.toLowerCase();
+            const coatColor = cat.coat_color.toLowerCase();
+
+            const matchingImages = catImages.filter(img =>
+                img.toLowerCase().includes(coatLength) && img.toLowerCase().includes(coatColor)
+            );
+
+            if (matchingImages.length > 0) {
+                const hash = simpleHash(String(cat.cat_id));
+                const index = hash % matchingImages.length;
+                return `/static/cats/${matchingImages[index]}`;
+            } else {
+                return `https://placehold.co/64x64/E2E8F0/4A5568?text=${cat.name.substring(0,2)}`;
+            }
+        }
+
+        function formatAge(totalMonths) {
+            if (totalMonths === null || totalMonths === undefined) return 'Unknown Age';
+            const years = Math.floor(totalMonths / 12);
+            const months = totalMonths % 12;
+            let result = '';
+            if (years > 0) result += `${years} year${years > 1 ? 's' : ''}`;
+            if (months > 0) {
+                if (years > 0) result += ', ';
+                result += `${months} month${months > 1 ? 's' : ''}`;
+            }
+            return result || 'Kitten (<1 month)';
+        }
+
+        function createCatCard(cat) {
+            const card = document.createElement('div');
+            card.id = `cat-${cat.cat_id}`;
+            card.className = 'bg-white p-4 rounded-lg shadow-md border border-gray-200 transition-all duration-500';
+            const imageUrl = getCatImageUrl(cat);
+            card.innerHTML = `
+                <div class="flex items-center space-x-4">
+                    <img src="${imageUrl}" class="w-16 h-16 rounded-full object-cover bg-gray-200" alt="${cat.name}">
+                    <div>
+                        <p class="font-bold text-lg text-gray-800">${cat.name}</p>
+                        <p class="text-sm text-gray-500">Age ${formatAge(cat.age)}</p>
+                        <p class="text-xs text-gray-400">${cat.coat_color} ${cat.coat_length} coat</p>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        async function renderPage(catType, page = 1) {
+            const isAvailable = catType === 'available';
+            const grid = isAvailable ? availableGrid : adoptedGrid;
+            const paginationControls = isAvailable ? availablePagination : adoptedPagination;
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/cats?status=${catType}&page=${page}&limit=6`);
+                if (!response.ok) throw new Error('Failed to fetch cats');
+                const data = await response.json();
+                grid.innerHTML = '';
+                if (data.cats.length === 0) {
+                    grid.innerHTML = `<p class="text-gray-500 col-span-full">No ${catType} cats to display.</p>`;
+                } else {
+                    data.cats.forEach(cat => grid.appendChild(createCatCard(cat)));
+                }
+                paginationControls.innerHTML = `
+                    <button class="pagination-btn px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50" data-type="${catType}" data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}>Previous</button>
+                    <span class="text-sm text-gray-600">Page ${page} of ${data.totalPages || 1}</span>
+                    <button class="pagination-btn px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50" data-type="${catType}" data-page="${page + 1}" ${page >= data.totalPages ? 'disabled' : ''}>Next</button>
+                `;
+            } catch (error) {
+                console.error(`Error rendering ${catType} cats:`, error);
+                grid.innerHTML = `<p class="text-red-500 col-span-full">Could not load cat data.</p>`;
+            }
+        }
+
+        function handlePaginationClick(e) {
+            const btn = e.target.closest('.pagination-btn');
+            if (!btn || btn.disabled) return;
+            renderPage(btn.dataset.type, parseInt(btn.dataset.page, 10));
+        }
+
+        function initializeCatRoster() {
+            renderPage('available');
+            renderPage('adopted');
+        }
+
+        function createNotificationCard(event) {
+            const card = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            let borderColor, icon, title, message;
+
+            switch (event.type) {
+                case 'potential_adopter':
+                    borderColor = 'border-green-400'; icon = '❤️'; title = 'Potential Adopter Alert';
+                    message = event.data.alert_message;
+                    card.dataset.type = 'adopter';
+                    break;
+                case 'cat_health_alert':
+                    borderColor = 'border-red-400'; icon = '🩺'; title = 'Cat Health Alert';
+                    message = `Health Alert for ${event.data.cat_name}: ${event.data.alert_type} warning.`;
+                    card.dataset.type = 'health';
+                    break;
+                case 'cat_status_update':
+                     borderColor = 'border-blue-400'; icon = '🎉'; title = 'Adoption Successful!';
+                     message = `${event.data.cat_name} has found a new home! The roster is updating.`;
+                     card.dataset.type = 'system';
+                     break;
+                default:
+                    borderColor = 'border-gray-300'; icon = '🔔'; title = 'System Notification';
+                    message = 'An unknown event occurred.';
+                    card.dataset.type = 'system';
+            }
+            card.className = `p-3 rounded-md bg-gray-50 border-l-4 ${borderColor} shadow-sm transition-all duration-300`;
+            card.innerHTML = `<div class="flex items-start space-x-3"><span class="text-xl">${icon}</span><div><p class="font-semibold text-sm text-gray-700">${title}</p><p class="text-sm text-gray-600">${message}</p><p class="text-xs text-gray-400 mt-1">${timestamp}</p></div></div>`;
+            return card;
+        }
+
+        function setupWebSocket() {
+            const socket = new WebSocket(WEBSOCKET_URL);
+            socket.onopen = () => {
+                console.log("WebSocket connection established.");
+                connectionStatus.innerHTML = `<div class="w-3 h-3 bg-green-500 rounded-full live-dot"></div><span>Live</span>`;
+                connectionStatus.classList.replace('bg-red-100', 'bg-green-100');
+                connectionStatus.classList.replace('text-red-700', 'text-green-700');
+            };
+            socket.onmessage = (rawEvent) => {
+                if (feedContainer.children.length === 1 && feedContainer.firstElementChild.tagName !== 'DIV') {
+                    feedContainer.innerHTML = '';
+                }
+                const eventData = JSON.parse(rawEvent.data);
+
+                if (eventData.type === 'cat_status_update' && eventData.data.status === 'adopted') {
+                     console.log(`Cat ${eventData.data.cat_id} adopted! Refreshing rosters.`);
+                     const notificationCard = createNotificationCard(eventData);
+                     feedContainer.prepend(notificationCard);
+                     initializeCatRoster();
+                } else {
+                    const notificationCard = createNotificationCard(eventData);
+                    const currentFilter = document.querySelector('.filter-btn.bg-blue-500').dataset.filter;
+                    if (currentFilter !== 'all' && notificationCard.dataset.type !== currentFilter) {
+                        notificationCard.style.display = 'none';
+                    }
+                    feedContainer.prepend(notificationCard);
+                }
+            };
+            socket.onclose = () => {
+                console.log("WebSocket connection closed. Reconnecting...");
+                connectionStatus.innerHTML = `<div class="w-3 h-3 bg-red-500 rounded-full"></div><span>Disconnected</span>`;
+                connectionStatus.classList.replace('bg-green-100', 'bg-red-100');
+                connectionStatus.classList.replace('text-green-700', 'text-red-700');
+                setTimeout(setupWebSocket, 3000);
+            };
+            socket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                socket.close();
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchCatImages();
+            initializeCatRoster();
+            setupWebSocket();
+            availablePagination.addEventListener('click', handlePaginationClick);
+            adoptedPagination.addEventListener('click', handlePaginationClick);
+            document.getElementById('filter-controls').addEventListener('click', (e) => {
+                const clickedBtn = e.target.closest('.filter-btn');
+                if (!clickedBtn) return;
+
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.replace('bg-blue-500', 'bg-gray-200');
+                    btn.classList.replace('text-white', 'text-gray-700');
+                });
+                clickedBtn.classList.replace('bg-gray-200', 'bg-blue-500');
+                clickedBtn.classList.replace('text-gray-700', 'text-white');
+
+                const currentFilter = clickedBtn.dataset.filter;
+                document.querySelectorAll('#feed-container > div[data-type]').forEach(card => {
+                    card.style.display = (currentFilter === 'all' || card.dataset.type === currentFilter) ? 'block' : 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

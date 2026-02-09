@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-debug
+  namespace: workshop
+spec:
+  containers:
+  - name: kafka-consumer
+    image: confluentinc/cp-kafka:8.0.1
+    command: ["kafka-console-consumer"]
+    args:
+      - "--bootstrap-server=data-on-eks-broker-0.data-on-eks-kafka-brokers.kafka.svc.cluster.local:9092"
+      - "--topic=visitor-checkins"
+      - "--from-beginning"
+  restartPolicy: Never
