@@ -4,7 +4,7 @@ sidebar_label: Mounpoint-S3 for Spark Workloads
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 import CodeBlock from '@theme/CodeBlock';
 import DaemonSetWithConfig from '!!raw-loader!../../../analytics/terraform/spark-k8s-operator/examples/mountpoint-s3-spark/mountpoint-s3-daemonset.yaml';

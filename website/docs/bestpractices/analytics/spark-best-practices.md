@@ -4,7 +4,7 @@ sidebar_label: Spark on EKS Best Practices
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # Spark on EKS Best Practices
 

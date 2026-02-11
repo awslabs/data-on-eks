@@ -2,7 +2,7 @@
 title: Kafka on EKS
 sidebar_position: 4
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # Apache Kafka
 [Apache Kafka](https://kafka.apache.org/) is an open-source distributed event streaming platform used by thousands of companies for high-performance data pipelines, streaming analytics, data integration, and mission-critical applications. This blueprint implements Kafka using **KRaft (Kafka Raft) mode**, a significant architectural improvement that eliminates the need for Zookeeper.

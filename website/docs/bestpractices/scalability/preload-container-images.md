@@ -3,7 +3,7 @@ sidebar_label: Preload Container Images
 sidebar_position: 1
 ---
 
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # Preload container images into data volumes with EBS Snapshots
 

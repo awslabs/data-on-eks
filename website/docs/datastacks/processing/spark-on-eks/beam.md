@@ -3,7 +3,7 @@ sidebar_position: 11
 sidebar_label: Apache Beam Pipelines
 ---
 
-import CollapsibleContent from '../../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # Apache Beam Pipelines on Spark/EKS
 

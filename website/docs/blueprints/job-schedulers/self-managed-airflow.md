@@ -5,7 +5,7 @@ sidebar_label: Airflow on EKS
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 import CodeBlock from '@theme/CodeBlock';
 

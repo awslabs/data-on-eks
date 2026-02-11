@@ -4,7 +4,7 @@ sidebar_label: Data Generation
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 import ReplaceS3BucketPlaceholders from './_replace_s3_bucket_placeholders.mdx';
 
 # Data Generation for Running Spark Benchmark Tests on Amazon EKS

@@ -2,7 +2,7 @@
 sidebar_position: 9
 sidebar_label: S3 Tables with Spark
 ---
-import CollapsibleContent from '../../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # S3 Tables with Amazon EKS
 

@@ -3,7 +3,7 @@ sidebar_position: 6
 sidebar_label: Mountpoint S3 for Spark
 ---
 
-import CollapsibleContent from '../../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 import CodeBlock from '@theme/CodeBlock';
 
 # Mountpoint S3 for Spark Workloads

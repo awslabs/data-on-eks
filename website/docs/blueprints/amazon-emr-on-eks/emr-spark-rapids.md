@@ -2,7 +2,7 @@
 sidebar_position: 4
 sidebar_label: EMR NVIDIA Spark-RAPIDS
 ---
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 # EMR on EKS NVIDIA RAPIDS Accelerator for Apache Spark
 
