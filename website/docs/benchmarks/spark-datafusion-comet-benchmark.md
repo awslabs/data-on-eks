@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 import BarChart from '@site/src/components/Charts/BarChart';
 import PieChart from '@site/src/components/Charts/PieChart';
 
-# Apache Spark with Apache DataFusion Comet Benchmarks
+## Apache Spark with Apache DataFusion Comet Benchmarks
 
 [Apache Spark](https://spark.apache.org/) powers large-scale analytics, but its JVM-based execution faces performance limitations. [Apache DataFusion Comet](https://github.com/apache/datafusion-comet) attempts to address this by offloading compute operations to a native Rust execution engine built on [Apache Arrow DataFusion](https://arrow.apache.org/datafusion/).
 
