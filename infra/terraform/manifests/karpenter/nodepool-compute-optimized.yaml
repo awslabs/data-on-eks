@@ -52,7 +52,7 @@ spec:
         # Generation 5+ for modern performance
         - key: karpenter.k8s.aws/instance-generation
           operator: Gt
-          values: ["5"]
+          values: ["4"]
 
   # Resource limits for budget control
   limits:
