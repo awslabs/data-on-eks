@@ -418,3 +418,29 @@ resource "kubernetes_secret" "airflow_connecton_config" {
     kubernetes_namespace_v1.airflow[0],
   ]
 }
+
+#---------------------------------------------------------------
+# Airflow Fernet Secret
+#---------------------------------------------------------------
+
+resource "random_password" "fernet" {
+  count  = var.enable_airflow ? 1 : 0
+  length = 32
+}
+
+resource "kubernetes_secret" "airflow_fernet_secrets" {
+  count = var.enable_airflow ? 1 : 0
+
+  metadata {
+    name      = "airflow-fernet-key"
+    namespace = local.airflow_namespace
+  }
+
+  data = {
+    "fernet-key" = base64encode(random_password.fernet[0].result)
+  }
+
+  type = "Opaque"
+
+  depends_on = [kubernetes_namespace_v1.airflow[0]]
+}
