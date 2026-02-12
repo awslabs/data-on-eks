@@ -2,7 +2,7 @@
 # Amazon Prometheus
 #------------------------------------------
 locals {
-  amp_ingest_service_account = "amp-iamproxy-ingest-service-account"
+  amp_ingest_service_account = "kube-prometheus-stack-prometheus"
   amp_namespace              = "kube-prometheus-stack"
 }
 
