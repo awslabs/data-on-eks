@@ -47,7 +47,7 @@ resource "helm_release" "karpenter" {
   create_namespace = true
   repository       = "oci://public.ecr.aws/karpenter"
   chart            = "karpenter"
-  version          = "1.6.4"
+  version          = "1.9.0"
   wait             = true
 
   values = [
