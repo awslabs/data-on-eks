@@ -23,3 +23,4 @@ sparkConf: |-
   # Show up to 10000 jobs and stages in the UI
   spark.ui.retainedJobs=10000
   spark.ui.retainedStages=10000
+  spark.history.store.hybridStore.maxMemoryUsage=6g
