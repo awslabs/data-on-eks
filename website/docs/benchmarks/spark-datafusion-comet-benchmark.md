@@ -159,7 +159,7 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
   }}
   options={{
     scales: {
-      y: { 
+      y: {
         beginAtZero: true,
         title: { display: true, text: 'Improvement (%)' }
       },
@@ -202,7 +202,7 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
   }}
   options={{
     scales: {
-      y: { 
+      y: {
         beginAtZero: true,
         title: { display: true, text: 'Degradation (%)' }
       },
@@ -230,6 +230,29 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
 :::note
 Extreme regressions (>500%) may indicate queries falling back to JVM execution while still incurring Comet's coordination overhead.
 :::
+
+#### Notes on Performance Differences
+
+**Why Comet Underperforms on Some Queries:**
+
+As of Comet v0.13.0, **Dynamic Partition Pruning (DPP) is not fully supported**. This limitation significantly impacts queries with partitioned fact tables joined to filtered dimension tables. Without DPP, Comet scans entire datasets instead of pruning irrelevant partitions at runtime.
+
+**Example - Query 25 (1,308% slower):**
+- **Comet**: Scanned all 1,823 parquet files, spending ~34 minutes total CPU time
+- **Native Spark**: Applied DPP to read only 30 files, spending ~3 minutes total CPU time
+- **Impact**: 60x more files read, resulting in 14x slower execution
+
+This pattern appears across the worst-performing queries (q25, q17, q54, q29), where Comet reads 10-60x more data than necessary.
+
+**Why Comet Outperforms on Other Queries:**
+
+Comet's native Rust execution engine excels at CPU-intensive operations
+
+**Example - Query 8 (54% faster):**
+- **Parquet Scanning**: Both engines read the same files, but Comet's native reader processed 12M rows in 4.0s vs Spark's 6.0s (50% faster)
+- **Sort-Merge Join**: Comet completed the join in 1.4s vs Spark's 2.7s (93% faster)
+- **Aggregations**: Comet's vectorized execution significantly outperformed Spark's JVM-based aggregation
+
 
 ### Resource Usage Analysis
 
@@ -414,4 +437,3 @@ kubectl get sparkapplications -n spark-team-a
 # View logs
 kubectl logs -f -n spark-team-a -l spark-app-name=tpcds-benchmark-comet
 ```
-
