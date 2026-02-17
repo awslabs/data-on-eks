@@ -1,0 +1,202 @@
+# TPC-DS 1TB Benchmark - Native Spark on c5d.12xlarge
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "tpcds-benchmark-datafusion-comet-c5d"
+  namespace: spark-team-a
+spec:
+  type: Scala
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/spark-benchmark:v0.0.0" # 3.5.7
+  imagePullPolicy: IfNotPresent
+  sparkVersion: "3.5.7"
+  mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
+  mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
+  arguments:
+    # TPC-DS data location
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-1TB"
+    # results location
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-1TB-RESULT-COMET"
+    # Path to kit in the docker image
+    - "/opt/tpcds-kit/tools"
+    # Data Format
+    - "parquet"
+    # Scale factor (in GB)
+    - "1000"
+    # Number of iterations
+    - "3"
+    # Optimize queries with hive tables
+    - "false"
+    # Filter queries, will run all if empty
+    - ""
+    # Logging set to WARN
+    - "true"
+  restartPolicy:
+    type: Never
+  driver:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    serviceAccount: spark-team-a
+    template:
+      metadata:
+        annotations:
+          karpenter.sh/do-not-disrupt: "true"
+        labels:
+          yunikorn.apache.org/queue: root.spark.spark-team-a
+      spec:
+        # Optimize DNS resolution by reducing ndots from default 5 to 2
+        #
+        # How ndots works:
+        # - If a domain has fewer dots than ndots value, Kubernetes appends search domains
+        # - Default ndots=5 means "example.com" (1 dot) triggers search domain attempts
+        #
+        # Default behavior (ndots=5) for "example.com":
+        # 1. example.com.default.svc.cluster.local (FAIL)
+        # 2. example.com.svc.cluster.local (FAIL)
+        # 3. example.com.cluster.local (FAIL)
+        # 4. example.com (SUCCESS) - 4 failed queries before success
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "2"
+        securityContext:
+          runAsUser: 185
+        volumes:
+          - name: spark-local-dir-1
+            hostPath:
+              path: "/mnt/k8s-disks/0"
+              type: Directory
+        initContainers:
+          - name: volume-permission
+            image: public.ecr.aws/docker/library/busybox
+            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+            securityContext:
+              runAsUser: 0
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+        nodeSelector:
+          NodeGroupType: Benchmark
+        containers:
+          - name: spark-kubernetes-driver
+            env:
+              - name: JAVA_HOME
+                value: "/usr/lib/jvm/java-17-openjdk-amd64"
+              # - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
+              #   value: IPv6
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+  executor:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    instances: 23  # ~3 executors per spark_benchmark_ssd node
+    serviceAccount: spark-team-a
+    template:
+      metadata:
+        annotations:
+          karpenter.sh/do-not-disrupt: "true"
+        labels:
+          yunikorn.apache.org/queue: root.spark.spark-team-a
+      spec:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "2"
+        securityContext:
+          runAsUser: 185
+        volumes:
+          - name: spark-local-dir-1
+            hostPath:
+              path: "/mnt/k8s-disks/0"
+              type: Directory
+        initContainers:
+          - name: volume-permission
+            image: public.ecr.aws/docker/library/busybox
+            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+            securityContext:
+              runAsUser: 0
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+        nodeSelector:
+          NodeGroupType: Benchmark
+        containers:
+          - name: spark-kubernetes-executor
+            env:
+              - name: JAVA_HOME
+                value: "/usr/lib/jvm/java-17-openjdk-amd64"
+              # - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
+              #   value: IPv6
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+  sparkConf:
+    # Datafusion Comet settings
+    # https://github.com/apache/datafusion-benchmarks/tree/main/runners/datafusion-comet
+    "spark.memory.offHeap.enabled": "true"
+    "spark.memory.offHeap.size": "32g"
+    "spark.comet.exec.enabled": "true"
+    "spark.plugins": "org.apache.spark.CometPlugin"
+    "spark.shuffle.manager": "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager"
+    "spark.comet.explainFallback.enabled": "true"
+    "spark.comet.exec.shuffle.enabled": "true"
+    "spark.comet.cast.allowIncompatible": "true"
+    "spark.comet.exec.shuffle.mode": "auto"
+    # "spark.comet.exec.memoryPool.fraction": "0.9"
+    # Comet doesn't rely on aws sdk to determine s3 endpoints: https://github.com/apache/datafusion-comet/blob/main/native/core/src/parquet/objectstore/s3.rs
+    "spark.hadoop.fs.s3a.endpoint.region": "us-west-2"
+
+    # # ipv6
+    # "spark.kubernetes.driver.service.ipFamilies": "IPv6"
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    # AQE
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-datafusion-comet-c5d"
+
+    # S3 Optimizations with AWS SDK V2
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M"
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
+
+    # Kubernetes timeouts
+    "spark.kubernetes.submission.connectionTimeout": "120000"
+    "spark.kubernetes.submission.requestTimeout": "120000"
+    "spark.kubernetes.driver.connectionTimeout": "120000"
+    "spark.kubernetes.driver.requestTimeout": "120000"
+
+    # Data writing and shuffle tuning
+    "spark.shuffle.file.buffer": "1m"
+    "spark.reducer.maxSizeInFlight": "48m"
+    "spark.hadoop.fs.s3a.multipart.purge": "true"
