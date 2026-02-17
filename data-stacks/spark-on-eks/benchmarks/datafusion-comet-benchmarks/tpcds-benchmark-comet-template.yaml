@@ -8,8 +8,7 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  # image: "public.ecr.aws/m8u6z8z4/manabu-test:datafusion-comet-v0.0.0"
-  image: "public.ecr.aws/m8u6z8z4/manabu-test:datafusion-comet-v0.0.2" # 3.5.7
+  image: "public.ecr.aws/data-on-eks/spark-benchmark:v0.0.0" # 3.5.7
   imagePullPolicy: IfNotPresent
   sparkVersion: "3.5.7"
   mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
@@ -47,6 +46,17 @@ spec:
         labels:
           yunikorn.apache.org/queue: root.spark.spark-team-a
       spec:
+        # Optimize DNS resolution by reducing ndots from default 5 to 2
+        #
+        # How ndots works:
+        # - If a domain has fewer dots than ndots value, Kubernetes appends search domains
+        # - Default ndots=5 means "example.com" (1 dot) triggers search domain attempts
+        #
+        # Default behavior (ndots=5) for "example.com":
+        # 1. example.com.default.svc.cluster.local (FAIL)
+        # 2. example.com.svc.cluster.local (FAIL)
+        # 3. example.com.cluster.local (FAIL)
+        # 4. example.com (SUCCESS) - 4 failed queries before success
         dnsConfig:
           options:
             - name: ndots

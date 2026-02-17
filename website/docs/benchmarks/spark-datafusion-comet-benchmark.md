@@ -14,12 +14,11 @@ import PieChart from '@site/src/components/Charts/PieChart';
 
 This benchmark evaluates Comet's performance on [Amazon EKS](https://aws.amazon.com/eks/) using the [TPC-DS](https://www.tpc.org/tpcds/) 1TB workload.
 
-:::note Version Tested
-This benchmark uses Apache DataFusion Comet 0.13.0 (released January 2026). Performance characteristics may improve in future releases.
-:::
 
-:::warning Key Finding
-Our TPC-DS 1TB benchmark shows that **Apache DataFusion Comet delivered 18% slower overall performance** compared to native Spark SQL, with highly variable query-level results.
+:::warning **TL;DR**
+Our TPC-DS 1TB benchmark shows that **Apache DataFusion Comet (v0.13.0) delivered 18% slower overall performance** compared to native Spark SQL, with highly variable query-level results.
+Some queries saw ~50% improvements, while others saw ~1500% degradation. The degradation is primarily due to Comet's lack of support for Dynamic Partition Pruning (DPP)
+Performance is expected to improve significantly in future releases as DPP support is added.
 :::
 
 ## TPC-DS 1TB Benchmark Results
@@ -27,7 +26,7 @@ Our TPC-DS 1TB benchmark shows that **Apache DataFusion Comet delivered 18% slow
 ### Summary
 
 Our comprehensive TPC-DS 1TB benchmark on Amazon EKS demonstrates that **Apache DataFusion Comet does not provide overall speedup** (**18% slower**) compared to native Spark SQL, with individual queries showing mixed results.
-
+Comet also required significantly more memory (~32GB more) than Spark's default execution engine to successfully complete all queries.
 
 #### Overall Performance
 
@@ -97,7 +96,7 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
 | **Java Runtime** | [OpenJDK](https://openjdk.org/) 17 | [OpenJDK](https://openjdk.org/) 17 |
 | **Execution Engine** | JVM-based [Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten) | Rust + JVM hybrid |
 | **Key Plugins** | Standard Spark | `CometPlugin`, `CometShuffleManager` |
-| **Off-heap Memory** | Default | 32GB enabled |
+| **Off-heap Memory** | 32GB enabled | 32GB enabled |
 | **Memory Management** | JVM GC | Unified native + JVM |
 
 #### Critical Comet-Specific Configurations
@@ -228,7 +227,7 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
 | q74-v2.4 | 22.1 | 52.3 | **137%** slower |
 
 :::note
-Extreme regressions (>500%) may indicate queries falling back to JVM execution while still incurring Comet's coordination overhead.
+Extreme regressions (>100%) may indicate queries falling back to JVM execution while still incurring Comet's coordination overhead.
 :::
 
 #### Notes on Performance Differences
