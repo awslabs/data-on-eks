@@ -5,7 +5,7 @@ title: EMR on EKS with Flink Streaming
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CollapsibleContent from '../../../src/components/CollapsibleContent';
+import CollapsibleContent from '@site/src/components/CollapsibleContent';
 
 :::info
 Please note that we are working on adding more features to this blueprint such as Flink examples with multiple connectors, Ingress for WebUI, Grafana dashboards etc.
