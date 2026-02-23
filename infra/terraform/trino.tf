@@ -156,6 +156,15 @@ module "trino_pod_identity" {
 }
 
 #---------------------------------------------------------------
+# Trino Namespace
+#---------------------------------------------------------------
+resource "kubernetes_namespace" "trino" {
+  metadata {
+    name = local.trino_namespace
+  }
+}
+
+#---------------------------------------------------------------
 # Trino ArgoCD Application
 #---------------------------------------------------------------
 resource "kubectl_manifest" "trino" {
@@ -173,6 +182,7 @@ resource "kubectl_manifest" "trino" {
 
   depends_on = [
     helm_release.argocd,
+    kubernetes_namespace.trino,
     module.trino_pod_identity,
     module.trino_s3_bucket,
     module.trino_exchange_bucket
@@ -204,7 +214,8 @@ resource "kubectl_manifest" "trino_keda_scaledobject" {
 
   depends_on = [
     kubectl_manifest.trino,
-    kubectl_manifest.keda_operator
+    kubectl_manifest.keda_operator,
+    kubernetes_namespace.trino
   ]
 }
 
