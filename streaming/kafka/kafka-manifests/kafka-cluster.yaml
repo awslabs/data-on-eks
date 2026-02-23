@@ -1,4 +1,4 @@
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: cluster
@@ -8,8 +8,8 @@ metadata:
     strimzi.io/node-pools: enabled
 spec:
   kafka:
-    version: 3.9.0
-    metadataVersion: 3.9-IV0
+    version: 4.1.1
+    metadataVersion: 4.1-IV0
     listeners:
       - name: plain
         port: 9092
@@ -25,24 +25,9 @@ spec:
       transaction.state.log.min.isr: 2
       default.replication.factor: 3
       min.insync.replicas: 2
-    resources:
-      requests:
-        memory: 58Gi
-        cpu: "6"
-      limits:
-        memory: 64Gi
-        cpu: "8"
     jvmOptions:
       "-Xmx": "6g"
       "-Xms": "4g"
-    storage:
-      type: jbod
-      volumes:
-        - id: 0
-          type: persistent-claim
-          size: 1000Gi
-          class: gp3
-          deleteClaim: false
     template:
       pod:
         tolerations:
@@ -267,7 +252,7 @@ data:
       name: kafka_cruisecontrol_$1_$2
       type: GAUGE
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
   name: controller
@@ -284,10 +269,11 @@ spec:
       - id: 0
         type: persistent-claim
         size: 100Gi
+        class: gp3
         kraftMetadata: shared
         deleteClaim: false
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
   name: broker
@@ -304,5 +290,13 @@ spec:
       - id: 0
         type: persistent-claim
         size: 100Gi
+        class: gp3
         kraftMetadata: shared
         deleteClaim: false
+  resources:
+    requests:
+      memory: 58Gi
+      cpu: "6"
+    limits:
+      memory: 64Gi
+      cpu: "8"

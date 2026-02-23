@@ -3,13 +3,13 @@
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.17.2"
+  version = "~> 21.0"
 
-  cluster_name    = local.name
-  cluster_version = local.cluster_version
+  name               = local.name
+  kubernetes_version = local.cluster_version
 
   #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
-  cluster_endpoint_public_access = true
+  endpoint_public_access = true
 
   vpc_id = module.vpc.vpc_id
   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the EKS Control Plane ENIs will be created
@@ -21,11 +21,22 @@ module "eks" {
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
 
+  addons = {
+    coredns = {}
+    eks-pod-identity-agent = {
+      before_compute = true
+    }
+    kube-proxy = {}
+    vpc-cni = {
+      before_compute = true
+    }
+  }
+
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
   #---------------------------------------
   # Extend cluster security group rules
-  cluster_security_group_additional_rules = {
+  security_group_additional_rules = {
     ingress_nodes_ephemeral_ports_tcp = {
       description                = "Nodes on ephemeral ports"
       protocol                   = "tcp"
@@ -95,20 +106,8 @@ module "eks" {
   })
 }
 
-module "aws_auth" {
-  source  = "terraform-aws-modules/eks/aws//modules/aws-auth"
-  version = "20.17.2"
-
-  manage_aws_auth_configmap = true
-
-  aws_auth_roles = [
-    {
-      rolearn  = module.eks_blueprints_addons.karpenter.node_iam_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
-      groups = [
-        "system:bootstrappers",
-        "system:nodes",
-      ]
-    }
-  ]
+resource "aws_eks_access_entry" "karpenter" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.eks_blueprints_addons.karpenter.node_iam_role_arn
+  type          = "EC2_LINUX"
 }

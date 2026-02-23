@@ -4,23 +4,23 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.95"
+      version = "~> 6.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = ">= 2.10"
+      version = "~> 3.0"
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "~> 2.17"
+      version = "~> 2.9" # upgrading to helm v3 depends on https://github.com/aws-ia/terraform-aws-eks-blueprints-addons/issues/452
     }
     kubectl = {
       source  = "alekc/kubectl"
-      version = ">= 2.0.2"
+      version = "~> 2.1"
     }
     random = {
       source  = "hashicorp/random"
-      version = ">= 3.1"
+      version = "~> 3.8"
     }
   }
 }
