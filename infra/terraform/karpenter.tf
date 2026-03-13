@@ -37,6 +37,7 @@ module "karpenter" {
     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     S3TableAccess                = aws_iam_policy.s3tables_policy.arn
     CniIpv6Policy                = aws_iam_policy.cni_ipv6_policy.arn
+    EbsVolumeManagement          = aws_iam_policy.karpenter_ebs_volume_policy.arn
   }
 }
 
@@ -134,6 +135,37 @@ resource "aws_iam_policy" "s3tables_policy" {
           "s3tables:GetTableMaintenanceConfiguration"
         ]
         Resource = "arn:aws:s3tables:*:${data.aws_caller_identity.current.account_id}:bucket/*/table/*"
+      }
+    ]
+  })
+}
+
+#---------------------------------------------------------------
+# EBS Volume Management Policy for Karpenter Nodes
+# Required for EC2NodeClass userData scripts that dynamically
+# create and attach EBS volumes (e.g. emr-pcp-benchmark /data1 shuffle dir)
+#---------------------------------------------------------------
+resource "aws_iam_policy" "karpenter_ebs_volume_policy" {
+  name_prefix = "${local.name}-karpenter-ebs-vol"
+  path        = "/"
+  description = "Allow Karpenter nodes to create/attach EBS volumes via userData scripts"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "EbsVolumeOperations"
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateVolume",
+          "ec2:AttachVolume",
+          "ec2:DeleteVolume",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeVolumeStatus",
+          "ec2:ModifyInstanceAttribute",
+          "ec2:DescribeInstances"
+        ]
+        Resource = "*"
       }
     ]
   })

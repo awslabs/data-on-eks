@@ -9,7 +9,7 @@ Apache Celeborn is an elastic and high-performance Remote Shuffle Service (RSS) 
 
 #### Celeborn for Spark Dynamic Allocation
 
-For Spark dynamic allocation, Celeborn addresses a critical challenge: when executors are dynamically scaled up or down based on workload demands, shuffle data traditionally stored on executor local disks would be lost when those executors are terminated. 
+For Spark dynamic allocation, Celeborn addresses a critical challenge: when executors are dynamically scaled up or down based on workload demands, shuffle data traditionally stored on executor local disks would be lost when those executors are terminated.
 
 Celeborn solves this by externalizing shuffle operations to dedicated worker nodes that persist shuffle data independently of executor lifecycles. This enables true elastic scaling where Spark can safely add and remove executors without losing intermediate computation results, significantly improving resource utilization and cost efficiency. The service provides high availability through data replication and asynchronous processing, making dynamic allocation more reliable compared to traditional local shuffle mechanisms.
 
@@ -17,7 +17,7 @@ Celeborn solves this by externalizing shuffle operations to dedicated worker nod
 
 ### Storage Configuration
 
-Apache Celeborn pods run as StatefulSets in the official Helm chart. Performance is heavily dependent on the underlying storage used for shuffle data. 
+Apache Celeborn pods run as StatefulSets in the official Helm chart. Performance is heavily dependent on the underlying storage used for shuffle data.
 
 **When to Use Instance Stores:** If you need absolute maximum performance from your cluster, use instance store volumes. Instance stores provide high IOPS and throughput that significantly improve Celeborn's shuffle operations compared to network-attached storage like EBS.
 
@@ -105,4 +105,3 @@ Use the community-maintained [Grafana dashboards](https://github.com/apache/cele
 - Memory usage (Netty memory, direct memory, buffer allocations)
 - Sort operations and performance
 - Active connections and slots
-
