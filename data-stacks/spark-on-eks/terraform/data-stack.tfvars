@@ -7,4 +7,4 @@ enable_ingress_nginx        = true
 deployment_id               = "rOOMTbDP"
 enable_celeborn             = false
 enable_ipv6                 = false
-enable_nvidia_device_plugin = false # Enable this for Spark RAPIDS on GPUs example
+enable_nvidia_gpu_operator  = true  # Enable this for Spark RAPIDS on GPUs example

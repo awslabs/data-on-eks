@@ -38,7 +38,7 @@ spec:
         # g6e: Cost-optimized GPU instances
         - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["g5", "g6", "g6e"]
+          values: ["g5", "g6", "g6e", "g7e"]
 
         - key: karpenter.k8s.aws/instance-size
           operator: In
