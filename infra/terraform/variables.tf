@@ -239,6 +239,7 @@ Valid values: null (standard/default), "XL", "2XL", "4XL"
 - XL  : 1700 API concurrency seats, 167 pods/sec scheduling rate
 - 2XL : 3400 API concurrency seats, 283 pods/sec scheduling rate
 - 4XL : 6800 API concurrency seats, 400 pods/sec scheduling rate
+- 8XL : 13600 API concurrency seats, 400 pods/sec scheduling rate
 Leave null to use the default standard tier.
 DESC
   type        = string
@@ -248,7 +249,7 @@ DESC
     # contains() will error if the value argument is null, so use coalesce to
     # convert null into an empty string. The overall condition still allows
     # null as a valid value.
-    condition     = var.eks_pcp_tier == null || contains(["XL", "2XL", "4XL"], coalesce(var.eks_pcp_tier, ""))
-    error_message = "eks_pcp_tier must be null or one of: XL, 2XL, 4XL"
+    condition     = var.eks_pcp_tier == null || contains(["XL", "2XL", "4XL", "8XL"], coalesce(var.eks_pcp_tier, ""))
+    error_message = "eks_pcp_tier must be null or one of: XL, 2XL, 4XL, 8XL"
   }
 }

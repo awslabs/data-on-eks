@@ -93,6 +93,7 @@ locals {
     "XL"  = "tier-xl"
     "2XL" = "tier-2xl"
     "4XL" = "tier-4xl"
+    "8XL" = "tier-8xl"
   }
 
   # # Private ECR Account IDs for EMR Spark Operator Helm Charts

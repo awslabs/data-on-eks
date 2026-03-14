@@ -23,6 +23,8 @@ module "eks" {
   #   XL  : 1700 API concurrency seats | 167 pods/sec scheduling rate | 16 GB etcd
   #   2XL : 3400 API concurrency seats | 283 pods/sec scheduling rate | 16 GB etcd
   #   4XL : 6800 API concurrency seats | 400 pods/sec scheduling rate | 16 GB etcd
+  #   8XL : 13600 API concurrency seats | 400 pods/sec scheduling rate | 16 GB etcd
+
   # Set eks_pcp_tier = null to use the standard default control plane
   control_plane_scaling_config = var.eks_pcp_tier == null ? null : {
     tier = local.pcp_tier_map[var.eks_pcp_tier]
