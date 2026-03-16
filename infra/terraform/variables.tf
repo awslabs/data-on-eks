@@ -199,6 +199,12 @@ variable "enable_nvidia_device_plugin" {
   default     = false
 }
 
+variable "enable_nvidia_gpu_operator" {
+  description = "Enable NVIDIA GPU Operator addon for GPU workloads with DCGM metrics"
+  type        = bool
+  default     = false
+}
+
 variable "enable_emr_on_eks" {
   description = "Enable EMR on EKS Virtual Clusters for running Spark jobs"
   type        = bool
