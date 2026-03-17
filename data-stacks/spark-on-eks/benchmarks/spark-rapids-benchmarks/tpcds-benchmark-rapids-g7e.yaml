@@ -1,0 +1,226 @@
+# TPC-DS 1TB Benchmark - RAPIDS GPU Acceleration on g7e.2xlarge
+# Replace $S3_BUCKET with your S3 bucket name
+#
+# Prerequisites:
+# - TPC-DS 1TB data already in S3 at s3a://$S3_BUCKET/TPCDS-TEST-1TB
+# - GPU nodes with Karpenter NodePool configured (g7e.2xlarge with RTX PRO 6000 Blackwell GPUs)
+# - NVIDIA device plugin installed
+#
+# Instance Specs (g7e.2xlarge):
+# - 8 vCPUs, 64 GiB system memory, 1× NVIDIA RTX PRO 6000 Blackwell (96 GiB GPU memory)
+# - Upgrade from g6.2xlarge: 2x system memory, 4.3x GPU memory
+#
+# NOTE: g7e.2xlarge may have limited capacity. Use tpcds-benchmark-rapids-g6.yaml as fallback.
+#
+# Deploy:
+# envsubst < tpcds-benchmark-rapids-g7e.yaml | kubectl apply -f -
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "tpcds-benchmark-rapids-g7e"
+  namespace: spark-team-a
+spec:
+  type: Scala
+  mode: cluster
+  image: varabonthu/spark352-rapids25-tpcds4-cuda12-9:v1.1.0
+  imagePullPolicy: Always
+  sparkVersion: "3.5.2"
+  mainClass: com.k8s.spark.benchmark.BenchmarkSQL
+  mainApplicationFile: local:///opt/spark/examples/jars/spark-k8s-benchmarks-assembly-1.0.0.jar
+  arguments:
+    # TPC-DS data location (1TB parquet data)
+    - "s3a://$S3_BUCKET/TPCDS-TEST-1TB"
+    # Results location
+    - "s3a://$S3_BUCKET/TPCDS-TEST-1TB-RESULT-RAPIDS-GPU-G7E"
+    # Path to TPC-DS kit in the docker image
+    - "/opt/tpcds-kit/tools"
+    # Data Format
+    - "parquet"
+    # Scale factor (in GB)
+    - "1000"
+    # Number of iterations
+    - "3"
+    # Optimize queries with hive tables
+    - "false"
+    # Filter queries, will run all if empty (e.g., "q1,q2,q3" or "" for all)
+    - ""
+    # Logging set to WARN
+    - "true"
+  restartPolicy:
+    type: Never
+  volumes:
+    - name: spark-local-dir-1
+      hostPath:
+        path: "/mnt/k8s-disks/0"
+        type: DirectoryOrCreate
+  driver:
+    cores: 4
+    memory: "8g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /data1
+    initContainers:
+      - name: volume-permission
+        image: public.ecr.aws/docker/library/busybox
+        command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    env:
+      - name: JAVA_HOME
+        value: "/usr/lib/jvm/java-17-openjdk-amd64"
+    nodeSelector:
+      karpenter.sh/capacity-type: on-demand
+      node.kubernetes.io/instance-type: "c6i.2xlarge"  # Driver on CPU node
+  executor:
+    cores: 4  # 4 cores for 4 concurrent tasks per executor
+    memory: "48g"  # Increased from 16g to utilize g7e.2xlarge's 64 GiB system memory (48g + 12g overhead = 60g)
+    instances: 4  # 4 executors to process 250GB per executor (1TB total)
+    memoryOverhead: "12g"  # Overhead for pinnedPool (4g) + off-heap + native memory
+    gpu:
+      name: "nvidia.com/gpu"
+      quantity: 1  # 1 GPU per executor (RTX PRO 6000 Blackwell on g7e.2xlarge)
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /data1
+    initContainers:
+      - name: volume-permission
+        image: public.ecr.aws/docker/library/busybox
+        command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+    env:
+      - name: JAVA_HOME
+        value: "/usr/lib/jvm/java-17-openjdk-amd64"
+    nodeSelector:
+      karpenter.sh/capacity-type: on-demand
+      node.kubernetes.io/instance-type: "g7e.2xlarge"  # GPU nodes with RTX PRO 6000 Blackwell
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+  sparkConf:
+    # ==================== Additional JARs ====================
+    # spark-sql-perf jar needed for TPCDSTables class (not bundled in assembly)
+    "spark.jars": "local:///opt/spark/examples/jars/spark-sql-perf_2.12-0.5.1-SNAPSHOT.jar"
+
+    # ==================== RAPIDS GPU Configuration ====================
+    "spark.plugins": "com.nvidia.spark.SQLPlugin"
+    "spark.rapids.sql.enabled": "true"
+    "spark.rapids.sql.explain": "NOT_ON_GPU"  # Log operations not on GPU
+
+    # RAPIDS Shuffle Manager for GPU-accelerated shuffling
+    "spark.shuffle.manager": "com.nvidia.spark.rapids.spark352.RapidsShuffleManager"
+    "spark.rapids.shuffle.enabled": "true"
+    "spark.rapids.shuffle.mode": "MULTITHREADED"
+    "spark.rapids.cloudSchemes": "s3a"
+
+    # GPU Memory Management (optimized for 96 GiB GPU memory on g7e.2xlarge)
+    "spark.rapids.memory.pinnedPool.size": "4g"  # Increased from 2g to 4g (allocated from host RAM, NOT GPU memory)
+    "spark.rapids.memory.gpu.pool": "ASYNC"  # Async GPU memory allocation (default for CUDA 11.5+)
+    "spark.rapids.memory.gpu.allocFraction": "0.8"  # Allocate 80% of 96 GiB GPU memory (~77 GiB)
+    "spark.rapids.memory.gpu.maxAllocFraction": "0.9"  # Max 90% GPU memory (~86 GiB)
+    "spark.rapids.memory.gpu.minAllocFraction": "0.25"  # Min 25% GPU memory (~24 GiB)
+
+    # GPU Task Scheduling (optimized for larger GPU memory)
+    "spark.task.resource.gpu.amount": "0.25"  # 1/4th GPU per task (4 cores = 4 tasks)
+    "spark.executor.resource.gpu.amount": "1"  # 1 GPU per executor
+    "spark.rapids.sql.concurrentGpuTasks": "2"  # Increased from 1 to 2 due to 4.3x larger GPU memory (96 GiB vs 22.35 GiB)
+
+    # GPU Discovery
+    "spark.executor.resource.gpu.discoveryScript": "/opt/sparkRapidsPlugin/getGpusResources.sh"
+    "spark.executor.resource.gpu.vendor": "nvidia.com"
+
+    # CUDA Library Paths
+    "spark.executor.extraLibraryPath": "/usr/local/cuda/lib:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:/usr/local/cuda/targets/x86_64-linux/lib"
+
+    # RAPIDS SQL Optimizations (increased batch sizes for larger GPU memory)
+    "spark.rapids.sql.batchSizeBytes": "1g"  # Increased from 512m to 1g for larger GPU memory
+    "spark.rapids.sql.reader.batchSizeBytes": "1g"  # Increased from 512m to 1g for larger GPU memory
+    "spark.rapids.sql.variableFloatAgg.enabled": "false"  # Disable for consistency
+    "spark.rapids.sql.incompatibleOps.enabled": "true"  # Allow CPU fallback
+    "spark.rapids.sql.stableSort.enabled": "true"  # Enable stable sorting
+    "spark.rapids.sql.metrics.level": "MODERATE"  # Metrics collection level
+
+    # Shuffle Configuration
+    "spark.rapids.sql.shuffle.spillThreads": "16"
+    "spark.sql.shuffle.partitions": "200"  # Adjust based on data size
+    "spark.sql.files.maxPartitionBytes": "512m"
+
+    # ==================== General Spark Configuration ====================
+    # Adaptive Query Execution
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+
+    # Executor Configuration
+    "spark.executor.memoryOverhead": "12g"  # Overhead for pinned memory (4g) + off-heap/native (~8g)
+    "spark.dynamicAllocation.enabled": "false"  # Static allocation for GPU
+    "spark.speculation": "false"  # Disable speculation for GPU jobs
+
+    # Network Timeouts
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+
+    # Local Storage
+    "spark.local.dir": "/data1"
+
+    # ==================== S3 Configuration (AWS SDK v2 with EKS Pod Identity) ====================
+    # Use default credential chain - automatically detects EKS Pod Identity via AWS_CONTAINER_CREDENTIALS_FULL_URI
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M"
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+
+    # ==================== Spark Event Logs ====================
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://$S3_BUCKET/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    # ==================== Prometheus Metrics ====================
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.annotation.prometheus.io/path": "/metrics/executors/prometheus/"
+    "spark.kubernetes.driver.annotation.prometheus.io/port": "4040"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/scrape": "true"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/path": "/metrics/driver/prometheus/"
+    "spark.kubernetes.driver.service.annotation.prometheus.io/port": "4040"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.*.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.master.sink.prometheusServlet.path": "/metrics/master/prometheus/"
+    "spark.metrics.conf.applications.sink.prometheusServlet.path": "/metrics/applications/prometheus/"
+
+    # ==================== Kubernetes Configuration ====================
+    "spark.kubernetes.executor.podNamePrefix": "benchmark-exec-rapids-g7e"
+    "spark.kubernetes.submission.connectionTimeout": "120000"
+    "spark.kubernetes.submission.requestTimeout": "120000"
+    "spark.kubernetes.driver.connectionTimeout": "120000"
+    "spark.kubernetes.driver.requestTimeout": "120000"
+
+    # ==================== Shuffle Tuning ====================
+    "spark.shuffle.file.buffer": "1m"
+    "spark.reducer.maxSizeInFlight": "48m"
+    "spark.hadoop.fs.s3a.multipart.purge": "true"
