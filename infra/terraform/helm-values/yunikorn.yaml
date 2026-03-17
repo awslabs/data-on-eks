@@ -64,6 +64,31 @@ yunikornDefaults:
                       max:
                         memory: 2000G
                         vcore: 1000
+              - name: emr
+                resources:
+                  guaranteed:
+                    memory: 1000G
+                    vcore: 250
+                  max:
+                    memory: 4000000G
+                    vcore: 500000
+                queues:
+                  - name: emr-data-team-a
+                    resources:
+                      guaranteed:
+                        memory: 800G
+                        vcore: 200
+                      max:
+                        memory: 4000000G
+                        vcore: 500000
+                  - name: emr-data-team-b
+                    resources:
+                      guaranteed:
+                        memory: 200G
+                        vcore: 50
+                      max:
+                        memory: 2000G
+                        vcore: 500
               - name: prod
                 resources:
                   guaranteed:

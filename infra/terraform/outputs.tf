@@ -94,7 +94,12 @@ output "grafana_password" {
 
 output "emr_on_eks" {
   description = "EMR on EKS Virtual Cluster configuration"
-  value       = var.enable_emr_on_eks ? module.emr_containers : {}
+  value = var.enable_emr_on_eks ? {
+    virtual_clusters        = module.emr_containers[0].virtual_clusters
+    job_execution_role_arns = module.emr_containers[0].job_execution_role_arns
+    cloudwatch_log_groups   = module.emr_containers[0].cloudwatch_log_groups
+    namespaces              = module.emr_containers[0].namespaces
+  } : null
 }
 
 output "emr_s3_bucket_name" {

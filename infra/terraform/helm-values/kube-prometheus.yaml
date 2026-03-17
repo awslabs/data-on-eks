@@ -29,13 +29,13 @@ prometheus:
       # Scrape metrics for Yunikorn
       - job_name: yunikorn
         honor_labels: true
-        scrape_interval: 15s
-        scrape_timeout: 10s
-        metrics_path: /ws/v1//metrics
+        scrape_interval: 3s
+        scrape_timeout: 3s
+        metrics_path: /ws/v1/metrics
         scheme: http
         dns_sd_configs:
           - names:
-              - yunikorn-service.yunikorn.svc
+              - yunikorn-service.yunikorn-system.svc
             type: 'A'
             port: 9080
       # Scrape metrics for Karpenter
@@ -152,3 +152,7 @@ grafana:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/emr-eks-grafana-dashboard.json
       spark-operator-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/kubeflow-spark-operator-dashboard.json
+      # EKS PCP Control Plane monitoring dashboard for Spark/EMR benchmarks
+      # Tracks API concurrency seats, pod scheduling rate, etcd size, and Spark job metrics
+      eks-pcp-spark-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/eks-pcp-benchmarks/infra/terraform/grafana-dashboards/eks-pcp-spark-dashboard.json

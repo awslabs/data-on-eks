@@ -51,7 +51,14 @@ variable "vpc_cidr" {
 variable "secondary_cidrs" {
   description = "List of secondary CIDR blocks to associate with the VPC"
   type        = list(string)
-  default     = ["100.64.0.0/16"]
+  # Default includes four /16 blocks (two per AZ for a 2-AZ deployment).
+  # Replace these with your own non-overlapping /16 ranges when deploying.
+  default = [
+    "100.64.0.0/16",
+    "100.65.0.0/16",
+    "100.66.0.0/16",
+    "100.67.0.0/16",
+  ]
 
   validation {
     condition = alltrue([
@@ -215,4 +222,40 @@ variable "enable_emr_spark_operator" {
   description = "Enable EMR Spark Operator for declarative Spark job management"
   type        = bool
   default     = false
+}
+
+#---------------------------------------------------------------
+# EKS Provisioned Control Plane (PCP) Tier
+# Controls the EKS control plane capacity for high-scale workloads
+#
+# Tier Limits (EKS v1.30+):
+#   XL  : 1700 API seats | 167 pods/sec | 16 GB etcd
+#   2XL : 3400 API seats | 283 pods/sec | 16 GB etcd
+#   4XL : 6800 API seats | 400 pods/sec | 16 GB etcd
+#
+# Key Prometheus Metrics to monitor:
+#   - apiserver_flowcontrol_current_executing_seats
+#   - scheduler_schedule_attempts_total
+#   - apiserver_storage_size_bytes
+#---------------------------------------------------------------
+variable "eks_pcp_tier" {
+  description = <<DESC
+EKS Provisioned Control Plane (PCP) scaling tier. Controls the EKS control plane capacity.
+Valid values: null (standard/default), "XL", "2XL", "4XL"
+- XL  : 1700 API concurrency seats, 167 pods/sec scheduling rate
+- 2XL : 3400 API concurrency seats, 283 pods/sec scheduling rate
+- 4XL : 6800 API concurrency seats, 400 pods/sec scheduling rate
+- 8XL : 13600 API concurrency seats, 400 pods/sec scheduling rate
+Leave null to use the default standard tier.
+DESC
+  type        = string
+  default     = null
+
+  validation {
+    # contains() will error if the value argument is null, so use coalesce to
+    # convert null into an empty string. The overall condition still allows
+    # null as a valid value.
+    condition     = var.eks_pcp_tier == null || contains(["XL", "2XL", "4XL", "8XL"], coalesce(var.eks_pcp_tier, ""))
+    error_message = "eks_pcp_tier must be null or one of: XL, 2XL, 4XL, 8XL"
+  }
 }
