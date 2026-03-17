@@ -2,9 +2,10 @@ locals {
   celeborn_namespace       = "celeborn"
   celeborn_service_account = "celeborn"
   celeborn_values = yamldecode(templatefile("${path.module}/helm-values/celeborn.yaml", {
-    s3_bucket        = module.s3_bucket.s3_bucket_id
-    s3_bucket_region = module.s3_bucket.s3_bucket_region
+    s3_bucket        = module.data_bucket.s3_bucket_id
+    s3_bucket_region = module.data_bucket.s3_bucket_region
     az               = local.s3_express_zone_name # does NOT need to be the same as local express zone. This is done for convenience only.
+    celeborn_role    = module.celeborn_irsa.arn
   }))
 }
 
@@ -19,25 +20,24 @@ resource "kubernetes_namespace" "celeborn" {
   }
 }
 
+# we need to use IRSA because celeborn does not support pod identity yet (java sdk 1.x)
 #---------------------------------------------------------------
-# Pod Identity for Celeborn S3 Access
+# IRSA for Celeborn
 #---------------------------------------------------------------
-module "celeborn_pod_identity" {
-  count   = var.enable_celeborn ? 1 : 0
-  source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
 
-  name = "celeborn"
+module "celeborn_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "~> 6.0"
+  name    = "${module.eks.cluster_name}-celeborn"
 
-  additional_policy_arns = {
+  policies = {
     s3_access = aws_iam_policy.celeborn_s3[0].arn
   }
 
-  associations = {
-    celeborn = {
-      cluster_name    = module.eks.cluster_name
-      namespace       = local.celeborn_namespace
-      service_account = local.celeborn_service_account
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["${local.celeborn_namespace}:${local.celeborn_service_account}"]
     }
   }
 }
@@ -62,8 +62,8 @@ resource "aws_iam_policy" "celeborn_s3" {
           "s3:ListBucket"
         ]
         Resource = [
-          module.s3_bucket.s3_bucket_arn,
-          "${module.s3_bucket.s3_bucket_arn}/*"
+          module.data_bucket.s3_bucket_arn,
+          "${module.data_bucket.s3_bucket_arn}/*"
         ]
       }
     ]
@@ -96,6 +96,6 @@ resource "kubectl_manifest" "celeborn" {
   depends_on = [
     helm_release.argocd,
     kubernetes_namespace.celeborn[0],
-    module.celeborn_pod_identity[0]
+    module.celeborn_irsa[0]
   ]
 }
