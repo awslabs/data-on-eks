@@ -9,8 +9,8 @@ reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   type: gp3 # For more performance, use IO2 == $$
-  iops: "6000"
-  throughput: "1000"
+  iops: "80000"
+  throughput: "2000"
   encrypted: "true"
   fsType: "xfs"
   tagSpecification_1:  "DeploymentId=${deployment_id}"
