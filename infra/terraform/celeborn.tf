@@ -5,7 +5,7 @@ locals {
     s3_bucket        = module.data_bucket.s3_bucket_id
     s3_bucket_region = module.data_bucket.s3_bucket_region
     az               = local.s3_express_zone_name # does NOT need to be the same as local express zone. This is done for convenience only.
-    celeborn_role    = module.celeborn_irsa.arn
+    celeborn_role    = try(module.celeborn_irsa[0].arn, "")
   }))
 }
 
@@ -26,6 +26,7 @@ resource "kubernetes_namespace" "celeborn" {
 #---------------------------------------------------------------
 
 module "celeborn_irsa" {
+  count   = var.enable_celeborn ? 1 : 0
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
   version = "~> 6.0"
   name    = "${module.eks.cluster_name}-celeborn"
