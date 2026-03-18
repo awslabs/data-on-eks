@@ -1,5 +1,6 @@
 image:
   pullPolicy: IfNotPresent
+  tag: 0.6.2
 
 serviceAccount:
   create: true
