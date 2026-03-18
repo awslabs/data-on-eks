@@ -9,7 +9,7 @@ serviceAccount:
 cluster:
   name: cluster
 celeborn:
-    celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=100Gi,/mnt/disk2:disktype=SSD:capacity=100Gi
+    celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=1000Gi,/mnt/disk2:disktype=SSD:capacity=1000Gi,/mnt/disk3:disktype=SSD:capacity=1000Gi,/mnt/disk4:disktype=SSD:capacity=1000Gi
     # wait for official release before enabling. Following enables tiered storage memory -> ssd -> s3. https://celeborn.apache.org/docs/latest/developers/storage/#multi-layered-storage
     # celeborn.storage.availableTypes: MEMORY,SSD,S3
     # celeborn.worker.storage.storagePolicy.evictPolicy: MEMORY,SSD,S3
@@ -61,7 +61,7 @@ worker:
         storageClassName: gp3-faster # do not use default
         resources:
           requests:
-            storage: 100Gi
+            storage: 1000Gi
     - metadata:
         name: disk2
       spec:
@@ -70,10 +70,32 @@ worker:
         storageClassName: gp3-faster # do not use default
         resources:
           requests:
-            storage: 100Gi
+            storage: 1000Gi
+    - metadata:
+        name: disk3
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: gp3-faster # do not use default
+        resources:
+          requests:
+            storage: 1000Gi
+    - metadata:
+        name: disk4
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: gp3-faster # do not use default
+        resources:
+          requests:
+            storage: 1000Gi
   volumeMounts:
     - name: disk1
       mountPath: /mnt/disk1
     - name: disk2
       mountPath: /mnt/disk2
+    - name: disk3
+      mountPath: /mnt/disk3
+    - name: disk4
+      mountPath: /mnt/disk4
   volumes: {}
