@@ -10,6 +10,14 @@ cluster:
   name: cluster
 celeborn:
     celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=1000Gi,/mnt/disk2:disktype=SSD:capacity=1000Gi,/mnt/disk3:disktype=SSD:capacity=1000Gi,/mnt/disk4:disktype=SSD:capacity=1000Gi
+    celeborn.worker.flusher.ssd.threads: "64"
+    celeborn.worker.fetch.io.threads: "64"
+    celeborn.worker.push.io.threads: "64"
+    celeborn.worker.clean.threads: "128"
+    celeborn.worker.commitFiles.threads: "128"
+    celeborn.worker.disk.clean.threads: "16"
+    celeborn.worker.sortPartition.threads: "128"
+    celeborn.worker.flusher.buffer.size: "10m"
     # wait for official release before enabling. Following enables tiered storage memory -> ssd -> s3. https://celeborn.apache.org/docs/latest/developers/storage/#multi-layered-storage
     # celeborn.storage.availableTypes: MEMORY,SSD,S3
     # celeborn.worker.storage.storagePolicy.evictPolicy: MEMORY,SSD,S3
@@ -20,6 +28,7 @@ master:
   nodeSelector:
     NodeGroupType: general-purpose # use a different nodepool for better performance if required. networking spec matters a lot.
     topology.kubernetes.io/zone: ${az}
+    karpenter.sh/capacity-type: "on-demand"
   env:
     - name: CELEBORN_MASTER_MEMORY
       value: 2g
@@ -31,15 +40,19 @@ master:
       value: Etc/GMT
 
 worker:
-  replicas: 3
+  replicas: 6
+  labels:
+    yunikorn.apache.org/queue: root.spark.spark-team-a
   nodeSelector:
-    NodeGroupType: general-purpose
+    karpenter.k8s.aws/instance-family: "r8g"
+    karpenter.k8s.aws/instance-size: "16xlarge"
     topology.kubernetes.io/zone: ${az}
+    karpenter.sh/capacity-type: "on-demand"
   env:
     - name: CELEBORN_WORKER_MEMORY
-      value: 4g
+      value: 48g # benchmarking
     - name: CELEBORN_WORKER_OFFHEAP_MEMORY
-      value: 24g
+      value: 256g # benchmarking
     - name: CELEBORN_WORKER_JAVA_OPTS
       value: -XX:-PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:gc-worker.out -Dio.netty.leakDetectionLevel=advanced
     - name: CELEBORN_NO_DAEMONIZE
@@ -48,10 +61,10 @@ worker:
       value: Etc/GMT
   resources:
     requests:
-      cpu: "4"
-      memory: "32Gi"
+      cpu: "60"
+      memory: "500Gi"
     limits:
-      memory: "32Gi"
+      memory: "500Gi"
   volumeClaimTemplates:
     - metadata:
         name: disk1
@@ -99,3 +112,4 @@ worker:
     - name: disk4
       mountPath: /mnt/disk4
   volumes: {}
+
