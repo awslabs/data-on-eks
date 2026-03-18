@@ -26,7 +26,7 @@ dependencies = [
     "msgpack==1.1.0",
     "oauthlib==3.2.2",
     "psutil==7.0.0",
-    "pyasn1==0.6.2",
+    "pyasn1==0.6.3",
     "pyasn1-modules==0.4.1",
     "python-dateutil==2.9.0.post0",
     "python-dotenv==1.0.1",
