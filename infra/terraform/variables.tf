@@ -224,6 +224,12 @@ variable "enable_emr_spark_operator" {
   default     = false
 }
 
+variable "enable_clickhouse" {
+  description = "Enable ClickHouse Operator for managing ClickHouse clusters"
+  type        = bool
+  default     = false
+}
+
 #---------------------------------------------------------------
 # EKS Provisioned Control Plane (PCP) Tier
 # Controls the EKS control plane capacity for high-scale workloads
