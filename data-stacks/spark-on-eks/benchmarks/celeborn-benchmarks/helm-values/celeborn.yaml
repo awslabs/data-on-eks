@@ -38,7 +38,7 @@ master:
       value: Etc/GMT
 
 worker:
-  replicas: 3
+  replicas: 6
   labels:
     yunikorn.apache.org/queue: root.spark.spark-team-a
   nodeSelector:
