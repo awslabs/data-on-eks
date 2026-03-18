@@ -36,7 +36,7 @@ resource "kubectl_manifest" "spark_history_server" {
 module "spark_history_server_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
   version = "~> 6.0"
-  name    = "${module.eks.cluster_name}-spark-history-server"
+  name    = "${module.eks.cluster_name}-shs"
 
   policies = {
     policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
