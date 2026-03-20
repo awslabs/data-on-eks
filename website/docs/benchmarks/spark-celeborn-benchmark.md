@@ -670,7 +670,7 @@ With the 10TB dataset, Celeborn achieved a **14.5% overall performance improveme
 | 8 | q68-v2.4 | -18 |
 | 9 | q44-v2.4 | -18 |
 | 10 | q1-v2.4 | -16 |
-  
+
 
 
 ### Analysis
