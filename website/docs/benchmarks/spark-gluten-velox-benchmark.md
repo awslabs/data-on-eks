@@ -40,7 +40,7 @@ We benchmarked [TPC-DS](https://www.tpc.org/tpcds/) **1TB** workloads on a dedic
 
 Our comprehensive TPC-DS 1TB benchmark on Amazon EKS demonstrates that **Apache Gluten with Velox delivers a 1.72x overall speedup** (**72%** faster) compared to native Spark SQL, with individual queries showing improvements ranging from **1.1x** to **5.5x**.
 
-📊 **[View complete benchmark results and raw data →](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator/examples/benchmark/tpcds-benchmark-spark-gluten-velox/results)**
+📊 **[View complete benchmark results and raw data →](https://github.com/awslabs/data-on-eks/tree/main/data-stacks/spark-on-eks/benchmarks/gluten-velox-benchmarks/results)**
 
 ### Benchmark Infrastructure Configuration
 
@@ -368,7 +368,7 @@ The instructions in this section walk through the baseline artifacts you need to
 
 Create a production-ready Spark image with Gluten + Velox:
 
-You can find the sample Dockerfile here: [Dockerfile-spark-gluten-velox](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/examples/spark-gluten-velox/Dockerfile-spark-gluten-velox)
+You can find the sample Dockerfile here: [Dockerfile-spark-gluten-velox](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/benchmarks/gluten-velox-benchmarks/Dockerfile-tpcds-gluten-velox)
 
 
 ## Spark Configuration Examples
@@ -488,7 +488,7 @@ Follow the workflow below to reproduce the benchmark from data generation throug
 
 ### TPC-DS Benchmark Setup
 
-The complete TPC-DS harness is available in the repository: [examples/benchmark/tpcds-benchmark-spark-gluten-velox/README.md](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/examples/benchmark/tpcds-benchmark-spark-gluten-velox/README.md).
+The complete TPC-DS harness is available in the repository: [examples/benchmark/tpcds-benchmark-spark-gluten-velox/README.md](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/benchmarks/gluten-velox-benchmarks/README.md).
 
 #### Step 1: Generate TPC-DS Data (1TB scale)
 
@@ -710,4 +710,4 @@ With the Docker image, Spark defaults, and example manifests provided in this gu
 
 ---
 
-*For complete implementation examples and benchmark results, see the [GitHub repository](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator/examples/benchmark/tpcds-benchmark-spark-gluten-velox).*
+*For complete implementation examples and benchmark results, see the [GitHub repository](https://github.com/awslabs/data-on-eks/tree/main/data-stacks/spark-on-eks/benchmarks/gluten-velox-benchmarks).*
