@@ -125,6 +125,13 @@ module "vpc_endpoints" {
       }
       private_dns_enabled = true
     }
+    s3express = {
+      service      = "s3express"
+      service_type = "Gateway"
+      route_table_ids = concat(
+        module.vpc.private_route_table_ids
+      )
+    }
   }
 
   tags = {
