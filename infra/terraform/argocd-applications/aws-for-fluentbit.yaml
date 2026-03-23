@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://aws.github.io/eks-charts
     chart: aws-for-fluent-bit
-    targetRevision: "0.1.35"
+    targetRevision: "0.2.0"
     helm:
       values: |
         ${user_values_yaml}

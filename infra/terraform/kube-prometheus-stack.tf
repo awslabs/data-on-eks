@@ -29,7 +29,7 @@ resource "kubectl_manifest" "kube_prometheus_stack_namespace" {
 resource "kubernetes_secret" "grafana_admin" {
   metadata {
     name      = "grafana-admin-secret"
-    namespace = "kube-prometheus-stack"
+    namespace = "monitoring"
   }
 
   data = {
