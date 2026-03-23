@@ -257,7 +257,7 @@ kubectl exec -n kafka my-cluster-kafka-0 -- \
 
 ```bash
 # Access Grafana dashboard
-kubectl port-forward -n kube-prometheus-stack svc/kube-prometheus-stack-grafana 3000:80
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 
 # Navigate to Flink dashboards:
 # - Flink Job Overview
