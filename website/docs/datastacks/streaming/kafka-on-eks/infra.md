@@ -338,7 +338,7 @@ This creates:
 Port-forward to Prometheus:
 
 ```bash
-kubectl port-forward -n kube-prometheus-stack prometheus-kube-prometheus-stack-prometheus-0 9090:9090
+kubectl port-forward -n monitoring prometheus-kube-prometheus-stack-prometheus-0 9090:9090
 ```
 
 Open http://localhost:9090 and search for `kafka_` metrics.
@@ -348,7 +348,7 @@ Open http://localhost:9090 and search for `kafka_` metrics.
 Port-forward to Grafana:
 
 ```bash
-kubectl port-forward -n kube-prometheus-stack svc/kube-prometheus-stack-grafana 3000:80
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 ```
 
 Open http://localhost:3000 and navigate to:
