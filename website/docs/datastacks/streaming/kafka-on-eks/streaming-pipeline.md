@@ -293,7 +293,7 @@ kubectl exec -it kafka-cli -n kafka -- kafka-console-consumer.sh \
 Access Grafana to monitor pipeline metrics (see [Infrastructure Guide](./infra.md#access-grafana-dashboards) for setup):
 
 ```bash
-kubectl port-forward -n kube-prometheus-stack svc/kube-prometheus-stack-grafana 3000:80
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 ```
 
 Open http://localhost:3000 and import the custom dashboard from `monitoring/grafana-dashboard.json`.
@@ -486,7 +486,7 @@ Window 3: Events from 10:10:00 - 10:14:59 → Emit at 10:15:00
 - **Grafana dashboards** (pre-configured with Prometheus + Kafka Exporter):
   - **Strimzi Kafka Dashboard**: Broker throughput, partition status, resource usage
   - **Strimzi Exporter Dashboard**: Consumer lag by group, topic metrics, partition details
-  - Access via: `kubectl port-forward -n kube-prometheus-stack svc/kube-prometheus-stack-grafana 3000:80`
+  - Access via: `kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80`
 - **Key Prometheus metrics**:
   - Broker throughput: `kafka_server_brokertopicmetrics_messagesin_total`
   - Consumer lag: `kafka_consumergroup_lag` (monitor `clickstream-processor` group)
