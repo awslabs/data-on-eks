@@ -1,3 +1,5 @@
+fullnameOverride: prometheus
+cleanPrometheusOperatorObjectNames: true
 prometheus:
   # The ClusterRole for Prometheus needs additional permissions for the EKS scheduler/controller metrics https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
   additionalRulesForClusterRole:
