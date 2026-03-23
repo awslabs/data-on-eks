@@ -38,7 +38,7 @@ const stacks = [
     Icon: Database,
     color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
     stacks: [
-      { name: 'PostgreSQL', description: 'Transactional database', link: '/data-on-eks/docs/datastacks/databases/postgres-on-eks/' },
+      { name: 'PostgreSQL', description: 'Transactional database', link: '/data-on-eks/docs/datastacks/databases/' },
       { name: 'ClickHouse', description: 'OLAP analytics', link: '/data-on-eks/docs/datastacks/databases/clickhouse-on-eks/' },
       { name: 'Apache Pinot', description: 'Real-time OLAP', link: '/data-on-eks/docs/datastacks/databases/pinot-on-eks/' },
     ]

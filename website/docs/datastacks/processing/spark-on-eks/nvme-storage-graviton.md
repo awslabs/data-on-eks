@@ -78,7 +78,7 @@ graph TB
 ## Performance Benchmarks
 
 For detailed Graviton performance benchmarks and comparisons:
-[📊 Graviton Spark Benchmarks](http://localhost:3000/data-on-eks/docs/benchmarks/spark-operator-benchmark/graviton-r-data)
+[📊 Graviton Spark Benchmarks](/docs/benchmarks/spark-operator-benchmark/graviton-r-data)
 
 ## Example Code
 
@@ -215,7 +215,7 @@ kubectl delete sparkapplication taxi-trip-graviton -n spark-team-a
 
 ## Next Steps
 
-- [📊 Graviton Performance Benchmarks](http://localhost:3000/data-on-eks/docs/benchmarks/spark-operator-benchmark/graviton-r-data) - Detailed performance analysis
+- [📊 Graviton Performance Benchmarks](/docs/benchmarks/spark-operator-benchmark/graviton-r-data) - Detailed performance analysis
 - [NVMe Instance Storage (x86)](./nvme-storage) - x86 NVMe comparison
 - [EBS Dynamic PVC Storage](./ebs-pvc-storage) - Production fault tolerance
 - [Infrastructure Setup](./infra.md) - Deploy base infrastructure

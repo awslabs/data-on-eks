@@ -13,7 +13,7 @@ The following guide provides instructions on how to generate the data set for ru
 
 ## Deploying the data generation toolkit
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator), you will provision the following resources required to run Spark Jobs with open source Spark Operator.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/data-stacks/spark-on-eks), you will provision the following resources required to run Spark Jobs with open source Spark Operator.
 
 This example deploys an EKS Cluster running the Spark K8s Operator into a new VPC.
 
@@ -55,7 +55,7 @@ export TF_VAR_spark_benchmark_ssd_desired_size=6
 Navigate into the following directory and run `install.sh` script.
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks
 chmod +x install.sh
 ./install.sh
 ```
@@ -76,7 +76,7 @@ In order to generate the dataset for TPCDS benchmark tests, you will need to con
 <!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
 <ReplaceS3BucketPlaceholders filename="./tpcds-benchmark-data-generation-1t.yaml" />
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks/benchmarks/spark-operator-benchmarks
 sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./tpcds-benchmark-data-generation-1t.yaml
 ```
 
@@ -152,6 +152,6 @@ To avoid unwanted charges to your AWS account, delete all the AWS resources crea
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks && chmod +x cleanup.sh
 ./cleanup.sh
 ```
