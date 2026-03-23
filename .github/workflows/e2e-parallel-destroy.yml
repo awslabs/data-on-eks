@@ -22,9 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - example_path: analytics/terraform/emr-eks-karpenter
-          - example_path: analytics/terraform/spark-k8s-operator
+        include: []
 
     steps:
       - name: Checkout

@@ -11,7 +11,7 @@ These tools are well-suited for a wide range of use cases, including data pipeli
 The following are the most popular job scheduling tools used with data workloads.
 This section provides deployment patterns for the following tools and examples to trigger Spark/ML jobs using these schedulers.
 
-1. [Apache Airflow](https://airflow.apache.org/)
+1. [Apache Airflow on EKS](https://github.com/awslabs/data-on-eks/tree/main/data-stacks/airflow-on-eks) — self-managed Airflow has moved to Data Stacks
 2. [Amazon Managed Workflows for Apache Airflow (MWAA)](https://docs.aws.amazon.com/mwaa/latest/userguide/what-is-mwaa.html)
 3. [Argo Workflow](https://argoproj.github.io/workflows/)
 4. [Prefect](https://www.prefect.io/)

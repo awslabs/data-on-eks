@@ -15,3 +15,5 @@ With its growing ecosystem of tools and support for a wide range of use cases, K
 - [Karpenter](https://karpenter.sh/)
 - [Apache YuniKorn](https://yunikorn.apache.org/)
 - [Volcano](https://volcano.sh/en/)
+
+Deployment patterns for Spark on EKS have moved to the [Data Stacks](https://awslabs.github.io/data-on-eks/docs/datastacks/processing/spark-on-eks/) section.

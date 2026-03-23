@@ -354,7 +354,7 @@ Amazon Elastic Compute Cloud (EC2) offers diverse computing options through its 
 :::
 - Use [AWS Graviton-based Instances](https://aws.amazon.com/ec2/graviton/): Graviton instances lowers cost of instances while improving performance, it also helps to meet with sustainability goals
 - Use Karpenter: For better scaling and simplified management of Trino clusters, prefer using Karpenter.
-- Diversify the Spot Instances to maximize your savings. [More details can be found in EC2 Spot Best Practices](https://aws.amazon.com/blogs/compute/best-practices-to-optimize-your-amazon-ec2-spot-instances-usage/). Use [Fault-Tolerant execution](http://localhost:3000/data-on-eks/docs/blueprints/distributed-databases/trino#example-3-optional-fault-tolerant-execution-in-trino) with EC2 Spot Instances
+- Diversify the Spot Instances to maximize your savings. [More details can be found in EC2 Spot Best Practices](https://aws.amazon.com/blogs/compute/best-practices-to-optimize-your-amazon-ec2-spot-instances-usage/). Use [Fault-Tolerant execution](/docs/datastacks/databases/trino-on-eks/infra#fault-tolerant-execution) with EC2 Spot Instances
 
 </CollapsibleContent>
 

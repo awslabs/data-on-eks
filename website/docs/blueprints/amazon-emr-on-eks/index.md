@@ -17,9 +17,6 @@ With EMR on EKS, your compute resources can be shared between your Apache Spark 
 ### Optimize Performance
 By running analytics applications on EKS, you can reuse existing EC2 instances in your shared Kubernetes cluster and avoid the startup time of creating a new cluster of EC2 instances dedicated for analytics. You can also get [3x faster performance](https://aws.amazon.com/blogs/big-data/amazon-emr-on-amazon-eks-provides-up-to-61-lower-costs-and-up-to-68-performance-improvement-for-spark-workloads/) running performance optimized Spark with EMR on EKS compared to standard Apache Spark on EKS.
 
-## EMR on EKS Deployment patterns with Terraform
+## EMR on EKS Deployment
 
-The following Terraform templates are available to deploy.
-
-- [EMR on EKS with Karpenter](./emr-eks-karpenter.md): **:point_left::skin-tone-3: Start Here** if you are new to EMR on EKS. This template deploys EMR on EKS cluster and uses [Karpenter](https://karpenter.sh/) to scale Spark jobs.
-- [EMR on EKS with Spark Operator](./emr-eks-spark-operator.md): This template deploys EMR on EKS cluster with Spark Operator for managing Spark jobs
+The EMR on EKS deployment patterns have moved to the [Data Stacks](https://github.com/awslabs/data-on-eks/tree/main/data-stacks/emr-on-eks) section for a streamlined experience.

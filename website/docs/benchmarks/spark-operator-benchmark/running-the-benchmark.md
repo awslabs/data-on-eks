@@ -10,7 +10,7 @@ The following guide provides instructions on how to execute the TPCDS benchmark 
 
 ## Deploying the Benchmark toolkit
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator), you will provision the following resources required to run Spark Jobs with open source Spark Operator.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/data-stacks/spark-on-eks), you will provision the following resources required to run Spark Jobs with open source Spark Operator.
 
 This example deploys an EKS Cluster running the Spark K8s Operator into a new VPC.
 
@@ -45,7 +45,7 @@ DATA_ON_EKS=$(pwd)` from your data-on-eks directory.
 Navigate into the following directory and run `install.sh` script.
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks
 chmod +x install.sh
 ./install.sh
 ```
@@ -72,7 +72,7 @@ Once you have an S3 bucket with the example data set, you can run the benchmark 
 ### Scale up the worker nodes
 For these benchmarks we are not measuring the scaling speed but are focusing on the performance of the Spark SQL queries and the job runtime. To ensure the job is not interrupted by scaling activities or Spot interruptions we recommend using a Managed Node Group for the benchmarks, and scaling the capacity up before submitting the jobs
 
-The blueprint [creates two Managed Node Groups](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/eks.tf#L120-L207) that we use for these benchmarks:
+The blueprint [creates two Managed Node Groups](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/terraform#L120-L207) that we use for these benchmarks:
 - `spark_benchmark_ebs` - This nodegroup is configured for instances without NVMe storage such as r6g or c5
 - `spark_benchmark_ssd` - This nodegroup will setup a RAID over NVMe devices available on the instances. This is perfect for instances with NVMe storage like r6gd, and c5d.
 These nodegroups are scaled to 0 by default to save on costs, but you can configure the instance type you would like to benchmark on and then set the `min_size` and `desired_size` for the node group.
@@ -87,7 +87,7 @@ The number of nodes required varies based on the size of the instance and the re
 <!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
 <ReplaceS3BucketPlaceholders filename="./tpcds-benchmark-1t-ebs.yaml" />
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks/benchmarks/spark-operator-benchmarks
 sed -i.old s/\<S3_BUCKET\>/${S3_BUCKET}/g ./tpcds-benchmark-1t-ebs.yaml
 ```
 
@@ -132,7 +132,7 @@ Then open browser and enter localhost:4040. You can review the jobs that are run
 
 Once the benchmark has completed you can scale the Nodgroup back to zero to save costs, and you can delete the remaining SparkApplication with the commands below:
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/benchmark
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks/benchmarks/spark-operator-benchmarks
 kubectl delete -f tpcds-benchmark-1t-ebs.yaml
 ```
 
@@ -177,6 +177,6 @@ To avoid unwanted charges to your AWS account, delete all the AWS resources crea
 This script will cleanup the environment using `-target` option to ensure all the resources are deleted in correct order.
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks && chmod +x cleanup.sh
 ./cleanup.sh
 ```

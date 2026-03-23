@@ -30,13 +30,13 @@ The diagram below showcases the wide array of open-source data tools, Kubernetes
 ## 🌟 Features
 Data on EKS(DoEKS) solution is categorized into the following focus areas.
 
-🎯  [Data Analytics](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics) on EKS
+🎯  [Data Processing](https://awslabs.github.io/data-on-eks/docs/datastacks/processing) on EKS (Spark, EMR, Ray)
 
-🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms) on EKS
+🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/datastacks/streaming) on EKS (Kafka, Flink)
 
-🎯  [Scheduler Workflow Platforms](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers) on EKS
+🎯  [Orchestration](https://awslabs.github.io/data-on-eks/docs/datastacks/orchestration) on EKS (Airflow, MWAA)
 
-🎯  [Distributed Databases & Query Engine](https://awslabs.github.io/data-on-eks/docs/blueprints/distributed-databases) on EKS
+🎯  [Databases & Query Engines](https://awslabs.github.io/data-on-eks/docs/datastacks/databases) on EKS (Trino, Pinot, ClickHouse)
 
 ## 🏃‍♀️ Getting Started
 In this repository, you'll find a variety of deployment blueprints for creating Data/ML platforms with Amazon EKS clusters. These examples are just a small selection of the available blueprints - visit the [DoEKS website](https://awslabs.github.io/data-on-eks/) for the complete list of options.
@@ -48,12 +48,12 @@ Here are some of the ready-to-deploy blueprints included in this repo:
 
 | Blueprint | Description |
 |-------------|-------------|
-| 🚀 **[EMR-on-EKS with Karpenter](https://awslabs.github.io/data-on-eks/docs/blueprints/amazon-emr-on-eks/emr-eks-karpenter)** | Run EMR Spark workloads on EKS with cost-effective autoscaling |
+| 🚀 **[EMR on EKS](https://awslabs.github.io/data-on-eks/docs/datastacks/processing/emr-on-eks/)** | Run EMR Spark workloads on EKS with cost-effective autoscaling |
 | 🚀 **[Spark Operator with YuniKorn](https://awslabs.github.io/data-on-eks/docs/blueprints/data-analytics/spark-operator-yunikorn)** | Self-managed Spark with multi-tenant scheduling |
-| 🚀 **[Apache Flink Operator](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms/flink)** | Self-managed Flink clusters on EKS |
-| 🚀 **[Apache Kafka with Strimzi](https://awslabs.github.io/data-on-eks/docs/blueprints/streaming-platforms/kafka)** | High-throughput Kafka messaging on EKS |
-| 🚀 **[Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/self-managed-airflow)** | DAG-based data pipeline orchestration using Apache Airflow |
-| 🚀 **[Argo Workflows](https://awslabs.github.io/data-on-eks/docs/blueprints/job-schedulers/argo-workflows-eks)** | Kubernetes-native workflow engine for CI/CD or data pipelines |
+| 🚀 **[Apache Flink on EKS](https://awslabs.github.io/data-on-eks/docs/datastacks/streaming/flink-on-eks/)** | Self-managed Flink clusters on EKS |
+| 🚀 **[Apache Kafka with Strimzi](https://awslabs.github.io/data-on-eks/docs/datastacks/streaming/kafka-on-eks/)** | High-throughput Kafka messaging on EKS |
+| 🚀 **[Airflow on EKS](https://awslabs.github.io/data-on-eks/docs/datastacks/orchestration/airflow-on-eks/)** | DAG-based data pipeline orchestration using Apache Airflow |
+| 🚀 **[Argo Workflows](https://awslabs.github.io/data-on-eks/docs/datastacks/processing/spark-on-eks/argo-workflows)** | Kubernetes-native workflow engine for CI/CD or data pipelines |
 
 
 ## 📚 Documentation
