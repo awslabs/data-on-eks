@@ -1,0 +1,173 @@
+apiVersion: clickhouse.com/v1alpha1
+kind: KeeperCluster
+metadata:
+  name: event-store
+  namespace: logging
+spec:
+  replicas: 3
+  settings:
+    logger:
+      level: information
+    extraConfig:
+      logger:
+        formatting:
+          type: json
+  dataVolumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Gi
+---
+apiVersion: clickhouse.com/v1alpha1
+kind: ClickHouseCluster
+metadata:
+  name: event-store
+  namespace: logging
+spec:
+  settings:
+    logger:
+      level: information
+    extraConfig:
+      logger:
+        formatting:
+          type: json
+      enable_json_type: 1
+      storage_configuration:
+        disks:
+          s3_cold:
+            type: s3
+            endpoint: {{ .Values.s3_endpoint }}
+            use_environment_credentials: true
+        policies:
+          tiered:
+            volumes:
+              hot:
+                disk: default
+              cold:
+                disk: s3_cold
+    defaultUserPassword:
+      secret:
+        name: clickhouse-password
+        key: password
+  shards: 1
+  replicas: 1
+  keeperClusterRef:
+    name: event-store
+  dataVolumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Gi
+  podTemplate:
+    serviceAccountName: event-store-clickhouse
+    nodeSelector:
+      karpenter.k8s.aws/instance-family: r8g
+      karpenter.k8s.aws/instance-size: 4xlarge
+  containerTemplate:
+    image:
+      repository: clickhouse/clickhouse-server
+      tag: "25.1"
+    resources:
+      requests:
+        cpu: "8"
+        memory: 64Gi
+      limits:
+        cpu: "16"
+        memory: 120Gi
+
+# We use argocd hook rather than terraform because terraform ends up blocking the entire flow while waiting for the job to finish.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-schema
+  namespace: logging
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: init-schema
+          image: clickhouse/clickhouse-server:25.1
+          command:
+            - bash
+            - -c
+            - |
+              SECONDS=0
+              until clickhouse-client --host=event-store-clickhouse-headless.logging.svc.cluster.local --password="$CLICKHOUSE_PASSWORD" --query="SELECT 1" 2>/dev/null; do
+                if (( SECONDS >= 60 )); then
+                  echo "Timed out waiting for ClickHouse"
+                  exit 1
+                fi
+                echo "Waiting for ClickHouse..."
+                sleep 5
+              done
+
+              clickhouse-client --host=event-store-clickhouse-headless.logging.svc.cluster.local --password="$CLICKHOUSE_PASSWORD" --multiquery --query "
+                SET enable_json_type = 1;
+
+                CREATE DATABASE IF NOT EXISTS k8s_events;
+
+                CREATE TABLE IF NOT EXISTS k8s_events.events (
+                  timestamp DateTime64(3) DEFAULT now64(),
+                  namespace String,
+                  object_kind LowCardinality(String),
+                  object_name String,
+                  object_api_version LowCardinality(String),
+                  type LowCardinality(String),
+                  reason LowCardinality(String),
+                  message String,
+                  source_component LowCardinality(String),
+                  source_host String,
+                  reporting_component String,
+                  reporting_instance String,
+                  count UInt32,
+                  action String,
+                  firstTimestamp String,
+                  lastTimestamp String
+                ) ENGINE = MergeTree()
+                ORDER BY (namespace, object_kind, type, timestamp)
+                TTL toDateTime(timestamp) + INTERVAL 14 DAY TO VOLUME 'cold',
+                    toDateTime(timestamp) + INTERVAL 60 DAY DELETE
+                SETTINGS storage_policy = 'tiered';
+
+                CREATE DATABASE IF NOT EXISTS app_logs;
+
+                CREATE TABLE IF NOT EXISTS app_logs.spark (
+                  timestamp DateTime64(3) DEFAULT now64(),
+                  namespace LowCardinality(String),
+                  pod_name String,
+                  container_name LowCardinality(String),
+                  app LowCardinality(String),
+                  log JSON
+                ) ENGINE = MergeTree()
+                ORDER BY (app, namespace, timestamp)
+                TTL toDateTime(timestamp) + INTERVAL 7 DAY TO VOLUME 'cold',
+                    toDateTime(timestamp) + INTERVAL 60 DAY DELETE
+                SETTINGS storage_policy = 'tiered';
+
+                CREATE TABLE IF NOT EXISTS app_logs.spark_operator (
+                  timestamp DateTime64(3) DEFAULT now64(),
+                  namespace LowCardinality(String),
+                  pod_name String,
+                  container_name LowCardinality(String),
+                  log JSON
+                ) ENGINE = MergeTree()
+                ORDER BY (namespace, timestamp)
+                TTL toDateTime(timestamp) + INTERVAL 7 DAY TO VOLUME 'cold',
+                    toDateTime(timestamp) + INTERVAL 60 DAY DELETE
+                SETTINGS storage_policy = 'tiered';
+              "
+          env:
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: clickhouse-password
+                  key: password
