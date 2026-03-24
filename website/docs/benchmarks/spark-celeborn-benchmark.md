@@ -31,6 +31,17 @@ Key observations include:
 - **Infrastructure Overhead:** Using Celeborn introduces higher costs, requiring dedicated master and worker nodes, high-throughput storage (e.g., EBS), and high-bandwidth networking. Careful capacity planning is essential to handle peak shuffle traffic.
 - **Tuning Matters:** The `spark.sql.adaptive.localShuffleReader.enabled=false` setting dramatically reduced worst-case query regressions, highlighting the importance of Spark-side configuration when using Celeborn.
 
+## Architecture Overview
+
+### Default Spark Shuffle
+
+[![Default Spark Shuffle Architecture](./img/spark-shuffler-architecture.png)](./img/spark-shuffler-architecture.png)
+
+### Spark with Apache Celeborn
+
+[![Spark with Apache Celeborn Architecture](./img/celeborn-architecture.png)](./img/celeborn-architecture.png)
+
+
 ## Benchmark Configuration
 
 We benchmarked [TPC-DS](https://www.tpc.org/tpcds/) **3TB** workloads on a dedicated Amazon EKS cluster to compare native Spark SQL execution with Spark enhanced by Apache Celeborn. To ensure an apples-to-apples comparison, both native Spark and Celeborn jobs ran on identical hardware, storage, and data. Each test was run 10 times and the average was taken.
