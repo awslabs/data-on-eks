@@ -31,11 +31,11 @@ jobs:
       directories: ${{ steps.dirs.outputs.directories }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Get root directories
         id: dirs
-        uses: clowdhaus/terraform-composite-actions/directories@v1.11.1
+        uses: clowdhaus/terraform-composite-actions/directories@8aef6513928e6e56c30662afb34a21bf4bf5d9f4 # v1.11.1
 
   preCommitMinVersions:
     name: Min TF pre-commit
@@ -49,9 +49,9 @@ jobs:
         run: rm -rf $(which terraform)
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: changes
         with:
           # We only need to check Terraform files for the current directory
@@ -67,7 +67,7 @@ jobs:
 
       - name: Restore Terraform Cache
         id: restore-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         if: steps.changes.outputs.src== 'true'
         with:
           # restore latest matching cache to the tf cache dir
@@ -79,14 +79,14 @@ jobs:
             ${{ runner.os }}-terraform-
 
       - name: Terraform min/max versions
-        uses: clowdhaus/terraform-min-max@v1.3.2
+        uses: clowdhaus/terraform-min-max@f489335873df04c3ce04b5e73f385a726d910039 # v1.3.2
         if: steps.changes.outputs.src== 'true'
         id: minMax
         with:
           directory: ${{ matrix.directory }}
 
       - name: Pre-commit Terraform ${{ steps.minMax.outputs.minVersion }}
-        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.11.1
+        uses: clowdhaus/terraform-composite-actions/pre-commit@8aef6513928e6e56c30662afb34a21bf4bf5d9f4 # v1.11.1
         # Run only validate pre-commit check on min version supported
         if: ${{ matrix.directory !=  '.' && steps.changes.outputs.src== 'true' }}
         with:
@@ -94,7 +94,7 @@ jobs:
           args: 'terraform_validate --color=always --show-diff-on-failure --files ${{ matrix.directory }}/*'
 
       - name: Pre-commit Terraform ${{ steps.minMax.outputs.minVersion }}
-        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.11.1
+        uses: clowdhaus/terraform-composite-actions/pre-commit@8aef6513928e6e56c30662afb34a21bf4bf5d9f4 # v1.11.1
         # Run only validate pre-commit check on min version supported
         if: ${{ matrix.directory ==  '.' && steps.changes.outputs.src== 'true' }}
         with:
@@ -110,9 +110,9 @@ jobs:
         run: rm -rf $(which terraform)
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: changes
         with:
           filters: |
@@ -125,7 +125,7 @@ jobs:
 
       - name: Restore Terraform Cache
         id: restore-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         if: steps.changes.outputs.src== 'true'
         with:
           # restore latest matching cache to the tf cache dir
@@ -142,11 +142,11 @@ jobs:
 
       - name: Terraform min/max versions
         id: minMax
-        uses: clowdhaus/terraform-min-max@v1.3.2
+        uses: clowdhaus/terraform-min-max@f489335873df04c3ce04b5e73f385a726d910039 # v1.3.2
         if: steps.changes.outputs.src== 'true'
 
       - name: Pre-commit Terraform ${{ steps.minMax.outputs.maxVersion }}
-        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.11.1
+        uses: clowdhaus/terraform-composite-actions/pre-commit@8aef6513928e6e56c30662afb34a21bf4bf5d9f4 # v1.11.1
         if: steps.changes.outputs.src== 'true'
         with:
           terraform-version: ${{ steps.minMax.outputs.maxVersion }}
@@ -154,7 +154,7 @@ jobs:
           tflint-version: ${{ env.TFLINT_VERSION }}
 
       - name: Save Terraform Cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         if: steps.changes.outputs.src== 'true'
         with:
           # caches cannot be updated, we can only save this hash once,
