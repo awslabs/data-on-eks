@@ -78,35 +78,6 @@ if [ ${#targets[@]} -gt 0 ]; then
     echo "FAILED: Terraform destroy of kubectl_manifest resources failed"
     exit 1
   fi
-
-  # Wait for nodes to fully terminate before destroying remaining infrastructure
-  KUBECTL_CONFIGURED=false
-  TMPFILE_CHECK=$(mktemp)
-  if terraform output -raw configure_kubectl > "$TMPFILE_CHECK" 2>/dev/null && [[ ! $(cat "$TMPFILE_CHECK") == *"No outputs found"* ]]; then
-    source "$TMPFILE_CHECK"
-    KUBECTL_CONFIGURED=true
-  fi
-  rm -f "$TMPFILE_CHECK"
-
-  if [ "$KUBECTL_CONFIGURED" = true ]; then
-    MAX_WAIT=600
-    INTERVAL=15
-    ELAPSED=0
-    echo "Waiting for all worker nodes to terminate before destroying infrastructure..."
-    while [ $ELAPSED -lt $MAX_WAIT ]; do
-      NODE_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
-      if [ "$NODE_COUNT" -eq 0 ]; then
-        echo "All nodes terminated."
-        break
-      fi
-      echo "  $NODE_COUNT node(s) still present, waiting ${INTERVAL}s... (${ELAPSED}s/${MAX_WAIT}s)"
-      sleep $INTERVAL
-      ELAPSED=$((ELAPSED + INTERVAL))
-    done
-    if [ $ELAPSED -ge $MAX_WAIT ]; then
-      echo "WARNING: Timed out after ${MAX_WAIT}s waiting for nodes to terminate. Proceeding with destroy."
-    fi
-  fi
 fi
 
 
