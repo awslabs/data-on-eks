@@ -77,6 +77,7 @@ resource "kubectl_manifest" "karpenter_resources" {
   for_each = local.karpenter_node_pools
 
   yaml_body = each.value
+  wait      = true
 
   depends_on = [
     helm_release.karpenter
