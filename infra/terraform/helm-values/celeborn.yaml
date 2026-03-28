@@ -108,7 +108,7 @@ worker:
   replicas: 6
   # Celeborn Helm chart doesn't support podLabels. Use kubectl patch as a workaround.
   # YuniKorn requires this label to route pods to a specific queue.
-  # podLabels: 
+  # podLabels:
   #   yunikorn.apache.org/queue: root.spark.spark-team-a
 
   nodeSelector:
@@ -194,4 +194,3 @@ worker:
       mountPath: /mnt/disk4
 
   volumes: {}
-

@@ -356,17 +356,17 @@ Check worker logs and verify celeborn.network.bind.preferIpAddress=false is set.
   while true; do
     ELAPSED=$(( $(date +%s) - STABLE_START ))
     [[ $ELAPSED -ge 120 ]] && break
-    
+
     # Verify pod is still Running during stability period
     PHASE=$(kubectl get pod "$POD" -n "$NAMESPACE" \
       -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
     READY=$(kubectl get pod "$POD" -n "$NAMESPACE" \
       -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
-    
+
     if [[ "$PHASE" != "Running" || "$READY" != "True" ]]; then
       fail "$POD became unhealthy during stability wait (phase=$PHASE ready=$READY)"
     fi
-    
+
     info "  Stability check: phase=$PHASE ready=$READY elapsed=${ELAPSED}s/120s"
     sleep 15
   done
