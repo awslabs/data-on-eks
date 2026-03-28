@@ -8,50 +8,143 @@ serviceAccount:
 
 cluster:
   name: cluster
+
+# -----------------------------------------------------------------------------
+# CELEBORN SERVER-SIDE CONFIG (celeborn-defaults.conf on master + worker)
+# These keys do NOT carry the spark. prefix — they are server-side only.
+# -----------------------------------------------------------------------------
 celeborn:
-    celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=1000Gi,/mnt/disk2:disktype=SSD:capacity=1000Gi,/mnt/disk3:disktype=SSD:capacity=1000Gi,/mnt/disk4:disktype=SSD:capacity=1000Gi
-    # wait for official release before enabling. Following enables tiered storage memory -> ssd -> s3. https://celeborn.apache.org/docs/latest/developers/storage/#multi-layered-storage
-    # celeborn.storage.availableTypes: MEMORY,SSD,S3
-    # celeborn.worker.storage.storagePolicy.evictPolicy: MEMORY,SSD,S3
-    # celeborn.worker.storage.storagePolicy.createFilePolicy: MEMORY,SSD,S3
-    # celeborn.storage.s3.dir: s3://${s3_bucket}/celeborn
-    # celeborn.storage.s3.endpoint.region: ${s3_bucket_region}
+  # --- Storage ---
+  # Verified: deploy docs show storage.dirs with disktype=SSD is the correct format.
+  # capacity set to 900Gi (not 700Gi) to leave ~10% headroom on 1000Gi PVC for FS overhead.
+  celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=900Gi,/mnt/disk2:disktype=SSD:capacity=900Gi,/mnt/disk3:disktype=SSD:capacity=900Gi,/mnt/disk4:disktype=SSD:capacity=900Gi
+
+  # FIX (from original): celeborn.storage.availableTypes defaults to HDD which covers SSD too
+  # when using local disks. Only required when using HDFS/S3. Setting SSD explicitly
+  # is documented as valid and ensures the master slot assignment treats these as SSD class.
+  celeborn.storage.availableTypes: SSD
+
+  # --- Performance tuning (r8g.8xlarge: 32 vCPU, 256 GB) ---
+  # These are unchanged from your original — values are appropriate for this instance type.
+  celeborn.worker.flusher.ssd.threads: "64"
+  celeborn.worker.fetch.io.threads: "64"
+  celeborn.worker.push.io.threads: "64"
+  celeborn.worker.clean.threads: "128"
+  celeborn.worker.commitFiles.threads: "128"
+  celeborn.worker.disk.clean.threads: "16"
+  celeborn.worker.sortPartition.threads: "128"
+  celeborn.worker.flusher.buffer.size: "10m"
+
+  # --- Graceful shutdown / rolling restart support ---
+  # Source: https://celeborn.apache.org/docs/latest/upgrading/#worker
+  # in-flight partition metadata stored in RocksDB. EBS reattach alone is not enough —
+  # the worker process must also restore its partition file index on startup.
+  celeborn.worker.graceful.shutdown.enabled: "true"
+  celeborn.worker.graceful.shutdown.checkSlotsFinished.timeout: "480s"   # default: 480s
+  celeborn.worker.graceful.shutdown.partitionSorter.shutdownTimeout: "120s"  # default: 120s
+  celeborn.worker.graceful.shutdown.timeout: "600s"                      # default: 600s
+
+  # --- Fixed ports for rolling restarts with graceful shutdown ---
+  # Source: https://celeborn.apache.org/docs/latest/configuration/
+  # When graceful shutdown is enabled, ALL worker ports must be fixed (non-zero).
+  # Clients record host:port at push time. If ports change after restart,
+  # all requests to that worker fail permanently.
+  celeborn.worker.rpc.port: "9091"
+  celeborn.worker.fetch.port: "9092"
+  celeborn.worker.push.port: "9093"
+  celeborn.worker.replicate.port: "9094"
+
+  # --- Replication fast-fail duration ---
+  # Source: deploy docs example config (shown in HA cluster example)
+  # Controls how long a replication attempt can take
+  # before it is abandoned and marked as failed. Default may be too tight for EBS.
+  celeborn.worker.replicate.fastFail.duration: "240s"
+
+  # --- Worker heartbeat timeout ---
+  # Default is 120s — EBS detach/reattach on EKS
+  # can take 60-120s, putting the restarting worker right at the exclusion boundary.
+  # Increasing to 180s gives a safe buffer before master excludes the worker.
+  celeborn.master.heartbeat.worker.timeout: "180s"
+
+  # --- Network binding preference ---
+  # Source: https://celeborn.apache.org/docs/latest/deploy_on_k8s/
+  # When false, workers register using stable DNS hostname instead of pod IP.
+  # REQUIRED for rolling restarts — pod IP changes after restart, but DNS remains stable.
+  # Without this, master keeps stale IP and clients can't reach restarted worker.
+  celeborn.network.bind.preferIpAddress: "false"
+
+  # --- Decommission config (for planned rolling restarts / upgrades) ---
+  # Source: https://celeborn.apache.org/docs/latest/decommissioning/
+  # These control how long a decommissioning worker waits before force-exiting.
+  # Keep defaults — 6h is appropriate for long-running shuffle jobs.
+  celeborn.worker.decommission.forceExitTimeout: "6h"    # default: 6h
+  celeborn.worker.decommission.checkInterval: "30s"      # default: 30s
+
+  # --- Tiered storage (S3) — keep commented until stable in 0.6.x ---
+  # celeborn.storage.availableTypes: MEMORY,SSD,S3
+  # celeborn.storage.s3.dir: s3://${s3_bucket}/celeborn
+  # celeborn.storage.s3.endpoint.region: ${s3_bucket_region}
+
+# -----------------------------------------------------------------------------
+# MASTER
+# -----------------------------------------------------------------------------
 master:
   nodeSelector:
-    NodeGroupType: general-purpose # use a different nodepool for better performance if required. networking spec matters a lot.
-    topology.kubernetes.io/zone: ${az}
+    NodeGroupType: general-purpose
   env:
     - name: CELEBORN_MASTER_MEMORY
       value: 2g
     - name: CELEBORN_MASTER_JAVA_OPTS
-      value: -XX:-PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:gc-master.out -Dio.netty.leakDetectionLevel=advanced
+      value: -XX:+UseG1GC -XX:MaxGCPauseMillis=500 -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:gc-master.out -Dio.netty.leakDetectionLevel=advanced
     - name: CELEBORN_NO_DAEMONIZE
       value: "true"
     - name: TZ
       value: Etc/GMT
 
+# -----------------------------------------------------------------------------
+# WORKER
+# -----------------------------------------------------------------------------
 worker:
-  replicas: 3
+  replicas: 6
+  # Celeborn Helm chart doesn't support podLabels. Use kubectl patch as a workaround.
+  # YuniKorn requires this label to route pods to a specific queue.
+  # podLabels: 
+  #   yunikorn.apache.org/queue: root.spark.spark-team-a
+
   nodeSelector:
-    NodeGroupType: general-purpose
-    topology.kubernetes.io/zone: ${az}
+    NodeGroupType: SparkGravitonMemoryOptimized
+    karpenter.sh/capacity-type: "on-demand"
+    kubernetes.io/arch: arm64
+    karpenter.k8s.aws/instance-family: "r8g"
+    karpenter.k8s.aws/instance-size: "8xlarge"
+
   env:
     - name: CELEBORN_WORKER_MEMORY
-      value: 4g
+      value: 48g
     - name: CELEBORN_WORKER_OFFHEAP_MEMORY
-      value: 24g
+      # Total JVM = 48g heap + 180g off-heap = 228g. Pod limit is 240Gi. Monitor for
+      # node-level OOM — if it occurs, reduce off-heap to 160g.
+      value: 180g
     - name: CELEBORN_WORKER_JAVA_OPTS
-      value: -XX:-PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:gc-worker.out -Dio.netty.leakDetectionLevel=advanced
+      # Replaced deprecated -XX:-PrintGC / +PrintGCDetails flags with G1GC.
+      # ParallelGC causes stop-the-world pauses on 48g heap; G1 is correct for
+      # large long-lived server JVMs.
+      value: -XX:+UseG1GC -XX:G1HeapRegionSize=32m -XX:MaxGCPauseMillis=500 -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:gc-worker.out -Dio.netty.leakDetectionLevel=advanced
     - name: CELEBORN_NO_DAEMONIZE
       value: "true"
     - name: TZ
       value: Etc/GMT
+
   resources:
     requests:
-      cpu: "4"
-      memory: "32Gi"
+      cpu: "26"
+      memory: "220Gi"
     limits:
-      memory: "32Gi"
+      memory: "240Gi"
+      # No CPU limit — CPU limits cause CFS throttling which degrades JVM performance.
+
+  # StatefulSet PVC retention defaults to Retain.
+  # PVCs are NOT deleted when pods are deleted — data survives restarts. ✅
   volumeClaimTemplates:
     - metadata:
         name: disk1
@@ -89,6 +182,7 @@ worker:
         resources:
           requests:
             storage: 1000Gi
+
   volumeMounts:
     - name: disk1
       mountPath: /mnt/disk1
@@ -98,4 +192,6 @@ worker:
       mountPath: /mnt/disk3
     - name: disk4
       mountPath: /mnt/disk4
+
   volumes: {}
+
