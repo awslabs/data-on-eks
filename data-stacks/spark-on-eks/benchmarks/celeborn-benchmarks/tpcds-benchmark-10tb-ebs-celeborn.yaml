@@ -1,0 +1,201 @@
+
+# ==============================================================================
+# TPC-DS 10TB Benchmark with Celeborn Remote Shuffle Service
+# ==============================================================================
+
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-benchmark-10tb-celeborn
+  namespace: spark-team-a
+spec:
+  type: Scala
+  mode: cluster
+  image: public.ecr.aws/m8u6z8z4/manabu-test:celeborn-arm64
+  imagePullPolicy: IfNotPresent
+  sparkVersion: 3.5.3
+  mainClass: com.amazonaws.eks.tpcds.BenchmarkSQL
+  mainApplicationFile: local:///opt/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
+  arguments:
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-10TB"
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-10TB-RESULT"
+    - "/opt/tpcds-kit/tools"
+    - "parquet"
+    - "10000"
+    - "3"
+    - "false"
+    - ""
+    - "true"
+
+  sparkConf:
+
+    # =========================================================================
+    # CELEBORN CORE — verified from deploy/#spark-configuration
+    # =========================================================================
+
+    # Shuffle manager — correct class name since 0.3.0
+    # Source: migration guide (changed from RssShuffleManager in 0.3.0)
+    "spark.shuffle.manager": "org.apache.spark.shuffle.celeborn.SparkShuffleManager"
+    # Source: deploy docs — "must use kryo serializer because java serializer
+    # does not support relocation"
+    "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
+    "spark.shuffle.service.enabled": "false"
+    "spark.celeborn.master.endpoints": "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local,celeborn-master-1.celeborn-master-svc.celeborn.svc.cluster.local,celeborn-master-2.celeborn-master-svc.celeborn.svc.cluster.local"
+
+    # Source: deploy docs — "sort shuffle writer uses less memory than hash shuffle
+    # writer; if your shuffle partition count is large, try sort"
+    # TPC-DS at 10TB has large partition counts — sort is correct here.
+    "spark.celeborn.client.spark.shuffle.writer": "sort"
+
+    # =========================================================================
+    # REPLICATION — client-side, must be set per job
+    # Source: migration guide — default changed to false in 0.3.0
+    # =========================================================================
+    "spark.celeborn.client.push.replicate.enabled": "true"
+
+    # =========================================================================
+    # ROLLING RESTART / FETCH RETRY
+    # Source: https://celeborn.apache.org/docs/latest/upgrading/#client
+    # These are the exact keys listed in the official upgrading docs client table.
+    # =========================================================================
+    # Valid key — in upgrading docs client table. Default: 3.
+    "spark.celeborn.client.fetch.maxRetriesForEachReplica": "5"
+
+    # Valid key — in upgrading docs client table. Default: 5s.
+    # Increasing gives the client more time between fetch retries while a worker
+    # pod is restarting and EBS volume is reattaching (~60-120s on EKS).
+    "spark.celeborn.data.io.retryWait": "15s"
+
+    # Valid key — in upgrading docs client table. Default: true.
+    # Required for HARD_SPLIT pre-commit during graceful worker shutdown.
+    "spark.celeborn.client.shuffle.batchHandleCommitPartition.enabled": "true"
+
+    # Valid key — confirmed in source (celeborn.client.rpc.maxRetries, since 0.3.2).
+    # Controls RPC retries in LifecycleManager.
+    "spark.celeborn.client.rpc.maxRetries": "5"
+
+    # =========================================================================
+    # AQE
+    # Source: deploy docs — "we recommend setting localShuffleReader to false
+    # for getting better performance of Celeborn"
+    # true in original — must be FALSE with Celeborn.
+    # With true, Spark tries to read shuffle data from local executors, bypassing
+    # Celeborn entirely, causing data-not-found errors.
+    # =========================================================================
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "false" # must be FALSE with Celeborn
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+
+    # =========================================================================
+    # SPARK NETWORK TIMEOUTS (Spark-level, not Celeborn-level)
+    # These are standard Spark configs — unchanged from original, values appropriate
+    # for a cluster with possible 60-180s worker pod restart windows.
+    # =========================================================================
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    "spark.rpc.askTimeout": "600s"
+
+    # =========================================================================
+    # KUBERNETES API TIMEOUTS (milliseconds)
+    # =========================================================================
+    "spark.kubernetes.submission.connectionTimeout": "120000"
+    "spark.kubernetes.submission.requestTimeout": "120000"
+    "spark.kubernetes.driver.connectionTimeout": "120000"
+    "spark.kubernetes.driver.requestTimeout": "120000"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-10tb-celeborn"
+
+    # =========================================================================
+    # SPARK EVENT LOGS
+    # =========================================================================
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    # =========================================================================
+    # PROMETHEUS METRICS
+    # =========================================================================
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # =========================================================================
+    # S3A CONFIGURATION
+    # =========================================================================
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/tmp/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "67108864"
+    "spark.hadoop.fs.s3a.multipart.threshold": "134217728"
+    "spark.hadoop.fs.s3a.multipart.purge": "true"
+    "spark.hadoop.fs.s3a.threads.max": "40"
+    "spark.hadoop.fs.s3a.connection.maximum": "100"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+
+    # =========================================================================
+    # SHUFFLE / REDUCER TUNING
+    # =========================================================================
+    "spark.shuffle.file.buffer": "1m"
+    "spark.reducer.maxSizeInFlight": "48m"
+
+    # =========================================================================
+    # EXECUTOR JVM OPTS
+    # UseParallelGC replaced with G1GC.
+    # ParallelGC is stop-the-world; on 100g executor heap, GC pauses will
+    # routinely exceed heartbeat intervals and cause executor timeouts.
+    # G1GC with MaxGCPauseMillis=500 is the correct choice for large heap executors.
+    # =========================================================================
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseG1GC -XX:G1HeapRegionSize=32m -XX:MaxGCPauseMillis=500 -XX:InitiatingHeapOccupancyPercent=35"
+
+  driver:
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    labels:
+      yunikorn.apache.org/queue: root.spark.spark-team-a
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
+    nodeSelector:
+      NodeGroupType: SparkGravitonMemoryOptimized
+      kubernetes.io/arch: arm64
+      topology.kubernetes.io/zone: us-west-2a
+      karpenter.sh/capacity-type: "on-demand"
+
+  executor:
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    labels:
+      yunikorn.apache.org/queue: root.spark.spark-team-a
+    cores: 14
+    memory: "100g"
+    memoryOverhead: "20g"
+    instances: 32
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    env:
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
+    nodeSelector:
+      NodeGroupType: SparkGravitonMemoryOptimized
+      kubernetes.io/arch: arm64
+      topology.kubernetes.io/zone: us-west-2a
+      karpenter.sh/capacity-type: "on-demand"
+      karpenter.k8s.aws/instance-family: "r8g"
+      karpenter.k8s.aws/instance-size: "8xlarge"
+
+  restartPolicy:
+    type: Never
