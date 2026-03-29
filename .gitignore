@@ -2,6 +2,7 @@
 .idea
 .build
 *.old
+.kiro
 
 # ignore the lock file
 website/package-lock.json
