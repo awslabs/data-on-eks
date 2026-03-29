@@ -26,7 +26,7 @@ Performance is expected to improve significantly in future releases as DPP suppo
 ### Summary
 
 Our comprehensive TPC-DS 1TB benchmark on Amazon EKS demonstrates that **Apache DataFusion Comet does not provide overall speedup** (**18% slower**) compared to native Spark SQL, with individual queries showing mixed results.
-Comet also required significantly more memory (~32GB more) than Spark's default execution engine to successfully complete all queries.
+Comet also required significantly more memory (~16GB more per executor) than Spark's default execution engine to successfully complete all queries.
 
 #### Overall Performance
 
@@ -80,7 +80,7 @@ Benchmarks ran sequentially on the same cluster to ensure identical hardware and
 |-----------|--------------|
 | **EKS Cluster** | [Amazon EKS](https://aws.amazon.com/eks/) 1.34 |
 | **Node Instance Type** | c5d.12xlarge (48 vCPUs, 96GB RAM, 1.8TB NVMe SSD) |
-| **Node Group** | 24 nodes dedicated for benchmark workloads |
+| **Node Group** | 8 nodes used for benchmark workloads (out of 24 total) |
 | **Executor Configuration** | 23 executors × 5 cores × 58GB RAM each |
 | **Driver Configuration** | 5 cores × 20GB RAM |
 | **Dataset** | [TPC-DS](https://www.tpc.org/tpcds/) 1TB (Parquet format) |
@@ -265,7 +265,7 @@ We ran an updated benchmark with Comet 0.14.0 on memory-optimized r8gd.12xlarge 
 | **Instance Type** | c5d.12xlarge | r8gd.12xlarge | 🔄 Compute → Memory optimized |
 | **Architecture** | x86_64 (Intel) | ARM64 (Graviton) | 🔄 Different ISA |
 | **RAM per Node** | 96GB | 384GB | ⬆️ 4x more |
-| **Nodes** | 24 (8 benchmark nodes) | 4 | ⬇️ 2x fewer |
+| **Nodes** | 8 (out of 24 total) | 4 | ⬇️ 50% fewer |
 | **Executors per Node** | ~3 (23÷8) | ~6 (23÷4) | ⬆️ 2x density |
 | **TPC-DS Version** | v2.x | v4.0 | ⬆️ Updated queries |
 
@@ -303,21 +303,21 @@ We ran an updated benchmark with Comet 0.14.0 on memory-optimized r8gd.12xlarge 
 <td>4</td>
 <td>$4.848/hr</td>
 <td>2.14 hrs</td>
-<td><strong>$20.71</strong></td>
-<td>$0.161</td>
+<td><strong>$41.48</strong></td>
+<td>$0.323</td>
 </tr>
-<tr style={{backgroundColor: '#d4edda'}}>
-<td><strong>Savings</strong></td>
+<tr style={{backgroundColor: '#ffe6e6'}}>
+<td><strong>Difference</strong></td>
 <td><strong>50% fewer</strong></td>
 <td>2.1x higher</td>
 <td>4% slower</td>
-<td><strong>45% cheaper</strong></td>
-<td><strong>47% better</strong></td>
+<td><strong>9% more expensive</strong></td>
+<td><strong>5% worse</strong></td>
 </tr>
 </tbody>
 </table>
 
-Despite r8gd.12xlarge being 2.1x more expensive per hour, the updated configuration achieved **45% cost savings** by using half the nodes with only 4% slower runtime.
+Despite using 50% fewer nodes, the r8gd.12xlarge configuration was **9% more expensive** overall due to the 2.1x higher instance price and 4% longer runtime.
 
 #### Key Findings
 
