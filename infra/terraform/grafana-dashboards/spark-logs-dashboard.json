@@ -13,13 +13,24 @@
         "current": { "value": "" }
       },
       {
+        "name": "level",
+        "type": "query",
+        "label": "Level",
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-events" },
+        "query": "SELECT DISTINCT level FROM app_logs.spark ORDER BY level",
+        "includeAll": true,
+        "allValue": "'ERROR','WARN','INFO','DEBUG','TRACE','FATAL'",
+        "multi": true,
+        "current": { "text": ["ERROR", "WARN"], "value": ["ERROR", "WARN"] },
+        "refresh": 2
+      },
+      {
         "name": "spark_filter",
         "type": "adhoc",
         "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-events" },
         "defaultKeys": [
           { "text": "namespace", "value": "namespace" },
           { "text": "app", "value": "app" },
-          { "text": "level", "value": "level" },
           { "text": "role", "value": "role" },
           { "text": "node_name", "value": "node_name" },
           { "text": "pod_name", "value": "pod_name" },
@@ -37,7 +48,7 @@
       "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-events" },
       "targets": [
         {
-          "rawSql": "SELECT toStartOfMinute(timestamp) AS time, level, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime GROUP BY time, level ORDER BY time",
+          "rawSql": "SELECT toStartOfMinute(timestamp) AS time, level, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND level IN (${level:sqlstring}) GROUP BY time, level ORDER BY time",
           "format": 0,
           "refId": "A",
           "meta": { "database": "app_logs", "table": "spark" }
@@ -62,7 +73,7 @@
       "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-events" },
       "targets": [
         {
-          "rawSql": "SELECT app, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime GROUP BY app ORDER BY logs DESC LIMIT 20",
+          "rawSql": "SELECT app, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND level IN (${level:sqlstring}) GROUP BY app ORDER BY logs DESC LIMIT 20",
           "format": 1,
           "refId": "A",
           "meta": { "database": "app_logs", "table": "spark" }
@@ -90,7 +101,7 @@
       "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-events" },
       "targets": [
         {
-          "rawSql": "SELECT timestamp AS time, level, message, namespace, app, role, pod_name, container_name, node_name, toString(log) AS log FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') ORDER BY timestamp DESC LIMIT 500",
+          "rawSql": "SELECT timestamp, message AS body, level, namespace, app, role, pod_name, container_name, node_name, toString(log) AS log FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND level IN (${level:sqlstring}) AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') ORDER BY timestamp DESC LIMIT 500",
           "format": 2,
           "refId": "A",
           "meta": { "database": "app_logs", "table": "spark" }
