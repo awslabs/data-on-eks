@@ -85,24 +85,26 @@
     {
       "id": 3,
       "title": "Spark Logs",
-      "type": "table",
-      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 8 },
+      "type": "logs",
+      "gridPos": { "h": 20, "w": 24, "x": 0, "y": 8 },
       "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-events" },
       "targets": [
         {
-          "rawSql": "SELECT timestamp, level, namespace, app, role, pod_name, container_name, node_name, message, log FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') ORDER BY timestamp DESC LIMIT 500",
-          "format": 1,
+          "rawSql": "SELECT timestamp AS time, level, message, namespace, app, role, pod_name, container_name, node_name, toString(log) AS log FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') ORDER BY timestamp DESC LIMIT 500",
+          "format": 2,
           "refId": "A",
           "meta": { "database": "app_logs", "table": "spark" }
         }
       ],
-      "options": { "showHeader": true, "sortBy": [{ "displayName": "timestamp", "desc": true }] },
-      "fieldConfig": {
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "message" }, "properties": [{ "id": "custom.width", "value": 500 }] },
-          { "matcher": { "id": "byName", "options": "level" }, "properties": [{ "id": "custom.width", "value": 80 }] },
-          { "matcher": { "id": "byName", "options": "log" }, "properties": [{ "id": "custom.width", "value": 400 }] }
-        ]
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
       }
     }
   ]
