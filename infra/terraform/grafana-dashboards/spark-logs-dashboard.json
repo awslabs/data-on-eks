@@ -1,0 +1,142 @@
+{
+  "title": "Spark Application Logs",
+  "uid": "data-on-eks-spark-logs",
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "search",
+        "type": "textbox",
+        "label": "Search messages",
+        "current": { "value": "" }
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+        "query": "SELECT DISTINCT namespace FROM app_logs.spark ORDER BY namespace",
+        "includeAll": true,
+        "allValue": "%",
+        "current": { "text": "All", "value": "$__all" },
+        "multi": false,
+        "refresh": 2
+      },
+      {
+        "name": "app",
+        "type": "query",
+        "label": "Application",
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+        "query": "SELECT DISTINCT app FROM app_logs.spark WHERE namespace ILIKE '${namespace}' ORDER BY app",
+        "includeAll": true,
+        "allValue": "%",
+        "current": { "text": "All", "value": "$__all" },
+        "multi": false,
+        "refresh": 2
+      },
+      {
+        "name": "level",
+        "type": "query",
+        "label": "Level",
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+        "query": "SELECT DISTINCT level FROM app_logs.spark ORDER BY level",
+        "includeAll": true,
+        "allValue": "%",
+        "current": { "text": "All", "value": "$__all" },
+        "multi": false,
+        "refresh": 2
+      },
+      {
+        "name": "DS_CLICKHOUSE_EVENTS",
+        "type": "datasource",
+        "query": "grafana-clickhouse-datasource",
+        "current": { "text": "ClickHouse Events", "value": "ClickHouse Events" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Log Rate by Level",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(timestamp) AS time, level, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND namespace ILIKE '${namespace}' AND app ILIKE '${app}' AND level ILIKE '${level}' GROUP BY time, level ORDER BY time",
+          "format": 0,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "ERROR" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "WARN" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "INFO" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "Logs by Application",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+      "targets": [
+        {
+          "rawSql": "SELECT app, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND namespace ILIKE '${namespace}' AND app ILIKE '${app}' AND level ILIKE '${level}' GROUP BY app ORDER BY logs DESC LIMIT 20",
+          "format": 1,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right" },
+        "reduceOptions": { "values": true, "calcs": [] },
+        "pieType": "pie"
+      },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "app" },
+            "properties": [{ "id": "custom.hideFrom", "value": { "legend": false, "tooltip": false, "viz": true } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "Spark Logs",
+      "type": "table",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+      "targets": [
+        {
+          "rawSql": "SELECT timestamp, level, namespace, app, role, pod_name, container_name, node_name, message, log FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') AND namespace ILIKE '${namespace}' AND app ILIKE '${app}' AND level ILIKE '${level}' ORDER BY timestamp DESC LIMIT 500",
+          "format": 1,
+          "refId": "A"
+        }
+      ],
+      "options": { "showHeader": true, "sortBy": [{ "displayName": "timestamp", "desc": true }] },
+      "fieldConfig": {
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "message" }, "properties": [{ "id": "custom.width", "value": 500 }] },
+          { "matcher": { "id": "byName", "options": "level" }, "properties": [{ "id": "custom.width", "value": 80 }] },
+          { "matcher": { "id": "byName", "options": "log" }, "properties": [{ "id": "custom.width", "value": 400 }] }
+        ]
+      }
+    }
+  ],
+  "__inputs": [
+    {
+      "name": "DS_CLICKHOUSE_EVENTS",
+      "label": "ClickHouse Events",
+      "type": "datasource",
+      "pluginId": "grafana-clickhouse-datasource"
+    }
+  ]
+}
