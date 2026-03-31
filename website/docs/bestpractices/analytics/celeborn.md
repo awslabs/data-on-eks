@@ -19,14 +19,14 @@ Validated with **Celeborn 0.6.2** on **Amazon EKS 1.30+**. TPC-DS 10 TB benchmar
 | 2 | **Workers** | Keep all workers in a single AZ, co-located with executors | Cross-AZ shuffle costs $0.01/GB. When an AZ fails, its executors die too, so spreading workers buys nothing. |
 | 3 | **Instance Type Selection** | r8g.8xlarge for small/medium, r8g.12xlarge or r8g.16xlarge for large, r8gd.16xlarge or i4i.16xlarge for I/O-bound | Start with 6 workers and scale out before scaling up. r8g.8xlarge ran 10 TB TPC-DS at under 20% disk and under 1% CPU. More workers distribute both network and disk load better than fewer larger instances. |
 | 4 | **Storage** | Use EBS for most teams. NVMe only after profiling confirms I/O bottleneck | EBS volumes follow pods across nodes, resize online, and survive node failures without replication. |
-| 5 | **Replication** | `spark.celeborn.client.push.replicate.enabled: "true"` on every job | Without it, any worker restart causes job failure. Non-negotiable. |
+| 5 | **Replication** | Enable `spark.celeborn.client.push.replicate.enabled: "true"` for jobs that need zero-downtime worker restarts or use NVMe storage | Mandatory for NVMe (data lost on node failure). Strongly recommended for EBS to enable rolling restarts without job failures. Trade off: 2x network and storage cost vs recomputation cost and dynamic allocation benefits. |
 | 6 | **Ports** | Set all 4 worker ports to fixed values (9091 to 9094) | Dynamic `port=0` triggers `AssertionError` on every graceful shutdown. |
 | 7 | **Graceful shutdown** | `celeborn.worker.graceful.shutdown.enabled: "true"` | Without it, abrupt worker exit causes Spark jobs to hang. |
 | 8 | **Local shuffle reader** | `spark.sql.adaptive.localShuffleReader.enabled: "false"` on every job | If true, Spark reads from executor local disks where Celeborn data does not exist. Jobs fail with `FileNotFoundException`. |
 | 9 | **terminationGracePeriodSeconds** | Set to at least 720s (600s graceful shutdown + 120s buffer) | Kubernetes default is 30s. If too short, SIGKILL fires before graceful shutdown completes, corrupting data and causing job failures. Must exceed `celeborn.worker.graceful.shutdown.timeout`. |
 | 10 | **DNS registration** | `celeborn.network.bind.preferIpAddress: "false"` | Workers register with pod IPs by default. Pod IPs change on restart, so the master ends up with stale mappings and clients can't reconnect. DNS names are stable. |
-| 11 | **Rolling restarts** | `kubectl delete pod` with 120s delay between workers | SIGTERM triggers graceful shutdown (requires rows 7 and 9 above). Replication covers the ~70s restart window. Zero job failures validated on TPC-DS 10 TB. |
-| 12 | **Decommission API** | Optional. Use for 100+ worker clusters, not required for correctness | It stops new writes to a worker but does not migrate existing shuffle data. Fetch errors still happen (20-30 per worker) and are handled by Spark retries. Simple pod delete with replication achieves the same data safety outcome. |
+| 11 | **Rolling restarts** | Use decommission API before pod deletion, with appropriate delay between workers | Decommission stops new writes to the worker before shutdown. Delay between workers depends on job characteristics and shuffle volume. See Day 2 Operations section for procedures. |
+| 12 | **Decommission API** | Use decommission API before worker restarts or pod deletions | Recommended by Apache Celeborn for production operations. Stops new writes to the worker and provides explicit coordination with the master before shutdown. See Day 2 Operations for procedures. |
 | 13 | **Shuffle sizing** | Don't provision storage based on dataset size | A 10 TB dataset produced only 4.7 TB of shuffle (19.7% disk utilization). Peak concurrent shuffle is 5 to 15% of total dataset, not 100%. |
 
 ## Table of Contents
@@ -388,7 +388,7 @@ sparkConf:
 
 :::danger These misconfigurations can cause performance degradation. Check these first on any new deployment:
 1. `spark.sql.adaptive.localShuffleReader.enabled: "true"` — Celeborn is bypassed entirely, `FileNotFoundException`
-2. `spark.celeborn.client.push.replicate.enabled: "false"` — any worker restart causes job failure
+2. `spark.celeborn.client.push.replicate.enabled: "false"` with NVMe storage — node failure causes permanent data loss and job failure
 3. Worker ports set to `0` (dynamic) — `AssertionError` on every graceful shutdown
 :::
 
