@@ -147,6 +147,7 @@ spec:
                   container_name LowCardinality(String),
                   node_name String,
                   app LowCardinality(String),
+                  role LowCardinality(String),
                   level LowCardinality(String),
                   message String,
                   log JSON
