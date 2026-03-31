@@ -13,7 +13,7 @@ Validated with **Celeborn 0.6.2** on **Amazon EKS 1.30+**. TPC-DS 10 TB benchmar
 
 ## TL;DR
 
-| # | Area | What to Do | Why |
+| # | Area | Recommendations | Reasons |
 |---|------|-----------|-----|
 | 1 | **Masters** | Deploy 3 masters, one per AZ | Raft needs a majority (2/3). One AZ down, control plane keeps running. |
 | 2 | **Workers** | Keep all workers in a single AZ, co-located with executors | Cross-AZ shuffle costs $0.01/GB. When an AZ fails, its executors die too, so spreading workers buys nothing. |
@@ -165,7 +165,7 @@ Once you've scaled out and still need more capacity per worker:
 
 **Choose `r8g.12xlarge` or `r8g.16xlarge`** when you've already scaled out to 20 or more r8g.8xlarge workers and still need more capacity per node. If network or memory is your constraint, these instances pair well with EBS and give you persistent storage, online resize, and resilience to node failures.
 
-**Choose `i4i.16xlarge`** when profiling confirms disk I/O is the actual bottleneck. You get 15 TB of local NVMe (4 x 3.75 TB) but the operational bar is higher: replication is mandatory, you rotate one node at a time, and there is no online resize.
+**Choose `i4i.16xlarge`** when profiling confirms disk I/O is the actual bottleneck. You get 15 TB of local NVMe (4 x 3.75 TB) but the operational bar is higher: replication is highly recommended, you rotate one node at a time, and there is no online resize.
 
 :::note
 The `r8g` family, including `r8g.16xlarge`, has **no local NVMe** and uses EBS only. For NVMe on Graviton4 use the `r8gd` variant. Do not mix arm64 instances (`r8g`, `r8gd`) and x86-64 instances (`i4i`) in the same StatefulSet.
@@ -258,9 +258,9 @@ persistentVolumeClaimRetentionPolicy:
   whenScaled: Delete
 ```
 
-**3. Replication is mandatory**
+**3. Replication is highly recommended**
 
-With NVMe, a node failure means permanent data loss. Enable replication in every Spark job:
+With NVMe, a node failure means permanent data loss. Highly recommended to enable replications for critical jobs:
 
 ```yaml
 sparkConf:
@@ -386,7 +386,7 @@ sparkConf:
   spark.rpc.askTimeout: "600s"
 ```
 
-:::danger Three misconfigurations that silently break Celeborn. Check these first on any new deployment:
+:::danger These misconfigurations can cause performance degradation. Check these first on any new deployment:
 1. `spark.sql.adaptive.localShuffleReader.enabled: "true"` — Celeborn is bypassed entirely, `FileNotFoundException`
 2. `spark.celeborn.client.push.replicate.enabled: "false"` — any worker restart causes job failure
 3. Worker ports set to `0` (dynamic) — `AssertionError` on every graceful shutdown
@@ -511,7 +511,7 @@ cd data-stacks/spark-on-eks/benchmarks/celeborn-benchmarks
 **For EBS-backed workers:**
 ```bash
 # 1. Verify replication is enabled in all running jobs
-kubectl logs <driver-pod> -n spark-operator | grep "push.replicate.enabled"
+kubectl logs <driver-pod>  | grep "push.replicate.enabled"
 
 # 2. Check disk usage (keep below 70%)
 bash benchmarks/celeborn-benchmarks/check-celeborn-disk-usage.sh
