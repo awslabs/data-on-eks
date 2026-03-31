@@ -147,7 +147,8 @@ spec:
                   container_name LowCardinality(String),
                   app LowCardinality(String),
                   level LowCardinality(String),
-                  message String
+                  message String,
+                  log JSON
                 ) ENGINE = MergeTree()
                 ORDER BY (app, namespace, timestamp)
                 TTL toDateTime(timestamp) + INTERVAL 7 DAY TO VOLUME 'cold',
@@ -160,7 +161,8 @@ spec:
                   pod_name String,
                   container_name LowCardinality(String),
                   level LowCardinality(String),
-                  message String
+                  message String,
+                  log JSON
                 ) ENGINE = MergeTree()
                 ORDER BY (namespace, timestamp)
                 TTL toDateTime(timestamp) + INTERVAL 7 DAY TO VOLUME 'cold',
