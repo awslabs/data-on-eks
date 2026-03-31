@@ -133,6 +133,7 @@ spec:
                   firstTimestamp String,
                   lastTimestamp String
                 ) ENGINE = MergeTree()
+                PARTITION BY toYYYYMM(timestamp)
                 ORDER BY (namespace, object_kind, type, timestamp)
                 TTL toDateTime(timestamp) + INTERVAL 14 DAY TO VOLUME 'cold',
                     toDateTime(timestamp) + INTERVAL 60 DAY DELETE
@@ -152,7 +153,8 @@ spec:
                   message String,
                   log JSON
                 ) ENGINE = MergeTree()
-                ORDER BY (app, namespace, timestamp)
+                PARTITION BY toYYYYMM(timestamp)
+                ORDER BY (namespace, app, level, timestamp)
                 TTL toDateTime(timestamp) + INTERVAL 7 DAY TO VOLUME 'cold',
                     toDateTime(timestamp) + INTERVAL 60 DAY DELETE
                 SETTINGS storage_policy = 'tiered';
@@ -166,6 +168,7 @@ spec:
                   message String,
                   log JSON
                 ) ENGINE = MergeTree()
+                PARTITION BY toYYYYMM(timestamp)
                 ORDER BY (namespace, timestamp)
                 TTL toDateTime(timestamp) + INTERVAL 7 DAY TO VOLUME 'cold',
                     toDateTime(timestamp) + INTERVAL 60 DAY DELETE
