@@ -1,0 +1,106 @@
+{
+  "title": "Kubernetes Events",
+  "uid": "data-on-eks-k8s-events",
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "search",
+        "type": "textbox",
+        "label": "Search messages",
+        "current": { "value": "" }
+      },
+      {
+        "name": "Filters",
+        "type": "adhoc",
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" }
+      },
+      {
+        "name": "DS_CLICKHOUSE_EVENTS",
+        "type": "datasource",
+        "query": "grafana-clickhouse-datasource",
+        "current": { "text": "ClickHouse Events", "value": "ClickHouse Events" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Event Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(timestamp) AS time, type, count() AS events FROM k8s_events.events WHERE timestamp >= $__fromTime AND timestamp <= $__toTime GROUP BY time, type ORDER BY time",
+          "format": 1,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Events by Namespace",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+      "targets": [
+        {
+          "rawSql": "SELECT namespace, count() AS events FROM k8s_events.events WHERE timestamp >= $__fromTime AND timestamp <= $__toTime GROUP BY namespace ORDER BY events DESC LIMIT 20",
+          "format": 1,
+          "refId": "A"
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right" },
+        "reduceOptions": { "values": true, "calcs": [] },
+        "pieType": "pie"
+      },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "namespace" },
+            "properties": [{ "id": "custom.hideFrom", "value": { "legend": false, "tooltip": false, "viz": true } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "Events Log",
+      "type": "table",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "${DS_CLICKHOUSE_EVENTS}" },
+      "targets": [
+        {
+          "rawSql": "SELECT timestamp, type, namespace, object_kind, object_name, reason, source_component, message FROM k8s_events.events WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') ORDER BY timestamp DESC LIMIT 500",
+          "format": 1,
+          "refId": "A"
+        }
+      ],
+      "options": { "showHeader": true, "sortBy": [{ "displayName": "timestamp", "desc": true }] },
+      "fieldConfig": {
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "message" }, "properties": [{ "id": "custom.width", "value": 500 }] },
+          { "matcher": { "id": "byName", "options": "type" }, "properties": [{ "id": "custom.width", "value": 80 }] }
+        ]
+      }
+    }
+  ],
+  "__inputs": [
+    {
+      "name": "DS_CLICKHOUSE_EVENTS",
+      "label": "ClickHouse Events",
+      "type": "datasource",
+      "pluginId": "grafana-clickhouse-datasource"
+    }
+  ]
+}
