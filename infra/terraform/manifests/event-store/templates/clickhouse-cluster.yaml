@@ -145,6 +145,7 @@ spec:
                   namespace LowCardinality(String),
                   pod_name String,
                   container_name LowCardinality(String),
+                  node_name String,
                   app LowCardinality(String),
                   level LowCardinality(String),
                   message String,
