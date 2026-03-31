@@ -3,1563 +3,1064 @@ sidebar_position: 4
 sidebar_label: Apache Celeborn Best Practices
 ---
 
-# Apache Celeborn: Production Operations Guide
 
-Apache Celeborn is an elastic and high-performance Remote Shuffle Service (RSS) designed to handle intermediate data processing for big data compute engines like Spark, Flink, and MapReduce.
+# Apache Celeborn: Best Practices
 
-This guide provides production-grade best practices for operating Celeborn at scale (200+ nodes), covering deployment, maintenance, upgrades, and troubleshooting scenarios encountered in large-scale data platforms.
+
+Apache Celeborn is a Remote Shuffle Service (RSS) that externalizes Spark shuffle data to dedicated worker nodes — decoupling executor lifecycle from shuffle storage, enabling true dynamic allocation, and eliminating the performance bottleneck of local-disk shuffle at scale.
+
 
 ## Table of Contents
 
-- [Architecture Overview](#architecture-overview)
-- [Deployment Best Practices](#deployment-best-practices)
-- [Day 2 Operations](#day-2-operations-rolling-restarts-and-maintenance)
-- [Scaling Considerations](#scaling-to-200-nodes)
-- [Monitoring and Observability](#monitoring)
-- [Troubleshooting](#troubleshooting-common-scenarios)
 
-## Architecture Overview
+- [Architecture Fundamentals](#architecture-fundamentals)
+- [Decision 1: AZ Topology](#decision-1-az-topology)
+- [Decision 2: Instance Type by Scale](#decision-2-instance-type-by-scale)
+- [Decision 3: EBS vs NVMe Storage](#decision-3-ebs-vs-nvme-storage)
+- [Configuration](#configuration)
+- [Day 2 Operations](#day-2-operations)
+- [Monitoring](#monitoring)
+- [Troubleshooting](#troubleshooting)
 
-Understanding Celeborn's architecture helps explain why certain configurations are critical for production operations.
 
-### Default Spark Shuffle Architecture
+---
 
-In traditional Spark deployments, shuffle data is stored on executor local disks:
 
-[![Default Spark Shuffle Architecture](../../benchmarks/img/spark-shuffler-architecture.png)](../../benchmarks/img/spark-shuffler-architecture.png)
+## Architecture Fundamentals
 
-**Limitations of Default Shuffle:**
-- ❌ Shuffle data lost when executors are terminated (blocks dynamic allocation)
-- ❌ Executors must stay alive until all downstream stages complete
-- ❌ No fault tolerance - executor failure requires recomputing upstream stages
-- ❌ Poor resource utilization - can't scale down during shuffle-heavy stages
 
-### Spark with Apache Celeborn Architecture
+[![Default Spark Shuffle vs Celeborn](../../benchmarks/img/spark-shuffler-architecture.png)](../../benchmarks/img/spark-shuffler-architecture.png)
 
-Celeborn externalizes shuffle operations to dedicated worker nodes:
 
-[![Spark with Apache Celeborn Architecture](../../benchmarks/img/celeborn-architecture.png)](../../benchmarks/img/celeborn-architecture.png)
+[![Celeborn Architecture](../../benchmarks/img/celeborn-architecture.png)](../../benchmarks/img/celeborn-architecture.png)
 
-**Celeborn Architecture Components:**
 
-1. **Celeborn Masters (3+ nodes):**
-   - Coordinate shuffle operations and slot assignments
-   - Track worker health via heartbeats
-   - Manage metadata for active shuffles
-   - Provide HA through Raft consensus (deploy in odd numbers: 3, 5, 7)
+**Three components:**
+- **Masters (3+):** Slot assignment, worker health tracking, shuffle metadata. HA via Raft consensus — deploy as odd numbers (3, 5, 7).
+- **Workers (N):** Shuffle data storage and serving. Scale horizontally. **One pod per node** — this is enforced in the official Helm chart and is non-negotiable for performance.
+- **Spark Client:** Embedded in executors. Handles retries, replica selection, and failover.
 
-2. **Celeborn Workers (N nodes):**
-   - Store and serve shuffle data on local disks (EBS or NVMe)
-   - Handle push operations from Spark executors (write shuffle data)
-   - Handle fetch operations to Spark executors (read shuffle data)
-   - Replicate data to other workers for fault tolerance
 
-3. **Spark Client Library:**
-   - Embedded in Spark executors and driver
-   - Handles retries, failover, and replica selection
-   - Communicates with masters for slot allocation
-   - Pushes/fetches shuffle data to/from workers
+**Sizing ratio** (from [official Celeborn planning docs](https://celeborn.apache.org/docs/latest/deployment/cluster_planning/)):
+```
+vCPU : Memory (GB) : Network (Gbps) : Disk IOPS (K) = 2 : 5 : 2 : 1
+```
+A worker with 32 vCPU ideally pairs with 80GB RAM, 32 Gbps network, and 16K IOPS disk — use this to validate instance choices.
 
-**Benefits of Celeborn Architecture:**
-- ✅ Shuffle data persists independently of executor lifecycle
-- ✅ Enables true dynamic allocation (scale executors up/down freely)
-- ✅ Fault tolerance through replication (survive worker failures)
-- ✅ Better resource utilization (executors can be terminated after map stage)
-- ✅ Improved performance through dedicated shuffle infrastructure
 
-### Celeborn for Spark Dynamic Allocation
+:::note When to Use Celeborn
+Not all Spark workloads need Celeborn. Use Celeborn when you need:
+- **Dynamic allocation** - scale executors up/down without losing shuffle data
+- **Large shuffle volumes** - > 100GB shuffle data per job
+- **High concurrency** - multiple jobs sharing shuffle infrastructure
+- **Fault tolerance** - survive executor failures without recomputing stages
 
-For Spark dynamic allocation, Celeborn addresses a critical challenge: when executors are dynamically scaled up or down based on workload demands, shuffle data traditionally stored on executor local disks would be lost when those executors are terminated.
-
-Celeborn solves this by externalizing shuffle operations to dedicated worker nodes that persist shuffle data independently of executor lifecycles. This enables true elastic scaling where Spark can safely add and remove executors without losing intermediate computation results, significantly improving resource utilization and cost efficiency. The service provides high availability through data replication and asynchronous processing, making dynamic allocation more reliable compared to traditional local shuffle mechanisms.
-
-### High Availability Architecture
-
-For production deployments, Celeborn uses a master-worker architecture with HA capabilities:
-
-- **Masters (3+ nodes):** Coordinate shuffle operations, track worker health, manage metadata. Deploy in odd numbers (3, 5, 7) for Raft consensus.
-- **Workers (N nodes):** Store and serve shuffle data. Scale horizontally based on workload demands.
-- **Replication:** Shuffle data replicated across workers (typically factor=2) for fault tolerance.
-- **Client Library:** Embedded in Spark executors, handles retries, failover, and replica selection.
-
-:::tip Production Recommendation
-For clusters serving 200+ Spark executors, start with 6-12 worker nodes and scale based on shuffle volume metrics. Each worker should handle 10-20 concurrent Spark applications comfortably.
+For small jobs (&lt; 10GB shuffle), streaming workloads, or single-executor jobs, default Spark shuffle is often sufficient.
 :::
 
-## Deployment Best Practices
 
-### Storage Configuration
+---
 
-Apache Celeborn pods run as StatefulSets in the official Helm chart. Performance is heavily dependent on the underlying storage used for shuffle data.
 
-#### Storage Options: NVMe vs EBS
+## Decision 1: AZ Topology
 
-Choosing the right storage is critical for Celeborn performance and reliability. Here's a clear comparison:
 
-| Storage Type | IOPS | Throughput | Durability | Cost | Replication Required |
-|--------------|------|------------|------------|------|---------------------|
-| **Instance Store (NVMe SSD)** | 3M+ | 14 GB/s | ❌ Ephemeral | Included with instance | ✅ **MANDATORY** |
-| **EBS gp3** | 16K (configurable) | 1 GB/s | ✅ Persistent | $0.08/GB/month | ✅ Recommended |
-| **EBS io2** | 64K+ | 4 GB/s | ✅ Persistent | $0.125/GB/month | ✅ Recommended |
+### Masters: Spread Across 3 AZs
 
-#### NVMe Instance Stores: High Performance, High Risk
 
-**Advantages:**
-- ⚡ Extremely high IOPS (3M+) and throughput (14 GB/s)
-- 💰 No additional storage cost (included with instance)
-- 🚀 Best performance for shuffle-intensive workloads
+Deploy one master per AZ (3 total). Raft requires a majority (2/3) — losing one AZ leaves 2 masters running and Celeborn's control plane stays up. Masters hold only metadata, so cross-AZ master traffic is negligible.
 
-**Critical Limitations:**
 
-:::danger Data Loss Risk with NVMe Instance Stores
-NVMe instance stores are **ephemeral storage** - all data is permanently lost when:
-- Node is terminated (EC2 retirement, spot interruption)
-- Node is replaced (Karpenter consolidation, AMI updates)
-- Instance is stopped or hibernated
-- Hardware failure occurs
+**This is the main reason to care about multi-AZ at all for Celeborn.** With masters healthy across AZs, you can provision new worker nodes in AZ2 or AZ3 immediately after an AZ failure — without redeploying or reconfiguring the masters. The cluster recovers for the next batch of jobs with no control plane work.
 
-**This means shuffle data disappears instantly when nodes die.**
 
-To prevent job failures with NVMe storage, you MUST:
-1. ✅ Enable replication: `spark.celeborn.client.push.replicate.enabled: "true"` (factor=2 minimum)
-2. ✅ Configure aggressive retries: `maxRetriesForEachReplica: 10`, `retryWait: 20s`
-3. ✅ Maintain 50%+ extra worker capacity to handle node losses
-4. ✅ Use on-demand instances (not spot) for stability
-5. ✅ Monitor node replacement events closely
+### Workers: Single AZ, Co-Located with Executors
 
-**Without replication enabled, NVMe instance store failures WILL cause job failures and data loss.**
-:::
 
-**When to Use NVMe Instance Stores:**
-- ✅ Shuffle I/O is proven bottleneck (profiled with metrics)
-- ✅ Workloads can tolerate occasional retry storms during node replacements
-- ✅ Team has operational maturity to handle ephemeral storage
-- ✅ Cost savings from included storage justify operational complexity
+**Keep workers in the same AZ as your Spark executor nodes.** Do not spread workers across AZs.
 
-#### EBS Volumes: Balanced Performance, Operational Safety
 
-**Advantages:**
-- 💾 Persistent across pod restarts and node replacements
-- 🔄 Enables graceful rolling updates without data loss
-- 📈 Resize volumes online without downtime
-- 🛡️ Survives node failures (volumes reattach to new nodes)
-- 🔧 Simpler operations and maintenance
+Here is why: every shuffle push (executor → worker) and fetch (worker → executor) that crosses an AZ boundary costs **$0.01/GB** on AWS. With replication, that doubles. At terabyte-scale shuffle volumes this is a significant and avoidable cost. More importantly — if an AZ fails, the Spark executors running in that AZ fail too. The job is lost regardless of where the workers are. Cross-AZ worker spread adds cost and latency with no practical resilience benefit for Spark jobs.
 
-**Performance:**
-- gp3: 16K IOPS, 1 GB/s throughput (sufficient for most workloads)
-- io2: 64K IOPS, 4 GB/s throughput (high-performance option)
 
-:::tip Recommended for Production: EBS gp3
-For 200+ node clusters, **use EBS gp3 volumes** as the default choice:
+**The nuance:** this only works cleanly if your Spark executor node pools are also AZ-pinned. EKS defaults to multi-AZ node groups — if executors spread across AZ1/AZ2/AZ3 and workers are only in AZ1, two-thirds of your executors are already paying cross-AZ costs on every push and fetch. Pin your executor node pools to the same AZ as workers using node affinity or Karpenter NodePool constraints.
 
-**Why EBS over NVMe:**
-1. **Operational Safety** - No data loss during node replacements, AMI updates, or EKS upgrades
-2. **Easier Maintenance** - Rolling restarts work smoothly without aggressive retry tuning
-3. **Predictable Behavior** - No surprise retry storms when nodes are replaced
-4. **Sufficient Performance** - Network and CPU are usually bottlenecks, not storage I/O
-5. **Replication Optional** - Can run without replication (though still recommended for HA)
-
-**When to Consider NVMe:**
-- Only after profiling proves storage I/O is the bottleneck
-- Only if team can handle operational complexity
-- Only with mandatory replication enabled
-
-**Cost Comparison:**
-- r8g.8xlarge with 4TB NVMe: $1.63/hour (storage included)
-- r8g.8xlarge with 4TB gp3 EBS: $1.63/hour + $320/month storage = ~$2.07/hour
-- Extra cost: ~$0.44/hour for persistent storage and operational simplicity
-:::
-
-**Implementation:**
-
-For NVMe instance stores, use the [Kubernetes Local Static Provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner) to automate configuration.
-
-For EBS volumes, use standard Kubernetes PersistentVolumeClaims in the Celeborn Helm chart.
-
-**Implementation:** Use the [Kubernetes Local Static Provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner) to automate configuration and provisioning of local storage to Celeborn pods.
-
-### Critical Configuration for Production
-
-These configurations are **non-negotiable** for production deployments. Missing any of these will cause job failures, data loss, or operational issues.
-
-#### Server-Side Configuration (Helm Values)
-
-Copy this configuration into your Celeborn Helm values file:
 
 ```yaml
-celeborn:
-  # ============================================================================
-  # CRITICAL: Fixed Ports (Required for Graceful Shutdown)
-  # ============================================================================
-  # All 4 ports MUST be fixed (non-zero) when graceful shutdown is enabled.
-  # Dynamic ports (port=0) cause assertion failures during worker restarts.
-  celeborn.worker.rpc.port: "9091"
-  celeborn.worker.fetch.port: "9092"
-  celeborn.worker.push.port: "9093"
-  celeborn.worker.replicate.port: "9094"
-
-  # ============================================================================
-  # Graceful Shutdown (Enables Zero-Downtime Rolling Updates)
-  # ============================================================================
-  celeborn.worker.graceful.shutdown.enabled: "true"
-  celeborn.worker.graceful.shutdown.timeout: "600s"
-  celeborn.worker.graceful.shutdown.checkSlotsFinished.interval: "1s"
-  celeborn.worker.graceful.shutdown.checkSlotsFinished.timeout: "480s"
-
-  # ============================================================================
-  # CRITICAL: Network Binding (Required for Stable Worker Registration)
-  # ============================================================================
-  # Without this, workers register with pod IPs that change after restart,
-  # causing routing failures and connection errors.
-  celeborn.network.bind.preferIpAddress: "false"
-
-  # ============================================================================
-  # Heartbeat Timeout (Allow Time for EBS Reattachment)
-  # ============================================================================
-  # EBS volumes take 60-120s to reattach during pod restarts on EKS.
-  # This timeout prevents false "worker lost" events during restarts.
-  celeborn.master.heartbeat.worker.timeout: "180s"
-
-  # ============================================================================
-  # Storage Configuration
-  # ============================================================================
-  celeborn.storage.availableTypes: "SSD"
-  celeborn.worker.storage.dirs: "/mnt/disk1:disktype=SSD:capacity=900Gi,/mnt/disk2:disktype=SSD:capacity=900Gi,/mnt/disk3:disktype=SSD:capacity=900Gi,/mnt/disk4:disktype=SSD:capacity=900Gi"
-
-  # ============================================================================
-  # Slot Assignment (For Large Clusters)
-  # ============================================================================
-  celeborn.master.slot.assign.policy: "ROUNDROBIN"
-  celeborn.master.slot.assign.maxWorkers: "10000"
+# Karpenter NodePool — pin Celeborn workers to a single AZ
+spec:
+ template:
+   spec:
+     requirements:
+       - key: topology.kubernetes.io/zone
+         operator: In
+         values: ["us-east-1a"]   # same AZ as your Spark executor node pool
+       - key: karpenter.sh/capacity-type
+         operator: In
+         values: ["on-demand"]
 ```
 
-:::danger CRITICAL: Fixed Ports Are Mandatory
-When `celeborn.worker.graceful.shutdown.enabled: true`, you **MUST** configure all 4 fixed ports:
-- `celeborn.worker.rpc.port: "9091"`
-- `celeborn.worker.fetch.port: "9092"`
-- `celeborn.worker.push.port: "9093"`
-- `celeborn.worker.replicate.port: "9094"`
 
-**Do NOT use dynamic ports (port=0).** This will cause assertion failures during graceful shutdown and break rolling restarts.
+**AZ failure recovery pattern:**
+1. AZ1 fails → workers in AZ1 go down → in-flight jobs fail (executors in AZ1 also gone)
+2. Masters in AZ2 and AZ3 are still running (Raft majority intact)
+3. Scale up new Celeborn worker nodes in AZ2 — masters register them automatically
+4. New Spark jobs submit and run against workers in AZ2
+5. Recovery time: time to provision nodes + worker startup (~2-3 minutes with Karpenter)
 
-**Symptom if misconfigured:** Workers crash with `AssertionError` during graceful shutdown.
+
+:::tip The single-AZ worker + 3-AZ master architecture gives you the right tradeoff: zero cross-AZ shuffle costs during normal operation, fast recovery after AZ failure without any master redeployment.
 :::
 
-:::danger CRITICAL: Network Binding Configuration
-You **MUST** set `celeborn.network.bind.preferIpAddress: "false"` for production deployments.
 
-**Why:** Without this, workers register with pod IPs instead of DNS names. When a worker pod restarts, it gets a new IP address, but clients still try to connect to the old IP, causing connection failures.
+---
 
-**Symptom if misconfigured:** After worker restarts, you see `Connection refused` errors and workers don't re-register properly with the master.
+
+## Decision 2: Instance Type by Scale
+
+
+### Shuffle Volume is Not Dataset Size
+
+
+The most common sizing mistake: customers assume shuffle data scales linearly with dataset size. It does not. For analytical workloads like TPC-DS, peak concurrent shuffle is typically **5–15% of total dataset size**, depending on query mix, parallelism, and concurrency.
+
+
+**Validated with TPC-DS 10TB benchmark:**
+- Dataset size: 10 TB
+- Total shuffle data written: **4.7 TB** (4736 GB across all workers)
+- Shuffle as % of dataset: **47%**
+- Cluster: 6 x r8g.8xlarge workers with 4x1TB EBS each (24TB total capacity)
+- Disk utilization: **19.7%** (4.7 TB / 24 TB)
+- Per-worker distribution: 937GB (24%), 878GB (22%), 993GB (25%), 817GB (21%), 637GB (16%), 474GB (12%)
+- Resource usage: CPU &lt;1%, Memory ~2%
+
+
+**Key insight:** The r8g.8xlarge handled this comfortably with minimal resource pressure across all dimensions (CPU, memory, disk, network).
+
+
+**Implication:** Scale out with r8g.8xlarge first. Add more workers before reaching for larger instances. Adding workers distributes both network and disk load.
+
+
+### Scale Tiers
+
+
+| Scale Tier | Typical Dataset | Peak Concurrent Shuffle | Approach | Instance | Storage |
+|------------|----------------|------------------------|----------|----------|---------|
+| **Small** | &lt; 10 TB | &lt; 500 GB | 3–6 workers | r8g.8xlarge | EBS gp3 (4x1TB) |
+| **Medium** | 10–100 TB | 500 GB – 5 TB | 6–20 workers, scale out | r8g.8xlarge | EBS gp3 (4x1TB) |
+| **Large** | 100–500 TB | 5–20 TB | 20–80 workers | r8g.12xlarge or r8g.8xlarge | EBS gp3 (4x2TB) |
+| **Very Large / I/O-bound** | > 500 TB or confirmed I/O bottleneck | > 20 TB | 50–200+ workers | r8gd.16xlarge or i4i.16xlarge | NVMe (see Decision 3) |
+
+
+:::tip For Small and Medium scale, **r8g.8xlarge + 4x1TB EBS is the right default.** Start with 6 workers and add more as shuffle volume grows. Don't jump to larger instances without first checking whether you're actually I/O-bound.
 :::
 
-#### Client-Side Configuration (Spark Jobs)
 
-Add this configuration to **EVERY** Spark job that uses Celeborn:
+### Instance Comparison at Large Scale
+
+
+Once you've scaled out and still need more capacity per worker:
+
+
+| | r8g.12xlarge | r8g.16xlarge | r8gd.16xlarge | i4i.16xlarge |
+|--|-------------|-------------|--------------|-------------|
+| **vCPU** | 48 | 64 | 64 | 64 |
+| **RAM** | 384 GB | 512 GB | 512 GB | 512 GB |
+| **Network** | 22.5 Gbps | 30 Gbps | 30 Gbps | 37.5 Gbps |
+| **EBS Bandwidth** | 15 Gbps | 20 Gbps | 20 Gbps | 20 Gbps |
+| **Local NVMe** | ❌ None | ❌ None | 2x1.9 TB | 4x3.75 TB |
+| **Arch** | arm64 | arm64 | arm64 | x86-64 |
+| **Best For** | Large scale EBS, sweet spot for concurrency | High-memory EBS | NVMe on Graviton | Maximum NVMe density |
+
+
+**When `r8g.12xlarge` or `r8g.16xlarge` wins:** You've scaled out to 20+ r8g.8xlarge workers and still need more capacity per node. Network or memory is the constraint. EBS gives persistent storage, online resize, and node-failure resilience.
+
+
+**When `i4i.16xlarge` wins:** You've profiled and confirmed disk I/O is the bottleneck at your scale. You need the 15TB of local NVMe (4x3.75TB) and can handle the operational requirements — replication mandatory, rotate one node at a time, no online resize.
+
+
+:::note `r8g` and `r8g.16xlarge` have **no local NVMe** — EBS only. For NVMe on Graviton4, use the `r8gd` variant. Don't mix arm64 (`r8g`, `r8gd`, `im4gn`) and x86-64 (`i4i`) in the same StatefulSet.
+:::
+
+
+---
+
+
+## Decision 3: EBS vs NVMe Storage
+
+
+### Side-by-Side Comparison
+
+
+| | EBS gp3 | EBS io2 Block Express | NVMe (i4i/r8gd/im4gn) |
+|--|---------|---------|----------------------|
+| **IOPS** | Up to 80K/volume | Up to 256K/volume | 500K–1M+ per disk |
+| **Throughput** | Up to 2 GB/s/volume | Up to 4 GB/s/volume | 7–14 GB/s aggregate |
+| **Max Volume Size** | 64 TiB | 64 TiB | Instance-dependent |
+| **Data on node failure** | ✅ Survives (volume reattaches) | ✅ Survives | ❌ **Permanently lost** |
+| **Pod restart data** | ✅ PVC reconnects to same volume | ✅ Same | ⚠️ Reconnects only if same node |
+| **Online resize** | ✅ Yes | ✅ Yes | ❌ No |
+| **Replication required** | Recommended | Recommended | **Mandatory** |
+| **StatefulSet PVC policy** | `WhenDeleted: Retain` | `WhenDeleted: Retain` | `WhenDeleted: Delete` |
+| **Operational complexity** | Low | Low | **High** |
+
+
+### EBS: The Right Default for Most Teams
+
+
+EBS gp3 with StatefulSets is the safest, most operationally simple choice for Celeborn on EKS:
+
+
+- **Persistent volumes follow pods:** EBS volumes detach from a terminated pod and reattach to the replacement pod — even on a different node. Your shuffle data survives node failures, AMI updates, and EKS upgrades without replication.
+- **Online resize:** Grow volumes without pod restarts (see [Storage Vertical Scaling](#storage-vertical-scaling)).
+- **Simple rolling updates:** Workers restart in ~13s. With replication enabled, no shuffle data loss.
+
+
+Use **4 gp3 volumes per worker**, configured with provisioned IOPS for medium/large scale:
+
+
+```yaml
+# Helm values — EBS configuration
+worker:
+ storage:
+   - mountPath: /mnt/disk1
+     storageClass: gp3
+     size: 2000Gi
+   - mountPath: /mnt/disk2
+     storageClass: gp3
+     size: 2000Gi
+   - mountPath: /mnt/disk3
+     storageClass: gp3
+     size: 2000Gi
+   - mountPath: /mnt/disk4
+     storageClass: gp3
+     size: 2000Gi
+```
+
+
+### NVMe: For Large Scale I/O-Bound Workloads
+
+
+At large scale (> 5–10TB concurrent shuffle), when you've confirmed disk I/O is the bottleneck, NVMe instance stores provide dramatically higher IOPS at lower latency than EBS. But they require strict operational discipline.
+
+
+**NVMe operational requirements:**
+
+
+**1. Use Kubernetes Local Static Provisioner**
+
+
+NVMe instance stores are not managed by EBS. You must use the [Kubernetes Local Static Provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner) (or TopoLVM) to expose NVMe disks as PersistentVolumes.
+
+
+```yaml
+# Local PV has node affinity — pod is pinned to the node with this volume
+apiVersion: v1
+kind: PersistentVolume
+spec:
+ capacity:
+   storage: 3500Gi
+ storageClassName: local-nvme
+ local:
+   path: /mnt/fast-disk
+ nodeAffinity:
+   required:
+     nodeSelectorTerms:
+       - matchExpressions:
+           - key: kubernetes.io/hostname
+             operator: In
+             values: ["node-xyz"]
+```
+
+
+**2. Pod restart must return to the same node**
+
+
+Because local PVs have node affinity, a Celeborn worker pod can only reconnect to its NVMe data if it restarts on the exact same node. If rescheduled to a different node, the pod gets stuck in `Pending`.
+
+
+**Set PVC retention to Delete** (not Retain) for NVMe StatefulSets:
+```yaml
+# In StatefulSet spec
+persistentVolumeClaimRetentionPolicy:
+ whenDeleted: Delete     # PVC is cleaned up when pod is deleted
+ whenScaled: Delete      # PVC is cleaned up when replicas reduced
+```
+
+
+This allows a new pod on a different node to create a fresh local PV. The old NVMe data is permanently lost — which is acceptable because **replication on the other worker preserves the data**.
+
+
+**3. Replication is mandatory**
+
+
+With NVMe, a node failure means permanent data loss. Replication ensures every shuffle partition exists on exactly 2 workers in different nodes/AZs. Enable it in all Spark jobs:
+
 
 ```yaml
 sparkConf:
-  # ============================================================================
-  # Shuffle Manager (Required to Use Celeborn)
-  # ============================================================================
-  spark.shuffle.manager: "org.apache.spark.shuffle.celeborn.SparkShuffleManager"
-  spark.serializer: "org.apache.spark.serializer.KryoSerializer"
-  spark.shuffle.service.enabled: "false"
-
-  # ============================================================================
-  # Master Endpoints (Use All Masters for HA)
-  # ============================================================================
-  spark.celeborn.master.endpoints: "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local:9097,celeborn-master-1.celeborn-master-svc.celeborn.svc.cluster.local:9097,celeborn-master-2.celeborn-master-svc.celeborn.svc.cluster.local:9097"
-
-  # ============================================================================
-  # CRITICAL: Replication (MANDATORY for Zero-Downtime Operations)
-  # ============================================================================
-  # Without replication, worker failures cause immediate job failures.
-  # With NVMe instance stores, replication is ABSOLUTELY MANDATORY.
-  spark.celeborn.client.push.replicate.enabled: "true"
-
-  # ============================================================================
-  # Retry Configuration (Tuned for Worker Restarts)
-  # ============================================================================
-  # These settings allow Spark to survive worker restarts (~13s) and
-  # EBS reattachment delays (~60-120s) without failing tasks.
-  spark.celeborn.client.fetch.maxRetriesForEachReplica: "5"
-  spark.celeborn.data.io.retryWait: "15s"
-  spark.celeborn.client.rpc.maxRetries: "5"
-
-  # ============================================================================
-  # Shuffle Writer (Use "sort" for Large Partition Counts)
-  # ============================================================================
-  spark.celeborn.client.spark.shuffle.writer: "sort"
-
-  # ============================================================================
-  # Batch Commit (Required for Graceful Shutdown)
-  # ============================================================================
-  spark.celeborn.client.shuffle.batchHandleCommitPartition.enabled: "true"
-
-  # ============================================================================
-  # CRITICAL: Adaptive Query Execution (Local Shuffle Reader MUST Be Disabled)
-  # ============================================================================
-  spark.sql.adaptive.enabled: "true"
-  spark.sql.adaptive.localShuffleReader.enabled: "false"  # MUST BE FALSE
-
-  # ============================================================================
-  # Network Timeouts (Generous for Large-Scale Clusters)
-  # ============================================================================
-  spark.network.timeout: "2000s"
-  spark.executor.heartbeatInterval: "300s"
-  spark.rpc.askTimeout: "600s"
+ spark.celeborn.client.push.replicate.enabled: "true"
+ spark.celeborn.client.reserveSlots.rackAware.enabled: "true"  # replicas on different nodes
 ```
 
-:::danger CRITICAL: Replication Must Be Enabled
-You **MUST** set `spark.celeborn.client.push.replicate.enabled: "true"` in ALL Spark jobs.
 
-**Why replication is mandatory:**
-1. **Worker failures** - When a worker pod restarts, shuffle data becomes temporarily unavailable. Replication allows Spark to fetch from the replica worker.
-2. **Node replacements** - During EKS upgrades or AMI updates, nodes are replaced and workers move to new nodes. Replication prevents data loss.
-3. **NVMe instance stores** - If using NVMe storage, replication is ABSOLUTELY MANDATORY because all data is lost when nodes die.
-
-**Without replication:**
-- ❌ Worker restarts cause immediate task failures
-- ❌ Node replacements cause job failures
-- ❌ NVMe node losses cause permanent data loss and job failures
-
-**Symptom if disabled:** You'll see `FetchFailed` exceptions and task failures during any worker disruption.
+:::danger Without replication on NVMe, any node termination (Karpenter consolidation, spot interruption, hardware failure) causes immediate job failure. This is not a theoretical risk.
 :::
 
-:::danger CRITICAL: Local Shuffle Reader Must Be Disabled
-You **MUST** set `spark.sql.adaptive.localShuffleReader.enabled: "false"` when using Celeborn.
 
-**Why:** When set to `true`, Spark's Adaptive Query Execution tries to read shuffle data from local executors instead of Celeborn workers. This causes:
-- ❌ `FileNotFoundException` errors (data doesn't exist on executors)
-- ❌ Job failures
-- ❌ Celeborn is completely bypassed
+**4. Rotate one node at a time — never two simultaneously**
 
-**This is the #1 most common misconfiguration that breaks Celeborn.**
 
-**Symptom if misconfigured:** Jobs fail with `FileNotFoundException` for shuffle files, even though Celeborn is running fine.
-:::
+With replication factor=1 (each partition on exactly 2 workers), if you restart 2 workers at the same time, a partition whose primary is on worker A and replica is on worker B has zero live copies while both are restarting. Rotate sequentially:
 
-:::warning Retry Configuration for NVMe Instance Stores
-If using NVMe instance stores, increase retry settings to handle node replacement events:
 
-```yaml
-spark.celeborn.client.fetch.maxRetriesForEachReplica: "10"  # Increased from 5
-spark.celeborn.data.io.retryWait: "20s"  # Increased from 15s
-spark.celeborn.client.rpc.maxRetries: "10"  # Increased from 5
+```bash
+# Always: decommission → drain → wait for re-registration → then next worker
+# Never restart two NVMe workers simultaneously
 ```
 
-This gives Spark more time to wait for replica workers when primary workers are lost due to node terminations.
-:::
 
-### StatefulSet Update Strategies
+**5. Set terminationGracePeriodSeconds: 3600**
 
-Workers and masters are deployed as StatefulSets, which have restrictions on which fields can be updated in-place.
 
-#### Mutable vs Immutable Fields
+Karpenter's default drain timeout is 30 seconds. NVMe workers may take up to 10 minutes to drain active shuffle slots. Without an extended grace period, Kubernetes sends SIGKILL before graceful shutdown completes:
 
-**Mutable (can update in-place):**
-- Container image
-- Environment variables
-- ConfigMaps and Secrets
-- Resource requests/limits
-- Annotations and labels
-
-**Immutable (require StatefulSet replacement):**
-- Volume claim templates
-- Pod management policy
-- Service name
-- Persistent volume size (requires manual PVC resize)
-
-#### Updating Immutable Fields
-
-If you need to modify immutable fields (like volume claim templates or pod management policy):
-
-1. **For Worker Pods:**
-   - Use a blue-green deployment strategy with two separate StatefulSets
-   - Use Celeborn's decommission API to mark workers for rotation
-   - Decommissioned workers accept existing requests but reject new ones
-   - Once drained, delete the old StatefulSet
-
-2. **For Master Pods:**
-   - Deploy a new StatefulSet with updated configuration
-   - Update client configurations (e.g., Spark `spark.celeborn.master.endpoints`) to point to the new master endpoints
-   - Verify connectivity and wait for all clients to stop talking to the old master before removing the old StatefulSet
-
-:::warning Master Endpoint Changes
-Changing master endpoints requires updating ALL Spark job configurations and restarting active applications. Plan master replacements during maintenance windows when no critical workloads are running.
-:::
-
-### Local Storage Considerations
-
-When using local static provisioner, be aware of these behaviors:
-
-**Node Affinity:** Local PVs have node affinity, binding them to specific nodes. StatefulSets will remount the same PVC to the same pod only if the pod reschedules to the same node.
-
-**Pod Rescheduling Issue:** If a worker StatefulSet is restarted with PVC retention policy set to `Retain` (default), but pods reschedule to different nodes, the pods will be stuck in `Pending` state because:
-- The PVC is still bound to the original node
-- The pod is scheduled to a different node
-- Kubernetes cannot satisfy the pod's volume requirements
-
-**Solutions:**
-- Set PVC deletion policy to `Delete` to allow pods to create new volumes on their new nodes
-- Use node affinity/selectors to ensure pods stay on the same nodes
-- Consider using `WhenDeleted` retention policy for automatic cleanup
-
-### Node Rotation with Karpenter
-
-When Karpenter drains a node, you can trigger graceful decommission using a `preStop` hook:
-
-**Lifecycle Flow:**
-1. Karpenter initiates node drain → Pod receives SIGTERM
-2. `preStop` hook executes immediately, triggering Celeborn's graceful shutdown
-3. Celeborn stops accepting new requests and completes in-flight operations
-4. Kubernetes waits up to `terminationGracePeriodSeconds` before sending SIGKILL
-5. Pod terminates after decommission completes or grace period expires
-
-**Configuration Example:**
 
 ```yaml
 spec:
-  template:
-    spec:
-      terminationGracePeriodSeconds: 3600
-      containers:
-      - name: celeborn-worker
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "/opt/celeborn/sbin/decommission-worker.sh"] # you will have to create this file.
+ template:
+   spec:
+     terminationGracePeriodSeconds: 3600  # Must exceed graceful shutdown timeout
+     containers:
+     - name: celeborn-worker
+       lifecycle:
+         preStop:
+           exec:
+             command: ["/bin/sh", "-c", "/opt/celeborn/sbin/decommission-worker.sh"]
 ```
 
-**Best Practices:**
-- Set `terminationGracePeriodSeconds` high enough for typical decommission operations (varies depending on your envionrment)
-- Configure Celeborn's graceful shutdown timeout to be ~30s less than `terminationGracePeriodSeconds` to allow cleanup
-- If decommission exceeds the grace period, Kubernetes will forcefully terminate the pod with SIGKILL
-- This approach handles disruptions gracefully but cannot prevent or delay them (unlike PodDisruptionBudgets or `karpenter.sh/do-not-disrupt` annotations)
-- Monitor decommission duration to tune grace period appropriately
 
-## Day 2 Operations: Rolling Restarts and Maintenance
+**Schedule NVMe maintenance in off-peak hours.** Because decommission can take minutes per worker (active shuffle slots must drain), rolling restarts of NVMe clusters take significantly longer than EBS clusters.
 
-This section covers production operations for maintaining Celeborn clusters at scale, including version upgrades, configuration changes, security patches, and infrastructure updates.
 
-### Common Maintenance Scenarios
+---
 
-| Scenario | Requires Restart | Approach | Downtime | Risk Level |
-|----------|------------------|----------|----------|------------|
-| **Celeborn version upgrade** | Yes (workers + masters) | Rolling restart with decommission | Zero | Medium |
-| **Helm chart update** | Yes (triggered automatically) | Rolling restart with decommission | Zero | Medium |
-| **Configuration change** | Yes (ConfigMap triggers restart) | Rolling restart with decommission | Zero | Low |
-| **Container security patch** | Yes (image update) | Rolling restart with decommission | Zero | Low |
-| **EKS version upgrade** | Yes (node replacement) | Drain nodes with decommission | Zero | High |
-| **AMI update** | Yes (node replacement) | Drain nodes with decommission | Zero | High |
-| **Instance type change** | Yes (node replacement) | Blue-green worker pool | Zero | Medium |
-| **Storage expansion** | No (resize PVC) | Online resize | Zero | Low |
-| **Master endpoint change** | Yes (all clients) | Blue-green master deployment | Requires maintenance window | High |
 
-:::tip Planning Maintenance Windows
-For large-scale clusters (200+ nodes), schedule maintenance during low-traffic periods. A full rolling restart of 200 workers takes approximately 6-8 hours with decommission-based approach (2-3 minutes per worker including drain time).
+## Configuration
+
+
+### Test-Validated Configuration (TPC-DS 10TB)
+
+
+The following configuration was validated with a 10TB TPC-DS benchmark running for 15+ hours with rolling restarts during active shuffle. Results: zero job failures, zero executor losses, zero task failures.
+
+
+**Cluster Setup:**
+- 6 x r8g.8xlarge workers (32 vCPU, 256 GB RAM, 15 Gbps network)
+- 4 x 1TB EBS gp3 volumes per worker (24TB total capacity)
+- 3 x r8g.xlarge masters (8 GB heap each)
+- 32 Spark executors with dynamic allocation
+
+
+**Key Metrics:**
+- Total shuffle data: 4.7 TB (47% of 10TB dataset)
+- Disk utilization: 19.7% (4.7 TB / 24 TB)
+- CPU usage: &lt;1% across all workers
+- Memory usage: ~2% across all workers
+- Rolling restart: 6 workers restarted successfully during active job
+
+
+### Server-Side (Helm Values)
+
+
+```yaml
+celeborn:
+ # Fixed ports — required when graceful shutdown is enabled
+ # port=0 (dynamic) causes AssertionError during graceful shutdown restart
+ celeborn.worker.rpc.port: "9091"
+ celeborn.worker.fetch.port: "9092"
+ celeborn.worker.push.port: "9093"
+ celeborn.worker.replicate.port: "9094"
+
+
+ # Graceful shutdown — persists shuffle metadata to RocksDB before restart
+ # Allows workers to serve existing shuffle files after restart
+ celeborn.worker.graceful.shutdown.enabled: "true"
+ celeborn.worker.graceful.shutdown.timeout: "600s"
+ celeborn.worker.graceful.shutdown.checkSlotsFinished.interval: "1s"
+ celeborn.worker.graceful.shutdown.checkSlotsFinished.timeout: "480s"
+
+ # RocksDB path for graceful shutdown metadata
+ # Default is /tmp/recover which gets cleared on pod restart
+ # Use node root filesystem (/var) instead of EBS PVC to avoid storage costs
+ # Metadata survives pod restarts as long as pod returns to same node (StatefulSet behavior)
+ celeborn.worker.graceful.shutdown.recoverPath: "/var/celeborn/rocksdb"
+
+
+ # DNS-based worker registration — required for stable re-registration after restart
+ # Without this, workers register with pod IPs (ephemeral). After restart the IP changes,
+ # clients can't reconnect, master has stale mapping.
+ celeborn.network.bind.preferIpAddress: "false"
+
+
+ # Allow time for EBS volume reattachment (can take 60-120s on EKS)
+ # Prevents false "worker lost" events during node replacements
+ celeborn.master.heartbeat.worker.timeout: "180s"
+
+
+ # Storage — use both MEMORY and SSD for tiered storage
+ # Memory is used for hot shuffle data, SSD for overflow
+ # This maximizes utilization of worker memory allocation
+ celeborn.storage.availableTypes: "MEMORY,SSD"
+ celeborn.worker.storage.dirs: "/mnt/disk1:disktype=SSD:capacity=900Gi,/mnt/disk2:disktype=SSD:capacity=900Gi,/mnt/disk3:disktype=SSD:capacity=900Gi,/mnt/disk4:disktype=SSD:capacity=900Gi"
+ celeborn.worker.storage.storagePolicy.evictPolicy: "LRU"
+
+
+ celeborn.master.slot.assign.policy: "ROUNDROBIN"
+ celeborn.master.slot.assign.maxWorkers: "10000"
+```
+
+
+### Client-Side (Every Spark Job)
+
+
+```yaml
+sparkConf:
+ spark.shuffle.manager: "org.apache.spark.shuffle.celeborn.SparkShuffleManager"
+ spark.serializer: "org.apache.spark.serializer.KryoSerializer"
+ spark.shuffle.service.enabled: "false"
+
+
+ # All 3 master endpoints — required for HA failover
+ spark.celeborn.master.endpoints: "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local:9097,celeborn-master-1.celeborn-master-svc.celeborn.svc.cluster.local:9097,celeborn-master-2.celeborn-master-svc.celeborn.svc.cluster.local:9097"
+
+
+ # Replication — mandatory for NVMe, strongly recommended for EBS
+ spark.celeborn.client.push.replicate.enabled: "true"
+
+
+ # Retries — sized for ~13s EBS restart window; increase for NVMe (drain takes longer)
+ spark.celeborn.client.fetch.maxRetriesForEachReplica: "5"
+ spark.celeborn.data.io.retryWait: "15s"
+ spark.celeborn.client.rpc.maxRetries: "5"
+
+
+ spark.celeborn.client.spark.shuffle.writer: "sort"
+ spark.celeborn.client.shuffle.batchHandleCommitPartition.enabled: "true"
+
+
+ # MUST be false — if true, Spark tries to read shuffle data from executor local disks
+ # (where Celeborn data doesn't exist), causing FileNotFoundException and job failure
+ spark.sql.adaptive.enabled: "true"
+ spark.sql.adaptive.localShuffleReader.enabled: "false"
+
+
+ spark.network.timeout: "2000s"
+ spark.executor.heartbeatInterval: "300s"
+ spark.rpc.askTimeout: "600s"
+```
+
+
+:::danger Three misconfigurations that silently break Celeborn — check these first on any new deployment:
+1. `spark.sql.adaptive.localShuffleReader.enabled: "true"` → Celeborn bypassed entirely, `FileNotFoundException`
+2. `spark.celeborn.client.push.replicate.enabled: "false"` → any worker restart causes job failure
+3. Worker ports set to `0` (dynamic) → `AssertionError` on every graceful shutdown
 :::
 
-### Understanding Orphaned Shuffle Data After Restarts
 
-When a Celeborn worker pod restarts (due to upgrades, configuration changes, or node maintenance), an interesting behavior occurs with shuffle data on persistent volumes:
+### For NVMe at Large Scale: Increase Retries
 
-**What Happens During a Worker Restart:**
 
-1. **Before Restart:** Worker has shuffle files on EBS volumes (e.g., `/mnt/disk1/celeborn-worker/shuffle_data/`) and maintains an in-memory index of all files
-2. **Pod Deleted:** Worker process stops, in-memory metadata is lost
-3. **EBS Volumes Persist:** Physical shuffle files remain on disk (EBS volumes are persistent storage)
-4. **Pod Recreated:** New worker process starts with empty in-memory index
-5. **Result:** Physical files exist on disk, but worker doesn't know about them - they become "orphaned"
+When workers are draining active NVMe shuffle slots (can take 2-5 minutes), executors need more patience:
 
-**Why You See FileNotFoundException Errors:**
 
-After a worker restarts, Spark executors may request shuffle files that were written before the restart:
-
-```
-ERROR FetchHandler: Read file: 42-0-1 with shuffleKey: spark-xxx-163 error
-java.io.FileNotFoundException: Could not find file 42-0-1 for spark-xxx-163
+```yaml
+sparkConf:
+ spark.celeborn.client.fetch.maxRetriesForEachReplica: "10"
+ spark.celeborn.data.io.retryWait: "30s"
+ spark.celeborn.client.rpc.maxRetries: "10"
 ```
 
-**File naming pattern:** `{partitionId}-{attemptId}-{epoch}`
-- Example: `42-0-1` = partition 42, attempt 0, epoch 1
 
-**This is expected and normal!** The worker's in-memory index was reset, so it doesn't know about files written before the restart. Spark automatically fetches from the replica worker and the task succeeds.
+### Large Cluster Tuning (100+ Workers)
 
-### Celeborn's Cleanup Mechanisms
 
-Celeborn uses multiple mechanisms to clean up shuffle data and prevent disk exhaustion:
+```yaml
+celeborn:
+ # Worker threads — baseline for 100+ concurrent applications
+ # Tune based on CPU utilization metrics, not blindly
+ celeborn.worker.fetch.io.threads: "64"
+ celeborn.worker.push.io.threads: "64"
+ celeborn.worker.flusher.threads: "32"   # For NVMe: ≥8 per disk; for HDD: ≤2 per disk
+ celeborn.worker.flusher.buffer.size: "256k"
+ celeborn.worker.commitFiles.threads: "128"
+ celeborn.worker.commitFiles.timeout: "120s"
 
-#### 1. Application-Level Cleanup (Primary Mechanism)
 
-Based on the [LifecycleManager documentation](https://celeborn.apache.org/docs/latest/developers/lifecyclemanager/), Celeborn tracks active applications and their shuffle data:
+ # Direct memory — adjust based on worker heap size
+ celeborn.worker.directMemoryRatioForReadBuffer: "0.3"
+ celeborn.worker.directMemoryRatioForShuffleStorage: "0.3"
+ celeborn.worker.directMemoryRatioToResume: "0.5"
 
-**Normal Cleanup Flow:**
-1. Spark application calls `unregisterShuffle()` when a shuffle completes
-2. LifecycleManager waits for an expiration period, then sends `UnregisterShuffle` to Master
-3. Master removes the shuffle ID from its active list
-4. Master sends cleanup commands to workers during heartbeat
-5. Workers delete shuffle files for unregistered shuffles from disk
 
-**Application Failure Cleanup:**
-- LifecycleManager sends periodic heartbeats to Master
-- If Master detects application heartbeat timeout, it marks the application as failed
-- Master tells workers to clean up all shuffle data for the failed application
-- Workers remove files from disk based on Master's instructions
+ # Master scale
+ celeborn.master.estimatedPartitionSize.update.interval: "10s"
+ celeborn.master.estimatedPartitionSize.initialSize: "64mb"
 
-**Key Point:** Cleanup is coordinated by the Master based on application lifecycle, not by individual workers independently scanning their disks.
 
-#### 2. Orphaned Data After Worker Restarts
+# JVM tuning for masters — set via Helm values
+master:
+ jvmOptions:
+   - "-XX:+UseG1GC"
+   - "-XX:MaxGCPauseMillis=200"
+   - "-XX:G1HeapRegionSize=32m"
+   - "-Xms32g"
+   - "-Xmx64g"   # Match master sizing table below
+```
 
-When a worker restarts, orphaned shuffle files (files on disk but not in the worker's in-memory index) are handled through Master coordination:
 
-**Cleanup Process:**
-1. Worker restarts and re-registers with Master
-2. Worker sends heartbeat with its current active shuffle IDs (from in-memory state)
-3. Master compares worker's shuffle IDs with Master's authoritative list
-4. Master tells worker to clean up any shuffle IDs that are no longer active
-5. Worker scans disk and removes files for those shuffle IDs
+**Master sizing:**
 
-**Important:** Workers do NOT automatically delete orphaned files on startup. Cleanup happens when:
-- The application completes and unregisters the shuffle
-- The application fails and Master detects heartbeat timeout
-- Master explicitly tells the worker to clean up specific shuffle IDs
 
-#### 3. Metadata Persistence for Rolling Upgrades
+| Workers | Masters | Instance | Heap |
+|---------|---------|----------|------|
+| 1–50 | 3 | r8g.xlarge | 8 GB |
+| 51–100 | 3 | r8g.2xlarge | 16 GB |
+| 101–200 | 5 | r8g.4xlarge | 32 GB |
+| 200–500 | 5–7 | r8g.8xlarge | 64 GB |
 
-According to the [rolling upgrade documentation](https://celeborn.apache.org/docs/latest/upgrading/), Celeborn supports metadata persistence to enable reading existing shuffle data after worker restarts:
 
-**With Graceful Shutdown Enabled:**
-- Workers store shuffle file metadata in RocksDB during shutdown
-- After restart, workers restore metadata from RocksDB
-- This allows workers to serve existing shuffle files even after restart
-- Configuration: `celeborn.worker.graceful.shutdown.enabled: true`
+---
 
-**Without Graceful Shutdown:**
-- In-memory metadata is lost on restart
-- Orphaned files remain on disk until Master-coordinated cleanup
-- Spark relies on replicas for data availability
 
-### Disk Space Management Considerations
+## Day 2 Operations
 
-**Orphaned Data Accumulation Risk:**
 
-If workers restart frequently (e.g., during testing, configuration changes, or node issues), orphaned shuffle data can accumulate on disk because:
-- Files remain on persistent volumes after restart
-- Worker's in-memory index doesn't know about them
-- Cleanup only happens when Master tells worker to remove specific shuffle IDs
-- If applications are still running, Master won't trigger cleanup yet
+### Common Operations Reference
 
-**Monitoring Disk Usage:**
+
+| Operation | Method | Downtime | Notes |
+|-----------|--------|----------|-------|
+| Config / image update | Rolling restart (auto-triggered by ConfigMap) | Zero | ~13s per worker for EBS |
+| EBS volume expansion | Online PVC resize + config update | Zero | No pod restart for resize |
+| EKS / AMI upgrade | Decommission → drain per node | Zero | See procedure below |
+| Instance type change | Blue-green worker pool | Zero | Old + new pools run simultaneously |
+| StatefulSet immutable field | Blue-green worker pool | Zero | Required for template changes |
+
+
+### Rolling Restarts
+
+
+**Validated with TPC-DS 10TB benchmark:** Two comprehensive tests with 6 workers, 32 executors, active shuffle during restart. Both tests achieved zero job failures and zero executor losses.
+
+
+#### Test Results Summary
+
+
+| Test | Method | Worker Errors | Job Impact | Restart Time/Worker | Total Time |
+|------|--------|---------------|------------|---------------------|------------|
+| **Test 1** | Simple pod delete | 20-30 "file not found" per worker | Zero failures | ~70s | ~13 min |
+| **Test 2** | Decommission API | 62 errors (worker-5), 0 (worker-4) | Zero failures | ~70s | ~13 min |
+
+
+**Key Finding:** Decommission API did NOT eliminate errors. Worker-5 had 62 "file not found" errors despite decommission completing in 0 seconds. The API stops accepting new writes but does not migrate existing shuffle data.
+
+
+#### Recommended Approach: Simple Restart + Replication
+
+
+For most deployments, simple pod deletion with replication enabled is sufficient:
+
 
 ```bash
-# Check disk usage on a worker
-kubectl exec -n celeborn celeborn-worker-0 -- df -h | grep mnt
-
-# Check shuffle data directory size
-kubectl exec -n celeborn celeborn-worker-0 -- du -sh /mnt/disk1/celeborn-worker/shuffle_data
-```
-
-**Mitigation Strategies:**
-
-1. **Enable Graceful Shutdown:** Set `celeborn.worker.graceful.shutdown.enabled: true` to persist metadata in RocksDB, allowing workers to track and serve existing files after restart
-
-2. **Use Decommission API for Planned Restarts:** The decommission-based rolling restart approach drains active shuffle data before termination, reducing orphaned data accumulation
-
-3. **Monitor Application Lifecycle:** Ensure Spark applications properly call `unregisterShuffle()` when jobs complete so Master can trigger cleanup
-
-4. **Provision Adequate Storage:** Size EBS volumes with headroom for orphaned data between application completions (e.g., 1TB volumes for 500GB typical shuffle data)
-
-5. **Periodic Worker Rotation:** In long-running clusters, consider periodic full worker rotation during maintenance windows to reset disk state
-
-6. **Manual Cleanup (Emergency Only):** If disk space is critically low and applications have completed, you can manually delete shuffle data directories, but this should be a last resort:
-   ```bash
-   # DANGER: Only do this if you're certain no active jobs need the data
-   kubectl exec -n celeborn celeborn-worker-0 -- rm -rf /mnt/disk1/celeborn-worker/shuffle_data/*
-   ```
-
-### Rolling Restart Best Practices
-
-Rolling restarts are essential for production operations like version upgrades, configuration changes, and node maintenance. Celeborn supports zero-downtime rolling restarts when properly configured.
-
-:::info What Triggers Automatic Rolling Restarts
-When you update Celeborn configuration in Helm values (e.g., adding `celeborn.network.bind.preferIpAddress: "false"`), Kubernetes detects the ConfigMap change and automatically triggers a rolling restart of all worker pods. This happens as fast as pods become Ready (~13s between restarts). For controlled restarts with longer pauses, use the decommission-based script AFTER the config is deployed.
-:::
-
-#### Production Validation Results
-
-We validated rolling restarts using a TPC-DS 10TB benchmark with 32 executors running for 15+ hours:
-
-**Test Configuration:**
-- 6 Celeborn workers (r8g.8xlarge: 32 vCPU, 256GB RAM)
-- 4x 1000GB gp3 EBS volumes per worker
-- Replication enabled (factor=2)
-- All workers restarted during active shuffle operations
-
-**Results:**
-- ✅ Zero task failures across all 6 worker restarts
-- ✅ Zero stage failures during 12-minute rolling restart window
-- ✅ All 32 executors survived throughout
-- ✅ 226 retry attempts all succeeded automatically
-- ✅ Average restart time: ~13 seconds per worker
-- ✅ Job completed successfully after 15+ hours including restarts
-
-**Key Findings:**
-
-1. **Fixed Ports Are Critical:** All 4 worker ports (rpc:9091, fetch:9092, push:9093, replicate:9094) must be set to non-zero values when graceful shutdown is enabled. Dynamic ports cause assertion failures.
-
-2. **Replication Provides Resilience:** With replication factor=2, executors automatically fetch from replica workers when primary is unavailable. This is why replication is mandatory for zero-downtime restarts.
-
-3. **Retry Configs Matter:** Client-side retry settings (maxRetriesForEachReplica: 5, retryWait: 15s) give workers sufficient time to restart (~13s) before exhausting retries.
-
-4. **Revive Mechanism Works:** LifecycleManager automatically detects shutting-down workers and redirects new shuffle writes to available workers.
-
-5. **Transient Errors Are Normal:** During rolling restarts, expect ERROR messages in logs for connection timeouts and fetch failures. These are automatically recovered through retries and do not indicate job failure. Monitor for task failures, not transient errors.
-
-#### Two Approaches for Rolling Restarts
-
-We validated two approaches - both work successfully with proper configuration, but they have different characteristics:
-
-| Aspect | Decommission API | Simple Pod Delete |
-|--------|------------------|-------------------|
-| **Shuffle data handling** | Proactively drains before termination | Relies on graceful shutdown + replication |
-| **Transient errors** | Minimal - workers reject new writes during drain | More frequent - connection timeouts during restart |
-| **Retry attempts** | Fewer - clients redirected before worker stops | More - clients retry until worker restarts (~13s) |
-| **Observability** | Full visibility via master API polling | Limited - only pod status |
-| **Complexity** | Higher - requires API calls, port-forwarding, polling | Lower - simple kubectl delete |
-| **Duration per worker** | Variable - depends on shuffle data volume | Predictable - ~13s restart + configurable pause |
-| **Risk level** | Lower - explicit drain reduces edge cases | Moderate - depends on replication + retries |
-
-**Decommission-Based Restart (RECOMMENDED for production):**
-```bash
+# Rolling restart (validated approach)
 cd data-stacks/spark-on-eks/benchmarks/celeborn-benchmarks
-export KUBECONFIG=../../kubeconfig.yaml
-./rolling-restart-celeborn-with-decommission.sh
+./rolling-restart-celeborn.sh 120  # 120s pause between workers
 ```
 
-This script calls the decommission API, polls master to verify drain completion, deletes the pod, waits for Ready status, verifies re-registration, then proceeds to the next worker.
 
-**Simple Pod Delete (acceptable for specific scenarios):**
+**Why this works:**
+- ✅ Graceful shutdown (600s timeout) flushes in-flight data
+- ✅ Replication ensures data availability during restart
+- ✅ Spark retry mechanism (5 retries x 15s) handles transient errors
+- ✅ 120s delay ensures worker re-registration before next restart
+- ✅ Zero job failures, zero executor losses (validated)
+
+
+**What's normal during restart:**
+- `FileNotFoundException` errors (20-30 per worker) - executors fetch from replicas
+- Connection timeouts during ~70s restart window
+- Revive events redirecting writes to other workers
+- All errors are handled automatically by retry mechanism
+
+
+**Critical requirements:**
+1. **Replication MUST be enabled** - non-negotiable
+2. **Graceful shutdown MUST be enabled** - prevents data corruption
+3. **Fixed ports MUST be configured** - dynamic ports cause AssertionError
+4. **120s delay between restarts** - allows worker re-registration
+
+
+#### When to Use Decommission API
+
+
+Based on our testing, decommission API provides minimal benefit for most deployments:
+
+
+**Decommission API is useful for:**
+- ✅ Large clusters (100+ workers) - better coordination with master
+- ✅ Automated operations - explicit lifecycle hooks
+- ✅ Observability - cleaner shutdown signals
+
+
+**Decommission API does NOT provide:**
+- ❌ Data migration to other workers
+- ❌ Elimination of "file not found" errors
+- ❌ Faster restarts (still need 120s delay)
+- ❌ Ability to disable replication
+
+
+**Decommission-based restart (optional):**
 ```bash
-cd data-stacks/spark-on-eks
-export KUBECONFIG=kubeconfig.yaml
-./scripts/rolling-restart-celeborn.sh 120  # 120s pause between workers
+# Only use if you need explicit coordination for large clusters
+cd data-stacks/spark-on-eks/benchmarks/celeborn-benchmarks
+./rolling-restart-celeborn-with-decommission.py --namespace celeborn --release celeborn
 ```
 
-This script deletes pods one at a time, waits for Ready status, pauses for the specified duration, then proceeds to the next worker.
 
-**When to Use Each Approach:**
+**Decommission workflow:**
+1. Send decommission request to worker API
+2. Worker stops accepting new shuffle writes
+3. Master redirects new writes to other workers
+4. Worker drains in-flight operations (typically 0-5 seconds)
+5. Delete pod, wait for re-registration
+6. 120s stability wait before next worker
 
-Use **Decommission API** for:
-- Planned maintenance windows (version upgrades, config changes)
-- High-value production workloads where transient errors should be minimized
-- Large shuffle volumes (>100GB) requiring controlled drain
-- Multi-tenant clusters serving multiple teams simultaneously
-- Risk-averse environments requiring maximum safety
-- Compliance/audit requirements needing detailed operational logs
 
-Use **Simple Pod Delete** for:
-- Emergency recovery (worker stuck, unresponsive, CrashLoopBackOff)
-- Development/testing environments
-- Quick restarts where predictable timing is more important than minimizing retries
-- Low shuffle activity scenarios
-- Automated operations (CI/CD, GitOps) where simpler kubectl approach is easier
-- Configuration-triggered restarts from Helm/ArgoCD
+**Important:** Decommission drain time is typically 0-5 seconds because it only waits for in-flight writes to complete, not for data migration. Existing shuffle files remain on disk and rely on replicas for availability.
 
-#### Prerequisites Checklist
 
-Before performing rolling restarts in production, verify ALL of these configurations are in place:
+#### Rolling Restart Best Practices
 
-:::danger Rolling Restart Prerequisites - ALL Must Be Configured
-**If ANY of these are missing, rolling restarts WILL cause job failures.**
 
-**Server-Side (Celeborn Helm values):**
-- [ ] `celeborn.worker.graceful.shutdown.enabled: "true"`
-- [ ] `celeborn.worker.rpc.port: "9091"` (fixed, NOT 0)
-- [ ] `celeborn.worker.fetch.port: "9092"` (fixed, NOT 0)
-- [ ] `celeborn.worker.push.port: "9093"` (fixed, NOT 0)
-- [ ] `celeborn.worker.replicate.port: "9094"` (fixed, NOT 0)
-- [ ] `celeborn.network.bind.preferIpAddress: "false"`
-- [ ] `celeborn.master.heartbeat.worker.timeout: "180s"` (or higher)
-
-**Client-Side (ALL Spark jobs):**
-- [ ] `spark.celeborn.client.push.replicate.enabled: "true"` ← **MANDATORY**
-- [ ] `spark.celeborn.client.fetch.maxRetriesForEachReplica: "5"` (or higher)
-- [ ] `spark.celeborn.data.io.retryWait: "15s"` (or higher)
-- [ ] `spark.celeborn.client.rpc.maxRetries: "5"` (or higher)
-- [ ] `spark.sql.adaptive.localShuffleReader.enabled: "false"` ← **MUST BE FALSE**
-
-**Verification Commands:**
+**For EBS-backed workers:**
 ```bash
-# Verify server-side config
-kubectl get configmap -n celeborn celeborn-config -o yaml | grep -E "graceful.shutdown|port|preferIpAddress|heartbeat"
+# 1. Verify replication is enabled in all running jobs
+kubectl logs <driver-pod> -n spark-operator | grep "push.replicate.enabled"
 
-# Verify worker pods have fixed ports
-kubectl logs -n celeborn celeborn-worker-0 | grep "port"
-# Should show: rpc.port=9091, fetch.port=9092, push.port=9093, replicate.port=9094
+# 2. Check disk usage before restart (should be &lt; 70%)
+bash benchmarks/celeborn-benchmarks/check-celeborn-disk-usage.sh
 
-# Verify client-side config in running Spark job
-kubectl logs -n spark-team-a <driver-pod> | grep -E "replicate.enabled|localShuffleReader"
-# Should show: replicate.enabled=true, localShuffleReader.enabled=false
+# 3. Run rolling restart with 120s delay
+bash benchmarks/celeborn-benchmarks/rolling-restart-celeborn.sh 120
+
+# 4. Monitor worker re-registration
+kubectl get pods -n celeborn -w
 ```
-:::
 
-**Expected Behavior During Restarts:**
-- FileNotFoundException errors for shuffle files on restarted workers (normal - Spark fetches from replicas)
-- Connection timeout errors during ~13s restart window (normal - clients retry automatically)
-- Revive events when workers enter graceful shutdown (normal - redirects new writes to available workers)
-- Zero task failures if replication and retry configs are properly set
 
-**Monitoring During Restarts:**
+**For NVMe-backed workers:**
+- Use decommission API (drain takes longer with active slots)
+- Increase delay to 180-300s between restarts
+- Never restart two workers simultaneously
+- Schedule during off-peak hours
+
+
+**Rolling restart WITHOUT graceful shutdown is unsafe.** GitHub issue #3539 confirms: abrupt worker termination causes Spark job hangs with `"CommitManager: Worker shutdown, commit all its partition locations"`. Always use graceful shutdown.
+
+
+**Canary validation for large clusters (50+ workers):**
 ```bash
-# Watch worker status
-kubectl get pods -n celeborn -l app.kubernetes.io/role=worker -w
-
-# Monitor Spark executors
-kubectl get pods -n <namespace> -l spark-role=executor
-
-# Check for Revive events (normal during restarts)
-kubectl logs <driver-pod> -n <namespace> | grep -i "revive\|shutting"
-
-# Check retry attempts (normal during restarts)
-kubectl logs <executor-pod> -n <namespace> | grep -i "retry"
-```
-
-**What to Look For:**
-
-✅ Normal (expected during restarts):
-- ERROR messages for connection timeouts
-- ERROR messages for fetch failures
-- WARN messages for retry attempts
-- "Current worker is shutting down!" messages
-- "Destroyed partitions" messages
-
-❌ Abnormal (indicates real problems):
-- Task failures in driver logs
-- Executor pod restarts or crashes
-- "FetchFailed" exceptions that exhaust all retries
-- Job termination or stage failures
-
-## Scaling to 200+ Nodes
-
-Operating Celeborn at scale (200+ worker nodes) requires careful planning for capacity, networking, and operational procedures.
-
-### Capacity Planning
-
-**Worker Node Sizing:**
-
-For large-scale deployments, choose instance types based on your shuffle characteristics:
-
-| Instance Type | vCPU | RAM | Network | Storage | Best For |
-|---------------|------|-----|---------|---------|----------|
-| **r8g.8xlarge** | 32 | 256GB | 12.5 Gbps | 4x NVMe or EBS | Balanced, memory-intensive shuffles |
-| **r8g.12xlarge** | 48 | 384GB | 18.75 Gbps | 4x NVMe or EBS | Large partition counts, high concurrency |
-| **i4i.8xlarge** | 32 | 256GB | 18.75 Gbps | 2x 3.75TB NVMe | Maximum I/O performance |
-| **c7gn.16xlarge** | 64 | 128GB | 100 Gbps | EBS only | Network-bound shuffles, small partitions |
-
-**Sizing Formula:**
-
-```
-Workers needed = (Peak concurrent executors × Avg shuffle per executor) / Worker capacity
-
-Example:
-- 2000 concurrent executors
-- 50GB average shuffle data per executor
-- r8g.8xlarge workers (4TB usable storage, 200GB/s aggregate throughput)
-- Target 70% utilization
-
-Workers = (2000 × 50GB) / (4TB × 0.7) = 36 workers minimum
-Recommended: 50-60 workers (includes headroom for failures, maintenance)
-```
-
-:::tip Production Recommendation
-For 200+ node clusters, deploy workers in batches of 20-30 nodes. This allows gradual capacity validation and easier troubleshooting if issues arise. Use Karpenter NodePools with taints to control which workers accept traffic during rollout.
-:::
-
-### Network Considerations
-
-**Network Bandwidth Planning:**
-
-Celeborn is network-intensive. Each worker needs sufficient bandwidth for:
-- Push operations (executors → workers)
-- Fetch operations (workers → executors)
-- Replication traffic (worker → worker)
-
-**Bandwidth Formula:**
-```
-Required bandwidth per worker = (Concurrent push streams × Push rate) + (Concurrent fetch streams × Fetch rate) + Replication overhead
-
-Example for r8g.8xlarge (12.5 Gbps network):
-- 100 concurrent push streams × 100 MB/s = 10 GB/s
-- 50 concurrent fetch streams × 200 MB/s = 10 GB/s
-- Replication overhead (2x writes) = 10 GB/s
-Total: 30 GB/s required → r8g.8xlarge is undersized
-
-Better choice: c7gn.16xlarge (100 Gbps) or multiple smaller workers
-```
-
-:::warning Network Bottlenecks at Scale
-At 200+ nodes, network bandwidth becomes the primary bottleneck. Monitor network saturation metrics and consider:
-- Using enhanced networking instances (c7gn, i4i series)
-- Deploying more workers with smaller instance types to distribute network load
-- Enabling jumbo frames (MTU 9001) on EKS for better throughput
-- Using placement groups for low-latency worker-to-worker replication
-:::
-
-### Master Scaling
-
-**Master Node Requirements:**
-
-Masters are CPU and memory-intensive for metadata management. At 200+ workers:
-
-| Workers | Masters | Instance Type | Heap Size | Notes |
-|---------|---------|---------------|-----------|-------|
-| 1-50 | 3 | r8g.xlarge | 8GB | Standard deployment |
-| 51-100 | 3 | r8g.2xlarge | 16GB | Increased metadata load |
-| 101-200 | 5 | r8g.4xlarge | 32GB | High availability critical |
-| 201-500 | 5-7 | r8g.8xlarge | 64GB | Enterprise scale |
-
-:::danger Master Overload Symptoms
-If masters are undersized, you'll see:
-- Slow worker registration (>30s)
-- Heartbeat timeouts causing false worker failures
-- Slot reservation failures with "Master is busy" errors
-- Increased Revive frequency due to master unavailability
-
-Monitor master CPU and heap usage closely. Scale vertically (larger instances) before scaling horizontally (more masters).
-:::
-
-### Configuration Tuning for Large Clusters
-
-**Master Configuration (200+ workers):**
-
-```yaml
-celeborn:
-  # Increase worker capacity limits
-  celeborn.master.slot.assign.maxWorkers: "10000"
-
-  # Tune heartbeat intervals for scale
-  celeborn.master.heartbeat.worker.timeout: "180s"
-  celeborn.worker.heartbeat.timeout: "120s"
-
-  # Increase thread pools for concurrent operations
-  celeborn.master.rpc.dispatcher.numThreads: "64"
-  celeborn.master.slot.assign.threads: "32"
-
-  # Metadata management
-  celeborn.master.estimatedPartitionSize.update.interval: "10s"
-  celeborn.master.estimatedPartitionSize.initialSize: "64mb"
-
-  # Garbage collection tuning
-  celeborn.master.gc.interval: "300s"
-  celeborn.master.gc.threads: "16"
-```
-
-**Worker Configuration (high concurrency):**
-
-```yaml
-celeborn:
-  # Increase connection limits
-  celeborn.worker.rpc.io.threads: "64"
-  celeborn.worker.fetch.io.threads: "64"
-  celeborn.worker.push.io.threads: "64"
-
-  # Buffer management for high throughput
-  celeborn.worker.directMemoryRatioForReadBuffer: "0.3"
-  celeborn.worker.directMemoryRatioForShuffleStorage: "0.3"
-  celeborn.worker.directMemoryRatioToResume: "0.5"
-
-  # Disk I/O tuning
-  celeborn.worker.flusher.threads: "32"
-  celeborn.worker.flusher.buffer.size: "256k"
-
-  # Commit thread pool
-  celeborn.worker.commitFiles.threads: "128"
-  celeborn.worker.commitFiles.timeout: "120s"
-```
-
-:::tip Performance Tuning
-Start with default configurations and tune based on metrics. Over-tuning thread pools can cause excessive context switching and degrade performance. Monitor CPU utilization and thread pool queue depths before increasing thread counts.
-:::
-
-### Rolling Restart Strategy for Large Clusters
-
-**Phased Restart Approach (200+ workers):**
-
-For large clusters, restart workers in phases to minimize risk:
-
-**Phase 1: Canary (5% of workers)**
-```bash
-# Restart first 10 workers (out of 200)
-for i in {0..9}; do
-  ./rolling-restart-celeborn-with-decommission.sh celeborn-worker-$i
-  # Monitor for 10 minutes before proceeding
+# Test with first 3 workers and monitor for 10 minutes
+for i in 5 4 3; do
+ kubectl delete pod -n celeborn "celeborn-worker-$i"
+ kubectl wait pod/"celeborn-worker-$i" -n celeborn --for=condition=Ready --timeout=300s
+ echo "Worker $i ready, waiting 120s..."
+ sleep 120
 done
+
+# Monitor for errors
+kubectl logs -n celeborn celeborn-worker-5 --tail=200 | grep -i "error\|exception"
+kubectl logs -n celeborn celeborn-worker-4 --tail=200 | grep -i "error\|exception"
+kubectl logs -n celeborn celeborn-worker-3 --tail=200 | grep -i "error\|exception"
+
+# Check Spark driver for task failures (should be zero)
+kubectl logs -n spark-operator <driver-pod> | grep -i "task.*failed"
+
+# If metrics look healthy (no task failures, workers re-registered), proceed with rest
+bash benchmarks/celeborn-benchmarks/rolling-restart-celeborn.sh 120
 ```
 
-**Phase 2: Progressive Rollout (20% batches)**
+
+### Storage Vertical Scaling
+
+
+EBS volumes resize **online** — no pod downtime for the resize itself. A pod rolling restart is only needed to pick up the updated config.
+
+
 ```bash
-# Restart in batches of 40 workers
-for batch in {10..49} {50..89} {90..129} {130..169} {170..199}; do
-  ./rolling-restart-celeborn-with-decommission.sh celeborn-worker-$batch
-  # 5-minute pause between batches
-  sleep 300
+# Step 1: verify StorageClass allows expansion
+kubectl get storageclass <name> -o jsonpath='{.allowVolumeExpansion}'  # must be true
+
+
+# Step 2: resize all 4 PVCs per worker
+NEW_SIZE="2000Gi"
+REPLICAS=$(kubectl get statefulset celeborn-worker -n celeborn -o jsonpath='{.spec.replicas}')
+for i in $(seq 0 $((REPLICAS - 1))); do
+ for disk in 1 2 3 4; do
+   kubectl patch pvc "data-disk${disk}-celeborn-worker-${i}" -n celeborn \
+     -p "{\"spec\":{\"resources\":{\"requests\":{\"storage\":\"${NEW_SIZE}\"}}}}"
+ done
 done
+kubectl get pvc -n celeborn -w  # wait for Bound status
+
+
+# Step 3: update Helm values with new capacity, then apply
+# celeborn.worker.storage.dirs capacity values must match new disk size
+helm upgrade celeborn apache-celeborn/celeborn --namespace celeborn -f your-values.yaml
 ```
 
-**Phase 3: Validation**
-```bash
-# Verify all workers registered
-kubectl get pods -n celeborn -l app.kubernetes.io/role=worker | grep Running | wc -l
 
-# Check master sees all workers
-kubectl port-forward -n celeborn celeborn-master-0 9098:9098
-curl http://localhost:9098/api/v1/workers | jq '.workers | length'
-```
-
-:::warning Large-Scale Restart Duration
-A full rolling restart of 200 workers with decommission takes approximately 6-8 hours (2-3 minutes per worker including drain time). Plan maintenance windows accordingly and consider:
-- Pausing non-critical Spark jobs during maintenance
-- Increasing retry timeouts for critical jobs
-- Monitoring master CPU/memory during restart (metadata churn is high)
-- Having rollback plan if issues detected in canary phase
+:::warning `volumeClaimTemplates` is immutable in StatefulSets. This procedure patches existing PVCs — it does not change the template. For new PVCs (when scaling out), use blue-green.
 :::
 
-### EKS and AMI Upgrade Procedures
 
-**Node Replacement Strategy:**
+### Blue-Green Worker Pool Upgrade
 
-When upgrading EKS versions or AMIs, nodes are replaced (not restarted in-place). This requires careful coordination:
 
-**Option 1: Karpenter-Managed Replacement (Recommended)**
+Required when you need to change instance type, storage type, or any StatefulSet immutable field.
 
-```yaml
-# Update NodePool with new AMI/EKS version
-apiVersion: karpenter.sh/v1beta1
-kind: NodePool
-metadata:
-  name: celeborn-workers
-spec:
-  template:
-    spec:
-      requirements:
-        - key: karpenter.k8s.aws/instance-family
-          operator: In
-          values: ["r8g"]
-        - key: karpenter.sh/capacity-type
-          operator: In
-          values: ["on-demand"]
-      nodeClassRef:
-        name: celeborn-node-class
-  disruption:
-    consolidationPolicy: WhenEmpty
-    expireAfter: 720h
-```
-
-```yaml
-# Update EC2NodeClass with new AMI
-apiVersion: karpenter.k8s.aws/v1beta1
-kind: EC2NodeClass
-metadata:
-  name: celeborn-node-class
-spec:
-  amiFamily: AL2
-  amiSelectorTerms:
-    - id: ami-new-version-id  # Updated AMI
-  role: KarpenterNodeRole
-```
 
 **Procedure:**
-1. Update EC2NodeClass with new AMI ID
-2. Cordon old nodes: `kubectl cordon <node-name>`
-3. Decommission workers on old nodes using API
-4. Drain nodes: `kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data`
-5. Karpenter provisions new nodes with updated AMI
-6. Workers schedule on new nodes and register with master
-7. Verify worker count and health before proceeding to next batch
 
-:::danger CRITICAL: Always Decommission Before Draining Nodes
-When replacing nodes (EKS upgrades, AMI updates), you **MUST** decommission Celeborn workers BEFORE draining the node.
-
-**Correct Order:**
-1. ✅ Call decommission API on worker
-2. ✅ Wait for drain completion (poll master API)
-3. ✅ Drain node (`kubectl drain`)
-4. ✅ Delete node (Karpenter replaces automatically)
-
-**Wrong Order (causes problems):**
-1. ❌ Drain node immediately
-2. ❌ Worker forcefully terminated
-3. ❌ Active shuffle data lost
-4. ❌ Massive retry storms in Spark jobs
-5. ❌ Potential job failures even with replication
-
-**Why this matters:**
-- Decommissioning gracefully drains shuffle data before termination
-- Draining without decommissioning causes abrupt worker termination
-- Even with replication, abrupt termination causes retry storms and job slowdowns
-- With NVMe instance stores, abrupt termination can cause data loss if replica is also on a dying node
-
-**Script to use:** `rolling-restart-celeborn-with-decommission.sh` (handles decommission automatically)
-:::
-
-**Option 2: Blue-Green Node Pool**
-
-For maximum safety, deploy a new node pool alongside the existing one:
 
 ```bash
-# Deploy new NodePool with updated AMI
-kubectl apply -f celeborn-nodepool-v2.yaml
+# 1. Deploy new NodePool
+kubectl apply -f celeborn-nodepool-v2.yaml   # Karpenter NodePool for new instance type
 
-# Scale up new worker StatefulSet
-kubectl scale statefulset celeborn-worker-v2 -n celeborn --replicas=200
 
-# Wait for all new workers to register
-# Monitor master API for worker count
+# 2. Deploy new worker StatefulSet pointing to new NodePool
+kubectl apply -f celeborn-worker-v2.yaml
 
-# Decommission old workers in batches
-for i in {0..199}; do
-  curl -X POST http://celeborn-master:9098/api/v1/workers/celeborn-worker-$i/exit
+
+# 3. Wait for new workers to register with masters
+kubectl port-forward -n celeborn svc/celeborn-master-svc 9098:9098 &
+curl -s http://localhost:9098/api/v1/workers | jq '.registeredWorkers | length'
+# Both old and new workers are registered — traffic flows to both
+
+
+# 4. Decommission old workers (worker HTTP port is 9096)
+REPLICAS=$(kubectl get statefulset celeborn-worker -n celeborn -o jsonpath='{.spec.replicas}')
+for i in $(seq 0 $((REPLICAS - 1))); do
+ kubectl exec -n celeborn "celeborn-worker-$i" -- \
+   curl -sf -X POST -H "Content-Type: application/json" \
+   -d '{"type":"DECOMMISSION"}' "http://localhost:9096/api/v1/workers/exit"
 done
 
-# Wait for all old workers to drain
-# Monitor master API for decommissioning status
 
-# Delete old StatefulSet
+# 5. Poll until all old workers drained
+while true; do
+ DECOMM=$(curl -s http://localhost:9098/api/v1/workers | jq '.decommissioningWorkers | length')
+ [ "$DECOMM" -eq 0 ] && break
+ echo "$DECOMM workers still draining..."; sleep 30
+done
+
+
+# 6. Delete old pool
 kubectl delete statefulset celeborn-worker -n celeborn
-
-# Delete old NodePool
 kubectl delete nodepool celeborn-workers-v1
 ```
 
-:::tip Blue-Green Advantages
-Blue-green node pool replacement provides:
-- Zero risk of capacity shortage (both pools active during transition)
-- Instant rollback capability (keep old pool until validation complete)
-- No impact on active workloads (new workers absorb traffic gradually)
-- Better for risk-averse environments (financial, healthcare, compliance)
 
-Trade-off: Requires 2x capacity during transition (cost consideration for large clusters)
+**Rollback:** Keep old StatefulSet running until new pool is validated. Scale old pool back up and decommission new pool if issues arise.
+
+
+### EKS and AMI Upgrades
+
+
+```yaml
+# EC2NodeClass — always use AL2023 with alias (AL2 is EOL)
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+ name: celeborn-node-class
+spec:
+ amiFamily: AL2023
+ amiSelectorTerms:
+   - alias: al2023@latest
+ role: KarpenterNodeRole
+ subnetSelectorTerms:
+   - tags:
+       karpenter.sh/discovery: "<cluster-name>"
+ securityGroupSelectorTerms:
+   - tags:
+       karpenter.sh/discovery: "<cluster-name>"
+```
+
+
+**Per-node procedure:**
+```bash
+kubectl cordon <node-name>
+
+
+# Decommission worker on this node before draining
+WORKER=$(kubectl get pods -n celeborn --field-selector spec.nodeName=<node-name> -o name | head -1)
+kubectl exec -n celeborn $WORKER -- \
+ curl -sf -X POST -H "Content-Type: application/json" \
+ -d '{"type":"DECOMMISSION"}' "http://localhost:9096/api/v1/workers/exit"
+
+
+# Poll master until worker is drained, then drain the node
+kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
+```
+
+
+:::danger Never drain a Celeborn node without decommissioning the worker first. Abrupt termination with active shuffle slots causes retry storms. With NVMe, it can cause data loss if the replica happens to be on another node being drained simultaneously.
+::: node being replaced simultaneously.
 :::
 
-## Troubleshooting Common Scenarios
 
-### Scenario 1: Workers Not Registering After Restart
+### Node Rotation with Karpenter
 
-**Symptoms:**
-- Worker pod shows Running but not in master's worker list
-- Logs show: `Failed to register with master` or `Connection refused`
 
-**Root Causes:**
+When Karpenter drains a node (consolidation, expiry, or drift), a `preStop` hook triggers graceful decommission:
 
-1. **Network binding misconfiguration:**
-```bash
-# Check worker logs
-kubectl logs -n celeborn celeborn-worker-0 | grep "bind"
 
-# If you see pod IP instead of DNS name, add:
-celeborn.network.bind.preferIpAddress: "false"
-```
-
-2. **Fixed ports not configured:**
-```bash
-# Check if ports are dynamic (0)
-kubectl logs -n celeborn celeborn-worker-0 | grep "port"
-
-# Should see: rpc.port=9091, fetch.port=9092, push.port=9093, replicate.port=9094
-# If you see port=0, graceful shutdown will fail
-```
-
-3. **Master endpoint unreachable:**
-```bash
-# Test connectivity from worker pod
-kubectl exec -n celeborn celeborn-worker-0 -- curl -v celeborn-master-0.celeborn-master-svc:9097
-
-# Check master logs for registration attempts
-kubectl logs -n celeborn celeborn-master-0 | grep "register"
-```
-
-**Resolution:**
 ```yaml
-# Update Helm values
-celeborn:
-  celeborn.network.bind.preferIpAddress: "false"
-  celeborn.worker.rpc.port: "9091"
-  celeborn.worker.fetch.port: "9092"
-  celeborn.worker.push.port: "9093"
-  celeborn.worker.replicate.port: "9094"
-
-# Restart workers after config update
+spec:
+ template:
+   spec:
+     terminationGracePeriodSeconds: 3600  # EBS: 600s sufficient; NVMe: 3600s for drain
+     containers:
+     - name: celeborn-worker
+       lifecycle:
+         preStop:
+           exec:
+             command: ["/bin/sh", "-c", "/opt/celeborn/sbin/decommission-worker.sh"]
 ```
 
-### Scenario 2: Disk Space Exhaustion
 
-**Symptoms:**
-- Workers rejecting new shuffle writes
-- Logs show: `No space left on device` or `Disk usage exceeds threshold`
+Add `karpenter.sh/do-not-disrupt: "true"` to worker pods if you want to prevent Karpenter from consolidating Celeborn nodes during active workloads. Combine with a disruption budget:
 
-**Diagnosis:**
-```bash
-# Check disk usage on all workers
-for i in {0..5}; do
-  echo "Worker $i:"
-  kubectl exec -n celeborn celeborn-worker-$i -- df -h | grep mnt
-done
 
-# Check shuffle data directory sizes
-kubectl exec -n celeborn celeborn-worker-0 -- du -sh /mnt/disk*/celeborn-worker/shuffle_data
-```
-
-**Root Causes:**
-
-1. **Orphaned shuffle data accumulation** (workers restarted frequently without cleanup)
-2. **Long-running applications** (shuffle data not cleaned up until app completes)
-3. **Undersized storage** (insufficient capacity for workload)
-
-**Immediate Mitigation:**
-```bash
-# Check for completed applications
-kubectl port-forward -n celeborn celeborn-master-0 9098:9098
-curl http://localhost:9098/api/v1/applications | jq '.applications[] | select(.status=="COMPLETED")'
-
-# Trigger manual cleanup (DANGER: only if applications are truly completed)
-# This forces master to send cleanup commands to workers
-curl -X POST http://localhost:9098/api/v1/gc
-```
-
-**Long-Term Solutions:**
-
-1. **Enable graceful shutdown with metadata persistence:**
 ```yaml
-celeborn:
-  celeborn.worker.graceful.shutdown.enabled: "true"
-  # This persists metadata to RocksDB, enabling better cleanup tracking
+# Karpenter NodePool — prevent consolidation of Celeborn nodes
+spec:
+ disruption:
+   consolidationPolicy: WhenEmpty   # Only consolidate completely empty nodes
+   expireAfter: 720h                # Rotate every 30 days for AMI freshness
 ```
 
-2. **Increase storage capacity:**
-```bash
-# Resize EBS volumes (requires PVC resize)
-kubectl patch pvc celeborn-worker-data-0 -n celeborn -p '{"spec":{"resources":{"requests":{"storage":"2000Gi"}}}}'
 
-# Wait for resize to complete
-kubectl get pvc -n celeborn -w
+---
+
+
+## Rolling Restart Test Results
+
+
+### Test Environment
+
+
+**Benchmark:** TPC-DS 10TB scale factor
+**Duration:** 15+ hours
+**Cluster:** 6 x r8g.8xlarge workers, 3 x r8g.xlarge masters
+**Storage:** 4 x 1TB EBS gp3 per worker (24TB total)
+**Spark:** 32 executors with dynamic allocation
+
+
+### Test 1: Simple Pod Delete (Baseline)
+
+
+**Method:** `kubectl delete pod` with 120s delay between workers
+**Graceful shutdown:** Enabled (600s timeout)
+**Replication:** Enabled
+
+
+**Results:**
+- ✅ Zero job failures
+- ✅ Zero executor losses
+- ✅ Zero task failures
+- ⚠️ 20-30 "file not found" errors per restarted worker
+- ✅ All errors handled by retry mechanism
+- ✅ Job continued running throughout all 6 worker restarts
+
+
+**Restart timing per worker:**
+- Pod deletion: instant
+- Pod termination: ~60s
+- Pod Ready: ~10s
+- Worker re-registration: ~2s
+- Total downtime: ~70s per worker
+- Total test duration: ~13 minutes (6 workers x 120s delay)
+
+
+**Error pattern observed:**
 ```
-
-3. **Tune garbage collection:**
-```yaml
-celeborn:
-  celeborn.master.gc.interval: "180s"  # More frequent GC
-  celeborn.master.gc.threads: "16"     # More GC threads
-  celeborn.worker.gc.checkInterval: "60s"
+WARN FetchHandler: Could not find file 32-0-0 for shuffle-105
+ERROR FetchHandler: Read file: 32-0-0 with shuffleKey error
 ```
+- Errors occur when executors try to fetch from restarted worker
+- Executors automatically retry from replica workers
+- No impact on job completion
 
-:::warning Emergency Disk Cleanup
-If disk space is critically low (>95%) and applications have completed, you can manually delete shuffle data:
 
-```bash
-# DANGER: Only do this if you're certain no active jobs need the data
-# Check for active applications first
-curl http://localhost:9098/api/v1/applications | jq '.applications[] | select(.status=="RUNNING")'
+### Test 2: Decommission API
 
-# If no active applications, safe to clean
-kubectl exec -n celeborn celeborn-worker-0 -- rm -rf /mnt/disk1/celeborn-worker/shuffle_data/*
-```
 
-This should be a LAST RESORT. Proper solution is fixing GC configuration and capacity planning.
-:::
+**Method:** Decommission API + pod delete with 120s delay
+**Hypothesis:** Decommission should eliminate "file not found" errors
 
-### Scenario 3: High Retry Rates During Normal Operations
 
-**Symptoms:**
-- Spark jobs show high retry counts even without restarts
-- Logs show frequent: `Fetch chunk failed`, `Retry create client`
+**Decommission workflow:**
+1. POST to `http://worker:9096/api/v1/workers/exit` with `{"type":"DECOMMISSION"}`
+2. Worker status changes to "InDecommission"
+3. Master stops assigning new writes to this worker
+4. Poll master API until worker removed from decommissioningWorkers
+5. Delete pod
 
-**Diagnosis:**
-```bash
-# Check worker health
-kubectl get pods -n celeborn -l app.kubernetes.io/role=worker
 
-# Check for worker restarts
-kubectl get pods -n celeborn -l app.kubernetes.io/role=worker -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.containerStatuses[0].restartCount}{"\n"}{end}'
+**Results:**
+- Worker-5: 62 "file not found" errors (4-5 minutes after restart)
+- Worker-4: 0 errors (job had completed by this point)
+- Decommission drain time: 0 seconds (both workers)
+- Job impact: Zero failures (same as Test 1)
 
-# Check network connectivity
-kubectl exec -n celeborn celeborn-worker-0 -- ping -c 5 celeborn-worker-1.celeborn-worker-svc
-```
 
-**Root Causes:**
+**Critical finding:** Decommission API did NOT eliminate errors. The API stops accepting new writes but does not migrate existing shuffle data. Errors still occur when executors try to fetch from restarted workers.
 
-1. **Network saturation** (workers exceeding network bandwidth)
-2. **Worker overload** (too many concurrent connections)
-3. **Insufficient retry timeouts** (clients giving up too quickly)
 
-**Resolution:**
+**Why decommission drained in 0 seconds:**
+- Worker-5 had 66 active slots with 261.2 GiB of data
+- Worker-4 had 1 active slot with 193.5 GiB of data
+- Decommission only waits for in-flight writes to complete
+- Does not migrate existing shuffle files to other workers
+- Relies on replication for data availability (same as simple restart)
 
-1. **Scale out workers** (distribute load):
-```bash
-kubectl scale statefulset celeborn-worker -n celeborn --replicas=12
-```
 
-2. **Increase client retry configuration:**
-```yaml
-sparkConf:
-  spark.celeborn.client.fetch.maxRetriesForEachReplica: "10"  # Increased from 5
-  spark.celeborn.data.io.retryWait: "20s"  # Increased from 15s
-  spark.celeborn.client.rpc.maxRetries: "10"
-```
+### Test Conclusions
 
-3. **Tune worker thread pools:**
-```yaml
-celeborn:
-  celeborn.worker.fetch.io.threads: "128"  # Increased from 64
-  celeborn.worker.push.io.threads: "128"
-```
 
-### Scenario 4: Master Failover Not Working
+**What works (validated):**
+1. ✅ **Replication** - handles all worker restarts gracefully
+2. ✅ **Graceful shutdown** - flushes in-flight data, prevents corruption
+3. ✅ **120s delay** - ensures worker re-registration before next restart
+4. ✅ **Retry configuration** - 5 retries x 15s handles all transient errors
 
-**Symptoms:**
-- Master pod crashes but clients don't failover to other masters
-- Logs show: `All masters unreachable` or `Connection refused to all endpoints`
 
-**Diagnosis:**
-```bash
-# Check master pod status
-kubectl get pods -n celeborn -l app.kubernetes.io/role=master
+**What doesn't matter (tested):**
+1. ❌ **Decommission API** - does not eliminate errors or migrate data
+2. ❌ **Faster restarts** - 60s delay not tested (120s is safe and validated)
 
-# Check master endpoints
-kubectl get endpoints -n celeborn celeborn-master-svc
 
-# Test connectivity to all masters
-for i in {0..2}; do
-  kubectl exec -n spark-team-a <executor-pod> -- curl -v celeborn-master-$i.celeborn-master-svc:9097
-done
-```
+**Recommendation:**
+- Use simple pod delete with replication + graceful shutdown
+- Decommission API is optional (useful for coordination in large clusters)
+- Focus on replication, graceful shutdown, and conservative delays
 
-**Root Causes:**
 
-1. **Client configuration has only one master endpoint** (no HA)
-2. **Network policy blocking cross-namespace communication**
-3. **DNS resolution issues** (CoreDNS overloaded)
+---
 
-**Resolution:**
-
-1. **Update client configuration with all master endpoints:**
-```yaml
-sparkConf:
-  spark.celeborn.master.endpoints: "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local:9097,celeborn-master-1.celeborn-master-svc.celeborn.svc.cluster.local:9097,celeborn-master-2.celeborn-master-svc.celeborn.svc.cluster.local:9097"
-```
-
-2. **Verify network policies allow traffic:**
-```bash
-kubectl get networkpolicies -n celeborn
-kubectl get networkpolicies -n spark-team-a
-
-# Ensure policies allow egress to celeborn namespace
-```
-
-3. **Scale CoreDNS if DNS resolution is slow:**
-```bash
-kubectl scale deployment coredns -n kube-system --replicas=5
-```
 
 ## Monitoring
 
-Comprehensive monitoring is critical for operating Celeborn at scale. Use the community-maintained [Grafana dashboards](https://github.com/apache/celeborn/tree/main/assets/grafana) as a starting point.
 
-### Key Metrics to Monitor
+Celeborn exposes metrics via Prometheus format at the `/metrics` endpoint on each master and worker. Configure Prometheus to scrape:
+- Masters: `http://<master-pod>:9098/metrics`
+- Workers: `http://<worker-pod>:9096/metrics`
 
-**Worker Health Metrics:**
+For the complete list of available metrics and their descriptions, see the [official Celeborn monitoring documentation](https://celeborn.apache.org/docs/latest/monitoring).
 
-| Metric | Alert Threshold | Description | Action |
-|--------|----------------|-------------|--------|
-| `celeborn_worker_available_count` | < 80% of expected | Workers registered with master | Check worker logs, network connectivity |
-| `celeborn_worker_excluded_count` | > 0 | Workers excluded due to failures | Investigate excluded workers, check disk space |
-| `celeborn_worker_lost_count` | > 0 | Workers lost (heartbeat timeout) | Check network, master capacity, worker health |
-| `celeborn_worker_shutdown_count` | > 0 (outside maintenance) | Workers in graceful shutdown | Verify no unplanned restarts |
-| `celeborn_worker_disk_usage_percent` | > 85% | Disk space utilization | Scale storage, tune GC, check for orphaned data |
-| `celeborn_worker_memory_usage_percent` | > 90% | Direct memory utilization | Tune memory ratios, scale workers |
+Use the [official Grafana dashboards](https://github.com/apache/celeborn/tree/main/assets/grafana) as a starting point. For clusters with 200+ workers, use aggregated (sum/avg) panels rather than per-worker time series to avoid overwhelming Grafana.
 
-**Shuffle Performance Metrics:**
+**Key metrics to monitor:**
+- Worker availability and health status
+- Disk usage per worker and per mount point
+- Active shuffle count and shuffle file count
+- Push/fetch success and failure rates
+- Master slot allocation latency
+- Network throughput and connection counts
 
-| Metric | Alert Threshold | Description | Action |
-|--------|----------------|-------------|--------|
-| `celeborn_shuffle_write_throughput_mb_per_sec` | < 50% of baseline | Write throughput per worker | Check network saturation, disk I/O, thread pools |
-| `celeborn_shuffle_read_throughput_mb_per_sec` | < 50% of baseline | Read throughput per worker | Check network saturation, fetch thread pools |
-| `celeborn_shuffle_push_data_fail_count` | > 100/min | Failed push operations | Check worker availability, replication config |
-| `celeborn_shuffle_fetch_data_fail_count` | > 100/min | Failed fetch operations | Check worker availability, retry config |
-| `celeborn_shuffle_commit_files_fail_count` | > 10/min | Failed commit operations | Check disk space, commit thread pool |
 
-**Master Health Metrics:**
+---
 
-| Metric | Alert Threshold | Description | Action |
-|--------|----------------|-------------|--------|
-| `celeborn_master_registered_shuffle_count` | Sudden drop | Active shuffles tracked | Check for master restarts, application failures |
-| `celeborn_master_slot_allocation_latency_p99` | > 5000ms | Slot allocation latency | Scale master vertically, tune thread pools |
-| `celeborn_master_heartbeat_from_worker_latency_p99` | > 10000ms | Worker heartbeat processing | Scale master, check network |
-| `celeborn_master_heap_usage_percent` | > 85% | JVM heap utilization | Scale master vertically, tune heap size |
-| `celeborn_master_gc_time_percent` | > 10% | GC overhead | Tune GC settings, scale master |
 
-**Client-Side Metrics (Spark):**
+## Troubleshooting
 
-Monitor these metrics from Spark executors to detect Celeborn issues:
 
-```bash
-# Fetch retry rate (should be low during normal operations)
-spark_executor_celeborn_fetch_retry_count
+### Workers not registering after restart
 
-# Push retry rate (should be low during normal operations)
-spark_executor_celeborn_push_retry_count
 
-# Revive frequency (indicates worker unavailability)
-spark_driver_celeborn_revive_count
-```
+| Symptom | Root Cause | Fix |
+|---------|-----------|-----|
+| Pod IP in registration (not DNS) | `preferIpAddress` not set | `celeborn.network.bind.preferIpAddress: "false"` |
+| `port=0` in logs | Dynamic ports in use | Set all 4 fixed ports (9091–9094) |
+| `AssertionError` on shutdown | Dynamic ports + graceful shutdown | Same fix as above |
+| Pod stuck `Pending` (NVMe) | Local PV node affinity mismatch | Check node affinity, consider `WhenDeleted: Delete` policy |
+| `Connection refused` to master | Network policy or DNS | Test from worker: `curl celeborn-master-0.celeborn-master-svc:9097` |
 
-### Alerting Rules
 
-**Critical Alerts (Page immediately):**
+### Disk space exhaustion
 
-```yaml
-# Worker availability below 80%
-- alert: CelebornWorkerAvailabilityLow
-  expr: celeborn_worker_available_count / celeborn_worker_expected_count < 0.8
-  for: 5m
-  annotations:
-    summary: "Celeborn worker availability is {{ $value }}%"
-    description: "Less than 80% of expected workers are available. Active Spark jobs may fail."
-
-# Disk space critical
-- alert: CelebornWorkerDiskSpaceCritical
-  expr: celeborn_worker_disk_usage_percent > 95
-  for: 2m
-  annotations:
-    summary: "Worker {{ $labels.worker_id }} disk usage is {{ $value }}%"
-    description: "Disk space critically low. Worker will reject new shuffle writes."
-
-# Master unavailable
-- alert: CelebornMasterUnavailable
-  expr: up{job="celeborn-master"} == 0
-  for: 1m
-  annotations:
-    summary: "Celeborn master {{ $labels.instance }} is down"
-    description: "Master unavailable. Check pod status and logs immediately."
-```
-
-**Warning Alerts (Investigate within 30 minutes):**
-
-```yaml
-# High retry rate
-- alert: CelebornHighRetryRate
-  expr: rate(celeborn_shuffle_fetch_data_fail_count[5m]) > 100
-  for: 10m
-  annotations:
-    summary: "High fetch retry rate: {{ $value }} failures/sec"
-    description: "Elevated retry rate may indicate network issues or worker overload."
-
-# Disk space warning
-- alert: CelebornWorkerDiskSpaceWarning
-  expr: celeborn_worker_disk_usage_percent > 85
-  for: 15m
-  annotations:
-    summary: "Worker {{ $labels.worker_id }} disk usage is {{ $value }}%"
-    description: "Disk space approaching limit. Plan capacity expansion or cleanup."
-
-# GC overhead high
-- alert: CelebornMasterGCOverhead
-  expr: celeborn_master_gc_time_percent > 10
-  for: 15m
-  annotations:
-    summary: "Master GC overhead is {{ $value }}%"
-    description: "High GC overhead may indicate undersized heap or memory leak."
-```
-
-### Grafana Dashboard Recommendations
-
-Import the official Celeborn dashboards and customize for your environment:
-
-**Dashboard 1: Cluster Overview**
-- Worker availability (available, excluded, lost, shutdown)
-- Total shuffle data volume (read + write)
-- Active shuffle count
-- Master CPU and memory usage
-
-**Dashboard 2: Worker Performance**
-- Per-worker disk usage (heatmap)
-- Per-worker network throughput (time series)
-- Per-worker shuffle operations (push, fetch, commit)
-- Thread pool utilization (fetch, push, commit threads)
-
-**Dashboard 3: Shuffle Operations**
-- Shuffle write throughput (MB/s)
-- Shuffle read throughput (MB/s)
-- Push/fetch failure rates
-- Commit latency (p50, p95, p99)
-
-**Dashboard 4: Client Metrics (Spark)**
-- Retry rates per executor
-- Revive frequency per application
-- Shuffle data volume per application
-- Fetch latency distribution
-
-:::tip Dashboard Best Practices
-For 200+ node clusters, use aggregated views (sum, avg) rather than per-worker graphs to avoid overwhelming Grafana. Create separate dashboards for:
-- Executive view (cluster-level KPIs)
-- Operations view (worker health, alerts)
-- Performance view (throughput, latency, bottlenecks)
-- Troubleshooting view (per-worker details, error rates)
-:::
-
-### Log Aggregation
-
-Centralize logs from all Celeborn components for troubleshooting:
-
-**Recommended Stack:**
-- **Fluent Bit** (log collection from pods)
-- **Amazon OpenSearch** or **Elasticsearch** (log storage and indexing)
-- **Kibana** or **OpenSearch Dashboards** (log visualization)
-
-**Key Log Patterns to Index:**
 
 ```bash
-# Worker registration events
-"Successfully registered with master"
-"Failed to register with master"
+# Check usage across all workers
+REPLICAS=$(kubectl get statefulset celeborn-worker -n celeborn -o jsonpath='{.spec.replicas}')
+for i in $(seq 0 $((REPLICAS - 1))); do
+ echo "Worker $i:"; kubectl exec -n celeborn "celeborn-worker-$i" -- df -h | grep mnt
+done
 
-# Graceful shutdown events
-"Graceful shutdown started"
-"Graceful shutdown completed"
 
-# Disk space warnings
-"Disk usage exceeds threshold"
-"No space left on device"
-
-# Replication failures
-"Failed to replicate partition"
-"Replica worker unavailable"
-
-# Client errors
-"FetchFailed"
-"PushFailed"
-"Connection refused"
+# Check for running applications before any cleanup action
+kubectl port-forward -n celeborn svc/celeborn-master-svc 9098:9098 &
+curl -s http://localhost:9098/api/v1/applications | \
+ jq '[.applications[] | select(.status=="RUNNING")] | length'
 ```
 
-**Useful Kibana Queries:**
 
+Celeborn cleanup is application-driven — the master coordinates worker cleanup when applications complete. There is no manual GC trigger API.
+
+
+**Remediation in order:**
+1. Wait for in-flight applications to complete (master will trigger cleanup automatically)
+2. [Resize EBS volumes online](#storage-vertical-scaling)
+3. Enable `celeborn.worker.graceful.shutdown.enabled: true` (reduces orphaned data accumulation)
+
+
+:::danger Manual shuffle data deletion — only if confirmed zero running jobs:
+```bash
+kubectl exec -n celeborn celeborn-worker-0 -- rm -rf /mnt/disk1/celeborn-worker/shuffle_data/*
 ```
-# Find workers with registration issues
-kubernetes.namespace:"celeborn" AND message:"Failed to register"
-
-# Find disk space warnings
-kubernetes.namespace:"celeborn" AND message:"Disk usage exceeds"
-
-# Find replication failures
-kubernetes.namespace:"celeborn" AND message:"Failed to replicate"
-
-# Find client fetch failures
-kubernetes.namespace:"spark-team-a" AND message:"FetchFailed"
-```
-
-## Production Readiness Checklist
-
-Before deploying Celeborn to production or performing major maintenance, verify this checklist:
-
-### Pre-Deployment Checklist
-
-**Infrastructure:**
-- [ ] EKS cluster version is supported (1.28+)
-- [ ] Karpenter installed and configured for Celeborn NodePool
-- [ ] Storage provisioned (EBS gp3 or instance stores)
-- [ ] Network bandwidth sufficient for workload (see capacity planning)
-- [ ] Security groups allow traffic between Spark and Celeborn namespaces
-
-**Celeborn Configuration:**
-- [ ] Fixed ports configured (rpc:9091, fetch:9092, push:9093, replicate:9094)
-- [ ] Graceful shutdown enabled (`celeborn.worker.graceful.shutdown.enabled: true`)
-- [ ] Network binding set (`celeborn.network.bind.preferIpAddress: "false"`)
-- [ ] Master heartbeat timeout increased (`celeborn.master.heartbeat.worker.timeout: 180s`)
-- [ ] Storage directories configured with correct capacity
-- [ ] Master HA configured (3+ masters)
-
-**Client Configuration (All Spark Jobs):**
-- [ ] Replication enabled (`spark.celeborn.client.push.replicate.enabled: true`)
-- [ ] Retry configuration set (`maxRetriesForEachReplica: 5`, `retryWait: 15s`)
-- [ ] Local shuffle reader disabled (`spark.sql.adaptive.localShuffleReader.enabled: false`)
-- [ ] Master endpoints include all masters (comma-separated)
-- [ ] Network timeouts generous (`spark.network.timeout: 2000s`)
-
-**Monitoring:**
-- [ ] Prometheus scraping Celeborn metrics
-- [ ] Grafana dashboards imported and customized
-- [ ] Critical alerts configured (worker availability, disk space, master health)
-- [ ] Log aggregation configured (Fluent Bit → OpenSearch/Elasticsearch)
-- [ ] On-call rotation defined for Celeborn alerts
-
-**Testing:**
-- [ ] Smoke test completed (simple Spark job with shuffle)
-- [ ] Load test completed (TPC-DS or production-like workload)
-- [ ] Rolling restart tested in staging environment
-- [ ] Failover tested (kill master pod, verify client failover)
-- [ ] Disk space exhaustion tested (verify GC cleanup works)
-
-### Pre-Maintenance Checklist
-
-Before performing rolling restarts or upgrades:
-
-**Preparation:**
-- [ ] Maintenance window scheduled and communicated
-- [ ] Backup of current Helm values and configurations
-- [ ] Rollback plan documented
-- [ ] Monitoring dashboards open and ready
-- [ ] On-call engineer available during maintenance
-
-**Validation:**
-- [ ] All prerequisites verified (see "Prerequisites Checklist" in Rolling Restart section)
-- [ ] No active critical Spark jobs (or jobs configured for restarts)
-- [ ] Worker count matches expected (`kubectl get pods -n celeborn`)
-- [ ] All workers registered with master (check master API)
-- [ ] Disk space below 70% on all workers
-- [ ] No existing alerts firing
-
-**Execution:**
-- [ ] Start with canary phase (5% of workers)
-- [ ] Monitor for 10-15 minutes after canary
-- [ ] Proceed with progressive rollout if canary successful
-- [ ] Monitor metrics continuously during rollout
-- [ ] Document any issues encountered
-
-**Post-Maintenance:**
-- [ ] All workers registered and healthy
-- [ ] Worker count matches expected
-- [ ] No alerts firing
-- [ ] Smoke test passed (run simple Spark job)
-- [ ] Metrics returned to baseline
-- [ ] Maintenance report documented
-
-:::tip Maintenance Window Planning
-For 200-worker clusters:
-- **Canary phase:** 1 hour (10 workers + monitoring)
-- **Progressive rollout:** 6-8 hours (190 workers at 2-3 min each)
-- **Validation:** 1 hour (smoke tests, metric validation)
-- **Total:** 8-10 hours
-
-Schedule maintenance during lowest traffic periods (weekends, holidays) and ensure adequate staffing for the entire window.
+Data loss is permanent. This is a last resort.
 :::
 
-## Summary
 
-Operating Apache Celeborn at scale requires careful planning, robust monitoring, and disciplined operational procedures. Key takeaways:
+### High retry rates (no restarts)
 
-1. **Configuration is Critical:** Fixed ports, graceful shutdown, replication, and retry settings are non-negotiable for zero-downtime operations.
 
-2. **Capacity Planning Matters:** Size workers based on shuffle volume, network bandwidth, and concurrency requirements. Plan for 30-50% headroom.
+| Cause | Diagnosis | Fix |
+|-------|-----------|-----|
+| Network saturation | Check per-worker network metrics | Scale out workers, use higher-bandwidth instances |
+| Worker overload | High CPU + thread pool queue depth | Increase fetch/push io.threads; scale out |
+| Client retry too short | Retries exhausting on slow responses | Increase `maxRetriesForEachReplica`, `retryWait` |
 
-3. **Monitoring is Essential:** Implement comprehensive metrics, alerting, and log aggregation before going to production.
 
-4. **Rolling Restarts Work:** With proper configuration, Celeborn supports zero-downtime rolling restarts for maintenance and upgrades.
+### Master failover not working
 
-5. **Test Everything:** Validate rolling restarts, failover, and disk exhaustion scenarios in staging before production deployment.
 
-6. **Scale Gradually:** For 200+ node clusters, deploy and restart in phases. Validate each phase before proceeding.
+```bash
+# Verify all 3 endpoints are configured in Spark jobs
+kubectl logs <driver-pod> -n <spark-namespace> | grep "master.endpoints"
 
-7. **Document Procedures:** Maintain runbooks for common scenarios (rolling restart, disk cleanup, failover, scaling).
 
-For questions or issues, refer to the [Apache Celeborn documentation](https://celeborn.apache.org/docs/latest/) or engage with the community on the [Celeborn mailing list](https://celeborn.apache.org/community/).
+# Test each master from Spark namespace
+for i in {0..2}; do
+ kubectl exec -n <spark-namespace> <executor-pod> -- \
+   curl -v "celeborn-master-$i.celeborn-master-svc.celeborn.svc.cluster.local:9097"
+done
+```
+
+
+---
+
+
+For reference: [Apache Celeborn docs](https://celeborn.apache.org/docs/latest/) · [Cluster planning guide](https://celeborn.apache.org/docs/latest/deployment/cluster_planning/) · [Community](https://celeborn.apache.org/community/)

@@ -38,23 +38,23 @@ echo ""
 # Restart pods in reverse order (highest ordinal first)
 for ((i=$REPLICAS-1; i>=0; i--)); do
   POD_NAME="${STATEFULSET}-${i}"
-  
+
   echo "[$((REPLICAS-i))/$REPLICAS] Restarting $POD_NAME..."
-  
+
   # Delete the pod
   kubectl delete pod $POD_NAME -n $NAMESPACE --wait=false
-  
+
   # Wait for pod to be recreated and become Ready
   echo "  Waiting for $POD_NAME to be Ready..."
   kubectl wait pod/$POD_NAME -n $NAMESPACE --for=condition=Ready --timeout=300s
-  
+
   if [ $? -eq 0 ]; then
     echo "  ✓ $POD_NAME is Ready"
   else
     echo "  ✗ $POD_NAME failed to become Ready within timeout"
     exit 1
   fi
-  
+
   # Add delay before next restart (skip for last pod)
   if [ $i -gt 0 ]; then
     echo "  Waiting ${DELAY_SECONDS}s before next restart..."

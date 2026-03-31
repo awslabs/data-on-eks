@@ -19,10 +19,12 @@ celeborn:
   # capacity set to 900Gi (not 700Gi) to leave ~10% headroom on 1000Gi PVC for FS overhead.
   celeborn.worker.storage.dirs: /mnt/disk1:disktype=SSD:capacity=900Gi,/mnt/disk2:disktype=SSD:capacity=900Gi,/mnt/disk3:disktype=SSD:capacity=900Gi,/mnt/disk4:disktype=SSD:capacity=900Gi
 
-  # FIX (from original): celeborn.storage.availableTypes defaults to HDD which covers SSD too
-  # when using local disks. Only required when using HDFS/S3. Setting SSD explicitly
-  # is documented as valid and ensures the master slot assignment treats these as SSD class.
-  celeborn.storage.availableTypes: SSD
+  # Use both MEMORY and SSD for tiered storage - memory for hot data, SSD for overflow
+  # This maximizes resource utilization of worker memory allocation
+  celeborn.storage.availableTypes: MEMORY,SSD
+
+  # Eviction policy - when memory fills, evict to SSD
+  celeborn.worker.storage.storagePolicy.evictPolicy: LRU
 
   # --- Performance tuning (r8g.8xlarge: 32 vCPU, 256 GB) ---
   # These are unchanged from your original — values are appropriate for this instance type.
@@ -43,6 +45,12 @@ celeborn:
   celeborn.worker.graceful.shutdown.checkSlotsFinished.timeout: "480s"   # default: 480s
   celeborn.worker.graceful.shutdown.partitionSorter.shutdownTimeout: "120s"  # default: 120s
   celeborn.worker.graceful.shutdown.timeout: "600s"                      # default: 600s
+
+  # RocksDB path for graceful shutdown metadata. Uses node root filesystem (not EBS PVC).
+  # Default is /tmp/recover which gets cleared on pod restart.
+  # Using /var/celeborn/rocksdb on the node's root volume ensures metadata survives pod restarts
+  # while avoiding unnecessary EBS storage costs for small metadata files.
+  celeborn.worker.graceful.shutdown.recoverPath: "/var/celeborn/rocksdb"
 
   # --- Fixed ports for rolling restarts with graceful shutdown ---
   # Source: https://celeborn.apache.org/docs/latest/configuration/
@@ -108,7 +116,7 @@ worker:
   replicas: 6
   # Celeborn Helm chart doesn't support podLabels. Use kubectl patch as a workaround.
   # YuniKorn requires this label to route pods to a specific queue.
-  # podLabels: 
+  # podLabels:
   #   yunikorn.apache.org/queue: root.spark.spark-team-a
 
   nodeSelector:
@@ -194,4 +202,3 @@ worker:
       mountPath: /mnt/disk4
 
   volumes: {}
-
