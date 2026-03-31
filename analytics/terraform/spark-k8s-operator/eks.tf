@@ -201,6 +201,8 @@ resource "kubectl_manifest" "auto_mode_nodeclass" {
   for_each = { for idx, manifest in local.auto_mode_nodeclass_manifests : idx => manifest }
 
   yaml_body = yamlencode(each.value)
+  wait      = true
+
   # ensure Node role has policies attached to pull images
   depends_on = [aws_iam_role_policy_attachment.eks_worker_node_policy, aws_iam_role_policy_attachment.ecr_pull_policy]
 }
@@ -210,6 +212,8 @@ resource "kubectl_manifest" "auto_mode_nodepools" {
   for_each = local.auto_mode_nodepool_manifests
 
   yaml_body = each.value
+  wait      = true
+  
   # ensure Node role has policies attached to pull images
   depends_on = [aws_iam_role_policy_attachment.eks_worker_node_policy, aws_iam_role_policy_attachment.ecr_pull_policy]
 }
