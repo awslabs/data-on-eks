@@ -1,3 +1,6 @@
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
+
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -118,6 +121,9 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
   volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
     - name: spark-s3-mount
       persistentVolumeClaim:
         claimName: spark-s3-mount-nvme-pvc
@@ -127,6 +133,8 @@ spec:
       # runAsGroup: 2000
       fsGroup: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - mountPath: "/data1"
         name: "spark-s3-mount"
     initContainers:
@@ -151,6 +159,8 @@ spec:
       # runAsGroup: 2000
       fsGroup: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - mountPath: "/data1"
         name: "spark-s3-mount"
     initContainers:
