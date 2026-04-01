@@ -81,6 +81,17 @@ if [ ${#targets[@]} -gt 0 ]; then
 fi
 
 
+## Destroy EKS resources before VPC to ensure NAT gateway and VPC endpoints
+## remain available while nodes drain
+echo "Destroying EKS resources first (preserving VPC for pod cleanup)..."
+destroy_output=$($TERRAFORM_COMMAND -var="region=$REGION" -target=module.eks 2>&1 | tee /dev/tty)
+if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
+  echo "SUCCESS: EKS resources destroyed"
+else
+  echo "FAILED: EKS destroy failed"
+  exit 1
+fi
+
 ## Final destroy to catch any remaining resources
 echo "Destroying remaining resources..."
 destroy_output=$($TERRAFORM_COMMAND -var="region=$REGION" 2>&1 | tee /dev/tty)
