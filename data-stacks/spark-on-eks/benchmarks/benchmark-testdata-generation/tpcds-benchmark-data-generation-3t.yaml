@@ -1,6 +1,8 @@
 # NOTE: This example requires the following prerequisites before executing the jobs
 # 1. Ensure spark-team-a name space exists
 # 2. replace `<S3_BUCKET>`  with your bucket name
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
 
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -118,6 +120,8 @@ spec:
     securityContext:
       runAsUser: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
     - name: spark-local-dir-1
       mountPath: /data1
     env:
@@ -149,6 +153,8 @@ spec:
     securityContext:
       runAsUser: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
     - name: spark-local-dir-1
       mountPath: /data1
     initContainers:
@@ -170,6 +176,9 @@ spec:
       karpenter.k8s.aws/instance-family: "c7g"
       karpenter.k8s.aws/instance-size: "8xlarge"
   volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   - name: spark-local-dir-1
     hostPath:
       path: "/mnt/k8s-disks/0"

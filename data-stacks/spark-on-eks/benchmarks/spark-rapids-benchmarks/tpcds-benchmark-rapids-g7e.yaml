@@ -14,6 +14,8 @@
 #
 # Deploy:
 # envsubst < tpcds-benchmark-rapids-g7e.yaml | kubectl apply -f -
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -50,6 +52,9 @@ spec:
   restartPolicy:
     type: Never
   volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
     - name: spark-local-dir-1
       hostPath:
         path: "/mnt/k8s-disks/0"
@@ -62,6 +67,8 @@ spec:
     securityContext:
       runAsUser: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - name: spark-local-dir-1
         mountPath: /data1
     initContainers:
@@ -89,6 +96,8 @@ spec:
     securityContext:
       runAsUser: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - name: spark-local-dir-1
         mountPath: /data1
     initContainers:
