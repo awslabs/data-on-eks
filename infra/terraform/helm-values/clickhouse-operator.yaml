@@ -1,5 +1,6 @@
 watchNamespaces:
   - clickhouse
+  - logging
 
 manager:
   nodeSelector:

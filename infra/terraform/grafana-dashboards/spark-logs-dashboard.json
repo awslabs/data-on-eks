@@ -1,0 +1,122 @@
+{
+  "title": "Spark Application Logs",
+  "uid": "data-on-eks-spark-logs",
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "search",
+        "type": "textbox",
+        "label": "Search messages",
+        "current": { "value": "" }
+      },
+      {
+        "name": "level",
+        "type": "query",
+        "label": "Level",
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-observability" },
+        "query": "SELECT DISTINCT level FROM app_logs.spark ORDER BY level",
+        "includeAll": true,
+        "allValue": "'ERROR','WARN','INFO','DEBUG','TRACE','FATAL'",
+        "multi": true,
+        "current": { "text": ["ERROR", "WARN"], "value": ["ERROR", "WARN"] },
+        "refresh": 2
+      },
+      {
+        "name": "spark_filter",
+        "type": "adhoc",
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-observability" },
+        "defaultKeys": [
+          { "text": "namespace", "value": "namespace" },
+          { "text": "app", "value": "app" },
+          { "text": "role", "value": "role" },
+          { "text": "node_name", "value": "node_name" },
+          { "text": "pod_name", "value": "pod_name" },
+          { "text": "container_name", "value": "container_name" }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Log Rate by Level",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-observability" },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfMinute(timestamp) AS time, level, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND level IN (${level:sqlstring}) GROUP BY time, level ORDER BY time",
+          "format": 0,
+          "refId": "A",
+          "meta": { "database": "app_logs", "table": "spark" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "ERROR" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "WARN" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "INFO" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "Logs by Application",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-observability" },
+      "targets": [
+        {
+          "rawSql": "SELECT app, count() AS logs FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND level IN (${level:sqlstring}) GROUP BY app ORDER BY logs DESC LIMIT 20",
+          "format": 1,
+          "refId": "A",
+          "meta": { "database": "app_logs", "table": "spark" }
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right" },
+        "reduceOptions": { "values": true, "calcs": [] },
+        "pieType": "pie"
+      },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "app" },
+            "properties": [{ "id": "custom.hideFrom", "value": { "legend": false, "tooltip": false, "viz": true } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "Spark Logs",
+      "type": "logs",
+      "gridPos": { "h": 20, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-observability" },
+      "targets": [
+        {
+          "rawSql": "SELECT timestamp, message AS body, level, namespace, app, role, pod_name, container_name, node_name, toString(log) AS log FROM app_logs.spark WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND level IN (${level:sqlstring}) AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') ORDER BY timestamp DESC LIMIT 500",
+          "format": 2,
+          "refId": "A",
+          "meta": { "database": "app_logs", "table": "spark" }
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}

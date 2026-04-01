@@ -1,0 +1,90 @@
+kind: Deployment
+replicaCount: 1
+
+env:
+  - name: CLICKHOUSE_USER
+    valueFrom:
+      secretKeyRef:
+        name: fluent-bit-clickhouse-credentials
+        key: username
+  - name: CLICKHOUSE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: fluent-bit-clickhouse-credentials
+        key: password
+
+rbac:
+  eventsAccess: true
+
+config:
+  inputs: |
+    [INPUT]
+        Name         kubernetes_events
+        Tag          kube_events.*
+
+  filters: |
+    [FILTER]
+        Name         nest
+        Match        kube_events.*
+        Operation    lift
+        Nested_under involvedObject
+        Add_prefix   involvedObject_
+
+    [FILTER]
+        Name         nest
+        Match        kube_events.*
+        Operation    lift
+        Nested_under source
+        Add_prefix   source_
+
+    [FILTER]
+        Name         nest
+        Match        kube_events.*
+        Operation    lift
+        Nested_under metadata
+        Add_prefix   metadata_
+
+    [FILTER]
+        Name      modify
+        Match     kube_events.*
+        Condition Key_does_not_exist source_host
+        Add       source_host ""
+
+    [FILTER]
+        Name      modify
+        Match     kube_events.*
+        Rename    metadata_namespace      namespace
+        Rename    involvedObject_kind     object_kind
+        Rename    involvedObject_name     object_name
+        Rename    involvedObject_apiVersion object_api_version
+        Rename    source_component        source_component
+        Rename    source_host             source_host
+        Rename    reportingComponent      reporting_component
+        Rename    reportingInstance       reporting_instance
+        Remove    metadata_name
+        Remove    metadata_uid
+        Remove    metadata_resourceVersion
+        Remove    metadata_creationTimestamp
+        Remove    metadata_managedFields
+        Remove    involvedObject_resourceVersion
+        Remove    involvedObject_uid
+        Remove    involvedObject_fieldPath
+        Remove    involvedObject_labels
+        Remove    involvedObject_annotations
+        Remove    eventTime
+        Remove    metadata
+        Remove    involvedObject
+        Remove    source
+
+  outputs: |
+    [OUTPUT]
+        Name         http
+        Match        kube_events.*
+        Host         ${clickhouse_host}
+        Port         ${clickhouse_port}
+        URI          /?query=INSERT+INTO+${clickhouse_database}.events+FORMAT+JSONEachRow&input_format_skip_unknown_fields=1
+        Format       json_stream
+        json_date_format iso8601
+        Header       X-ClickHouse-User $${CLICKHOUSE_USER}
+        Header       X-ClickHouse-Key  $${CLICKHOUSE_PASSWORD}
+        tls          ${clickhouse_tls}

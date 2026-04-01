@@ -131,6 +131,27 @@ grafana:
     existingSecret: "grafana-admin-secret"
     userKey: admin-user
     passwordKey: admin-password
+  plugins:
+    - grafana-clickhouse-datasource
+  additionalDataSources:
+    - name: ClickHouse Observability
+      type: grafana-clickhouse-datasource
+      uid: clickhouse-observability
+      access: proxy
+      jsonData:
+        host: event-store-clickhouse-headless.logging.svc.cluster.local
+        port: 8123
+        protocol: http
+        defaultDatabase: k8s_events
+        username: default
+        logs:
+          defaultDatabase: app_logs
+          defaultTable: spark
+          timeColumn: timestamp
+          levelColumn: level
+          messageColumn: message
+      secureJsonData:
+        password: ${clickhouse_password}
   defaultDashboardsEnabled: true
   dashboardProviders:
     dashboardproviders.yaml:
@@ -158,3 +179,7 @@ grafana:
       # Tracks API concurrency seats, pod scheduling rate, etcd size, and Spark job metrics
       eks-pcp-spark-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/eks-pcp-benchmarks/infra/terraform/grafana-dashboards/eks-pcp-spark-dashboard.json
+      k8s-events-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/tmp-gitops/infra/terraform/grafana-dashboards/k8s-events-dashboard.json
+      spark-logs-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/tmp-gitops/infra/terraform/grafana-dashboards/spark-logs-dashboard.json
