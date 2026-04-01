@@ -18,28 +18,28 @@ yunikornDefaults:
               - name: default
                 resources:
                   guaranteed:
-                    memory: 500G
-                    vcore: 50
+                    memory: 5000G
+                    vcore: 500
                   max:
-                    memory: 1000G
-                    vcore: 100
+                    memory: 50000G
+                    vcore: 5000
               - name: spark
                 resources:
                   guaranteed:
-                    memory: 4000G
-                    vcore: 400
+                    memory: 10000G
+                    vcore: 1000
                   max:
-                    memory: 160000G
-                    vcore: 4000
+                    memory: 1100000G
+                    vcore: 150000
                 queues:
                   - name: spark-team-a
                     resources:
                       guaranteed:
-                        memory: 1000G
-                        vcore: 100
+                        memory: 5000G
+                        vcore: 500
                       max:
-                        memory: 20000G
-                        vcore: 1000
+                        memory: 1100000G
+                        vcore: 150000
                   - name: spark-team-b
                     resources:
                       guaranteed:
