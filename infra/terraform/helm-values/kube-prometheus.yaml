@@ -178,8 +178,8 @@ grafana:
       # EKS PCP Control Plane monitoring dashboard for Spark/EMR benchmarks
       # Tracks API concurrency seats, pod scheduling rate, etcd size, and Spark job metrics
       eks-pcp-spark-dashboard:
-        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/eks-pcp-benchmarks/infra/terraform/grafana-dashboards/eks-pcp-spark-dashboard.json
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/eks-pcp-spark-dashboard.json
       k8s-events-dashboard:
-        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/tmp-gitops/infra/terraform/grafana-dashboards/k8s-events-dashboard.json
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/k8s-events-dashboard.json
       spark-logs-dashboard:
-        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/tmp-gitops/infra/terraform/grafana-dashboards/spark-logs-dashboard.json
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/spark-logs-dashboard.json

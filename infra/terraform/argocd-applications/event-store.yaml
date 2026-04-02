@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/awslabs/data-on-eks
     path: infra/terraform/manifests/event-store
-    targetRevision: tmp-gitops
+    targetRevision: main
     helm:
       valuesObject:
         s3_endpoint: ${clickhouse_s3_endpoint}
