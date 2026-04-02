@@ -1,27 +1,23 @@
 # ============================================================
 # TPC-DS Parquet → Iceberg Conversion (scale-agnostic template)
 #
-# Reads TPC-DS Parquet data from S3 and writes all 24 tables as
+# Reads TPC-DS Parquet data from S3 and writes TPC-DS tables as
 # Apache Iceberg tables registered in AWS Glue Data Catalog.
 #
 # Required environment variables (set before applying):
 #   S3_BUCKET      — S3 bucket name (no s3:// prefix)
-#   AWS_ACCOUNT_ID — AWS account ID (used for private ECR image)
 #   AWS_REGION     — AWS region (e.g. us-west-2)
 #   SCALE          — Scale factor: 1, 3, or 10
 #
 # Scale-derived paths (auto-resolved from SCALE):
-#   Source Parquet  : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB/
-#   Iceberg data    : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/data/
-#   Iceberg metadata: s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/metadata/
-#   Glue database   : tpcds_${SCALE}tb
+#   Source Parquet   : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB/
+#   Iceberg warehouse: s3://${S3_BUCKET}/tpcds-iceberg/                   ← shared root for all scales
+#   Iceberg database : s3://${S3_BUCKET}/tpcds-iceberg/tpcds_${SCALE}tb.db/
+#   Iceberg table    : s3://${S3_BUCKET}/tpcds-iceberg/tpcds_${SCALE}tb.db/<table>/{metadata,data}/
+#   Glue database    : tpcds_${SCALE}tb
 #
 # Usage:
-#   export S3_BUCKET=my-bucket AWS_ACCOUNT_ID=123456789012 AWS_REGION=us-west-2 SCALE=1
-#   envsubst < tpcds-parquet-to-iceberg.yaml | kubectl apply -f -
-#
-#   # For 3TB:
-#   export SCALE=3
+#   export S3_BUCKET=my-bucket AWS_REGION=us-west-2 SCALE=3
 #   envsubst < tpcds-parquet-to-iceberg.yaml | kubectl apply -f -
 #
 # Monitor:
@@ -38,13 +34,16 @@ kind: SparkApplication
 metadata:
   name: tpcds-parquet-to-iceberg-${SCALE}tb
   namespace: spark-team-a
+
 spec:
   type: Python
+  pythonVersion: "3"
   mode: cluster
   image: "public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4"
   imagePullPolicy: Always
   sparkVersion: "3.5.8"
-  mainApplicationFile: "local:///opt/scripts/convert_parquet_to_iceberg.py"
+  mainApplicationFile: "s3a://${S3_BUCKET}/scripts/convert_parquet_to_iceberg.py"
+
   arguments:
     - "--src-bucket"
     - "${S3_BUCKET}"
@@ -53,9 +52,10 @@ spec:
     - "--glue-db"
     - "tpcds_${SCALE}tb"
     - "--iceberg-prefix"
-    - "TPCDS-TEST-${SCALE}TB-ICEBERG"
+    - "tpcds-iceberg"
     - "--region"
     - "${AWS_REGION}"
+    - "--overwrite"
   restartPolicy:
     type: Never
   driver:
@@ -76,25 +76,26 @@ spec:
       karpenter.k8s.aws/instance-family: r8gd
       karpenter.k8s.aws/instance-size: 12xlarge
     env:
-    - name: JAVA_HOME
-      value: "/opt/java/openjdk"
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
     volumeMounts:
-    - name: spark-local-dir-1
-      mountPath: /data1
-    initContainers:
-    - name: volume-permission
-      image: public.ecr.aws/docker/library/busybox
-      command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
-      securityContext:
-        runAsUser: 0
-      volumeMounts:
       - name: spark-local-dir-1
         mountPath: /data1
+    initContainers:
+      - name: volume-permission
+        image: public.ecr.aws/docker/library/busybox
+        command: ["sh", "-c", "mkdir -p /data1 /data1; chown -R 185:185 /data1"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+
   executor:
     cores: 8
     memory: "28g"
     memoryOverhead: "12g"
-    instances: 20
+    instances: 10
     serviceAccount: spark-team-a
     securityContext:
       runAsUser: 185
@@ -109,44 +110,43 @@ spec:
       karpenter.k8s.aws/instance-family: r8gd
       karpenter.k8s.aws/instance-size: 12xlarge
     env:
-    - name: JAVA_HOME
-      value: "/opt/java/openjdk"
+      - name: JAVA_HOME
+        value: "/opt/java/openjdk"
     volumeMounts:
-    - name: spark-local-dir-1
-      mountPath: /data1
-    initContainers:
-    - name: volume-permission
-      image: public.ecr.aws/docker/library/busybox
-      command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
-      securityContext:
-        runAsUser: 0
-      volumeMounts:
       - name: spark-local-dir-1
         mountPath: /data1
+    initContainers:
+      - name: volume-permission
+        image: public.ecr.aws/docker/library/busybox
+        command: ["sh", "-c", "mkdir -p /data1 /data1; chown -R 185:185 /data1"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - name: spark-local-dir-1
+            mountPath: /data1
+
   volumes:
-  - name: spark-local-dir-1
-    hostPath:
-      path: "/mnt/k8s-disks/0"
-      type: DirectoryOrCreate
+    - name: spark-local-dir-1
+      hostPath:
+        path: "/mnt/k8s-disks/0"
+        type: DirectoryOrCreate
+
   sparkConf:
     # ── Iceberg + Glue catalog ───────────────────────────────────────────────
     "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
     "spark.sql.catalog.glue_catalog": "org.apache.iceberg.spark.SparkCatalog"
     "spark.sql.catalog.glue_catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
-    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/metadata"
     "spark.sql.catalog.glue_catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
+    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/tpcds-iceberg"
     "spark.sql.catalog.glue_catalog.glue.region": "${AWS_REGION}"
-    "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog"
-    "spark.sql.catalog.spark_catalog.type": "glue"
     "spark.sql.statistics.fallBackToHdfs": "false"
 
-    # ── S3A / AWS SDK v2 (EKS Pod Identity) ─────────────────────────────────
+    # ── S3A / AWS SDK v2 (EKS Pod Identity / IRSA-style runtime creds) ──────
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3a.endpoint.region": "${AWS_REGION}"
     "spark.hadoop.fs.s3a.fast.upload": "true"
-    "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
     "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
     "spark.hadoop.fs.s3a.multipart.size": "128M"
@@ -156,7 +156,7 @@ spec:
     "spark.hadoop.fs.s3a.multipart.purge": "true"
     "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
 
-    # ── AQE ─────────────────────────────────────────────────────────────────
+    # ── AQE / shuffle tuning for conversion workload ─────────────────────────
     "spark.sql.adaptive.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
     "spark.sql.adaptive.skewJoin.enabled": "true"
@@ -167,7 +167,7 @@ spec:
     # Large Iceberg writes — no per-file record cap (let Iceberg manage file sizing)
     "spark.sql.files.maxRecordsPerFile": "0"
 
-    # ── Event logs ──────────────────────────────────────────────────────────
+    # ── Event logs ────────────────────────────────────────────────────────────
     "spark.eventLog.enabled": "true"
     "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
     "spark.eventLog.rolling.enabled": "true"
@@ -179,7 +179,7 @@ spec:
     "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
     "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
 
-    # ── Stability ────────────────────────────────────────────────────────────
+    # ── Stability ─────────────────────────────────────────────────────────────
     "spark.network.timeout": "2000s"
     "spark.executor.heartbeatInterval": "300s"
     "spark.kubernetes.executor.podNamePrefix": "tpcds-parquet-to-iceberg-${SCALE}tb"

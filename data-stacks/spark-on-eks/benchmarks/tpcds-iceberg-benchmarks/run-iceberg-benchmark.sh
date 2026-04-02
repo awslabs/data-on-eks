@@ -148,7 +148,7 @@ fi
 step "Section 3: Parquet → Iceberg conversion"
 
 if $SKIP_CONVERSION; then
-  warn "Skipping conversion (--skip-conversion). Assuming Glue DB tpcds_1tb exists."
+  warn "Skipping conversion (--skip-conversion). Assuming Glue DB tpcds_${SCALE}tb exists."
 else
   CONV_APP="tpcds-parquet-to-iceberg-${SCALE}tb"
 
@@ -156,7 +156,7 @@ else
   kubectl delete sparkapplication "${CONV_APP}" -n "${NAMESPACE}" --ignore-not-found
 
   info "Submitting conversion job for ${SCALE_TB}..."
-  run "kubectl apply -f ${SCRIPT_DIR}/tpcds-parquet-to-iceberg-${SCALE}tb.yaml"
+  run "envsubst < ${SCRIPT_DIR}/tpcds-parquet-to-iceberg.yaml | kubectl apply -f -"
 
   info "Waiting for conversion job to complete (can take 10 min for 1TB, 25 min for 3TB)..."
   _poll_spark_app() {

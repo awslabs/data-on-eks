@@ -1,32 +1,41 @@
 # ============================================================
-# TPC-DS v4 Benchmark — DataFusion Comet 0.14.0 + Apache Iceberg 1.10.1
+# TPC-DS v4 Benchmark — DataFusion Comet 0.14.0 on Parquet (no Iceberg)
 # Instance: r8gd.12xlarge (Graviton4, 48 vCPU, 384 GB RAM, NVMe)
-# scale: ${SCALE} TB   Iterations: 3
+# Scale: 3 TB   Iterations: 3
+#
+# Test 3 of 4 — isolates Comet benefit on raw Parquet, no Iceberg overhead.
+# Comparing against Test 1 shows pure Comet acceleration.
+# Comparing against Test 4 shows Iceberg overhead/benefit on top of Comet.
+#
+#   Test 1: Spark  + Parquet          (tpcds-benchmark-spark.yaml)        ← baseline
+#   Test 2: Spark  + Iceberg          (tpcds-benchmark-iceberg.yaml)
+#   Test 3: Comet  + Parquet          (this file)
+#   Test 4: Comet  + Iceberg          (tpcds-benchmark-iceberg-comet.yaml)
+#
+# Compute is identical across all four tests.
 #
 # Prerequisites:
-#   1. Iceberg conversion complete (tpcds-parquet-to-iceberg.yaml → COMPLETED)
-#   2. Glue DB tpcds_${SCALE}tb has all 24 TPC-DS tables (registered via RESTCatalog)
-#   3. Image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4
+#   1. TPC-DS 3TB Parquet data at s3://${S3_BUCKET}/TPCDS-TEST-3TB/
+#   2. Image: public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4
 #
 # S3 layout:
-#   Iceberg warehouse: s3://${S3_BUCKET}/tpcds-iceberg/                        ← shared root for all scales
-#   Iceberg database : s3://${S3_BUCKET}/tpcds-iceberg/tpcds_${SCALE}tb.db/
-#   Iceberg table    : s3://${S3_BUCKET}/tpcds-iceberg/tpcds_${SCALE}tb.db/<table>/{metadata,data}/
-#   Results          : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-RESULT-COMET-ICEBERG-R8G/
+#   Parquet source : s3://${S3_BUCKET}/TPCDS-TEST-3TB/
+#   Results        : s3://${S3_BUCKET}/TPCDS-TEST-3TB-RESULT-PARQUET-COMET-R8G/
 #
 # Usage:
-#   kubectl apply -f tpcds-benchmark-iceberg-comet.yaml
+#   kubectl apply -f tpcds-benchmark-parquet-comet.yaml
 #
 # Monitor:
-#   kubectl get sparkapplication -n spark-team-a tpcds-benchmark-iceberg-comet -w
-#   kubectl logs -n spark-team-a -l spark-role=driver --tail=50 -f
+#   kubectl get sparkapplication -n spark-team-a tpcds-benchmark-parquet-comet -w
+#   kubectl logs -n spark-team-a -l spark-role=driver,spark-app-name=tpcds-benchmark-parquet-comet --tail=50 -f
 # ============================================================
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: tpcds-benchmark-iceberg-comet
+  name: tpcds-benchmark-parquet-comet
   namespace: spark-team-a
+
 spec:
   type: Scala
   mode: cluster
@@ -35,31 +44,30 @@ spec:
   sparkVersion: "3.5.8"
   mainClass: com.k8s.spark.benchmark.BenchmarkSQL
   mainApplicationFile: "local:///opt/spark/jars/spark-k8s-benchmarks-assembly-1.0.0.jar"
+
   arguments:
-    # arg[0] tpcdsDataDir — Iceberg warehouse root (format=iceberg uses icebergDatabase instead)
-    - "s3a://${S3_BUCKET}/tpcds-iceberg"
+    # arg[0] tpcdsDataDir — root path of parquet data in S3
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-3TB"
     # arg[1] Results location
-    - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-RESULT-COMET-ICEBERG-R8G"
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-3TB-RESULT-PARQUET-COMET-R8G"
     # arg[2] Path to TPC-DS kit (dsdgen/dsqgen) in the image
     - "/opt/tpcds-kit/tools"
-    # arg[3] Data format — triggers Iceberg catalog path in BenchmarkSQL
-    - "iceberg"
+    # arg[3] Data format
+    - "parquet"
     # arg[4] Scale factor (GB)
-    - "${SCALE_FACTOR}"
+    - "3000"
     # arg[5] Iterations
     - "3"
-    # arg[6] optimizeQueries — enables CBO using Iceberg catalog statistics
+    # arg[6] optimizeQueries
     - "true"
-    # arg[7] DPP-sensitive queries — partition-aware queries that benefit most from
-    #         Iceberg catalog statistics enabling Dynamic Partition Pruning.
-    #         Change to "" to run all 99 queries.
+    # arg[7] Query filter — change to specific queries or leave empty for all 99
     - ""
     # arg[8] Set log level to WARN
     - "true"
-    # arg[9] icebergDatabase — Iceberg catalog.database for USE statement
-    - "glue_catalog.tpcds_${SCALE}tb"
+
   restartPolicy:
     type: Never
+
   driver:
     cores: 5
     memory: "20g"
@@ -103,6 +111,7 @@ spec:
             volumeMounts:
               - name: spark-local-dir-1
                 mountPath: /data1
+
   executor:
     cores: 5
     memory: "20g"
@@ -147,9 +156,9 @@ spec:
             volumeMounts:
               - name: spark-local-dir-1
                 mountPath: /data1
+
   sparkConf:
     # ── DataFusion Comet 0.14.0 ─────────────────────────────────────────────
-    # Ref: https://datafusion.apache.org/comet/user-guide/tuning.html
     "spark.plugins": "org.apache.spark.CometPlugin"
     "spark.comet.exec.enabled": "true"
     "spark.comet.exec.shuffle.enabled": "true"
@@ -160,24 +169,6 @@ spec:
     "spark.memory.offHeap.enabled": "true"
     "spark.memory.offHeap.size": "32g"
 
-    # ── Apache Iceberg 1.10.1 + Glue catalog ────────────────────────────────
-    # Using GlueCatalog (direct Glue API) — same catalog used for conversion.
-    # RESTCatalog (https://glue.*.amazonaws.com/iceberg) was attempted but the
-    # AWS Glue REST endpoint uses an older Iceberg version incompatible with
-    # Iceberg 1.10.1 metadata format (fails: "schemas must exist in format v2").
-    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
-    # Primary catalog — glue_catalog.tpcds_${SCALE}tb.<table>
-    "spark.sql.catalog.glue_catalog": "org.apache.iceberg.spark.SparkCatalog"
-    "spark.sql.catalog.glue_catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
-    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/tpcds-iceberg"
-    "spark.sql.catalog.glue_catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
-    "spark.sql.catalog.glue_catalog.glue.region": "${AWS_REGION}"
-    # SparkSessionCatalog v2 bridge — allows DPP to work with default catalog tables
-    "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog"
-    "spark.sql.catalog.spark_catalog.type": "glue"
-    # Use catalog statistics for partition pruning (disables HDFS fallback stats)
-    "spark.sql.statistics.fallBackToHdfs": "false"
-
     # ── AQE (Adaptive Query Execution) ──────────────────────────────────────
     "spark.sql.adaptive.enabled": "true"
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
@@ -185,12 +176,11 @@ spec:
     "spark.sql.adaptive.skewJoin.enabled": "true"
 
     # ── S3A / AWS SDK v2 (EKS Pod Identity) ─────────────────────────────────
-    "spark.hadoop.fs.s3a.endpoint.region": "${AWS_REGION}"
+    "spark.hadoop.fs.s3a.endpoint.region": "us-west-2"
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "spark.hadoop.fs.s3a.fast.upload": "true"
-    "spark.hadoop.fs.s3a.path.style.access": "true"
     "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
     "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
     "spark.hadoop.fs.s3a.multipart.size": "128M"
@@ -220,7 +210,7 @@ spec:
     "spark.kubernetes.submission.requestTimeout": "120000"
     "spark.kubernetes.driver.connectionTimeout": "120000"
     "spark.kubernetes.driver.requestTimeout": "120000"
-    "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-iceberg-comet"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-parquet-comet"
 
     # ── Shuffle tuning ───────────────────────────────────────────────────────
     "spark.shuffle.file.buffer": "1m"
