@@ -9,8 +9,8 @@
 #   3. Image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4
 #
 # S3 layout:
-#   Iceberg data     : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-DATA/
-#   Iceberg metadata : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-WH/
+#   Iceberg data     : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/data/
+#   Iceberg metadata : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/metadata/
 #   Results          : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-RESULT-COMET-ICEBERG-R8G/
 #
 # Usage:
@@ -29,7 +29,7 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4"
+  image: "public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4"
   imagePullPolicy: Always
   sparkVersion: "3.5.8"
   mainClass: com.k8s.spark.benchmark.BenchmarkSQL
@@ -37,7 +37,7 @@ spec:
   arguments:
     # arg[0] tpcdsDataDir — Iceberg data files root (used for TPCDSTables init;
     #         format=iceberg bypasses path-based table creation, uses icebergDatabase instead)
-    - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-DATA"
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/data"
     # arg[1] Results location
     - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-RESULT-COMET-ICEBERG-R8G"
     # arg[2] Path to TPC-DS kit (dsdgen/dsqgen) in the image
@@ -169,7 +169,7 @@ spec:
     # Primary catalog — glue_catalog.tpcds_${SCALE}tb.<table>
     "spark.sql.catalog.glue_catalog": "org.apache.iceberg.spark.SparkCatalog"
     "spark.sql.catalog.glue_catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
-    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-WH"
+    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/metadata"
     "spark.sql.catalog.glue_catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
     "spark.sql.catalog.glue_catalog.glue.region": "${AWS_REGION}"
     # SparkSessionCatalog v2 bridge — allows DPP to work with default catalog tables
