@@ -32,7 +32,7 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4"
+  image: "public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4"
   imagePullPolicy: Always
   sparkVersion: "3.5.8"
   mainClass: com.k8s.spark.benchmark.DataGeneration

@@ -12,8 +12,8 @@
 #
 # Scale-derived paths (auto-resolved from SCALE):
 #   Source Parquet  : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB/
-#   Iceberg data    : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-DATA/
-#   Iceberg metadata: s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-WH/
+#   Iceberg data    : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/data/
+#   Iceberg metadata: s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/metadata/
 #   Glue database   : tpcds_${SCALE}tb
 #
 # Usage:
@@ -41,7 +41,7 @@ metadata:
 spec:
   type: Python
   mode: cluster
-  image: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4"
+  image: "public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4"
   imagePullPolicy: Always
   sparkVersion: "3.5.8"
   mainApplicationFile: "local:///opt/scripts/convert_parquet_to_iceberg.py"
@@ -52,10 +52,8 @@ spec:
     - "TPCDS-TEST-${SCALE}TB"
     - "--glue-db"
     - "tpcds_${SCALE}tb"
-    - "--warehouse"
-    - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-WH"
-    - "--data-path"
-    - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-DATA"
+    - "--iceberg-prefix"
+    - "TPCDS-TEST-${SCALE}TB-ICEBERG"
     - "--region"
     - "${AWS_REGION}"
   restartPolicy:
@@ -135,7 +133,7 @@ spec:
     "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
     "spark.sql.catalog.glue_catalog": "org.apache.iceberg.spark.SparkCatalog"
     "spark.sql.catalog.glue_catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
-    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-WH"
+    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG/metadata"
     "spark.sql.catalog.glue_catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
     "spark.sql.catalog.glue_catalog.glue.region": "${AWS_REGION}"
     "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog"
@@ -165,7 +163,7 @@ spec:
     # shuffle.partitions: set high enough to avoid OOM on large fact tables;
     # AQE will auto-coalesce small partitions at runtime.
     # Rule of thumb: ~800 × SCALE (1TB→800, 3TB→2400, 10TB→8000)
-    "spark.sql.shuffle.partitions": "800"
+    "spark.sql.shuffle.partitions": "2400"
     # Large Iceberg writes — no per-file record cap (let Iceberg manage file sizing)
     "spark.sql.files.maxRecordsPerFile": "0"
 

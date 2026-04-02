@@ -13,20 +13,20 @@ Why Iceberg?
 
 Usage (via SparkApplication YAML — all args come from SparkApplication.spec.arguments):
   spark-submit convert_parquet_to_iceberg.py \\
-      --src-bucket  <S3_BUCKET>              \\
-      --src-prefix  TPCDS-TEST-3TB           \\
-      --glue-db     tpcds_3tb                \\
-      --warehouse   s3a://<S3_BUCKET>/TPCDS-TEST-3TB-ICEBERG \\
-      --region      us-west-2                \\
-      [--table      <single_table>]          # optional: convert one table only
+      --src-bucket      <S3_BUCKET>              \\
+      --src-prefix      TPCDS-TEST-3TB           \\
+      --glue-db         tpcds_3tb                \\
+      --iceberg-prefix  TPCDS-TEST-3TB-ICEBERG   \\
+      --region          us-west-2                \\
+      [--table          <single_table>]          # optional: convert one table only
 
-S3 layout (three dedicated prefixes — no cross-contamination between benchmark runs):
-  Parquet-only data : s3://<bucket>/TPCDS-TEST-{N}TB/{table}/           (--src-prefix)
-  Iceberg data files: s3://<bucket>/TPCDS-TEST-{N}TB-ICEBERG-DATA/{table}/ (--data-path)
-  Iceberg metadata  : s3://<bucket>/TPCDS-TEST-{N}TB-ICEBERG-WH/           (--warehouse)
+S3 layout (single Iceberg prefix with data/ and metadata/ subdirectories):
+  Parquet-only data : s3://<bucket>/TPCDS-TEST-{N}TB/{table}/                  (--src-prefix)
+  Iceberg data files: s3://<bucket>/TPCDS-TEST-{N}TB-ICEBERG/data/{table}/     (derived)
+  Iceberg metadata  : s3://<bucket>/TPCDS-TEST-{N}TB-ICEBERG/metadata/         (derived)
 
   To run at a different scale (3TB, 10TB), change --src-prefix, --glue-db,
-  --warehouse, and --data-path in the SparkApplication YAML — no image rebuild needed.
+  and --iceberg-prefix in the SparkApplication YAML — no image rebuild needed.
 
 The job is idempotent — it checks existing Glue tables and skips any already converted.
 
@@ -81,15 +81,14 @@ TPCDS_TABLES = [
 def parse_args():
     parser = argparse.ArgumentParser(description="Convert TPC-DS Parquet → Iceberg (Glue catalog)")
     # ── Scale-specific args — only these change per benchmark scale in the YAML ─
-    # Scale | --src-prefix         | --glue-db   | --warehouse                          | --data-path
-    # 1TB   | TPCDS-TEST-1TB       | tpcds_1tb   | s3a://<b>/TPCDS-TEST-1TB-ICEBERG-WH  | s3a://<b>/TPCDS-TEST-1TB-ICEBERG-DATA
-    # 3TB   | TPCDS-TEST-3TB       | tpcds_3tb   | s3a://<b>/TPCDS-TEST-3TB-ICEBERG-WH  | s3a://<b>/TPCDS-TEST-3TB-ICEBERG-DATA
-    # 10TB  | TPCDS-TEST-10TB      | tpcds_10tb  | s3a://<b>/TPCDS-TEST-10TB-ICEBERG-WH | s3a://<b>/TPCDS-TEST-10TB-ICEBERG-DATA
-    parser.add_argument("--src-bucket",  required=True,  help="Source S3 bucket name (no s3a:// prefix)")
-    parser.add_argument("--src-prefix",  required=True,  help="S3 prefix for source Parquet, e.g. TPCDS-TEST-3TB")
-    parser.add_argument("--glue-db",     required=True,  help="Target Glue database name, e.g. tpcds_3tb")
-    parser.add_argument("--warehouse",   required=True,  help="Iceberg metadata warehouse, e.g. s3a://<bucket>/TPCDS-TEST-3TB-ICEBERG-WH")
-    parser.add_argument("--data-path",   required=True,  help="Iceberg data file root, e.g. s3a://<bucket>/TPCDS-TEST-3TB-ICEBERG-DATA")
+    # Scale | --src-prefix         | --glue-db   | --iceberg-prefix
+    # 1TB   | TPCDS-TEST-1TB       | tpcds_1tb   | TPCDS-TEST-1TB-ICEBERG
+    # 3TB   | TPCDS-TEST-3TB       | tpcds_3tb   | TPCDS-TEST-3TB-ICEBERG
+    # 10TB  | TPCDS-TEST-10TB      | tpcds_10tb  | TPCDS-TEST-10TB-ICEBERG
+    parser.add_argument("--src-bucket",     required=True,  help="Source S3 bucket name (no s3a:// prefix)")
+    parser.add_argument("--src-prefix",     required=True,  help="S3 prefix for source Parquet, e.g. TPCDS-TEST-3TB")
+    parser.add_argument("--glue-db",        required=True,  help="Target Glue database name, e.g. tpcds_3tb")
+    parser.add_argument("--iceberg-prefix", required=True,  help="S3 prefix for Iceberg output, e.g. TPCDS-TEST-3TB-ICEBERG")
     # ── Fixed args ───────────────────────────────────────────────────────────────
     parser.add_argument("--region",      default="us-west-2",  help="AWS region for Glue")
     parser.add_argument("--table",       default=None,         help="Convert a single table only (optional)")
@@ -115,10 +114,10 @@ def convert_table(spark, table_name, partition_col, src_path, glue_db, data_path
     CTAS: read Parquet from src_path, write as partitioned Iceberg table in Glue.
     Uses CREATE OR REPLACE so re-running is safe (drops old Iceberg snapshot).
 
-    Three fully separate S3 prefixes (set via YAML args — no image rebuild needed):
-      src_path  → --src-prefix  (raw Parquet, read-only source)
-      data_path → --data-path   (Iceberg data files, e.g. TPCDS-TEST-3TB-ICEBERG-DATA)
-      warehouse → --warehouse   (Iceberg metadata/snapshots, e.g. TPCDS-TEST-3TB-ICEBERG-WH)
+    S3 layout (derived from --iceberg-prefix):
+      src_path  → --src-prefix           (raw Parquet, read-only source)
+      data_path → <iceberg-prefix>/data  (Iceberg data files)
+      warehouse → <iceberg-prefix>/metadata (Iceberg metadata/snapshots)
     """
     full_table = f"glue_catalog.{glue_db}.{table_name}"
 
@@ -152,6 +151,8 @@ def main():
     args = parse_args()
 
     src_base = f"s3a://{args.src_bucket}/{args.src_prefix}"
+    warehouse = f"s3a://{args.src_bucket}/{args.iceberg_prefix}/metadata"
+    data_path = f"s3a://{args.src_bucket}/{args.iceberg_prefix}/data"
 
     spark = (
         SparkSession.builder
@@ -163,7 +164,7 @@ def main():
                 "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.glue_catalog.catalog-impl",
                 "org.apache.iceberg.aws.glue.GlueCatalog")
-        .config("spark.sql.catalog.glue_catalog.warehouse", args.warehouse)
+        .config("spark.sql.catalog.glue_catalog.warehouse", warehouse)
         .config("spark.sql.catalog.glue_catalog.io-impl",
                 "org.apache.iceberg.aws.s3.S3FileIO")
         .config("spark.sql.catalog.glue_catalog.glue.region", args.region)
@@ -204,7 +205,7 @@ def main():
 
         src_path = f"{src_base}/{table_name}"
         try:
-            convert_table(spark, table_name, partition_col, src_path, args.glue_db, args.data_path)
+            convert_table(spark, table_name, partition_col, src_path, args.glue_db, data_path)
             converted += 1
         except Exception as exc:
             print(f"[fail] {table_name}: {exc}")
