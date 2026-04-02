@@ -1,0 +1,196 @@
+# ============================================================
+# DataFusion Comet + Apache Iceberg + TPC-DS v4.0 benchmark image
+# Target: AWS Graviton4 (r8g) — linux/arm64
+#
+# Bundles:
+#   - Spark 3.5.8 + Scala 2.12 + Java 17
+#   - DataFusion Comet 0.14.0
+#   - Apache Iceberg 1.10.1 (spark-runtime + aws-bundle)
+#   - Hadoop 3.4.3 + AWS SDK v2 (for S3A)
+#   - TPC-DS toolkit v4.0.0 (dsdgen/dsqgen)
+#   - spark-sql-perf (support-tpcds-v4.0 branch)
+#   - spark-k8s-benchmarks (KubedAI/spark-k8s-benchmarks)
+#   - Parquet-to-Iceberg conversion script (/opt/scripts/)
+#   - UID 185 non-root Spark user
+#
+# Purpose: Run TPC-DS v4 benchmarks with Iceberg tables to enable
+# Dynamic Partition Pruning (DPP) — addressing poor performance on
+# partition-sensitive queries (q14, q23, q24, q39, q47, q57) when
+# reading raw Parquet files without catalog statistics.
+# ============================================================
+# WARNING:
+# This Dockerfile is provided for sample and demonstration purposes only.
+# It is NOT intended for production use.
+# ============================================================
+
+# ============================================================
+### Stage 1 – Build spark-sql-perf (TPC-DS v4 support)
+# ============================================================
+FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS spark_sql_perf_builder
+ARG SCALA_VERSION=2.12.15
+ARG SPARK_VERSION=3.5.8
+ARG SBT_VERSION=1.9.7
+
+# Clone support-tpcds-v4.0 fork
+RUN git clone --depth 1 --branch support-iceberg-tpcds-v4.0 \
+      https://github.com/KubedAI/spark-sql-perf.git /build/spark-sql-perf
+WORKDIR /build/spark-sql-perf
+
+# Minimal plugin — only sbt-assembly needed
+RUN rm -f project/plugins.sbt && \
+    mkdir -p project && \
+    echo 'addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.2.0")' > project/plugins.sbt
+
+# Pin sbt version
+RUN echo "sbt.version=${SBT_VERSION}" > project/build.properties
+
+# Minimal build.sbt
+RUN rm -f build.sbt && \
+    cat > build.sbt <<SBT
+name := "spark-sql-perf"
+organization := "com.databricks"
+scalaVersion := "${SCALA_VERSION}"
+crossScalaVersions := Seq("${SCALA_VERSION}")
+
+val sparkVer = "${SPARK_VERSION}"
+
+libraryDependencies ++= Seq(
+  "org.apache.spark" %% "spark-sql"   % sparkVer % "provided",
+  "org.apache.spark" %% "spark-hive"  % sparkVer % "provided",
+  "org.apache.spark" %% "spark-mllib" % sparkVer % "provided",
+  "com.github.scopt" %% "scopt"       % "3.7.1",
+  "com.twitter"     %% "util-jvm"    % "6.45.0" % "provided",
+  "org.scalatest"   %% "scalatest"   % "3.0.5" % Test,
+  "org.yaml"        %  "snakeyaml"   % "1.23"
+)
+SBT
+
+# Use Maven Central only — avoids dead Ivy/Typesafe repos
+RUN mkdir -p ~/.sbt && \
+    cat > ~/.sbt/repositories <<'EOF'
+[repositories]
+local
+maven-central: https://repo1.maven.org/maven2/
+typesafe-ivy-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+EOF
+
+RUN sbt -Dsbt.override.build.repos=true -batch clean package
+
+# ============================================================
+### Stage 2 – Build spark-k8s-benchmarks
+# ============================================================
+FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS benchmark_builder
+ARG SCALA_VERSION=2.12.18
+ARG SPARK_VERSION=3.5.8
+ARG SBT_VERSION=1.9.9
+
+RUN git clone --depth 1 --branch support-iceberg-tpcds-v4.0 \
+      https://github.com/KubedAI/spark-k8s-benchmarks.git /build/spark-k8s-benchmarks
+WORKDIR /build/spark-k8s-benchmarks
+
+RUN mkdir -p lib
+COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar lib/
+
+RUN mkdir -p ~/.sbt && \
+    cat > ~/.sbt/repositories <<'EOF'
+[repositories]
+local
+maven-central: https://repo1.maven.org/maven2/
+typesafe-ivy-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+EOF
+
+RUN sbt -Dsbt.override.build.repos=true -batch clean assembly
+
+# ============================================================
+### Stage 3 – Runtime image (Graviton4 / ARM64)
+# ============================================================
+FROM apache/spark:3.5.8-scala2.12-java17-python3-ubuntu
+
+ARG SPARK_VERSION=3.5.8
+ARG HADOOP_VERSION=3.4.3
+ARG AWS_SDK_VERSION=2.30.31
+ARG COMET_VERSION=0.14.0
+ARG ICEBERG_VERSION=1.10.1
+ARG SCALA_BINARY=2.12
+ARG SPARK_UID=185
+ARG SPARK_GID=185
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+# JDK path from apache/spark base image (Eclipse Temurin)
+ENV JAVA_HOME=/opt/java/openjdk
+
+USER root
+WORKDIR ${SPARK_HOME}
+
+# System dependencies for TPC-DS toolkit compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc make flex bison git wget curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Non-root Spark user — UID 185 matches Kubernetes runAsUser convention
+RUN (groupadd -g ${SPARK_GID} spark 2>/dev/null || true) && \
+    (useradd -m -u ${SPARK_UID} -g ${SPARK_GID} -s /bin/bash spark 2>/dev/null || true)
+
+# ── Hadoop upgrade to 3.4.3 ──────────────────────────────────────────────────
+# Remove all bundled Hadoop + legacy AWS SDK jars to prevent version conflicts
+RUN cd ${SPARK_HOME}/jars && \
+    find . -maxdepth 1 -type f -name 'hadoop-*.jar' -delete || true && \
+    find . -maxdepth 1 -type f -name 'aws-java-sdk-*.jar' -delete || true && \
+    # Core Hadoop 3.4.3
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-auth/${HADOOP_VERSION}/hadoop-auth-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar && \
+    # S3A connector + AWS SDK v2 standalone bundle
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar && \
+    # commons-configuration2 required by Hadoop 3.4.x
+    wget -q https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.9.0/commons-configuration2-2.9.0.jar && \
+    # Spark cloud committers
+    wget -q https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_${SCALA_BINARY}/${SPARK_VERSION}/spark-hadoop-cloud_${SCALA_BINARY}-${SPARK_VERSION}.jar && \
+    # XML deps for jackson-dataformat-xml
+    wget -q https://repo1.maven.org/maven2/com/fasterxml/woodstox/woodstox-core/6.5.1/woodstox-core-6.5.1.jar && \
+    wget -q https://repo1.maven.org/maven2/org/codehaus/woodstox/stax2-api/4.2.2/stax2-api-4.2.2.jar
+
+# ── DataFusion Comet 0.14.0 ──────────────────────────────────────────────────
+RUN wget -q \
+    https://repo1.maven.org/maven2/org/apache/datafusion/comet-spark-spark3.5_${SCALA_BINARY}/${COMET_VERSION}/comet-spark-spark3.5_${SCALA_BINARY}-${COMET_VERSION}.jar \
+    -P ${SPARK_HOME}/jars/
+
+# ── Apache Iceberg 1.10.1 ────────────────────────────────────────────────────
+# iceberg-spark-runtime: Spark/Iceberg integration (catalog, DPP, read/write)
+# iceberg-aws-bundle:    Glue catalog implementation + S3FileIO
+RUN wget -q \
+    https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_${SCALA_BINARY}/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_${SCALA_BINARY}-${ICEBERG_VERSION}.jar \
+    -P ${SPARK_HOME}/jars/ && \
+    wget -q \
+    https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar \
+    -P ${SPARK_HOME}/jars/
+
+# ── TPC-DS toolkit v4.0.0 ────────────────────────────────────────────────────
+RUN git clone -b v4.0.0 https://github.com/heyujiao99/tpcds-kit.git /opt/tpcds-kit && \
+    cd /opt/tpcds-kit/tools && \
+    make OS=LINUX CFLAGS="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DYYDEBUG -DLINUX -g -Wall -fcommon" && \
+    install -m 0755 dsdgen dsqgen /usr/local/bin
+
+# ── Benchmark JARs from build stages ─────────────────────────────────────────
+COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar \
+    ${SPARK_HOME}/jars/
+COPY --from=benchmark_builder /build/spark-k8s-benchmarks/target/scala-2.12/*.jar \
+    ${SPARK_HOME}/jars/
+
+# ── Parquet-to-Iceberg conversion script ─────────────────────────────────────
+RUN mkdir -p /opt/scripts
+COPY convert_parquet_to_iceberg.py /opt/scripts/convert_parquet_to_iceberg.py
+
+# ── Permissions ──────────────────────────────────────────────────────────────
+RUN chown -R spark:spark ${SPARK_HOME} && \
+    chown -R spark:spark /opt/tpcds-kit && \
+    chown -R spark:spark /opt/scripts
+
+USER ${SPARK_UID}
+WORKDIR ${SPARK_HOME}
+
+ENTRYPOINT ["/opt/entrypoint.sh"]

@@ -1,0 +1,230 @@
+# ============================================================
+# TPC-DS v4 Benchmark — DataFusion Comet 0.14.0 + Apache Iceberg 1.10.1
+# Instance: r8gd.12xlarge (Graviton4, 48 vCPU, 384 GB RAM, NVMe)
+# scale: ${SCALE} TB   Iterations: 3
+#
+# Prerequisites:
+#   1. Iceberg conversion complete (tpcds-parquet-to-iceberg.yaml → COMPLETED)
+#   2. Glue DB tpcds_${SCALE}tb has all 24 TPC-DS tables (registered via RESTCatalog)
+#   3. Image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4
+#
+# S3 layout:
+#   Iceberg data     : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-DATA/
+#   Iceberg metadata : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-WH/
+#   Results          : s3://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-RESULT-COMET-ICEBERG-R8G/
+#
+# Usage:
+#   kubectl apply -f tpcds-benchmark-iceberg-comet.yaml
+#
+# Monitor:
+#   kubectl get sparkapplication -n spark-team-a tpcds-benchmark-iceberg-comet -w
+#   kubectl logs -n spark-team-a -l spark-role=driver --tail=50 -f
+# ============================================================
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-benchmark-iceberg-comet
+  namespace: spark-team-a
+spec:
+  type: Scala
+  mode: cluster
+  image: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4"
+  imagePullPolicy: Always
+  sparkVersion: "3.5.8"
+  mainClass: com.k8s.spark.benchmark.BenchmarkSQL
+  mainApplicationFile: "local:///opt/spark/jars/spark-k8s-benchmarks-assembly-1.0.0.jar"
+  arguments:
+    # arg[0] tpcdsDataDir — Iceberg data files root (used for TPCDSTables init;
+    #         format=iceberg bypasses path-based table creation, uses icebergDatabase instead)
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-DATA"
+    # arg[1] Results location
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-RESULT-COMET-ICEBERG-R8G"
+    # arg[2] Path to TPC-DS kit (dsdgen/dsqgen) in the image
+    - "/opt/tpcds-kit/tools"
+    # arg[3] Data format — triggers Iceberg catalog path in BenchmarkSQL
+    - "iceberg"
+    # arg[4] Scale factor (GB)
+    - "${SCALE_FACTOR}"
+    # arg[5] Iterations
+    - "3"
+    # arg[6] optimizeQueries — enables CBO using Iceberg catalog statistics
+    - "true"
+    # arg[7] DPP-sensitive queries — partition-aware queries that benefit most from
+    #         Iceberg catalog statistics enabling Dynamic Partition Pruning.
+    #         Change to "" to run all 99 queries.
+    - "q14a,q14b,q23a,q23b,q24a,q24b,q39a,q39b,q47,q57"
+    # arg[8] Set log level to WARN
+    - "true"
+    # arg[9] icebergDatabase — Iceberg catalog.database for USE statement
+    - "glue_catalog.tpcds_${SCALE}tb"
+  restartPolicy:
+    type: Never
+  driver:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    serviceAccount: spark-team-a
+    template:
+      metadata:
+        annotations:
+          karpenter.sh/do-not-disrupt: "true"
+        labels:
+          yunikorn.apache.org/queue: root.spark.spark-team-a
+      spec:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "2"
+        securityContext:
+          runAsUser: 185
+        volumes:
+          - name: spark-local-dir-1
+            hostPath:
+              path: "/mnt/k8s-disks/0"
+              type: Directory
+        initContainers:
+          - name: volume-permission
+            image: public.ecr.aws/docker/library/busybox
+            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+            securityContext:
+              runAsUser: 0
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+        nodeSelector:
+          karpenter.sh/capacity-type: on-demand
+          node.kubernetes.io/instance-type: r8gd.12xlarge
+        containers:
+          - name: spark-kubernetes-driver
+            env:
+              - name: JAVA_HOME
+                value: "/opt/java/openjdk"
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+  executor:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    instances: 23
+    serviceAccount: spark-team-a
+    template:
+      metadata:
+        annotations:
+          karpenter.sh/do-not-disrupt: "true"
+        labels:
+          yunikorn.apache.org/queue: root.spark.spark-team-a
+      spec:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "2"
+        securityContext:
+          runAsUser: 185
+        volumes:
+          - name: spark-local-dir-1
+            hostPath:
+              path: "/mnt/k8s-disks/0"
+              type: Directory
+        initContainers:
+          - name: volume-permission
+            image: public.ecr.aws/docker/library/busybox
+            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+            securityContext:
+              runAsUser: 0
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+        nodeSelector:
+          karpenter.sh/capacity-type: on-demand
+          node.kubernetes.io/instance-type: r8gd.12xlarge
+        containers:
+          - name: spark-kubernetes-executor
+            env:
+              - name: JAVA_HOME
+                value: "/opt/java/openjdk"
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+  sparkConf:
+    # ── DataFusion Comet 0.14.0 ─────────────────────────────────────────────
+    # Ref: https://datafusion.apache.org/comet/user-guide/tuning.html
+    "spark.plugins": "org.apache.spark.CometPlugin"
+    "spark.comet.exec.enabled": "true"
+    "spark.comet.exec.shuffle.enabled": "true"
+    "spark.comet.exec.shuffle.mode": "auto"
+    "spark.comet.cast.allowIncompatible": "true"
+    "spark.comet.explainFallback.enabled": "true"
+    "spark.shuffle.manager": "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager"
+    "spark.memory.offHeap.enabled": "true"
+    "spark.memory.offHeap.size": "32g"
+
+    # ── Apache Iceberg 1.10.1 + Glue catalog ────────────────────────────────
+    # Using GlueCatalog (direct Glue API) — same catalog used for conversion.
+    # RESTCatalog (https://glue.*.amazonaws.com/iceberg) was attempted but the
+    # AWS Glue REST endpoint uses an older Iceberg version incompatible with
+    # Iceberg 1.10.1 metadata format (fails: "schemas must exist in format v2").
+    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+    # Primary catalog — glue_catalog.tpcds_${SCALE}tb.<table>
+    "spark.sql.catalog.glue_catalog": "org.apache.iceberg.spark.SparkCatalog"
+    "spark.sql.catalog.glue_catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
+    "spark.sql.catalog.glue_catalog.warehouse": "s3a://${S3_BUCKET}/TPCDS-TEST-${SCALE}TB-ICEBERG-WH"
+    "spark.sql.catalog.glue_catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
+    "spark.sql.catalog.glue_catalog.glue.region": "${AWS_REGION}"
+    # SparkSessionCatalog v2 bridge — allows DPP to work with default catalog tables
+    "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog"
+    "spark.sql.catalog.spark_catalog.type": "glue"
+    # Use catalog statistics for partition pruning (disables HDFS fallback stats)
+    "spark.sql.statistics.fallBackToHdfs": "false"
+
+    # ── AQE (Adaptive Query Execution) ──────────────────────────────────────
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+
+    # ── S3A / AWS SDK v2 (EKS Pod Identity) ─────────────────────────────────
+    "spark.hadoop.fs.s3a.endpoint.region": "${AWS_REGION}"
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M"
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.multipart.purge": "true"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+
+    # ── Event logs ──────────────────────────────────────────────────────────
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    # ── Prometheus metrics ───────────────────────────────────────────────────
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # ── Stability ────────────────────────────────────────────────────────────
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    "spark.kubernetes.submission.connectionTimeout": "120000"
+    "spark.kubernetes.submission.requestTimeout": "120000"
+    "spark.kubernetes.driver.connectionTimeout": "120000"
+    "spark.kubernetes.driver.requestTimeout": "120000"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-iceberg-comet"
+
+    # ── Shuffle tuning ───────────────────────────────────────────────────────
+    "spark.shuffle.file.buffer": "1m"
+    "spark.reducer.maxSizeInFlight": "48m"
+
+    # ── GC ───────────────────────────────────────────────────────────────────
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"

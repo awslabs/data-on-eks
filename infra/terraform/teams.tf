@@ -273,7 +273,8 @@ data "aws_iam_policy_document" "spark_jobs" {
       "glue:DeletePartition",
       "glue:BatchCreatePartition",
       "glue:BatchDeletePartition",
-      "glue:BatchUpdatePartition"
+      "glue:BatchUpdatePartition",
+      "glue:GetCatalog"
     ]
   }
 }
