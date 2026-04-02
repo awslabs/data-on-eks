@@ -1,0 +1,180 @@
+# ============================================================
+# TPC-DS v4 Data Generation — 3 TB Parquet
+#
+# Image:   ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/spark-benchmark-native:3.5.8-tpcds4
+# Target:  AWS Graviton (arm64, c7g.8xlarge)
+# Output:  s3://${S3_BUCKET}/TPCDS-TEST-3TB/
+#
+# Step 1 of 2 in the TPC-DS Iceberg benchmark pipeline:
+#   1. Run this job to generate 3 TB of raw Parquet data  (this file)
+#   2. Run tpcds-parquet-to-iceberg-3tb.yaml to convert → Iceberg (Glue catalog)
+#
+# NOTE: Parquet data is NOT deleted after conversion — both coexist in S3.
+#
+# Prerequisites:
+#   1. Namespace spark-team-a exists
+#   2. ServiceAccount spark-team-a has s3:PutObject on the target bucket
+#   3. Karpenter NodePool SparkGravitonComputeOptimized exists (arm64)
+#
+# Usage:
+#   kubectl apply -f tpcds-data-generation-3tb.yaml
+#
+# Monitor:
+#   kubectl get sparkapplication -n spark-team-a tpcds-data-generation-3tb -w
+#   kubectl logs -n spark-team-a -l spark-role=driver --tail=100 -f
+# ============================================================
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-data-generation-3tb
+  namespace: spark-team-a
+spec:
+  type: Scala
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4"
+  imagePullPolicy: Always
+  sparkVersion: "3.5.8"
+  mainClass: com.k8s.spark.benchmark.DataGeneration
+  mainApplicationFile: "local:///opt/spark/jars/spark-k8s-benchmarks-assembly-1.0.0.jar"
+  arguments:
+    # TPC-DS output location (Parquet)
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-3TB"
+    # Path to TPC-DS kit (dsdgen) in the image
+    - "/opt/tpcds-kit/tools"
+    # Scale factor in GB (3 TB) — must come before format for DataGeneration class
+    - "3000"
+    # Data format
+    - "parquet"
+    # Number of output partitions — doubled vs 1TB for parallelism at 3x scale
+    - "400"
+    # Create partitioned fact tables (store_sales, web_sales, etc.)
+    - "true"
+    # Shuffle to coalesce partitions into single files
+    - "true"
+    # Set log level to WARN
+    - "true"
+  restartPolicy:
+    type: Never
+  driver:
+    cores: 11
+    memory: "15g"
+    memoryOverhead: "4g"
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    nodeSelector:
+      NodeGroupType: SparkGravitonComputeOptimized
+      kubernetes.io/arch: arm64
+      karpenter.sh/capacity-type: on-demand
+      karpenter.k8s.aws/instance-family: "c7gd"
+      karpenter.k8s.aws/instance-size: "8xlarge"
+    env:
+    - name: JAVA_HOME
+      value: "/opt/java/openjdk"
+    volumeMounts:
+    - name: spark-local-dir-1
+      mountPath: /data1
+    initContainers:
+    - name: volume-permission
+      image: public.ecr.aws/docker/library/busybox
+      command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /data1
+  executor:
+    cores: 14
+    memory: "20g"
+    memoryOverhead: "4g"
+    # 40 executors × 14 cores = 560 vCPUs — ~1.8× the 22-executor 1TB job
+    instances: 40
+    serviceAccount: spark-team-a
+    securityContext:
+      runAsUser: 185
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    nodeSelector:
+      NodeGroupType: SparkGravitonComputeOptimized
+      kubernetes.io/arch: arm64
+      karpenter.sh/capacity-type: on-demand
+      karpenter.k8s.aws/instance-family: "c7gd"
+      karpenter.k8s.aws/instance-size: "8xlarge"
+    env:
+    - name: JAVA_HOME
+      value: "/opt/java/openjdk"
+    volumeMounts:
+    - name: spark-local-dir-1
+      mountPath: /data1
+    initContainers:
+    - name: volume-permission
+      image: public.ecr.aws/docker/library/busybox
+      command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+      - name: spark-local-dir-1
+        mountPath: /data1
+  volumes:
+  - name: spark-local-dir-1
+    hostPath:
+      path: "/mnt/k8s-disks/0"
+      type: DirectoryOrCreate
+  sparkConf:
+    # ── AQE ─────────────────────────────────────────────────────────────────
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+    "spark.sql.shuffle.partitions": "3000"
+    "spark.sql.files.maxRecordsPerFile": "30000000"
+    "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
+
+    # ── S3A / AWS SDK v2 (EKS Pod Identity) ─────────────────────────────────
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3a.endpoint.region": "${AWS_REGION}"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M"
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.multipart.purge": "true"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+
+    # ── Shuffle tuning ───────────────────────────────────────────────────────
+    "spark.shuffle.file.buffer": "1m"
+    "spark.reducer.maxSizeInFlight": "128m"
+
+    # ── Event logs ──────────────────────────────────────────────────────────
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    # ── Prometheus metrics ───────────────────────────────────────────────────
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # ── Stability ────────────────────────────────────────────────────────────
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-data-generation-3tb"
+    "spark.kubernetes.submission.connectionTimeout": "60000000"
+    "spark.kubernetes.submission.requestTimeout": "60000000"
+    "spark.kubernetes.driver.connectionTimeout": "60000000"
+    "spark.kubernetes.driver.requestTimeout": "60000000"
+
+    # ── GC ───────────────────────────────────────────────────────────────────
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseG1GC"
+    "spark.driver.defaultJavaOptions": "-XX:+UseG1GC"

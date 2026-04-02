@@ -1,0 +1,198 @@
+# ============================================================
+# TPC-DS v4 Benchmark — Native Spark SQL on Parquet in S3
+# Instance: r8gd.12xlarge (Graviton4, 48 vCPU, 384 GB RAM, NVMe)
+# Scale: 3 TB   Iterations: 3
+#
+# Prerequisites:
+#   1. TPC-DS parquet data already exists in S3
+#   2. Image: public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4
+#
+# S3 layout:
+#   Source parquet : s3://${S3_BUCKET}/TPCDS-TEST-3TB/
+#   Results        : s3://${S3_BUCKET}/TPCDS-TEST-3TB-RESULT-PARQUET-R8G/
+#
+# Usage:
+#   kubectl apply -f tpcds-benchmark-parquet.yaml
+#
+# Monitor:
+#   kubectl get sparkapplication -n spark-team-a tpcds-benchmark-parquet -w
+#   kubectl logs -n spark-team-a -l spark-role=driver --tail=50 -f
+# ============================================================
+---
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: tpcds-benchmark-parquet
+  namespace: spark-team-a
+
+spec:
+  type: Scala
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4"
+  imagePullPolicy: Always
+  sparkVersion: "3.5.8"
+  mainClass: com.k8s.spark.benchmark.BenchmarkSQL
+  mainApplicationFile: "local:///opt/spark/jars/spark-k8s-benchmarks-assembly-1.0.0.jar"
+
+  arguments:
+    # arg[0] tpcdsDataDir — root path of parquet data in S3
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-3TB"
+    # arg[1] Results location
+    - "s3a://${S3_BUCKET}/TPCDS-TEST-3TB-RESULT-PARQUET-R8G"
+    # arg[2] Path to TPC-DS kit (dsdgen/dsqgen) in the image
+    - "/opt/tpcds-kit/tools"
+    # arg[3] Data format
+    - "parquet"
+    # arg[4] Scale factor (GB 1000, 3000, 10000)
+    - "3000"
+    # arg[5] Iterations
+    - "3"
+    # arg[6] optimizeQueries
+    - "true"
+    # arg[7] Query filter — change to "" to run all 99 queries
+    - ""
+    # arg[8] Set log level to WARN
+    - "true"
+
+  restartPolicy:
+    type: Never
+
+  driver:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    serviceAccount: spark-team-a
+    template:
+      metadata:
+        annotations:
+          karpenter.sh/do-not-disrupt: "true"
+        labels:
+          yunikorn.apache.org/queue: root.spark.spark-team-a
+      spec:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "2"
+        securityContext:
+          runAsUser: 185
+        volumes:
+          - name: spark-local-dir-1
+            hostPath:
+              path: "/mnt/k8s-disks/0"
+              type: Directory
+        initContainers:
+          - name: volume-permission
+            image: public.ecr.aws/docker/library/busybox
+            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+            securityContext:
+              runAsUser: 0
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+        nodeSelector:
+          karpenter.sh/capacity-type: on-demand
+          node.kubernetes.io/instance-type: r8gd.12xlarge
+        containers:
+          - name: spark-kubernetes-driver
+            env:
+              - name: JAVA_HOME
+                value: "/opt/java/openjdk"
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+
+  executor:
+    cores: 5
+    memory: "20g"
+    memoryOverhead: "6g"
+    instances: 23
+    serviceAccount: spark-team-a
+    template:
+      metadata:
+        annotations:
+          karpenter.sh/do-not-disrupt: "true"
+        labels:
+          yunikorn.apache.org/queue: root.spark.spark-team-a
+      spec:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "2"
+        securityContext:
+          runAsUser: 185
+        volumes:
+          - name: spark-local-dir-1
+            hostPath:
+              path: "/mnt/k8s-disks/0"
+              type: Directory
+        initContainers:
+          - name: volume-permission
+            image: public.ecr.aws/docker/library/busybox
+            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
+            securityContext:
+              runAsUser: 0
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+        nodeSelector:
+          karpenter.sh/capacity-type: on-demand
+          node.kubernetes.io/instance-type: r8gd.12xlarge
+        containers:
+          - name: spark-kubernetes-executor
+            env:
+              - name: JAVA_HOME
+                value: "/opt/java/openjdk"
+            volumeMounts:
+              - name: spark-local-dir-1
+                mountPath: /data1
+
+  sparkConf:
+    # ── AQE (Adaptive Query Execution) ──────────────────────────────────────
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.skewJoin.enabled": "true"
+
+    # ── S3A / AWS SDK v2 (EKS Pod Identity) ─────────────────────────────────
+    "spark.hadoop.fs.s3a.endpoint.region": "us-west-2"
+    "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.fast.upload.buffer": "disk"
+    "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
+    "spark.hadoop.fs.s3a.multipart.size": "128M"
+    "spark.hadoop.fs.s3a.multipart.threshold": "256M"
+    "spark.hadoop.fs.s3a.threads.max": "50"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.multipart.purge": "true"
+    "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
+
+    # ── Event logs ──────────────────────────────────────────────────────────
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+
+    # ── Prometheus metrics ───────────────────────────────────────────────────
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+
+    # ── Stability ────────────────────────────────────────────────────────────
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    "spark.kubernetes.submission.connectionTimeout": "120000"
+    "spark.kubernetes.submission.requestTimeout": "120000"
+    "spark.kubernetes.driver.connectionTimeout": "120000"
+    "spark.kubernetes.driver.requestTimeout": "120000"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-parquet"
+
+    # ── Shuffle tuning ───────────────────────────────────────────────────────
+    "spark.shuffle.file.buffer": "1m"
+    "spark.reducer.maxSizeInFlight": "48m"
+
+    # ── GC ───────────────────────────────────────────────────────────────────
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
