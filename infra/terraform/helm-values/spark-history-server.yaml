@@ -3,8 +3,9 @@ historyServer:
     maxDiskUsage: 25g
     hybridStore:
       enabled: true
+      maxMemoryUsage: 6g
 sparkDaemon:
-  memory: 10g
+  memory: 12g
 logStore:
   s3:
     bucket: ${s3_bucket_name}
@@ -12,7 +13,7 @@ logStore:
     irsaRoleArn: ${spark_history_server_role}
 resources:
   limits:
-    memory: 12Gi
+    memory: 24Gi
 sparkConf: |-
   # Storage backend optimizations for S3/ABFS (non-conflicting settings)
   spark.hadoop.fs.s3a.connection.maximum=200
