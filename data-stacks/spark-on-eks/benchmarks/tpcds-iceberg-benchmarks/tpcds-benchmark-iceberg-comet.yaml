@@ -105,8 +105,8 @@ spec:
                 mountPath: /data1
   executor:
     cores: 5
-    memory: "20g"
-    memoryOverhead: "6g"
+    memory: "24g"            # bumped 20→24g: JVM heap was at 95% (19g/20g) on Parquet run; GC under stress
+    memoryOverhead: "30g"    # K8s limit = 24+30+42=96g; peak RSS observed ~88.5g on Parquet run → 7.5g headroom
     instances: 23
     serviceAccount: spark-team-a
     template:
@@ -147,6 +147,15 @@ spec:
             volumeMounts:
               - name: spark-local-dir-1
                 mountPath: /data1
+            # Set request < limit to create Burstable QoS — required for MemoryQoS to work.
+            # memory.high = 80Gi + 0.7 * (96Gi - 80Gi) = 91.2Gi  ← page cache eviction starts
+            # memory.max  = 96Gi                                   ← hard kill only here
+            # Scheduling safety: 4 executors × 80Gi request = 320Gi < 384Gi node capacity
+            resources:
+              requests:
+                memory: "80Gi"
+              limits:
+                memory: "96Gi"
   sparkConf:
     # ── DataFusion Comet 0.14.0 ─────────────────────────────────────────────
     # Ref: https://datafusion.apache.org/comet/user-guide/tuning.html
@@ -158,7 +167,7 @@ spec:
     "spark.comet.explainFallback.enabled": "true"
     "spark.shuffle.manager": "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager"
     "spark.memory.offHeap.enabled": "true"
-    "spark.memory.offHeap.size": "32g"
+    "spark.memory.offHeap.size": "42g"   # aligned with Parquet run; 24+30+42=96g K8s limit
 
     # ── Apache Iceberg 1.10.1 + Glue catalog ────────────────────────────────
     # Using GlueCatalog (direct Glue API) — same catalog used for conversion.

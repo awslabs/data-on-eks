@@ -1,0 +1,686 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus datasource",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "9.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "TPC-DS Comet 3TB Benchmark — Executor memory deep-dive. Monitors JVM heap, Spark offheap pool, NIO Direct (CometShuffleManager), inferred Arrow/DataFusion native memory, and RSS vs K8s container kill limit. Validated config: executor.memory=24g + memoryOverhead=24g + offHeap.size=42g = 90g K8s limit.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "Container Kill Boundary",
+      "type": "row"
+    },
+
+    {
+      "id": 1,
+      "title": "Container RSS vs K8s Kill Limit",
+      "description": "Peak and avg RSS across all executors vs the hard K8s cgroup kill limit (90g). If any executor's RSS touches the red dashed line = OOMKill imminent.\n\nKey finding: offHeap.size=42g is fully consumed during heavy TPC-DS queries (q17/q23/q24/q77). RSS breakdown at peak: 24g JVM heap + 42g Spark offheap + 18.7g NIO Direct (CometShuffleManager) + 0.25g non-heap ≈ 85g.",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 1},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 10, "spanNulls": false},
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "K8s Limit (90g)"},
+            "properties": [
+              {"id": "custom.lineWidth", "value": 3},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}},
+              {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [8, 4]}},
+              {"id": "custom.fillOpacity", "value": 0}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Warn threshold (84g)"},
+            "properties": [
+              {"id": "custom.lineWidth", "value": 1},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}},
+              {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [4, 4]}},
+              {"id": "custom.fillOpacity", "value": 0}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Peak RSS (worst executor)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#F2495C"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Avg RSS (all executors)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#5794F2"}}
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_ProcessTreeJVMRSSMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Peak RSS (worst executor)",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "avg(metrics_executor_ProcessTreeJVMRSSMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Avg RSS (all executors)",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "vector(96636764160)",
+          "legendFormat": "K8s Limit (90g)",
+          "refId": "C"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "vector(90194313216)",
+          "legendFormat": "Warn threshold (84g)",
+          "refId": "D"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max", "min"]}
+      }
+    },
+
+    {
+      "id": 2,
+      "title": "Container Headroom  (90g limit − peak RSS)",
+      "description": "Buffer remaining before K8s OOMKills the executor.\n🟢 > 6g = safe\n🟡 2–6g = warning\n🔴 < 2g = imminent OOMKill",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 9},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 20},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red",    "value": null},
+              {"color": "yellow", "value": 2147483648},
+              {"color": "green",  "value": 6442450944}
+            ]
+          },
+          "color": {"mode": "thresholds"}
+        }
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "96636764160 - max(metrics_executor_ProcessTreeJVMRSSMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Headroom (90g − peak RSS)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "min"]}
+      }
+    },
+
+    {
+      "id": 3,
+      "title": "Live Executors  |  Active & Failed Tasks",
+      "description": "Executor count drops = OOMKill or eviction event.\nFailed tasks spike = tasks being retried after executor death.\nIf same task fails 4× across different executors = job FAILS.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 9},
+      "fieldConfig": {
+        "defaults": {"unit": "short", "custom": {"lineWidth": 2}},
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Failed Tasks (cumulative)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}},
+              {"id": "custom.lineWidth", "value": 2}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Live Executors"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "count(metrics_executor_ProcessTreeJVMRSSMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"} > 0)",
+          "legendFormat": "Live Executors",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "sum(metrics_executor_activeTasks{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Active Tasks",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "sum(metrics_executor_failedTasks_total{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Failed Tasks (cumulative)",
+          "refId": "C"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 16},
+      "id": 101,
+      "title": "Memory Component Breakdown  (what actually fills the 90g container)",
+      "type": "row"
+    },
+
+    {
+      "id": 4,
+      "title": "Memory Breakdown — Stacked (max per component across executors)",
+      "description": "The 4 real consumers inside the 90g container limit:\n\n1. JVM Heap (blue) — spark.executor.memory=24g pool. Spark on-heap execution + storage. Was at 95% with 20g config.\n\n2. Spark OffHeap Exec (red) — spark.memory.offHeap.size=42g. Spark fills this completely during heavy TPC-DS queries (q17/q23/q24). This IS the biggest consumer. Increasing offHeap.size just grows RSS proportionally — no headroom gain.\n\n3. NIO Direct (orange) — CometShuffleManager ByteBuffers for in-flight shuffle data. Saturates at ~18-19g and stays flat. NOT tracked by offHeap.size.\n\n4. Arrow/DataFusion Native (purple) — inferred as RSS − (heap + offheap + NIO + non-heap). Comet's Rust/Arrow engine native malloc. Bypasses Spark MemoryManager entirely.",
+      "type": "timeseries",
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 17},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 65,
+            "stacking": {"mode": "normal", "group": "A"}
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "JVM Heap"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#5794F2"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Spark OffHeap Exec (fills 42g cap on heavy queries)"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#F2495C"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "NIO Direct (CometShuffleManager)"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#FF9830"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Arrow/DataFusion Native (inferred)"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#B877D9"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "JVM Non-Heap (metaspace)"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#37872D"}}]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_JVMHeapMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "JVM Heap",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_OffHeapExecutionMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Spark OffHeap Exec (fills 42g cap on heavy queries)",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_DirectPoolMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "NIO Direct (CometShuffleManager)",
+          "refId": "C"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "clamp_min(max(metrics_executor_ProcessTreeJVMRSSMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"}) - max(metrics_executor_JVMHeapMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"}) - max(metrics_executor_OffHeapExecutionMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"}) - max(metrics_executor_DirectPoolMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"}) - max(metrics_executor_JVMOffHeapMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"}), 0)",
+          "legendFormat": "Arrow/DataFusion Native (inferred)",
+          "refId": "D"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_JVMOffHeapMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "JVM Non-Heap (metaspace)",
+          "refId": "E"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "id": 5,
+      "title": "JVM Heap Used vs 24g Limit",
+      "description": "Spark executor JVM heap. Previously at 95% (19g/20g) causing heavy GC pressure. With memory=24g the same 19g used = 79% — gives GC room to breathe.\n\nIf heap approaches 24g = risk of on-heap java.lang.OutOfMemoryError (different failure mode from K8s OOMKill).",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 26},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 10}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "JVM Heap Limit (24g)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}},
+              {"id": "custom.lineStyle", "value": {"fill": "dash"}},
+              {"id": "custom.lineWidth", "value": 2},
+              {"id": "custom.fillOpacity", "value": 0}
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_JVMHeapMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "JVM Heap max",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "avg(metrics_executor_JVMHeapMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "JVM Heap avg",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "vector(25769803776)",
+          "legendFormat": "JVM Heap Limit (24g)",
+          "refId": "C"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "id": 6,
+      "title": "Spark OffHeap Execution Pool  (42g cap)",
+      "description": "Spark's managed off-heap execution memory pool. spark.memory.offHeap.size=42g sets the cap.\n\nKey insight: during heavy TPC-DS queries this fills to exactly 42g and stays there — Spark is using the ENTIRE pool. Increasing this value just grows RSS proportionally. Do NOT increase to gain headroom — increase memoryOverhead instead.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 26},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 10}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "OffHeap Pool Cap (42g)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}},
+              {"id": "custom.lineStyle", "value": {"fill": "dash"}},
+              {"id": "custom.lineWidth", "value": 2},
+              {"id": "custom.fillOpacity", "value": 0}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "OffHeap Exec max"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#F2495C"}}
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_OffHeapExecutionMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "OffHeap Exec max",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "avg(metrics_executor_OffHeapExecutionMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "OffHeap Exec avg",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "vector(45097156608)",
+          "legendFormat": "OffHeap Pool Cap (42g)",
+          "refId": "C"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "id": 7,
+      "title": "NIO Direct Pool  (CometShuffleManager)",
+      "description": "NIO Direct ByteBuffers used by CometShuffleManager for in-flight shuffle data + Netty network buffers.\n\nThis is NOT tracked by spark.memory.offHeap.size. Saturates at ~18-19g early in the run and stays flat — scales with the number of concurrent shuffle tasks, not query complexity.\n\nReducing spark.reducer.maxSizeInFlight (currently 48m) would lower this.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 26},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 15},
+          "color": {"mode": "fixed", "fixedColor": "#FF9830"}
+        }
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_DirectPoolMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "NIO Direct max",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "avg(metrics_executor_DirectPoolMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "NIO Direct avg",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 33},
+      "id": 102,
+      "title": "GC Pressure  |  Shuffle Throughput  |  Per-Executor Detail",
+      "type": "row"
+    },
+
+    {
+      "id": 8,
+      "title": "GC Pressure — Major GC Count & Time",
+      "description": "High Major GC = JVM heap under pressure. Previously 11-17 major GCs with memory=20g (heap at 95%). With memory=24g, same 19g used = 79% — expect GC count to drop significantly.\n\nGC is NOT the cause of OOMKills (exit code 137 = kernel SIGKILL). But high GC causes executor heartbeat timeouts which look similar.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 34},
+      "fieldConfig": {
+        "defaults": {"custom": {"lineWidth": 2}},
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Major GC Time max (s)"},
+            "properties": [{"id": "unit", "value": "s"}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Major GC Time avg (s)"},
+            "properties": [{"id": "unit", "value": "s"}]
+          },
+          {
+            "matcher": {"id": "byRegexp", "options": ".*Count.*"},
+            "properties": [{"id": "unit", "value": "short"}]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_MajorGCCount_total{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Major GC Count max",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "avg(metrics_executor_MajorGCCount_total{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Major GC Count avg",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_MajorGCTime_seconds_total{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Major GC Time max (s)",
+          "refId": "C"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "avg(metrics_executor_MajorGCTime_seconds_total{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Major GC Time avg (s)",
+          "refId": "D"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "id": 9,
+      "title": "Shuffle Read / Write Rate",
+      "description": "Comet shuffle throughput (CometShuffleManager). High shuffle write rate correlates directly with NIO Direct buffer growth. Reducing spark.reducer.maxSizeInFlight from 48m would reduce NIO Direct pool size at the cost of more round-trips.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 34},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {"lineWidth": 2}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Shuffle Write rate"},
+            "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "sum(rate(metrics_executor_totalShuffleRead_bytes_total{application_id=~\"$application_id\", executor_id!=\"driver\"}[2m]))",
+          "legendFormat": "Shuffle Read rate",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "sum(rate(metrics_executor_totalShuffleWrite_bytes_total{application_id=~\"$application_id\", executor_id!=\"driver\"}[2m]))",
+          "legendFormat": "Shuffle Write rate",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "id": 10,
+      "title": "Per-Executor RSS — Heatmap (top 10 highest)",
+      "description": "Individual executor RSS values. Large spread = uneven query assignment. Sudden drops to 0 = OOMKill event — executor died and was replaced by a new one with a higher ID.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 34},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 1, "fillOpacity": 0}
+        }
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "topk(10, metrics_executor_ProcessTreeJVMRSSMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "exec-{{executor_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 41},
+      "id": 103,
+      "title": "Config Reference  —  memory budget progression across test runs",
+      "type": "row"
+    },
+
+    {
+      "id": 11,
+      "title": "Config History & Memory Budget",
+      "description": "Progression of config changes made during 3TB Comet+Parquet benchmark investigation.\n\nRun 1 (failed):  memory=20g  overhead=6g   offHeap=42g  →  limit=68g  →  OOMKill (RSS >68g)\nRun 2 (failed):  memory=20g  overhead=12g  offHeap=42g  →  limit=74g  →  6 OOMKills (offHeap hits 42g cap, RSS ~80g)\nRun 3 (failed):  memory=20g  overhead=18g  offHeap=42g  →  limit=80g  →  still OOMKills (RSS ~80g, <0.9g headroom)\nRun 4 (current): memory=24g  overhead=24g  offHeap=42g  →  limit=90g  →  ~10g headroom expected\n\nRoot cause: spark.memory.offHeap.size=42g is fully consumed during heavy queries. Increasing offHeap.size just grows RSS proportionally. The fix is memoryOverhead — it adds to K8s limit without adding to Spark memory usage.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 42},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 10}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Current Limit (90g)"},
+            "properties": [
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}},
+              {"id": "custom.lineStyle", "value": {"fill": "dash"}},
+              {"id": "custom.fillOpacity", "value": 0}
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_ProcessTreeJVMRSSMemory_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Peak RSS",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "vector(96636764160)",
+          "legendFormat": "Current Limit (90g)",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    },
+
+    {
+      "id": 12,
+      "title": "Disk Spill — Executor Disk Used",
+      "description": "When Spark's memory pools (heap or offheap) are exhausted, data spills to local NVMe disk (/data1). High disk usage = memory pressure causing performance degradation even without OOMKill.\n\nExpect zero or minimal spill with the 90g config.",
+      "type": "timeseries",
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 42},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "max(metrics_executor_diskUsed_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Disk used max",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "expr": "sum(metrics_executor_diskUsed_bytes{application_id=~\"$application_id\", executor_id!=\"driver\"})",
+          "legendFormat": "Disk used total",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"]}
+      }
+    }
+
+  ],
+
+  "refresh": "30s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["spark", "tpcds", "comet", "datafusion", "memory", "benchmark", "k8s", "oom"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource",
+        "label": "Datasource"
+      },
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "definition": "label_values(metrics_executor_ProcessTreeJVMRSSMemory_bytes, application_id)",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "application_id",
+        "query": {
+          "query": "label_values(metrics_executor_ProcessTreeJVMRSSMemory_bytes, application_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "sort": 5,
+        "type": "query",
+        "label": "Application ID"
+      }
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "TPC-DS Comet — Executor Memory Deep Dive",
+  "uid": "spark-comet-memory-v1",
+  "version": 1
+}
