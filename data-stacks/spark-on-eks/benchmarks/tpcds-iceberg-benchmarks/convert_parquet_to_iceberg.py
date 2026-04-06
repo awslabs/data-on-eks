@@ -46,7 +46,9 @@ Usage:
       --region us-west-2 \
       [--table store_sales] \
       [--overwrite] \
-      [--verify-counts]
+      [--verify-counts] \
+      [--compute-stats] \
+      [--stats-only]
 
 Operational behavior:
   - By default, existing Glue tables are skipped
@@ -142,6 +144,16 @@ def parse_args():
         action="store_true",
         help="Run COUNT(*) on source and target after conversion (expensive)",
     )
+    parser.add_argument(
+        "--compute-stats",
+        action="store_true",
+        help="Compute NDV column statistics (Puffin files) for cost-based optimization",
+    )
+    parser.add_argument(
+        "--stats-only",
+        action="store_true",
+        help="Only compute NDV stats on existing tables; skip conversion",
+    )
     return parser.parse_args()
 
 
@@ -208,6 +220,14 @@ def get_tables_to_convert(single_table: Optional[str]) -> List[Tuple[str, Option
     return matches
 
 
+def compute_ndv_statistics(spark: SparkSession, glue_db: str, table_name: str) -> None:
+    """Compute NDV column statistics (Puffin files) for CBO."""
+    start = time.time()
+    spark.sql(f"CALL glue_catalog.system.compute_table_stats('{glue_db}.{table_name}')")
+    elapsed = time.time() - start
+    print(f"[stats] {glue_db}.{table_name:25s} NDV stats computed in {elapsed:7.1f}s")
+
+
 def convert_table(
     spark: SparkSession,
     glue_db: str,
@@ -217,6 +237,7 @@ def convert_table(
     table_location: str,
     overwrite: bool,
     verify_counts: bool,
+    compute_stats: bool,
 ) -> None:
     """
     Convert one source Parquet table into one Iceberg table.
@@ -255,6 +276,9 @@ def convert_table(
 
     elapsed = time.time() - start
 
+    if compute_stats:
+        compute_ndv_statistics(spark, glue_db, table_name)
+
     if verify_counts:
         src_count = source_df.count()   # served from cache — no S3 re-scan
         tgt_count = spark.table(full_table_name).count()
@@ -281,6 +305,10 @@ def main():
         ensure_glue_database(spark, args.glue_db)
         existing_tables = get_existing_tables(spark, args.glue_db)
         tables_to_convert = get_tables_to_convert(args.table)
+
+        if args.stats_only:
+            _run_stats_only(spark, args.glue_db, tables_to_convert, existing_tables)
+            return
 
         converted = 0
         skipped = 0
@@ -311,6 +339,7 @@ def main():
                         table_location=table_location,
                         overwrite=args.overwrite,
                         verify_counts=args.verify_counts,
+                        compute_stats=args.compute_stats,
                     )
                     converted += 1
                     break
@@ -335,6 +364,32 @@ def main():
 
     finally:
         spark.stop()
+
+
+def _run_stats_only(
+    spark: SparkSession,
+    glue_db: str,
+    tables: List[Tuple[str, Optional[str]]],
+    existing_tables: Set[str],
+) -> None:
+    """Compute NDV statistics on existing Iceberg tables only."""
+    failed = []
+    total_start = time.time()
+
+    for table_name, _ in tables:
+        if table_name not in existing_tables:
+            print(f"[skip] {table_name:25s} not found in catalog")
+            continue
+        try:
+            compute_ndv_statistics(spark, glue_db, table_name)
+        except Exception as exc:
+            print(f"[fail] {table_name:25s} {exc}")
+            failed.append(table_name)
+
+    print(f"\nTotal time: {time.time() - total_start:.1f}s")
+    if failed:
+        print(f"Failed: {failed}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
