@@ -17,6 +17,12 @@ spec:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: ephemeral-nvme-local-provisioner
+      # Kubelet eviction — stop scheduling new pods when node free memory drops
+      # below 10Gi. Without this, Karpenter can fill a node to the point where
+      # multiple Spark executors bursting simultaneously tip the node itself into OOM.
+      kubelet:
+        evictionHard:
+          memory.available: "10Gi"
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In

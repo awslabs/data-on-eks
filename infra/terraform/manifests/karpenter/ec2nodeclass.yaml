@@ -336,6 +336,29 @@ spec:
     Content-Type: multipart/mixed; boundary="//"
 
     --//
+    Content-Type: application/node.eks.aws
+
+    # AL2023 NodeConfig — applied before kubelet starts
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS uses cgroupsv2 memory.high to insert a soft eviction threshold
+            # between the container request and the hard limit. When a Spark executor
+            # approaches memory.high, the kernel evicts page cache (NVMe shuffle files,
+            # s3a read buffers) before sending SIGKILL. This prevents OOMKills caused
+            # by page cache accumulation being counted against the cgroup limit.
+            # AL2023 ships with cgroupsv2 enabled — no kernel changes needed.
+            MemoryQoS: true
+          # memory.high = request + 0.7 * (limit - request)
+          # For Spark executors with request=80Gi, limit=96Gi:
+          #   memory.high = 80 + 0.7 * (96 - 80) = 91.2Gi  (soft eviction starts here)
+          #   memory.max  = 96Gi                            (hard kill only here)
+          memoryThrottlingFactor: 0.7
+
+    --//
     Content-Type: text/x-shellscript; charset="us-ascii"
 
     #!/bin/bash
