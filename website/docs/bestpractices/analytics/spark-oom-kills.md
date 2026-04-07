@@ -202,7 +202,7 @@ cgroupsv1 (the default on Amazon Linux 2) has one memory knob: `memory.limit_in_
 memory.usage_in_bytes = anonymous_memory (RSS) + file_cache (page cache) + kernel memory
 ```
 
-When usage hits the limit, the cgroup OOM killer fires immediately. No throttling, no preferential page cache reclaim, no second chance.
+When usage hits the limit, the cgroup OOM killer fires immediately, without ever giving the kernel a chance to reclaim page cache.
 
 ```
 cgroupsv1 Behavior
