@@ -47,7 +47,7 @@ While OOM kills can have multiple causes (undersized JVM heap, memory leaks, exc
   └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+
 
 ## Exit Code 137: Kernel Kill, Not JVM Kill
 
@@ -68,7 +68,7 @@ This distinction matters because most debugging guides focus on JVM heap analysi
 If you are debugging OOM kills by analyzing JVM heap dumps or GC logs, you are looking in the wrong place. The kernel killed your container because total RSS exceeded the cgroup limit, and much of that RSS is page cache that neither Spark nor the JVM is aware of.
 :::
 
----
+
 
 ## Linux Memory Management: The Pieces That Matter
 
@@ -147,7 +147,7 @@ When a cgroup runs low on memory, the kernel activates page reclamation through 
 
 If reclamation cannot free enough memory, the OOM killer is invoked. The global OOM killer scores processes by RSS size and `oom_score_adj`, then sends SIGKILL to the highest scoring process. But the **cgroup OOM killer** is more direct: when a cgroup hits `memory.max` (or `memory.limit_in_bytes` in v1), it skips the scoring algorithm entirely and kills a process within that cgroup. For single process containers like Spark executors, that means the executor itself. Always.
 
----
+
 
 ## Why Spark Executors Get OOM Killed
 
@@ -229,7 +229,7 @@ cgroupsv1 does have `memory.soft_limit_in_bytes`, but it is advisory only. It in
 The kernel *could* reclaim the page cache. Those are clean, reclaimable pages backed by files on local storage. But cgroupsv1's memory controller does not attempt aggressive cgroup-local reclamation before invoking the OOM killer. It treats reclaimable page cache and non-reclaimable anonymous memory identically when evaluating the hard limit. Your executor dies because the kernel cached its own I/O.
 :::
 
----
+
 
 ## The Solution: cgroupsv2 and Memory QoS
 
@@ -321,7 +321,7 @@ For Guaranteed pods, the KEP states: *"Memory QoS feature is disabled on those p
 
 KEP-2570 also maps `requests.memory` to `memory.min`, providing a hard memory guarantee. The kernel will not reclaim memory from a cgroup below its `memory.min` value, even under extreme system-wide pressure. This protects your executor's working set (JVM heap, off-heap pool) from being evicted by noisy neighbors on the same node.
 
----
+
 
 ## Prerequisites
 
@@ -359,7 +359,7 @@ ls /sys/fs/cgroup/kubepods.slice/kubepods-burstable.slice/*/memory.high
 ```
 :::
 
----
+
 
 ## Configuration
 
@@ -487,7 +487,7 @@ memory.max  = 96 Gi          ← hard kill (only genuine OOM)
 
 **Scheduling safety:** Size requests so that `executors_per_node × requests.memory < node_allocatable_memory`. For `r8gd.12xlarge` (384 GiB): `4 executors × 80 Gi = 320 Gi`, leaving 64 GiB for system daemons, kubelet, and the eviction threshold.
 
----
+
 
 ## Sizing the Memory Budget
 
@@ -616,7 +616,7 @@ sparkConf:
   </TabItem>
 </Tabs>
 
----
+
 
 ## Monitoring and Observability
 
@@ -674,7 +674,7 @@ Set up alerts for containers that are repeatedly hitting `memory.high`:
       Consider increasing limits.memory or lowering memoryThrottlingFactor.
 ```
 
----
+
 
 ## What MemoryQoS Does Not Fix
 
@@ -695,7 +695,7 @@ MemoryQoS handles reclaimable memory (page cache) temporarily pushing RSS above 
 If the memory is backed by a file on disk, MemoryQoS can reclaim it. If it is anonymous (allocated by the application), it cannot be reclaimed and must be sized correctly.
 :::
 
----
+
 
 ## Troubleshooting
 
@@ -788,7 +788,7 @@ kubectl exec <pod> -- cat /sys/fs/cgroup/memory.stat | grep anon
   </TabItem>
 </Tabs>
 
----
+
 
 ## Summary
 
@@ -815,7 +815,7 @@ Formula:   memory.high = request + throttlingFactor × (limit - request)
            memory.min  = request
 ```
 
----
+
 
 ## Further Reading
 
