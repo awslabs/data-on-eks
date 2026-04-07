@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 # Preventing OOM Kills in Spark on Kubernetes
 Every organization running large scale Spark workloads on Kubernetes has dealt with this: a job runs for hours, processes terabytes of data, completes 80% of its work, and then executors start disappearing. No JVM exception. No heap dump. No warning in Spark UI. Just `exit code 137` and hours of compute burned. The standard response is to throw more memory at it, bump `memoryOverhead` by another 10 GB, and hope for the best. That works until the next data spike.
 
-The root cause is not insufficient memory. It is a design limitation in how **cgroupsv1** handles the Linux page cache. When a Spark executor reads shuffle data from local storage, the kernel caches those file pages in RAM. Under cgroupsv1, this page cache counts against the container's memory limit with no mechanism to reclaim it before the OOM killer fires. The kernel kills your executor to free memory it could have simply evicted.
+While OOM kills can have multiple causes (undersized JVM heap, memory leaks, excessive off-heap allocations), a significant category of production OOM kills stems from a design limitation in how **cgroupsv1** handles the Linux page cache. When a Spark executor reads shuffle data from local storage (NVMe SSDs, EBS volumes, or any block device), the kernel caches those file pages in RAM. Under cgroupsv1, this page cache counts against the container's memory limit with no mechanism to reclaim it before the OOM killer fires. The kernel kills your executor to free memory it could have simply evicted.
 
 **cgroupsv2** fixes this with `memory.high`, a throttling boundary that forces page cache eviction before reaching the hard kill limit. Kubernetes exposes this through the **MemoryQoS** feature gate ([KEP-2570](https://github.com/kubernetes/enhancements/issues/2570)). This guide covers the kernel internals behind the problem, the cgroupsv2 solution, and the exact EKS configuration to deploy it.
 
@@ -46,10 +46,6 @@ The root cause is not insufficient memory. It is a design limitation in how **cg
   │                                                                                     │
   └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
-
-:::info Who is this guide for?
-Platform engineers running Spark on EKS and data engineers debugging unexplained executor failures. Assumes familiarity with Spark memory configuration, Kubernetes resource management, and basic Linux concepts.
-:::
 
 ---
 
@@ -112,11 +108,11 @@ The page cache is the kernel's read/write buffer for all file I/O. Every `read()
 
 **Shuffle Write:** Executors write shuffle data to local storage. The `write()` syscall places data into page cache as dirty pages. The kernel's writeback daemon (`kworker/flush`) flushes dirty pages to disk asynchronously, governed by `vm.dirty_background_ratio` (default 10%) and `vm.dirty_ratio` (default 20%).
 
-**Shuffle Read:** During the reduce stage, executors read shuffle files back from NVMe. The `read()` syscall loads file blocks into page cache. The kernel retains these pages for potential future reads. Spark reads each shuffle block once and never touches it again, but the kernel does not know that. This read-ahead caching behavior works well for general purpose workloads but is toxic for Spark's sequential scan once access pattern.
+**Shuffle Read:** During the reduce stage, executors read shuffle files back from local storage. The `read()` syscall loads file blocks into page cache. The kernel retains these pages for potential future reads. Spark reads each shuffle block once and never touches it again, but the kernel does not know that. This read-ahead caching behavior works well for general purpose workloads but is toxic for Spark's sequential scan once access pattern.
 
 **Spill to Disk:** When Spark's execution pool runs out of memory, it spills intermediate data to local disk. Reading those spill files back generates even more page cache.
 
-**Accumulation:** Over the lifetime of a long running executor, page cache grows continuously. On a node with fast NVMe and heavy shuffle, page cache can reach **10 to 30 GB per executor**, none of which Spark or the JVM tracks.
+**Accumulation:** Over the lifetime of a long running executor, page cache grows continuously. On a node with fast local storage and heavy shuffle, page cache can reach **10 to 30 GB per executor**, none of which Spark or the JVM tracks.
 
 ```
 Timeline of a Spark Executor's Memory Usage
@@ -183,7 +179,7 @@ Container RSS (what the cgroup tracks)
 │       Scales with concurrent shuffle connections (3x data ≈ 3x buffers)
 │
 └── Linux Page Cache      ⚠️ NOT tracked by Spark OR the JVM
-    ├── Shuffle Files      Written to NVMe, cached on read-back
+    ├── Shuffle Files      Written to local storage, cached on read-back
     ├── Spill Files        Execution/storage pool spills to disk
     ├── S3A Disk Buffers   S3 reads cached on local filesystem
     └── JAR/Class Files    Loaded libraries and dependencies
@@ -230,7 +226,7 @@ Container starts → Allocates JVM heap → Runs tasks → Reads shuffle files
 cgroupsv1 does have `memory.soft_limit_in_bytes`, but it is advisory only. It influences which cgroup the kernel prefers to reclaim from under global memory pressure, but does not insert a reclamation step before the hard limit within a single cgroup.
 
 :::note
-The kernel *could* reclaim the page cache. Those are clean, reclaimable pages backed by files on NVMe. But cgroupsv1's memory controller does not attempt aggressive cgroup-local reclamation before invoking the OOM killer. It treats reclaimable page cache and non-reclaimable anonymous memory identically when evaluating the hard limit. Your executor dies because the kernel cached its own I/O.
+The kernel *could* reclaim the page cache. Those are clean, reclaimable pages backed by files on local storage. But cgroupsv1's memory controller does not attempt aggressive cgroup-local reclamation before invoking the OOM killer. It treats reclaimable page cache and non-reclaimable anonymous memory identically when evaluating the hard limit. Your executor dies because the kernel cached its own I/O.
 :::
 
 ---
@@ -686,7 +682,7 @@ MemoryQoS handles reclaimable memory (page cache) temporarily pushing RSS above 
 
 | Cause of High RSS | MemoryQoS Helps? | Correct Fix |
 |---|---|---|
-| Page cache from NVMe shuffle read-back | ✅ Yes. Kernel evicts cache before killing. | MemoryQoS is the fix |
+| Page cache from local storage shuffle read-back | ✅ Yes. Kernel evicts cache before killing. | MemoryQoS is the fix |
 | S3A / HDFS disk buffer cache | ✅ Yes. Same mechanism. | MemoryQoS is the fix |
 | Memory-mapped JAR/class files | ✅ Yes. File-backed, reclaimable. | MemoryQoS is the fix |
 | JVM heap full (GC not keeping up) | ❌ No. Heap is anonymous, non-reclaimable. | Increase `spark.executor.memory` or tune GC |
