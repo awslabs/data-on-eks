@@ -110,7 +110,7 @@ In a Spark executor, anonymous memory is bounded and predictable (JVM flags and 
 
 The page cache is the kernel's read/write buffer for all file I/O. Every `read()` and `write()` syscall goes through it. For Spark, this creates a silent memory consumer that grows across four phases:
 
-**Shuffle Write:** Executors write shuffle data to local NVMe. The `write()` syscall places data into page cache as dirty pages. The kernel's writeback daemon (`kworker/flush`) flushes dirty pages to disk asynchronously, governed by `vm.dirty_background_ratio` (default 10%) and `vm.dirty_ratio` (default 20%).
+**Shuffle Write:** Executors write shuffle data to local storage. The `write()` syscall places data into page cache as dirty pages. The kernel's writeback daemon (`kworker/flush`) flushes dirty pages to disk asynchronously, governed by `vm.dirty_background_ratio` (default 10%) and `vm.dirty_ratio` (default 20%).
 
 **Shuffle Read:** During the reduce stage, executors read shuffle files back from NVMe. The `read()` syscall loads file blocks into page cache. The kernel retains these pages for potential future reads. Spark reads each shuffle block once and never touches it again, but the kernel does not know that. This read-ahead caching behavior works well for general purpose workloads but is toxic for Spark's sequential scan once access pattern.
 
