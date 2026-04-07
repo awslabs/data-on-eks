@@ -21,7 +21,7 @@ The root cause is not insufficient memory. It is a design limitation in how **cg
   │   ════════════════════              ═══════════════════════════════════════          │
   │                                                                                     │
   │   1. Writes shuffle data    ──►     Dirty pages land in page cache                  │
-  │      to local NVMe                  Writeback flushes to disk                       │
+  │      to local storage                  Writeback flushes to disk                       │
   │                                                                                     │
   │   2. Reads shuffle data     ──►     read() loads file blocks into page cache        │
   │      during reduce phase            Kernel retains pages for future reads            │
