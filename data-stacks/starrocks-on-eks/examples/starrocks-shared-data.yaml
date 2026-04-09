@@ -126,8 +126,8 @@ data:
     # Replace with your actual values from Terraform outputs:
     #   terraform -chdir=terraform/_local output starrocks_s3_bucket_id
     #   terraform -chdir=terraform/_local output region
-    aws_s3_path = s3://starrocks-on-eks-starrocks-data-20260407040703670800000004
-    aws_s3_region = us-east-1
+    aws_s3_path = s3://<STARROCKS_S3_BUCKET_ID>
+    aws_s3_region = <REGION>
     aws_s3_use_aws_sdk_default_behavior = true
     aws_s3_use_instance_profile = true
     
