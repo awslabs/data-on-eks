@@ -16,10 +16,10 @@ spec:
         - |
           FE_SERVICE="starrocks-shared-data-fe-service"
           DATA_PATH="/data/tpcds-1tb"
-
+          
           # Create all TPC-DS tables (ignore if exists)
           mysql -h$FE_SERVICE -P9030 -uroot < /sql/tpcds_create.sql || true
-
+          
           # Load all tables with fixes
           for table in call_center catalog_page catalog_returns catalog_sales customer customer_address customer_demographics date_dim household_demographics income_band inventory item promotion reason ship_mode store store_returns store_sales time_dim warehouse web_page web_returns web_sales web_site; do
             echo "Loading table: $table"

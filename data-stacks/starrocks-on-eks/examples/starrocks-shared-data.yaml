@@ -1,0 +1,135 @@
+apiVersion: starrocks.com/v1
+kind: StarRocksCluster
+metadata:
+  name: starrocks-shared-data
+  namespace: starrocks
+spec:
+  # Frontend (FE) - Metadata and Query Coordination
+  starRocksFeSpec:
+    replicas: 3
+    image: "starrocks/fe-ubuntu:3.5-latest"
+    
+    limits:
+      cpu: 8
+      memory: 32Gi
+    requests:
+      cpu: 4
+      memory: 16Gi
+    
+    # FE Configuration for shared-data mode
+    configMapInfo:
+      configMapName: starrocks-shared-data-fe-cm
+      resolveKey: fe.conf
+      
+    # Node placement - use general-purpose Graviton nodes for FE metadata/coordination
+    nodeSelector:
+      NodeGroupType: general-purpose
+      karpenter.sh/capacity-type: on-demand
+      kubernetes.io/arch: arm64
+      
+    # Service configuration
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+        service.beta.kubernetes.io/aws-load-balancer-type: "external"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+
+  # Compute Nodes (CN) - Stateless compute for shared-data architecture
+  starRocksCnSpec:
+    image: "starrocks/cn-ubuntu:3.5-latest"
+    
+    limits:
+      cpu: 16
+      memory: 128Gi
+    requests:
+      cpu: 8
+      memory: 128Gi
+    
+    # Local cache storage for CN nodes (shared-data mode uses S3 as primary storage)
+    storageVolumes:
+    - name: cn-cache
+      mountPath: /opt/starrocks/cn/storage
+      storageClassName: gp3
+      storageSize: 100Gi
+    
+    # Use IRSA service account
+    serviceAccount: starrocks-sa
+        
+    # CN Autoscaling Configuration
+    autoScalingPolicy:
+      maxReplicas: 10
+      minReplicas: 1
+      hpaPolicy:
+        metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 60
+        - type: Resource
+          resource:
+            name: memory
+            target:
+              type: Utilization
+              averageUtilization: 60
+        behavior:
+          scaleDown:
+            policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 60
+          scaleUp:
+            policies:
+            - type: Pods
+              value: 2
+              periodSeconds: 30
+      
+    # Node placement - use Graviton memory-optimized nodes for CN compute
+    nodeSelector:
+      NodeGroupType: SparkGravitonMemoryOptimized
+      karpenter.sh/capacity-type: on-demand
+      
+    # Service configuration
+    service:
+      type: ClusterIP
+
+  # ServiceAccount with IRSA for S3 access
+  serviceAccount: starrocks-sa
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starrocks-shared-data-fe-cm
+  namespace: starrocks
+data:
+  fe.conf: |
+    LOG_DIR = ${STARROCKS_HOME}/log
+    DATE = "$(date +%Y%m%d-%H%M%S)"
+    JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xmx16g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    http_port = 8030
+    rpc_port = 9020
+    query_port = 9030
+    edit_log_port = 9010
+    mysql_service_nio_enabled = true
+    sys_log_level = INFO
+    
+    # Shared-data mode configuration
+    run_mode = shared_data
+    cloud_native_meta_port = 6090
+    query_timeout = 3600
+    max_connection = 4096
+    
+    # S3 shared storage configuration (uses Pod Identity for authentication)
+    # Replace with your actual values from Terraform outputs:
+    #   terraform -chdir=terraform/_local output starrocks_s3_bucket_id
+    #   terraform -chdir=terraform/_local output region
+    aws_s3_path = s3://starrocks-on-eks-starrocks-data-20260407040703670800000004
+    aws_s3_region = us-east-1
+    aws_s3_use_aws_sdk_default_behavior = true
+    aws_s3_use_instance_profile = true
+    
+    # Enable automatic default volume creation
+    enable_load_volume_from_conf = true
