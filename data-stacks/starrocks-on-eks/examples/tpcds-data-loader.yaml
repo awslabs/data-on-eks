@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tpcds-data-loader
+  namespace: starrocks
+spec:
+  template:
+    spec:
+      serviceAccountName: starrocks-sa
+      containers:
+      - name: loader
+        image: mysql:8.0
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          FE_SERVICE="starrocks-shared-data-fe-service"
+          DATA_PATH="/data/tpcds-1tb"
+
+          # Create all TPC-DS tables (ignore if exists)
+          mysql -h$FE_SERVICE -P9030 -uroot < /sql/tpcds_create.sql || true
+
+          # Load all tables with fixes
+          for table in call_center catalog_page catalog_returns catalog_sales customer customer_address customer_demographics date_dim household_demographics income_band inventory item promotion reason ship_mode store store_returns store_sales time_dim warehouse web_page web_returns web_sales web_site; do
+            echo "Loading table: $table"
+            for file in $DATA_PATH/${table}_*.dat; do
+              if [ -f "$file" ]; then
+                echo "Loading file: $file"
+                timestamp=$(date +%s%N)
+                curl --location-trusted -u "root:" \
+                  -XPUT "http://$FE_SERVICE:8030/api/tpcds/$table/_stream_load" \
+                  -T "$file" \
+                  -H "column_separator:|" \
+                  -H "Expect: 100-Continue" \
+                  -H "label:${table}_${timestamp}" \
+                  -H "max_filter_ratio:0.3" \
+                  -H "timeout:600" \
+                  -H "strict_mode:false"
+                echo ""
+              fi
+            done
+          done
+        volumeMounts:
+        - name: tpcds-data
+          mountPath: /data
+        - name: sql-scripts
+          mountPath: /sql
+      volumes:
+      - name: tpcds-data
+        persistentVolumeClaim:
+          claimName: tpcds-data-pvc
+      - name: sql-scripts
+        configMap:
+          name: tpcds-tables-sql
+      restartPolicy: Never
+  backoffLimit: 3
