@@ -1,9 +1,10 @@
 name   = "starrocks-on-eks"
 region = "us-east-1"
 
-
-# Enable all components for full stack deployment
+# Core component
 enable_starrocks = true
+
+# Enable optional components if needed
 enable_spark_operator       = false
 enable_spark_history_server = false
 enable_yunikorn             = false
