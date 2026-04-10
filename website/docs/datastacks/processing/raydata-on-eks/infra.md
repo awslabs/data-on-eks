@@ -129,11 +129,11 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443
 
 ```bash
 # Get password
-kubectl get secret -n kube-prometheus-stack kube-prometheus-stack-grafana \
+kubectl get secret -n monitoring kube-prometheus-stack-grafana \
   -o jsonpath="{.data.admin-password}" | base64 -d
 
 # Port forward
-kubectl port-forward -n kube-prometheus-stack svc/kube-prometheus-stack-grafana 3000:80
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 
 # Access: http://localhost:3000 (admin / <password>)
 ```

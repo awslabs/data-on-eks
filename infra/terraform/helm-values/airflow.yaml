@@ -139,10 +139,10 @@ config:
                 "name": "doeks-dags",
                 "classpath": "airflow.providers.git.bundles.git.GitDagBundle",
                 "kwargs": {
-                  "tracking_ref": "ad98dcd698047b8b0f106732bccb532eae9b4f0c",
+                  "tracking_ref": "bc442b020f8387d8277a823b711a9a1912d3a639",
                   "git_conn_id": "data-on-eks",
-                  "subdir": "schedulers/terraform/dags",
-                  "repo_url": "https://github.com/nabuskey/data-on-eks"
+                  "subdir": "data-stacks/airflow-on-eks/examples/dag-bundles",
+                  "repo_url": "https://github.com/awslabs/data-on-eks"
                 }
               }
             ]

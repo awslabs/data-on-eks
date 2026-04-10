@@ -4,6 +4,8 @@
 # 2. Update the `eks.tf` file to modify `min_size=6` and `desired_size=6` for the managed node group `"spark_benchmark_ssd"`, then run `terraform apply`.
 # 3. Confirm that the `"spark-team-a"` namespace exists.
 # 4. Replace `<S3_BUCKET>` in the configuration with your actual bucket name.
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
 # 5. Run `kubectl apply -f <filename>` to apply the configuration.
 
 # If you are repeating the tests to re-runw tih different instance types then make sure you update the following
@@ -117,6 +119,8 @@ spec:
     securityContext:
       runAsUser: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - name: spark-local-dir-1
         mountPath: /data1
     initContainers:
@@ -141,6 +145,8 @@ spec:
     securityContext:
       runAsUser: 185
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - name: spark-local-dir-1
         mountPath: /data1
     initContainers:
@@ -158,6 +164,9 @@ spec:
   restartPolicy:
     type: Never
   volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
     - name: spark-local-dir-1
       hostPath:
         path: "/mnt/k8s-disks/0"

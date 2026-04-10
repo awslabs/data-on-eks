@@ -7,6 +7,8 @@
   # Support shuffle data recovery on the reused PVCs (SPARK-35593)
   # Support driver-owned on-demand PVC (SPARK-35182)
 # WARNING: spark-operator cluster role is missing a 'persistenvolumeclaims' permission. Ensure you add this permission to spark-operator cluster role
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -98,6 +100,10 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
 
+  volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   driver:
     initContainers:
       - name: volume-permissions
@@ -120,6 +126,9 @@ spec:
       - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
   executor:
     initContainers:
       - name: volume-permissions
@@ -142,3 +151,6 @@ spec:
       - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom

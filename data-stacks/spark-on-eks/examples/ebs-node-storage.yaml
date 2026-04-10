@@ -4,6 +4,8 @@
 # 3/ execute taxi-trip-execute.sh
 
 # This example demonstrates EBS Node-Level Storage features
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
   # Shared EBS volume per node (mounted at /mnt/spark-local)
   # Cost-effective alternative to per-pod PVCs
   # Higher performance than individual PVCs but potential noisy neighbor issues
@@ -88,6 +90,10 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
 
+  volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   driver:
     cores: 1
     coreLimit: "1200m"
@@ -103,6 +109,9 @@ spec:
       - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
   executor:
     cores: 1
     coreLimit: "1200m"
@@ -118,3 +127,6 @@ spec:
       - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom

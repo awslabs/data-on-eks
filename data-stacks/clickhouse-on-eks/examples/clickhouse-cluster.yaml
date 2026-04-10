@@ -1,0 +1,74 @@
+# Example: Deploy a ClickHouse cluster on Graviton r8g.4xlarge nodes
+#
+# Prerequisites:
+#   - ClickHouse operator installed (enable_clickhouse = true)
+#   - clickhouse namespace created
+#
+# Usage:
+#   kubectl create namespace clickhouse
+#   kubectl create secret generic clickhouse-password -n clickhouse --from-literal=password="$(openssl rand -base64 24)"
+#   kubectl apply -f clickhouse-cluster.yaml
+
+apiVersion: clickhouse.com/v1alpha1
+kind: KeeperCluster
+metadata:
+  name: clickhouse-keeper
+  namespace: clickhouse
+spec:
+  replicas: 3
+  settings:
+    logger:
+      level: information
+    extraConfig:
+      logger:
+        formatting:
+          type: json
+  dataVolumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Gi
+---
+apiVersion: clickhouse.com/v1alpha1
+kind: ClickHouseCluster
+metadata:
+  name: clickhouse-cluster
+  namespace: clickhouse
+spec:
+  settings:
+    logger:
+      level: information
+    extraConfig:
+      logger:
+        formatting:
+          type: json
+    defaultUserPassword:
+      secret:
+        name: clickhouse-password
+        key: password
+  shards: 1
+  replicas: 1
+  keeperClusterRef:
+    name: clickhouse-keeper
+  dataVolumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 500Gi
+  podTemplate:
+    nodeSelector:
+      karpenter.k8s.aws/instance-family: r8g
+      karpenter.k8s.aws/instance-size: 4xlarge
+  containerTemplate:
+    image:
+      repository: clickhouse/clickhouse-server
+      tag: "25.1"
+    resources:
+      requests:
+        cpu: "8"
+        memory: 64Gi
+      limits:
+        cpu: "16"
+        memory: 120Gi

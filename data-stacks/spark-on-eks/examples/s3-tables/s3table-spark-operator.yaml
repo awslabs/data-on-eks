@@ -1,6 +1,8 @@
 # Pre-requisite before running this job
 # Replace <S3_BUCKET> with your S3 bucket created by this example (Check Terraform outputs)
 # REPLACE <S3TABLE_ARN> with actual S3 Table ARN
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -45,6 +47,10 @@ spec:
     type: OnFailure
     onFailureRetries: 1
 
+  volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   driver:
     cores: 1
     coreLimit: "1200m"
@@ -54,6 +60,9 @@ spec:
       NodeGroupType: "SparkComputeOptimized"
       karpenter.sh/capacity-type: "on-demand"
 
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
   executor:
     cores: 1
     coreLimit: "1200m"
@@ -62,3 +71,6 @@ spec:
     serviceAccount: spark-team-a
     nodeSelector:
       NodeGroupType: "SparkComputeOptimized"
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom

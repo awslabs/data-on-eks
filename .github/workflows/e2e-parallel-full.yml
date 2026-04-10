@@ -24,10 +24,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Auth AWS
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # v1
         with:
           role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
           aws-region: us-west-2
@@ -56,14 +56,14 @@ jobs:
           - example_path: analytics/terraform/spark-k8s-operator
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup backend
         # Un-comment remote backend for use in workflow
         run: sed -i "s/# //g" ${{ matrix.example_path }}/versions.tf
 
       - name: Auth AWS
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v1-node16
         with:
           role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
           aws-region: us-west-2
@@ -81,7 +81,7 @@ jobs:
           echo "iamlive_pid=$IAMLIVE_PID" >> $GITHUB_ENV
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2
         with:
           terraform_version: 1.0.0
 
@@ -141,10 +141,10 @@ jobs:
     steps:
       # Be careful not to change this to explicit checkout from PR ref/code, as below we run a python code that may change from the PR code.
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v1-node16
         with:
           role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
           aws-region: us-west-2

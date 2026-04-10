@@ -17,12 +17,14 @@ service:
 %{ if enable_ipv6 ~}
   extraService: |
     ipv6         On
+    Flush        5
     HTTP_Server  On
     HTTP_Listen  [::]
     HTTP_PORT    2020
     Health_Check On
 %{ else ~}
   extraService: |
+    Flush        5
     HTTP_Server  On
     HTTP_Listen  0.0.0.0
     HTTP_PORT    2020
@@ -51,7 +53,7 @@ input:
 additionalInputs: |
   [INPUT]
       Name                tail
-      Tag                 spark.<namespace_name>.<container_name>.<spark_app_id>.<driver_or_executor>.<docker_id>-
+      Tag                 spark.<namespace_name>.<container_name>.<spark_app_id>-<driver_or_executor>.<docker_id>-
       Path                /var/log/containers/*spark-team-*
       DB                  /var/log/flb_spark.db
       multiline.parser    docker, cri
@@ -102,6 +104,15 @@ additionalFilters: |
       Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
       Annotations         Off
 
+  # Enriches spark records with Kubernetes metadata and parses the JSON log line.
+  # Extracts level/message as top-level columns; remaining fields go into log JSON.
+  # Drops non-JSON lines (plain stdout/stderr) by returning -1 when level is absent.
+  [FILTER]
+      Name                lua
+      Match               spark.*
+      call                enrich
+      code                function enrich(tag, timestamp, record) local k8s = record.kubernetes or {} local labels = k8s.labels or {} local parsed = record.log_processed or {} if type(parsed) == "string" then local ok, obj = pcall(cjson.decode, parsed) if ok then parsed = obj else parsed = {} end end if not parsed.level then return -1, timestamp, record end local explicit = {namespace=true, pod_name=true, container_name=true, node_name=true, app=true, role=true, timestamp=true, level=true, message=true} local log = {} for k,v in pairs(parsed) do if not explicit[k] then log[k] = v end end return 1, timestamp, {namespace=k8s.namespace_name or "", pod_name=k8s.pod_name or "", container_name=k8s.container_name or "", node_name=k8s.host or "", app=labels["spark-app-selector"] or "", role=labels["spark-role"] or "", level=parsed.level, message=parsed.message or "", log=log} end
+
 cloudWatchLogs:
  enabled: false
  match: "systempods.*"
@@ -125,13 +136,37 @@ additionalOutputs: |
       log_key                         log
 
   [OUTPUT]
+      Name                http
+      Match               spark.*
+      Host                ${clickhouse_host}
+      Port                ${clickhouse_port}
+      URI                 /?query=INSERT+INTO+app_logs.spark+FORMAT+JSONEachRow&input_format_skip_unknown_fields=1&async_insert=1&wait_for_async_insert=0
+      Format              json_lines
+      http_User           $${CLICKHOUSE_USER}
+      http_Passwd         $${CLICKHOUSE_PASSWORD}
+      tls                 Off
+      Retry_Limit         3
+
+  [OUTPUT]
       Name                            s3
       Match                           spark.*
       region                          ${region}
       bucket                          ${s3_bucket_name}
       total_file_size                 5M
-      s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[3]/$TAG[4]/%H%M%S_$UUID.log
+      s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[1]/$TAG[3]/%H%M%S_$UUID.log
       s3_key_format_tag_delimiters    ..
       store_dir                       /home/ec2-user/buffer
       upload_timeout                  5m
       log_key                         log
+
+env:
+  - name: CLICKHOUSE_USER
+    valueFrom:
+      secretKeyRef:
+        name: fluent-bit-clickhouse-credentials
+        key: username
+  - name: CLICKHOUSE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: fluent-bit-clickhouse-credentials
+        key: password

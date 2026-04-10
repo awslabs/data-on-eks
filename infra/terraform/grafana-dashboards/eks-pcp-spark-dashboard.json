@@ -1,0 +1,686 @@
+{
+  "__inputs": [],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "8.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "EKS Provisioned Control Plane (PCP) monitoring dashboard for Spark and EMR on EKS workloads. Tracks API concurrency, pod scheduling rate, etcd size, and Spark job metrics.",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "EKS PCP Tier Thresholds",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.7},
+              {"color": "red", "value": 0.9}
+            ]
+          },
+          "unit": "short",
+          "max": 6800,
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "id": 1,
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "title": "API Request Concurrency (Seats) - 4XL Limit: 6800",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "sum(apiserver_flowcontrol_current_executing_seats)",
+          "legendFormat": "Executing Seats",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 280},
+              {"color": "red", "value": 360}
+            ]
+          },
+          "unit": "short",
+          "max": 400,
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "id": 2,
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "title": "Pod Scheduling Rate (pods/sec) - 4XL Limit: 400",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "sum(rate(scheduler_schedule_attempts_total{result=\"scheduled\"}[1m]))",
+          "legendFormat": "Scheduled pods/sec",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 11264},
+              {"color": "red", "value": 14336}
+            ]
+          },
+          "unit": "bytes",
+          "max": 17179869184,
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+      "id": 3,
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "title": "etcd DB Size - Limit: 16 GB",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "apiserver_storage_size_bytes",
+          "legendFormat": "etcd DB size",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.7},
+              {"color": "red", "value": 0.9}
+            ]
+          },
+          "unit": "percentunit",
+          "max": 1,
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+      "id": 4,
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "orientation": "auto",
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "title": "API Concurrency % of 4XL Limit (6800 seats)",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "sum(apiserver_flowcontrol_current_executing_seats) / 6800",
+          "legendFormat": "% of 4XL limit",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+      "id": 101,
+      "title": "EKS Control Plane Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+      "id": 10,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "API Request Concurrency - Executing Seats Over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(apiserver_flowcontrol_current_executing_seats)",
+          "legendFormat": "Total Executing Seats",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(apiserver_flowcontrol_current_executing_seats{flow_schema=~\".*spark.*|.*emr.*\"})",
+          "legendFormat": "Spark/EMR Seats",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [
+        {"colorMode": "warning", "op": "gt", "value": 4760, "visible": true},
+        {"colorMode": "critical", "op": "gt", "value": 6120, "visible": true}
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+      "id": 11,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Pod Scheduling Rate (pods/sec)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(scheduler_schedule_attempts_total{result=\"scheduled\"}[1m]))",
+          "legendFormat": "Scheduled",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(scheduler_schedule_attempts_total{result=\"unschedulable\"}[1m]))",
+          "legendFormat": "Unschedulable",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(scheduler_schedule_attempts_total{result=\"error\"}[1m]))",
+          "legendFormat": "Error",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [
+        {"colorMode": "warning", "op": "gt", "value": 280, "visible": true},
+        {"colorMode": "critical", "op": "gt", "value": 360, "visible": true}
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "bytes", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "id": 12,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "etcd Database Size",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "apiserver_storage_size_bytes",
+          "legendFormat": "etcd DB size",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {"colorMode": "warning", "op": "gt", "value": 11811160064, "visible": true},
+        {"colorMode": "critical", "op": "gt", "value": 14495514624, "visible": true}
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "s", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "id": 13,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "API Server Request Duration (p50/p90/p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"WATCH|CONNECT\"}[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"WATCH|CONNECT\"}[5m])) by (le))",
+          "legendFormat": "p90",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"WATCH|CONNECT\"}[5m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 22},
+      "id": 102,
+      "title": "Scheduler Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 23},
+      "id": 20,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Scheduler Queue Depth (Pending Pods)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "scheduler_pending_pods{queue=\"active\"}",
+          "legendFormat": "Active Queue",
+          "refId": "A"
+        },
+        {
+          "expr": "scheduler_pending_pods{queue=\"backoff\"}",
+          "legendFormat": "Backoff Queue",
+          "refId": "B"
+        },
+        {
+          "expr": "scheduler_pending_pods{queue=\"unschedulable\"}",
+          "legendFormat": "Unschedulable Queue",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "s", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 23},
+      "id": 21,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Scheduler E2E Scheduling Latency (p50/p90/p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(scheduler_scheduling_attempt_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(scheduler_scheduling_attempt_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p90",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(scheduler_scheduling_attempt_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 31},
+      "id": 103,
+      "title": "Spark / EMR Job Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+      "id": 30,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Spark Application Count (Running / Completed / Failed)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "count(kube_pod_labels{label_spark_role=\"driver\"}) or vector(0)",
+          "legendFormat": "Running Jobs (drivers)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(kube_pod_status_phase{phase=\"Failed\"} * on(pod, namespace) kube_pod_labels{label_spark_role=\"driver\"}) or vector(0)",
+          "legendFormat": "Failed Jobs",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(kube_pod_status_phase{phase=\"Succeeded\"} * on(pod, namespace) kube_pod_labels{label_spark_role=\"driver\"}) or vector(0)",
+          "legendFormat": "Succeeded Jobs",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+      "id": 31,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Job Submission Rate (Jobs/min)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(kube_pod_created{} * on(pod, namespace) kube_pod_labels{label_spark_role=\"driver\"}[5m])) * 60 or vector(0)",
+          "legendFormat": "New Spark Jobs/min",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "s", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40},
+      "id": 32,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Pod Scheduling SLI — Time to Running (p50/p90/p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(scheduler_pod_scheduling_sli_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50 Schedule Latency",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(scheduler_pod_scheduling_sli_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p90 Schedule Latency",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(scheduler_pod_scheduling_sli_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99 Schedule Latency",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "percentunit", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40},
+      "id": 33,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Job Success Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(kube_pod_status_phase{phase=\"Succeeded\"} * on(pod, namespace) kube_pod_labels{label_spark_role=\"driver\"}[5m])) / (sum(rate(kube_pod_status_phase{phase=\"Succeeded\"} * on(pod, namespace) kube_pod_labels{label_spark_role=\"driver\"}[5m])) + sum(rate(kube_pod_status_phase{phase=\"Failed\"} * on(pod, namespace) kube_pod_labels{label_spark_role=\"driver\"}[5m])) + 0.0001)",
+          "legendFormat": "Success Rate",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 48},
+      "id": 104,
+      "title": "Cluster Object Counts",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 49},
+      "id": 40,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Node Object Count",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "count(kube_node_info)",
+          "legendFormat": "Total Nodes",
+          "refId": "A"
+        },
+        {
+          "expr": "count(kube_node_info{node=~\".*karpenter.*\"}) or vector(0)",
+          "legendFormat": "Karpenter Nodes",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 49},
+      "id": 41,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Pod Object Count (by namespace)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(kube_pod_info) by (namespace)",
+          "legendFormat": "{{namespace}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(kube_pod_info)",
+          "legendFormat": "Total Pods",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 49},
+      "id": 42,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "SparkApplication CRD Count",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "count(kube_customresource_info{customresource_group=\"sparkoperator.k8s.io\", customresource_kind=\"SparkApplication\"}) or vector(0)",
+          "legendFormat": "SparkApplication CRs",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 57},
+      "id": 105,
+      "title": "Karpenter Node Provisioning",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 58},
+      "id": 50,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Karpenter Node Allocation Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(karpenter_nodes_allocatable{resource_type=\"cpu\"}[5m]))",
+          "legendFormat": "CPU allocated/sec",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "short", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 58},
+      "id": 51,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Karpenter Nodes by Lifecycle Phase",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(karpenter_cluster_state_node_count) by (lifecycle)",
+          "legendFormat": "{{lifecycle}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 66},
+      "id": 106,
+      "title": "Admission Webhook & etcd Latency",
+      "type": "row"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "s", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 67},
+      "id": 60,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Admission Webhook Duration (p90)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket[5m])) by (le, name))",
+          "legendFormat": "{{name}} p90",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {"unit": "s", "color": {"mode": "palette-classic"}},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 67},
+      "id": 61,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "etcd Request Duration (p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "{{operation}} p99",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["eks", "pcp", "spark", "emr", "benchmark"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": "${datasource}",
+        "definition": "label_values(kube_node_info, cluster)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Cluster",
+        "multi": false,
+        "name": "cluster",
+        "options": [],
+        "query": "label_values(kube_node_info, cluster)",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "EKS PCP Control Plane - Spark & EMR Benchmark Monitor",
+  "uid": "eks-pcp-spark-monitor",
+  "version": 1
+}

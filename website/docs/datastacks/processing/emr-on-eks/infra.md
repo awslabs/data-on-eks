@@ -320,7 +320,7 @@ If enabled, access Grafana dashboards:
 
 ```bash
 # Port forward to Grafana
-kubectl port-forward -n kube-prometheus-stack \
+kubectl port-forward -n monitoring \
   svc/kube-prometheus-stack-grafana 3000:80
 
 # Access at http://localhost:3000

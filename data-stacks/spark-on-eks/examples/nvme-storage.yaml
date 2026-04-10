@@ -4,6 +4,8 @@
 # 3/ execute taxi-trip-execute.sh
 
 # This example demonstrates NVMe Instance Store Storage features
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
   # Direct access to NVMe SSDs attached to instances
   # Maximum performance with local storage - no network I/O overhead
   # Requires latest generation instances with NVMe storage (c6id, c7id, r6id, r7id, m6id, m7id, i4i)
@@ -106,6 +108,10 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
 
+  volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   driver:
     cores: 2  # Increased for NVMe workload coordination
     coreLimit: "2000m"
@@ -119,6 +125,9 @@ spec:
       karpenter.sh/capacity-type: "on-demand"
       karpenter.k8s.aws/instance-family: "c6id"
     # Driver resource requirements: 2 vCPU, 10GB RAM (minimum c6id.xlarge+)
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
   executor:
     cores: 4  # Utilize NVMe instance capacity better
     coreLimit: "4000m"
@@ -132,3 +141,6 @@ spec:
       node.kubernetes.io/workload-type: "compute-optimized-x86"
       karpenter.k8s.aws/instance-family: "c6id"
     # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6id.xlarge+)
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom

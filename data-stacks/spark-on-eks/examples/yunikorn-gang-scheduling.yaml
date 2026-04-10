@@ -4,6 +4,8 @@
 # 3/ execute taxi-trip-execute.sh
 
 # This example demonstrates YuniKorn Gang Scheduling with NVMe Instance Store Storage
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
   # Gang scheduling ensures all Spark components (driver + executors) are scheduled atomically
   # Prevents partial allocations and resource fragmentation in multi-tenant environments
   # Combined with NVMe storage for maximum performance
@@ -110,6 +112,10 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
 
+  volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   driver:
     initContainers:
       - name: volume-permission
@@ -160,6 +166,9 @@ spec:
       karpenter.k8s.aws/instance-family: "c6id"  # Ensures NVMe instances
     labels:
       version: 3.5.3
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
   executor:
     initContainers:
       - name: volume-permission
@@ -182,3 +191,6 @@ spec:
     labels:
       version: 3.5.3
     # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6id.xlarge+)
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom

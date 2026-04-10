@@ -318,7 +318,7 @@ triggers:
   - type: prometheus
     metricType: Value
     metadata:
-      serverAddress: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090
+      serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
       threshold: '1'
       metricName: queued_queries
       query: sum by (job) (avg_over_time(trino_execution_QueryManager_QueuedQueries{job="trino"}[1m]))

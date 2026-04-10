@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/apache/celeborn.git
-    targetRevision: v0.6.1
+    targetRevision: 81d89f3ecac24fe22b29a2965a740c8bf93ce186
     path: charts/celeborn
     helm:
       values: |

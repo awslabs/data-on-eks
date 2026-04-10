@@ -4,6 +4,8 @@
 # 3/ execute taxi-trip-execute.sh
 
 # This example demonstrates Graviton ARM64 with NVMe Instance Store Storage features
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
   # Direct access to NVMe SSDs attached to ARM64 Graviton instances
   # Maximum performance with local storage - no network I/O overhead
   # Uses latest generation Graviton instances with NVMe storage (c6gd, c7gd, r6gd, r7gd, m6gd, m7gd, i4g, im4gn)
@@ -106,6 +108,10 @@ spec:
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
 
+  volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   driver:
     initContainers:
       - name: volume-permissions
@@ -126,6 +132,9 @@ spec:
       karpenter.sh/capacity-type: "on-demand"
       karpenter.k8s.aws/instance-family: "c6gd"
     # Driver resource requirements: 2 vCPU, 10GB RAM (minimum c6gd.xlarge+)
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
   executor:
     initContainers:
       - name: volume-permissions
@@ -146,3 +155,6 @@ spec:
       node.kubernetes.io/workload-type: "compute-optimized-graviton"
       karpenter.k8s.aws/instance-family: "c6gd"
     # Executor resource requirements: 4 vCPU, 18GB RAM per executor (minimum c6gd.xlarge+)
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom

@@ -5,6 +5,7 @@ locals {
     amp_sa              = local.amp_ingest_service_account
     amp_remotewrite_url = var.enable_amazon_prometheus ? "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}/api/v1/remote_write" : ""
     amp_url             = var.enable_amazon_prometheus ? "https://aps-workspaces.${local.region}.amazonaws.com/workspaces/${aws_prometheus_workspace.amp[0].id}" : ""
+    clickhouse_password = random_password.clickhouse.result
   })
 }
 
@@ -29,7 +30,7 @@ resource "kubectl_manifest" "kube_prometheus_stack_namespace" {
 resource "kubernetes_secret" "grafana_admin" {
   metadata {
     name      = "grafana-admin-secret"
-    namespace = "kube-prometheus-stack"
+    namespace = "monitoring"
   }
 
   data = {

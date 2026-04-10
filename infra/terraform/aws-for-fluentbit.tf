@@ -9,6 +9,8 @@ locals {
     region               = local.region
     enable_ipv6          = var.enable_ipv6
     fluent_bit_irsa_arn  = module.aws_for_fluentbit_irsa.arn
+    clickhouse_host      = local.clickhouse_host
+    clickhouse_port      = local.clickhouse_port
   })
 }
 

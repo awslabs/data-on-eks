@@ -1,5 +1,7 @@
 # NOTE: This example requires the following prerequisites before executing the jobs
 # 1. Ensure spark-team-a name space exists
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -47,6 +49,10 @@ spec:
     onFailureRetryInterval: 10
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
+  volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
   driver:
     cores: 1
     coreLimit: "1200m"
@@ -68,6 +74,9 @@ spec:
       - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
   executor:
     cores: 1
     instances: 2
@@ -88,3 +97,6 @@ spec:
       - key: "spark-compute-optimized"
         operator: "Exists"
         effect: "NoSchedule"
+    volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom

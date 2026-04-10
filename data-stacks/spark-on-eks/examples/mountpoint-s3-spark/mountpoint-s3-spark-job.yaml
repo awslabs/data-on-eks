@@ -1,6 +1,8 @@
 # Pre-requisite before running this job
 # Replace <S3_BUCKET_NAME> with your S3 bucket created by this example (Check Terraform outputs)
 # Verify that the version for spark matches
+# NOTE: Apply the log4j2 ConfigMap for JSON logging before submitting this job:
+#   kubectl apply -f data-stacks/spark-on-eks/spark-log4j2-configmap.yaml -n <namespace>
 
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
@@ -25,6 +27,9 @@ spec:
       - "local:///mnt/s3/jars/aws-java-sdk-bundle-1.12.647.jar" # Mountpoint-S3 Configuration
       - "local:///mnt/s3/jars/hadoop-aws-3.3.1.jar" # Mountpoint-S3 Configuration
   volumes:
+    - name: spark-log4j2
+      configMap:
+        name: spark-log4j2-config
     - name: spark-volume
       hostPath:
         path: /mnt/s3/jars # Mountpoint-S3 Configuration
@@ -85,6 +90,8 @@ spec:
     cores: 1
     coreLimit: "1200m"
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - mountPath: /mnt/s3/jars # Mountpoint-S3 Configuration
         name: spark-volume
     memory: "4g"
@@ -101,6 +108,8 @@ spec:
       runAsUser: 1000  # User ID
     cores: 1
     volumeMounts:
+      - name: spark-log4j2
+        mountPath: /opt/spark/log4j2-custom
       - mountPath: /mnt/s3/jars # Mountpoint-S3 Configuration
         name: spark-volume
     coreLimit: "3400m"

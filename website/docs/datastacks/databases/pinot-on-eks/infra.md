@@ -204,7 +204,7 @@ pinot-zookeeper-2                                      1/1     Running     0    
 We have also deployed `prometheus` and `grafana` under `monitoring` namespace. So also make sure all the pods for `monitoring` are also running.
 
 ```bash
-kubectl get pods -n kube-prometheus-stack
+kubectl get pods -n monitoring
 ```
 #### Output
 ```bash
@@ -234,7 +234,7 @@ Apache Pinot supports exporting metrics using Prometheus JMX exporter that is pa
 Let's verify metrics from all Apache Pinot components are getting published to Prometheus:
 
 ```bash
-kubectl port-forward service/prometheus-kube-prometheus-prometheus 9090:9090 -n kube-prometheus-stack
+kubectl port-forward service/prometheus-kube-prometheus-prometheus 9090:9090 -n monitoring
 ```
 
 Navigate to the prometheus UI at `http://localhost:9090`, type `pinot` in the search box and you should be able to see all the metrics.
@@ -244,13 +244,13 @@ Navigate to the prometheus UI at `http://localhost:9090`, type `pinot` in the se
 Next, let's use Grafana to visualize the Apache Pinot metrics. In order to access Grafana, we need to get the grafana password from Kubernetes secrets:
 
 ```bash
-kubectl get secret grafana-admin-secret -n kube-prometheus-stack -o jsonpath="{.data.admin-password}" | base64 --decode
+kubectl get secret grafana-admin-secret -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode
 ```
 
 Now use port-forwarding to access Grafana at port `8080`:
 
 ```bash
-kubectl port-forward service/prometheus-grafana 8080:80 -n kube-prometheus-stack
+kubectl port-forward service/prometheus-grafana 8080:80 -n monitoring
 ```
 
 Login to grafana dashboard using `admin` and the password retrieved in the previous step. Navigate to Dashboard → New → Import.

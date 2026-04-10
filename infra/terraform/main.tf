@@ -86,6 +86,16 @@ locals {
     }
   }
 
+  # EKS PCP Tier mapping: user-friendly names → AWS EKS API values
+  # These correspond to the EKS Provisioned Control Plane capacity tiers
+  # Ref: terraform-aws-modules/eks/aws v21 control_plane_scaling_config
+  pcp_tier_map = {
+    "XL"  = "tier-xl"
+    "2XL" = "tier-2xl"
+    "4XL" = "tier-4xl"
+    "8XL" = "tier-8xl"
+  }
+
   # # Private ECR Account IDs for EMR Spark Operator Helm Charts
   # account_region_map = {
   #   ap-northeast-1 = "059004520145"

@@ -153,7 +153,7 @@ Check if Prometheus is successfully scraping Spark metrics:
 
 ```bash
 # Port-forward to Prometheus
-kubectl port-forward -n prometheus svc/kube-prometheus-stack-prometheus 9090:9090
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
 ```
 
 Navigate to `http://localhost:9090` and query:

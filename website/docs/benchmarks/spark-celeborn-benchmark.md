@@ -15,20 +15,32 @@ import PieChart from '@site/src/components/Charts/PieChart';
 
 Apache Celeborn is an open-source intermediate data service designed to optimize big data compute engines like Apache Spark and Flink. It primarily manages shuffle and spilled data to enhance performance, stability, and flexibility in big data processing. By acting as a Remote Shuffle Service (RSS), it addresses issues like low I/O efficiency in traditional shuffle mechanisms. Celeborn offers high performance through asynchronous processing and a highly available architecture, contributing to more robust big data analytics.
 
-This document presents the performance characteristics of using Apache Celeborn with Apache Spark on a 3TB TPC-DS benchmark.
+This document presents the performance characteristics of using Apache Celeborn with Apache Spark on 3TB and 10TB TPC-DS benchmarks.
 
 ## Executive Summary (TL;DR)
 
-While Celeborn provides significant operational benefits for specific use cases, it does not serve as a universal performance accelerator. For the standardized TPC-DS 3TB benchmark, **overall execution time increased by 16%** compared to the native Spark shuffle service.
+This document evaluates Apache Celeborn as a Remote Shuffle Service for Apache Spark across two independent TPC-DS benchmarks: 3TB and 10TB. Due to differences in hardware and configuration between the two benchmarks, their results should be evaluated independently rather than as a direct comparison.
+
+**TPC-DS 3TB:** Overall execution time **increased by 16%** with Celeborn. The overhead of the remote shuffle service outweighed its benefits for the majority of queries at this scale.
+
+**TPC-DS 10TB:** With optimized Spark settings (notably `localShuffleReader.enabled=false`) and upgraded hardware, Celeborn achieved a **14.5% overall performance improvement**, with shuffle-heavy queries seeing gains of up to 49%.
 
 Key observations include:
-- **Query-Dependent Performance:** Results were highly query-dependent. The best-performing query (`q99-v2.4`) improved by **10.1%**, whereas the worst-performing query (`q91-v2.4`) regressed by over **100%**. The performance gains appear correlated with queries that have large shuffle operations, while the overhead of the remote service penalizes queries with small shuffles.
+- **Query-Dependent Performance:** Results were highly query-dependent at both scales. Performance gains correlate with queries that have large shuffle operations, while the overhead of the remote service penalizes queries with small shuffles.
 - **Operational Stability:** Celeborn's primary advantage is providing a centralized and fault-tolerant shuffle service. This architecture prevents job failures caused by executor loss and can improve reliability for long-running, complex queries.
 - **Infrastructure Overhead:** Using Celeborn introduces higher costs, requiring dedicated master and worker nodes, high-throughput storage (e.g., EBS), and high-bandwidth networking. Careful capacity planning is essential to handle peak shuffle traffic.
+- **Tuning Matters:** The `spark.sql.adaptive.localShuffleReader.enabled=false` setting dramatically reduced worst-case query regressions, highlighting the importance of Spark-side configuration when using Celeborn.
 
-**In summary,** Celeborn is a strategic choice for improving the stability of Spark jobs with large shuffle data, but for general workloads, the performance and cost overhead should be carefully evaluated.
+## Architecture Overview
 
-## Native Spark vs. Spark with Celeborn Benchmark
+### Default Spark Shuffle
+
+[![Default Spark Shuffle Architecture](./img/spark-shuffler-architecture.png)](./img/spark-shuffler-architecture.png)
+
+### Spark with Apache Celeborn
+
+[![Spark with Apache Celeborn Architecture](./img/celeborn-architecture.png)](./img/celeborn-architecture.png)
+
 
 ## Benchmark Configuration
 
@@ -129,7 +141,7 @@ This result demonstrates that for a broad, mixed workload like TPC-DS, the overh
     datasets: [
       {
         label: 'Number of Queries',
-        data: [2, 55, 15, 29],
+        data: [2, 55, 16, 31],
         backgroundColor: [
           '#27ae60', // Green for improvement
           '#bdc3c7', // Light grey for similar (neutral)
@@ -487,7 +499,7 @@ Thread configuration adjustments did not produce major performance impacts overa
 
 #### Celeborn Default CPU usage
 
-![](./img/celebron-default-threads.png)
+![](./img/celeborn-default-threads.png)
 
 
 #### Celeborn with 4x thread configured
@@ -499,10 +511,254 @@ Thread configuration adjustments did not produce major performance impacts overa
 
 Despite extensive tuning efforts across storage, Spark parameters, and Celeborn-specific configurations, all Celeborn configurations resulted in longer overall completion times compared to the default Spark shuffler. This consistent finding reinforces that while Celeborn provides operational benefits, achieving performance parity or improvement with native Spark shuffle requires careful workload-specific optimization and may not be achievable for all use cases.
 
+
+## TPC-DS 10TB
+
+We ran the 10TB benchmark using the same EKS cluster, application configurations, and methodology as the 3TB benchmark described above, with the following differences:
+
+| Component | Configuration |
+|-----------|---------------|
+| **Dataset** | [TPC-DS](https://www.tpc.org/tpcds/) 10TB (Parquet format) |
+| **Instance Type** | r8g.16xlarge (upgraded from r6g.8xlarge to eliminate potential hardware bottlenecks) |
+| **Executor Pods** | 32 pods × 14 cores × 120GB RAM each (4 pods per node) |
+| **Celeborn Worker Pods** | 6 pods × 60 cores × 500GB RAM each (1 pod per node) |
+| **Celeborn Worker Storage** | 4 × 1TB EBS GP3 per pod (80,000 IOPS, 2,000 MiB/s throughput per volume) |
+| **Test Iterations** | 3 runs averaged (reduced from 10 due to runtime and cost) |
+
+Based on findings from the 3TB tuning analysis, `spark.sql.adaptive.localShuffleReader.enabled` was set to **false** for the 10TB benchmark. As demonstrated in the [Spark Parameter Optimization](#spark-parameter-optimization) section, this setting significantly reduces performance regressions on outlier queries.
+
+:::note
+Due to the different hardware (r8g.16xlarge vs. r6g.8xlarge) and the `localShuffleReader` configuration change, the 3TB and 10TB results should not be directly compared. Each benchmark independently evaluates Celeborn against the native Spark shuffler under its own test conditions.
+:::
+
+With the 10TB dataset, Celeborn achieved a **14.5% overall performance improvement** over the native Spark shuffler. Most queries showed similar performance between the two approaches, while shuffle-heavy queries saw significant gains.
+
+### Overall Benchmark Performance
+
+<BarChart
+  title="TPC-DS 10TB Overall Runtime Comparison"
+  data={{
+    labels: ['Native Spark Shuffle', 'Celeborn Default Settings'],
+    datasets: [
+      {
+        label: 'Total Runtime (seconds)',
+        data: [6533.0, 5583.0],
+        backgroundColor: ['#e74c3c', '#27ae60'],
+        borderColor: ['#c0392b', '#229954'],
+        borderWidth: 1,
+      },
+    ],
+  }}
+  options={{
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: 'Runtime (seconds)',
+        },
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Shuffle Mechanism',
+        },
+      },
+    },
+  }}
+/>
+
+### Query Performance Distribution
+
+<PieChart
+  title="Query Performance Distribution vs. Baseline"
+  type="doughnut"
+  data={{
+    labels: [
+      '10%+ Improvement (Celeborn Faster)',
+      '+/- 9% (Similar Performance)',
+      '10-20% Regression (Celeborn Slower)',
+      '20%+ Regression (Celeborn Slower)',
+    ],
+    datasets: [
+      {
+        label: 'Number of Queries',
+        data: [9, 75, 14, 6],
+        backgroundColor: [
+          '#27ae60',
+          '#bdc3c7',
+          '#e67e22',
+          '#e74c3c',
+        ],
+        borderColor: '#ffffff',
+        borderWidth: 2,
+      },
+    ],
+  }}
+/>
+
+### Per-Query Performance Analysis
+
+<BarChart
+  title="Per-Query Performance: Top 10 Gains and Regressions"
+  height="600px"
+  data={{
+    labels: [
+      'q24b-v2.4', 'q23b-v2.4', 'q23a-v2.4', 'q50-v2.4', 'q26-v2.4',
+      'q93-v2.4', 'q78-v2.4', 'q27-v2.4', 'q74-v2.4', 'q19-v2.4',
+      'q1-v2.4', 'q44-v2.4', 'q68-v2.4', 'q81-v2.4', 'q32-v2.4',
+      'q92-v2.4', 'q41-v2.4', 'q12-v2.4', 'q8-v2.4', 'q77-v2.4'
+    ],
+    datasets: [
+      {
+        label: '% Improvement vs. Baseline',
+        data: [
+          49, 33, 27, 27, 24, 23, 14, 13, 10, 10,
+          -16, -18, -18, -19, -22, -35, -36, -36, -53, -66
+        ],
+        backgroundColor: [
+          '#27ae60', '#27ae60', '#27ae60', '#27ae60', '#27ae60',
+          '#27ae60', '#27ae60', '#27ae60', '#27ae60', '#27ae60',
+          '#e74c3c', '#e74c3c', '#e74c3c', '#e74c3c', '#e74c3c',
+          '#e74c3c', '#e74c3c', '#e74c3c', '#e74c3c', '#e74c3c'
+        ],
+        borderColor: [
+          '#229954', '#229954', '#229954', '#229954', '#229954',
+          '#229954', '#229954', '#229954', '#229954', '#229954',
+          '#c0392b', '#c0392b', '#c0392b', '#c0392b', '#c0392b',
+          '#c0392b', '#c0392b', '#c0392b', '#c0392b', '#c0392b'
+        ],
+        borderWidth: 1,
+      },
+    ],
+  }}
+  options={{
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: '% Improvement (Positive is better)',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'TPC-DS Query',
+        },
+      },
+    },
+  }}
+/>
+
+#### Top Performing Queries
+
+| Rank | TPC-DS Query | Performance Change (%) |
+|------|--------------|------------------------|
+| 1 | q24b-v2.4 | 49 |
+| 2 | q23b-v2.4 | 33 |
+| 3 | q23a-v2.4 | 27 |
+| 4 | q50-v2.4 | 27 |
+| 5 | q26-v2.4 | 24 |
+| 6 | q93-v2.4 | 23 |
+| 7 | q78-v2.4 | 14 |
+| 8 | q27-v2.4 | 13 |
+| 9 | q74-v2.4 | 10 |
+| 10 | q19-v2.4 | 10 |
+
+#### Bottom Performing Queries
+
+| Rank | TPC-DS Query | Performance Change (%) |
+|------|--------------|------------------------|
+| 1 | q77-v2.4 | -66 |
+| 2 | q8-v2.4 | -53 |
+| 3 | q12-v2.4 | -36 |
+| 4 | q41-v2.4 | -36 |
+| 5 | q92-v2.4 | -35 |
+| 6 | q32-v2.4 | -22 |
+| 7 | q81-v2.4 | -19 |
+| 8 | q68-v2.4 | -18 |
+| 9 | q44-v2.4 | -18 |
+| 10 | q1-v2.4 | -16 |
+
+
+
+### Analysis
+
+Query q50 demonstrates a clear example of where Celeborn's architecture provides significant benefit. This query had 27% improvement and is representative of shuffle-heavy queries.
+
+<div style={{display: 'flex'}}>
+  <div style={{textAlign: 'center', marginRight: '10px'}}>
+    <p><strong>Celeborn</strong></p>
+    <img src={require('./img/celeborn-10tb-q50-exchange-celeborn.png').default} width="100%" />
+  </div>
+  <div style={{textAlign: 'center'}}>
+    <p><strong>Default</strong></p>
+    <img src={require('./img/celeborn-10tb-q50-exchange-default.png').default} width="100%" />
+  </div>
+</div>
+
+#### Shuffle Write
+
+| Metric | Celeborn | Default |
+|---|---|---|
+| Write time total | 1.12 h | 3.60 h |
+| Write time med/max | 416 ms / 1.0 s | 1.4 s / 4.8 s |
+| Bytes written | 521.5 GiB | 532.5 GiB |
+
+Celeborn achieved approximately **3.2x faster shuffle writes** compared to the default shuffler. Total write time dropped from 3.60 hours to 1.12 hours, with median write latency improving from 1.4 seconds to 416 milliseconds. The slight difference in bytes written (521.5 GiB vs. 532.5 GiB) is likely attributable to minor compression variations between the two shuffle implementations.
+
+#### Shuffle Read
+
+| Metric | Celeborn | Default |
+|---|---|---|
+| Fetch wait time total | 5.4 min | 2.29 h |
+| Fetch wait med/max | 583 ms / 13.3 s | 42.5 s / 56.1 s |
+| Remote bytes read | 521.5 GiB | 515.9 GiB |
+| Remote blocks read | 22,196,458 | 1,915,416 |
+| Local bytes read | — | 16.6 GiB |
+| Local blocks read | — | 61,784 |
+| Remote reqs duration | — | 17.39 h |
+
+The shuffle read phase revealed the most significant performance difference between the two approaches:
+
+- **~25x reduction in fetch wait time:** Total fetch wait time dropped from 2.29 hours to 5.4 minutes. With the default shuffler, tasks spend considerable time waiting to pull data from other executors that are simultaneously serving shuffle blocks and performing computation. Celeborn's dedicated workers eliminate this contention.
+- **Centralized data serving:** Celeborn consolidates all shuffle data on its workers, removing the local/remote read split seen in the default shuffler (16.6 GiB local + 515.9 GiB remote). This centralization simplifies data access patterns and reduces scheduling dependencies.
+- **Higher block granularity with lower latency:** Celeborn served 22 million blocks compared to 1.9 million in the default configuration. Despite the significantly higher block count, the dedicated shuffle workers served these smaller blocks with substantially lower latency per request.
+- **Elimination of remote request overhead:** The default shuffler accumulated 17.39 hours of total remote request duration — time spent by executors making and waiting on shuffle fetch requests from other executors. This metric is absent in Celeborn, reflecting its more efficient data serving architecture.
+
+### Resource Utilization
+
+#### Celeborn Worker Disk Usage
+
+<div style={{display: 'flex'}}>
+  <div style={{textAlign: 'center', marginRight: '10px'}}>
+    <p><strong>Disk Usage Percent</strong></p>
+    <img src={require('./img/celeborn-10tb-disk-used-percent.png').default} width="100%" />
+  </div>
+  <div style={{textAlign: 'center'}}>
+    <p><strong>Disk Usage Amount</strong></p>
+    <img src={require('./img/celeborn-10tb-disk-used-space.png').default} width="100%" />
+  </div>
+</div>
+
+Peak disk usage across all 6 Celeborn workers reached approximately **1TB** — well within the available **24TB** total capacity (4 × 1TB × 6 nodes). This indicates significant headroom for larger datasets or more concurrent workloads without risking storage pressure.
+
+#### Celeborn Worker Network and Storage I/O
+
+![](./img/celeborn-10tb-networking.png)
+![](./img/celeborn-10tb-storage.png)
+
+As expected, IOPS and throughput increased compared to the 3TB benchmark. However, observed values remained significantly below the configured maximums per EBS volume (80,000 IOPS and 2,000 MiB/s throughput), suggesting that storage was not a bottleneck for this workload and the current provisioning provides ample capacity.
+
+
 ## Overall Conclusion
 
-This benchmark report aimed to evaluate the performance characteristics of Apache Celeborn with Apache Spark on a 3TB TPC-DS workload. The initial comparison against native Spark shuffle revealed that while Celeborn offers significant operational stability benefits (e.g., fault tolerance for large shuffle operations), it introduced an overall 16% performance regression for this mixed workload. Performance was highly query-dependent, with some queries improving modestly and others regressing severely.
+This benchmark evaluated Apache Celeborn with Apache Spark across two independent TPC-DS workloads.
 
-Furthermore, an investigation into specific Celeborn configuration adjustments (`CELEBORN_WORKER_MEMORY`, `CELEBORN_WORKER_OFFHEAP_MEMORY`, `celeborn.worker.flusher.buffer.size`) demonstrated that these optimizations did not yield a net positive performance gain. A majority of queries showed either negligible change or significant performance degradation, reinforcing the idea that generic tuning might not be universally effective.
+At the **3TB scale**, Celeborn introduced an overall **16% performance regression** compared to native Spark shuffle. Performance was highly query-dependent, with some queries improving modestly and others regressing severely. Investigation into Celeborn configuration adjustments (`CELEBORN_WORKER_MEMORY`, `CELEBORN_WORKER_OFFHEAP_MEMORY`, `celeborn.worker.flusher.buffer.size`) did not yield a net positive performance gain. However, disabling `spark.sql.adaptive.localShuffleReader.enabled` dramatically reduced worst-case query regressions, proving to be the single most impactful tuning parameter.
 
-In summary, Apache Celeborn is a strategic choice when operational stability, particularly for large and complex shuffle data, is paramount. However, for general analytical workloads, its deployment requires a careful evaluation of the performance overhead and associated infrastructure costs. Optimal performance tuning with Celeborn is highly dependent on workload characteristics and necessitates detailed, workload-specific analysis rather than relying on generalized configuration adjustments.
+At the **10TB scale**, with the `localShuffleReader` optimization applied and upgraded hardware (r8g.16xlarge), Celeborn achieved an overall **14.5% performance improvement**. The deep-dive analysis on shuffle-heavy queries revealed the underlying mechanism: Celeborn reduced shuffle write time by approximately 70% and shuffle read wait time by approximately 96%. The default shuffler's bottleneck stems from the dual role of executors — they must both perform computation and serve shuffle data. At large data volumes, this contention becomes severe, as evidenced by 17.39 hours of cumulative remote request duration in the default configuration. Celeborn addresses this by offloading shuffle storage to dedicated workers, allowing executors to focus exclusively on computation.
+
+Due to differences in hardware and Spark configuration between the two benchmarks, their results should not be directly compared. Each independently demonstrates that Celeborn's effectiveness depends on workload characteristics, proper tuning, and shuffle data volume. Deployment decisions should be guided by these factors, with careful evaluation of the associated infrastructure costs.

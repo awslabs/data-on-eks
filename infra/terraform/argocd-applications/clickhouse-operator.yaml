@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: clickhouse-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/clickhouse
+    chart: clickhouse-operator-helm
+    targetRevision: "0.0.3"
+    helm:
+      values: |
+        ${user_values_yaml}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: clickhouse-operator-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
