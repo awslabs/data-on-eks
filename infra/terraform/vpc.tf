@@ -121,7 +121,7 @@ module "vpc_endpoints" {
       )
       ip_address_type = "dualstack"
       dns_options = {
-        dns_record_ip_type = "dualstack"
+        dns_record_ip_type = var.enable_ipv6 ? "dualstack" : "ipv4"
       }
       private_dns_enabled = true
     }
