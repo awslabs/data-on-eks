@@ -1,0 +1,19 @@
+# EMR on EKS Executor Pod Template — PCP Benchmark
+#
+# Placement strategy: pin executor pods to the PCP benchmark node group.
+#
+# Do not define a volume mount for spark.local.dir here. EMR on EKS already
+# injects the local-dir mount when spark.local.dir is configured, and adding
+# the same mount in the pod template causes a duplicate mount-path error.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emr-executor
+  namespace: emr-data-team-a
+spec:
+  nodeSelector:
+    NodeGroupType: EMRPCPBenchmark
+    emr-eks-benchmarks: "true"
+
+  containers:
+    - name: spark-kubernetes-executor  # Required — do not change

@@ -82,10 +82,15 @@ output "raydata_config" {
   } : null
 }
 
-output "grafana_password" {
-  description = "Grafana admin password"
-  value       = kubernetes_secret.grafana_admin.data["admin-password"]
-  sensitive   = true
+
+output "grafana_port_forward" {
+  description = "Port-forward command for Grafana"
+  value       = "kubectl port-forward svc/kube-prometheus-stack-grafana -n kube-prometheus-stack 3000:80"
+}
+
+output "grafana_password_command" {
+  description = "Command to print the Grafana admin password from the Kubernetes secret"
+  value       = "kubectl get secret grafana-admin-secret -n kube-prometheus-stack -o jsonpath='{.data.admin-password}' | base64 --decode && echo"
 }
 
 ################################################################################

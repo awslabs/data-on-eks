@@ -53,3 +53,13 @@ resource "kubectl_manifest" "kube_prometheus_stack" {
     module.amp_ingest_pod_identity
   ]
 }
+
+resource "kubectl_manifest" "eks_pcp_spark_dashboard" {
+  yaml_body = templatefile("${path.module}/manifests/kube-prometheus-stack/eks-pcp-spark-dashboard.yaml", {
+    eks_pcp_spark_dashboard_json = file("${path.module}/grafana-dashboards/eks-pcp-spark-dashboard.json")
+  })
+
+  depends_on = [
+    kubectl_manifest.kube_prometheus_stack
+  ]
+}
