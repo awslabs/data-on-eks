@@ -224,12 +224,6 @@ variable "enable_emr_spark_operator" {
   default     = false
 }
 
-variable "enable_yunikorn" {
-  description = "Enable Apache YuniKorn scheduler. Set to false for PCP benchmarking — YuniKorn adds control-plane overhead and skews scheduler_schedule_attempts metrics."
-  type        = bool
-  default     = true
-}
-
 #---------------------------------------------------------------
 # EKS Provisioned Control Plane (PCP) Tier
 # Controls the EKS control plane capacity for high-scale workloads

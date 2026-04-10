@@ -100,8 +100,6 @@ prometheus:
           spark-role: driver
       namespaceSelector:
         matchNames:
-          - emr-data-team-a
-          - emr-data-team-b
           - spark-team-a
           - spark-team-b
           - spark-team-c
@@ -154,3 +152,7 @@ grafana:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/emr-eks-grafana-dashboard.json
       spark-operator-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/kubeflow-spark-operator-dashboard.json
+      # EKS PCP Control Plane monitoring dashboard for Spark/EMR benchmarks
+      # Tracks API concurrency seats, pod scheduling rate, etcd size, and Spark job metrics
+      eks-pcp-spark-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/eks-pcp-benchmarks/infra/terraform/grafana-dashboards/eks-pcp-spark-dashboard.json
