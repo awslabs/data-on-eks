@@ -1,0 +1,113 @@
+# SparkApplication using Amazon S3 Files
+# S3 Files provides POSIX file system semantics on top of S3 data
+# Built on EFS with intelligent caching for performance
+# Reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files.html
+#
+# This job reads/writes data via mounted S3 Files filesystem instead of s3a:// protocol
+# Benefits:
+# - File system semantics (POSIX compliance, file locking)
+# - Intelligent caching (active data in high-performance storage)
+# - Bidirectional sync with S3 bucket
+# - Better for small file operations and metadata-heavy workloads
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "order-s3-files"
+  namespace: spark-team-a
+  labels:
+    app: "order-s3-files"
+    queue: root.test
+spec:
+  type: Python
+  sparkVersion: "4.0.1"
+  pythonVersion: "3"
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/spark:4.0.1-scala2.13-java21-python3-r-ubuntu"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://<S3_BUCKET>/scripts/pyspark-order.py"
+  arguments:
+    # Use file:// protocol to read/write from mounted S3 Files filesystem
+    # S3 Files automatically syncs changes bidirectionally with S3 bucket
+    - "file:///mnt/s3-files/order/input/"
+    - "file:///mnt/s3-files/order/output/s3-files/"
+  sparkConf:
+    # AWS SDK V2 for s3a:// access (still needed for mainApplicationFile and event logs)
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider,software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    # K8s Pod naming
+    "spark.app.name": "order-s3-files"
+    "spark.kubernetes.driver.pod.name": "order-s3-files-driver"
+    "spark.kubernetes.executor.podNamePrefix": "order-s3-files"
+    # Spark Event logs - keep on s3a:// for Spark History Server compatibility
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 3
+    onSubmissionFailureRetryInterval: 20
+  driver:
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    cores: 2
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      karpenter.sh/capacity-type: "on-demand"
+      NodeGroupType: "SparkGravitonMemoryOptimized"
+    # Mount S3 Files filesystem via EFS CSI driver
+    volumes:
+      - name: s3-files-volume
+        persistentVolumeClaim:
+          claimName: s3-files-pvc
+    volumeMounts:
+      - name: s3-files-volume
+        mountPath: "/mnt/s3-files"
+        readOnly: false
+  executor:
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    cores: 2
+    instances: 4
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      karpenter.sh/capacity-type: "spot"
+      NodeGroupType: "SparkGravitonMemoryOptimized"
+    # Mount S3 Files filesystem via EFS CSI driver
+    volumes:
+      - name: s3-files-volume
+        persistentVolumeClaim:
+          claimName: s3-files-pvc
+    volumeMounts:
+      - name: s3-files-volume
+        mountPath: "/mnt/s3-files"
+        readOnly: false
+    affinity:
+      # Keep executors in same AZ for better performance
+      podAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - order-s3-files
+          topologyKey: topology.kubernetes.io/zone

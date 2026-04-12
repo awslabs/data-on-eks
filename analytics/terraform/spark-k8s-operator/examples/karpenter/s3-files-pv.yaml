@@ -1,0 +1,26 @@
+# PersistentVolume for S3 Files
+# This statically provisions the S3 Files filesystem for Spark workloads
+# The filesystem provides file system semantics on top of S3 data
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: s3-files-pv
+  labels:
+    type: s3-files
+    usage: spark-data
+spec:
+  capacity:
+    storage: 100Gi  # Arbitrary value for S3 Files (actual storage is in S3)
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany  # Multiple pods can read/write simultaneously
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: s3-files-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-XXXXXXXXX  # REPLACE with your S3 Files filesystem ID
+    # Optional: Use Access Point for better isolation
+    # volumeHandle: fs-XXXXXXXXX::fsap-XXXXXXXXX
+  mountOptions:
+    - tls  # Encryption in transit

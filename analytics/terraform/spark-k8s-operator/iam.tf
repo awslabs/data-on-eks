@@ -83,6 +83,23 @@ resource "aws_iam_policy" "s3_irsa_access_policy" {
   })
 }
 
+#---------------------------------------------------------------
+# IRSA for EFS CSI Driver
+#---------------------------------------------------------------
+module "efs_csi_driver_irsa" {
+  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version               = "5.60.0"
+  role_name_prefix      = format("%s-%s-", local.name, "efs-csi-driver")
+  attach_efs_csi_policy = true
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:efs-csi-controller-sa", "kube-system:efs-csi-node-sa"]
+    }
+  }
+  tags = local.tags
+}
+
 
 #---------------------------------------------------------------
 # IRSA for Kubecost EC2 access
@@ -193,6 +210,21 @@ data "aws_iam_policy_document" "spark_operator" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",
       "logs:PutLogEvents",
+    ]
+  }
+
+  statement {
+    sid       = "EFSAccess"
+    effect    = "Allow"
+    resources = ["*"]
+
+    actions = [
+      "elasticfilesystem:ClientMount",
+      "elasticfilesystem:ClientWrite",
+      "elasticfilesystem:ClientRootAccess",
+      "elasticfilesystem:DescribeFileSystems",
+      "elasticfilesystem:DescribeMountTargets",
+      "elasticfilesystem:DescribeAccessPoints",
     ]
   }
 }

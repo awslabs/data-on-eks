@@ -67,6 +67,30 @@ output "s3directory_bucket_zone" {
 }
 
 ################################################################################
+# S3 Files (EFS) Configuration
+################################################################################
+
+output "s3_files_filesystem_id" {
+  description = "S3 Files (EFS) filesystem ID - use this in PersistentVolume manifests"
+  value       = aws_efs_file_system.s3_files.id
+}
+
+output "s3_files_filesystem_dns_name" {
+  description = "S3 Files (EFS) filesystem DNS name"
+  value       = aws_efs_file_system.s3_files.dns_name
+}
+
+output "s3_files_access_point_id" {
+  description = "S3 Files EFS Access Point ID for spark-team-a"
+  value       = aws_efs_access_point.spark_team_a.id
+}
+
+output "s3_files_access_point_arn" {
+  description = "S3 Files EFS Access Point ARN for spark-team-a"
+  value       = aws_efs_access_point.spark_team_a.arn
+}
+
+################################################################################
 # Ray Data Configuration
 ################################################################################
 
