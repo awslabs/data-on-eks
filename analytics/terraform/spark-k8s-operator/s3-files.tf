@@ -16,7 +16,7 @@ resource "aws_iam_role" "s3_files" {
       {
         Effect = "Allow"
         Principal = {
-          Service = "s3files.amazonaws.com"
+          Service = "elasticfilesystem.amazonaws.com"
         }
         Action = "sts:AssumeRole"
       }

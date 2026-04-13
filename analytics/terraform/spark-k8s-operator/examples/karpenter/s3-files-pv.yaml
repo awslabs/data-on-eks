@@ -28,6 +28,5 @@ spec:
   csi:
     driver: efs.csi.aws.com  # S3 Files uses EFS CSI driver
     # Format: s3files:<filesystem-id>::<access-point-id>
+    # Mount target IP is auto-discovered from the filesystem and access point
     volumeHandle: s3files:fs-XXXXXXXXX::fsap-XXXXXXXXX
-    volumeAttributes:
-      mounttargetip: "MOUNT_TARGET_IP"  # IP of mount target in your AZ

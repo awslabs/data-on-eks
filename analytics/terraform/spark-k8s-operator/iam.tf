@@ -87,10 +87,15 @@ resource "aws_iam_policy" "s3_irsa_access_policy" {
 # IRSA for EFS CSI Driver
 #---------------------------------------------------------------
 module "efs_csi_driver_irsa" {
-  source                = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version               = "5.60.0"
-  role_name_prefix      = format("%s-%s-", local.name, "efs-csi-driver")
-  attach_efs_csi_policy = true
+  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version          = "5.60.0"
+  role_name_prefix = format("%s-%s-", local.name, "efs-csi-driver")
+
+  # Use S3 Files CSI Driver policy instead of EFS CSI policy
+  role_policy_arns = {
+    s3files_csi_policy = "arn:aws:iam::aws:policy/AmazonS3FilesCSIDriverPolicy"
+  }
+
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
@@ -220,9 +225,8 @@ data "aws_iam_policy_document" "spark_operator" {
 
     actions = [
       "s3files:ClientMount",
-      "s3files:DescribeFileSystems",
-      "s3files:DescribeMountTargets",
-      "s3files:DescribeAccessPoints",
+      "s3files:ClientWrite",
+      "s3files:ClientRootAccess",
     ]
   }
 }
