@@ -67,27 +67,32 @@ output "s3directory_bucket_zone" {
 }
 
 ################################################################################
-# S3 Files (EFS) Configuration
+# S3 Files Configuration
 ################################################################################
 
 output "s3_files_filesystem_id" {
-  description = "S3 Files (EFS) filesystem ID - use this in PersistentVolume manifests"
-  value       = aws_efs_file_system.s3_files.id
+  description = "S3 Files filesystem ID - use this in PersistentVolume manifests"
+  value       = aws_s3files_file_system.spark_data.id
 }
 
-output "s3_files_filesystem_dns_name" {
-  description = "S3 Files (EFS) filesystem DNS name"
-  value       = aws_efs_file_system.s3_files.dns_name
+output "s3_files_filesystem_arn" {
+  description = "S3 Files filesystem ARN"
+  value       = aws_s3files_file_system.spark_data.arn
 }
 
 output "s3_files_access_point_id" {
-  description = "S3 Files EFS Access Point ID for spark-team-a"
-  value       = aws_efs_access_point.spark_team_a.id
+  description = "S3 Files Access Point ID for spark-team-a"
+  value       = aws_s3files_access_point.spark_team_a.id
 }
 
 output "s3_files_access_point_arn" {
-  description = "S3 Files EFS Access Point ARN for spark-team-a"
-  value       = aws_efs_access_point.spark_team_a.arn
+  description = "S3 Files Access Point ARN for spark-team-a"
+  value       = aws_s3files_access_point.spark_team_a.arn
+}
+
+output "s3_files_mount_targets" {
+  description = "S3 Files mount target IDs by AZ"
+  value       = { for idx, mt in aws_s3files_mount_target.spark_data : local.azs[idx] => mt.id }
 }
 
 ################################################################################

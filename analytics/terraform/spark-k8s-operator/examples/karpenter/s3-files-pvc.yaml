@@ -4,7 +4,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: s3-files-pvc
+  name: s3files-pvc
   namespace: spark-team-a
   labels:
     app: spark
@@ -12,11 +12,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: s3-files-sc
+  storageClassName: s3files-sc
   resources:
     requests:
-      storage: 100Gi  # Must match PV capacity
-  selector:
-    matchLabels:
-      type: s3-files
-      usage: spark-data
+      storage: 1200Gi  # Must match PV capacity
+  volumeName: s3files-pv

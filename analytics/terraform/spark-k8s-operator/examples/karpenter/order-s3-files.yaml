@@ -75,7 +75,7 @@ spec:
     volumes:
       - name: s3-files-volume
         persistentVolumeClaim:
-          claimName: s3-files-pvc
+          claimName: s3files-pvc
     volumeMounts:
       - name: s3-files-volume
         mountPath: "/mnt/s3-files"
@@ -95,7 +95,7 @@ spec:
     volumes:
       - name: s3-files-volume
         persistentVolumeClaim:
-          claimName: s3-files-pvc
+          claimName: s3files-pvc
     volumeMounts:
       - name: s3-files-volume
         mountPath: "/mnt/s3-files"

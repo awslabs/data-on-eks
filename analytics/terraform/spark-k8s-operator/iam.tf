@@ -214,17 +214,15 @@ data "aws_iam_policy_document" "spark_operator" {
   }
 
   statement {
-    sid       = "EFSAccess"
+    sid       = "S3FilesAccess"
     effect    = "Allow"
     resources = ["*"]
 
     actions = [
-      "elasticfilesystem:ClientMount",
-      "elasticfilesystem:ClientWrite",
-      "elasticfilesystem:ClientRootAccess",
-      "elasticfilesystem:DescribeFileSystems",
-      "elasticfilesystem:DescribeMountTargets",
-      "elasticfilesystem:DescribeAccessPoints",
+      "s3files:ClientMount",
+      "s3files:DescribeFileSystems",
+      "s3files:DescribeMountTargets",
+      "s3files:DescribeAccessPoints",
     ]
   }
 }

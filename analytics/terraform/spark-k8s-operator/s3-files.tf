@@ -2,62 +2,89 @@
 # Amazon S3 Files - File System Interface to S3
 #---------------------------------------------------------------
 # S3 Files provides file system semantics (POSIX, NFS) on top of S3 data
-# Built on EFS technology with intelligent caching
 # Reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files.html
 
-resource "aws_efs_file_system" "s3_files" {
-  creation_token = "${local.name}-s3-files"
+#---------------------------------------------------------------
+# IAM Role for S3 Files Filesystem
+#---------------------------------------------------------------
+resource "aws_iam_role" "s3_files" {
+  name_prefix = "${local.name}-s3-files-"
 
-  # Performance mode
-  performance_mode = "generalPurpose"
-  throughput_mode  = "elastic"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "s3files.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
 
-  # Encryption at rest
-  encrypted  = true
-  kms_key_id = null # Uses AWS managed key. Set to aws_kms_key.this.arn for customer-managed key
+  tags = local.tags
+}
 
-  # Lifecycle management for cost optimization
-  lifecycle_policy {
-    transition_to_ia = "AFTER_30_DAYS"
-  }
+resource "aws_iam_role_policy" "s3_files_bucket_access" {
+  name_prefix = "${local.name}-s3-files-bucket-"
+  role        = aws_iam_role.s3_files.id
 
-  lifecycle_policy {
-    transition_to_primary_storage_class = "AFTER_1_ACCESS"
-  }
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          module.s3_bucket.s3_bucket_arn,
+          "${module.s3_bucket.s3_bucket_arn}/*"
+        ]
+      }
+    ]
+  })
+}
 
-  # Link to S3 bucket for S3 Files functionality
-  # NOTE: As of the latest AWS API, S3 Files is configured via the AWS Console or CLI
-  # This creates the EFS filesystem that can be configured as S3 Files post-deployment
-  # Follow AWS documentation to link this filesystem to your S3 bucket
+#---------------------------------------------------------------
+# S3 Files Filesystem
+#---------------------------------------------------------------
+resource "aws_s3files_file_system" "spark_data" {
+  bucket   = module.s3_bucket.s3_bucket_arn
+  role_arn = aws_iam_role.s3_files.arn
 
   tags = merge(
     local.tags,
     {
       Name        = "${local.name}-s3-files"
-      Description = "EFS filesystem for S3 Files - provides file system interface to S3 data"
+      Description = "S3 Files filesystem for Spark data access"
       Purpose     = "SparkOnEKS"
     }
   )
 }
 
 #---------------------------------------------------------------
-# EFS Mount Targets - One per Availability Zone
+# S3 Files Mount Targets - One per Availability Zone
 #---------------------------------------------------------------
-resource "aws_efs_mount_target" "s3_files" {
+resource "aws_s3files_mount_target" "spark_data" {
   count = length(local.azs)
 
-  file_system_id = aws_efs_file_system.s3_files.id
-  # Mount in primary private subnets (10.x CIDR range)
+  file_system_id  = aws_s3files_file_system.spark_data.id
   subnet_id       = module.vpc.private_subnets[count.index]
   security_groups = [aws_security_group.s3_files.id]
 }
 
 #---------------------------------------------------------------
-# Security Group for S3 Files / EFS Access
+# Security Group for S3 Files Access
 #---------------------------------------------------------------
 resource "aws_security_group" "s3_files" {
   name_prefix = "${local.name}-s3-files-"
-  description = "Security group for S3 Files (EFS) access from EKS nodes"
+  description = "Security group for S3 Files access from EKS nodes"
   vpc_id      = module.vpc.vpc_id
 
   ingress {
@@ -92,23 +119,54 @@ resource "aws_security_group" "s3_files" {
 }
 
 #---------------------------------------------------------------
-# EFS Access Point for Spark Team A (Optional - for better isolation)
+# S3 Files Filesystem Policy
 #---------------------------------------------------------------
-resource "aws_efs_access_point" "spark_team_a" {
-  file_system_id = aws_efs_file_system.s3_files.id
+resource "aws_s3files_file_system_policy" "spark_data" {
+  file_system_id = aws_s3files_file_system.spark_data.id
 
-  posix_user {
-    gid = 185 # Spark user GID
-    uid = 185 # Spark user UID
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "s3files:ClientMount"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+#---------------------------------------------------------------
+# S3 Files Synchronization Configuration
+#---------------------------------------------------------------
+resource "aws_s3files_synchronization_configuration" "spark_data" {
+  file_system_id = aws_s3files_file_system.spark_data.id
+
+  # Import data from S3 to filesystem cache when accessed
+  import_data_rule {
+    prefix         = "order/"  # Only sync order data
+    size_less_than = 52673613135872  # ~50TB limit
+    trigger        = "ON_FILE_ACCESS"  # Load on-demand
   }
 
-  root_directory {
-    path = "/spark-team-a"
-    creation_info {
-      owner_gid   = 185
-      owner_uid   = 185
-      permissions = "755"
-    }
+  # Expire data from cache after 30 days of no access
+  expiration_data_rule {
+    days_after_last_access = 30
+  }
+}
+
+#---------------------------------------------------------------
+# S3 Files Access Point for Spark Team A
+#---------------------------------------------------------------
+resource "aws_s3files_access_point" "spark_team_a" {
+  file_system_id = aws_s3files_file_system.spark_data.id
+
+  posix_user {
+    gid = 185  # Spark user GID
+    uid = 185  # Spark user UID
   }
 
   tags = merge(

@@ -1,18 +1,9 @@
 # StorageClass for Amazon S3 Files
 # S3 Files provides POSIX-compliant file system access to S3 data
-# Built on EFS with intelligent caching for performance
+# Uses EFS CSI driver since S3 Files is built on EFS technology
 ---
-kind: StorageClass
 apiVersion: storage.k8s.io/v1
+kind: StorageClass
 metadata:
-  name: s3-files-sc
+  name: s3files-sc
 provisioner: efs.csi.aws.com
-parameters:
-  provisioningMode: efs-ap  # Use EFS Access Points for isolation
-  fileSystemId: fs-XXXXXXXXX  # REPLACE with your S3 Files filesystem ID from Terraform output
-  directoryPerms: "755"
-  gidRangeStart: "1000"
-  gidRangeEnd: "2000"
-  basePath: "/dynamic"  # Base path for dynamically provisioned volumes
-mountOptions:
-  - tls  # Enable encryption in transit
