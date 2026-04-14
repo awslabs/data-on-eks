@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tpcds-data-pvc
+  namespace: starrocks
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Ti
+  storageClassName: gp3
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tpcds-datagen-1tb
+  namespace: starrocks
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        NodeGroupType: SparkGravitonMemoryOptimized
+        karpenter.sh/capacity-type: on-demand
+      containers:
+      - name: tpcds-generator
+        image: public.ecr.aws/dong-registry/starrocks-benchmark:latest
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          set -e
+          echo "Starting TPC-DS 1TB data generation..."
+          
+          # Generate 1TB dataset using the benchmark tool
+          cd /opt/BenchmarkTool
+          ./bin/gen_data/gen-tpcds.sh 1000 /data/tpcds-1tb
+          
+          echo "TPC-DS 1TB data generation completed!"
+          echo "Generated files:"
+          ls -lh /data/tpcds-1tb/
+        
+        resources:
+          requests:
+            cpu: "8"
+            memory: "32Gi"
+          limits:
+            cpu: "16"
+            memory: "64Gi"
+        
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+      
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: tpcds-data-pvc
