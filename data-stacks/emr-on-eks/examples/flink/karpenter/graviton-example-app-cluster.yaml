@@ -29,8 +29,10 @@ spec:
     state.checkpoints.dir: s3://$S3_BUCKET/checkpoints
     state.savepoints.dir: s3://$S3_BUCKET/savepoints
 
+    fs.s3a.aws.credentials.provider: "com.amazonaws.auth.ContainerCredentialsProvider"
+
   # Replace this execution role ARN with your own
-  executionRoleArn: $FLINK_JOB_ROLE
+  executionRoleArn: $EMR_EXECUTION_ROLE_ARN_TEAM_A
 
   podTemplate:
     apiVersion: v1

@@ -12,7 +12,7 @@ sidebar_position: 4
 
 Set the env variables for the job execution role and s3 bucket name :
 ```bash
-source env.sh
+source set-env.sh
 ```
 
 Navigate to example directory and submit the Flink job.

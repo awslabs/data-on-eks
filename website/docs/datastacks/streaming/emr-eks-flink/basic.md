@@ -13,7 +13,7 @@ sidebar_position: 3
 
 Set the env variables for the job execution role and s3 bucket name :
 ```bash
-source env.sh
+source set-env.sh
 ```
 
 Navigate to example directory and submit the Flink job.
@@ -55,7 +55,7 @@ basic-example-karpenter-flink-7c7d9c6fd9-pjxj2   2/2     Running   0          3h
 basic-example-karpenter-flink-taskmanager-1-1    2/2     Running   0          3h6m
 ```
 ```bash
-kubectl get services -n flink-team-a-ns
+kubectl get services -n emr-data-team-a
 ```
 ```
 NAME                                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE

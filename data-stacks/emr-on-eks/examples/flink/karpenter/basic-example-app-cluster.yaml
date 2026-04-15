@@ -29,6 +29,8 @@ spec:
     state.checkpoints.dir: s3://$S3_BUCKET/checkpoints
     state.savepoints.dir: s3://$S3_BUCKET/savepoints
 
+    fs.s3a.aws.credentials.provider: "com.amazonaws.auth.DefaultAWSCredentialsProviderChain"
+
   # Replace this execution role ARN with your own
   executionRoleArn: $EMR_EXECUTION_ROLE_ARN_TEAM_A
 
@@ -60,6 +62,7 @@ spec:
     parallelism: 4
     upgradeMode: savepoint
     savepointTriggerNonce: 0
+
   monitoringConfiguration:
     s3MonitoringConfiguration:
       logUri: $S3_BUCKET/logs

@@ -22,5 +22,9 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6.0"
     }
+    encode = {
+      source  = "justenwalker/encode"
+      version = "0.3.0-beta.1"
+    }
   }
 }

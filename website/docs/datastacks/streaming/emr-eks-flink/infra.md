@@ -56,7 +56,7 @@ enable_emr_on_eks = true
 # Enable EMR Spark Operator for declarative Spark job management
 enable_emr_spark_operator = true
 
-# Enable EMR Flink Kubernetes Operator, replacing the opensource 
+# Enable EMR Flink Kubernetes Operator, replacing the opensource
 enable_emr_flink_operator = true
 
 # Optional: Enable additional addons as needed
@@ -78,7 +78,7 @@ This script will:
 4. Install Karpenter for autoscaling
 5. Install YuniKorn scheduler
 6. Create EMR virtual clusters for Team A and Team B
-7. Configure IAM roles and service accounts
+7. Configure IAM roles and pod identity associations
 8. Set up S3 buckets for logs and data
 9. Deploy EMR Flink Kubernetes Operator
 
@@ -103,15 +103,37 @@ cluster_name = "emr-on-eks"
 configure_kubectl = "aws eks --region us-west-2 update-kubeconfig --name emr-on-eks"
 deployment_id = "abcdefg"
 emr_on_eks = {
-  "emr-data-team-a" = {
-    "cloudwatch_log_group_name" = "/emr-on-eks-logs/emr-on-eks/emr-data-team-a"
-    "job_execution_role_arn" = "arn:aws:iam::123456789:role/emr-on-eks-emr-data-team-a"
-    "virtual_cluster_id" = "hclg71zute4fm4fpm3m2cobv0"
+  "cloudwatch_log_groups" = {
+    "emr-data-team-a" = {
+      "arn" = "arn:aws:logs:us-west-2:301444719761:log-group:/emr-on-eks-logs/emr-on-eks/emr-data-team-a"
+      "name" = "/emr-on-eks-logs/emr-on-eks/emr-data-team-a"
+    }
+    "emr-data-team-b" = {
+      "arn" = "arn:aws:logs:us-west-2:301444719761:log-group:/emr-on-eks-logs/emr-on-eks/emr-data-team-b"
+      "name" = "/emr-on-eks-logs/emr-on-eks/emr-data-team-b"
+    }
   }
-  "emr-data-team-b" = {
-    "cloudwatch_log_group_name" = "/emr-on-eks-logs/emr-on-eks/emr-data-team-b"
-    "job_execution_role_arn" = "arn:aws:iam::123456789:role/emr-on-eks-emr-data-team-b"
-    "virtual_cluster_id" = "cqt781jwn4vq1wh4jlqdhpj5h"
+  "job_execution_role_arns" = {
+    "emr-data-team-a" = "arn:aws:iam::301444719761:role/emr-on-eks-emr-data-team-a"
+    "emr-data-team-b" = "arn:aws:iam::301444719761:role/emr-on-eks-emr-data-team-b"
+  }
+  "namespaces" = {
+    "emr-data-team-a" = "emr-data-team-a"
+    "emr-data-team-b" = "emr-data-team-b"
+  }
+  "virtual_clusters" = {
+    "emr-data-team-a" = {
+      "arn" = "arn:aws:emr-containers:us-west-2:301444719761:/virtualclusters/rthjrl76dgz7x1xixlf11lbc0"
+      "id" = "rthjrl76dgz7x1xixlf11lbc0"
+      "name" = "emr-on-eks-emr-data-team-a"
+      "namespace" = "emr-data-team-a"
+    }
+    "emr-data-team-b" = {
+      "arn" = "arn:aws:emr-containers:us-west-2:301444719761:/virtualclusters/agvpvoyl5poe1to9mwjizrbsk"
+      "id" = "agvpvoyl5poe1to9mwjizrbsk"
+      "name" = "emr-on-eks-emr-data-team-b"
+      "namespace" = "emr-data-team-b"
+    }
   }
 }
 emr_s3_bucket_name = "emr-on-eks-spark-logs-123456789"
