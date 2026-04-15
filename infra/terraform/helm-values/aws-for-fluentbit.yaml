@@ -29,6 +29,7 @@ service:
     HTTP_Listen  0.0.0.0
     HTTP_PORT    2020
     Health_Check On
+    Dns.prefer_ipv4 On
 %{ endif ~}
   extraParsers: |
     [PARSER]

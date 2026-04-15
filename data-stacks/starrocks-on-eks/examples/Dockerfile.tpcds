@@ -1,0 +1,28 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    make \
+    bison \
+    flex \
+    python3 \
+    python3-pip \
+    mysql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip3 install pymysql
+
+# Copy BenchmarkTool
+COPY BenchmarkTool /opt/BenchmarkTool
+
+# Build TPC-DS dbgen with linker flags to handle multiple definitions
+WORKDIR /opt/BenchmarkTool/thirdparty/tpcds-dbgen
+RUN make clean && make LDFLAGS="-Wl,--allow-multiple-definition"
+
+# Set permissions
+RUN chmod +x /opt/BenchmarkTool/bin/gen_data/gen-tpcds.sh
+
+WORKDIR /data
+CMD ["/bin/bash"]

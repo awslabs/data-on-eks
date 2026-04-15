@@ -230,6 +230,12 @@ variable "enable_emr_flink_operator" {
   default     = false
 }
 
+variable "enable_starrocks" {
+  description = "Enable StarRocks analytical database"
+  type        = bool
+  default     = false
+}
+
 #---------------------------------------------------------------
 # EKS Provisioned Control Plane (PCP) Tier
 # Controls the EKS control plane capacity for high-scale workloads
