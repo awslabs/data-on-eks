@@ -103,3 +103,9 @@ variable "enable_spark_history_mcp" {
   type        = bool
   default     = true
 }
+
+variable "enable_celeborn" {
+  description = "Enable Apache Celeborn Remote Shuffle Service"
+  type        = bool
+  default     = true
+}

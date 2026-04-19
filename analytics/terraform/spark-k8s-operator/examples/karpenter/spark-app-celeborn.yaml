@@ -1,0 +1,104 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: "order-celeborn"
+  namespace: spark-team-a
+  labels:
+    app: "order-celeborn"
+    queue: root.test
+spec:
+  type: Python
+  sparkVersion: "4.0.1"
+  pythonVersion: "3"
+  mode: cluster
+  image: "public.ecr.aws/data-on-eks/spark:4.0.1-scala2.13-java21-python3-r-ubuntu"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://<S3_BUCKET>/scripts/pyspark-order.py"
+  arguments:
+    - "s3a://<S3_BUCKET>/order/input/"
+    - "s3a://<S3_BUCKET>/order/output/celeborn/"
+  deps:
+    jars:
+      - "https://repo1.maven.org/maven2/org/apache/celeborn/celeborn-client-spark-4-shaded_2.13/0.6.0/celeborn-client-spark-4-shaded_2.13-0.6.0.jar"
+  sparkConf:
+    # AWS SDK V2
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider,software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider"
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.connection.timeout": "1200000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.maximum": "200"
+    "spark.hadoop.fs.s3a.fast.upload": "true"
+    "spark.hadoop.fs.s3a.readahead.range": "256K"
+    "spark.hadoop.fs.s3a.input.fadvise": "random"
+    # K8s Pod naming
+    "spark.app.name": "order-celeborn"
+    "spark.kubernetes.driver.pod.name": "order-celeborn-driver"
+    "spark.kubernetes.executor.podNamePrefix": "order-celeborn"
+    # Celeborn Remote Shuffle Service
+    "spark.shuffle.manager": "org.apache.spark.shuffle.celeborn.SparkShuffleManager"
+    "spark.serializer": "org.apache.spark.serializer.KryoSerializer"
+    "spark.shuffle.service.enabled": "false"
+    "spark.celeborn.master.endpoints": "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local:9097"
+    "spark.celeborn.client.push.replicate.enabled": "true"
+    "spark.celeborn.client.spark.shuffle.writer": "sort"
+    "spark.celeborn.client.shuffle.batchHandleCommitPartition.enabled": "true"
+    "spark.celeborn.client.fetch.maxRetriesForEachReplica": "5"
+    "spark.celeborn.data.io.retryWait": "15s"
+    "spark.celeborn.client.rpc.maxRetries": "5"
+    # Adaptive Query Execution
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+    "spark.sql.adaptive.localShuffleReader.enabled": "false"
+    "spark.sql.shuffle.partitions": "200"
+    # Timeouts
+    "spark.network.timeout": "2000s"
+    "spark.executor.heartbeatInterval": "300s"
+    "spark.rpc.askTimeout": "600s"
+    # Spark Event logs
+    "spark.eventLog.enabled": "true"
+    "spark.eventLog.dir": "s3a://<S3_BUCKET>/spark-event-logs"
+    "spark.eventLog.rolling.enabled": "true"
+    "spark.eventLog.rolling.maxFileSize": "64m"
+    # Expose Spark metrics for Prometheus
+    "spark.ui.prometheus.enabled": "true"
+    "spark.executor.processTreeMetrics.enabled": "true"
+    "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
+    "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
+    "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 3
+    onSubmissionFailureRetryInterval: 20
+  driver:
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    cores: 2
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      karpenter.sh/capacity-type: "on-demand"
+      NodeGroupType: "SparkComputeGeneral"
+  executor:
+    annotations:
+      karpenter.sh/do-not-disrupt: "true"
+    cores: 2
+    instances: 4
+    memory: "4g"
+    memoryOverhead: "2g"
+    serviceAccount: spark-team-a
+    nodeSelector:
+      karpenter.sh/capacity-type: "spot"
+      NodeGroupType: "SparkComputeGeneral"
+    affinity:
+      podAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - order-celeborn
+          topologyKey: topology.kubernetes.io/zone
