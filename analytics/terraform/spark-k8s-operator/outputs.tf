@@ -67,6 +67,60 @@ output "s3directory_bucket_zone" {
 }
 
 ################################################################################
+# S3 Files Configuration (CLI-based, provider v5.x workaround)
+################################################################################
+
+output "s3_files_filesystem_id" {
+  description = "S3 Files filesystem ID - use this in PersistentVolume manifests"
+  value       = trimspace(data.local_file.s3_files_fs_id.content)
+}
+
+output "s3_files_access_point_id" {
+  description = "S3 Files Access Point ID for spark-team-a"
+  value       = trimspace(data.local_file.s3_files_ap_id.content)
+}
+
+output "s3_files_mount_target_ip" {
+  description = "S3 Files mount target IP for PV configuration"
+  value       = trimspace(data.local_file.s3_files_mt_ip.content)
+}
+
+################################################################################
+# S3 Files Configuration (native Terraform, requires AWS provider v6.40+)
+# Uncomment when upstream modules support AWS provider v6
+################################################################################
+
+# output "s3_files_filesystem_id" {
+#   description = "S3 Files filesystem ID - use this in PersistentVolume manifests"
+#   value       = aws_s3files_file_system.spark_data.id
+# }
+#
+# output "s3_files_filesystem_arn" {
+#   description = "S3 Files filesystem ARN"
+#   value       = aws_s3files_file_system.spark_data.arn
+# }
+#
+# output "s3_files_access_point_id" {
+#   description = "S3 Files Access Point ID for spark-team-a"
+#   value       = aws_s3files_access_point.spark_team_a.id
+# }
+#
+# output "s3_files_access_point_arn" {
+#   description = "S3 Files Access Point ARN for spark-team-a"
+#   value       = aws_s3files_access_point.spark_team_a.arn
+# }
+#
+# output "s3_files_mount_targets" {
+#   description = "S3 Files mount target IDs by AZ"
+#   value       = { for idx, mt in aws_s3files_mount_target.spark_data : local.azs[idx] => mt.id }
+# }
+#
+# output "s3_files_mount_target_ip" {
+#   description = "S3 Files mount target IP for PV configuration (first AZ)"
+#   value       = aws_s3files_mount_target.spark_data[0].ipv4_address
+# }
+
+################################################################################
 # Ray Data Configuration
 ################################################################################
 

@@ -1,0 +1,33 @@
+# PersistentVolume for S3 Files
+# S3 Files syncs data bidirectionally with S3 bucket
+#
+# IMPORTANT: Replace the following values from terraform outputs:
+#   - fs-XXXXXXXXX with: terraform output -raw s3_files_filesystem_id
+#   - fsap-XXXXXXXXX with: terraform output -raw s3_files_access_point_id
+#   - MOUNT_TARGET_IP: Get from mount target (see below)
+#
+# To get mount target IP:
+#   terraform output s3_files_mount_targets
+#   Then: aws s3files describe-mount-targets --file-system-id <fs-id> --region <region>
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: s3files-pv
+  labels:
+    type: s3-files
+    usage: spark-data
+spec:
+  capacity:
+    storage: 1200Gi  # Arbitrary value for S3 Files (actual storage is in S3)
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany  # Multiple pods can read/write simultaneously
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: s3files-sc
+  csi:
+    driver: efs.csi.aws.com  # S3 Files uses EFS CSI driver
+    # Format: s3files:<filesystem-id>::<access-point-id>
+    volumeHandle: s3files:<S3_FILES_FS_ID>::<S3_FILES_AP_ID>
+    volumeAttributes:
+      mounttargetip: "<S3_FILES_MOUNT_TARGET_IP>"

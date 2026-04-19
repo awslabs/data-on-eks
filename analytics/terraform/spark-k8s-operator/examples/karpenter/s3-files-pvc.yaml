@@ -1,0 +1,22 @@
+# PersistentVolumeClaim for S3 Files in spark-team-a namespace
+# This claims the S3 Files PV for use by Spark applications
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-files-pvc
+  namespace: spark-team-a
+  labels:
+    app: spark
+    storage-type: s3-files
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: s3-files-sc
+  resources:
+    requests:
+      storage: 100Gi  # Must match PV capacity
+  selector:
+    matchLabels:
+      type: s3-files
+      usage: spark-data
