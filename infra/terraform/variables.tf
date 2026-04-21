@@ -224,6 +224,12 @@ variable "enable_emr_spark_operator" {
   default     = false
 }
 
+variable "enable_emr_flink_operator" {
+  description = "Enable EMR Flink Kubernetes Operator"
+  type        = bool
+  default     = false
+}
+
 variable "enable_starrocks" {
   description = "Enable StarRocks analytical database"
   type        = bool
