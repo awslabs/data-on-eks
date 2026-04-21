@@ -202,4 +202,4 @@ kubectl get nodepools
 
 After deploying the infrastructure:
 
-- [Getting Started with Flink Jobs](./getting-started)
+- [Getting Started with basic Flink Jobs](./basic)
