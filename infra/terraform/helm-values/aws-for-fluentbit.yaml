@@ -105,14 +105,21 @@ additionalFilters: |
       Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
       Annotations         Off
 
-  # Enriches spark records with Kubernetes metadata and parses the JSON log line.
-  # Extracts level/message as top-level columns; remaining fields go into log JSON.
-  # Drops non-JSON lines (plain stdout/stderr) by returning -1 when level is absent.
+  # Reassemble multi-line stack traces before parsing
+  [FILTER]
+      Name                  multiline
+      Match                 spark.*
+      multiline.key_content log
+      multiline.parser      java
+
+  # Enriches spark records with Kubernetes metadata and parses the log line.
+  # Extracts level/message from plain-text Spark log format.
+  # Drops lines that don't match the expected pattern.
   [FILTER]
       Name                lua
       Match               spark.*
       call                enrich
-      code                function enrich(tag, timestamp, record) local k8s = record.kubernetes or {} local labels = k8s.labels or {} local parsed = record.log_processed or {} if type(parsed) == "string" then local ok, obj = pcall(cjson.decode, parsed) if ok then parsed = obj else parsed = {} end end if not parsed.level then return -1, timestamp, record end local explicit = {namespace=true, pod_name=true, container_name=true, node_name=true, app=true, role=true, timestamp=true, level=true, message=true} local log = {} for k,v in pairs(parsed) do if not explicit[k] then log[k] = v end end return 1, timestamp, {namespace=k8s.namespace_name or "", pod_name=k8s.pod_name or "", container_name=k8s.container_name or "", node_name=k8s.host or "", app=labels["spark-app-selector"] or "", role=labels["spark-role"] or "", level=parsed.level, message=parsed.message or "", log=log} end
+      code                function enrich(tag, timestamp, record) local k8s = record.kubernetes or {} local labels = k8s.labels or {} local line = record.log or "" local ts, lvl, cls, msg = line:match("^(%d+/%d+/%d+%s+%S+)%s+(%w+)%s+(%S+):%s+(.*)") if not lvl then lvl, msg = line:match("^(%u+)%s+(.*)") end if not lvl then lvl = "UNKNOWN" msg = line end return 1, timestamp, {namespace=k8s.namespace_name or "", pod_name=k8s.pod_name or "", container_name=k8s.container_name or "", node_name=k8s.host or "", app=labels["spark-app-selector"] or "", role=labels["spark-role"] or "", level=lvl, message=msg or ""} end
 
 cloudWatchLogs:
  enabled: false

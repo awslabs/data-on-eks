@@ -82,7 +82,7 @@ config:
         Match        kube_events.*
         Host         ${clickhouse_host}
         Port         ${clickhouse_port}
-        URI          /?query=INSERT+INTO+${clickhouse_database}.events+FORMAT+JSONEachRow&input_format_skip_unknown_fields=1
+        URI          /?query=INSERT+INTO+${clickhouse_database}.events+FORMAT+JSONEachRow&input_format_skip_unknown_fields=1&date_time_input_format=best_effort&async_insert=1&wait_for_async_insert=0
         Format       json_stream
         json_date_format iso8601
         Header       X-ClickHouse-User $${CLICKHOUSE_USER}

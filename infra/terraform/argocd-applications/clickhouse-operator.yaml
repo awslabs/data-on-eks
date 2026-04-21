@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: ghcr.io/clickhouse
     chart: clickhouse-operator-helm
-    targetRevision: "0.0.3"
+    targetRevision: "0.0.4"
     helm:
       values: |
         ${user_values_yaml}

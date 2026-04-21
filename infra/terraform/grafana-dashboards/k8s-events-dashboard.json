@@ -30,7 +30,8 @@
         {
           "rawSql": "SELECT toStartOfMinute(timestamp) AS time, type, count() AS events FROM k8s_events.events WHERE timestamp >= $__fromTime AND timestamp <= $__toTime GROUP BY time, type ORDER BY time",
           "format": 1,
-          "refId": "A"
+          "refId": "A",
+          "meta": { "database": "k8s_events", "table": "events" }
         }
       ],
       "fieldConfig": {
@@ -49,7 +50,8 @@
         {
           "rawSql": "SELECT namespace, count() AS events FROM k8s_events.events WHERE timestamp >= $__fromTime AND timestamp <= $__toTime GROUP BY namespace ORDER BY events DESC LIMIT 20",
           "format": 1,
-          "refId": "A"
+          "refId": "A",
+          "meta": { "database": "k8s_events", "table": "events" }
         }
       ],
       "transformations": [],
@@ -75,9 +77,10 @@
       "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-observability" },
       "targets": [
         {
-          "rawSql": "SELECT timestamp, type, namespace, object_kind, object_name, reason, source_component, message FROM k8s_events.events WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND ('${search:raw}' = '' OR message ILIKE '%${search:raw}%') ORDER BY timestamp DESC LIMIT 500",
+          "rawSql": "SELECT timestamp, type, namespace, object_kind, object_name, reason, source_component, message FROM k8s_events.events WHERE timestamp >= $__fromTime AND timestamp <= $__toTime AND ('${search:raw}' = '' OR hasTokenCaseInsensitive(message, '${search:raw}')) ORDER BY timestamp DESC LIMIT 500",
           "format": 1,
-          "refId": "A"
+          "refId": "A",
+          "meta": { "database": "k8s_events", "table": "events" }
         }
       ],
       "options": { "showHeader": true, "sortBy": [{ "displayName": "timestamp", "desc": true }] },
