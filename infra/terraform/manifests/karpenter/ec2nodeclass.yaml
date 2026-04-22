@@ -36,6 +36,28 @@ spec:
 
   # User data to create Spark directory on existing root volume
   userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            MemoryQoS: true
+          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          memoryThrottlingFactor: 0.9
+
+    --//
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
     #!/bin/bash
     # Create Spark local directory on existing root volume
     mkdir -p /mnt/spark-local
@@ -43,6 +65,8 @@ spec:
     # Set permissions for Spark (UID 185)
     chown -R 185:185 /mnt/spark-local
     chmod 755 /mnt/spark-local
+
+    --//--
 
 ---
 apiVersion: karpenter.k8s.aws/v1
@@ -75,6 +99,23 @@ spec:
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            MemoryQoS: true
+          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
+          # memory.high = request + 0.7 * (limit - request)
+          memoryThrottlingFactor: 0.7
 
     --//
     Content-Type: text/x-shellscript; charset="us-ascii"
@@ -201,6 +242,28 @@ spec:
         encrypted: true
         deleteOnTermination: true
 
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            MemoryQoS: true
+          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          memoryThrottlingFactor: 0.9
+
+    --//--
+
 ---
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
@@ -239,6 +302,29 @@ spec:
         throughput: 1000
         encrypted: true
         deleteOnTermination: true
+
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            MemoryQoS: true
+          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
+          # memory.high = request + 0.7 * (limit - request)
+          memoryThrottlingFactor: 0.7
+
+    --//--
 
 ---
 apiVersion: karpenter.k8s.aws/v1
@@ -282,6 +368,22 @@ spec:
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            MemoryQoS: true
+          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          memoryThrottlingFactor: 0.9
 
     --//
     Content-Type: text/x-shellscript; charset="us-ascii"
@@ -345,13 +447,15 @@ spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS uses cgroupsv2 memory.high to insert a soft eviction threshold
-            # between the container request and the hard limit. When a Spark executor
-            # approaches memory.high, the kernel evicts page cache (NVMe shuffle files,
-            # s3a read buffers) before sending SIGKILL. This prevents OOMKills caused
-            # by page cache accumulation being counted against the cgroup limit.
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # When a Spark executor approaches memory.high, the kernel evicts page
+            # cache (NVMe shuffle files, s3a read buffers) before sending SIGKILL.
+            # This prevents OOMKills caused by page cache accumulation being
+            # counted against the cgroup limit.
             # AL2023 ships with cgroupsv2 enabled — no kernel changes needed.
             MemoryQoS: true
+          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
           # memory.high = request + 0.7 * (limit - request)
           # For Spark executors with request=80Gi, limit=96Gi:
           #   memory.high = 80 + 0.7 * (96 - 80) = 91.2Gi  (soft eviction starts here)
