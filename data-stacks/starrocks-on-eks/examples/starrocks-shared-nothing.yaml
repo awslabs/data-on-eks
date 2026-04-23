@@ -1,0 +1,156 @@
+# StarRocks Shared-Nothing Cluster
+#
+# Architecture: FE (metadata + query coordination) + BE (storage + compute on local EBS)
+# Use case: High-throughput OLAP with low-latency local storage, no S3 dependency for queries
+# Storage: gp3-starrocks EBS (6000 IOPS / 250 MB/s) on BE nodes
+#
+# Best practices per https://docs.starrocks.io/docs/deployment/plan_cluster/:
+#   - 3x FE (Raft quorum — tolerates 1 failure)
+#   - 3x BE minimum for HA (replication_num=3 — tolerates 1 BE failure without data loss)
+#   - FE: 8 CPU / 16Gi RAM minimum; JVM heap = ~50% of RAM
+#   - BE: 16 CPU / 64Gi RAM minimum
+#   - FE storage: 100Gi is sufficient for metadata
+#   - BE storage: estimate as raw_data * replica_count / compression_ratio (3:1 to 5:1)
+#
+# Prerequisites:
+#   - StarRocks operator running in starrocks-operator-system
+#   - Karpenter NodePools: general-purpose (FE), memory-optimized-graviton (BE)
+#   - StorageClass: gp3-starrocks (6000 IOPS / 250 MB/s) — see manifests/starrocks/storageclass.yaml
+#   - ServiceAccount: starrocks-sa (created by Terraform with Pod Identity for S3)
+#
+# Deploy:
+#   kubectl apply -f starrocks-shared-nothing.yaml
+#   Or use the deployment script:
+#   ./deploy-shared-nothing.sh
+#
+# Connect:
+#   kubectl port-forward svc/starrocks-shared-nothing-fe-service 9030:9030 -n starrocks
+#   mysql -h 127.0.0.1 -P 9030 -u root
+
+
+apiVersion: starrocks.com/v1
+kind: StarRocksCluster
+metadata:
+ name: starrocks-shared-nothing
+ namespace: starrocks
+spec:
+ starRocksFeSpec:
+   replicas: 3
+   image: "starrocks/fe-ubuntu:3.5-latest"
+   # Docs recommend: 8 CPU cores / 16Gi RAM minimum per FE node
+   requests:
+     cpu: "4"
+     memory: 16Gi
+   limits:
+     cpu: "8"
+     memory: 32Gi
+   serviceAccount: starrocks-sa
+   nodeSelector:
+     NodeGroupType: general-purpose
+     karpenter.sh/capacity-type: on-demand
+   # Pod anti-affinity — spread FE across nodes for Raft quorum safety
+   affinity:
+     podAntiAffinity:
+       requiredDuringSchedulingIgnoredDuringExecution:
+         - labelSelector:
+             matchExpressions:
+               - key: app.kubernetes.io/component
+                 operator: In
+                 values: ["fe"]
+           topologyKey: kubernetes.io/hostname
+   service:
+     type: ClusterIP
+   storageVolumes:
+     - name: fe-meta
+       mountPath: /opt/starrocks/fe/meta
+       storageClassName: gp3
+       storageSize: 100Gi    # 100Gi is sufficient for FE metadata per docs
+     - name: fe-log
+       mountPath: /opt/starrocks/fe/log
+       storageClassName: gp3
+       storageSize: 10Gi
+   configMapInfo:
+     configMapName: starrocks-shared-nothing-fe-cm
+     resolveKey: fe.conf
+
+
+ starRocksBeSpec:
+   replicas: 3    # Minimum 3 for HA — tolerates 1 BE failure with replication_num=3
+   image: "starrocks/be-ubuntu:3.5-latest"
+   # Docs recommend: 16 CPU cores / 64Gi RAM minimum per BE node
+   # r8g.8xlarge: 32 vCPU, 256 GiB RAM — no local NVMe (data on EBS PVCs)
+   # Reserve ~10% for kubelet + daemonsets
+   requests:
+     cpu: "28"
+     memory: 220Gi
+   limits:
+     cpu: "31"
+     memory: 240Gi
+   serviceAccount: starrocks-sa
+   nodeSelector:
+     NodeGroupType: SparkGravitonMemoryOptimized
+     karpenter.sh/capacity-type: on-demand
+     karpenter.k8s.aws/instance-family: r8g
+   # Pod anti-affinity — spread BE across nodes so replicas are on different nodes
+   affinity:
+     podAntiAffinity:
+       requiredDuringSchedulingIgnoredDuringExecution:
+         - labelSelector:
+             matchExpressions:
+               - key: app.kubernetes.io/component
+                 operator: In
+                 values: ["be"]
+           topologyKey: kubernetes.io/hostname
+   service:
+     type: ClusterIP
+   storageVolumes:
+     - name: be-data
+       mountPath: /opt/starrocks/be/storage
+       storageClassName: gp3-starrocks   # 6000 IOPS / 250 MB/s — production tuned
+       storageSize: 500Gi
+     - name: be-log
+       mountPath: /opt/starrocks/be/log
+       storageClassName: gp3
+       storageSize: 20Gi
+   configMapInfo:
+     configMapName: starrocks-shared-nothing-be-cm
+     resolveKey: be.conf
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: starrocks-shared-nothing-fe-cm
+ namespace: starrocks
+data:
+ fe.conf: |
+   LOG_DIR = ${STARROCKS_HOME}/log
+   DATE = "$(date +%Y%m%d-%H%M%S)"
+   # JVM heap = ~50% of container memory limit (32Gi) per StarRocks docs
+   JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xmx16g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:${LOG_DIR}/fe.gc.log.$DATE:time"
+   http_port = 8030
+   rpc_port = 9020
+   query_port = 9030
+   edit_log_port = 9010
+   mysql_service_nio_enabled = true
+   sys_log_level = INFO
+   # Graceful shutdown — ensures in-flight queries complete before FE stops
+   min_graceful_exit_time_second = 25
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: starrocks-shared-nothing-be-cm
+ namespace: starrocks
+data:
+ be.conf: |
+   be_port = 9060
+   webserver_port = 8040
+   heartbeat_service_port = 9050
+   brpc_port = 8060
+   sys_log_level = INFO
+   default_rowset_type = beta
+   storage_root_path = /opt/starrocks/be/storage
