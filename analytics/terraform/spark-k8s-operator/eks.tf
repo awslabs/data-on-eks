@@ -22,6 +22,11 @@ module "eks" {
     node_pools = ["system"]
   }
 
+  # Enable Provisioned Control Plane
+  control_plane_scaling_config = {
+    tier = "tier-xl"
+  }
+
   access_entries = {
     # One access entry with a policy associated
     custom_nodeclass_access = {

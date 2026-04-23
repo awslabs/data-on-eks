@@ -220,6 +220,8 @@ module "eks_blueprints_addons" {
     })]
   }
 
+  enable_cert_manager = true
+
   enable_ingress_nginx = true
   ingress_nginx = {
     chart_version = "4.14.0"
