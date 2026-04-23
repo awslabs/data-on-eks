@@ -7,7 +7,7 @@ import TabItem from '@theme/TabItem';
 import CollapsibleContent from '../../src/components/CollapsibleContent';
 
 import CodeBlock from '@theme/CodeBlock';
-import DaemonSetWithConfig from '!!raw-loader!../../../analytics/terraform/spark-k8s-operator/examples/mountpoint-s3-spark/mountpoint-s3-daemonset.yaml';
+import DaemonSetWithConfig from '!!raw-loader!../../../data-stacks/spark-on-eks/examples/mountpoint-s3-spark/mountpoint-s3-daemonset.yaml';
 
 # Mountpoint-S3 for Spark Workloads
 When working with the [SparkApplication](https://www.kubeflow.org/docs/components/spark-operator/user-guide/using-sparkapplication/) Custom Resource Definition (CRD) managed by the [SparkOperator](https://github.com/kubeflow/spark-operator), handling multiple dependency JAR files can become a significant challenge. Traditionally, these JAR files are bundled within the container image, leading to several inefficiencies:
@@ -48,7 +48,7 @@ Before being able to implement the Mountpoint-s3 solution provided, AWS cloud re
 
 <CollapsibleContent header={<h2><span>Deploy Solution Resources</span></h2>}>
 
-In this [example](https://github.com/awslabs/data-on-eks/tree/main/analytics/terraform/spark-k8s-operator), you will provision the following resources required to run Spark Jobs with open source Spark Operator.
+In this [example](https://github.com/awslabs/data-on-eks/tree/main/data-stacks/spark-on-eks), you will provision the following resources required to run Spark Jobs with open source Spark Operator.
 
 This example deploys an EKS Cluster running the Spark K8s Operator into a new VPC.
 
@@ -81,7 +81,7 @@ DATA_ON_EKS=$(pwd)` from your data-on-eks directory.
 Navigate into one of the example directories and run `install.sh` script.
 
 ```bash
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks
 chmod +x install.sh
 ./install.sh
 ```
@@ -176,7 +176,7 @@ Here are the steps to test the scenario using Approach 2 with DaemonSet:
 
 1. Deploy [Spark Operator Resources](#resource-allocation)
 2. Prepare the S3 Bucket
-    1. ``` cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator/examples/mountpoint-s3-spark/ ```
+    1. ``` cd ${DOEKS_HOME}/data-stacks/spark-on-eks/examples/mountpoint-s3-spark/ ```
     2. ``` chmod +x copy-jars-to-s3.sh ```
     3. ``` ./copy-jars-to-s3.sh ```
 3. Set-up Kubeconfig

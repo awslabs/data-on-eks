@@ -18,7 +18,7 @@ function CollapsibleContent({ children, header }) {
           {isExpanded ? '👇' : '👈'}
         </span>
       </div>
-      {isExpanded && <div className={styles.content}>{children}</div>}
+      <div className={styles.content} style={{ display: isExpanded ? 'block' : 'none' }}>{children}</div>
     </div>
   );
 }

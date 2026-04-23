@@ -34,7 +34,7 @@ To prepare the cluster for benchmark testing, apply the following modifications:
 
 **Step 1: Update Spark Operator Helm Configuration**
 
-Uncomment the specified Spark Operator Helm values in the file [analytics/terraform/spark-k8s-operator/addons.tf](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/addons.tf) (from the `-- Start` to `-- End` section). Then, run terraform apply to apply the changes.
+Uncomment the specified Spark Operator Helm values in the file [data-stacks/spark-on-eks/terraform](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/terraform) (from the `-- Start` to `-- End` section). Then, run terraform apply to apply the changes.
 
 These updates ensure that:
 - The Spark Operator and webhook pods are deployed on a dedicated `c5.9xlarge` instance using Karpenter.
@@ -115,7 +115,7 @@ enable_spark_operator = true
 
 **Step 3: Configure VPC CNI for High Pod Density:**
 
-Modify [analytics/terraform/spark-k8s-operator/eks.tf](https://github.com/awslabs/data-on-eks/blob/main/analytics/terraform/spark-k8s-operator/eks.tf) to enable `prefix delegation` in the `vpc-cni` addon. This increases the pod capacity per node from `110 to 200`.
+Modify [data-stacks/spark-on-eks/terraform](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/spark-on-eks/terraform) to enable `prefix delegation` in the `vpc-cni` addon. This increases the pod capacity per node from `110 to 200`.
 
 ```hcl
 cluster_addons = {
@@ -185,7 +185,7 @@ To simulate high-scale concurrent job submissions, we developed **Locust** scrip
 On your local machine (Mac or desktop), create a Python virtual environment and install the required dependencies:
 
 ```
-cd analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit
+cd data-stacks/spark-on-eks/benchmarks/spark-operator-benchmarks
 python3.12 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -207,7 +207,7 @@ This command:
 - Total of **6000 jobs** are submitted by this command. Each Spark job consists of **6 pods** (1 Driver and 5 executor pods)
 - Generates **36,000 pods** across **200 nodes** using **3 namespaces**.
 
-- Locust script uses the Spark job template located at: `analytics/terraform/spark-k8s-operator/examples/benchmark/spark-operator-benchmark-kit/spark-app-with-webhook.yaml`.
+- Locust script uses the Spark job template located at: `data-stacks/spark-on-eks/benchmarks/spark-operator-benchmarks/spark-app-with-webhook.yaml`.
 
 - Spark job uses a simple `spark-pi-sleep.jar` that sleeps for a specified duration. The testing image is available at: `public.ecr.aws/data-on-eks/spark:pi-sleep-v0.0.2`
 
@@ -295,6 +295,6 @@ To avoid unnecessary costs, first scale down the **spark_operator_bench** node g
 Once the nodes have been scaled down, you can proceed with cluster teardown using the following script:
 
 ```sh
-cd ${DOEKS_HOME}/analytics/terraform/spark-k8s-operator && chmod +x cleanup.sh
+cd ${DOEKS_HOME}/data-stacks/spark-on-eks && chmod +x cleanup.sh
 ./cleanup.sh
 ```
