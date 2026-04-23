@@ -33,28 +33,82 @@ spec:
         - -c
         - |
           set -e
-          echo "Starting TPC-DS 1TB data generation..."
-          
-          # Generate 1TB dataset using the benchmark tool
+
+          SCALE=1000
+          CHUNKS=1000
+          PARALLEL_WORKERS=${PARALLEL_WORKERS:-32}
+          OUTPUT_DIR=/data/tpcds-1tb
+
+          echo "=== TPC-DS Data Generation ==="
+          echo "Scale factor: ${SCALE} (~1TB)"
+          echo "Chunks: ${CHUNKS}"
+          echo "Parallel workers: ${PARALLEL_WORKERS}"
+          echo "Output: ${OUTPUT_DIR}"
+          echo ""
+
+          mkdir -p ${OUTPUT_DIR}
           cd /opt/BenchmarkTool
-          ./bin/gen_data/gen-tpcds.sh 1000 /data/tpcds-1tb
-          
-          echo "TPC-DS 1TB data generation completed!"
-          echo "Generated files:"
-          ls -lh /data/tpcds-1tb/
-        
+
+          # Find the dsdgen binary
+          DSDGEN=$(find . -name dsdgen -type f | head -1)
+          if [ -z "$DSDGEN" ]; then
+            echo "ERROR: dsdgen binary not found"
+            exit 1
+          fi
+          DSDGEN_DIR=$(dirname "$DSDGEN")
+          echo "Using dsdgen at: ${DSDGEN_DIR}/dsdgen"
+
+          START_TIME=$(date +%s)
+
+          # Run dsdgen in parallel batches
+          # Each child generates one chunk of the total dataset
+          child=1
+          while [ $child -le $CHUNKS ]; do
+            # Launch a batch of workers
+            active=0
+            while [ $active -lt $PARALLEL_WORKERS ] && [ $child -le $CHUNKS ]; do
+              (cd "$DSDGEN_DIR" && ./dsdgen \
+                -scale $SCALE \
+                -PARALLEL $CHUNKS \
+                -CHILD $child \
+                -TERMINATE N \
+                -FORCE Y \
+                -dir ${OUTPUT_DIR}) &
+              child=$((child + 1))
+              active=$((active + 1))
+            done
+            # Wait for this batch to finish before starting the next
+            wait
+            ELAPSED=$(( $(date +%s) - START_TIME ))
+            DONE=$((child - 1))
+            echo "[${ELAPSED}s] Completed ${DONE}/${CHUNKS} chunks"
+          done
+
+          END_TIME=$(date +%s)
+          TOTAL_TIME=$((END_TIME - START_TIME))
+
+          echo ""
+          echo "=== TPC-DS 1TB data generation completed ==="
+          echo "Total time: ${TOTAL_TIME} seconds ($((TOTAL_TIME / 60)) minutes)"
+          echo "Files generated: $(ls ${OUTPUT_DIR}/*.dat 2>/dev/null | wc -l)"
+          echo "Total size: $(du -sh ${OUTPUT_DIR} | cut -f1)"
+
         resources:
           requests:
-            cpu: "8"
+            cpu: "30"
             memory: "32Gi"
           limits:
-            cpu: "16"
+            cpu: "32"
             memory: "64Gi"
-        
+
+        env:
+        - name: PARALLEL_WORKERS
+          value: "32"
+
         volumeMounts:
         - name: data-volume
           mountPath: /data
-      
+
       volumes:
       - name: data-volume
         persistentVolumeClaim:

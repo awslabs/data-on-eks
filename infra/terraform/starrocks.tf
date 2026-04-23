@@ -103,6 +103,65 @@ resource "kubectl_manifest" "starrocks_operator" {
 }
 
 #---------------------------------------------------------------
+# gp3-starrocks StorageClass
+#---------------------------------------------------------------
+resource "kubectl_manifest" "starrocks_storageclass" {
+  count     = var.enable_starrocks ? 1 : 0
+  yaml_body = templatefile("${path.module}/manifests/starrocks/storageclass.yaml", {})
+
+  depends_on = [
+    kubectl_manifest.starrocks_operator
+  ]
+}
+
+#---------------------------------------------------------------
+# Prometheus PodMonitors for StarRocks metrics
+# Scrapes FE (port 8030), BE (port 8040), CN (port 8040)
+# Automatically extracts cluster name from operator labels
+#---------------------------------------------------------------
+locals {
+  starrocks_pod_monitors = var.enable_starrocks ? provider::kubernetes::manifest_decode_multi(
+    file("${path.module}/manifests/starrocks/pod-monitors.yaml")
+  ) : []
+}
+
+resource "kubectl_manifest" "starrocks_pod_monitors" {
+  for_each = { for idx, manifest in local.starrocks_pod_monitors : idx => manifest }
+
+  yaml_body = yamlencode(each.value)
+
+  depends_on = [
+    kubectl_manifest.starrocks_operator
+  ]
+}
+
+#---------------------------------------------------------------
+# KEDA ScaledObject for CN Autoscaling (Shared-Data, Optional)
+#
+# Scales CN nodes based on StarRocks query rate from Prometheus.
+# Supports scale-to-zero during idle periods.
+#
+# NOTE: When this ScaledObject is active, the StarRocksCluster CR
+# MUST NOT set `replicas` under `starRocksCnSpec`. KEDA/HPA manages
+# the replica count. If `replicas` is set, there will be a conflict.
+#
+# Deploys automatically when var.enable_starrocks = true.
+#---------------------------------------------------------------
+resource "kubectl_manifest" "starrocks_cn_keda_scaledobject" {
+  count = var.enable_starrocks ? 1 : 0
+
+  yaml_body = templatefile("${path.module}/manifests/starrocks/cn-keda-scaledobject.yaml", {
+    starrocks_namespace = local.starrocks_namespace
+    prometheus_url      = "http://prometheus-prometheus.monitoring:9090"
+  })
+
+  depends_on = [
+    kubectl_manifest.starrocks_operator,
+    kubectl_manifest.keda_operator
+  ]
+}
+
+#---------------------------------------------------------------
 # Outputs
 #---------------------------------------------------------------
 output "starrocks_s3_bucket_id" {

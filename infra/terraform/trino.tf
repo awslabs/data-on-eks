@@ -180,21 +180,8 @@ resource "kubectl_manifest" "trino" {
 }
 
 #---------------------------------------------------------------
-# KEDA Operator for Trino Autoscaling (Optional)
-#---------------------------------------------------------------
-resource "kubectl_manifest" "keda_operator" {
-
-  yaml_body = templatefile("${path.module}/argocd-applications/keda.yaml", {
-    user_values_yaml = indent(8, yamlencode(yamldecode(templatefile("${path.module}/helm-values/keda.yaml", {}))))
-  })
-
-  depends_on = [
-    helm_release.argocd,
-  ]
-}
-
-#---------------------------------------------------------------
 # Trino KEDA Autoscaling ScaledObject (Optional)
+# KEDA operator is deployed via keda.tf (shared across workloads)
 #---------------------------------------------------------------
 resource "kubectl_manifest" "trino_keda_scaledobject" {
 

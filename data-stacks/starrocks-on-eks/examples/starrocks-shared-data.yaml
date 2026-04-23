@@ -1,3 +1,33 @@
+# StarRocks Shared-Data Cluster
+#
+# Architecture: FE (metadata + query coordination) + CN (stateless compute with NVMe cache)
+# Use case: Cloud-native OLAP with S3 as primary storage, elastic CN autoscaling
+# Storage: S3 is the source of truth — CN nodes hold hot data in local cache
+#
+# Best practices per https://docs.starrocks.io/docs/deployment/plan_cluster/:
+#   - 3x FE (Raft quorum — tolerates 1 failure)
+#   - CN: 16 CPU / 64Gi RAM minimum; requests == limits for accurate HPA
+#   - FE storage: 100Gi sufficient for metadata
+#   - CN local disk: sized to hot data working set (NVMe preferred for cache)
+#   - When autoScalingPolicy is set, do NOT set replicas in starRocksCnSpec
+#
+# Prerequisites:
+#   - StarRocks operator running in starrocks-operator-system
+#   - Karpenter NodePools: general-purpose (FE), memory-optimized-graviton (CN)
+#   - ServiceAccount: starrocks-sa (created by Terraform with Pod Identity for S3)
+#   - S3 bucket: terraform -chdir=terraform/_local output starrocks_s3_bucket_id
+#
+# Deploy:
+#   1. Replace <STARROCKS_S3_BUCKET_ID> and <REGION> in the FE ConfigMap below
+#   2. kubectl apply -f starrocks-shared-data.yaml
+#   Or use the deployment script:
+#   ./deploy-shared-data.sh
+#
+# Connect (via NLB — no port-forward needed within VPC):
+#   NLB=$(kubectl get svc starrocks-shared-data-fe-service -n starrocks \
+#     -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+#   mysql -h $NLB -P 9030 -u root
+
 apiVersion: starrocks.com/v1
 kind: StarRocksCluster
 metadata:
@@ -8,25 +38,48 @@ spec:
   starRocksFeSpec:
     replicas: 3
     image: "starrocks/fe-ubuntu:3.5-latest"
-    
-    limits:
-      cpu: 8
-      memory: 32Gi
+
+    # Docs recommend: 8 CPU cores / 16Gi RAM minimum per FE node
     requests:
-      cpu: 4
+      cpu: "4"
       memory: 16Gi
-    
+    limits:
+      cpu: "8"
+      memory: 32Gi
+
     # FE Configuration for shared-data mode
     configMapInfo:
       configMapName: starrocks-shared-data-fe-cm
       resolveKey: fe.conf
-      
+
     # Node placement - use general-purpose Graviton nodes for FE metadata/coordination
     nodeSelector:
       NodeGroupType: general-purpose
       karpenter.sh/capacity-type: on-demand
       kubernetes.io/arch: arm64
-      
+
+    # Pod anti-affinity — spread FE across nodes for Raft quorum safety
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values: ["fe"]
+            topologyKey: kubernetes.io/hostname
+
+    # FE storage volumes for metadata and logs
+    storageVolumes:
+      - name: fe-meta
+        mountPath: /opt/starrocks/fe/meta
+        storageClassName: gp3
+        storageSize: 100Gi    # 100Gi is sufficient for FE metadata per docs
+      - name: fe-log
+        mountPath: /opt/starrocks/fe/log
+        storageClassName: gp3
+        storageSize: 10Gi
+
     # Service configuration
     service:
       type: LoadBalancer
@@ -36,66 +89,59 @@ spec:
         service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
 
   # Compute Nodes (CN) - Stateless compute for shared-data architecture
+  # r8gd.8xlarge: 32 vCPU, 256 GiB RAM, 1×1.9TB NVMe — memory-optimized Graviton4
+  # Matches StarRocks 1:4+ vCPU:GB recommendation for vectorized joins + data cache
   starRocksCnSpec:
+    replicas: 3
     image: "starrocks/cn-ubuntu:3.5-latest"
-    
-    limits:
-      cpu: 16
-      memory: 128Gi
+
+    # r8gd.8xlarge: 32 vCPU / 256 GiB — reserve ~10% for kubelet + daemonsets
     requests:
-      cpu: 8
-      memory: 128Gi
-    
-    # Local cache storage for CN nodes (shared-data mode uses S3 as primary storage)
-    storageVolumes:
-    - name: cn-cache
-      mountPath: /opt/starrocks/cn/storage
-      storageClassName: gp3
-      storageSize: 100Gi
-    
+      cpu: "28"
+      memory: 220Gi
+    limits:
+      cpu: "31"
+      memory: 240Gi
+
+    # CN uses local NVMe SSD (RAID0) for cache — no EBS PVC needed
+    # The RAID0 mount is at /mnt/k8s-disks, configured by Karpenter instanceStorePolicy
+    configMapInfo:
+      configMapName: starrocks-shared-data-cn-cm
+      resolveKey: cn.conf
+
     # Use IRSA service account
     serviceAccount: starrocks-sa
-        
-    # CN Autoscaling Configuration
-    autoScalingPolicy:
-      maxReplicas: 10
-      minReplicas: 1
-      hpaPolicy:
-        metrics:
-        - type: Resource
-          resource:
-            name: cpu
-            target:
-              type: Utilization
-              averageUtilization: 60
-        - type: Resource
-          resource:
-            name: memory
-            target:
-              type: Utilization
-              averageUtilization: 60
-        behavior:
-          scaleDown:
-            policies:
-            - type: Pods
-              value: 1
-              periodSeconds: 60
-          scaleUp:
-            policies:
-            - type: Pods
-              value: 2
-              periodSeconds: 30
-      
-    # Node placement - use Graviton memory-optimized nodes for CN compute
+
+    # ---------------------------------------------------------
+    # Autoscaling (fixed replicas by default for benchmark consistency)
+    # ---------------------------------------------------------
+    # The stack always deploys a KEDA ScaledObject for CN:
+    #   infra/terraform/manifests/starrocks/cn-keda-scaledobject.yaml
+    #
+    # To let KEDA manage replicas (scale-to-zero capable):
+    #   1. REMOVE the `replicas: 3` field above — KEDA owns the count.
+    #   2. Roll out the CN StatefulSet; KEDA's HPA will take over.
+    #
+    # KEDA scales CN 0 → 10 based on:
+    #   - Query rate from Prometheus (starrocks_fe_query_total)
+    #   - Active connections (starrocks_fe_connection_total)
+    #
+    # Cost savings: scaling to 0 during idle periods saves ~$1,400/month
+    # per CN instance. First query after scale-up has cold-cache penalty.
+    # ---------------------------------------------------------
+
+    # Node placement - memory-optimized Graviton with local NVMe for data cache
+    # r8gd/r7gd: best price/perf for StarRocks CN (1:8 vCPU:GB ratio, local NVMe)
     nodeSelector:
       NodeGroupType: SparkGravitonMemoryOptimized
       karpenter.sh/capacity-type: on-demand
-      
+      karpenter.k8s.aws/instance-family: r8gd
+
     # Service configuration
     service:
       type: ClusterIP
 
-  # ServiceAccount with IRSA for S3 access
+  # ServiceAccount with Pod Identity for S3 access
   serviceAccount: starrocks-sa
 
 ---
@@ -108,20 +154,23 @@ data:
   fe.conf: |
     LOG_DIR = ${STARROCKS_HOME}/log
     DATE = "$(date +%Y%m%d-%H%M%S)"
-    JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xmx16g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xmx16g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:${LOG_DIR}/fe.gc.log.$DATE:time"
     http_port = 8030
     rpc_port = 9020
     query_port = 9030
     edit_log_port = 9010
     mysql_service_nio_enabled = true
     sys_log_level = INFO
-    
+
     # Shared-data mode configuration
     run_mode = shared_data
     cloud_native_meta_port = 6090
     query_timeout = 3600
     max_connection = 4096
-    
+
+    # Graceful shutdown — ensures in-flight queries complete before FE stops
+    min_graceful_exit_time_second = 25
+
     # S3 shared storage configuration (uses Pod Identity for authentication)
     # Replace with your actual values from Terraform outputs:
     #   terraform -chdir=terraform/_local output starrocks_s3_bucket_id
@@ -130,6 +179,22 @@ data:
     aws_s3_region = <REGION>
     aws_s3_use_aws_sdk_default_behavior = true
     aws_s3_use_instance_profile = true
-    
+
     # Enable automatic default volume creation
     enable_load_volume_from_conf = true
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starrocks-shared-data-cn-cm
+  namespace: starrocks
+data:
+  cn.conf: |
+    sys_log_level = INFO
+    be_port = 9060
+    webserver_port = 8040
+    heartbeat_service_port = 9050
+    brpc_port = 8060
+    # Use local NVMe SSD (RAID0) for cache — mounted by Karpenter instanceStorePolicy
+    storage_root_path = /mnt/k8s-disks

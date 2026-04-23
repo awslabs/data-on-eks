@@ -14,59 +14,119 @@ spec:
         args: 
         - -c
         - |
-          FE_SERVICE="starrocks-shared-data-fe-service"
+          FE_SERVICE="${STARROCKS_FE_SERVICE:-starrocks-shared-data-fe-service}"
+          ITERATIONS=${BENCHMARK_ITERATIONS:-3}
           RESULTS_DIR="/results"
           
           mkdir -p $RESULTS_DIR
           
-          echo "Starting TPC-DS Benchmark for StarRocks"
-          echo "Timestamp: $(date)"
-          echo "Database: tpcds"
+          echo "============================================="
+          echo "TPC-DS Benchmark for StarRocks"
+          echo "============================================="
+          echo "FE Service:  $FE_SERVICE"
+          echo "Iterations:  $ITERATIONS"
+          echo "Timestamp:   $(date)"
+          echo "Database:    tpcds"
+          echo ""
           
-          SUMMARY_FILE="$RESULTS_DIR/benchmark_summary.txt"
-          echo "TPC-DS Benchmark Results - $(date)" > $SUMMARY_FILE
-          echo "=================================" >> $SUMMARY_FILE
+          # Collect all query files
+          QUERY_FILES=$(ls /queries/query*.sql 2>/dev/null | sort -V)
+          QUERY_COUNT=$(echo "$QUERY_FILES" | wc -l)
           
-          total_time=0
-          successful_queries=0
-          failed_queries=0
-          
-          for query_file in /queries/query*.sql; do
-              if [ -f "$query_file" ]; then
-                  query_name=$(basename "$query_file" .sql)
-                  echo "Running $query_name..."
-                  
-                  start_time=$(date +%s%3N)
-                  
-                  timeout 600 mysql -h$FE_SERVICE -P9030 -uroot tpcds -e "SET query_timeout=600; $(cat $query_file)" > "$RESULTS_DIR/${query_name}_result.txt" 2> "$RESULTS_DIR/${query_name}_error.txt"
-                  exit_code=$?
-                  
-                  end_time=$(date +%s%3N)
-                  duration=$((end_time - start_time))
-                  
-                  if [ $exit_code -eq 0 ]; then
-                      echo "$query_name: SUCCESS (${duration}ms)" | tee -a $SUMMARY_FILE
-                      successful_queries=$((successful_queries + 1))
-                      total_time=$((total_time + duration))
-                  else
-                      echo "$query_name: FAILED (${duration}ms)" | tee -a $SUMMARY_FILE
-                      failed_queries=$((failed_queries + 1))
-                  fi
+          # Run iterations
+          for iter in $(seq 1 $ITERATIONS); do
+            echo ""
+            echo "========== Iteration $iter of $ITERATIONS =========="
+            
+            iter_total=0
+            iter_success=0
+            iter_failed=0
+            
+            for query_file in $QUERY_FILES; do
+              query_name=$(basename "$query_file" .sql)
+              echo -n "  $query_name: "
+              
+              start_time=$(date +%s%3N)
+              timeout 600 mysql -h$FE_SERVICE -P9030 -uroot tpcds -e "SET query_timeout=600; $(cat $query_file)" > /dev/null 2>&1
+              exit_code=$?
+              end_time=$(date +%s%3N)
+              duration=$((end_time - start_time))
+              
+              if [ $exit_code -eq 0 ]; then
+                echo "SUCCESS (${duration}ms)"
+                iter_success=$((iter_success + 1))
+                iter_total=$((iter_total + duration))
+              else
+                echo "FAILED (${duration}ms)"
+                iter_failed=$((iter_failed + 1))
               fi
+              
+              # Store per-query per-iteration result
+              echo "${iter},${query_name},${exit_code},${duration}" >> $RESULTS_DIR/raw_results.csv
+            done
+            
+            echo ""
+            echo "Iteration $iter: ${iter_success} passed, ${iter_failed} failed, total ${iter_total}ms"
           done
           
-          echo "" >> $SUMMARY_FILE
-          echo "Summary:" >> $SUMMARY_FILE
-          echo "Total Queries: $((successful_queries + failed_queries))" >> $SUMMARY_FILE
-          echo "Successful: $successful_queries" >> $SUMMARY_FILE
-          echo "Failed: $failed_queries" >> $SUMMARY_FILE
-          echo "Total Time: ${total_time}ms" >> $SUMMARY_FILE
-          if [ $successful_queries -gt 0 ]; then
-              echo "Average Time: $((total_time / successful_queries))ms" >> $SUMMARY_FILE
-          fi
+          # Generate summary with min/avg/max per query across iterations
+          echo ""
+          echo "============================================="
+          echo "TPC-DS Benchmark Summary"
+          echo "============================================="
+          echo "FE Service:  $FE_SERVICE"
+          echo "Iterations:  $ITERATIONS"
+          echo "Timestamp:   $(date)"
+          echo ""
           
-          echo "Benchmark completed. Results saved to $RESULTS_DIR"
-          cat $SUMMARY_FILE
+          echo "Per-Query Results (min/avg/max across $ITERATIONS iterations):"
+          echo "--------------------------------------------------------------"
+          printf "%-12s %8s %8s %8s %8s\n" "Query" "Min(ms)" "Avg(ms)" "Max(ms)" "Status"
+          echo "--------------------------------------------------------------"
+          
+          grand_total_avg=0
+          grand_success=0
+          grand_failed=0
+          
+          for query_file in $QUERY_FILES; do
+            query_name=$(basename "$query_file" .sql)
+            
+            # Extract times for this query (only successful runs)
+            times=$(grep ",${query_name},0," $RESULTS_DIR/raw_results.csv | cut -d',' -f4)
+            fail_count=$(grep ",${query_name}," $RESULTS_DIR/raw_results.csv | grep -v ",0," | wc -l)
+            success_count=$(echo "$times" | grep -c .)
+            
+            if [ "$success_count" -gt 0 ] && [ -n "$times" ]; then
+              min_t=$(echo "$times" | sort -n | head -1)
+              max_t=$(echo "$times" | sort -n | tail -1)
+              sum_t=0
+              for t in $times; do sum_t=$((sum_t + t)); done
+              avg_t=$((sum_t / success_count))
+              
+              if [ "$fail_count" -gt 0 ]; then
+                printf "%-12s %8d %8d %8d %8s\n" "$query_name" "$min_t" "$avg_t" "$max_t" "PARTIAL"
+              else
+                printf "%-12s %8d %8d %8d %8s\n" "$query_name" "$min_t" "$avg_t" "$max_t" "OK"
+              fi
+              grand_total_avg=$((grand_total_avg + avg_t))
+              grand_success=$((grand_success + 1))
+            else
+              printf "%-12s %8s %8s %8s %8s\n" "$query_name" "-" "-" "-" "FAILED"
+              grand_failed=$((grand_failed + 1))
+            fi
+          done
+          
+          echo "--------------------------------------------------------------"
+          echo ""
+          echo "Overall:"
+          echo "  Queries passed:  $grand_success / $QUERY_COUNT"
+          echo "  Queries failed:  $grand_failed / $QUERY_COUNT"
+          echo "  Sum of avg times: ${grand_total_avg}ms ($((grand_total_avg / 1000))s)"
+          if [ $grand_success -gt 0 ]; then
+            echo "  Mean avg time:   $((grand_total_avg / grand_success))ms"
+          fi
+          echo ""
+          echo "Raw results saved to: $RESULTS_DIR/raw_results.csv"
         volumeMounts:
         - name: query-files
           mountPath: /queries

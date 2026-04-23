@@ -4,9 +4,14 @@ metadata:
   name: tpcds-data-loader
   namespace: starrocks
 spec:
+  backoffLimit: 1
   template:
     spec:
       serviceAccountName: starrocks-sa
+      restartPolicy: Never
+      nodeSelector:
+        NodeGroupType: SparkGravitonMemoryOptimized
+        karpenter.sh/capacity-type: on-demand
       containers:
       - name: loader
         image: mysql:8.0
@@ -16,35 +21,119 @@ spec:
         - |
           FE_SERVICE="starrocks-shared-data-fe-service"
           DATA_PATH="/data/tpcds-1tb"
-          
-          # Create all TPC-DS tables (ignore if exists)
-          mysql -h$FE_SERVICE -P9030 -uroot < /sql/tpcds_create.sql || true
-          
-          # Load all tables with fixes
-          for table in call_center catalog_page catalog_returns catalog_sales customer customer_address customer_demographics date_dim household_demographics income_band inventory item promotion reason ship_mode store store_returns store_sales time_dim warehouse web_page web_returns web_sales web_site; do
-            echo "Loading table: $table"
-            for file in $DATA_PATH/${table}_*.dat; do
+
+          echo "============================================="
+          echo "TPC-DS Data Loader"
+          echo "============================================="
+          echo "Target FE: ${FE_SERVICE}"
+          echo "Data path: ${DATA_PATH}"
+          echo "Start time: $(date)"
+          echo ""
+
+          OVERALL_START=$(date +%s)
+
+          # --- Step 1: Create database and tables ---
+          echo "--- Creating database 'tpcds' ---"
+          mysql -h${FE_SERVICE} -P9030 -uroot -e "CREATE DATABASE IF NOT EXISTS tpcds;" || {
+            echo "ERROR: Failed to create database"
+            exit 1
+          }
+
+          echo "--- Creating TPC-DS tables ---"
+          mysql -h${FE_SERVICE} -P9030 -uroot tpcds < /sql/tpcds_create.sql || true
+          echo "Tables created."
+          echo ""
+
+          # --- Step 2: Load data with timing ---
+          TABLES="call_center catalog_page catalog_returns catalog_sales customer customer_address customer_demographics date_dim household_demographics income_band inventory item promotion reason ship_mode store store_returns store_sales time_dim warehouse web_page web_returns web_sales web_site"
+
+          SUMMARY=""
+          TOTAL_FILES=0
+          TOTAL_ERRORS=0
+
+          for table in $TABLES; do
+            TABLE_START=$(date +%s)
+            file_count=0
+            error_count=0
+
+            echo "--- Loading table: ${table} ---"
+
+            for file in ${DATA_PATH}/${table}_*.dat; do
               if [ -f "$file" ]; then
-                echo "Loading file: $file"
+                file_count=$((file_count + 1))
+                filesize=$(du -h "$file" | cut -f1)
+                echo "  Loading: $(basename $file) (${filesize})"
                 timestamp=$(date +%s%N)
-                curl --location-trusted -u "root:" \
-                  -XPUT "http://$FE_SERVICE:8030/api/tpcds/$table/_stream_load" \
+
+                result=$(curl -s --location-trusted -u "root:" \
+                  -XPUT "http://${FE_SERVICE}:8030/api/tpcds/${table}/_stream_load" \
                   -T "$file" \
                   -H "column_separator:|" \
                   -H "Expect: 100-Continue" \
                   -H "label:${table}_${timestamp}" \
                   -H "max_filter_ratio:0.3" \
                   -H "timeout:600" \
-                  -H "strict_mode:false"
-                echo ""
+                  -H "strict_mode:false" 2>&1)
+
+                status=$(echo "$result" | grep -o '"Status":"[^"]*"' | head -1 | cut -d'"' -f4)
+                if [ "$status" != "Success" ] && [ "$status" != "Publish Timeout" ]; then
+                  echo "    WARN: status=${status}"
+                  error_count=$((error_count + 1))
+                fi
               fi
             done
+
+            TABLE_END=$(date +%s)
+            TABLE_TIME=$((TABLE_END - TABLE_START))
+            TOTAL_FILES=$((TOTAL_FILES + file_count))
+            TOTAL_ERRORS=$((TOTAL_ERRORS + error_count))
+
+            line="${table}: ${file_count} files, ${TABLE_TIME}s, ${error_count} errors"
+            echo "  => ${line}"
+            SUMMARY="${SUMMARY}\n${line}"
+            echo ""
           done
+
+          OVERALL_END=$(date +%s)
+          OVERALL_TIME=$((OVERALL_END - OVERALL_START))
+
+          echo ""
+          echo "============================================="
+          echo "TPC-DS Data Load Summary"
+          echo "============================================="
+          echo "Target FE:    ${FE_SERVICE}"
+          echo "End time:     $(date)"
+          echo "Total time:   ${OVERALL_TIME}s ($((OVERALL_TIME / 60))m $((OVERALL_TIME % 60))s)"
+          echo "Total files:  ${TOTAL_FILES}"
+          echo "Total errors: ${TOTAL_ERRORS}"
+          echo ""
+          echo "Per-table breakdown:"
+          echo -e "${SUMMARY}"
+          echo ""
+
+          # --- Step 3: Verify row counts ---
+          echo "============================================="
+          echo "Table Row Counts"
+          echo "============================================="
+          for table in $TABLES; do
+            count=$(mysql -h${FE_SERVICE} -P9030 -uroot -N -e "SELECT count(*) FROM tpcds.${table};" 2>/dev/null || echo "ERROR")
+            echo "  ${table}: ${count} rows"
+          done
+
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+
         volumeMounts:
         - name: tpcds-data
           mountPath: /data
         - name: sql-scripts
           mountPath: /sql
+
       volumes:
       - name: tpcds-data
         persistentVolumeClaim:
@@ -52,5 +141,3 @@ spec:
       - name: sql-scripts
         configMap:
           name: tpcds-tables-sql
-      restartPolicy: Never
-  backoffLimit: 3
