@@ -23,6 +23,10 @@ module "s3_bucket" {
   # For example only - please evaluate for your environment
   force_destroy = true
 
+  versioning = {
+    enabled = true
+  }
+
   server_side_encryption_configuration = {
     rule = {
       apply_server_side_encryption_by_default = {

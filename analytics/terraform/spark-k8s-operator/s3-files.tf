@@ -1,8 +1,7 @@
 #---------------------------------------------------------------
 # Amazon S3 Files - File System Interface to S3
+# Uses CloudFormation to avoid null_resource/CLI workarounds
 #---------------------------------------------------------------
-# S3 Files provides file system semantics (POSIX, NFS) on top of S3 data
-# Reference: https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files.html
 
 #---------------------------------------------------------------
 # IAM Role for S3 Files Filesystem
@@ -39,8 +38,12 @@ resource "aws_iam_role_policy" "s3_files_bucket_access" {
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
+          "s3:HeadObject",
           "s3:ListBucket",
-          "s3:GetBucketLocation"
+          "s3:GetBucketLocation",
+          "s3:GetBucketVersioning",
+          "s3:GetObjectVersion",
+          "s3:ListBucketVersions"
         ]
         Resource = [
           module.s3_bucket.s3_bucket_arn,
@@ -78,12 +81,7 @@ resource "aws_security_group" "s3_files" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "${local.name}-s3-files-sg"
-    }
-  )
+  tags = merge(local.tags, { Name = "${local.name}-s3-files-sg" })
 
   lifecycle {
     create_before_destroy = true
@@ -91,175 +89,131 @@ resource "aws_security_group" "s3_files" {
 }
 
 #---------------------------------------------------------------
-# S3 Files Resources via AWS CLI
-# Workaround: aws_s3files_* resources require AWS provider v6+
-# but upstream modules (EKS, eks-data-addons) are pinned to v5.x
-# TODO: Replace with native Terraform resources when modules support v6
+# Step 1: CloudFormation stack for S3 Files FileSystem only
+# CFN waits for the filesystem to reach AVAILABLE before completing
 #---------------------------------------------------------------
-locals {
-  s3_files_output_dir = "${path.module}/.s3files"
-}
+resource "aws_cloudformation_stack" "s3_files_fs" {
+  name = "${local.name}-s3-files-fs"
 
-resource "null_resource" "s3_files_create" {
+  template_body = jsonencode({
+    AWSTemplateFormatVersion = "2010-09-09"
+    Description              = "S3 Files filesystem for Spark on EKS"
+
+    Resources = {
+      FileSystem = {
+        Type = "AWS::S3Files::FileSystem"
+        Properties = {
+          Bucket  = module.s3_bucket.s3_bucket_arn
+          RoleArn = aws_iam_role.s3_files.arn
+          Tags = [
+            { Key = "Name", Value = "${local.name}-s3-files" },
+            { Key = "Blueprint", Value = local.name }
+          ]
+        }
+      }
+    }
+
+    Outputs = {
+      FileSystemId = {
+        Value = { "Fn::GetAtt" = ["FileSystem", "FileSystemId"] }
+      }
+    }
+  })
+
   depends_on = [
-    aws_iam_role.s3_files,
     aws_iam_role_policy.s3_files_bucket_access,
-    aws_security_group.s3_files,
-    module.vpc
+    module.s3_bucket
   ]
 
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      mkdir -p ${local.s3_files_output_dir}
-
-      echo "=== Creating S3 Files filesystem ==="
-      FS_ID=$(aws s3files create-file-system \
-        --bucket "${module.s3_bucket.s3_bucket_arn}" \
-        --role-arn "${aws_iam_role.s3_files.arn}" \
-        --region "${local.region}" \
-        --query 'Id' --output text)
-      echo -n $FS_ID > ${local.s3_files_output_dir}/fs_id.txt
-      echo "Created filesystem: $FS_ID"
-
-      echo "=== Waiting for filesystem to become available ==="
-      for i in $(seq 1 30); do
-        STATUS=$(aws s3files describe-file-system --file-system-id $FS_ID --region "${local.region}" --query 'Status' --output text 2>/dev/null || echo "CREATING")
-        echo "  Status: $STATUS"
-        if [ "$STATUS" = "AVAILABLE" ]; then break; fi
-        sleep 10
-      done
-
-      echo "=== Creating mount target ==="
-      MT_RESULT=$(aws s3files create-mount-target \
-        --file-system-id "$FS_ID" \
-        --subnet-id "${module.vpc.private_subnets[0]}" \
-        --security-groups "${aws_security_group.s3_files.id}" \
-        --region "${local.region}" \
-        --output json)
-      MT_ID=$(echo $MT_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['Id'])")
-      MT_IP=$(echo $MT_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('Ipv4Address',''))")
-      echo -n $MT_ID > ${local.s3_files_output_dir}/mt_id.txt
-      echo -n $MT_IP > ${local.s3_files_output_dir}/mt_ip.txt
-      echo "Created mount target: $MT_ID ($MT_IP)"
-
-      echo "=== Waiting for mount target to become available ==="
-      for i in $(seq 1 30); do
-        STATUS=$(aws s3files describe-mount-targets --file-system-id $FS_ID --region "${local.region}" --query 'MountTargets[0].Status' --output text 2>/dev/null || echo "CREATING")
-        echo "  Status: $STATUS"
-        if [ "$STATUS" = "AVAILABLE" ]; then break; fi
-        sleep 10
-      done
-
-      echo "=== Creating access point ==="
-      AP_ID=$(aws s3files create-access-point \
-        --file-system-id "$FS_ID" \
-        --posix-user "Uid=185,Gid=185" \
-        --region "${local.region}" \
-        --query 'Id' --output text)
-      echo -n $AP_ID > ${local.s3_files_output_dir}/ap_id.txt
-      echo "Created access point: $AP_ID"
-
-      echo "=== S3 Files setup complete ==="
-      echo "Filesystem ID: $FS_ID"
-      echo "Mount Target ID: $MT_ID"
-      echo "Mount Target IP: $MT_IP"
-      echo "Access Point ID: $AP_ID"
-    EOT
-  }
-}
-
-data "local_file" "s3_files_fs_id" {
-  filename   = "${local.s3_files_output_dir}/fs_id.txt"
-  depends_on = [null_resource.s3_files_create]
-}
-
-data "local_file" "s3_files_mt_ip" {
-  filename   = "${local.s3_files_output_dir}/mt_ip.txt"
-  depends_on = [null_resource.s3_files_create]
-}
-
-data "local_file" "s3_files_ap_id" {
-  filename   = "${local.s3_files_output_dir}/ap_id.txt"
-  depends_on = [null_resource.s3_files_create]
-}
-
-data "local_file" "s3_files_mt_id" {
-  filename   = "${local.s3_files_output_dir}/mt_id.txt"
-  depends_on = [null_resource.s3_files_create]
+  tags = local.tags
 }
 
 #---------------------------------------------------------------
-# Native Terraform resources (requires AWS provider v6.40+)
-# Uncomment when upstream modules support AWS provider v6
+# Step 2: CloudFormation stack for MountTarget + AccessPoint
+# Only created after filesystem stack completes (filesystem is AVAILABLE)
 #---------------------------------------------------------------
-# resource "aws_s3files_file_system" "spark_data" {
-#   bucket   = module.s3_bucket.s3_bucket_arn
-#   role_arn = aws_iam_role.s3_files.arn
-#
-#   tags = merge(
-#     local.tags,
-#     {
-#       Name        = "${local.name}-s3-files"
-#       Description = "S3 Files filesystem for Spark data access"
-#       Purpose     = "SparkOnEKS"
-#     }
-#   )
-# }
-#
-# resource "aws_s3files_mount_target" "spark_data" {
-#   count = length(local.azs)
-#
-#   file_system_id  = aws_s3files_file_system.spark_data.id
-#   subnet_id       = module.vpc.private_subnets[count.index]
-#   security_groups = [aws_security_group.s3_files.id]
-# }
-#
-# resource "aws_s3files_file_system_policy" "spark_data" {
-#   file_system_id = aws_s3files_file_system.spark_data.id
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Principal = {
-#           AWS = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"
-#         }
-#         Action   = "s3files:ClientMount"
-#         Resource = "*"
-#       }
-#     ]
-#   })
-# }
-#
-# resource "aws_s3files_synchronization_configuration" "spark_data" {
-#   file_system_id = aws_s3files_file_system.spark_data.id
-#
-#   import_data_rule {
-#     prefix         = "order/"
-#     size_less_than = 52673613135872
-#     trigger        = "ON_FILE_ACCESS"
-#   }
-#
-#   expiration_data_rule {
-#     days_after_last_access = 30
-#   }
-# }
-#
-# resource "aws_s3files_access_point" "spark_team_a" {
-#   file_system_id = aws_s3files_file_system.spark_data.id
-#
-#   posix_user {
-#     gid = 185
-#     uid = 185
-#   }
-#
-#   tags = merge(
-#     local.tags,
-#     {
-#       Name = "${local.name}-spark-team-a-ap"
-#       Team = "spark-team-a"
-#     }
-#   )
-# }
+resource "aws_cloudformation_stack" "s3_files_resources" {
+  name = "${local.name}-s3-files-resources"
+
+  template_body = jsonencode({
+    AWSTemplateFormatVersion = "2010-09-09"
+    Description              = "S3 Files mount target, access point, and filesystem policy for Spark on EKS"
+
+    Resources = {
+      FileSystemPolicy = {
+        Type = "AWS::S3Files::FileSystemPolicy"
+        Properties = {
+          FileSystemId = aws_cloudformation_stack.s3_files_fs.outputs["FileSystemId"]
+          Policy = {
+            Version = "2012-10-17"
+            Statement = [
+              {
+                Effect    = "Allow"
+                Principal = { AWS = "*" }
+                Action = [
+                  "s3files:ClientMount",
+                  "s3files:ClientWrite",
+                  "s3files:ClientRootAccess"
+                ]
+                Resource = "*"
+              }
+            ]
+          }
+        }
+      }
+
+      MountTarget = {
+        Type = "AWS::S3Files::MountTarget"
+        Properties = {
+          FileSystemId   = aws_cloudformation_stack.s3_files_fs.outputs["FileSystemId"]
+          SubnetId       = module.vpc.private_subnets[0]
+          SecurityGroups = [aws_security_group.s3_files.id]
+        }
+      }
+
+      AccessPoint = {
+        Type      = "AWS::S3Files::AccessPoint"
+        DependsOn = "FileSystemPolicy"
+        Properties = {
+          FileSystemId = aws_cloudformation_stack.s3_files_fs.outputs["FileSystemId"]
+          PosixUser = {
+            Uid = "0"
+            Gid = "0"
+          }
+          Tags = [
+            { Key = "Name", Value = "${local.name}-spark-team-a-ap" },
+            { Key = "Team", Value = "spark-team-a" }
+          ]
+        }
+      }
+    }
+
+    Outputs = {
+      MountTargetId = {
+        Value = { "Fn::GetAtt" = ["MountTarget", "MountTargetId"] }
+      }
+      AccessPointId = {
+        Value = { "Fn::GetAtt" = ["AccessPoint", "AccessPointId"] }
+      }
+    }
+  })
+
+  depends_on = [aws_cloudformation_stack.s3_files_fs]
+
+  tags = local.tags
+}
+
+#---------------------------------------------------------------
+# Look up mount target IP after creation
+# (Ipv4Address is not a CFN GetAtt attribute for MountTarget)
+#---------------------------------------------------------------
+data "external" "s3_files_mount_target_ip" {
+  program = ["bash", "-c", <<-EOT
+    MT_ID="${aws_cloudformation_stack.s3_files_resources.outputs["MountTargetId"]}"
+    IP=$(aws s3files get-mount-target --mount-target-id "$MT_ID" --region "${local.region}" --query 'ipv4Address' --output text)
+    echo "{\"ip\": \"$IP\"}"
+  EOT
+  ]
+
+  depends_on = [aws_cloudformation_stack.s3_files_resources]
+}

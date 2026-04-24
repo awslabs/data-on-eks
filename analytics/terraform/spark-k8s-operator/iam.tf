@@ -91,7 +91,7 @@ module "efs_csi_driver_irsa" {
   version          = "5.60.0"
   role_name_prefix = format("%s-%s-", local.name, "efs-csi-driver")
 
-  attach_efs_csi_policy = true
+  attach_efs_csi_policy = false
 
   oidc_providers = {
     main = {
@@ -100,6 +100,30 @@ module "efs_csi_driver_irsa" {
     }
   }
   tags = local.tags
+}
+
+# Inline policy for EFS CSI driver (avoids iam:CreatePolicy permission requirement)
+resource "aws_iam_role_policy" "efs_csi_driver" {
+  name_prefix = "${local.name}-efs-csi-"
+  role        = module.efs_csi_driver_irsa.iam_role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticfilesystem:DescribeAccessPoints",
+          "elasticfilesystem:DescribeFileSystems",
+          "elasticfilesystem:DescribeMountTargets",
+          "elasticfilesystem:CreateAccessPoint",
+          "elasticfilesystem:DeleteAccessPoint",
+          "ec2:DescribeAvailabilityZones"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 # Additional S3 Files permissions for EFS CSI driver
@@ -117,9 +141,12 @@ resource "aws_iam_role_policy" "efs_csi_s3files" {
           "s3files:ClientMount",
           "s3files:ClientWrite",
           "s3files:ClientRootAccess",
-          "s3files:DescribeFileSystems",
-          "s3files:DescribeMountTargets",
-          "s3files:DescribeAccessPoints"
+          "s3files:GetFileSystem",
+          "s3files:ListFileSystems",
+          "s3files:GetMountTarget",
+          "s3files:ListMountTargets",
+          "s3files:GetAccessPoint",
+          "s3files:ListAccessPoints"
         ]
         Resource = "*"
       }
