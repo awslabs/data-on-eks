@@ -22,10 +22,10 @@ module "eks" {
     node_pools = ["system"]
   }
 
-  # Enable Provisioned Control Plane
-  control_plane_scaling_config = {
-    tier = "tier-xl"
-  }
+  # NOTE: Provisioned Control Plane (PCP) is configured via AWS CLI in the bootstrap script
+  # because the eks-data-addons module (v1.38.0) pins AWS provider to ~> 5.95,
+  # which is incompatible with EKS module v21.x (requires >= 6.20).
+  # See: https://github.com/aws-ia/terraform-aws-eks-data-addons/commit/9136fc8
 
   access_entries = {
     # One access entry with a policy associated
