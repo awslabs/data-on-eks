@@ -1,0 +1,112 @@
+# Prometheus recording rules and alerts for EKS PCP (4XL) benchmarking.
+# Apply with: kubectl apply -f prometheus-pcp-rules.yaml
+# Assumes kube-prometheus-stack is installed in the monitoring namespace.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: eks-pcp-benchmark-rules
+  namespace: kube-prometheus-stack
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+    # ----------------------------------------------------------------
+    # Recording rules — 1-minute windows, named for Grafana dashboards
+    # ----------------------------------------------------------------
+    - name: eks_pcp_benchmark.recording
+      interval: 15s
+      rules:
+        # API concurrency seats — current value
+        - record: eks_pcp:api_seats:current
+          expr: apiserver_flowcontrol_current_executing_seats
+
+        # Pod scheduling throughput — pods scheduled per second (1m avg)
+        - record: eks_pcp:pod_sched_rate:1m
+          expr: |
+            sum(rate(scheduler_schedule_attempts_total{result="scheduled"}[1m]))
+
+        # Pod scheduling failures per second (1m avg)
+        - record: eks_pcp:pod_sched_unschedulable:1m
+          expr: |
+            sum(rate(scheduler_schedule_attempts_total{result="unschedulable"}[1m]))
+
+        # etcd DB size in GB
+        - record: eks_pcp:etcd_db_gb:current
+          expr: apiserver_storage_size_bytes / 1e9
+
+        # % of 4XL API seat capacity used
+        - record: eks_pcp:api_seats_pct_4xl:current
+          expr: apiserver_flowcontrol_current_executing_seats / 6800 * 100
+
+        # % of 4XL pod scheduling rate capacity used
+        - record: eks_pcp:pod_sched_rate_pct_4xl:1m
+          expr: |
+            sum(rate(scheduler_schedule_attempts_total{result="scheduled"}[1m])) / 400 * 100
+
+        # % of 4XL etcd capacity used
+        - record: eks_pcp:etcd_pct_4xl:current
+          expr: apiserver_storage_size_bytes / 1.6e10 * 100
+
+    # ----------------------------------------------------------------
+    # Alerts — fire at 80% of tier limit (warning) and 90% (critical)
+    # ----------------------------------------------------------------
+    - name: eks_pcp_benchmark.alerts
+      rules:
+        # ── API Seats ──────────────────────────────────────────────
+        - alert: EKSPCPApiSeatsWarning
+          expr: eks_pcp:api_seats_pct_4xl:current > 80
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "EKS 4XL API seats > 80% ({{ $value | printf \"%.0f\" }}%)"
+            description: >
+              apiserver_flowcontrol_current_executing_seats is at
+              {{ $value | printf "%.0f" }}% of the 4XL limit (6800 seats).
+
+        - alert: EKSPCPApiSeatsCritical
+          expr: eks_pcp:api_seats_pct_4xl:current > 90
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: "EKS 4XL API seats > 90% — approaching control plane limit"
+            description: >
+              apiserver_flowcontrol_current_executing_seats has exceeded 90%
+              of the 4XL limit (6800 seats). Reduce concurrent job submissions.
+
+        # ── Pod Scheduling Rate ────────────────────────────────────
+        - alert: EKSPCPPodSchedRateWarning
+          expr: eks_pcp:pod_sched_rate_pct_4xl:1m > 80
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "EKS 4XL pod scheduling rate > 80% ({{ $value | printf \"%.0f\" }}%)"
+
+        - alert: EKSPCPPodSchedRateCritical
+          expr: eks_pcp:pod_sched_rate_pct_4xl:1m > 90
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: "EKS 4XL pod scheduling rate > 90% — approaching limit (400 pods/s)"
+
+        # ── etcd DB Size ───────────────────────────────────────────
+        - alert: EKSPCPEtcdSizeWarning
+          expr: eks_pcp:etcd_pct_4xl:current > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "EKS 4XL etcd DB > 80% ({{ $value | printf \"%.1f\" }} GB)"
+
+        - alert: EKSPCPEtcdSizeCritical
+          expr: eks_pcp:etcd_pct_4xl:current > 90
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "EKS 4XL etcd DB > 90% — approaching 16 GB limit"

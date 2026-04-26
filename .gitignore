@@ -53,6 +53,8 @@ local_tf_state/
 .gitallowed
 site
 .env*
+data-stacks/emr-on-eks/benchmarks/benchmark.env
+data-stacks/emr-on-eks/benchmarks/.benchmark-state/
 
 # Checks
 .tfsec

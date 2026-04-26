@@ -1,6 +1,67 @@
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
+  name: emr-pcp-benchmark
+  namespace: karpenter
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 300Gi
+        volumeType: gp3
+        iops: 3000
+        throughput: 125
+        encrypted: true
+        deleteOnTermination: true
+
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+    --BOUNDARY
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      featureGates:
+        FastImagePull: true
+      containerd:
+        config: |
+          [proxy_plugins.soci.exports]
+          root = "/var/lib/containerd/io.containerd.snapshotter.v1.soci"
+
+    --BOUNDARY
+    Content-Type: text/x-shellscript
+
+    #!/bin/bash
+    set -ex
+
+    mkdir -p /var/lib/containerd/io.containerd.snapshotter.v1.soci
+    sed -i "s;^ExecStart=.*;ExecStart=/usr/bin/soci-snapshotter-grpc --root /var/lib/containerd/io.containerd.snapshotter.v1.soci --address fd://;" \
+      /etc/systemd/system/soci-snapshotter.service
+    systemctl daemon-reload
+
+    --BOUNDARY--
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
   name: default
   namespace: karpenter
 spec:

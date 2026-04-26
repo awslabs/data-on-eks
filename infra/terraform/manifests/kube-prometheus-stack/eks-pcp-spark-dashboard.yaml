@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eks-pcp-spark-dashboard
+  namespace: kube-prometheus-stack
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_dashboard: "1"
+data:
+  eks-pcp-spark-dashboard.json: |
+%{ for line in split("\n", eks_pcp_spark_dashboard_json) ~}
+    ${line}
+%{ endfor ~}
