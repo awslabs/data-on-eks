@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  namespace: agentic-analytics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-server
+  template:
+    metadata:
+      labels:
+        app: mcp-server
+    spec:
+      serviceAccountName: mcp-sa
+      containers:
+        - name: mcp-server
+          image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/agentic-analytics/mcp-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: STARROCKS_HOST
+              value: starrocks-shared-data-fe-service.starrocks.svc.cluster.local
+            - name: STARROCKS_PORT
+              value: "9030"
+            - name: STARROCKS_DATABASE
+              value: ad_analytics
+            - name: STARROCKS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: starrocks-creds
+                  key: user
+            - name: STARROCKS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: starrocks-creds
+                  key: password
+          resources:
+            requests:
+              cpu: "250m"
+              memory: 256Mi
+            limits:
+              cpu: "500m"
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15

@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-data
+  namespace: agentic-analytics
+spec:
+  # Auto-delete 5 minutes after completion so it doesn't clutter the namespace
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: mcp-sa
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/agentic-analytics/seed:latest
+          imagePullPolicy: Always
+          env:
+            - name: STARROCKS_HOST
+              value: starrocks-shared-data-fe-service.starrocks.svc.cluster.local
+            - name: STARROCKS_PORT
+              value: "9030"
+            - name: STARROCKS_DATABASE
+              value: ad_analytics
+            - name: STARROCKS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: starrocks-creds
+                  key: user
+            - name: STARROCKS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: starrocks-creds
+                  key: password
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 2Gi

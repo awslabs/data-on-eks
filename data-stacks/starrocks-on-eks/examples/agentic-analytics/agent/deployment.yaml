@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+  namespace: agentic-analytics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent
+  template:
+    metadata:
+      labels:
+        app: agent
+    spec:
+      serviceAccountName: agent-sa
+      containers:
+        - name: agent
+          # Replace with your ECR image URI after running deploy.sh build step
+          image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/agentic-analytics/agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: AWS_REGION
+              value: us-east-1
+            # Set to the Bedrock model ID available in your region.
+            # Cross-region inference prefix (us.) enables automatic failover.
+            - name: BEDROCK_MODEL_ID
+              value: us.anthropic.claude-sonnet-4-6
+            - name: MCP_SERVER_URL
+              value: http://mcp-server.agentic-analytics.svc.cluster.local:8000
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
