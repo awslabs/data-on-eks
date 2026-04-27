@@ -81,3 +81,12 @@ output "raydata_config" {
     iam_role_arn      = module.spark_team_irsa["raydata"].iam_role_arn
   } : null
 }
+
+################################################################################
+# ECR
+################################################################################
+
+output "ecr_repo_url" {
+  description = "ECR repository URL for Spot Balancer image"
+  value       = aws_ecr_repository.spot_balancer.repository_url
+}
