@@ -78,10 +78,8 @@ echo "    IAM role arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME} ready."
 # ──────────────────────────────────────────────────────────────────────────────
 # 2. Namespace + RBAC
 # ──────────────────────────────────────────────────────────────────────────────
-echo "==> Applying namespace and service accounts ..."
-$KC apply -f "$SCRIPT_DIR/namespace.yaml"
-sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$SCRIPT_DIR/serviceaccounts.yaml" | $KC apply -f -
-$KC apply -f "$SCRIPT_DIR/secret.yaml"
+echo "==> Applying namespace, service accounts, and secret ..."
+sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$SCRIPT_DIR/base.yaml" | $KC apply -f -
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. StarRocks schema
