@@ -224,6 +224,18 @@ cd examples/agentic-analytics
 ./kubectl-deploy.sh
 ```
 
+:::note Demo deployment — no Docker required
+`kubectl-deploy.sh` is optimized for fast setup. It stores the agent source in a Kubernetes ConfigMap and installs Python dependencies via a pip init container on first start. No Docker build, no ECR repository, and no image registry are required.
+
+For production, replace the ConfigMap approach with purpose-built container images:
+
+1. Build `agent/Dockerfile` and push to your container registry (ECR or otherwise)
+2. Build `mcp-server/Dockerfile` and push to your registry
+3. Reference the image URIs in standard Kubernetes Deployments in place of the pip init container pattern
+
+The agent logic (`agent/app.py`), StarRocks schema, and LangGraph state machine are identical between both approaches. Only the delivery mechanism changes.
+:::
+
 The script runs these steps in order:
 
 | Step | What it does |
@@ -533,10 +545,13 @@ All files are in [`data-stacks/starrocks-on-eks/examples/agentic-analytics/`](ht
 
 | File | Purpose |
 |---|---|
-| `kubectl-deploy.sh` | Deploys IRSA, schema, ConfigMaps, MCP server, agent, and seed job |
+| `kubectl-deploy.sh` | Demo deploy: IRSA, schema, ConfigMaps, MCP server, agent, and seed job — no Docker required |
 | `demo.sh` | Interactive demo with pre-flight checks, live log streaming, and colored trace output |
 | `reseed.sh` | Truncates and re-inserts data with current timestamps before each demo session |
-| `agent/app.py` | LangGraph agent: the 4-step Decompose, Execute, Analyze, Report state machine |
-| `mcp-server/` | Kubernetes manifests for the StarRocks MCP server |
-| `seed-job/seed_data.py` | Synthetic data generator with the injected CTR anomaly on creative_id 8821 |
+| `base.yaml` | Namespace, StarRocks credentials Secret, and service accounts — applied as one manifest |
+| `iam-policy.json` | IAM policy granting `bedrock:InvokeModel` — used by `kubectl-deploy.sh` to create the IRSA role |
 | `starrocks-schema.sql` | DDL for the `ad_events` table and `ad_events_1min` materialized view |
+| `agent/app.py` | LangGraph agent: the 4-step Decompose, Execute, Analyze, Report state machine |
+| `agent/Dockerfile` | Container image for production deployment of the agent |
+| `mcp-server/Dockerfile` | Container image for production deployment of the StarRocks MCP server |
+| `seed-job/seed_data.py` | Synthetic data generator with the injected CTR anomaly on `creative_id=8821` |
