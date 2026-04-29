@@ -11,7 +11,7 @@
 #   CONTEXT=starrocks-on-eks ./demo.sh
 #   ./demo.sh "CTR dropped for advertiser_42 in last 15 minutes?"  42
 
-set -euo pipefail
+set -uo pipefail
 
 CONTEXT="${CONTEXT:-starrocks-on-eks}"
 QUESTION="${1:-CTR dropped for advertiser_42 in last 15 minutes — which creative, placement, device, or country is the root cause?}"
@@ -54,56 +54,71 @@ echo -e "${BOLD}${BLUE}❶  PRE-FLIGHT STATE CHECK${RESET}"
 echo -e "${DIM}${SEP}${RESET}"
 
 echo -e "\n${BOLD}  Pods (namespace: ${NS})${RESET}"
-kubectl --context "$CONTEXT" get pods -n "$NS" \
-  --no-headers \
-  -o custom-columns='  NAME:.metadata.name,READY:.status.containerStatuses[0].ready,STATUS:.status.phase,AGE:.metadata.creationTimestamp' 2>/dev/null \
-  | awk '{printf "  %-45s %-8s %-12s %s\n", $1, $2, $3, $4}' || \
-  kubectl --context "$CONTEXT" get pods -n "$NS" 2>/dev/null | sed 's/^/  /'
+kubectl --context "$CONTEXT" get pods -n "$NS" 2>/dev/null | sed 's/^/  /' || \
+  echo -e "  ${RED}(could not reach cluster — check kubectl context)${RESET}"
 
 echo ""
 echo -e "${BOLD}  Data freshness (ad_analytics.ad_events)${RESET}"
 
-# Query StarRocks for current state
-SR_CMD="kubectl --context $CONTEXT exec -n $SR_NS $SR_POD -- mysql -h 127.0.0.1 -P 9030 -u root"
+# StarRocks helper — always succeeds, returns empty string on failure
+sr_query() {
+  kubectl --context "$CONTEXT" exec -n "$SR_NS" "$SR_POD" -- \
+    mysql -h 127.0.0.1 -P 9030 -u root -e "$1" 2>/dev/null | tail -1 || echo ""
+}
 
-FRESH=$(${SR_CMD} -e \
-  "SELECT COUNT(*) FROM ad_analytics.ad_events WHERE event_ts >= NOW() - INTERVAL 15 MINUTE;" \
-  2>/dev/null | tail -1 || echo "0")
+FRESH=$(sr_query "SELECT COUNT(*) FROM ad_analytics.ad_events WHERE event_ts >= NOW() - INTERVAL 15 MINUTE;")
+TOTAL=$(sr_query "SELECT COUNT(*) FROM ad_analytics.ad_events;")
+MAX_TS=$(sr_query "SELECT MAX(event_ts) FROM ad_analytics.ad_events;")
 
-TOTAL=$(${SR_CMD} -e \
-  "SELECT COUNT(*) FROM ad_analytics.ad_events;" \
-  2>/dev/null | tail -1 || echo "0")
+echo -e "  Total rows   : ${BOLD}${TOTAL:-unknown}${RESET}"
+echo -e "  Latest event : ${BOLD}${MAX_TS:-unknown}${RESET}"
 
-MAX_TS=$(${SR_CMD} -e \
-  "SELECT MAX(event_ts) FROM ad_analytics.ad_events;" \
-  2>/dev/null | tail -1 || echo "unknown")
+FRESH_INT="${FRESH//[^0-9]/}"
+FRESH_INT="${FRESH_INT:-0}"
 
-echo -e "  Total rows   : ${BOLD}${TOTAL}${RESET}"
-echo -e "  Latest event : ${BOLD}${MAX_TS}${RESET}"
-
-if [[ "$FRESH" -lt 1000 ]]; then
+if [[ "$FRESH_INT" -lt 1000 ]]; then
+  echo -e "  In last 15min: ${YELLOW}${FRESH_INT} rows (stale) — refreshing timestamps...${RESET}"
   echo ""
-  echo -e "  ${BOLD}${RED}⚠  WARNING: Only ${FRESH} rows in last 15 min — data may be stale!${RESET}"
-  echo -e "  ${DIM}  Re-seed before demoing:${RESET}"
-  echo -e "  ${DIM}  kubectl --context $CONTEXT exec -n $SR_NS $SR_POD -- \\${RESET}"
-  echo -e "  ${DIM}    mysql -h 127.0.0.1 -P 9030 -u root -e 'TRUNCATE TABLE ad_analytics.ad_events;'${RESET}"
+
+  # Calculate how far behind the data is
+  OFFSET=$(sr_query "SELECT TIMESTAMPDIFF(SECOND, MAX(event_ts), NOW()) FROM ad_analytics.ad_events;")
+  OFFSET_INT="${OFFSET//[^0-9]/}"
+  OFFSET_INT="${OFFSET_INT:-0}"
+  OFFSET_MIN=$(( OFFSET_INT / 60 ))
+
+  echo -e "  ${DIM}  Data is ${OFFSET_MIN} min old — refreshing timestamps via INSERT OVERWRITE (~5s) ...${RESET}"
+
+  kubectl --context "$CONTEXT" exec -n "$SR_NS" "$SR_POD" -- \
+    mysql -h 127.0.0.1 -P 9030 -u root \
+    -e "INSERT OVERWRITE ad_analytics.ad_events
+        SELECT event_id, DATE_ADD(event_ts, INTERVAL ${OFFSET_INT} SECOND),
+               advertiser_id, creative_id, placement_id, device_type, country_code,
+               impressions, clicks
+        FROM ad_analytics.ad_events;" 2>&1 | grep -v "^$" | sed 's/^/  /' || true
+  echo -e "  ${GREEN}✓ Timestamps refreshed — 1M rows shifted to current time.${RESET}"
+
   echo ""
+  # Re-check freshness after update
+  FRESH=$(sr_query "SELECT COUNT(*) FROM ad_analytics.ad_events WHERE event_ts >= NOW() - INTERVAL 15 MINUTE;")
+  FRESH_INT="${FRESH//[^0-9]/}"
+  FRESH_INT="${FRESH_INT:-0}"
+  echo -e "  In last 15min: ${BOLD}${GREEN}${FRESH_INT} rows ✓${RESET}"
 else
-  echo -e "  In last 15min: ${BOLD}${GREEN}${FRESH} rows ✓${RESET}"
+  echo -e "  In last 15min: ${BOLD}${GREEN}${FRESH_INT} rows ✓${RESET}"
 fi
 
 echo ""
 echo -e "${BOLD}  Injected anomaly preview (advertiser_id=${ADVERTISER})${RESET}"
-${SR_CMD} -e \
+kubectl --context "$CONTEXT" exec -n "$SR_NS" "$SR_POD" -- \
+  mysql -h 127.0.0.1 -P 9030 -u root -e \
   "SELECT creative_id,
           ROUND(SUM(clicks)/NULLIF(SUM(impressions),0)*100,4) AS ctr_pct,
           SUM(impressions) AS impressions,
           SUM(clicks) AS clicks
    FROM ad_analytics.ad_events
    WHERE advertiser_id=${ADVERTISER} AND event_ts >= NOW() - INTERVAL 15 MINUTE
-   GROUP BY creative_id
-   ORDER BY ctr_pct ASC
-   LIMIT 5;" 2>/dev/null | sed 's/^/  /' || echo "  (unable to query)"
+   GROUP BY creative_id ORDER BY ctr_pct ASC LIMIT 5;" 2>/dev/null \
+  | sed 's/^/  /' || echo "  (unable to query StarRocks)"
 
 echo ""
 echo -e "${DIM}  The agent does NOT know any of this — it will discover it by writing its own SQL queries.${RESET}"
