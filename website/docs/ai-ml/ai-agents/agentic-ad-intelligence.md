@@ -224,16 +224,26 @@ cd examples/agentic-analytics
 ./kubectl-deploy.sh
 ```
 
-:::note Demo deployment — no Docker required
-`kubectl-deploy.sh` is optimized for fast setup. It stores the agent source in a Kubernetes ConfigMap and installs Python dependencies via a pip init container on first start. No Docker build, no ECR repository, and no image registry are required.
+:::warning Demo only — not for production
+`kubectl-deploy.sh` is a fast-path demo script. It stores agent source code in a Kubernetes ConfigMap and installs Python dependencies via a pip init container at pod start. This approach has no startup caching, no image scanning, and no GitOps audit trail.
 
-For production, replace the ConfigMap approach with purpose-built container images:
+**For production**, build purpose-built container images and deploy them through ArgoCD, Helm, or your standard GitOps pipeline:
 
-1. Build `agent/Dockerfile` and push to your container registry (ECR or otherwise)
-2. Build `mcp-server/Dockerfile` and push to your registry
-3. Reference the image URIs in standard Kubernetes Deployments in place of the pip init container pattern
+1. Build `agent/Dockerfile` → push to ECR (or your registry):
+   ```bash
+   docker build -t $ECR_REGISTRY/agentic-analytics-agent:latest agent/
+   docker push $ECR_REGISTRY/agentic-analytics-agent:latest
+   ```
+2. Build `mcp-server/Dockerfile` → push to ECR:
+   ```bash
+   docker build -t $ECR_REGISTRY/starrocks-mcp-server:latest mcp-server/
+   docker push $ECR_REGISTRY/starrocks-mcp-server:latest
+   ```
+3. Reference those image URIs in standard Kubernetes Deployments (no ConfigMap, no pip init container).
+4. For the IAM role, use `iam-policy.json` with Terraform (`aws_iam_policy` + `aws_iam_role`) or `eksctl` instead of the inline `aws iam` CLI calls in `kubectl-deploy.sh`.
+5. Apply via ArgoCD `Application` manifest or `helm install` — the same Deployments, Service, and IRSA annotations, delivered through your GitOps pipeline.
 
-The agent logic (`agent/app.py`), StarRocks schema, and LangGraph state machine are identical between both approaches. Only the delivery mechanism changes.
+The agent logic (`agent/app.py`), StarRocks schema, and LangGraph state machine are identical in both approaches. Only the delivery mechanism changes.
 :::
 
 The script runs these steps in order:
@@ -526,6 +536,10 @@ Useful metrics to expose:
 
 | Component | Demo | Production |
 |---|---|---|
+| Deployment tooling | `kubectl-deploy.sh` (demo script, no Docker required) | Docker images in ECR, deployed via ArgoCD or Helm |
+| Agent packaging | Python source in a Kubernetes ConfigMap, pip at pod start | Purpose-built image from `agent/Dockerfile` |
+| MCP server packaging | `mcp-server-starrocks` installed via pip init container | Purpose-built image from `mcp-server/Dockerfile` |
+| IAM role creation | Inline `aws iam` CLI calls in `kubectl-deploy.sh` | Terraform `aws_iam_policy` using `iam-policy.json` |
 | Data ingestion | Batch Python seed job, inserted once | Kafka Connector, continuous Stream Load |
 | Data freshness | `INSERT OVERWRITE` shifts timestamps to `NOW()` | Kafka keeps data live automatically |
 | Alert trigger | `./demo.sh` run manually | CTR Anomaly Monitor fires automatically |
@@ -549,7 +563,7 @@ All files are in [`data-stacks/starrocks-on-eks/examples/agentic-analytics/`](ht
 | `demo.sh` | Interactive demo with pre-flight checks, live log streaming, and colored trace output |
 | `reseed.sh` | Truncates and re-inserts data with current timestamps before each demo session |
 | `base.yaml` | Namespace, StarRocks credentials Secret, and service accounts — applied as one manifest |
-| `iam-policy.json` | IAM policy granting `bedrock:InvokeModel` — used by `kubectl-deploy.sh` to create the IRSA role |
+| `iam-policy.json` | IAM policy granting `bedrock:InvokeModel` — reference document for production IaC (Terraform `aws_iam_policy` or `eksctl`). `kubectl-deploy.sh` inlines this policy directly via the AWS CLI and does not read this file. |
 | `starrocks-schema.sql` | DDL for the `ad_events` table and `ad_events_1min` materialized view |
 | `agent/app.py` | LangGraph agent: the 4-step Decompose, Execute, Analyze, Report state machine |
 | `agent/Dockerfile` | Container image for production deployment of the agent |

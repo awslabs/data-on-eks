@@ -77,6 +77,10 @@ def main() -> None:
     )
     cursor = conn.cursor()
 
+    print("Truncating ad_events for a clean seed ...")
+    cursor.execute("TRUNCATE TABLE ad_events")
+    conn.commit()
+
     print(f"Generating {TOTAL_EVENTS:,} synthetic events ...")
     now  = datetime.utcnow()
     rows = generate_rows(now)
