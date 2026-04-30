@@ -1,0 +1,4267 @@
+{
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "datasource",
+            "uid": "grafana"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "target": {
+            "limit": 100,
+            "matchAny": false,
+            "tags": [],
+            "type": "dashboard"
+          },
+          "type": "dashboard"
+        }
+      ]
+    },
+    "description": "Monitors spark and EKS metrics using Prometheus in Kubernetes",
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": 44,
+    "links": [],
+    "panels": [
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 150,
+        "panels": [],
+        "title": "Pod State Timelines",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${data_source}"
+        },
+        "description": "The phase state timeline of all job pods (driver, executor(s) and job-runner)\n\nIf this graph looks convoluted, try selecting  less executors as it can only show so many pods at a time",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "fixed"
+            },
+            "custom": {
+              "fillOpacity": 50,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineWidth": 1,
+              "spanNulls": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "1": {
+                    "color": "gray",
+                    "index": 0,
+                    "text": "Unknown"
+                  },
+                  "2": {
+                    "color": "blue",
+                    "index": 1,
+                    "text": "Running"
+                  },
+                  "3": {
+                    "color": "yellow",
+                    "index": 2,
+                    "text": "Pending"
+                  },
+                  "4": {
+                    "color": "green",
+                    "index": 3,
+                    "text": "Succeeded"
+                  },
+                  "5": {
+                    "color": "red",
+                    "index": 4,
+                    "text": "Failed"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "purple",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 1
+        },
+        "id": 152,
+        "options": {
+          "alignValue": "left",
+          "legend": {
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "mergeValues": true,
+          "rowHeight": 0.7,
+          "showValue": "never",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "(\nscalar(kube_pod_status_phase{pod=\"$Pod\", container!=\"\", phase=\"Failed\"}*5) + \nscalar(kube_pod_status_phase{pod=\"$Pod\",container!=\"\", phase=\"Pending\"}*3) + \nscalar(kube_pod_status_phase{pod=\"$Pod\",container!=\"\", phase=\"Running\"}*2) + \nscalar(kube_pod_status_phase{pod=\"$Pod\",container!=\"\", phase=\"Succeeded\"}*4) + scalar(kube_pod_status_phase{pod=\"$Pod\",container!=\"\", phase=\"Unknown\"}*1)\n)",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Driver",
+            "refId": "Driver"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "label_replace(\n(\n(\n(sum(kube_pod_status_phase{pod=~\"$executor\",container!=\"\",phase=\"Pending\"}*3)by(pod)) + (sum(kube_pod_status_phase{pod=~\"$executor\",container!=\"\",phase=\"Running\"}*2)by(pod)) +\n(sum(kube_pod_status_phase{pod=~\"$executor\",container!=\"\",phase=\"Succeeded\"}*4)by(pod)) +\n(sum(kube_pod_status_phase{pod=~\"$executor\",container!=\"\",phase=\"Unknown\"}*1)by(pod)) +\n(sum(kube_pod_status_phase{pod=~\"$executor\",container!=\"\",phase=\"Failed\"}*5)by(pod))\n)\nand on (pod)\nkube_pod_info{created_by_name=\"$Pod\"}\n),\"executor_id\",\"$1\",\"pod\", \".*-exec-(.*)\"\n)\n>0\n",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Executor: {{executor_id}}",
+            "refId": "Executors"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "scalar(kube_pod_status_phase{pod=\"$job_runner_pod\", container!=\"\", phase=\"Failed\"}*5) + \nscalar(kube_pod_status_phase{pod=\"$job_runner_pod\",container!=\"\", phase=\"Pending\"}*3) + \nscalar(kube_pod_status_phase{pod=\"$job_runner_pod\", container!=\"\", phase=\"Running\"}*2) + \nscalar(kube_pod_status_phase{pod=\"$job_runner_pod\",container!=\"\", phase=\"Succeeded\"}*4) + scalar(kube_pod_status_phase{pod=\"$job_runner_pod\", container!=\"\", phase=\"Unknown\"}*1)",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "JobRunner",
+            "refId": "JobRunner"
+          }
+        ],
+        "title": "Phase State Timeline",
+        "transformations": [
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "isNull",
+                    "options": {}
+                  },
+                  "fieldName": "Driver"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "state-timeline"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 11
+        },
+        "id": 146,
+        "panels": [],
+        "title": "Metric Ingestion",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "fillOpacity": 70,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineWidth": 0,
+              "spanNulls": false
+            },
+            "decimals": 0,
+            "mappings": [],
+            "noValue": "Not Running",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 12
+        },
+        "id": 139,
+        "options": {
+          "alignValue": "left",
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": false
+          },
+          "mergeValues": true,
+          "rowHeight": 0.9,
+          "showValue": "never",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "(count(spark_info{emr_containers_amazonaws_com_virtual_cluster_id=\"$vc_id\"}>0)by(emr_containers_amazonaws_com_job_id))>0",
+            "interval": "",
+            "legendFormat": "Job: {{emr_containers_amazonaws_com_job_id}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Jobs in Virtual Cluster",
+        "type": "state-timeline"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "fillOpacity": 70,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineWidth": 0,
+              "spanNulls": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byFrameRefID",
+                "options": "EKS"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byFrameRefID",
+                "options": "Spark"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "rgba(110, 255, 48, 1)",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 12
+        },
+        "id": 115,
+        "options": {
+          "alignValue": "left",
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true
+          },
+          "mergeValues": true,
+          "rowHeight": 0.9,
+          "showValue": "never",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(kube_pod_info{created_by_name=\"$Pod\",container!=\"\"}) by (created_by_name)",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Executor Progress",
+            "refId": "EKS"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${data_source}"
+            },
+            "exemplar": false,
+            "expr": "spark_info{emr_containers_amazonaws_com_job_id=\"$job_id\"}",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Driver Progress",
+            "refId": "Spark"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "(count({name=~\".*$job_id.*\"}))+count({pod=\"$Pod\"})",
+            "hide": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "title": "Metric Ingestion",
+        "type": "state-timeline"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 18
+        },
+        "id": 42,
+        "panels": [],
+        "title": "Driver Info",
+        "type": "row"
+      },
+      {
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 0,
+          "y": 19
+        },
+        "id": 34,
+        "options": {
+          "content": "# $Pod_ip",
+          "mode": "markdown"
+        },
+        "pluginVersion": "8.4.7",
+        "repeat": "Pod",
+        "repeatDirection": "v",
+        "title": "Driver IP Address",
+        "transparent": true,
+        "type": "text"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 10,
+          "y": 19
+        },
+        "id": 98,
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "none",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "text": {},
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "max(kube_pod_container_resource_limits{container=\"spark-kubernetes-driver\",pod=\"$Pod\",resource=\"memory\"})",
+            "format": "time_series",
+            "hide": false,
+            "interval": "",
+            "intervalFactor": 2,
+            "legendFormat": "",
+            "refId": "A",
+            "step": 40
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "kube_pod_container_resource_requests{container=\"spark-kubernetes-driver\",pod=\"$Pod\",resource=\"memory\"}",
+            "hide": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "B"
+          }
+        ],
+        "title": "Requested Driver Memory",
+        "transparent": true,
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "N/A"
+                  }
+                },
+                "type": "special"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 20,
+          "y": 19
+        },
+        "id": 99,
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "none",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "text": {},
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "max(kube_pod_container_resource_requests{container=\"spark-kubernetes-driver\",pod=\"$Pod\",resource=\"cpu\"})",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "kube_pod_container_resource_limits{container=\"spark-kubernetes-driver\",pod=\"$Pod\",resource=\"cpu\"}",
+            "format": "time_series",
+            "hide": true,
+            "interval": "",
+            "intervalFactor": 2,
+            "legendFormat": "",
+            "refId": "A",
+            "step": 40
+          }
+        ],
+        "title": "Requested Driver Cores",
+        "transparent": true,
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "fillOpacity": 70,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineWidth": 0,
+              "spanNulls": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Running"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Succeeded"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "green",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Failed"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "red",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Pending"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "yellow",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Unknown"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "purple",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 5,
+          "w": 24,
+          "x": 0,
+          "y": 22
+        },
+        "id": 95,
+        "options": {
+          "alignValue": "left",
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": false
+          },
+          "mergeValues": true,
+          "rowHeight": 0.9,
+          "showValue": "never",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "kube_pod_status_phase{pod=\"$Pod\",container!=\"\"}>0",
+            "interval": "",
+            "legendFormat": "{{phase}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Driver Status",
+        "transparent": true,
+        "type": "state-timeline"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 27
+        },
+        "id": 45,
+        "panels": [],
+        "title": "Driver CPU / Memory  usage",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "rgba(217, 119, 192, 1)",
+              "mode": "fixed"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 100,
+              "gradientMode": "opacity",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "percentunit"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 28
+        },
+        "id": 25,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max",
+              "last"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "8.0.5",
+        "repeat": "Pod",
+        "repeatDirection": "v",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum (container_memory_working_set_bytes{pod=\"$Pod\",container!=\"\"})",
+            "format": "time_series",
+            "hide": true,
+            "interval": "10s",
+            "intervalFactor": 1,
+            "legendFormat": "Pod",
+            "metric": "container_memory_usage:sort_desc",
+            "refId": "A",
+            "step": 10
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "(\navg(container_memory_working_set_bytes{pod=\"$Pod\",container!=\"\",container!=\"POD\"}) /\navg(kube_pod_container_resource_limits{pod=\"$Pod\",container!=\"\",container!=\"POD\",resource=\"memory\"})\n)",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Memory",
+            "refId": "B"
+          }
+        ],
+        "title": "Driver Memory Usage",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "blue",
+              "mode": "fixed"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "CPU Time",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 74,
+              "gradientMode": "opacity",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "percentunit"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 28
+        },
+        "id": 17,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max",
+              "last"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=\"$Pod\",container!=\"\"} [5m])) by (pod) / 1000 * 100",
+            "format": "time_series",
+            "hide": false,
+            "interval": "10s",
+            "intervalFactor": 1,
+            "legendFormat": "Used CPU",
+            "metric": "container_cpu",
+            "refId": "A",
+            "step": 10
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "sum(container_cpu_usage_seconds_total{pod=\"$Pod\", container_name!=\"POD\",container!=\"\"}) by (container_name)",
+            "format": "time_series",
+            "hide": true,
+            "intervalFactor": 1,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "sum(container_spec_cpu_shares{pod=\"$Pod\", container_name!=\"POD\",container!=\"\"}) by (container_name) / 1000",
+            "format": "time_series",
+            "hide": true,
+            "intervalFactor": 1,
+            "legendFormat": "Requested CPU",
+            "refId": "C"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "D"
+          }
+        ],
+        "title": "Driver CPU usage",
+        "type": "timeseries"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 36
+        },
+        "id": 46,
+        "panels": [],
+        "title": "Executor CPU /Memory Usage",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "max": 1,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "percentunit"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 37
+        },
+        "id": 28,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max",
+              "last"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum (container_memory_working_set_bytes{pod!=\"\",pod=~\"$executor\",container!=\"POD\",container!=\"\"} and on (pod) kube_pod_info{created_by_name=\"$Pod\"}) by (pod)",
+            "format": "time_series",
+            "hide": true,
+            "interval": "10s",
+            "intervalFactor": 1,
+            "legendFormat": "{{pod}} ",
+            "metric": "container_memory_usage:sort_desc",
+            "refId": "A",
+            "step": 10
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "avg(\n(avg(container_memory_working_set_bytes{pod!=\"\",pod=~\"$executor\",container!=\"POD\",container!=\"\"})by (pod)) / (avg(kube_pod_container_resource_limits{pod!=\"\",pod=~\"$executor\",container!=\"POD\",container!=\"\",resource=\"memory\"})by (pod))\nand on (pod) kube_pod_info{created_by_name=\"$Pod\"}\n) by (pod)",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "B"
+          }
+        ],
+        "title": "Executor :  Memory Usage",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "CPU Time",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "stepAfter",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "percentunit"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 37
+        },
+        "id": 20,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max",
+              "last"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$executor\",pod!=\"\"} [4m]) and on (pod) kube_pod_info{created_by_name=\"$Pod\"}) by (pod) / 1000 * 100",
+            "format": "time_series",
+            "hide": false,
+            "interval": "10s",
+            "intervalFactor": 1,
+            "legendFormat": "{{ pod }}",
+            "metric": "container_cpu",
+            "refId": "A",
+            "step": 10
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "sum(container_cpu_usage_seconds_total{pod=~\"$executor\", container_name!=\"POD\"}) by (pod) / 1000",
+            "format": "time_series",
+            "hide": true,
+            "intervalFactor": 1,
+            "legendFormat": "{{ pod }}",
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "sum(container_spec_cpu_shares{pod=~\"$executor\", container_name!=\"POD\"}) by (pod) / 1000",
+            "format": "time_series",
+            "hide": true,
+            "instant": false,
+            "intervalFactor": 1,
+            "legendFormat": "Requested {{pod}}",
+            "refId": "C"
+          }
+        ],
+        "title": "Executor  :  CPU usage",
+        "type": "timeseries"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 44
+        },
+        "id": 71,
+        "panels": [],
+        "title": "Network IO",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "decbytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 9,
+          "x": 0,
+          "y": 45
+        },
+        "id": 69,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "sum(rate(container_network_receive_bytes_total{pod=\"$Pod\"}[2m])) by (pod)",
+            "format": "time_series",
+            "intervalFactor": 1,
+            "legendFormat": "{{ pod }}  Received",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "sum(rate(container_network_transmit_bytes_total{pod=\"$Pod\"}[2m])) by (pod)",
+            "format": "time_series",
+            "intervalFactor": 1,
+            "legendFormat": "{{ pod }}  Transmitted",
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "",
+            "format": "time_series",
+            "hide": true,
+            "intervalFactor": 1,
+            "refId": "C"
+          }
+        ],
+        "title": "Driver Network I/O",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "decbytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 9,
+          "y": 45
+        },
+        "id": 72,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_network_transmit_bytes_total{pod=~'$executor',node=~\"$Node\"}[2m]) and on (pod,node) kube_pod_info{created_by_name=\"$Pod\"}) by (pod,node)",
+            "format": "time_series",
+            "interval": "",
+            "intervalFactor": 1,
+            "legendFormat": "{{ pod }} {{node}} Transmitted",
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "",
+            "format": "time_series",
+            "hide": true,
+            "intervalFactor": 1,
+            "refId": "C"
+          }
+        ],
+        "title": "Executor Network Transmitted",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "decbytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 7,
+          "x": 17,
+          "y": 45
+        },
+        "id": 73,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_network_receive_bytes_total{pod=~'$executor',pod!=\"POD\",node=~\"$Node\"}[2m]) and on (pod,node) kube_pod_info{created_by_name=\"$Pod\"}) by (pod,node)",
+            "format": "time_series",
+            "hide": false,
+            "interval": "",
+            "intervalFactor": 1,
+            "legendFormat": "{{ pod }} {{node}}  Received",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "",
+            "format": "time_series",
+            "hide": true,
+            "intervalFactor": 1,
+            "legendFormat": "",
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "expr": "",
+            "format": "time_series",
+            "hide": true,
+            "intervalFactor": 1,
+            "refId": "C"
+          }
+        ],
+        "title": "Executor Network Received",
+        "type": "timeseries"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 53
+        },
+        "id": 82,
+        "panels": [],
+        "title": "Disk IO",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 54
+        },
+        "id": 93,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max"
+            ],
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_fs_reads_bytes_total{pod=~\"$Pod\"}[2m])) by (pod,device)",
+            "format": "time_series",
+            "hide": false,
+            "interval": "",
+            "intervalFactor": 1,
+            "legendFormat": "{{pod }} - {{device}} Read",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_fs_reads_bytes_total{pod=~\"$executor\"}[2m]) and on (pod) kube_pod_info{created_by_name=\"$Pod\"}) by (pod,device)",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "{{pod }} - {{device}} Read",
+            "refId": "B"
+          }
+        ],
+        "title": "Disk Read Bytes",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "uid": "${data_source}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 54
+        },
+        "id": 92,
+        "options": {
+          "alertThreshold": true,
+          "legend": {
+            "calcs": [
+              "mean",
+              "max"
+            ],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "pluginVersion": "11.5.2",
+        "targets": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_fs_writes_bytes_total{pod=~\"$executor\"}[2m]) and on (pod) kube_pod_info{created_by_name=\"$Pod\"}) by (pod,device)",
+            "format": "time_series",
+            "interval": "",
+            "intervalFactor": 1,
+            "legendFormat": "{{pod }} - {{device}} Write",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "exemplar": true,
+            "expr": "sum(rate(container_fs_writes_bytes_total{pod=~\"$Pod\"}[2m])) by (pod,device)",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "B"
+          }
+        ],
+        "title": "Disk Writes Bytes",
+        "type": "timeseries"
+      },
+      {
+        "collapsed": true,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 63
+        },
+        "id": 110,
+        "panels": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "min": 0,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "percentunit"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 8
+            },
+            "id": 141,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "max",
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "(1 - label_replace(((avg_over_time(node_memory_MemFree_bytes{container!=\"\"}[5m]) + avg_over_time(node_memory_Cached_bytes{container!=\"\"}[5m]) + avg_over_time(node_memory_Buffers_bytes{container!=\"\"}[5m])) / avg_over_time(node_memory_MemTotal_bytes{container!=\"\"}[5m])),\"host_ip\", \"$1\", \"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{created_by_name=\"$Pod\",container!=\"\"})",
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Executor",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "(1 - label_replace(((avg_over_time(node_memory_MemFree_bytes{container!=\"\"}[5m]) + avg_over_time(node_memory_Cached_bytes{container!=\"\"}[5m]) + avg_over_time(node_memory_Buffers_bytes{container!=\"\"}[5m])) / avg_over_time(node_memory_MemTotal_bytes{container!=\"\"}[5m])),\"host_ip\", \"$1\",\"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{pod=\"$Pod\",container!=\"\"})",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Driver",
+                "refId": "C"
+              }
+            ],
+            "title": "Node Memory Usage",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "percentunit"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 8
+            },
+            "id": 119,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "max",
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "avg(1 - label_replace(sum(rate(node_cpu_seconds_total{mode=\"idle\",container!=\"\"}[5m]) ) by (cpu, instance), \"host_ip\", \"$1\",\"instance\", \"(.*):.*\")) by (host_ip) and on (host_ip) kube_pod_info{created_by_name=\"$Pod\"}",
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Executor",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "avg(1 - label_replace(sum(rate(node_cpu_seconds_total{mode=\"idle\",container!=\"\"}[5m]) ) by (cpu, instance), \"host_ip\", \"$1\",\"instance\", \"(.*):.*\")) by (host_ip) and on (host_ip) kube_pod_info{pod=\"$Pod\"}",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Driver",
+                "refId": "B"
+              }
+            ],
+            "title": "Node CPU Usage",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "description": "",
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": true,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "binBps"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 16
+            },
+            "id": 116,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "sort_desc(label_replace(sum(rate(node_network_transmit_bytes_total{container!=\"\"}[5m])) by (instance),\"host_ip\", \"$1\",\"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{created_by_name=\"$Pod\"})",
+                "format": "time_series",
+                "hide": false,
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "Node: {{host_ip}} - Executor",
+                "refId": "C"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "sort_desc(label_replace(sum(rate(node_network_transmit_bytes_total{container!=\"\"}[5m])) by (instance),\"host_ip\", \"$1\",\"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{pod=\"$Pod\"})",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Driver",
+                "refId": "A"
+              }
+            ],
+            "title": "Node Network Transmitted",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "description": "",
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": true,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "binBps"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 16
+            },
+            "id": 117,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "sort_desc(label_replace(sum(rate(node_network_receive_bytes_total{container!=\"\"}[5m])) by (instance),\"host_ip\", \"$1\",\"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{created_by_name=\"$Pod\"})",
+                "format": "time_series",
+                "hide": false,
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "Node: {{host_ip}} - Executor",
+                "refId": "C"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "sort_desc(label_replace(sum(rate(node_network_receive_bytes_total{container!=\"\"}[5m])) by (instance),\"host_ip\", \"$1\",\"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{pod=\"$Pod\"})",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Driver",
+                "refId": "A"
+              }
+            ],
+            "title": "Node Network Received",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "Total Executors",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "normal"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "noValue": "0",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "none"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 24,
+              "x": 0,
+              "y": 24
+            },
+            "id": 107,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "(count(kube_pod_info{created_by_name=\"$Pod\",node!=\"\",container!=\"\"})by(node))",
+                "interval": "",
+                "legendFormat": "Node: {{node}} - Executor",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "(count(kube_pod_info{pod=\"$Pod\",node!=\"\",container!=\"\"})by(node))",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Node: {{node}} - Driver",
+                "refId": "B"
+              }
+            ],
+            "title": "Executor Spin Up by Node",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "percentunit"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 24,
+              "x": 0,
+              "y": 32
+            },
+            "id": 123,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "label_replace((1-avg(node_filesystem_free_bytes{container!=\"\"}/node_filesystem_size_bytes{container!=\"\"})by(instance)),\"host_ip\", \"$1\", \"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{created_by_name=\"$Pod\",container!=\"\"}",
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Executor",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "label_replace((1-avg(node_filesystem_free_bytes{container!=\"\"}/node_filesystem_size_bytes{container!=\"\"}) by(instance)),\"host_ip\", \"$1\", \"instance\", \"(.*):.*\") and on (host_ip) kube_pod_info{pod=\"$Pod\",container!=\"\"}",
+                "hide": true,
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Driver",
+                "refId": "B"
+              }
+            ],
+            "title": "Node Disk Used",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "noValue": "0",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "binBps"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 40
+            },
+            "id": 124,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "label_replace(sum(rate(node_disk_read_bytes_total{container!=\"\"}[5m]))by(instance),\"host_ip\",\"$1\",\"instance\", \"(.+):.*\") and on (host_ip) \nkube_pod_info{created_by_name=\"$Pod\",container!=\"\"}",
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Executor",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "label_replace(sum(rate(node_disk_read_bytes_total{container!=\"\"}[5m]))by(instance),\"host_ip\",\"$1\",\"instance\", \"(.+):.*\") and on (host_ip) \nkube_pod_info{pod=\"$Pod\",container!=\"\"}",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Driver",
+                "refId": "B"
+              }
+            ],
+            "title": "Node Disk Reads",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "noValue": "0",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "binBps"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 40
+            },
+            "id": 125,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "label_replace(sum(rate(node_disk_written_bytes_total{container!=\"\"}[5m]))by(instance),\"host_ip\",\"$1\",\"instance\", \"(.+):.*\") and on (host_ip) \nkube_pod_info{created_by_name=\"$Pod\",container!=\"\"}",
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Executor",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "label_replace(sum(rate(node_disk_written_bytes_total{container!=\"\"}[5m]))by(instance),\"host_ip\",\"$1\",\"instance\", \"(.+):.*\") and on (host_ip) \nkube_pod_info{pod=\"$Pod\",container!=\"\"}",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Node: {{host_ip}} - Driver",
+                "refId": "B"
+              }
+            ],
+            "title": "Node Disk Writes",
+            "type": "timeseries"
+          }
+        ],
+        "title": "Node Metrics",
+        "type": "row"
+      },
+      {
+        "collapsed": true,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 64
+        },
+        "id": 132,
+        "panels": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 37,
+                  "gradientMode": "opacity",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "decimals": 0,
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Stage"
+                  },
+                  "properties": [
+                    {
+                      "id": "color",
+                      "value": {
+                        "fixedColor": "blue",
+                        "mode": "fixed"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Running Stages"
+                  },
+                  "properties": [
+                    {
+                      "id": "color",
+                      "value": {
+                        "fixedColor": "blue",
+                        "mode": "fixed"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Completed Stages"
+                  },
+                  "properties": [
+                    {
+                      "id": "color",
+                      "value": {
+                        "fixedColor": "green",
+                        "mode": "fixed"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Failed Stages"
+                  },
+                  "properties": [
+                    {
+                      "id": "color",
+                      "value": {
+                        "fixedColor": "red",
+                        "mode": "fixed"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "gridPos": {
+              "h": 7,
+              "w": 24,
+              "x": 0,
+              "y": 9
+            },
+            "id": 140,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "multi"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "{__name__=~\"metrics_.*_DAGScheduler_stage_runningStages_Value\",__name__=~\".*$job_id.*\"}",
+                "interval": "",
+                "legendFormat": "Running Stages",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "{__name__=~\"metrics_.*_appStatus_stages_completedStages_Count\",__name__=~\".*$job_id.*\"}",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Completed Stages",
+                "refId": "B"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "{__name__=~\"metrics_.*_appStatus_stages_failedStages_Count\",__name__=~\".*$job_id.*\"}",
+                "hide": false,
+                "interval": "",
+                "legendFormat": "Failed Stages",
+                "refId": "C"
+              }
+            ],
+            "title": "Stages",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 16
+            },
+            "id": 127,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "metrics_executor_completedTasks_total{pod=\"$Pod\",executor_id!=\"driver\"}",
+                "interval": "",
+                "legendFormat": "Executor ID: {{executor_id}}",
+                "refId": "A"
+              }
+            ],
+            "title": "Completed Tasks",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 16
+            },
+            "id": 128,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "metrics_executor_failedTasks_total{pod=\"$Pod\",executor_id!=\"driver\"}",
+                "interval": "",
+                "legendFormat": "Executor ID: {{executor_id}}",
+                "refId": "A"
+              }
+            ],
+            "title": "Failed Tasks",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 24
+            },
+            "id": 135,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "metrics_executor_activeTasks{pod=\"$Pod\",executor_id!=\"driver\"}",
+                "interval": "",
+                "legendFormat": "Executor: {{executor_id}}",
+                "refId": "A"
+              }
+            ],
+            "title": "Current Active Tasks",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 86,
+                  "gradientMode": "opacity",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Tasks"
+                  },
+                  "properties": [
+                    {
+                      "id": "color",
+                      "value": {
+                        "fixedColor": "yellow",
+                        "mode": "fixed"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 24
+            },
+            "id": 130,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "last"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "{__name__=~\"metrics_.*_appStatus_tasks_skippedTasks_Count\",__name__=~\".*$job_id.*\"}",
+                "interval": "",
+                "legendFormat": "Tasks",
+                "refId": "A"
+              }
+            ],
+            "title": "Skipped Tasks",
+            "type": "timeseries"
+          }
+        ],
+        "title": "Stages & Tasks",
+        "type": "row"
+      },
+      {
+        "collapsed": true,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 65
+        },
+        "id": 89,
+        "panels": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": true,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "decbytes"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 10
+            },
+            "id": 90,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "metrics_executor_totalShuffleWrite_bytes_total{pod=~\"$Pod\",executor_id!=\"driver\"}",
+                "format": "time_series",
+                "hide": false,
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "Executor: {{executor_id}}",
+                "refId": "C"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "sum(rate(container_network_transmit_bytes_total{pod=~'.*shuffle.*',node=~\"$Node\"}[2m])) by (pod,node)",
+                "format": "time_series",
+                "hide": true,
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "{{ pod }} {{node}} Transmitted",
+                "refId": "B"
+              }
+            ],
+            "title": "Spark Shuffle Data Written",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": true,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "decbytes"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 10
+            },
+            "id": 91,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "metrics_executor_totalShuffleRead_bytes_total{pod=~\"$Pod\",executor_id!=\"driver\"}",
+                "format": "time_series",
+                "hide": false,
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "Executor: {{executor_id}}",
+                "refId": "B"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "sum(rate(container_network_read_bytes_total{pod=~'.*shuffle.*',node=~\"$Node\"}[2m])) by (pod,node)",
+                "format": "time_series",
+                "hide": true,
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "{{ pod }} {{node}}  Received",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "expr": "",
+                "format": "time_series",
+                "hide": true,
+                "intervalFactor": 1,
+                "refId": "C"
+              }
+            ],
+            "title": "Spark Shuffle Data Read",
+            "type": "timeseries"
+          }
+        ],
+        "title": "Spark External Shuffle",
+        "type": "row"
+      },
+      {
+        "collapsed": true,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 66
+        },
+        "id": 49,
+        "panels": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 2,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "bytes"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 0,
+              "y": 11
+            },
+            "id": 16,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "lastNotNull",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "sum(metrics_executor_JVMHeapMemory_bytes{pod=\"$Pod\"})by(executor_id)",
+                "format": "time_series",
+                "interval": "10s",
+                "intervalFactor": 1,
+                "legendFormat": "Executor: {{executor_id}}",
+                "metric": "network",
+                "refId": "A",
+                "step": 10
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "expr": "jvm_memory_bytes_used{pod=~\"^$executor$\",area=\"heap\"}",
+                "format": "time_series",
+                "interval": "10s",
+                "intervalFactor": 1,
+                "legendFormat": " {{ pod }} ",
+                "metric": "network",
+                "refId": "B",
+                "step": 10
+              }
+            ],
+            "title": "JVM Heap Memory",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 2,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "decbytes"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 12,
+              "y": 11
+            },
+            "id": 29,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "mean",
+                  "lastNotNull",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "metrics_executor_JVMOffHeapMemory_bytes{pod=\"$Pod\"}",
+                "format": "time_series",
+                "interval": "10s",
+                "intervalFactor": 1,
+                "legendFormat": "Executor: {{executor_id }}",
+                "metric": "network",
+                "refId": "A",
+                "step": 10
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "expr": "jvm_memory_bytes_used{pod=~\"$executor\",area=\"nonheap\"}",
+                "format": "time_series",
+                "hide": true,
+                "interval": "10s",
+                "intervalFactor": 1,
+                "legendFormat": "{{pod}}",
+                "metric": "network",
+                "refId": "B",
+                "step": 10
+              }
+            ],
+            "title": "JVM Off Heap Memory",
+            "type": "timeseries"
+          }
+        ],
+        "title": "Memory Heap / Non - Heap",
+        "type": "row"
+      },
+      {
+        "collapsed": true,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 67
+        },
+        "id": 76,
+        "panels": [
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {},
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 0,
+              "y": 12
+            },
+            "id": 78,
+            "options": {
+              "alertThreshold": true
+            },
+            "pluginVersion": "8.2.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "count(kube_pod_info{created_by_name=~\"$Pod\",container!=\"\"})",
+                "format": "time_series",
+                "instant": false,
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "Executor Counts ",
+                "refId": "A"
+              }
+            ],
+            "title": "Executors Spawned",
+            "type": "timeseries"
+          },
+          {
+            "datasource": {
+              "uid": "${data_source}"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": true,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green"
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "bytes"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 9,
+              "w": 12,
+              "x": 12,
+              "y": 12
+            },
+            "id": 87,
+            "options": {
+              "legend": {
+                "calcs": [
+                  "lastNotNull",
+                  "max"
+                ],
+                "displayMode": "table",
+                "placement": "bottom",
+                "showLegend": true
+              },
+              "tooltip": {
+                "mode": "single"
+              }
+            },
+            "pluginVersion": "8.0.5",
+            "targets": [
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "exemplar": true,
+                "expr": "container_network_receive_packets_dropped_total{pod=~\"$Pod|$executor\"}",
+                "format": "time_series",
+                "interval": "",
+                "intervalFactor": 1,
+                "legendFormat": "{{pod}} - Receive",
+                "refId": "A"
+              },
+              {
+                "datasource": {
+                  "uid": "${data_source}"
+                },
+                "expr": "container_network_transmit_packets_dropped_total{pod=~\"$Pod|$executor\"}",
+                "format": "time_series",
+                "intervalFactor": 1,
+                "legendFormat": "{{pod}} - Transmit",
+                "refId": "B"
+              }
+            ],
+            "title": "Packets Dropped : Network",
+            "type": "timeseries"
+          }
+        ],
+        "title": "Miscellaneous Info",
+        "type": "row"
+      }
+    ],
+    "preload": false,
+    "refresh": "",
+    "schemaVersion": 40,
+    "tags": [
+      "kubernetes",
+      "prometheus",
+      "spark",
+      "aws",
+      "eks",
+      "emr-containers"
+    ],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "text": "AMP",
+            "value": "PD476F800710936AE"
+          },
+          "includeAll": false,
+          "label": "Data Source",
+          "name": "data_source",
+          "options": [],
+          "query": "prometheus",
+          "refresh": 1,
+          "regex": "",
+          "type": "datasource"
+        },
+        {
+          "allValue": ".*",
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "label_values(kube_node_info{},cluster_arn)",
+          "description": "The Cluster ARN",
+          "includeAll": true,
+          "label": "Cluster ARN",
+          "multi": true,
+          "name": "c_arn",
+          "options": [],
+          "query": {
+            "query": "label_values(kube_node_info{},cluster_arn)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "",
+            "value": ""
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "spark_info{cluster_arn=~\"$c_arn\"}",
+          "includeAll": false,
+          "label": "Virtual Cluster ID",
+          "name": "vc_id",
+          "options": [],
+          "query": {
+            "query": "spark_info{cluster_arn=~\"$c_arn\"}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*emr_containers_amazonaws_com_virtual_cluster_id=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "",
+            "value": ""
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "spark_info{}",
+          "includeAll": false,
+          "label": "Job ID",
+          "name": "job_id",
+          "options": [],
+          "query": {
+            "qryType": 4,
+            "query": "spark_info{}",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*emr_containers_amazonaws_com_job_id=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "allValue": ".*",
+          "current": {
+            "text": "taxi-trip",
+            "value": "taxi-trip"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "spark_info{emr_containers_amazonaws_com_job_id=\"$job_id\",emr_containers_amazonaws_com_virtual_cluster_id=\"$vc_id\"}",
+          "includeAll": false,
+          "label": "Driver ID",
+          "name": "Pod",
+          "options": [],
+          "query": {
+            "qryType": 4,
+            "query": "spark_info{emr_containers_amazonaws_com_job_id=\"$job_id\",emr_containers_amazonaws_com_virtual_cluster_id=\"$vc_id\"}",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*pod=\"([^\"]*).*/",
+          "sort": 1,
+          "type": "query"
+        },
+        {
+          "allValue": ".*",
+          "current": {
+            "text": "All",
+            "value": [
+              "$__all"
+            ]
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "kube_pod_info{created_by_name=\"$Pod\"}",
+          "includeAll": true,
+          "label": "Executor ID",
+          "multi": true,
+          "name": "executor",
+          "options": [],
+          "query": {
+            "query": "kube_pod_info{created_by_name=\"$Pod\"}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*pod=\"([^\"]*).*/",
+          "sort": 1,
+          "type": "query"
+        },
+        {
+          "allValue": ".*",
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "kube_pod_info{created_by_name=\"$Pod\"}",
+          "includeAll": true,
+          "name": "Node",
+          "options": [],
+          "query": {
+            "query": "kube_pod_info{created_by_name=\"$Pod\"}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*node=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "100.64.105.0",
+            "value": "100.64.105.0"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "kube_pod_info{pod=\"$Pod\"}",
+          "hide": 2,
+          "includeAll": false,
+          "name": "Pod_ip",
+          "options": [],
+          "query": {
+            "query": "kube_pod_info{pod=\"$Pod\"}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*pod_ip=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": [
+              "Pending"
+            ],
+            "value": [
+              "Pending"
+            ]
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "kube_pod_status_phase{pod=~\"$Pod\",container!=\"\"}",
+          "hide": 2,
+          "includeAll": false,
+          "multi": true,
+          "name": "phase",
+          "options": [],
+          "query": {
+            "query": "kube_pod_status_phase{pod=~\"$Pod\",container!=\"\"}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*phase=\"([^\"]*).*/",
+          "sort": 4,
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "ip-100-64-105-180.us-west-2.compute.internal",
+            "value": "ip-100-64-105-180.us-west-2.compute.internal"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "kube_pod_info{pod=\"$Pod\"}",
+          "hide": 2,
+          "includeAll": false,
+          "name": "driver_node",
+          "options": [],
+          "query": {
+            "query": "kube_pod_info{pod=\"$Pod\"}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*node=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "spark-team-c",
+            "value": "spark-team-c"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "kube_namespace_labels",
+          "hide": 2,
+          "includeAll": false,
+          "label": "Namespace",
+          "name": "namespace",
+          "options": [],
+          "query": {
+            "query": "kube_namespace_labels",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*namespace=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "3.5.3",
+            "value": "3.5.3"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "spark_info{}",
+          "hide": 2,
+          "includeAll": false,
+          "name": "spark_version",
+          "options": [],
+          "query": {
+            "query": "spark_info{}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*version=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "spark-team-a",
+            "value": "spark-team-a"
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "spark_info{}",
+          "hide": 2,
+          "includeAll": false,
+          "name": "driver_ns",
+          "options": [],
+          "query": {
+            "query": "spark_info{}",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "/.*namespace=\"([^\"]*).*/",
+          "type": "query"
+        },
+        {
+          "current": {
+            "text": "",
+            "value": ""
+          },
+          "datasource": {
+            "uid": "${data_source}"
+          },
+          "definition": "label_values(kube_pod_info{created_by_kind=\"Job\",created_by_name=\"$job_id\"},pod)",
+          "hide": 2,
+          "includeAll": false,
+          "name": "job_runner_pod",
+          "options": [],
+          "query": {
+            "query": "label_values(kube_pod_info{created_by_kind=\"Job\",created_by_name=\"$job_id\"},pod)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "",
+          "type": "query"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "Spark - EMR On EKS",
+    "uid": "E1-VXaK7z5",
+    "version": 4,
+    "weekStart": ""
+  }
