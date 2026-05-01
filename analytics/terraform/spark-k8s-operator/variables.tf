@@ -63,7 +63,7 @@ variable "enable_yunikorn" {
 }
 
 variable "enable_jupyterhub" {
-  default     = false
+  default     = true
   description = "Enable Jupyter Hub"
   type        = bool
 }
