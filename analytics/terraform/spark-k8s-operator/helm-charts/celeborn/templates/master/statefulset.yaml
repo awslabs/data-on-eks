@@ -1,0 +1,186 @@
+{{- /*
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to You under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/ -}}
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "celeborn.master.statefulSet.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "celeborn.master.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.master.replicas }}
+  selector:
+    matchLabels:
+      {{- include "celeborn.master.selectorLabels" . | nindent 6 }}
+  {{- with .Values.master.volumeClaimTemplates }}
+  volumeClaimTemplates:
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  serviceName: {{ include "celeborn.master.service.name" . }}
+  template:
+    metadata:
+      labels:
+        {{- include "celeborn.master.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/tag: {{ .Values.image.tag | quote }}
+      annotations:
+        celeborn.apache.org/conf-hash: {{ include "celeborn.configChecksum" . }}
+        {{- with .Values.master.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- /* Add an init container to chown mount paths of Celeborn master volumes if necessary. */}}
+      {{- $paths := list }}
+      {{- range $volumeMount := .Values.master.volumeMounts }}
+      {{- range $volume := $.Values.master.volumes }}
+      {{- if eq $volume.name $volumeMount.name }}
+      {{- if or $volume.hostPath $volume.emptyDir }}
+      {{- $paths = append $paths $volumeMount.mountPath }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- if $paths }}
+      initContainers:
+      - name: chown-celeborn-master-volume
+        image: {{ include "celeborn.image" . }}
+        {{- with .Values.image.pullPolicy }}
+        imagePullPolicy: {{ . }}
+        {{- end }}
+        command:
+        - chown
+        - -R
+        - {{ .Values.master.podSecurityContext.runAsUser | default 10006 }}:{{ .Values.master.podSecurityContext.runAsGroup | default 10006 }}
+        {{- range $path := $paths }}
+        - {{ $path }}
+        {{- end }}
+        {{- with .Values.master.volumeMounts }}
+        volumeMounts:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.master.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        securityContext:
+          runAsUser: 0
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ include "celeborn.image" . }}
+        {{- with .Values.image.pullPolicy }}
+        imagePullPolicy: {{ . }}
+        {{- end }}
+        command:
+        - /usr/bin/tini
+        - --
+        - /bin/sh
+        - -c
+        {{- $namespace := .Release.Namespace }}
+        - >
+          until {{ range until (.Values.master.replicas | int) }}
+          nslookup {{ include "celeborn.master.statefulSet.name" $ }}-{{ . }}.{{ include "celeborn.master.service.name" $ }}.{{ $namespace }}.svc.{{ $.Values.cluster.name }}.local &&
+          {{- end }}
+          true; do
+            echo "waiting for master"; 
+            sleep 2;
+          done && exec /opt/celeborn/sbin/start-master.sh
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        - containerPort: {{ get .Values.celeborn "celeborn.master.http.port" | default 9098 }}
+          name: metrics
+          protocol: TCP
+        {{- with .Values.master.env }}
+        env:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.master.envFrom }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        - name: celeborn-conf
+          subPath: celeborn-defaults.conf
+          mountPath: /opt/celeborn/conf/celeborn-defaults.conf
+        - name: celeborn-conf
+          subPath: log4j2.xml
+          mountPath: /opt/celeborn/conf/log4j2.xml
+        - name: celeborn-conf
+          subPath: metrics.properties
+          mountPath: /opt/celeborn/conf/metrics.properties
+        - name: celeborn-conf
+          subPath: ratis-log4j.properties
+          mountPath: /opt/celeborn/conf/ratis-log4j.properties
+        {{- with .Values.master.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.master.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.master.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      - name: celeborn-conf
+        configMap:
+          name: {{ include "celeborn.configMap.name" . }}
+          defaultMode: 0444
+          items:
+          - key: celeborn-defaults.conf
+            path: celeborn-defaults.conf
+          - key: log4j2.xml
+            path: log4j2.xml
+          - key: metrics.properties
+            path: metrics.properties
+          - key: ratis-log4j.properties
+            path: ratis-log4j.properties
+      {{- with .Values.master.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.master.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.master.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.master.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if or .Values.master.priorityClass.name .Values.master.priorityClass.create }}
+      priorityClassName: {{ include "celeborn.master.priorityClass.name" . }}
+      {{- end }}
+      {{- with .Values.master.dnsPolicy }}
+      dnsPolicy: {{ . }}
+      {{- end }}
+      {{- with .Values.master.hostNetwork }}
+      hostNetwork: {{ . }}
+      {{- end }}
+      serviceAccountName: {{ include "celeborn.serviceAccount.name" . }}
+      {{- with .Values.master.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30

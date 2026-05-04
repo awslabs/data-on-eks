@@ -81,3 +81,12 @@ output "raydata_config" {
     iam_role_arn      = module.spark_team_irsa["raydata"].iam_role_arn
   } : null
 }
+
+################################################################################
+# Celeborn Configuration
+################################################################################
+
+output "celeborn_master_endpoint" {
+  description = "Celeborn master endpoint for Spark shuffle configuration"
+  value       = var.enable_celeborn ? "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local:9097" : null
+}
