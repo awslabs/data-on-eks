@@ -60,6 +60,15 @@ if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
 fi
 
 
+# Drain nodes before terraform destroy. Terraform deletes VPC routes concurrently
+# with EKS cluster deletion, which can strand nodes without network connectivity.
+echo "Draining nodes before terraform destroy..."
+if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
+  echo "Deleting all nodepools..."
+  kubectl delete nodepool --all --wait=true --timeout=300s 2>/dev/null || echo "WARNING: No nodepools found or delete failed"
+  echo "Node drain complete"
+fi
+
 # List of Terraform modules to destroy in sequence
 targets=($(terraform state list | grep "kubectl_manifest\." | grep -v "kubectl_manifest.aws_load_balancer_controller"))
 
