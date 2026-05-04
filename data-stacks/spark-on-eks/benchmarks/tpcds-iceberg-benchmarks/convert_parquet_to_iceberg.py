@@ -220,12 +220,19 @@ def get_tables_to_convert(single_table: Optional[str]) -> List[Tuple[str, Option
     return matches
 
 
-def compute_ndv_statistics(spark: SparkSession, glue_db: str, table_name: str) -> None:
-    """Compute NDV column statistics (Puffin files) for CBO."""
+def compute_ndv_statistics(spark: SparkSession, glue_db: str, table_name: str, partition_col: Optional[str] = None) -> None:
+    """Compute NDV column statistics (Puffin files) and partition statistics."""
+
     start = time.time()
     spark.sql(f"CALL glue_catalog.system.compute_table_stats('{glue_db}.{table_name}')")
-    elapsed = time.time() - start
-    print(f"[stats] {glue_db}.{table_name:25s} NDV stats computed in {elapsed:7.1f}s")
+    ndv_elapsed = time.time() - start
+    print(f"[stats] {table_name:25s} NDV stats computed in {ndv_elapsed:7.1f}s")
+
+    if partition_col:
+        start = time.time()
+        spark.sql(f"CALL glue_catalog.system.compute_partition_stats('{glue_db}.{table_name}')")
+        part_elapsed = time.time() - start
+        print(f"[stats] {table_name:25s} partition stats computed in {part_elapsed:7.1f}s")
 
 
 def convert_table(
@@ -277,7 +284,7 @@ def convert_table(
     elapsed = time.time() - start
 
     if compute_stats:
-        compute_ndv_statistics(spark, glue_db, table_name)
+        compute_ndv_statistics(spark, glue_db, table_name, partition_col)
 
     if verify_counts:
         src_count = source_df.count()   # served from cache — no S3 re-scan
@@ -376,12 +383,12 @@ def _run_stats_only(
     failed = []
     total_start = time.time()
 
-    for table_name, _ in tables:
+    for table_name, partition_col in tables:
         if table_name not in existing_tables:
             print(f"[skip] {table_name:25s} not found in catalog")
             continue
         try:
-            compute_ndv_statistics(spark, glue_db, table_name)
+            compute_ndv_statistics(spark, glue_db, table_name, partition_col)
         except Exception as exc:
             print(f"[fail] {table_name:25s} {exc}")
             failed.append(table_name)
