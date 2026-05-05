@@ -21,14 +21,24 @@ LOCAL_DIR="$STACKS_DIR/$TERRAFORM_DIR/_local"
 TFVARS_FILE="$STACKS_DIR/$TERRAFORM_DIR/data-stack.tfvars"
 
 # --- Deployment ID Update ---
-# Generate random deployment_id if the default placeholder is found.
-# This ID is used to identify and delete AWS resources orphaned by Kubernetes Operators.
+# Ensure a unique deployment_id exists. This ID is used to identify and delete
+# AWS resources orphaned by Kubernetes Operators.
 if [ -f "$TFVARS_FILE" ]; then
-    if grep -q 'deployment_id = "abcdefg"' "$TFVARS_FILE"; then
-        print_status "Default deployment_id found. Generating a new random one."
+    if grep -q 'deployment_id' "$TFVARS_FILE"; then
+        # deployment_id exists — replace it only if it's the default placeholder
+        if grep -q 'deployment_id = "DO-NOT-EDIT-AUTO-GENERATED"' "$TFVARS_FILE"; then
+            print_status "Default deployment_id found. Generating a new random one."
+            RANDOM_ID=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 8)
+            sed -i.bak "s/deployment_id = \"DO-NOT-EDIT-AUTO-GENERATED\"/deployment_id = \"$RANDOM_ID\"/" "$TFVARS_FILE" && rm -f "$TFVARS_FILE.bak"
+            print_status "Updated deployment_id to $RANDOM_ID in $TFVARS_FILE"
+        fi
+    else
+        # deployment_id is missing entirely — add it
+        print_status "No deployment_id found in $TFVARS_FILE. Adding one."
         RANDOM_ID=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 8)
-        sed -i '' "s/deployment_id = \"abcdefg\"/deployment_id = \"$RANDOM_ID\"/" "$TFVARS_FILE"
-        print_status "Updated deployment_id to $RANDOM_ID in $TFVARS_FILE"
+        echo "" >> "$TFVARS_FILE"
+        echo "deployment_id = \"$RANDOM_ID\"" >> "$TFVARS_FILE"
+        print_status "Added deployment_id = $RANDOM_ID to $TFVARS_FILE"
     fi
 else
     print_warning "$TFVARS_FILE not found. Skipping deployment_id update."

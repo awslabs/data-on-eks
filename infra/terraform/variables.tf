@@ -22,9 +22,9 @@ variable "tags" {
 }
 
 variable "deployment_id" {
-  description = "Deployment ID unique to this stack"
+  description = "Unique ID used to tag all AWS resources for this deployment. Enables identification of orphaned resources and cleanup in case of Terraform state loss. Auto-generated on first deploy — do not edit manually."
   type        = string
-  default     = "abcdefg"
+  default     = "DO-NOT-EDIT-AUTO-GENERATED"
 }
 
 
