@@ -1,0 +1,11 @@
+[project]
+name = "agentic-analytics-seed-job"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "mysql-connector-python==9.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

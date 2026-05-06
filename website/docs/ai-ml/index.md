@@ -5,126 +5,46 @@ sidebar_label: Overview
 ---
 
 import '@site/src/css/datastack-tiles.css';
-import '@site/src/css/getting-started.css';
 import AIforDataHero from '@site/src/components/AIforData/AIforDataHero';
-import { Database, Cpu } from 'lucide-react';
 
 <AIforDataHero />
 
-## AI-Native Data Infrastructure
+This section provides production-ready reference architectures for AI agents built for data platforms and data workloads. Each reference architecture is a working agent you can deploy and run against a real system. The architectures span various data frameworks and distributed databases, including both AWS managed services and open source. On the agent side, we leverage open source agentic frameworks like LangGraph as well as AWS managed services like Bedrock AgentCore. The goal is to give data teams a concrete starting point for building agents that solve their specific operational problems.
 
-Transform your data platforms with AI capabilities. From vector databases for semantic search to intelligent agents that automatically diagnose Spark jobs, these stacks bring cutting-edge AI to your data operations on Amazon EKS.
+### Why Agents for Data Platforms?
 
-<div className="datastacks-grid">
+Every data team has the same problem. Something breaks at 2 AM. A Spark job fails silently. A metric drops and nobody notices for hours. A pipeline produces bad data and three downstream teams build reports on it before anyone catches it.
 
-<div className="datastack-card">
-<div className="datastack-header">
-<div className="datastack-icon">
-  <Database size={32} strokeWidth={2} />
-</div>
-<div className="datastack-content">
-<h3>Vector Databases</h3>
-<p className="datastack-description">High-performance vector storage and similarity search for AI applications, embeddings, and semantic data retrieval.</p>
-</div>
-</div>
-<div className="datastack-features">
-<span className="feature-tag">Milvus on EKS</span>
-<span className="feature-tag">pgvector</span>
-<span className="feature-tag">Weaviate</span>
-<span className="feature-tag">Semantic Search</span>
-</div>
-<div className="datastack-footer">
-<a href="/data-on-eks/docs/ai-ml/vector-databases" className="datastack-link">
-<span>Explore Vector DBs</span>
-<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-</svg>
-</a>
-</div>
-</div>
+The fix is always the same: someone senior logs in, runs a dozen queries, cross-references dashboards, checks configs, and eventually finds the one thing that went wrong. It takes 30 minutes if you're lucky. Hours if you're not.
 
-<div className="datastack-card">
-<div className="datastack-header">
-<div className="datastack-icon">
-  <Cpu size={32} strokeWidth={2} />
-</div>
-<div className="datastack-content">
-<h3>AI Agents for Data</h3>
-<p className="datastack-description">Intelligent agents that automatically monitor, diagnose, and optimize your data workloads using AI.</p>
-</div>
-</div>
-<div className="datastack-features">
-<span className="feature-tag">Spark Diagnostics</span>
-<span className="feature-tag">Auto-Optimization</span>
-<span className="feature-tag">Anomaly Detection</span>
-<span className="feature-tag">LangGraph</span>
-</div>
-<div className="datastack-footer">
-<a href="/data-on-eks/docs/ai-ml/ai-agents" className="datastack-link">
-<span>Explore AI Agents</span>
-<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-</svg>
-</a>
-</div>
-</div>
+What if that person didn't need to wake up?
 
-</div>
+## The Shift from Dashboards to Agents
 
-## Why AI for Data on EKS?
+Dashboards tell you something is wrong. Agents tell you why, and what to do about it.
 
-The convergence of AI and data infrastructure opens new possibilities for intelligent systems. By running vector databases and AI agents on Amazon EKS, you get:
+An AI agent for data is software that can investigate problems the way a senior engineer would. It looks at the symptoms, decides what to check, runs the queries, reads the results, and writes up a conclusion. It does this in seconds, not hours. It does it for every incident, not just the ones that page someone.
 
-### Intelligence at Scale
-Deploy vector databases like Milvus alongside your existing data stacks to enable semantic search across billions of embeddings with sub-second latency.
+This isn't about replacing engineers. It's about giving every alert the same quality of investigation that today only happens when the right person is online.
 
-### Automated Operations
-AI agents monitor your Spark jobs, Kafka streams, and Airflow DAGs—automatically detecting anomalies, optimizing configurations, and preventing failures before they happen.
+## Where Agents Make Sense
 
-### Cost Optimization
-Machine learning models analyze resource usage patterns and recommend optimal configurations, reducing cloud spend while improving performance.
+The best use cases share a pattern: a human would need to run multiple queries across multiple dimensions to find the answer.
 
-### Unified Platform
-Run everything on Kubernetes: your data processing (Spark), streaming (Kafka), orchestration (Airflow), and now AI agents—all managed through GitOps with ArgoCD.
+**Anomaly investigation.** A business metric drops. The agent drills into every dimension (region, device, campaign, creative) simultaneously and identifies the exact segment causing the drop.
 
-## Use Cases
+**Job failure diagnosis.** A Spark job fails or runs 10x slower than usual. The agent reads the execution plan, checks for data skew, examines memory usage, and pinpoints whether it's a code change, a data change, or an infrastructure issue.
 
-### Semantic Search for Data Discovery
-Build a data catalog where users can ask natural language questions like "find all tables containing customer payment data" and get AI-powered results using vector similarity.
+**Pipeline health.** Data arrives late or with unexpected schema changes. The agent traces the lineage, identifies where the break happened, and determines impact on downstream consumers.
 
-### Spark Job Auto-Diagnostics
-Deploy an AI agent that watches every Spark job, detects common failure patterns (OOM errors, data skew, shuffle problems), and automatically suggests fixes or creates JIRA tickets.
+**Performance optimization.** Queries that used to run in seconds now take minutes. The agent analyzes execution profiles, identifies missing indexes or bad join strategies, and recommends specific fixes.
 
-### Real-time Data Quality
-AI agents continuously validate streaming data, detect schema drift, identify PII leakage, and trigger automated remediation workflows.
+**Upgrade readiness.** Before upgrading a platform version, the agent reviews your workloads against the changelog, identifies breaking changes that affect your specific usage patterns, and flags what needs attention.
 
-### Intelligent Cost Management
-ML models predict resource usage, recommend spot vs on-demand instance mixes, and automatically scale clusters based on workload patterns.
+## How These Reference Architectures Work
 
-## Technology Stack
+Each reference architecture in this section is a complete, working agent you can deploy and run against a real data platform. You'll see the agent receive a problem, decide what to investigate, execute queries, and produce a written report with root cause and recommended actions.
 
-Our AI for Data stacks are built on:
+The goal is to give data teams a starting point. Take a reference architecture, swap in your data platform, adjust the investigation logic for your domain, and you have an agent that handles your specific operational problems.
 
-- **Vector Databases**: Milvus, Weaviate, pgvector for embeddings storage
-- **AI Frameworks**: LangChain, LangGraph for agent orchestration
-- **Compute**: Amazon EKS with Karpenter for GPU/CPU autoscaling
-- **Storage**: Amazon S3 for data lakes, EBS/EFS for vector indices
-- **Observability**: Prometheus, Grafana for agent monitoring
-- **GitOps**: ArgoCD for declarative AI infrastructure
-
-:::tip Coming Soon
-We're actively developing production-ready examples for:
-- **Milvus on EKS** - Distributed vector database deployment
-- **pgvector on EKS** - PostgreSQL with vector similarity search
-- **Spark Diagnostics Agent** - AI-powered Spark job analyzer using LangGraph
-- **Performance Optimization Agent** - Automated query and configuration tuning
-:::
-
-## Get Started
-
-1. **Explore Vector Databases** - Start with Milvus or pgvector for semantic search capabilities
-2. **Deploy AI Agents** - Try the Spark Diagnostics agent to analyze your existing jobs and automatically optimize configurations
-
----
-
-*For questions or contributions, visit our [GitHub repository](https://github.com/awslabs/data-on-eks) or join the community discussions.*
+Browse the reference architectures in the sidebar to get started.

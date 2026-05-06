@@ -1,0 +1,15 @@
+[project]
+name = "agentic-analytics-agent"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn>=0.35.0",
+    "langgraph==0.2.60",
+    "boto3==1.35.99",
+    "fastmcp>=2.14.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

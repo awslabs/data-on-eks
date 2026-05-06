@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentic-analytics
+---
+# StarRocks credentials for the MCP server and seed job.
+# For a fresh StarRocks deploy the root user has no password by default.
+# Update password if you have set one.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: starrocks-creds
+  namespace: agentic-analytics
+type: Opaque
+stringData:
+  user: root
+  password: ""
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-sa
+  namespace: agentic-analytics
+  annotations:
+    # Replace <ACCOUNT_ID> with your AWS account ID.
+    # The referenced IAM role must allow bedrock:InvokeModel (see iam-policy.json).
+    eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/agentic-analytics-agent-role
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mcp-sa
+  namespace: agentic-analytics

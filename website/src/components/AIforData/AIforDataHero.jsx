@@ -1,5 +1,5 @@
 import React from 'react';
-import { Brain, Database, Cpu, Sparkles, TrendingUp, Zap } from 'lucide-react';
+import { Brain, Database, Activity, Bot } from 'lucide-react';
 
 export default function AIforDataHero() {
   return (
@@ -10,43 +10,37 @@ export default function AIforDataHero() {
           AI for Data
         </h1>
         <p className="hero-subtitle">
-          Intelligent data systems powered by vector databases, AI agents, and modern ML infrastructure.
-          Build next-generation data platforms with AI-native capabilities for semantic search, automated diagnostics,
-          and intelligent data operations on Amazon EKS.
+          Production-ready reference architectures for AI agents that autonomously monitor,
+          investigate, and act on data platforms and data workloads.
         </p>
+
         <div className="hero-badges">
           <span className="badge">
-            <Database size={16} />
-            Vector Databases
+            <Bot size={18} className="inline-block mr-2" />
+            Agentic Workflows
           </span>
           <span className="badge">
-            <Cpu size={16} />
-            AI Agents
+            <Database size={18} className="inline-block mr-2" />
+            Data Platforms
           </span>
           <span className="badge">
-            <Sparkles size={16} />
-            Semantic Search
-          </span>
-          <span className="badge">
-            <TrendingUp size={16} />
-            Auto-Diagnostics
-          </span>
-          <span className="badge">
-            <Zap size={16} />
-            RAG Pipelines
+            <Activity size={18} className="inline-block mr-2" />
+            Real-time Investigation
           </span>
         </div>
       </div>
+
+      {/* Floating particles background */}
       <div className="hero-particles">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(15)].map((_, i) => (
           <div
             key={i}
             className="particle"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${3 + Math.random() * 4}s`
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${5 + Math.random() * 10}s`
             }}
           />
         ))}
