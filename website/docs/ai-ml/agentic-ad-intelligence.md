@@ -1,7 +1,7 @@
 ---
 title: Agentic Ad Intelligence
 sidebar_label: Agentic Ad Intelligence
-sidebar_position: 1
+sidebar_position: 2
 ---
 
 import '@site/src/css/datastack-tiles.css';
@@ -225,7 +225,7 @@ cd examples/agentic-analytics
 ```
 
 :::warning Demo only — not for production
-`kubectl-deploy.sh` is a fast-path demo script. It stores agent source code in a Kubernetes ConfigMap and installs Python dependencies via a pip init container at pod start. This approach has no startup caching, no image scanning, and no GitOps audit trail.
+`kubectl-deploy.sh` is a fast-path demo script. It stores agent source code in a Kubernetes ConfigMap and installs Python dependencies via a uv init container at pod start. This approach has no startup caching, no image scanning, and no GitOps audit trail.
 
 **For production**, build purpose-built container images and deploy them through ArgoCD, Helm, or your standard GitOps pipeline:
 
@@ -239,7 +239,7 @@ cd examples/agentic-analytics
    docker build -t $ECR_REGISTRY/starrocks-mcp-server:latest mcp-server/
    docker push $ECR_REGISTRY/starrocks-mcp-server:latest
    ```
-3. Reference those image URIs in standard Kubernetes Deployments (no ConfigMap, no pip init container).
+3. Reference those image URIs in standard Kubernetes Deployments (no ConfigMap, no uv init container).
 4. For the IAM role, use `iam-policy.json` with Terraform (`aws_iam_policy` + `aws_iam_role`) or `eksctl` instead of the inline `aws iam` CLI calls in `kubectl-deploy.sh`.
 5. Apply via ArgoCD `Application` manifest or `helm install` — the same Deployments, Service, and IRSA annotations, delivered through your GitOps pipeline.
 
@@ -259,7 +259,7 @@ The script runs these steps in order:
 | Seed Job | Inserts synthetic ad events with a pre-injected CTR anomaly on `creative_id=8821` |
 
 :::note
-The MCP server pip-install init container takes about 90 seconds on first run. The seed job runs to completion before the script exits.
+The MCP server uv init container takes about 60 seconds on first run. The seed job runs to completion before the script exits.
 :::
 
 Verify all pods are healthy:
@@ -342,6 +342,19 @@ CONTEXT=$CONTEXT ./reseed.sh
 ```
 
 Run the demo within 15 minutes of re-seeding.
+
+### Cleanup
+
+To tear down all resources created by the deploy script (IAM role, Kubernetes namespace, and StarRocks database):
+
+```bash
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export CLUSTER=starrocks-on-eks
+export REGION=us-east-1
+CONTEXT=$CONTEXT ./cleanup.sh
+```
+
+The script is idempotent — safe to run multiple times. It handles already-deleted resources gracefully.
 
 ---
 
@@ -537,8 +550,8 @@ Useful metrics to expose:
 | Component | Demo | Production |
 |---|---|---|
 | Deployment tooling | `kubectl-deploy.sh` (demo script, no Docker required) | Docker images in ECR, deployed via ArgoCD or Helm |
-| Agent packaging | Python source in a Kubernetes ConfigMap, pip at pod start | Purpose-built image from `agent/Dockerfile` |
-| MCP server packaging | `mcp-server-starrocks` installed via pip init container | Purpose-built image from `mcp-server/Dockerfile` |
+| Agent packaging | Python source in a Kubernetes ConfigMap, uv at pod start | Purpose-built image from `agent/Dockerfile` |
+| MCP server packaging | `mcp-server-starrocks` installed via uv init container | Purpose-built image from `mcp-server/Dockerfile` |
 | IAM role creation | Inline `aws iam` CLI calls in `kubectl-deploy.sh` | Terraform `aws_iam_policy` using `iam-policy.json` |
 | Data ingestion | Batch Python seed job, inserted once | Kafka Connector, continuous Stream Load |
 | Data freshness | `INSERT OVERWRITE` shifts timestamps to `NOW()` | Kafka keeps data live automatically |
@@ -560,12 +573,16 @@ All files are in [`data-stacks/starrocks-on-eks/examples/agentic-analytics/`](ht
 | File | Purpose |
 |---|---|
 | `kubectl-deploy.sh` | Demo deploy: IRSA, schema, ConfigMaps, MCP server, agent, and seed job — no Docker required |
+| `cleanup.sh` | Tears down all resources created by `kubectl-deploy.sh` — IAM role, K8s namespace, and StarRocks database |
 | `demo.sh` | Interactive demo with pre-flight checks, live log streaming, and colored trace output |
 | `reseed.sh` | Truncates and re-inserts data with current timestamps before each demo session |
 | `base.yaml` | Namespace, StarRocks credentials Secret, and service accounts — applied as one manifest |
 | `iam-policy.json` | IAM policy granting `bedrock:InvokeModel` — reference document for production IaC (Terraform `aws_iam_policy` or `eksctl`). `kubectl-deploy.sh` inlines this policy directly via the AWS CLI and does not read this file. |
 | `starrocks-schema.sql` | DDL for the `ad_events` table and `ad_events_1min` materialized view |
 | `agent/app.py` | LangGraph agent: the 4-step Decompose, Execute, Analyze, Report state machine |
+| `agent/pyproject.toml` | Python project definition with pinned dependencies (uv-managed) |
 | `agent/Dockerfile` | Container image for production deployment of the agent |
+| `mcp-server/pyproject.toml` | Python project definition for the MCP server wrapper (uv-managed) |
 | `mcp-server/Dockerfile` | Container image for production deployment of the StarRocks MCP server |
 | `seed-job/seed_data.py` | Synthetic data generator with the injected CTR anomaly on `creative_id=8821` |
+| `seed-job/pyproject.toml` | Python project definition for the seed job (uv-managed) |

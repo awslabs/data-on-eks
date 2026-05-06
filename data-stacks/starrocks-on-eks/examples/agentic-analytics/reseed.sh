@@ -41,9 +41,9 @@ spec:
       serviceAccountName: mcp-sa
       restartPolicy: Never
       initContainers:
-        - name: pip-install
-          image: python:3.12-slim
-          command: ["pip", "install", "--no-cache-dir", "-r", "/code/requirements.txt", "--target", "/deps"]
+        - name: uv-install
+          image: ghcr.io/astral-sh/uv:python3.12-trixie-slim
+          command: ["uv", "pip", "install", "--no-cache", "--target", "/deps", "-r", "/code/pyproject.toml"]
           volumeMounts:
             - {name: code, mountPath: /code}
             - {name: deps, mountPath: /deps}

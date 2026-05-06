@@ -2,9 +2,9 @@
 # kubectl-deploy.sh — deploy the agentic-analytics stack without building Docker images.
 #
 # Strategy:
-#   - Official StarRocks MCP server: installed via pip (mcp-server-starrocks==0.3.0)
+#   - Official StarRocks MCP server: installed via uv (mcp-server-starrocks==0.3.0)
 #   - Agent: Python source stored in a ConfigMap, run from python:3.12-slim
-#   - Both use pip-install init containers; no ECR or Docker builds required.
+#   - Both use uv init containers; no ECR or Docker builds required.
 #
 # Prerequisites:
 #   - kubectl configured for the target cluster (starrocks-on-eks)
@@ -20,7 +20,23 @@
 
 set -euo pipefail
 
-ACCOUNT_ID="${ACCOUNT_ID:?Set ACCOUNT_ID}"
+# ──────────────────────────────────────────────────────────────────────────────
+# Prompt for required environment variables if not set
+# ──────────────────────────────────────────────────────────────────────────────
+if [[ -z "${ACCOUNT_ID:-}" ]]; then
+  echo "ACCOUNT_ID is not set."
+  echo ""
+  echo "  Please export the following before running this script:"
+  echo ""
+  echo "    export ACCOUNT_ID=\$(aws sts get-caller-identity --query Account --output text)"
+  echo "    export CLUSTER=starrocks-on-eks    # optional, defaults to starrocks-on-eks"
+  echo "    export REGION=us-east-1            # optional, defaults to us-east-1"
+  echo "    ./kubectl-deploy.sh"
+  echo ""
+  exit 1
+fi
+
+ACCOUNT_ID="${ACCOUNT_ID}"
 CLUSTER="${CLUSTER:-starrocks-on-eks}"
 REGION="${REGION:-us-east-1}"
 CONTEXT="${CONTEXT:-$CLUSTER}"
@@ -85,7 +101,7 @@ sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$SCRIPT_DIR/base.yaml" | $KC apply -f -
 # 3. StarRocks schema
 # ──────────────────────────────────────────────────────────────────────────────
 echo "==> Applying StarRocks schema ..."
-$KC exec -n starrocks starrocks-shared-data-fe-0 -- \
+$KC exec -i -n starrocks starrocks-shared-data-fe-0 -- \
   mysql -h 127.0.0.1 -P 9030 -u root < "$SCRIPT_DIR/starrocks-schema.sql"
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -94,12 +110,12 @@ $KC exec -n starrocks starrocks-shared-data-fe-0 -- \
 echo "==> Creating code ConfigMaps ..."
 $KC create configmap agent-code \
   --from-file=app.py="$SCRIPT_DIR/agent/app.py" \
-  --from-file=requirements.txt="$SCRIPT_DIR/agent/requirements.txt" \
+  --from-file=pyproject.toml="$SCRIPT_DIR/agent/pyproject.toml" \
   -n agentic-analytics --dry-run=client -o yaml | $KC apply -f -
 
 $KC create configmap seed-job-code \
   --from-file=seed_data.py="$SCRIPT_DIR/seed-job/seed_data.py" \
-  --from-file=requirements.txt="$SCRIPT_DIR/seed-job/requirements.txt" \
+  --from-file=pyproject.toml="$SCRIPT_DIR/seed-job/pyproject.toml" \
   -n agentic-analytics --dry-run=client -o yaml | $KC apply -f -
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -126,9 +142,9 @@ spec:
     spec:
       serviceAccountName: mcp-sa
       initContainers:
-        - name: pip-install
-          image: python:3.12-slim
-          command: ["pip", "install", "--no-cache-dir",
+        - name: uv-install
+          image: ghcr.io/astral-sh/uv:python3.12-trixie-slim
+          command: ["uv", "pip", "install", "--no-cache",
                     "--target", "/deps",
                     "mcp-server-starrocks==0.3.0"]
           volumeMounts:
@@ -202,9 +218,9 @@ spec:
     spec:
       serviceAccountName: agent-sa
       initContainers:
-        - name: pip-install
-          image: python:3.12-slim
-          command: ["pip", "install", "--no-cache-dir", "-r", "/code/requirements.txt", "--target", "/deps"]
+        - name: uv-install
+          image: ghcr.io/astral-sh/uv:python3.12-trixie-slim
+          command: ["uv", "pip", "install", "--no-cache", "--target", "/deps", "-r", "/code/pyproject.toml"]
           volumeMounts:
             - {name: code, mountPath: /code}
             - {name: deps, mountPath: /deps}
@@ -247,7 +263,7 @@ EOF
 # ──────────────────────────────────────────────────────────────────────────────
 # 6. Wait for both deployments, then run seed job
 # ──────────────────────────────────────────────────────────────────────────────
-echo "==> Waiting for deployments (mcp-server pip install takes ~90s on first run) ..."
+echo "==> Waiting for deployments (uv install takes ~60s on first run) ..."
 $KC rollout status deployment/mcp-server -n agentic-analytics
 $KC rollout status deployment/agent      -n agentic-analytics
 
@@ -265,9 +281,9 @@ spec:
       serviceAccountName: mcp-sa
       restartPolicy: Never
       initContainers:
-        - name: pip-install
-          image: python:3.12-slim
-          command: ["pip", "install", "--no-cache-dir", "-r", "/code/requirements.txt", "--target", "/deps"]
+        - name: uv-install
+          image: ghcr.io/astral-sh/uv:python3.12-trixie-slim
+          command: ["uv", "pip", "install", "--no-cache", "--target", "/deps", "-r", "/code/pyproject.toml"]
           volumeMounts:
             - {name: code, mountPath: /code}
             - {name: deps, mountPath: /deps}
@@ -308,7 +324,7 @@ echo '    -H "Content-Type: application/json" \'
 echo '    -d '"'"'{"question":"CTR dropped for advertiser_42 in last 15min?","advertiser_id":42}'"'"' | jq .'
 echo ""
 echo "  NOTE: Seed data is timestamp-relative. Re-seed within 15 min of demo:"
-echo "  kubectl --context ${CONTEXT} exec -n starrocks starrocks-shared-data-fe-0 -- \\"
-echo "    mysql -h 127.0.0.1 -P 9030 -u root -e 'TRUNCATE TABLE ad_analytics.ad_events;'"
-echo "  kubectl --context ${CONTEXT} delete job seed-data -n agentic-analytics --ignore-not-found"
-echo "  kubectl --context ${CONTEXT} apply -f <(cat seed-job manifest above)"
+echo "  CONTEXT=${CONTEXT} ./reseed.sh"
+echo ""
+echo "  To tear down all resources:"
+echo "  ACCOUNT_ID=${ACCOUNT_ID} CLUSTER=${CLUSTER} REGION=${REGION} ./cleanup.sh"
