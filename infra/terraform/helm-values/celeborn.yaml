@@ -24,7 +24,7 @@ celeborn:
   celeborn.storage.availableTypes: MEMORY,SSD
 
   # Eviction policy - when memory fills, evict to SSD
-  celeborn.worker.storage.storagePolicy.evictPolicy: LRU
+  celeborn.worker.storage.storagePolicy.evictPolicy: MEMORY,SSD
 
   # --- Performance tuning (r8g.8xlarge: 32 vCPU, 256 GB) ---
   # These are unchanged from your original — values are appropriate for this instance type.
@@ -46,11 +46,8 @@ celeborn:
   celeborn.worker.graceful.shutdown.partitionSorter.shutdownTimeout: "120s"  # default: 120s
   celeborn.worker.graceful.shutdown.timeout: "600s"                      # default: 600s
 
-  # RocksDB path for graceful shutdown metadata. Uses node root filesystem (not EBS PVC).
-  # Default is /tmp/recover which gets cleared on pod restart.
-  # Using /var/celeborn/rocksdb on the node's root volume ensures metadata survives pod restarts
-  # while avoiding unnecessary EBS storage costs for small metadata files.
-  celeborn.worker.graceful.shutdown.recoverPath: "/var/celeborn/rocksdb"
+  # RocksDB path for graceful shutdown metadata.
+  celeborn.worker.graceful.shutdown.recoverPath: "/mnt/disk1/recover"
 
   # --- Fixed ports for rolling restarts with graceful shutdown ---
   # Source: https://celeborn.apache.org/docs/latest/configuration/
