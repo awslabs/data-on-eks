@@ -24,12 +24,12 @@ TFVARS_FILE="$STACKS_DIR/$TERRAFORM_DIR/data-stack.tfvars"
 # Ensure a unique deployment_id exists. This ID is used to identify and delete
 # AWS resources orphaned by Kubernetes Operators.
 if [ -f "$TFVARS_FILE" ]; then
-    if grep -q 'deployment_id' "$TFVARS_FILE"; then
+    if grep -qE '^[[:space:]]*deployment_id[[:space:]]*=' "$TFVARS_FILE"; then
         # deployment_id exists — replace it only if it's the default placeholder
-        if grep -q 'deployment_id = "DO-NOT-EDIT-AUTO-GENERATED"' "$TFVARS_FILE"; then
+        if grep -qE '^[[:space:]]*deployment_id[[:space:]]*=[[:space:]]*"DO-NOT-EDIT-AUTO-GENERATED"' "$TFVARS_FILE"; then
             print_status "Default deployment_id found. Generating a new random one."
             RANDOM_ID=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 8)
-            sed -i.bak "s/deployment_id = \"DO-NOT-EDIT-AUTO-GENERATED\"/deployment_id = \"$RANDOM_ID\"/" "$TFVARS_FILE" && rm -f "$TFVARS_FILE.bak"
+            sed -i.bak -E "s/^([[:space:]]*deployment_id[[:space:]]*=[[:space:]]*)\"DO-NOT-EDIT-AUTO-GENERATED\"/\1\"$RANDOM_ID\"/" "$TFVARS_FILE" && rm -f "$TFVARS_FILE.bak"
             print_status "Updated deployment_id to $RANDOM_ID in $TFVARS_FILE"
         fi
     else
