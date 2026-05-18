@@ -14,20 +14,20 @@ This benchmark evaluates Comet's performance on [Amazon EKS](https://aws.amazon.
 
 
 :::info **TL;DR**
-Our TPC-DS 3TB benchmark shows that **Apache DataFusion Comet (v0.15.0) delivered 11% faster overall performance** compared to native Spark SQL, with variable query-level results.
-Some queries saw ~50% improvements, while others saw ~35% degradation.
+Our TPC-DS 3TB benchmark shows that **Apache DataFusion Comet (v0.16.0) delivered 32% faster overall performance** compared to native Spark SQL, with variable query-level results.
+Most queries saw improvements up to 71%, while a small set of queries saw ~40% degradation.
 :::
 
 ## TPC-DS 3TB Benchmark Results
 
 ### Summary
 
-Our comprehensive TPC-DS 3TB benchmark on Amazon EKS demonstrates that **Apache DataFusion Comet (v0.15.0) provides an overall speedup** (**11% faster**) compared to native Spark SQL, with individual queries varying from ~50% faster to ~35% slower (one outlier at 90%, likely a measurement artifact).
+Our TPC-DS 3TB benchmark on Amazon EKS demonstrates that **Apache DataFusion Comet (v0.16.0) provides an overall speedup** (**32% faster**) compared to native Spark SQL, with individual queries varying from ~70% faster to ~40% slower.
 
 | Name | Completion Time (seconds) | Speedup |
 |------|---------------------------|---------|
 | Native Spark | 3,650.56 | Baseline |
-| Comet | 3,246.87 | **11% faster** |
+| Comet | 3,246.87 | **32% faster** |
 
 
 ### Benchmark Infrastructure
@@ -55,7 +55,7 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
 | Configuration | Native Spark | Comet |
 |---------------|-------------|-------|
 | **Spark Version** | 3.5.8 | 3.5.8 |
-| **Comet Version** | N/A | 0.15.0 |
+| **Comet Version** | N/A | 0.16.0 |
 | **Java Runtime** | [OpenJDK](https://openjdk.org/) 17 | [OpenJDK](https://openjdk.org/) 17 |
 | **Execution Engine** | JVM-based [Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten) | Rust + JVM hybrid |
 | **Key Plugins** | Standard Spark | `CometPlugin`, `CometShuffleManager` |
@@ -87,6 +87,170 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
 ```
 
 ## Performance Results
+
+### Overall Performance
+
+<BarChart
+  title="Total Runtime Comparison"
+  data={{
+    labels: ['Default', 'DataFusion Comet 0.16.0'],
+    datasets: [{
+      label: 'Runtime (seconds)',
+      data: [3650.56, 2467.49],
+      backgroundColor: ['#27ae60', '#27ae60'],
+      borderColor: ['#229954', '#229954'],
+      borderWidth: 2
+    }]
+  }}
+  options={{
+    scales: {
+      y: { title: { display: true, text: 'Runtime (seconds)' } }
+    }
+  }}
+  height="300px"
+/>
+
+| Name | Completion Time (seconds) | Performance |
+|------|---------------------------|-------------|
+| Default | 3,650.56 | Baseline |
+| DataFusion Comet 0.16.0 | 2,467.49 | **1.48×** (+32% time) |
+
+### Performance Distribution
+
+<PieChart
+  title="Query Performance Distribution"
+  type="doughnut"
+  data={{
+    labels: ['20%+ improvement', '10-20% improvement', '±10%', '10-20% degradation', '20%+ degradation'],
+    datasets: [{
+      data: [68, 22, 10, 0, 3],
+      backgroundColor: ['#27ae60', '#3498db', '#f39c12', '#e67e22', '#e74c3c'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  }}
+/>
+
+| Performance Range | Query Count | Percentage |
+|---|---|---|
+| 20%+ improvement | 68 | 66% |
+| 10-20% improvement | 22 | 21% |
+| ±10% | 10 | 10% |
+| 10-20% degradation | 0 | 0% |
+| 20%+ degradation | 3 | 3% |
+
+### Top 10 Query Improvements
+
+<BarChart
+  title="Top 10 Query Improvements (% faster with DataFusion Comet 0.16.0)"
+  data={{
+    labels: ['q86', 'q58', 'q56', 'q67', 'q65', 'q97', 'q83', 'q87', 'q38', 'q18'],
+    datasets: [
+      {
+        label: 'Improvement %',
+        data: [71, 66, 66, 64, 60, 60, 58, 55, 55, 54],
+        backgroundColor: '#27ae60',
+        borderColor: '#229954',
+        borderWidth: 1
+      }
+    ]
+  }}
+  options={{
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Improvement (%)' }
+      },
+      x: {
+        title: { display: true, text: 'TPC-DS Queries' }
+      }
+    }
+  }}
+  height="400px"
+/>
+
+| Query | Default (s) | DataFusion Comet 0.16.0 (s) | Speedup |
+|---|---|---|---|
+| q86-v4.0 | 12.8 | 3.7 | **3.47×** (+71%) |
+| q58-v4.0 | 5.4 | 1.8 | **2.98×** (+66%) |
+| q56-v4.0 | 5.8 | 2.0 | **2.96×** (+66%) |
+| q67-v4.0 | 141.2 | 50.7 | **2.79×** (+64%) |
+| q65-v4.0 | 43.6 | 17.3 | **2.52×** (+60%) |
+| q97-v4.0 | 43.3 | 17.4 | **2.49×** (+60%) |
+| q83-v4.0 | 2.8 | 1.2 | **2.37×** (+58%) |
+| q87-v4.0 | 27.7 | 12.5 | **2.21×** (+55%) |
+| q38-v4.0 | 27.6 | 12.5 | **2.20×** (+55%) |
+| q18-v4.0 | 22.0 | 10.1 | **2.18×** (+54%) |
+
+### Top 3 Query Regressions
+
+Only three queries showed regressions.
+
+<BarChart
+  title="Top 3 Query Regressions (% slower with DataFusion Comet 0.16.0)"
+  data={{
+    labels: ['q39a', 'q39b', 'q50'],
+    datasets: [
+      {
+        label: 'Degradation %',
+        data: [42, 41, 30],
+        backgroundColor: '#e74c3c',
+        borderColor: '#c0392b',
+        borderWidth: 1
+      }
+    ]
+  }}
+  options={{
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Degradation (%)' }
+      },
+      x: {
+        title: { display: true, text: 'TPC-DS Queries' }
+      }
+    }
+  }}
+  height="400px"
+/>
+
+| Query | Default (s) | DataFusion Comet 0.16.0 (s) | Degradation |
+|---|---|---|---|
+| q39a-v4.0 | 5.1 | 7.2 | **42%** slower (0.70×) |
+| q39b-v4.0 | 4.7 | 6.7 | **41%** slower (0.71×) |
+| q50-v4.0 | 82.7 | 107.5 | **30%** slower (0.77×) |
+
+
+
+### Notes on Performance Differences
+
+#### Comet Underperforms on Some Queries:
+
+**Example - Query 39a (-42%)**
+
+- Plan is fully "Cometized" (no fallback, no row↔columnar transitions inside the pipeline). Wall regression is concentrated in two parallel "scan inventory + 3× BHJ + partial-agg" stages where DPP leaves a single ~20 MB matching Parquet file processed by one straggler task while every other task reads ~0 B.
+- DPP collapses inventory to a single 20 MB partition that becomes a stage straggler; native scan + native partial-agg are slower than default's whole-stage-codegen on that single skewed task, and the larger straggler propagates a +1.82s delta into a +2.32s end-to-end regression.
+
+
+**Example - Query 39b (-41%)**
+- Plan is fully "Cometized"; the regression lives in two parallel `inventory` partial-aggregation stages (Comet 1444/1445 vs default 4051/4052) which contribute +1.541s of the +1.873s wall-clock delta. Heavy tasks process the same ~21 MB / 63 MB shuffle but Comet spends ~1.5s more wall and ~1.6s more CPU each.
+- Native `CometNativeScan → CometProject → CometBroadcastHashJoin × 3 → CometHashAggregate(stddev_samp+avg, 4-key group-by) → CometExchange` pipeline burns more CPU per heavy task than Spark's whole-stage-codegen equivalent on this small ~180 MB dataset.
+
+
+#### Comet Outperforms Most Queries:
+
+**Example - Query 86 (+71%)**
+
+- Default's dominant stage 5152 (Sort + SortMergeJoin + Expand + HashAggregate) ran 8.512s with 4.4 GB shuffle read, 320.3 MB peak on-heap memory, and 1.417s GC — Comet's equivalent stage 10295 finished in 914ms with stage shuffle read = 0 B and 0ms GC because AQE rewired the second join as a CometBroadcastHashJoin over a 6.1 MiB broadcast.
+- AQE-driven SortMergeJoin → CometBroadcastHashJoin flip on the item side, enabled by Comet's denser columnar shuffle; eliminates the 4.4 GB SMJ shuffle read and the 320 MB on-heap aggregation buffer.
+
+**Example - Query 58 (+66%)**
+
+- All 3 SortMergeJoins (and 6 surrounding Sort nodes) in default's executed plan are absent in Comet's: the same 9 logical joins resolve as 8 CometBroadcastHashJoin + 1 BroadcastHashJoin after AQE.
+- AQE chose broadcast joins everywhere under Comet, eliminating the 3 SMJ + 6 Sort pipeline; native CometExchange produced 29% smaller shuffle bytes on identical record counts.
+
+<details>
+<summary><b>Datafuison Comet V0.15.0 Results</b></summary>
 
 ### Overall Performance
 
@@ -258,6 +422,8 @@ Comet's native Rust execution engine excels at CPU-intensive operations
 - AQE converted all three SortMergeJoins to BroadcastHashJoins because CometExchange reported customer_address shuffle size as 2.7 MiB (vs 10.7 MiB in Default), falling below the 10 MB broadcast threshold
 - Combined join stage time dropped from 8.6s to 1.4s; GC dropped from 2.8s to 206ms
 - Comet's Arrow columnar shuffle encoding produced a more compact representation that caused AQE to select broadcast joins, eliminating sort buffers, shuffle overhead, and GC pressure from sort buffer allocation
+
+</details>
 
 
 ### Resource Usage Analysis
