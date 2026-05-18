@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 # Get the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,9 +9,9 @@ STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 echo "Reading Terraform outputs..."
 cd "$STACK_DIR/terraform/_local"
 
-EMR_VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".virtual_cluster_id')
-EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".job_execution_role_arn')
-CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '."emr-data-team-a".cloudwatch_log_group_name')
+EMR_VIRTUAL_CLUSTER_ID=$(terraform output -json emr_on_eks | jq -r '.virtual_clusters."emr-data-team-a".id')
+EMR_EXECUTION_ROLE_ARN=$(terraform output -json emr_on_eks | jq -r '.job_execution_role_arns."emr-data-team-a"')
+CLOUDWATCH_LOG_GROUP=$(terraform output -json emr_on_eks | jq -r '.cloudwatch_log_groups."emr-data-team-a".name')
 S3_BUCKET="s3://$(terraform output -raw emr_s3_bucket_name)"
 AWS_REGION=$(terraform output -raw region)
 
