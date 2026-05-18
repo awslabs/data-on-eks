@@ -15,7 +15,7 @@ This benchmark evaluates Comet's performance on [Amazon EKS](https://aws.amazon.
 
 :::info **TL;DR**
 Our TPC-DS 3TB benchmark shows that **Apache DataFusion Comet (v0.16.0) delivered 32% faster overall performance** compared to native Spark SQL, with variable query-level results.
-Most queries saw imrpovements up to 71% improvements, while a small set of queries saw ~40% degradation.
+Most queries saw improvements up to 71%, while a small set of queries saw ~40% degradation.
 :::
 
 ## TPC-DS 3TB Benchmark Results
