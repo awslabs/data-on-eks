@@ -89,6 +89,7 @@ output "raydata_config" {
 output "ecr_repo_url" {
   description = "ECR repository URL for Spot Balancer image"
   value       = aws_ecr_repository.spot_balancer.repository_url
+}
 # Celeborn Configuration
 ################################################################################
 
