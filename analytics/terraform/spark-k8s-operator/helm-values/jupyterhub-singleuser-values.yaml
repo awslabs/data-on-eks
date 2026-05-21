@@ -4,9 +4,7 @@ hub:
       storage: 50Gi
       storageClassName: gp3
   authenticatePrometheus: false
-  config:
-    JupyterHub:
-      base_url: /jupyter/
+  baseUrl: /jupyter/
 proxy:
   https:
     enabled: false
