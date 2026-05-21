@@ -1,0 +1,64 @@
+image:
+  repository: apache/celeborn
+  tag: "0.6.0"
+
+celeborn:
+  celeborn.worker.rpc.port: "9091"
+  celeborn.worker.fetch.port: "9092"
+  celeborn.worker.push.port: "9093"
+  celeborn.worker.replicate.port: "9094"
+  celeborn.worker.graceful.shutdown.enabled: "true"
+  celeborn.worker.graceful.shutdown.timeout: "600s"
+  celeborn.worker.graceful.shutdown.recoverPath: "/var/celeborn/rocksdb"
+  celeborn.network.bind.preferIpAddress: "false"
+  celeborn.master.heartbeat.worker.timeout: "180s"
+  celeborn.storage.availableTypes: "MEMORY,SSD"
+  celeborn.worker.storage.dirs: "/mnt/disk1:disktype=SSD:capacity=60Gi"
+  celeborn.master.slot.assign.policy: "ROUNDROBIN"
+  celeborn.worker.monitor.disk.enabled: "false"
+
+master:
+  replicas: 1
+  resources:
+    requests:
+      cpu: "1"
+      memory: "4Gi"
+    limits:
+      cpu: "1"
+      memory: "4Gi"
+  nodeSelector:
+    karpenter.sh/capacity-type: "on-demand"
+    NodeGroupType: "SparkComputeGeneral"
+
+worker:
+  replicas: 2
+  terminationGracePeriodSeconds: 720
+  resources:
+    requests:
+      cpu: "1"
+      memory: "8Gi"
+    limits:
+      cpu: "1"
+      memory: "8Gi"
+  nodeSelector:
+    karpenter.sh/capacity-type: "on-demand"
+    NodeGroupType: "SparkComputeGeneral"
+  # Override default hostPath volumes with PVC-backed storage
+  volumeMounts:
+    - name: disk1
+      mountPath: /mnt/disk1
+    - name: rocksdb
+      mountPath: /var/celeborn
+  volumes:
+    - name: rocksdb
+      emptyDir: {}
+  # PVC templates for worker storage
+  volumeClaimTemplates:
+    - metadata:
+        name: disk1
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 70Gi

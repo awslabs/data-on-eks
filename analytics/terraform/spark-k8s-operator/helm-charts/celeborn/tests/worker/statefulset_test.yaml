@@ -1,0 +1,518 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+suite: Test Celeborn worker statefulset
+
+templates:
+  - configmap.yaml
+  - worker/statefulset.yaml
+
+release:
+  name: celeborn
+  namespace: celeborn
+
+tests:
+  - it: Should create worker statefulset
+    template: worker/statefulset.yaml
+    asserts:
+      - containsDocument:
+          apiVersion: apps/v1
+          kind: StatefulSet
+          name: celeborn-worker
+          namespace: celeborn
+
+  - it: Should add checksum annotation referencing configmap
+    template: worker/statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["celeborn.apache.org/conf-hash"]
+          value: 316cfc634ed083bd70e36ad0b429578ace6893d4de3ef4897a078db5f01a7522
+
+  - it: Should change checksum annotation when celeborn config changes
+    template: worker/statefulset.yaml
+    set:
+      celeborn:
+        "celeborn.rpc.io.serverThreads": 128
+    asserts:
+      - notEqual:
+          path: spec.template.metadata.annotations["celeborn.apache.org/conf-hash"]
+          value: 316cfc634ed083bd70e36ad0b429578ace6893d4de3ef4897a078db5f01a7522
+      - equal:
+          path: spec.template.metadata.annotations["celeborn.apache.org/conf-hash"]
+          value: fae6199c4ac5ac5a9fd9049705ac239ad6e3474a65db55bdd98f29720122b756
+
+  - it: Should add extra pod annotations if `worker.annotations` is specified
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        annotations:
+          key1: value1
+          key2: value2
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.key1
+          value: value1
+      - equal:
+          path: spec.template.metadata.annotations.key2
+          value: value2
+
+  - it: Should use the specified image if `image.registry`, `image.repository` and `image.tag` is set
+    template: worker/statefulset.yaml
+    set:
+      image:
+        registry: test-registry
+        repository: test-repository
+        tag: test-tag
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name=="celeborn")].image
+          value: test-registry/test-repository:test-tag
+
+  - it: Should use the specified image pull policy if `image.pullPolicy` is set
+    template: worker/statefulset.yaml
+    set:
+      image:
+        pullPolicy: Always
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+
+  - it: Should use the specified replicas if `worker.replicas` is set
+    template: worker/statefulset.yaml
+    set:
+      worker.replicas: 10
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 10
+
+  - it: Should use the specified terminationGracePeriodSeconds if `worker.terminationGracePeriodSeconds` is set
+    template: worker/statefulset.yaml
+    set:
+      worker.terminationGracePeriodSeconds: 70
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 70
+
+  - it: Should add environment variables if `worker.env` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        env:
+          - name: test-env-name-1
+            value: test-env-value-1
+          - name: test-env-name-2
+            valueFrom:
+              configMapKeyRef:
+                name: test-configmap
+                key: test-key
+                optional: false
+          - name: test-env-name-3
+            valueFrom:
+              secretKeyRef:
+                name: test-secret
+                key: test-key
+                optional: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: test-env-name-1
+            value: test-env-value-1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: test-env-name-2
+            valueFrom:
+              configMapKeyRef:
+                name: test-configmap
+                key: test-key
+                optional: false
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: test-env-name-3
+            valueFrom:
+              secretKeyRef:
+                name: test-secret
+                key: test-key
+                optional: false
+
+  - it: Should add environment variable sources if `worker.envFrom` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        envFrom:
+          - configMapRef:
+              name: test-configmap
+              optional: false
+          - secretRef:
+              name: test-secret
+              optional: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: test-configmap
+              optional: false
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: test-secret
+              optional: false
+
+  - it: Should add volume mounts if `worker.volumeMounts` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        volumeMounts:
+          - name: disk1
+            mountPath: /mnt/disk1
+          - name: disk2
+            mountPath: /mnt/disk2
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: disk1
+            mountPath: /mnt/disk1
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: disk1
+            mountPath: /mnt/disk1
+
+  - it: Should use the specified resources if `worker.resources` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].resources
+          value:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      - equal:
+          path: spec.template.spec.containers[?(@.name=='celeborn')].resources
+          value:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+
+  - it: Should add container securityContext if `worker.securityContext` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsUser: 1000
+          runAsGroup: 2000
+          fsGroup: 3000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          privileged: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            readOnlyRootFilesystem: true
+            runAsUser: 1000
+            runAsGroup: 2000
+            fsGroup: 3000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            privileged: false
+
+  - it: Should add secrets if `imagePullSecrets` is set
+    template: worker/statefulset.yaml
+    set:
+      imagePullSecrets:
+        - name: test-secret1
+        - name: test-secret2
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets[0].name
+          value: test-secret1
+      - equal:
+          path: spec.template.spec.imagePullSecrets[1].name
+          value: test-secret2
+
+  - it: Should add volumes if `worker.volumes` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        volumes:
+          - name: disk1
+            emptyDir:
+              sizeLimit: 10Gi
+          - name: disk2
+            hostPath:
+              type: DirectoryOrCreate
+              path: /mnt/disk2
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: disk1
+            emptyDir:
+              sizeLimit: 10Gi
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: disk2
+            hostPath:
+              type: DirectoryOrCreate
+              path: /mnt/disk2
+
+  - it: Should add node selector if `worker.nodeSelector` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        nodeSelector:
+          key1: value1
+          key2: value2
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector.key1
+          value: value1
+      - equal:
+          path: spec.template.spec.nodeSelector.key2
+          value: value2
+
+  - it: Should add tolerations if `worker.tolerations` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        tolerations:
+          - key: key1
+            operator: Equal
+            value: value1
+            effect: NoSchedule
+          - key: key2
+            operator: Exists
+            effect: NoSchedule
+    asserts:
+      - equal:
+          path: spec.template.spec.tolerations
+          value:
+            - key: key1
+              operator: Equal
+              value: value1
+              effect: NoSchedule
+            - key: key2
+              operator: Exists
+              effect: NoSchedule
+
+  - it: Should use the specified affinity if `worker.affinity` is specified
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: topology.kubernetes.io/zone
+                      operator: In
+                      values:
+                        - antarctica-east1
+                        - antarctica-west1
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 1
+                preference:
+                  matchExpressions:
+                    - key: another-node-label-key
+                      operator: In
+                      values:
+                        - another-node-label-value
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity
+          value:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: topology.kubernetes.io/zone
+                      operator: In
+                      values:
+                        - antarctica-east1
+                        - antarctica-west1
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 1
+                preference:
+                  matchExpressions:
+                    - key: another-node-label-key
+                      operator: In
+                      values:
+                        - another-node-label-value
+
+  - it: Should use the specified priority class name if `worker.priorityClass.name` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        priorityClass:
+          name: test-priority-class
+    asserts:
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: test-priority-class
+
+  - it: Should use the specified dns policy if `worker.dnsPolicy` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        dnsPolicy: ClusterFirstWithHostNet
+    asserts:
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: ClusterFirstWithHostNet
+
+  - it: Should enable host network if `worker.hostNetwork` is set to true
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        hostNetwork: true
+    asserts:
+      - equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+
+  - it: Should use the specified security context if `worker.podSecurityContext` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        podSecurityContext:
+          runAsUser: 1000
+          runAsGroup: 2000
+          fsGroup: 3000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 2000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 3000
+
+  - it: Should add volume claim templates if `worker.volumeClaimTemplates` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        volumeClaimTemplates:
+          - metadata:
+              name: test-volume-claim-template-1
+            spec:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                request:
+                  storage: 100Gi
+                limits:
+                  storage: 100Gi
+          - metadata:
+              name: test-volume-claim-template-2
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                request:
+                  storage: 200Gi
+                limits:
+                  storage: 200Gi
+    asserts:
+      - contains:
+          path: spec.volumeClaimTemplates
+          content:
+            metadata:
+              name: test-volume-claim-template-1
+            spec:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                request:
+                  storage: 100Gi
+                limits:
+                  storage: 100Gi
+      - contains:
+          path: spec.volumeClaimTemplates
+          content:
+            metadata:
+              name: test-volume-claim-template-2
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                request:
+                  storage: 200Gi
+                limits:
+                  storage: 200Gi
+
+  - it: Should add extra init containers when `worker.extraInitContainers` is set
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        volumeMounts: []
+        extraInitContainers:
+          - name: custom-init
+            image: busybox:1.36
+            command:
+              - sh
+              - -c
+              - echo "hello celeborn"
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: custom-init
+      - equal:
+          path: spec.template.spec.initContainers[0].command[2]
+          value: echo "hello celeborn"
+
+  - it: Should not have initContainers when no volumes and extraInitContainers
+    template: worker/statefulset.yaml
+    set:
+      worker:
+        volumeMounts: []
+        extraInitContainers: []
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers

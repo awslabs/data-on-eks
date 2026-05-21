@@ -63,7 +63,7 @@ variable "enable_yunikorn" {
 }
 
 variable "enable_jupyterhub" {
-  default     = false
+  default     = true
   description = "Enable Jupyter Hub"
   type        = bool
 }
@@ -100,6 +100,12 @@ variable "enable_spark_history_server" {
 
 variable "enable_spark_history_mcp" {
   description = "Enable Spark History MCP Server for AI agent integration"
+  type        = bool
+  default     = true
+}
+
+variable "enable_celeborn" {
+  description = "Enable Apache Celeborn Remote Shuffle Service"
   type        = bool
   default     = true
 }

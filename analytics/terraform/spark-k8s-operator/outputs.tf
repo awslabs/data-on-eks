@@ -89,4 +89,10 @@ output "raydata_config" {
 output "ecr_repo_url" {
   description = "ECR repository URL for Spot Balancer image"
   value       = aws_ecr_repository.spot_balancer.repository_url
+# Celeborn Configuration
+################################################################################
+
+output "celeborn_master_endpoint" {
+  description = "Celeborn master endpoint for Spark shuffle configuration"
+  value       = var.enable_celeborn ? "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local:9097" : null
 }
