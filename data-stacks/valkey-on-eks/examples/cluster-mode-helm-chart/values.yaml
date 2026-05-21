@@ -1,0 +1,232 @@
+# =============================================================================
+# Valkey Cluster Mode — local chart values
+#
+# Deploys a Valkey cluster (sharded, gossip-based) as a StatefulSet plus a
+# headless Service plus the bootstrap/readiness/preStop scripts mounted via
+# ConfigMaps. No operator. No external chart dependency.
+#
+# Pair this chart with the data-on-eks Valkey NodePool (label
+# NodeGroupType=valkey, taint workload=valkey:NoSchedule) — see
+# infra/terraform/manifests/karpenter/nodepool-valkey.yaml.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Image
+# -----------------------------------------------------------------------------
+image:
+  registry: docker.io
+  repository: valkey/valkey
+  pullPolicy: IfNotPresent
+  # Empty = use Chart.appVersion (currently 9.0.2)
+  tag: ""
+
+imagePullSecrets: []
+
+# -----------------------------------------------------------------------------
+# Topology
+#
+# replicaCount = primaries × (1 + replicasPerPrimary)
+# 6 = 3 × (1 + 1)  → 3 primaries, 1 replica each (default, recommended)
+# 9 = 3 × (1 + 2)  → 3 primaries, 2 replicas each (read-heavy + extra HA)
+# 8 = 4 × (1 + 1)  → 4 primaries, 1 replica each
+#
+# Minimum 6 — quorum requires 3+ primaries.
+# -----------------------------------------------------------------------------
+replicaCount: 6
+replicasPerPrimary: 1
+
+# -----------------------------------------------------------------------------
+# Naming
+# -----------------------------------------------------------------------------
+nameOverride: ""
+fullnameOverride: ""
+
+# -----------------------------------------------------------------------------
+# StatefulSet
+# -----------------------------------------------------------------------------
+statefulset:
+  # OrderedReady forces deterministic bootstrap order; required for the
+  # init-cluster.sh logic that elects ordinal-0 as the bootstrapper.
+  podManagementPolicy: OrderedReady
+  # Time for the preStop hook to run CLUSTER FAILOVER TAKEOVER + CLUSTER FORGET
+  # before SIGKILL. 60s is a safe default; lower for fast pod churn.
+  terminationGracePeriodSeconds: 60
+
+# -----------------------------------------------------------------------------
+# Persistence — required for cluster mode. Without persistence, a pod restart
+# loses its on-disk node ID and slot ownership; recovery requires manual
+# intervention.
+# -----------------------------------------------------------------------------
+persistence:
+  enabled: true
+  storageClass: gp3
+  size: 100Gi
+  accessModes:
+    - ReadWriteOnce
+
+# -----------------------------------------------------------------------------
+# Service ports
+# -----------------------------------------------------------------------------
+ports:
+  client: 6379
+  bus: 16379
+  metrics: 9121
+
+# -----------------------------------------------------------------------------
+# Authentication
+#
+# When auth.enabled = true the chart expects a Kubernetes Secret named
+# `auth.existingSecret` with key `auth.existingSecretPasswordKey` holding the
+# default ACL password. If auth.existingSecret is empty, the chart generates a
+# Secret named `<release>-auth` with a random 32-character password (you'll
+# need to retrieve it via `kubectl get secret`).
+# -----------------------------------------------------------------------------
+auth:
+  enabled: true
+  existingSecret: ""
+  existingSecretPasswordKey: "default"
+  # Auto-generated when existingSecret is empty
+  generatedSecretName: ""
+
+# -----------------------------------------------------------------------------
+# Valkey configuration
+#
+# valkeyConfig is appended verbatim to /data/conf/valkey.conf inside the pod.
+# The chart adds the cluster-mode flags, persistence flags, and auth ACL on
+# top of whatever you put here.
+# -----------------------------------------------------------------------------
+valkeyConfig: |
+  # Memory + eviction
+  maxmemory 12gb
+  maxmemory-policy noeviction
+
+  # Persistence — both AOF and RDB for max durability
+  appendonly yes
+  appendfsync everysec
+  auto-aof-rewrite-percentage 100
+  auto-aof-rewrite-min-size 64mb
+  save 900 1
+  save 300 10
+  save 60 10000
+
+  # Operational visibility
+  slowlog-log-slower-than 10000
+  latency-monitor-threshold 100
+
+valkeyLogLevel: notice
+
+# -----------------------------------------------------------------------------
+# Resources
+#
+# Set requests.memory == limits.memory to avoid CoW OOM during BGSAVE.
+# Target ~70-80% of node RAM. Defaults below fit r7g.large (16 GiB).
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: "1000m"
+    memory: "12Gi"
+  limits:
+    memory: "16Gi"
+
+# -----------------------------------------------------------------------------
+# Scheduling
+#
+# Defaults match the data-on-eks Valkey NodePool. Pods land on Graviton
+# r7g/r8g on-demand instances spread across AZs.
+# -----------------------------------------------------------------------------
+nodeSelector:
+  NodeGroupType: valkey
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: valkey
+    effect: NoSchedule
+
+# Hard AZ spread by default — prevents two pods landing in the same AZ until
+# the cluster has at least 3 AZs of capacity. Switch whenUnsatisfiable to
+# ScheduleAnyway for dev/test in single-AZ clusters.
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: valkey-cluster
+
+affinity: {}
+
+# -----------------------------------------------------------------------------
+# PodDisruptionBudget — maxUnavailable: 1 matches the quorum tolerance of
+# cluster mode (1 primary loss is tolerated; 2+ stalls failover).
+# -----------------------------------------------------------------------------
+pdb:
+  enabled: true
+  maxUnavailable: 1
+
+# -----------------------------------------------------------------------------
+# NetworkPolicy
+# -----------------------------------------------------------------------------
+networkPolicy:
+  enabled: false
+  # Application namespaces allowed to reach the cluster on port 6379.
+  # Each entry is a namespaceSelector matchLabels block.
+  allowedFrom: []
+  #  - matchLabels:
+  #      role: app
+
+# -----------------------------------------------------------------------------
+# ServiceAccount
+# -----------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# -----------------------------------------------------------------------------
+# Pod-level security
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: false   # Valkey writes config + state to /data
+  runAsNonRoot: true
+  runAsUser: 1000
+
+podAnnotations: {}
+podLabels: {}
+
+# -----------------------------------------------------------------------------
+# Metrics — Prometheus exporter sidecar (oliver006/redis_exporter)
+# -----------------------------------------------------------------------------
+metrics:
+  enabled: true
+  image:
+    registry: ghcr.io
+    repository: oliver006/redis_exporter
+    tag: v1.79.0
+    pullPolicy: IfNotPresent
+  resources: {}
+  serviceMonitor:
+    enabled: true
+    namespace: ""        # default = release namespace
+    interval: 30s
+    additionalLabels: {}
+
+# -----------------------------------------------------------------------------
+# Bootstrap script tuning (advanced)
+# -----------------------------------------------------------------------------
+bootstrap:
+  # How long the script waits for ordinal-0 to declare cluster_state:ok before
+  # giving up and exiting non-zero (which restarts the pod).
+  waitForBootstrapTimeoutSeconds: 600
+  # How long to wait for each peer to PING before assuming the cluster is fresh.
+  peerPingTimeoutSeconds: 120
+  # Sleep before issuing `--cluster create` to let CoreDNS settle.
+  preCreateSleepSeconds: 10

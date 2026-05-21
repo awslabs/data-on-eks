@@ -1,0 +1,23 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "valkey-cluster.fullname" . }}
+  namespace: {{ default .Release.Namespace .Values.metrics.serviceMonitor.namespace }}
+  labels:
+    {{- include "valkey-cluster.labels" . | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "valkey-cluster.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http-metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      path: /metrics
+{{- end }}

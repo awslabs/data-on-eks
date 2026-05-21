@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "valkey-cluster.fullname" . }}-scripts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "valkey-cluster.labels" . | nindent 4 }}
+data:
+  init-cluster.sh: |-
+{{ .Files.Get "scripts/init-cluster.sh" | indent 4 }}
+  readiness.sh: |-
+{{ .Files.Get "scripts/readiness.sh" | indent 4 }}
+  prestop.sh: |-
+{{ .Files.Get "scripts/prestop.sh" | indent 4 }}

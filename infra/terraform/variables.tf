@@ -51,13 +51,12 @@ variable "vpc_cidr" {
 variable "secondary_cidrs" {
   description = "List of secondary CIDR blocks to associate with the VPC"
   type        = list(string)
-  # Default includes four /16 blocks (two per AZ for a 2-AZ deployment).
+  # Default includes three /16 blocks (one per AZ for a 3-AZ deployment).
   # Replace these with your own non-overlapping /16 ranges when deploying.
   default = [
     "100.64.0.0/16",
     "100.65.0.0/16",
     "100.66.0.0/16",
-    "100.67.0.0/16",
   ]
 
   validation {
@@ -270,4 +269,14 @@ DESC
     condition     = var.eks_pcp_tier == null || contains(["XL", "2XL", "4XL", "8XL"], coalesce(var.eks_pcp_tier, ""))
     error_message = "eks_pcp_tier must be null or one of: XL, 2XL, 4XL, 8XL"
   }
+}
+
+#---------------------------------------------------------------
+# Valkey
+#---------------------------------------------------------------
+
+variable "enable_valkey" {
+  description = "Enable Valkey, an in-memory key/value datastore (Redis fork), deployed in cluster mode via the Bitnami Helm chart. All other Valkey configuration (cluster topology, persistence, AUTH secret name, backup schedule, restore source, etc.) lives in `helm-values/valkey.yaml`."
+  type        = bool
+  default     = false
 }

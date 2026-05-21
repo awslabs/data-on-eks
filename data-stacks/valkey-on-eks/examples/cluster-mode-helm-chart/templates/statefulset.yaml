@@ -1,0 +1,247 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "valkey-cluster.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "valkey-cluster.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "valkey-cluster.headlessServiceName" . }}
+  replicas: {{ .Values.replicaCount }}
+  podManagementPolicy: {{ .Values.statefulset.podManagementPolicy }}
+  selector:
+    matchLabels:
+      {{- include "valkey-cluster.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "valkey-cluster.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        # Trigger a rolling restart whenever the config or scripts change.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-config.yaml") . | sha256sum }}
+        checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "valkey-cluster.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.statefulset.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      # ---------------------------------------------------------------------
+      # initContainer — copy chart's valkey.conf into the per-pod /data so
+      # the main container can append per-pod state (cluster.conf etc.).
+      # Also writes the ACL file from the auth Secret if auth is enabled.
+      # ---------------------------------------------------------------------
+      initContainers:
+        - name: prepare-config
+          image: {{ include "valkey-cluster.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /data/conf
+              cp /chart-config/valkey.conf /data/conf/valkey.conf
+              {{- if .Values.auth.enabled }}
+              # Append masteruser/masterauth so replicas authenticate to their
+              # primary during PSYNC. Without these, replicas hit NOAUTH on the
+              # initial sync handshake and never finish replicating.
+              printf '\nmasteruser replication-user\nmasterauth %s\n' "${VALKEY_PASSWORD}" \
+                >> /data/conf/valkey.conf
+              # Write the ACL file. Using printf (not heredoc) so $VALKEY_PASSWORD
+              # is expanded by the shell at runtime — avoids leaving the literal
+              # placeholder string in the file.
+              # NOTE on +@all: we deliberately do NOT add -@dangerous to the
+              # default user. `INFO`, `CLUSTER`, and `ACL` are all in the
+              # @dangerous category — `valkey-cli --cluster create` needs them.
+              # If you want a restricted client user, add a second user below
+              # with `~* +@all -@dangerous` and keep `default` as the cluster
+              # admin. Customize via .Values.valkeyConfig.
+              # The replication-user needs the full PSYNC/REPLCONF surface so
+              # the replica handshake (including SET-CLUSTER-NODE-ID and the
+              # initial RDB transfer) authenticates correctly.
+              printf 'user default on >%s ~* &* +@all\nuser replication-user on >%s ~* &* +psync +sync +replconf +ping +cluster|nodes +cluster|info\n' \
+                "${VALKEY_PASSWORD}" "${VALKEY_PASSWORD}" \
+                > /data/conf/users.acl
+              chmod 0600 /data/conf/users.acl
+              {{- end }}
+          env:
+            {{- if .Values.auth.enabled }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            {{- end }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: chart-config, mountPath: /chart-config }
+
+      # ---------------------------------------------------------------------
+      # Main container — runs the bootstrap script in background, then exec's
+      # the Valkey server. The script issues CLUSTER MEET / REPLICATE against
+      # localhost once the server is up.
+      # ---------------------------------------------------------------------
+      containers:
+        - name: valkey
+          image: {{ include "valkey-cluster.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Background: cluster bootstrap/rejoin coordinator
+              /scripts/init-cluster.sh &
+              # Foreground: Valkey server
+              exec valkey-server /data/conf/valkey.conf
+          env:
+            - name: FULLNAME
+              value: {{ include "valkey-cluster.fullname" . }}
+            - name: HEADLESS_SVC
+              value: {{ include "valkey-cluster.headlessServiceName" . }}
+            - name: NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: HOSTNAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_IP
+              valueFrom: { fieldRef: { fieldPath: status.podIP } }
+            - name: REPLICAS
+              value: "{{ .Values.replicaCount }}"
+            - name: REPLICAS_PER_PRIMARY
+              value: "{{ .Values.replicasPerPrimary }}"
+            - name: PEER_PING_TIMEOUT
+              value: "{{ .Values.bootstrap.peerPingTimeoutSeconds }}"
+            - name: WAIT_FOR_BOOTSTRAP_TIMEOUT
+              value: "{{ .Values.bootstrap.waitForBootstrapTimeoutSeconds }}"
+            - name: PRE_CREATE_SLEEP
+              value: "{{ .Values.bootstrap.preCreateSleepSeconds }}"
+            {{- if .Values.auth.enabled }}
+            - name: VALKEYCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            {{- end }}
+          ports:
+            - { name: tcp-client, containerPort: {{ .Values.ports.client }}, protocol: TCP }
+            - { name: tcp-bus, containerPort: {{ .Values.ports.bus }}, protocol: TCP }
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli ${VALKEYCLI_AUTH:+-a $VALKEYCLI_AUTH --no-auth-warning} ping"]
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli ${VALKEYCLI_AUTH:+-a $VALKEYCLI_AUTH --no-auth-warning} ping"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            exec:
+              command: ["/scripts/readiness.sh"]
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 6
+            failureThreshold: 10
+            successThreshold: 1
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/scripts/prestop.sh"]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: scripts, mountPath: /scripts }
+
+        {{- if .Values.metrics.enabled }}
+        - name: metrics
+          image: {{ include "valkey-cluster.metricsImage" . }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: REDIS_EXPORTER_IS_CLUSTER
+              value: "true"
+            - name: REDIS_ADDR
+              value: "redis://127.0.0.1:{{ .Values.ports.client }}"
+            {{- if .Values.auth.enabled }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            {{- end }}
+          ports:
+            - { name: http-metrics, containerPort: {{ .Values.ports.metrics }}, protocol: TCP }
+          {{- with .Values.metrics.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
+
+      volumes:
+        - name: chart-config
+          configMap:
+            name: {{ include "valkey-cluster.fullname" . }}-config
+            defaultMode: 0444
+        - name: scripts
+          configMap:
+            name: {{ include "valkey-cluster.fullname" . }}-scripts
+            defaultMode: 0555
+        {{- if not .Values.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "valkey-cluster.labels" . | nindent 10 }}
+      spec:
+        accessModes:
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}

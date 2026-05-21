@@ -1,0 +1,58 @@
+==============================================================================
+ Valkey Cluster Mode — installed
+==============================================================================
+
+Topology: {{ include "valkey-cluster.primaryCount" . }} primaries × {{ .Values.replicasPerPrimary }} replica(s) per primary
+Total pods: {{ .Values.replicaCount }}
+
+The bootstrap script runs in each pod's main container in the background and
+forms the cluster automatically. Watch progress:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }} -w
+
+Once all {{ .Values.replicaCount }} pods are 1/{{ if .Values.metrics.enabled }}2{{ else }}1{{ end }} or 2/2 Running, verify cluster health:
+
+{{- if .Values.auth.enabled }}
+
+  PASS=$(kubectl -n {{ .Release.Namespace }} get secret {{ include "valkey-cluster.secretName" . }} \
+           -o jsonpath='{{ printf "{.data.%s}" .Values.auth.existingSecretPasswordKey }}' | base64 -d)
+
+  kubectl -n {{ .Release.Namespace }} exec {{ include "valkey-cluster.fullname" . }}-0 -c valkey -- \
+    valkey-cli -a "$PASS" --no-auth-warning cluster info
+
+  # Expected:
+  #   cluster_state:ok
+  #   cluster_slots_assigned:16384
+  #   cluster_slots_ok:16384
+  #   cluster_known_nodes:{{ .Values.replicaCount }}
+  #   cluster_size:{{ include "valkey-cluster.primaryCount" . }}
+{{- else }}
+
+  kubectl -n {{ .Release.Namespace }} exec {{ include "valkey-cluster.fullname" . }}-0 -c valkey -- \
+    valkey-cli cluster info
+{{- end }}
+
+Endpoints (from any namespace):
+
+  Headless (per-pod DNS, gossip):
+    {{ include "valkey-cluster.headlessServiceName" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ports.client }}
+  Per-pod:
+    {{ include "valkey-cluster.fullname" . }}-N.{{ include "valkey-cluster.headlessServiceName" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ports.client }}
+    (where N is 0..{{ sub (int .Values.replicaCount) 1 }})
+
+Cluster-aware clients (Lettuce, Jedis, ioredis, redis-py >= 4.1, go-redis,
+valkey-glide) point at any subset of the per-pod endpoints; they discover the
+slot map via CLUSTER SLOTS at startup and route subsequent commands directly
+to the owning primary.
+
+To uninstall:
+
+  helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+  # PVCs are NOT deleted by `helm uninstall` — drop them manually:
+  kubectl -n {{ .Release.Namespace }} delete pvc -l app.kubernetes.io/instance={{ .Release.Name }}
+
+For the full operations guide (scaling, rebalancing, recovery), see
+the data-on-eks documentation:
+  https://awslabs.github.io/data-on-eks/docs/datastacks/databases/valkey-on-eks/cluster-mode
+
+==============================================================================

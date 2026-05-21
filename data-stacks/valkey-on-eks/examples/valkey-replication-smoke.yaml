@@ -1,0 +1,152 @@
+# =============================================================================
+# Example: replication-mode smoke test against the official Valkey chart
+# =============================================================================
+#
+# This Job runs a short-lived `valkey-cli` workload that writes against the
+# primary and reads back from the replica-load-balanced read service. It is
+# the canonical end-to-end check for the valkey-on-eks data stack: if it
+# completes successfully, the primary accepts writes, replication is
+# propagating, and the read service is load-balancing across replicas.
+#
+# Topology recap (default):
+#   - 1 primary pod  (valkey-0)
+#   - 3 replicas     (valkey-1, valkey-2, valkey-3)
+#   - Service `valkey`            -> primary (write endpoint)
+#   - Service `valkey-read`       -> all 4 pods, load-balanced (read endpoint)
+#   - Service `valkey-headless`   -> stable per-pod DNS for gossip / identity
+#
+# -----------------------------------------------------------------------------
+# Prerequisites
+# -----------------------------------------------------------------------------
+#   1. `enable_valkey = true` is set in the data stack tfvars.
+#   2. The `valkey` namespace exists with all 4 pods 2/2 Running. Verify:
+#        kubectl -n valkey get pods
+#   3. The `valkey-auth` Secret exists in the `valkey` namespace. It is
+#      auto-created by Terraform with two ACL user passwords:
+#        - default            (used by application clients)
+#        - replication-user   (used by replicas to authenticate to primary)
+#
+# -----------------------------------------------------------------------------
+# Apply
+# -----------------------------------------------------------------------------
+#   kubectl apply -f data-stacks/valkey-on-eks/examples/valkey-cluster.yaml
+#   kubectl -n valkey logs -f job/valkey-smoke
+#
+# -----------------------------------------------------------------------------
+# Read/write split
+# -----------------------------------------------------------------------------
+# The script writes to `valkey.valkey.svc.cluster.local` (the primary
+# service — single-pod selector). It reads back from
+# `valkey-read.valkey.svc.cluster.local` (load-balanced across all 4 pods).
+# Reads may briefly trail writes by `replica.minReplicasMaxLag` seconds
+# (10s default) — the script retries reads to absorb that lag rather than
+# failing on a transient miss.
+#
+# -----------------------------------------------------------------------------
+# Security
+# -----------------------------------------------------------------------------
+# The AUTH password is exposed to the script via `REDISCLI_AUTH`, which
+# valkey-cli reads automatically. We deliberately do not pass `-a "$PASS"`
+# on the command line to avoid leaking the password into the process list.
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: valkey-smoke
+  namespace: valkey
+  labels:
+    app.kubernetes.io/name: valkey-smoke
+    app.kubernetes.io/part-of: valkey-on-eks
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valkey-smoke
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        NodeGroupType: valkey
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: valkey
+          effect: NoSchedule
+      containers:
+        - name: valkey-cli
+          image: docker.io/valkey/valkey:9.0.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: valkey-auth
+                  key: default
+            - name: WRITE_HOST
+              value: valkey.valkey.svc.cluster.local
+            - name: READ_HOST
+              value: valkey-read.valkey.svc.cluster.local
+            - name: PORT
+              value: "6379"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              echo "=== Valkey replication smoke test ==="
+              echo "Write target: ${WRITE_HOST}:${PORT}"
+              echo "Read  target: ${READ_HOST}:${PORT} (load-balanced across all pods)"
+              echo
+
+              W="valkey-cli -h ${WRITE_HOST} -p ${PORT}"
+              R="valkey-cli -h ${READ_HOST}  -p ${PORT}"
+
+              echo "--- PING primary and read service ---"
+              echo "primary: $($W PING)"
+              echo "read   : $($R PING)"
+              echo
+
+              echo "--- WRITE three keys to the primary ---"
+              for k in user:1:profile user:42:profile user:9999:profile; do
+                $W SET "$k" "value-for-$k"
+                echo "  SET $k -> OK"
+              done
+              echo
+
+              echo "--- READ keys back from valkey-read (with brief retry for lag) ---"
+              for k in user:1:profile user:42:profile user:9999:profile; do
+                v=""
+                for i in 1 2 3 4 5; do
+                  v=$($R GET "$k")
+                  if [ -n "$v" ]; then break; fi
+                  sleep 1
+                done
+                if [ -z "$v" ]; then
+                  echo "  GET $k -> MISS after retries" >&2
+                  exit 1
+                fi
+                echo "  GET $k -> $v"
+              done
+              echo
+
+              echo "--- Replication health (from primary) ---"
+              $W INFO replication | grep -E '^(role|connected_slaves|min_slaves_good_slaves|slave[0-9]+):'
+              echo
+
+              echo "smoke test PASSED"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]

@@ -1,7 +1,7 @@
 data "aws_availability_zones" "available" {}
 
 locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, 2)
+  azs = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
 #---------------------------------------------------------------
@@ -22,19 +22,17 @@ module "vpc" {
   # Primary CIDR - Private and public subnets + Secondary CIDR subnets
   # Build private subnets:
   # 1) one private subnet per AZ from the primary VPC CIDR
-  # 2) two full-size secondary CIDR subnets per AZ taken directly from
+  # 2) one full-size secondary CIDR subnet per AZ taken directly from
   #    `var.secondary_cidrs` (assumed /16 each)
   private_subnets = concat(
     [for k, v in local.azs : cidrsubnet(var.vpc_cidr, 4, k)],
-    [for k in range(length(local.azs)) : var.secondary_cidrs[k * 2]],
-    [for k in range(length(local.azs)) : var.secondary_cidrs[k * 2 + 1]]
+    [for k in range(length(local.azs)) : var.secondary_cidrs[k]]
   )
   public_subnets = [for k, v in local.azs : cidrsubnet(var.vpc_cidr, 8, k + 48)]
 
   private_subnet_names = concat(
     [for k, v in local.azs : "${var.name}-private-${v}"],
-    [for k, v in local.azs : "${var.name}-private-secondary1-${v}"],
-    [for k, v in local.azs : "${var.name}-private-secondary2-${v}"]
+    [for k, v in local.azs : "${var.name}-private-secondary1-${v}"]
   )
   public_subnet_names = [for k, v in local.azs : "${var.name}-public-${v}"]
 
@@ -47,8 +45,8 @@ module "vpc" {
 
   public_subnet_ipv6_prefixes = [for k, v in local.azs : k]
   # We now have: public_subnets (len=AZs), primary private (len=AZs),
-  # and two secondary private per AZ (len=AZs*2) → total private = AZs * 3
-  private_subnet_ipv6_prefixes = [for i in range(length(local.azs) * 3) : i + length(local.azs)] # Start after public prefixes
+  # and one secondary private per AZ (len=AZs) → total private = AZs * 2
+  private_subnet_ipv6_prefixes = [for i in range(length(local.azs) * 2) : i + length(local.azs)] # Start after public prefixes
 
   public_subnet_assign_ipv6_address_on_creation  = true
   private_subnet_assign_ipv6_address_on_creation = true
