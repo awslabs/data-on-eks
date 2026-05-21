@@ -3,6 +3,8 @@ sidebar_position: 6
 sidebar_label: Apache Spark with DataFusion Comet Benchmarks
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import BarChart from '@site/src/components/Charts/BarChart';
 import PieChart from '@site/src/components/Charts/PieChart';
 
@@ -14,20 +16,39 @@ This benchmark evaluates Comet's performance on [Amazon EKS](https://aws.amazon.
 
 
 :::info **TL;DR**
-Our TPC-DS 3TB benchmark shows that **Apache DataFusion Comet (v0.16.0) delivered 32% faster overall performance** compared to native Spark SQL, with variable query-level results.
-Most queries saw improvements up to 71%, while a small set of queries saw ~40% degradation.
+Our TPC-DS 3TB benchmark shows that **Apache DataFusion Comet (v0.16.0)** delivered:
+
+- **32% faster** overall on **Parquet** — most queries improved by up to 71%, with a small set seeing ~40% degradation.
+- **37% faster** overall on **Iceberg** — most queries improved by up to 68%, with a small set seeing ~50% degradation.
 :::
 
 ## TPC-DS 3TB Benchmark Results
 
 ### Summary
 
-Our TPC-DS 3TB benchmark on Amazon EKS demonstrates that **Apache DataFusion Comet (v0.16.0) provides an overall speedup** (**32% faster**) compared to native Spark SQL, with individual queries varying from ~70% faster to ~40% slower.
+Our TPC-DS 3TB benchmark on Amazon EKS demonstrates that **Apache DataFusion Comet (v0.16.0) provides an overall speedup** compared to native Spark SQL on both Parquet and Iceberg table formats, with individual queries varying from ~70% faster to ~50% slower.
+
+<Tabs groupId="format" defaultValue="parquet" values={[
+  {label: 'Parquet', value: 'parquet'},
+  {label: 'Iceberg', value: 'iceberg'},
+]}>
+<TabItem value="parquet">
 
 | Name | Completion Time (seconds) | Speedup |
 |------|---------------------------|---------|
 | Native Spark | 3,650.56 | Baseline |
-| Comet | 3,246.87 | **32% faster** |
+| Comet | 2,467.49 | **32% faster** |
+
+</TabItem>
+<TabItem value="iceberg">
+
+| Name | Completion Time (seconds) | Speedup |
+|------|---------------------------|---------|
+| Native Spark | 4,665.47 | Baseline |
+| Comet | 2,922.30 | **37% faster** |
+
+</TabItem>
+</Tabs>
 
 
 ### Benchmark Infrastructure
@@ -87,6 +108,12 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
 ```
 
 ## Performance Results
+
+<Tabs groupId="format" defaultValue="parquet" values={[
+  {label: 'Parquet', value: 'parquet'},
+  {label: 'Iceberg', value: 'iceberg'},
+]}>
+<TabItem value="parquet">
 
 ### Overall Performance
 
@@ -507,6 +534,144 @@ Storage utilization (IOPS and throughput) showed Comet with higher peak IOPS tha
 
 
 **Summary**: Comet uses slightly more memory than Native Spark (higher peak and elevated baseline between queries), while CPU, network, and storage utilization remain comparable. The 11% overall speedup comes without a significant increase in resource consumption. Since Comet performs most compute off-heap in its native Rust engine, operators may be able to reduce on-heap JVM memory per executor and allocate more toward off-heap, potentially improving cost efficiency.
+
+</TabItem>
+<TabItem value="iceberg">
+
+### Overall Performance
+
+<BarChart
+  title="Total Runtime Comparison"
+  data={{
+    labels: ['Default Iceberg', 'DataFusion Comet Iceberg 0.16.0'],
+    datasets: [{
+      label: 'Runtime (seconds)',
+      data: [4665.47, 2922.30],
+      backgroundColor: ['#27ae60', '#27ae60'],
+      borderColor: ['#229954', '#229954'],
+      borderWidth: 2
+    }]
+  }}
+  options={{
+    scales: {
+      y: { title: { display: true, text: 'Runtime (seconds)' } }
+    }
+  }}
+  height="300px"
+/>
+
+| Name | Completion Time (seconds) | Performance |
+|------|---------------------------|-------------|
+| Default Iceberg | 4,665.47 | Baseline |
+| DataFusion Comet Iceberg 0.16.0 | 2,922.30 | **1.60×** (+37% time) |
+
+### Performance Distribution
+
+<PieChart
+  title="Query Performance Distribution"
+  type="doughnut"
+  data={{
+    labels: ['20%+ improvement', '10-20% improvement', '±10%', '10-20% degradation', '20%+ degradation'],
+    datasets: [{
+      data: [93, 6, 1, 0, 3],
+      backgroundColor: ['#27ae60', '#3498db', '#f39c12', '#e67e22', '#e74c3c'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  }}
+/>
+
+| Performance Range | Query Count | Percentage |
+|---|---|---|
+| 20%+ improvement | 93 | 90% |
+| 10-20% improvement | 6 | 6% |
+| ±10% | 1 | 1% |
+| 10-20% degradation | 0 | 0% |
+| 20%+ degradation | 3 | 3% |
+
+### Top 10 Query Improvements
+
+<BarChart
+  title="Top 10 Query Improvements (% faster with DataFusion Comet Iceberg 0.16.0)"
+  data={{
+    labels: ['q86', 'q56', 'q90', 'q67', 'q97', 'q49', 'q38', 'q35', 'q87', 'q78'],
+    datasets: [
+      {
+        label: 'Improvement %',
+        data: [68, 68, 63, 63, 61, 60, 53, 52, 52, 51],
+        backgroundColor: '#27ae60',
+        borderColor: '#229954',
+        borderWidth: 1
+      }
+    ]
+  }}
+  options={{
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Improvement (%)' }
+      },
+      x: {
+        title: { display: true, text: 'TPC-DS Queries' }
+      }
+    }
+  }}
+  height="400px"
+/>
+
+| Query | Default Iceberg (s) | DataFusion Comet Iceberg 0.16.0 (s) | Speedup |
+|---|---|---|---|
+| q86-v4.0 | 14.9 | 4.7 | **3.14×** (+68%) |
+| q56-v4.0 | 6.7 | 2.2 | **3.09×** (+68%) |
+| q90-v4.0 | 31.6 | 11.6 | **2.73×** (+63%) |
+| q67-v4.0 | 147.6 | 54.3 | **2.72×** (+63%) |
+| q97-v4.0 | 46.5 | 18.3 | **2.53×** (+61%) |
+| q49-v4.0 | 47.6 | 19.1 | **2.49×** (+60%) |
+| q38-v4.0 | 30.5 | 14.4 | **2.12×** (+53%) |
+| q35-v4.0 | 21.8 | 10.4 | **2.09×** (+52%) |
+| q87-v4.0 | 30.5 | 14.6 | **2.08×** (+52%) |
+| q78-v4.0 | 151.9 | 74.4 | **2.04×** (+51%) |
+
+### Top 3 Query Regressions
+
+Only three queries showed regressions.
+
+<BarChart
+  title="Top 3 Query Regressions (% slower with DataFusion Comet Iceberg 0.16.0)"
+  data={{
+    labels: ['q39b', 'q39a', 'q50'],
+    datasets: [
+      {
+        label: 'Degradation %',
+        data: [53, 37, 22],
+        backgroundColor: '#e74c3c',
+        borderColor: '#c0392b',
+        borderWidth: 1
+      }
+    ]
+  }}
+  options={{
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Degradation (%)' }
+      },
+      x: {
+        title: { display: true, text: 'TPC-DS Queries' }
+      }
+    }
+  }}
+  height="400px"
+/>
+
+| Query | Default Iceberg (s) | DataFusion Comet Iceberg 0.16.0 (s) | Degradation |
+|---|---|---|---|
+| q39b-v4.0 | 4.9 | 7.4 | **53%** slower (0.65×) |
+| q39a-v4.0 | 5.8 | 8.0 | **37%** slower (0.73×) |
+| q50-v4.0 | 96.3 | 117.4 | **22%** slower (0.82×) |
+
+</TabItem>
+</Tabs>
 
 
 ## When to Consider Comet
