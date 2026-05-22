@@ -39,6 +39,7 @@ module "karpenter" {
     CniIpv6Policy                = aws_iam_policy.cni_ipv6_policy.arn
     EbsVolumeManagement          = aws_iam_policy.karpenter_ebs_volume_policy.arn
   }
+  enable_inline_policy = true
 }
 
 

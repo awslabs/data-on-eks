@@ -1,43 +1,28 @@
 ---
 title: ClickHouse on EKS
-sidebar_position: 0
+sidebar_position: 1
 ---
 
 import '@site/src/css/datastack-tiles.css';
 
+{/*
+  ClickHouse Examples Tiles Documentation:
+
+  🎯 To add a new ClickHouse example tile:
+  1. Copy the showcase-card template below and modify the content
+  2. Update icon (emoji), title, description, tags, and link
+  3. Use tag classes for specific colors: infrastructure, storage, performance, optimization, guide
+  4. No CSS knowledge required!
+
+  📚 Full documentation: /src/components/DatastackTileExamples.md
+  🌟 Featured tiles: Add "featured" class to highlight special examples
+*/}
+
 # ClickHouse on EKS Stack
-[ClickHouse](https://clickhouse.com/) is a high-performance, column-oriented SQL database management system (DBMS) for online analytical processing (OLAP) that is open sourced under the Apache 2.0 license.
 
+[ClickHouse](https://clickhouse.com/) deployment on Amazon EKS — a high-performance, column-oriented OLAP database for real-time analytics on petabyte-scale datasets. This stack provisions a sharded, replicated ClickHouse cluster managed by the [ClickHouse Kubernetes operator](https://github.com/Altinity/clickhouse-operator) with a dedicated [ClickHouse Keeper](https://clickhouse.com/docs/en/guides/sre/keeper/clickhouse-keeper) ensemble for replication and distributed DDL coordination.
 
-OLAP is software technology you can use to analyze business data from different points of view. Organizations collect and store data from multiple data sources, such as websites, applications, smart meters, and internal systems. OLAP helps organizations process and benefit from a growing amount of information by combining and groups this data into categories to provide actionable insights for strategic planning. For example, a retailer stores data about all the products it sells, such as color, size, cost, and location. The retailer also collects customer purchase data, such as the name of the items ordered and total sales value, in a different system. OLAP combines the datasets to answer questions such as which color products are more popular or how product placement impacts sales.
-
-**Some key benefits of Clickhouse include:**
-
-* Real-Time Analytics: ClickHouse can handle real-time data ingestion and analysis, making it suitable for use cases such as monitoring, logging, and event data processing.
-* High Performance: ClickHouse is optimized for analytical workloads, providing fast query execution and high throughput.
-* Scalability: ClickHouse is designed to scale horizontally across multiple nodes, allowing users to store and process petabytes of data across a distributed cluster. It supports sharding and replication for high availability and fault tolerance.
-* Column-Oriented Storage: ClickHouse organizes data by columns rather than rows, which allows for efficient compression and faster query processing, especially for queries that involve aggregations and scans of large datasets.
-* SQL Support: ClickHouse supports a subset of SQL, making it familiar and easy to use for developers and analysts who are already familiar with SQL-based databases.
-* Integrated Data Formats: ClickHouse supports various data formats, including CSV, JSON, Apache Avro, and Apache Parquet, making it flexible for ingesting and querying different types of data.
-
-
-
-Production-ready ClickHouse OLAP database on Amazon EKS. Deploy high-performance analytical databases with columnar storage.
-
-<div style={{
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  color: 'white',
-  padding: '30px',
-  borderRadius: '12px',
-  textAlign: 'center',
-  margin: '30px 0',
-  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-}}>
-  <h2 style={{margin: '0 0 10px 0'}}>🚧 Coming Soon</h2>
-  <p style={{margin: 0, opacity: 0.9}}>This data stack is currently under development. Check back soon for deployment guides and examples!</p>
-</div>
-
-<!-- <div className="getting-started-header">
+<div className="getting-started-header">
 
 ## Getting Started
 
@@ -45,34 +30,33 @@ Production-ready ClickHouse OLAP database on Amazon EKS. Deploy high-performance
 
 <div className="step-card">
 <div className="step-number">1</div>
-<div className="step-number">1</div>
 <div className="step-content">
 <h4>Deploy Infrastructure</h4>
-<p>Set up ClickHouse operator with distributed clusters</p>
+<p>Provision the EKS cluster, Karpenter node pools, and the ClickHouse operator with ArgoCD</p>
 </div>
 </div>
 
 <div className="step-card">
 <div className="step-number">2</div>
 <div className="step-content">
-<h4>Create Tables</h4>
-<p>Define schemas with MergeTree engines and partitioning</p>
+<h4>Launch a ClickHouse Cluster</h4>
+<p>Deploy a sharded, replicated ClickHouse installation backed by ClickHouse Keeper</p>
 </div>
 </div>
 
 <div className="step-card">
 <div className="step-number">3</div>
 <div className="step-content">
-<h4>Ingest Data</h4>
-<p>Stream data from Kafka or batch load from S3</p>
+<h4>Load Sample Data</h4>
+<p>Ingest the ClickHouse <code>hits</code> dataset from S3 into a Distributed/ReplicatedMergeTree table</p>
 </div>
 </div>
 
 <div className="step-card">
 <div className="step-number">4</div>
 <div className="step-content">
-<h4>Query Analytics</h4>
-<p>Run blazing-fast SQL queries on billions of rows</p>
+<h4>Query and Test Failover</h4>
+<p>Run analytical queries, inspect index usage with <code>EXPLAIN</code>, and validate replica failover</p>
 </div>
 </div>
 
@@ -87,16 +71,19 @@ Production-ready ClickHouse OLAP database on Amazon EKS. Deploy high-performance
 <div className="showcase-icon">🏗️</div>
 <div className="showcase-content">
 <h3>Infrastructure Deployment</h3>
-<p className="showcase-description">Complete infrastructure deployment guide for ClickHouse on EKS with distributed cluster setup</p>
+<p className="showcase-description">Deploy a scalable ClickHouse platform on Amazon EKS with Terraform, Karpenter for node auto-scaling, ArgoCD for GitOps management, and the ClickHouse operator for cluster lifecycle.</p>
 </div>
 </div>
 <div className="showcase-tags">
 <span className="tag infrastructure">Infrastructure</span>
-<span className="tag guide">Guide</span>
+<span className="tag">EKS</span>
+<span className="tag">Terraform</span>
+<span className="tag">ArgoCD</span>
+<span className="tag">Karpenter</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/clickhouse-on-eks/infra" className="showcase-link">
-<span>Deploy Infrastructure</span>
+<a href="/data-on-eks/docs/datastacks/databases/clickhouse-on-eks/infra" className="showcase-link">
+<span>View Guide</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
@@ -106,19 +93,21 @@ Production-ready ClickHouse OLAP database on Amazon EKS. Deploy high-performance
 
 <div className="showcase-card">
 <div className="showcase-header">
-<div className="showcase-icon">📊</div>
+<div className="showcase-icon">⚡</div>
 <div className="showcase-content">
-<h3>S3 Data Lake Analytics</h3>
-<p className="showcase-description">Query S3 data lakes directly with ClickHouse S3 table functions for serverless analytics</p>
+<h3>Sample Workload: Hits Dataset</h3>
+<p className="showcase-description">Load the canonical ClickHouse <code>hits</code> Parquet dataset from S3 into a Distributed table over ReplicatedMergeTree, run analytical queries, and demonstrate replica failover by deleting a pod.</p>
 </div>
 </div>
 <div className="showcase-tags">
-<span className="tag storage">Data Lake</span>
 <span className="tag guide">Example</span>
+<span className="tag performance">OLAP</span>
+<span className="tag storage">S3</span>
+<span className="tag">Replication</span>
 </div>
 <div className="showcase-footer">
-<a href="/data-on-eks/docs/datastacks/clickhouse-on-eks/s3-analytics" className="showcase-link">
-<span>Learn More</span>
+<a href="/data-on-eks/docs/datastacks/databases/clickhouse-on-eks/sample-workload" className="showcase-link">
+<span>View Guide</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>
@@ -126,4 +115,6 @@ Production-ready ClickHouse OLAP database on Amazon EKS. Deploy high-performance
 </div>
 </div>
 
-</div> -->
+</div>
+
+{/* End of showcase grid - All styles are now in /src/css/datastack-tiles.css */}

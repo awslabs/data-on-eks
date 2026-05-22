@@ -12,8 +12,8 @@
 apiVersion: clickhouse.com/v1alpha1
 kind: KeeperCluster
 metadata:
-  name: clickhouse-keeper
-  namespace: clickhouse
+  name: test
+  namespace: clickhouse-tests
 spec:
   replicas: 3
   settings:
@@ -33,8 +33,8 @@ spec:
 apiVersion: clickhouse.com/v1alpha1
 kind: ClickHouseCluster
 metadata:
-  name: clickhouse-cluster
-  namespace: clickhouse
+  name: tests
+  namespace: clickhouse-tests
 spec:
   settings:
     logger:
@@ -47,10 +47,10 @@ spec:
       secret:
         name: clickhouse-password
         key: password
-  shards: 1
-  replicas: 1
+  shards: 3
+  replicas: 3
   keeperClusterRef:
-    name: clickhouse-keeper
+    name: test
   dataVolumeClaimSpec:
     accessModes:
       - ReadWriteOnce
@@ -59,16 +59,17 @@ spec:
         storage: 500Gi
   podTemplate:
     nodeSelector:
-      karpenter.k8s.aws/instance-family: r8g
-      karpenter.k8s.aws/instance-size: 4xlarge
+      karpenter.k8s.aws/instance-family: m6g
+      karpenter.k8s.aws/instance-size: 8xlarge
+      karpenter.sh/capacity-type: on-demand
   containerTemplate:
     image:
       repository: clickhouse/clickhouse-server
-      tag: "25.1"
+      tag: "26.3"
     resources:
       requests:
-        cpu: "8"
-        memory: 64Gi
+        cpu: "30"
+        memory: 110Gi
       limits:
-        cpu: "16"
-        memory: 120Gi
+        cpu: "30"
+        memory: 110Gi
