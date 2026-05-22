@@ -1,0 +1,276 @@
+/*
+ * ClickHouse on EKS architecture diagram styles.
+ * Scoped under `.ch-arch-diagram` so they don't bleed into the rest of the site.
+ * Adapted from the ClickHouse on EKS deck slide so the rendering is consistent
+ * regardless of the active Docusaurus color mode.
+ */
+
+.ch-arch-diagram {
+  --ch-amber: #e8530e;
+  --ch-blue: #0ea5e9;
+  --ch-gold: #92700c;
+  --ch-text: #1a2e23;
+  --ch-text-muted: #4a7c5e;
+  --ch-bg: #f0faf4;
+  --ch-surface: #e0f5ea;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin: 1.5rem 0 2rem;
+  width: 100%;
+  font-family: var(--ifm-font-family-base, system-ui, sans-serif);
+}
+
+[data-theme='dark'] .ch-arch-diagram {
+  --ch-amber: #ff6a3d;
+  --ch-blue: #4facfe;
+  --ch-gold: #ffd700;
+  --ch-text: #e8e6e3;
+  --ch-text-muted: #a8a39c;
+  --ch-bg: #1b1b1d;
+  --ch-surface: #242526;
+}
+
+.ch-arch-diagram .ch-arch-operator-wrapper {
+  border: 1.5px dashed var(--ch-text-muted);
+  border-radius: 8px;
+  padding: 2rem 1.5rem 1.5rem;
+  position: relative;
+  background: var(--ch-bg);
+}
+
+.ch-arch-diagram .ch-arch-operator-label {
+  position: absolute;
+  top: -0.7rem;
+  left: 1.2rem;
+  background: var(--ch-bg);
+  padding: 0 0.5rem;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ch-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ch-arch-diagram .ch-arch-layer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ch-arch-diagram .ch-arch-layer-label {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--ch-text-muted);
+  letter-spacing: 0.05em;
+}
+
+.ch-arch-diagram .ch-arch-layer-label b {
+  color: var(--ch-text);
+}
+
+.ch-arch-diagram .ch-arch-nodes {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ch-arch-diagram .ch-arch-shard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--ch-amber);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ch-amber) 8%, transparent);
+  flex: 1 1 0;
+  min-width: 200px;
+}
+
+.ch-arch-diagram .ch-arch-shard-label {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  color: var(--ch-amber);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.ch-arch-diagram .ch-arch-node {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--ch-surface);
+  border: 1px solid color-mix(in srgb, var(--ch-text-muted) 35%, transparent);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--ch-text);
+}
+
+.ch-arch-diagram .ch-arch-node-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: block;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Wrap label text so its box matches the icon box exactly.
+ * Without this, the icon's 16px box is centered against a text node whose
+ * line-box is taller (driven by inherited body line-height), so the visible
+ * glyphs sit off-center relative to the icon. */
+.ch-arch-diagram .ch-arch-node-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  line-height: 1.2;
+  flex: 1 1 auto;
+}
+
+/* Legend in the top-right corner of the EKS Cluster box */
+.ch-arch-diagram .ch-arch-legend {
+  position: absolute;
+  top: -0.7rem;
+  right: 1.2rem;
+  background: var(--ch-bg);
+  padding: 0 0.5rem;
+  display: flex;
+  gap: 1rem;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ch-arch-diagram .ch-arch-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ch-text-muted);
+}
+
+.ch-arch-diagram .ch-arch-legend-item::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.ch-arch-diagram .ch-arch-legend-controller::before {
+  border-color: var(--ch-blue);
+  background: color-mix(in srgb, var(--ch-blue) 14%, transparent);
+}
+
+.ch-arch-diagram .ch-arch-legend-resource::before {
+  border-color: var(--ch-amber);
+  background: color-mix(in srgb, var(--ch-amber) 14%, transparent);
+}
+
+/* Vertical connector between layers, with optional caption */
+.ch-arch-diagram .ch-arch-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0;
+  color: var(--ch-text-muted);
+}
+
+.ch-arch-diagram .ch-arch-connector-line {
+  width: 1px;
+  height: 14px;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.ch-arch-diagram .ch-arch-connector-arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  opacity: 0.7;
+}
+
+.ch-arch-diagram .ch-arch-connector-label {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+/* Side-by-side connector for fan-out (provisions / reconciles).
+ * Mirrors the Applications row (3 equal flex slots with the same gap)
+ * so each connector aligns under its source tile. */
+.ch-arch-diagram .ch-arch-connector-split {
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  padding: 0.1rem 0;
+}
+
+.ch-arch-diagram .ch-arch-connector-split > .ch-arch-connector,
+.ch-arch-diagram .ch-arch-connector-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.ch-arch-diagram .ch-arch-keeper-nodes {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ch-arch-diagram .ch-arch-keeper-node {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--ch-surface);
+  border: 1px solid var(--ch-blue);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--ch-text);
+  flex: 1;
+  min-width: 120px;
+}
+
+.ch-arch-diagram .ch-arch-coordination {
+  position: relative;
+  padding: 0.6rem 0;
+}
+
+.ch-arch-diagram .ch-arch-coordination svg {
+  width: 100%;
+  height: 40px;
+  overflow: visible;
+}
+
+.ch-arch-diagram .ch-arch-coordination-line {
+  stroke: var(--ch-blue);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  fill: none;
+  animation: ch-dash-flow 1.5s linear infinite;
+}
+
+@keyframes ch-dash-flow {
+  to { stroke-dashoffset: -20; }
+}
+
+.ch-arch-diagram .ch-arch-coordination-labels {
+  display: flex;
+  justify-content: space-around;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  color: var(--ch-blue);
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
