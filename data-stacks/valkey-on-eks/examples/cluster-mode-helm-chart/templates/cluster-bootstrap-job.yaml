@@ -1,0 +1,115 @@
+{{/*
+  Post-install / post-upgrade Helm Hook Job: runs the AZ-aware bootstrap that
+  creates the Valkey cluster. The bootstrap.sh script (in the scripts
+  ConfigMap) is idempotent — re-running on upgrade is a no-op once the
+  cluster is healthy.
+
+  When topology.azAwareBootstrap is true, an init container with bitnami/
+  kubectl discovers each pod's AZ via the K8s API and writes a topology file
+  for bootstrap.sh to read. This requires the RBAC objects rendered by
+  bootstrap-rbac.yaml.
+
+  hook-weight: 10 — runs after the StatefulSet (weight 0 default) but after
+  the RBAC objects (also weight 0; RBAC must exist before this Job's pod
+  binds to its ServiceAccount with the granted permissions).
+
+  hook-delete-policy: before-hook-creation,hook-succeeded — the Job is
+  replaced on every install/upgrade and cleaned up on success, leaving
+  Failed jobs around for debugging.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "valkey-cluster.fullname" . }}-bootstrap
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "valkey-cluster.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "valkey-cluster.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: bootstrap
+    spec:
+      serviceAccountName: {{ include "valkey-cluster.serviceAccountName" . }}
+      # automountServiceAccountToken is intentionally true here: the
+      # topology-detector init container uses the SA token to call the
+      # K8s API. The main bootstrap container talks to Valkey only.
+      automountServiceAccountToken: {{ .Values.topology.azAwareBootstrap }}
+      restartPolicy: OnFailure
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.topology.azAwareBootstrap }}
+      initContainers:
+        - name: topology
+          image: {{ .Values.topology.kubectlImage }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command: ["/bin/sh", "/scripts/topology.sh"]
+          env:
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: INSTANCE
+              value: {{ .Release.Name }}
+            - name: FULLNAME
+              value: {{ include "valkey-cluster.fullname" . }}
+            - name: REPLICAS
+              value: "{{ .Values.replicaCount }}"
+          volumeMounts:
+            - { name: scripts, mountPath: /scripts }
+            - { name: shared, mountPath: /shared }
+      {{- end }}
+      containers:
+        - name: bootstrap
+          image: {{ include "valkey-cluster.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command: ["/bin/sh", "/scripts/bootstrap.sh"]
+          env:
+            - name: FULLNAME
+              value: {{ include "valkey-cluster.fullname" . }}
+            - name: HEADLESS_SVC
+              value: {{ include "valkey-cluster.headlessServiceName" . }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: REPLICAS
+              value: "{{ .Values.replicaCount }}"
+            - name: REPLICAS_PER_PRIMARY
+              value: "{{ .Values.replicasPerPrimary }}"
+            - name: WAIT_TIMEOUT
+              value: "{{ .Values.bootstrap.waitTimeoutSeconds }}"
+            - name: AZ_AWARE
+              value: "{{ .Values.topology.azAwareBootstrap }}"
+            {{- if .Values.auth.enabled }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            {{- end }}
+          volumeMounts:
+            - { name: scripts, mountPath: /scripts }
+            - { name: shared, mountPath: /shared }
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ include "valkey-cluster.fullname" . }}-scripts
+            defaultMode: 0555
+        - name: shared
+          emptyDir: {}

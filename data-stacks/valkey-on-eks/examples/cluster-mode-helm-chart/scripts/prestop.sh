@@ -1,22 +1,22 @@
 #!/bin/sh
-# prestop.sh — graceful master failover + CLUSTER FORGET broadcast.
+# prestop.sh — graceful primary failover at shutdown.
 #
 # Runs when Kubernetes signals pod termination (drain, rolling update, scale
-# down). Without this, master-pod restarts cause a 10-15 second write outage
-# per shard while the cluster's failure detector takes effect.
+# down). If this pod is currently a primary, we issue CLUSTER FAILOVER against
+# one of its replicas to hand off the role before the server exits. Without
+# this, primary-pod restarts cause a 10-15 second write outage per shard while
+# the cluster's failure detector takes effect.
 #
 # Steps:
-#   1. If this pod is a master, find one of its replicas and trigger
-#      `CLUSTER FAILOVER TAKEOVER` against the replica. The replica becomes
-#      the new master immediately (no consensus wait). Clients see a
-#      sub-second blip.
-#   2. Tell every other peer to `CLUSTER FORGET` this node. Without this, the
-#      peers' gossip tables carry the dead node forward and the next pod
-#      rejoin sequence has to clean it up.
-#   3. SHUTDOWN SAVE.
+#   1. If primary: pick a healthy replica, issue CLUSTER FAILOVER, wait for
+#      the role swap.
+#   2. SHUTDOWN — Valkey persists then exits.
 #
-# The container's terminationGracePeriodSeconds must be large enough to cover
-# all three steps — 60 seconds is the chart default.
+# CLUSTER FORGET is intentionally NOT broadcast here. The pod is coming back
+# (StatefulSet) and forgetting + meeting again loses gossip state for no
+# benefit. The cluster's own failure detector handles the transient absence.
+#
+# terminationGracePeriodSeconds must cover step 1 + 2 — 30s default is safe.
 
 set -eu
 
@@ -29,7 +29,7 @@ fi
 
 VALKEY_CLI="valkey-cli ${AUTH_OPT}"
 
-NODE_ID=$(${VALKEY_CLI} cluster nodes 2>/dev/null | awk '/myself/ {print $1; exit}')
+NODE_ID=$(${VALKEY_CLI} cluster nodes 2>/dev/null | awk '/myself/ {print $1; exit}' || echo "")
 if [ -z "${NODE_ID}" ]; then
   log "could not retrieve node ID; exiting cleanly so K8s terminates the pod"
   exit 0
@@ -38,34 +38,30 @@ fi
 ROLE=$(${VALKEY_CLI} info replication 2>/dev/null | awk -F: '/^role:/ {gsub(/[\r\n ]/,"",$2); print $2}')
 log "node_id=${NODE_ID} role=${ROLE}"
 
-# ---------------------------------------------------------------------------
-# Step 1 — graceful failover if we're a master
-# ---------------------------------------------------------------------------
 if [ "${ROLE}" = "master" ]; then
-  log "master role detected; initiating failover"
+  log "primary role detected; initiating failover"
 
-  SLAVE_ADDR=$(${VALKEY_CLI} cluster nodes 2>/dev/null \
-                | awk -v me="${NODE_ID}" '$4 == me && /slave/ && !/fail/ {print $2; exit}' \
-                | cut -d'@' -f1)
+  REPLICA_ADDR=$(${VALKEY_CLI} cluster nodes 2>/dev/null \
+                  | awk -v me="${NODE_ID}" '$4 == me && /slave/ && !/fail/ {print $2; exit}' \
+                  | cut -d'@' -f1)
 
-  if [ -z "${SLAVE_ADDR}" ]; then
+  if [ -z "${REPLICA_ADDR}" ]; then
     log "no healthy replica found; skipping failover"
   else
-    SLAVE_HOST="${SLAVE_ADDR%:*}"
-    SLAVE_PORT="${SLAVE_ADDR##*:}"
-    log "issuing CLUSTER FAILOVER TAKEOVER to ${SLAVE_HOST}:${SLAVE_PORT}"
-    ${VALKEY_CLI} -h "${SLAVE_HOST}" -p "${SLAVE_PORT}" cluster failover takeover || \
-      log "TAKEOVER returned non-zero; continuing"
+    REPLICA_HOST="${REPLICA_ADDR%:*}"
+    REPLICA_PORT="${REPLICA_ADDR##*:}"
+    log "issuing CLUSTER FAILOVER to ${REPLICA_HOST}:${REPLICA_PORT}"
+    ${VALKEY_CLI} -h "${REPLICA_HOST}" -p "${REPLICA_PORT}" cluster failover || \
+      log "CLUSTER FAILOVER returned non-zero; continuing"
 
-    # Wait up to 20 seconds for the replica to be promoted
     i=0
     while [ "${i}" -lt 10 ]; do
-      sleep 2
-      NEW_ROLE=$(${VALKEY_CLI} -h "${SLAVE_HOST}" -p "${SLAVE_PORT}" \
+      sleep 1
+      NEW_ROLE=$(${VALKEY_CLI} -h "${REPLICA_HOST}" -p "${REPLICA_PORT}" \
                   info replication 2>/dev/null \
                   | awk -F: '/^role:/ {gsub(/[\r\n ]/,"",$2); print $2}')
       if [ "${NEW_ROLE}" = "master" ]; then
-        log "replica ${SLAVE_HOST}:${SLAVE_PORT} promoted to master"
+        log "replica ${REPLICA_HOST}:${REPLICA_PORT} promoted to primary"
         break
       fi
       i=$((i + 1))
@@ -73,22 +69,6 @@ if [ "${ROLE}" = "master" ]; then
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# Step 2 — broadcast CLUSTER FORGET to every other peer
-# ---------------------------------------------------------------------------
-log "broadcasting CLUSTER FORGET ${NODE_ID} to peers"
-PEERS=$(${VALKEY_CLI} cluster nodes 2>/dev/null | grep -v "myself" | awk '{print $2}' | cut -d'@' -f1)
-for PEER in ${PEERS}; do
-  PEER_HOST="${PEER%:*}"
-  PEER_PORT="${PEER##*:}"
-  ${VALKEY_CLI} -h "${PEER_HOST}" -p "${PEER_PORT}" cluster forget "${NODE_ID}" >/dev/null 2>&1 &
-done
-wait
-sleep 2
-
-# ---------------------------------------------------------------------------
-# Step 3 — graceful shutdown with persistence
-# ---------------------------------------------------------------------------
-log "issuing SHUTDOWN SAVE"
-${VALKEY_CLI} shutdown save || log "SHUTDOWN SAVE returned non-zero (server may have already exited)"
+log "issuing SHUTDOWN"
+${VALKEY_CLI} shutdown nosave || log "SHUTDOWN returned non-zero (server may have already exited)"
 exit 0

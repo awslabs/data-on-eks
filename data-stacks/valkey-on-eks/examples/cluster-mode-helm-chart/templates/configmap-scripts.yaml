@@ -6,9 +6,276 @@ metadata:
   labels:
     {{- include "valkey-cluster.labels" . | nindent 4 }}
 data:
-  init-cluster.sh: |-
-{{ .Files.Get "scripts/init-cluster.sh" | indent 4 }}
   readiness.sh: |-
 {{ .Files.Get "scripts/readiness.sh" | indent 4 }}
   prestop.sh: |-
 {{ .Files.Get "scripts/prestop.sh" | indent 4 }}
+  topology.sh: |-
+    #!/bin/sh
+    # topology.sh — discover each pod's AZ via the Kubernetes API. Runs in the
+    # init container of the bootstrap Job. Writes a tab-separated file
+    # /shared/topology with one line per pod:
+    #     <pod-name>\t<zone>
+    # Used by bootstrap.sh to pick AZ-diverse primary/replica pairings.
+    set -eu
+    NS="${NAMESPACE:?NAMESPACE required}"
+    INSTANCE="${INSTANCE:?INSTANCE required}"
+    FULLNAME="${FULLNAME:?FULLNAME required}"
+    REPLICAS="${REPLICAS:?REPLICAS required}"
+    SELECTOR="app.kubernetes.io/instance=${INSTANCE},app.kubernetes.io/name=valkey-cluster,statefulset.kubernetes.io/pod-name"
+
+    : > /shared/topology
+    # Iterate pods by their stable StatefulSet name (FULLNAME-0..N-1) and
+    # look each up directly. Avoids fragile JSONPath filtering — the
+    # bootstrap pod doesn't share this naming pattern so it's naturally
+    # excluded. Retries each pod up to 30s in case the StatefulSet
+    # controller hasn't assigned a nodeName yet.
+    i=0
+    while [ "${i}" -lt "${REPLICAS}" ]; do
+      pod="${FULLNAME}-${i}"
+      node=""
+      waited=0
+      while [ -z "${node}" ] && [ "${waited}" -lt 30 ]; do
+        node=$(kubectl get pod -n "${NS}" "${pod}" -o jsonpath='{.spec.nodeName}' 2>/dev/null || echo "")
+        if [ -z "${node}" ]; then
+          sleep 2
+          waited=$((waited + 2))
+        fi
+      done
+      if [ -z "${node}" ]; then
+        echo "ERROR: pod ${pod} has no nodeName after 30s; aborting" >&2
+        exit 1
+      fi
+      zone=$(kubectl get node "${node}" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}')
+      printf '%s\t%s\n' "${pod}" "${zone:-unknown}" >> /shared/topology
+      i=$((i + 1))
+    done
+
+    echo "[topology] discovered:"
+    cat /shared/topology
+  bootstrap.sh: |-
+    #!/bin/sh
+    # bootstrap.sh — idempotent, AZ-aware cluster bootstrap.
+    #
+    # Steps:
+    #   1. Wait for every pod to PING.
+    #   2. If cluster_state:ok with 16384 slots already, exit (idempotent —
+    #      re-running the Hook Job on upgrade is a no-op).
+    #   3. Read /shared/topology (written by the kubectl init container).
+    #      Pick PRIMARIES: one pod per unique AZ, up to `primaries` count.
+    #      The remaining pods are REPLICAS, each paired with the primary
+    #      whose AZ is most different from the replica's AZ.
+    #   4. `valkey-cli --cluster create <primaries> --cluster-replicas 0`.
+    #   5. For each replica: resolve its target primary's node ID, then
+    #      `valkey-cli --cluster add-node <replica> <primary> --cluster-slave
+    #         --cluster-master-id <id>`.
+    #   6. Verify cluster_state:ok with 16384 slots.
+    #
+    # Without AZ-aware pairing (topology.azAwareBootstrap=false), step 3
+    # uses ordinal order and step 4 uses --cluster-replicas N. That fallback
+    # path is kept for users in single-AZ clusters or dev environments.
+    set -eu
+
+    # Surface the topology file content so we can verify what the script saw.
+    if [ -s /shared/topology ]; then
+      echo "[bootstrap] /shared/topology content:"
+      cat /shared/topology
+    fi
+
+    log() { printf '[bootstrap] %s\n' "$*"; }
+
+    REPLICAS="${REPLICAS:?REPLICAS required}"
+    REPLICAS_PER_PRIMARY="${REPLICAS_PER_PRIMARY:?REPLICAS_PER_PRIMARY required}"
+    FULLNAME="${FULLNAME:?FULLNAME required}"
+    HEADLESS_SVC="${HEADLESS_SVC:?HEADLESS_SVC required}"
+    NAMESPACE="${NAMESPACE:?NAMESPACE required}"
+    AZ_AWARE="${AZ_AWARE:-true}"
+    WAIT_TIMEOUT="${WAIT_TIMEOUT:-300}"
+    PORT=6379
+
+    PRIMARIES=$(( REPLICAS / (1 + REPLICAS_PER_PRIMARY) ))
+
+    AUTH_OPT=""
+    if [ -n "${VALKEY_PASSWORD:-}" ]; then
+      AUTH_OPT="-a ${VALKEY_PASSWORD} --no-auth-warning"
+    fi
+
+    # Helpers ----------------------------------------------------------------
+    fqdn_for() {
+      printf '%s-%s.%s.%s.svc.cluster.local' \
+        "${FULLNAME}" "$1" "${HEADLESS_SVC}" "${NAMESPACE}"
+    }
+
+    # Step 1 — wait for every pod -------------------------------------------
+    log "waiting for ${REPLICAS} pods to PING (timeout ${WAIT_TIMEOUT}s)"
+    waited=0
+    i=0
+    while [ "${i}" -lt "${REPLICAS}" ]; do
+      host=$(fqdn_for "${i}")
+      until valkey-cli ${AUTH_OPT} -h "${host}" ping 2>/dev/null | grep -q PONG; do
+        if [ "${waited}" -ge "${WAIT_TIMEOUT}" ]; then
+          log "ERROR: ${host} did not respond within ${WAIT_TIMEOUT}s"
+          exit 1
+        fi
+        sleep 2
+        waited=$((waited + 2))
+      done
+      log "  PONG ${host}"
+      i=$((i + 1))
+    done
+
+    # Step 2 — idempotency check --------------------------------------------
+    PRIMARY0=$(fqdn_for 0)
+    EXISTING=$(valkey-cli ${AUTH_OPT} -h "${PRIMARY0}" cluster info 2>/dev/null || echo "")
+    if echo "${EXISTING}" | grep -q "cluster_state:ok" \
+       && echo "${EXISTING}" | grep -q "cluster_slots_assigned:16384"; then
+      log "cluster already bootstrapped (cluster_state:ok, 16384 slots); skipping"
+      exit 0
+    fi
+
+    # Step 3 — pick primaries and replicas, AZ-aware ------------------------
+    PRIMARY_LIST=""   # space-separated "ordinal:az"
+    REPLICA_LIST=""   # space-separated "ordinal:az"
+
+    if [ "${AZ_AWARE}" = "true" ] && [ -s /shared/topology ]; then
+      log "AZ-aware pairing (topology file present)"
+      # Group pods by AZ. Pick one pod per AZ as primary, in AZ order, until
+      # we have PRIMARIES primaries. Spill leftover pods into REPLICA_LIST.
+      ALL_LINES=$(awk -v fn="${FULLNAME}" '
+        { sub("^" fn "-","",$1); print $1 "\t" $2 }' /shared/topology \
+        | sort -k2,2 -k1n,1n)
+
+      log "all pods by (az, ordinal):"
+      echo "${ALL_LINES}" | while IFS="$(printf '\t')" read -r ord az; do
+        log "  ord=${ord} az=${az}"
+      done
+
+      # First pass: pick one primary per unique AZ.
+      seen_azs=""
+      remaining=""
+      echo "${ALL_LINES}" | while IFS="$(printf '\t')" read -r ord az; do
+        if [ -z "${ord}" ]; then continue; fi
+        if echo " ${seen_azs} " | grep -q " ${az} "; then
+          echo "REPLICA ${ord}:${az}"
+        else
+          echo "PRIMARY ${ord}:${az}"
+          seen_azs="${seen_azs} ${az}"
+        fi
+      done > /tmp/pass1
+
+      PRIMARY_LIST=$(awk '/^PRIMARY/ {print $2}' /tmp/pass1 | tr '\n' ' ')
+      REPLICA_LIST=$(awk '/^REPLICA/ {print $2}' /tmp/pass1 | tr '\n' ' ')
+
+      # If we got fewer primaries than needed (e.g., only 1 AZ available),
+      # promote replicas in order until we reach PRIMARIES count.
+      have=$(echo "${PRIMARY_LIST}" | wc -w | tr -d ' ')
+      while [ "${have}" -lt "${PRIMARIES}" ]; do
+        first_rep=$(echo "${REPLICA_LIST}" | awk '{print $1}')
+        if [ -z "${first_rep}" ]; then
+          log "ERROR: not enough pods to form ${PRIMARIES} primaries"
+          exit 1
+        fi
+        PRIMARY_LIST="${PRIMARY_LIST} ${first_rep}"
+        REPLICA_LIST=$(echo "${REPLICA_LIST}" | sed "s/${first_rep} //")
+        have=$((have + 1))
+      done
+    else
+      log "non-AZ-aware fallback (ordinal pairing)"
+      i=0
+      while [ "${i}" -lt "${PRIMARIES}" ]; do
+        PRIMARY_LIST="${PRIMARY_LIST} ${i}:unknown"
+        i=$((i + 1))
+      done
+      while [ "${i}" -lt "${REPLICAS}" ]; do
+        REPLICA_LIST="${REPLICA_LIST} ${i}:unknown"
+        i=$((i + 1))
+      done
+    fi
+
+    log "primaries: ${PRIMARY_LIST}"
+    log "replicas:  ${REPLICA_LIST}"
+
+    # Step 4 — create primary-only cluster ----------------------------------
+    PRIMARY_NODES=""
+    for entry in ${PRIMARY_LIST}; do
+      ord="${entry%:*}"
+      PRIMARY_NODES="${PRIMARY_NODES} $(fqdn_for ${ord}):${PORT}"
+    done
+
+    log "creating primary-only cluster: ${PRIMARY_NODES}"
+    # shellcheck disable=SC2086
+    echo "yes" | valkey-cli ${AUTH_OPT} --cluster create ${PRIMARY_NODES} \
+      --cluster-replicas 0
+
+    sleep 3
+
+    # Step 5 — add each replica, AZ-aware round-robin -----------------------
+    # True round-robin with an advancing pointer:
+    #   - For each replica, start scanning from `primary_round` and pick the
+    #     first primary in a different AZ.
+    #   - Advance `primary_round` past the chosen primary so the next replica
+    #     starts from the slot after.
+    # This gives perfect load balance when topology spread is honored
+    # (1 primary per AZ + 1 replica per AZ), and gracefully degrades to
+    # best-effort when AZ distribution is skewed.
+    : > /tmp/primaries_indexed
+    idx=0
+    for entry in ${PRIMARY_LIST}; do
+      printf '%s\t%s\n' "${idx}" "${entry}" >> /tmp/primaries_indexed
+      idx=$((idx + 1))
+    done
+    num_primaries="${idx}"
+
+    primary_round=0
+    for replica_entry in ${REPLICA_LIST}; do
+      rep_ord="${replica_entry%:*}"
+      rep_az="${replica_entry#*:}"
+
+      chosen_idx=""
+      chosen_ord=""
+      offset=0
+      while [ "${offset}" -lt "${num_primaries}" ]; do
+        candidate_idx=$(( (primary_round + offset) % num_primaries ))
+        candidate=$(awk -v i="${candidate_idx}" '$1==i {print $2}' /tmp/primaries_indexed)
+        candidate_ord="${candidate%:*}"
+        candidate_az="${candidate#*:}"
+        if [ "${candidate_az}" != "${rep_az}" ]; then
+          chosen_idx="${candidate_idx}"
+          chosen_ord="${candidate_ord}"
+          break
+        fi
+        offset=$((offset + 1))
+      done
+
+      if [ -z "${chosen_idx}" ]; then
+        # Single-AZ fallback — accept same-AZ pairing.
+        chosen_idx="${primary_round}"
+        candidate=$(awk -v i="${chosen_idx}" '$1==i {print $2}' /tmp/primaries_indexed)
+        chosen_ord="${candidate%:*}"
+      fi
+      primary_round=$(( (chosen_idx + 1) % num_primaries ))
+
+      rep_fqdn=$(fqdn_for "${rep_ord}")
+      prim_fqdn=$(fqdn_for "${chosen_ord}")
+      log "adding replica ${rep_ord}(az=${rep_az}) → primary ${chosen_ord}"
+
+      master_id=$(valkey-cli ${AUTH_OPT} -h "${prim_fqdn}" cluster myid)
+      echo "yes" | valkey-cli ${AUTH_OPT} --cluster add-node \
+        "${rep_fqdn}:${PORT}" "${prim_fqdn}:${PORT}" \
+        --cluster-slave --cluster-master-id "${master_id}"
+    done
+
+    # Step 6 — verify -------------------------------------------------------
+    sleep 3
+    POST=$(valkey-cli ${AUTH_OPT} -h "${PRIMARY0}" cluster info 2>/dev/null || echo "")
+    if ! echo "${POST}" | grep -q "cluster_state:ok"; then
+      log "ERROR: cluster_state not ok"
+      echo "${POST}"
+      exit 1
+    fi
+    if ! echo "${POST}" | grep -q "cluster_slots_assigned:16384"; then
+      log "ERROR: 16384 slots not assigned"
+      echo "${POST}"
+      exit 1
+    fi
+    log "cluster_state:ok, 16384/16384 slots assigned"

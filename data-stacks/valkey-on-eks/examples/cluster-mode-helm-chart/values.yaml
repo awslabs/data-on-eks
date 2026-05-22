@@ -1,9 +1,20 @@
 # =============================================================================
 # Valkey Cluster Mode — local chart values
 #
-# Deploys a Valkey cluster (sharded, gossip-based) as a StatefulSet plus a
-# headless Service plus the bootstrap/readiness/preStop scripts mounted via
-# ConfigMaps. No operator. No external chart dependency.
+# Deploys a Valkey cluster (sharded, gossip-based) as a single StatefulSet
+# (podManagementPolicy: Parallel) plus a headless Service plus a post-install
+# Helm Hook Job that runs `valkey-cli --cluster create`. No operator. No
+# external chart dependency.
+#
+# Design notes:
+#   - Auth uses `requirepass` + `primaryauth` (Valkey 8.0+ rename of
+#     `masterauth`) sourced from a Kubernetes Secret. No ACL file. This
+#     sidesteps the NOPERM/SYNC trap and keeps the single-password model.
+#   - The Secret value is preserved across `helm upgrade` via a `lookup`
+#     guard on the secret-auth template — re-running upgrade does NOT
+#     rotate the password.
+#   - Cluster bootstrap happens once, in a post-install Hook Job. The Job
+#     is idempotent (no-ops if cluster_state:ok is already true).
 #
 # Pair this chart with the data-on-eks Valkey NodePool (label
 # NodeGroupType=valkey, taint workload=valkey:NoSchedule) — see
@@ -17,7 +28,7 @@ image:
   registry: docker.io
   repository: valkey/valkey
   pullPolicy: IfNotPresent
-  # Empty = use Chart.appVersion (currently 9.0.2)
+  # Empty = use Chart.appVersion
   tag: ""
 
 imagePullSecrets: []
@@ -45,17 +56,29 @@ fullnameOverride: ""
 # StatefulSet
 # -----------------------------------------------------------------------------
 statefulset:
-  # OrderedReady forces deterministic bootstrap order; required for the
-  # init-cluster.sh logic that elects ordinal-0 as the bootstrapper.
-  podManagementPolicy: OrderedReady
-  # Time for the preStop hook to run CLUSTER FAILOVER TAKEOVER + CLUSTER FORGET
-  # before SIGKILL. 60s is a safe default; lower for fast pod churn.
-  terminationGracePeriodSeconds: 60
+  # 30s is enough for the preStop hook (CLUSTER FAILOVER + SHUTDOWN ~5-10s).
+  # Increase if you run with very large maxmemory and `shutdown save` semantics.
+  terminationGracePeriodSeconds: 30
 
 # -----------------------------------------------------------------------------
 # Persistence — required for cluster mode. Without persistence, a pod restart
 # loses its on-disk node ID and slot ownership; recovery requires manual
 # intervention.
+#
+# Storage choice cheat-sheet (per-shard working set → StorageClass):
+#   ≤ 32 GiB                  : `gp3` (default, 3000 IOPS / 125 MiB/s baseline)
+#   ≤ 256 GiB                 : `valkey-gp3` (6000 IOPS / 500 MiB/s) — see
+#                               data-stacks/valkey-on-eks/examples/
+#                               storageclass-valkey-gp3.yaml
+#   ≤ 1 TiB                   : custom gp3 StorageClass at 16000 IOPS /
+#                               1000 MiB/s (the gp3 ceiling)
+#   > 1 TiB OR p99-latency-   : io2 Block Express, or local NVMe instance store
+#     sensitive                 with `local-storage` (replica resync is your
+#                               only recovery path)
+#
+# Size the PVC at ~2× the per-shard working set: BGSAVE/AOF rewrite forks
+# and produces a fresh on-disk copy while the previous one is still live.
+# Default 100 GiB is fine for a 12 GiB shard.
 # -----------------------------------------------------------------------------
 persistence:
   enabled: true
@@ -75,25 +98,26 @@ ports:
 # -----------------------------------------------------------------------------
 # Authentication
 #
-# When auth.enabled = true the chart expects a Kubernetes Secret named
-# `auth.existingSecret` with key `auth.existingSecretPasswordKey` holding the
-# default ACL password. If auth.existingSecret is empty, the chart generates a
-# Secret named `<release>-auth` with a random 32-character password (you'll
-# need to retrieve it via `kubectl get secret`).
+# When auth.enabled = true and auth.existingSecret is empty, the chart
+# generates a Secret named `<release>-auth` with a random 32-character
+# password on FIRST install. Subsequent `helm upgrade` runs preserve the
+# existing password (via `lookup`) — they do not rotate.
+#
+# To manage the password externally (recommended for production): create
+# a Secret out-of-band with key `default`, then set
+# `auth.existingSecret: my-secret-name`.
 # -----------------------------------------------------------------------------
 auth:
   enabled: true
   existingSecret: ""
   existingSecretPasswordKey: "default"
-  # Auto-generated when existingSecret is empty
-  generatedSecretName: ""
 
 # -----------------------------------------------------------------------------
 # Valkey configuration
 #
-# valkeyConfig is appended verbatim to /data/conf/valkey.conf inside the pod.
-# The chart adds the cluster-mode flags, persistence flags, and auth ACL on
-# top of whatever you put here.
+# valkeyConfig is appended verbatim to the chart's valkey.conf. The chart adds
+# the cluster-mode flags, persistence flags, and the include for /data/conf/
+# auth.conf (requirepass + primaryauth) on top of whatever you put here.
 # -----------------------------------------------------------------------------
 valkeyConfig: |
   # Memory + eviction
@@ -119,7 +143,7 @@ valkeyLogLevel: notice
 # Resources
 #
 # Set requests.memory == limits.memory to avoid CoW OOM during BGSAVE.
-# Target ~70-80% of node RAM. Defaults below fit r7g.large (16 GiB).
+# Target ~70-80% of node RAM. Defaults fit r7g.large / r7i.large (16 GiB).
 # -----------------------------------------------------------------------------
 resources:
   requests:
@@ -132,7 +156,7 @@ resources:
 # Scheduling
 #
 # Defaults match the data-on-eks Valkey NodePool. Pods land on Graviton
-# r7g/r8g on-demand instances spread across AZs.
+# r7g/r8g (or x86 r7i) on-demand instances spread across AZs.
 # -----------------------------------------------------------------------------
 nodeSelector:
   NodeGroupType: valkey
@@ -154,7 +178,33 @@ topologySpreadConstraints:
       matchLabels:
         app.kubernetes.io/name: valkey-cluster
 
-affinity: {}
+# Soft pod anti-affinity at the host level — keeps pods on different nodes
+# when capacity allows, without blocking scheduling when it doesn't.
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: valkey-cluster
+
+# -----------------------------------------------------------------------------
+# Kernel tuning (privileged init container)
+#
+# Disables Transparent Huge Pages and bumps net.core.somaxconn /
+# vm.overcommit_memory. THP is the single most damaging default for Valkey
+# in production — it causes ~500x write amplification during BGSAVE forks.
+# Required by Valkey's startup warnings.
+#
+# Runs as root with `privileged: true` for ~1 second. If your namespace has
+# a restricted PSA profile, you need an exception for this container OR
+# disable kernelTuning and run a separate DaemonSet that applies the same
+# settings at the node level.
+# -----------------------------------------------------------------------------
+kernelTuning:
+  enabled: true
 
 # -----------------------------------------------------------------------------
 # PodDisruptionBudget — maxUnavailable: 1 matches the quorum tolerance of
@@ -165,7 +215,9 @@ pdb:
   maxUnavailable: 1
 
 # -----------------------------------------------------------------------------
-# NetworkPolicy
+# NetworkPolicy — default off because most users haven't configured the
+# `allowedFrom` selectors for their app namespaces yet. Flip to true once
+# you know who needs to reach 6379.
 # -----------------------------------------------------------------------------
 networkPolicy:
   enabled: false
@@ -220,13 +272,39 @@ metrics:
     additionalLabels: {}
 
 # -----------------------------------------------------------------------------
-# Bootstrap script tuning (advanced)
+# Bootstrap Hook Job tuning
 # -----------------------------------------------------------------------------
 bootstrap:
-  # How long the script waits for ordinal-0 to declare cluster_state:ok before
-  # giving up and exiting non-zero (which restarts the pod).
-  waitForBootstrapTimeoutSeconds: 600
-  # How long to wait for each peer to PING before assuming the cluster is fresh.
-  peerPingTimeoutSeconds: 120
-  # Sleep before issuing `--cluster create` to let CoreDNS settle.
-  preCreateSleepSeconds: 10
+  # How long the bootstrap Job waits for ALL pods to PING before bailing.
+  # Increase if your cluster pulls images slowly or schedules on cold nodes.
+  waitTimeoutSeconds: 300
+
+# -----------------------------------------------------------------------------
+# Topology / AZ-aware bootstrap
+#
+# When azAwareBootstrap is true, the post-install Hook Job runs an init
+# container with kubectl that discovers each pod's AZ (via the
+# topology.kubernetes.io/zone node label) and writes a topology file. The
+# main bootstrap container then issues explicit --cluster create + per-replica
+# --cluster add-node --cluster-slave calls so each replica is paired with a
+# primary in a DIFFERENT AZ — the cluster survives any single-AZ outage.
+#
+# Without this, `valkey-cli --cluster create --cluster-replicas N` pairs
+# primary i with replica i+N using only hostname patterns, and in a K8s
+# StatefulSet (where all pods share a hostname prefix) the pairing is
+# effectively ordinal-based — primary and replica frequently land in the
+# same AZ, defeating the HA guarantee.
+#
+# Disable only for single-AZ clusters or environments where the bootstrap
+# pod cannot be granted the modest list/get RBAC it needs (see
+# bootstrap-rbac.yaml).
+# -----------------------------------------------------------------------------
+topology:
+  azAwareBootstrap: true
+  # kubectl image for the topology init container. Needs sh + kubectl in
+  # $PATH. alpine/k8s is multi-arch (amd64, arm64), small (~50 MB), and
+  # ships with /bin/sh + kubectl pre-installed.
+  # Avoid `bitnami/kubectl` — Docker Hub no longer serves free Bitnami
+  # tags. Avoid `registry.k8s.io/kubectl` and `rancher/kubectl` — both
+  # are distroless / no shell.
+  kubectlImage: alpine/k8s:1.32.2

@@ -4,13 +4,14 @@
 
 Topology: {{ include "valkey-cluster.primaryCount" . }} primaries × {{ .Values.replicasPerPrimary }} replica(s) per primary
 Total pods: {{ .Values.replicaCount }}
-
-The bootstrap script runs in each pod's main container in the background and
-forms the cluster automatically. Watch progress:
+Bootstrap: post-install Hook Job runs `valkey-cli --cluster create` once the
+StatefulSet pods are reachable. Watch progress:
 
   kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }} -w
+  kubectl -n {{ .Release.Namespace }} logs job/{{ include "valkey-cluster.fullname" . }}-bootstrap -f
 
-Once all {{ .Values.replicaCount }} pods are 1/{{ if .Values.metrics.enabled }}2{{ else }}1{{ end }} or 2/2 Running, verify cluster health:
+Once the Job completes and all {{ .Values.replicaCount }} pods are 2/{{ if .Values.metrics.enabled }}2{{ else }}1{{ end }} Ready, verify
+cluster health:
 
 {{- if .Values.auth.enabled }}
 
@@ -45,14 +46,13 @@ valkey-glide) point at any subset of the per-pod endpoints; they discover the
 slot map via CLUSTER SLOTS at startup and route subsequent commands directly
 to the owning primary.
 
-To uninstall:
+To uninstall (preserves the Secret and PVCs):
 
   helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
-  # PVCs are NOT deleted by `helm uninstall` — drop them manually:
-  kubectl -n {{ .Release.Namespace }} delete pvc -l app.kubernetes.io/instance={{ .Release.Name }}
 
-For the full operations guide (scaling, rebalancing, recovery), see
-the data-on-eks documentation:
-  https://awslabs.github.io/data-on-eks/docs/datastacks/databases/valkey-on-eks/cluster-mode
+To fully purge:
+
+  kubectl -n {{ .Release.Namespace }} delete pvc -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl -n {{ .Release.Namespace }} delete secret {{ include "valkey-cluster.secretName" . }}
 
 ==============================================================================

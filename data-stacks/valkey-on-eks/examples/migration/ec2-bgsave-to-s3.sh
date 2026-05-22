@@ -41,7 +41,10 @@ PORT="6379"
 PASSWORD=""
 S3_BUCKET=""
 S3_PREFIX="valkey-migration"
-SHARD="0"
+SHARD=""      # Optional. Empty (default) → key is <prefix>/dump.rdb, which is
+              # what the replication-mode restore initContainer reads. Set to
+              # an integer for cluster-mode migrations where each shard writes
+              # to <prefix>/<shard>/dump.rdb.
 RDB_PATH="/var/lib/valkey/dump.rdb"
 TIMEOUT_SECONDS="1800"
 
@@ -60,7 +63,10 @@ Optional:
   --port PORT            Source Valkey port. Default: 6379.
   --password PASSWORD    AUTH password. If omitted, REDISCLI_AUTH env var is used.
   --s3-prefix PREFIX     Key prefix under the bucket. Default: valkey-migration.
-  --shard ORDINAL        Source shard ordinal (0-based). Default: 0.
+  --shard ORDINAL        Optional. Cluster-mode shard ordinal (0-based). If
+                         omitted (replication mode), the key is just
+                         <prefix>/dump.rdb. If set, the key becomes
+                         <prefix>/<shard>/dump.rdb.
   --rdb-path PATH        Local path where BGSAVE writes the RDB.
                          Default: /var/lib/valkey/dump.rdb.
   --timeout-seconds N    Max seconds to wait for LASTSAVE to advance.
@@ -150,7 +156,7 @@ if ! [[ "$PORT" =~ ^[0-9]+$ ]]; then
     err "--port must be an integer, got: $PORT"
     exit 64
 fi
-if ! [[ "$SHARD" =~ ^[0-9]+$ ]]; then
+if [[ -n "$SHARD" ]] && ! [[ "$SHARD" =~ ^[0-9]+$ ]]; then
     err "--shard must be a non-negative integer, got: $SHARD"
     exit 64
 fi
@@ -179,7 +185,14 @@ done
 
 # Strip trailing slash from prefix so we never produce a double slash in the key.
 S3_PREFIX="${S3_PREFIX%/}"
-S3_KEY="${S3_PREFIX}/${SHARD}/dump.rdb"
+if [[ -n "$SHARD" ]]; then
+    # Cluster-mode path: one RDB per shard.
+    S3_KEY="${S3_PREFIX}/${SHARD}/dump.rdb"
+else
+    # Replication-mode path: single RDB; matches the restore initContainer's
+    # default KEY="${S3_PREFIX}/dump.rdb" in helm-values/valkey.yaml.
+    S3_KEY="${S3_PREFIX}/dump.rdb"
+fi
 S3_URI="s3://${S3_BUCKET}/${S3_KEY}"
 
 # ---------------------------------------------------------------------------
@@ -190,7 +203,7 @@ cat <<BANNER
  Valkey/Redis EC2 -> S3 pre-migration snapshot
 ------------------------------------------------------------------------------
  Source host         : ${HOST}:${PORT}
- Shard ordinal       : ${SHARD}
+ Shard ordinal       : ${SHARD:-<replication-mode, no shard>}
  Local RDB path      : ${RDB_PATH}
  Destination         : ${S3_URI}
  BGSAVE timeout      : ${TIMEOUT_SECONDS}s
@@ -311,25 +324,30 @@ cat <<SUMMARY
  SUCCESS
 ------------------------------------------------------------------------------
  Source host         : ${HOST}:${PORT}
- Shard ordinal       : ${SHARD}
+ Shard ordinal       : ${SHARD:-<replication-mode, no shard>}
  Uploaded object     : ${S3_URI}
  Object size         : ${REMOTE_SIZE} bytes
 
  NEXT STEP
-   Edit infra/terraform/helm-values/valkey.yaml in your data stack:
+   Edit infra/terraform/helm-values/valkey.yaml — find
+   extraInitContainers[0].env and flip RESTORE_ENABLED + set S3_BUCKET:
 
-       restore:
-         enabled: true
-         s3Bucket: ${S3_BUCKET}
-         s3Prefix: ${S3_PREFIX}
-         onMissing: fail
+       - name: RESTORE_ENABLED
+         value: "true"               # was "false"
+       - name: S3_BUCKET
+         value: "${S3_BUCKET}"       # was ""
+       - name: S3_PREFIX
+         value: "${S3_PREFIX}"
+       - name: ON_MISSING
+         value: "fail"
 
    Then apply the EKS deploy:
 
        cd data-stacks/valkey-on-eks && ./deploy.sh
 
-   Pods will run the restore initContainer on first boot, downloading
-   dump.rdb from the matching s3://${S3_BUCKET}/${S3_PREFIX}/<ordinal>/dump.rdb
-   key for each shard.
+   On first boot of valkey-0 the restore initContainer downloads the RDB
+   from s3://${S3_BUCKET}/${S3_KEY}, places it at /data/dump.rdb, and
+   Valkey loads it on startup. Replicas (valkey-1..3) full-sync from the
+   freshly-restored primary — they do NOT pull the RDB from S3 again.
 ==============================================================================
 SUMMARY

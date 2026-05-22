@@ -8,10 +8,20 @@ metadata:
 spec:
   serviceName: {{ include "valkey-cluster.headlessServiceName" . }}
   replicas: {{ .Values.replicaCount }}
-  podManagementPolicy: {{ .Values.statefulset.podManagementPolicy }}
+  # Parallel is mandatory for cluster mode: the post-install Hook Job needs
+  # every pod reachable before it can call --cluster create, but readiness
+  # depends on the cluster being formed. OrderedReady deadlocks.
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       {{- include "valkey-cluster.selectorLabels" . | nindent 6 }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+      # One pod at a time — matches the PDB and gives the cluster's failure
+      # detector room to promote a replica before the next pod restarts.
+      maxUnavailable: 1
   template:
     metadata:
       labels:
@@ -20,9 +30,12 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       annotations:
-        # Trigger a rolling restart whenever the config or scripts change.
         checksum/config: {{ include (print $.Template.BasePath "/configmap-config.yaml") . | sha256sum }}
         checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
+        {{- if .Values.metrics.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.ports.metrics }}"
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -53,12 +66,48 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
-      # ---------------------------------------------------------------------
-      # initContainer — copy chart's valkey.conf into the per-pod /data so
-      # the main container can append per-pod state (cluster.conf etc.).
-      # Also writes the ACL file from the auth Secret if auth is enabled.
-      # ---------------------------------------------------------------------
       initContainers:
+        # -------------------------------------------------------------------
+        # 1. sysctl / THP — production tuning. Runs privileged for ~1 second.
+        #    Valkey will refuse to fork during BGSAVE/AOF rewrite if THP is
+        #    enabled — write amplification can be ~500x.
+        # -------------------------------------------------------------------
+        {{- if .Values.kernelTuning.enabled }}
+        - name: kernel-tuning
+          image: {{ include "valkey-cluster.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsNonRoot: false
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # Disable Transparent Huge Pages.
+              for f in /host-sys/kernel/mm/transparent_hugepage/enabled \
+                       /host-sys/kernel/mm/transparent_hugepage/defrag; do
+                if [ -w "${f}" ]; then
+                  echo never > "${f}"
+                fi
+              done
+              # net.core.somaxconn — backlog for tcp-backlog (default 511 is fine,
+              # but raising the kernel ceiling avoids silent clipping).
+              sysctl -w net.core.somaxconn=65535 || true
+              # vm.overcommit_memory=1 — required to avoid BGSAVE/COPY failures
+              # when memory is tight (Valkey advisory in startup logs).
+              sysctl -w vm.overcommit_memory=1 || true
+              echo "[kernel-tuning] done"
+          volumeMounts:
+            - { name: host-sys, mountPath: /host-sys }
+        {{- end }}
+
+        # -------------------------------------------------------------------
+        # 2. prepare-config — render /data/conf/auth.conf with requirepass +
+        #    primaryauth, sourced from the Secret. The main valkey.conf is a
+        #    ConfigMap mount and never carries the password.
+        # -------------------------------------------------------------------
         - name: prepare-config
           image: {{ include "valkey-cluster.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -70,29 +119,21 @@ spec:
             - |
               set -eu
               mkdir -p /data/conf
-              cp /chart-config/valkey.conf /data/conf/valkey.conf
               {{- if .Values.auth.enabled }}
-              # Append masteruser/masterauth so replicas authenticate to their
-              # primary during PSYNC. Without these, replicas hit NOAUTH on the
-              # initial sync handshake and never finish replicating.
-              printf '\nmasteruser replication-user\nmasterauth %s\n' "${VALKEY_PASSWORD}" \
-                >> /data/conf/valkey.conf
-              # Write the ACL file. Using printf (not heredoc) so $VALKEY_PASSWORD
-              # is expanded by the shell at runtime — avoids leaving the literal
-              # placeholder string in the file.
-              # NOTE on +@all: we deliberately do NOT add -@dangerous to the
-              # default user. `INFO`, `CLUSTER`, and `ACL` are all in the
-              # @dangerous category — `valkey-cli --cluster create` needs them.
-              # If you want a restricted client user, add a second user below
-              # with `~* +@all -@dangerous` and keep `default` as the cluster
-              # admin. Customize via .Values.valkeyConfig.
-              # The replication-user needs the full PSYNC/REPLCONF surface so
-              # the replica handshake (including SET-CLUSTER-NODE-ID and the
-              # initial RDB transfer) authenticates correctly.
-              printf 'user default on >%s ~* &* +@all\nuser replication-user on >%s ~* &* +psync +sync +replconf +ping +cluster|nodes +cluster|info\n' \
-                "${VALKEY_PASSWORD}" "${VALKEY_PASSWORD}" \
-                > /data/conf/users.acl
-              chmod 0600 /data/conf/users.acl
+              # Rewrite each pod start so a rotated Secret (rare — the chart's
+              # `lookup` keeps it stable across upgrades) actually takes effect.
+              # primaryauth = Valkey's renamed `masterauth`; both names work
+              # but the rename has been preferred since 8.0.
+              umask 077
+              cat > /data/conf/auth.conf <<EOF
+              requirepass ${VALKEY_PASSWORD}
+              primaryauth ${VALKEY_PASSWORD}
+              EOF
+              chmod 0600 /data/conf/auth.conf
+              {{- else }}
+              # Auth disabled — write an empty include target so valkey.conf's
+              # `include` directive doesn't fail.
+              : > /data/conf/auth.conf
               {{- end }}
           env:
             {{- if .Values.auth.enabled }}
@@ -104,54 +145,36 @@ spec:
             {{- end }}
           volumeMounts:
             - { name: data, mountPath: /data }
-            - { name: chart-config, mountPath: /chart-config }
 
-      # ---------------------------------------------------------------------
-      # Main container — runs the bootstrap script in background, then exec's
-      # the Valkey server. The script issues CLUSTER MEET / REPLICATE against
-      # localhost once the server is up.
-      # ---------------------------------------------------------------------
       containers:
         - name: valkey
           image: {{ include "valkey-cluster.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              # Background: cluster bootstrap/rejoin coordinator
-              /scripts/init-cluster.sh &
-              # Foreground: Valkey server
-              exec valkey-server /data/conf/valkey.conf
+          # --cluster-announce-* values are mandatory for cluster mode in K8s.
+          # The pod's IP changes on restart, but cluster-preferred-endpoint-type
+          # hostname makes clients use the stable per-pod DNS name. Bus port is
+          # announced explicitly because we set a non-default 16379.
+          command: ["valkey-server"]
+          args:
+            - /chart-config/valkey.conf
+            - --cluster-announce-hostname
+            - $(POD_FQDN)
+            - --cluster-announce-port
+            - "{{ .Values.ports.client }}"
+            - --cluster-announce-bus-port
+            - "{{ .Values.ports.bus }}"
           env:
-            - name: FULLNAME
-              value: {{ include "valkey-cluster.fullname" . }}
-            - name: HEADLESS_SVC
-              value: {{ include "valkey-cluster.headlessServiceName" . }}
             - name: NAMESPACE
               valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
             - name: HOSTNAME
               valueFrom: { fieldRef: { fieldPath: metadata.name } }
             - name: POD_IP
               valueFrom: { fieldRef: { fieldPath: status.podIP } }
-            - name: REPLICAS
-              value: "{{ .Values.replicaCount }}"
-            - name: REPLICAS_PER_PRIMARY
-              value: "{{ .Values.replicasPerPrimary }}"
-            - name: PEER_PING_TIMEOUT
-              value: "{{ .Values.bootstrap.peerPingTimeoutSeconds }}"
-            - name: WAIT_FOR_BOOTSTRAP_TIMEOUT
-              value: "{{ .Values.bootstrap.waitForBootstrapTimeoutSeconds }}"
-            - name: PRE_CREATE_SLEEP
-              value: "{{ .Values.bootstrap.preCreateSleepSeconds }}"
+            - name: POD_FQDN
+              value: "$(HOSTNAME).{{ include "valkey-cluster.headlessServiceName" . }}.$(NAMESPACE).svc.cluster.local"
             {{- if .Values.auth.enabled }}
-            - name: VALKEYCLI_AUTH
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "valkey-cluster.secretName" . }}
-                  key: {{ .Values.auth.existingSecretPasswordKey }}
             - name: VALKEY_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -163,21 +186,21 @@ spec:
             - { name: tcp-bus, containerPort: {{ .Values.ports.bus }}, protocol: TCP }
           startupProbe:
             exec:
-              command: ["sh", "-c", "valkey-cli ${VALKEYCLI_AUTH:+-a $VALKEYCLI_AUTH --no-auth-warning} ping"]
+              command: ["sh", "-c", "valkey-cli ${VALKEY_PASSWORD:+-a $VALKEY_PASSWORD --no-auth-warning} ping"]
             periodSeconds: 5
-            failureThreshold: 30
+            failureThreshold: 60
           livenessProbe:
             exec:
-              command: ["sh", "-c", "valkey-cli ${VALKEYCLI_AUTH:+-a $VALKEYCLI_AUTH --no-auth-warning} ping"]
+              command: ["sh", "-c", "valkey-cli ${VALKEY_PASSWORD:+-a $VALKEY_PASSWORD --no-auth-warning} ping"]
             periodSeconds: 10
             timeoutSeconds: 3
           readinessProbe:
             exec:
               command: ["/scripts/readiness.sh"]
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 6
-            failureThreshold: 10
+            failureThreshold: 6
             successThreshold: 1
           lifecycle:
             preStop:
@@ -187,7 +210,8 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - { name: data, mountPath: /data }
-            - { name: scripts, mountPath: /scripts }
+            - { name: chart-config, mountPath: /chart-config, readOnly: true }
+            - { name: scripts, mountPath: /scripts, readOnly: true }
 
         {{- if .Values.metrics.enabled }}
         - name: metrics
@@ -224,6 +248,12 @@ spec:
           configMap:
             name: {{ include "valkey-cluster.fullname" . }}-scripts
             defaultMode: 0555
+        {{- if .Values.kernelTuning.enabled }}
+        - name: host-sys
+          hostPath:
+            path: /sys
+            type: Directory
+        {{- end }}
         {{- if not .Values.persistence.enabled }}
         - name: data
           emptyDir: {}

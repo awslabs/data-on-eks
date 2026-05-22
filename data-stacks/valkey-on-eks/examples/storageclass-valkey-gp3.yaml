@@ -1,0 +1,44 @@
+# StorageClass for Valkey data PVCs — high-IOPS / high-throughput gp3.
+#
+# The default `gp3` StorageClass in EKS uses gp3 baseline (3000 IOPS / 125 MiB/s
+# throughput), which is fine for a 12 GiB working-set cache but pinches under
+# any of the following:
+#
+#   - AOF rewrite or BGSAVE on a >32 GiB working set: a 32 GiB RDB dump at
+#     125 MiB/s takes ~4 minutes, doubling fork-time CoW memory pressure.
+#   - Sustained writes >2k ops/sec with `appendfsync everysec`: random small
+#     writes saturate baseline IOPS faster than throughput.
+#   - PSYNC full resync (replica) on a >32 GiB shard.
+#
+# This class bumps to 6000 IOPS / 500 MiB/s — covers everything up to a
+# 256 GiB working set per shard while staying under the gp3 ceiling of
+# 16000 IOPS / 1000 MiB/s. Costs ~$30/month per 100 GiB volume above
+# gp3 baseline (vs ~$8/month at baseline).
+#
+# To use, set in your values override:
+#   persistence:
+#     storageClass: valkey-gp3
+#
+# For larger working sets (>256 GiB per shard) bump to:
+#   iops: "16000"      # gp3 max
+#   throughput: "1000" # gp3 max — at this point consider io2 Block Express
+#                      # for tail latency or instance-store NVMe via local-storage.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: valkey-gp3
+  annotations:
+    storageclass.kubernetes.io/description: |
+      gp3 SSD tuned for Valkey persistence — 6000 IOPS, 500 MiB/s throughput,
+      xfs filesystem, WaitForFirstConsumer binding so the volume lands in the
+      same AZ as the pod's node.
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  iops: "6000"
+  throughput: "500"
+  encrypted: "true"
+  fsType: xfs
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true

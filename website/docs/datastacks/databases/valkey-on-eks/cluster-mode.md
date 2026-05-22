@@ -1,40 +1,40 @@
 ---
-title: Cluster Mode (Self-Managed Manifests)
+title: Cluster Mode
 sidebar_position: 5
 ---
 
-# Cluster Mode — Self-Managed Manifests
+# Valkey Cluster Mode on EKS
 
-Valkey Cluster (sharded with hash-slot partitioning and gossip-based failover) is **not yet supported by the official `valkey-io/valkey-helm` chart** — see [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) for the roadmap. Until upstream cluster support ships, this stack provides Cluster mode as **plain Kubernetes manifests** (no Helm chart, no operator).
+Cluster mode shards data across multiple primaries using hash-slot partitioning and gossip-based failure detection. This stack ships a **local Helm chart** (`data-stacks/valkey-on-eks/examples/cluster-mode-helm-chart/`) that deploys a production-grade cluster onto the data-on-eks Valkey NodePool, with no operator and no external chart dependency.
 
-The design draws directly from [valkey-helm PR #51](https://github.com/valkey-io/valkey-helm/pull/51) ("Add cluster mode support" by `qjsoq`), which is the most credible open implementation of the manifest pattern. When PR #51 (or its successor) merges, this doc will be reduced to a thin overlay on the official chart.
+The chart will be retired in favor of the upstream `valkey-io/valkey-helm` chart once cluster mode lands there ([valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18)).
 
 This guide covers:
 
-1. The manifest topology and why each piece is shaped the way it is.
-2. The bootstrap script — how the cluster forms on first boot, and how pods rejoin after restart without operator intervention.
-3. Production best practices: AZ spread, persistent storage, security, scaling.
-4. Operational runbooks: scaling out, scaling replicas per shard, recovering from quorum loss.
+1. When to use cluster mode and how it differs from replication mode.
+2. How the cluster communicates internally — gossip, replication, slot routing, failover.
+3. Choosing instance types, storage, and scale.
+4. Deployment, verification, and day-2 operations.
 
 ## When to Use Cluster Mode
 
-Use Cluster mode when at least one of these holds:
+Use cluster mode when at least one of these holds:
 
-- **Working set > single node memory.** Your data exceeds what a single `r7g.16xlarge` (~512 GiB) can hold, or you want to keep per-node memory pressure down for fork-time CoW headroom on snapshots.
-- **Write throughput > single primary.** Replication mode has one primary; all writes serialize through it. Cluster mode shards writes across N primaries, scaling write throughput linearly with shard count (subject to cross-slot constraints).
-- **Multi-key operations are NOT a hard requirement.** Cluster mode rejects multi-key commands (`MGET`, `MSET`, `RENAME`, `SUNIONSTORE`, transactions, Lua scripts) when the keys span different hash slots — the application must use [hash tags](https://valkey.io/topics/cluster-spec/#hash-tags) (`{user:1}:profile` and `{user:1}:settings` hash to the same slot) or accept per-key operations only.
+- **Working set > single node memory.** Your data exceeds what a single `r7g.16xlarge` (~512 GiB) can hold, or you want to keep per-node memory pressure down for fork-time CoW headroom during BGSAVE.
+- **Write throughput > single primary.** Replication mode has one primary; all writes serialize through it. Cluster mode shards writes across N primaries.
+- **Multi-key operations are NOT a hard requirement.** Cluster mode rejects multi-key commands (`MGET`, `MSET`, `RENAME`, transactions, Lua) when keys span different slots — the application must use [hash tags](https://valkey.io/topics/cluster-spec/#hash-tags) (`{user:1}:profile` and `{user:1}:settings` hash to the same slot) or accept per-key operations.
 
-If your dataset fits a single large-memory node and your workload is read-heavy, **stay on replication mode**. Cluster mode adds operational complexity that's only worth it for scale.
+If your dataset fits a single large-memory node and the workload is read-heavy, **stay on replication mode**. Cluster mode adds operational complexity that's only worth it for scale.
 
 | Factor | Replication Mode | Cluster Mode |
 |---|---|---|
 | Topology | 1 primary + N replicas | 3+ primaries × 1+ replica each (minimum 6 pods) |
-| Write scaling | ✗ — single primary | ✓ — sharded across primaries by hash slot |
+| Write scaling | ✗ — single primary | ✓ — sharded by hash slot |
 | Multi-key ops | ✓ — single keyspace | Same-slot only (use hash tags) |
-| Failover | Manual `REPLICAOF NO ONE` | Automatic (gossip-based, ~10s to detect + promote) |
-| Min nodes (HA) | 2 (1 primary + 1 replica) | 6 (3 primaries + 3 replicas) for full HA |
+| Failover | Manual `REPLICAOF NO ONE` | Automatic via gossip (~10s detect + promote) |
+| Min nodes (HA) | 2 | 6 (3 primaries + 3 replicas) |
 | Operational surface | Lower | Higher (gossip, slot rebalancing, MEET/FORGET) |
-| Chart support | ✓ Official `valkey-io/valkey-helm` | Self-managed manifests until [#18](https://github.com/valkey-io/valkey-helm/issues/18) lands |
+| Chart support | ✓ Official `valkey-io/valkey-helm` | This stack's local chart until [#18](https://github.com/valkey-io/valkey-helm/issues/18) lands |
 
 ## Architecture
 
@@ -43,434 +43,396 @@ If your dataset fits a single large-memory node and your workload is read-heavy,
 │                                                                    │
 │  AZ us-west-2a            AZ us-west-2b           AZ us-west-2c    │
 │  ┌──────────────┐         ┌──────────────┐        ┌──────────────┐ │
-│  │ valkey-c-0   │ ◄──┐    │ valkey-c-1   │ ◄──┐   │ valkey-c-2   │ │
-│  │ primary      │    │    │ primary      │    │   │ primary      │ │
-│  │ slots 0-5460 │    │    │ slots 5461-  │    │   │ slots 10923- │ │
-│  │              │    │    │       10922  │    │   │       16383  │ │
-│  └──────────────┘    │    └──────────────┘    │   └──────────────┘ │
-│                      │                        │                    │
-│  ┌──────────────┐    │    ┌──────────────┐    │   ┌──────────────┐ │
-│  │ valkey-c-3   │ ◄──┘    │ valkey-c-4   │ ◄──┘   │ valkey-c-5   │ │
+│  │ valkey-c-0   │         │ valkey-c-2   │        │ valkey-c-1   │ │
+│  │ primary      │         │ primary      │        │ primary      │ │
+│  │ slots 0-5460 │         │ slots 10923- │        │ slots 5461-  │ │
+│  │              │         │       16383  │        │       10922  │ │
+│  └──────────────┘         └──────────────┘        └──────────────┘ │
+│         ▲                        ▲                       ▲         │
+│         │ async replication      │                       │         │
+│         │ (TCP 6379, PSYNC)      │                       │         │
+│  ┌──────┴───────┐         ┌──────┴───────┐        ┌──────┴───────┐ │
+│  │ valkey-c-3   │         │ valkey-c-5   │        │ valkey-c-4   │ │
 │  │ replica of   │         │ replica of   │        │ replica of   │ │
-│  │ valkey-c-0   │         │ valkey-c-1   │        │ valkey-c-2   │ │
+│  │ valkey-c-1   │         │ valkey-c-0   │        │ valkey-c-2   │ │
 │  └──────────────┘         └──────────────┘        └──────────────┘ │
 │                                                                    │
-│  Cross-AZ async replication (TCP 6379)                             │
-│  Cluster bus gossip       (TCP 16379) — full mesh between all 6   │
-│                                                                    │
-│  Service `valkey-cluster-headless` (ClusterIP: None)               │
-│   ├─ valkey-c-0.valkey-cluster-headless.<ns>.svc.cluster.local     │
-│   ├─ valkey-c-1...                                                 │
-│   └─ valkey-c-5...    (per-pod stable DNS)                         │
+│  Cluster bus (gossip) — TCP 16379, full mesh between all 6 pods   │
+│  Headless Service: valkey-cluster-headless                         │
+│   ├─ valkey-cluster-0.valkey-cluster-headless.<ns>.svc...:6379     │
+│   ├─ valkey-cluster-1...                                           │
+│   └─ valkey-cluster-5...    (per-pod stable DNS, hostname-aware)   │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-### Topology rules
+Three concepts make cluster mode work — **slots**, **gossip**, **replication**. Each pod owns a piece of each.
 
-- **Minimum 6 pods**: 3 primaries (for split-brain quorum during failover) × 1 replica each. The cluster spec mandates that a primary failure is only failed-over if **the majority of remaining primaries** agree — with 2 primaries, a single primary failure leaves 1 voter, no quorum, no failover.
-- **AZ spread**: each primary in a different AZ. Each replica in a different AZ than its primary. Survives a single-AZ outage with no data loss and automatic failover.
-- **Per-pod PVC**: `volumeClaimTemplates` create one PVC per StatefulSet ordinal. Each PVC is AZ-pinned via the gp3 StorageClass (`volumeBindingMode: WaitForFirstConsumer`).
-- **Stable identity**: each pod gets a stable DNS name via the headless Service. The cluster's gossip table references hostnames (where supported by the client) so pod-IP changes after restart are absorbed by CoreDNS.
+## How the cluster communicates internally
 
-## Manifests
+Operators need this model to debug effectively. Two TCP ports per pod, three different protocols on top.
 
-The full manifest set lives at `data-stacks/valkey-on-eks/examples/cluster-mode/` (provisioned in a follow-up patch — see the [Roll Your Own](#roll-your-own) section below to write them directly). The pieces:
+### Hash slots and client routing (port 6379)
 
-| File | Purpose |
+Every key is hashed into one of **16,384 slots** via CRC16(key) mod 16384. Each primary owns a contiguous range; with three shards the default split is:
+
+| Shard | Primary pod (in our test cluster) | Slot range |
+|---|---|---|
+| 0 | `valkey-cluster-0` | 0 – 5460 |
+| 1 | `valkey-cluster-2` | 10923 – 16383 |
+| 2 | `valkey-cluster-1` | 5461 – 10922 |
+
+When a **cluster-aware client** (Lettuce, Jedis, ioredis, redis-py ≥ 4.1, go-redis, valkey-glide) connects:
+
+1. It issues `CLUSTER SHARDS` (or `CLUSTER NODES` on older clients) to learn the slot → primary map.
+2. For each command, it computes the slot from the key and routes the connection directly to the owning primary.
+3. If the slot ownership has changed since the cached map (e.g., during a reshard), the targeted primary returns `MOVED <slot> <new-host>:<port>` or `ASK <slot> <new-host>:<port>`. The client updates its map and retries.
+
+`MOVED` is permanent (slot has moved); `ASK` is transient (slot is mid-migration, the next single request should go to the new host). A non-cluster-aware client will hit `MOVED` on every cross-slot command and fail.
+
+[Hash tags](https://valkey.io/topics/cluster-spec/#hash-tags) let you co-locate keys onto the same slot. `{user:42}:profile` and `{user:42}:orders` share slot CRC16("user:42") % 16384, so `MGET {user:42}:profile {user:42}:orders` works inside a single shard.
+
+### Gossip — the cluster bus (port 16379)
+
+Every pod opens a TCP connection to every other pod on port 16379. This is the **cluster bus**. With 6 pods that's 15 connections; with 100 pods it's 4,950. The bus carries small binary messages — never application data.
+
+What gossip does:
+
+- **Failure detection.** Each pod sends `PING` to a few random peers every second. The recipient replies `PONG`. If a pod doesn't get a `PONG` within `cluster-node-timeout` (default 15s), it marks the peer as `PFAIL` (possible failure) and gossips that opinion. When the *majority* of primaries agree a peer is `PFAIL`, it transitions to `FAIL` and replicas of the dead primary start a failover election.
+- **Topology propagation.** Every gossip exchange piggybacks the sender's view of a random subset of nodes. New nodes joined via `CLUSTER MEET` get discovered transitively — you only need to introduce one new pod to one existing pod, the rest learn via gossip.
+- **Configuration epoch.** Each primary has a monotonic epoch. When a replica promotes to primary, its epoch increments. The cluster uses epochs to resolve conflicting slot-ownership claims after a partition heals.
+
+> "For example in a 100 node cluster with a node timeout set to 60 seconds, every node will try to send 99 pings every 30 seconds … 330 pings per second in the total cluster."
+> — [Valkey Cluster Specification](https://valkey.io/topics/cluster-spec/)
+
+Gossip is intentionally cheap. Raising `cluster-node-timeout` halves heartbeat traffic at the cost of doubling failure-detection latency. Default 15s is fine up to ~500 pods. Above 500, bump to 30s.
+
+### Replication — primary → replica (port 6379, PSYNC)
+
+Each replica maintains a single long-lived TCP connection to its primary on the client port. The connection runs the **PSYNC** protocol:
+
+1. **Initial full sync**: replica connects, primary takes a BGSAVE snapshot (or uses a diskless transfer), streams it over the wire, then catches up via the replication backlog.
+2. **Partial resync**: if the replica disconnects briefly, on reconnect it tells the primary its current replication offset. If the offset is still in the primary's backlog (default `repl-backlog-size 10mb`), the primary streams just the diff. Otherwise it falls back to full sync.
+
+Auth: the replica authenticates to the primary using `primaryauth` (Valkey 8.0 rename of `masterauth`) from `/data/conf/auth.conf`. This chart uses **`requirepass` + `primaryauth` with the same password** — replicas connect as the `default` user. No separate ACL file.
+
+Replication is **asynchronous** in Valkey by default. A write `SET k v` on a primary returns OK to the client *before* the replica has received it. If the primary dies in that 1-2 ms window, the unacknowledged write is lost. For stronger consistency use `WAIT N timeout` (blocks until N replicas ack) — but understand cluster mode tolerates async lag deliberately, and `WAIT` only helps within a single shard.
+
+### Hostname-aware addressing
+
+This chart sets `cluster-preferred-endpoint-type hostname` and announces each pod's per-pod DNS name (`valkey-cluster-N.valkey-cluster-headless.<ns>.svc.cluster.local`) via `cluster-announce-hostname`. Result: when a pod restarts and gets a new IP, the cluster's gossip table updates the IP under the same hostname, and clients re-resolve via DNS rather than getting stuck on a stale IP.
+
+## Choosing instance types
+
+Valkey is RAM-bound. The right defaults look almost exactly like what ElastiCache offers under the hood for Valkey nodes.
+
+### What ElastiCache uses (managed)
+
+ElastiCache exposes `cache.*` SKUs that map to standard EC2 families. For Valkey, the recommended families are:
+
+| Family | Use case |
 |---|---|
-| `namespace.yaml` | Dedicated `valkey-cluster` namespace |
-| `secret.yaml` | ACL passwords (`default` + `replication-user`) |
-| `configmap-config.yaml` | `valkey.conf` — cluster mode + ACL + persistence config |
-| `configmap-scripts.yaml` | The `init-cluster.sh` and readiness/preStop scripts |
-| `serviceaccount.yaml` | Pod ServiceAccount (for future Pod Identity hooks) |
-| `service-headless.yaml` | Headless Service (ClusterIP: None) on `:6379` and `:16379` |
-| `service-client.yaml` | Optional ClusterIP Service for clients that don't need per-pod DNS |
-| `pdb.yaml` | PodDisruptionBudget — `maxUnavailable: 1` |
-| `networkpolicy.yaml` | Allow cluster bus + intra-namespace traffic |
-| `statefulset.yaml` | The 6-pod StatefulSet with init container, sidecar bootstrapper, preStop hook |
+| `cache.r7g`, `cache.r8g` | **Default** for Valkey — memory-optimized, Graviton, ~8 GiB RAM per vCPU |
+| `cache.m7g`, `cache.m6g` | General-purpose — smaller datasets (under 8 GiB/shard), CPU-bound clients |
+| `cache.r6gd` | Memory-optimized **with local NVMe** for [data tiering](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/data-tiering.html) (hot/warm tier inside the node) |
+| `cache.c7gn` | Network-optimized — proxies, counters, rate-limiters with very high QPS |
+| `cache.t4g` | **Dev/test only** — burstable CPU credits are incompatible with Valkey's single-threaded command loop |
 
-### StatefulSet — the central piece
+AWS [announced](https://aws.amazon.com/about-aws/whats-new/2023/08/amazon-elasticache-m7g-r7g-graviton-3-nodes/) for ElastiCache on r7g: *"up to 28% increased throughput, up to 21% improved P99 latency, up to 25% higher networking bandwidth"* vs r6g.
 
-Annotated essentials (full manifest in the example directory):
+### What to use on self-managed EKS
 
-```yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: valkey-cluster
-  namespace: valkey-cluster
-spec:
-  serviceName: valkey-cluster-headless     # Required for per-pod DNS
-  replicas: 6                              # 3 primaries × 1 replica = 6 pods
-  podManagementPolicy: OrderedReady        # Deterministic bootstrap order
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: valkey-cluster
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: valkey-cluster
-    spec:
-      terminationGracePeriodSeconds: 60    # Time for preStop CLUSTER FAILOVER + FORGET
-      nodeSelector:
-        NodeGroupType: valkey
-      tolerations:
-        - key: workload
-          operator: Equal
-          value: valkey
-          effect: NoSchedule
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/name: valkey-cluster
-      containers:
-        - name: valkey
-          image: docker.io/valkey/valkey:9.0.2
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              # Background: kick off the cluster bootstrap/rejoin coordinator
-              /scripts/init-cluster.sh &
-              # Foreground: start the Valkey server (the script will issue
-              # CLUSTER MEET / CLUSTER REPLICATE against this server once it pings)
-              exec valkey-server /etc/valkey/valkey.conf
-          env:
-            - name: HOSTNAME
-              valueFrom: { fieldRef: { fieldPath: metadata.name } }
-            - name: NAMESPACE
-              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
-            - name: POD_IP
-              valueFrom: { fieldRef: { fieldPath: status.podIP } }
-            - name: REPLICAS
-              value: "6"
-            - name: HEADLESS_SVC
-              value: "valkey-cluster-headless"
-            - name: VALKEYCLI_AUTH
-              valueFrom:
-                secretKeyRef:
-                  name: valkey-cluster-auth
-                  key: default
-          ports:
-            - { name: tcp, containerPort: 6379 }
-            - { name: bus, containerPort: 16379 }
-          volumeMounts:
-            - { name: data, mountPath: /data }
-            - { name: config, mountPath: /etc/valkey/valkey.conf, subPath: valkey.conf }
-            - { name: scripts, mountPath: /scripts }
-          readinessProbe:
-            exec:
-              command: ["/scripts/readiness.sh"]
-            initialDelaySeconds: 15
-            periodSeconds: 5
-            timeoutSeconds: 6
-            failureThreshold: 10
-          livenessProbe:
-            exec:
-              command: ["valkey-cli", "ping"]
-            periodSeconds: 5
-            timeoutSeconds: 3
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/scripts/prestop.sh"]
-          resources:
-            requests:
-              cpu: "1000m"
-              memory: "12Gi"      # ~70-80% of node RAM
-            limits:
-              memory: "16Gi"      # set == requests to avoid CoW OOM during BGSAVE
-        - name: metrics
-          image: oliver006/redis_exporter:v1.79.0
-          env:
-            - { name: REDIS_EXPORTER_IS_CLUSTER, value: "true" }
-            - { name: REDIS_ADDR, value: "redis://127.0.0.1:6379" }
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef: { name: valkey-cluster-auth, key: default }
-          ports:
-            - { name: http-metrics, containerPort: 9121 }
-      volumes:
-        - name: config
-          configMap: { name: valkey-cluster-config }
-        - name: scripts
-          configMap: { name: valkey-cluster-scripts, defaultMode: 0555 }
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: gp3
-        resources:
-          requests:
-            storage: 100Gi
-```
+**R-family (memory-optimized) is the default.** The data-on-eks Valkey NodePool ([`nodepool-valkey.yaml`](https://github.com/awslabs/data-on-eks/blob/main/infra/terraform/manifests/karpenter/nodepool-valkey.yaml)) is preconfigured for `r7g` and `r8g` Graviton instances.
 
-### Headless Service
+**Graviton vs x86.** Valkey upstream officially supports ARM64 and ran its own [1M RPS benchmark](https://valkey.io/blog/unlock-one-million-rps/) on `c7g.16xlarge`. Independent benchmarks measure ~22% lower latency on Graviton vs equivalent x86 SKUs. Fork/BGSAVE is also cheaper on Graviton because its TLB / page-walker handles COW patterns more efficiently. **Use Graviton unless you have a hard x86 dependency** (e.g., a kernel module).
+
+**Size per shard** (reserve ~25% for fork-time CoW headroom per AWS [BGSAVE best practice](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/BestPractices.BGSAVE.html)):
+
+| Working set per shard | Suggested instance | Pod memory request/limit | `maxmemory` |
+|---|---|---|---|
+| 12 GiB | `r7g.large` (16 GiB) | 12 Gi / 16 Gi | `12gb` |
+| 24 GiB | `r7g.xlarge` (32 GiB) | 24 Gi / 30 Gi | `24gb` |
+| 64 GiB | `r7g.2xlarge` (64 GiB) | 48 Gi / 60 Gi | `48gb` |
+| 128 GiB | `r7g.4xlarge` (128 GiB) | 96 Gi / 120 Gi | `96gb` |
+| 256 GiB | `r7g.8xlarge` (256 GiB) | 192 Gi / 240 Gi | `192gb` |
+| > 256 GiB | **Shard horizontally instead** — fork on a 512 GiB heap is operationally painful even with overcommit + THP disabled. |
+
+Always set `requests.memory == limits.memory`; otherwise the node OOM-killer can target the BGSAVE child during a fork. The chart enforces this in the default `values.yaml`.
+
+**Avoid:**
+
+- **T-family** (burstable). The CPU credits model is incompatible with Valkey's single-threaded event loop and unpredictable under spikes. AOF is unsupported on T2 per AWS docs.
+- **Spot instances for primaries.** The 2-minute interruption notice is not enough for a clean shard hand-off; replica resync after each interruption burns network bandwidth. Spot is acceptable only for read-replica overflow pools.
+
+### Network bandwidth
+
+Sustained replication + gossip + client traffic adds up fast. A 3-replica shard at 100k ops/sec, 1 KB values pushes ~800 Mbps of client traffic alone; full-sync of a 64 GiB replica can saturate a NIC for minutes. Plan for **2× peak steady-state**:
+
+| Sustained throughput | Minimum instance |
+|---|---|
+| < 2.5 Gbps | `r7g.xlarge` (baseline 1.876 Gbps, burst 12.5 Gbps) |
+| 2.5 – 10 Gbps | `r7g.4xlarge` (baseline 7.5 Gbps) |
+| > 10 Gbps | `r7g.8xlarge`+ or **r7gn / m7gn** network-optimized variants (25 Gbps baseline) |
+
+Enable **VPC CNI prefix delegation** (`ENABLE_PREFIX_DELEGATION=true`) for dense Valkey deployments — each ENI gets `/28` prefixes (16 IPs) instead of secondary IPs, and `r7g.16xlarge` jumps from 234 to 737 pods per node. The data-on-eks infra stack ships this enabled by default.
+
+### Cost
+
+- **Compute Savings Plans (3-yr)** are the recommended baseline — ~66% discount with flexibility to move between sizes/families. AWS itself [recommends them](https://docs.aws.amazon.com/savingsplans/latest/userguide/sp-ris.html) over RIs *"because they offer similar savings with more flexibility."*
+- For a 6-pod `r7g.2xlarge` cluster in us-west-2: ~$17,650/year on-demand → ~$6,000/year on a 3-yr Compute SP.
+- **Don't run primaries on Spot.** Replica overflow pools, yes. Primaries, no.
+
+## Choosing storage
+
+The per-pod PVC carries AOF, RDB, and `nodes.conf` (cluster state). Its specs directly drive AOF write latency, BGSAVE / AOF-rewrite throughput, and PSYNC full-resync speed.
+
+### gp3 is the right default
+
+> "gp3 volumes deliver a consistent baseline IOPS performance of 3,000 IOPS… you can provision additional IOPS (up to a maximum of 80,000)… at a ratio of 500 IOPS per GiB."
+> — [AWS EBS docs](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html)
+
+Critically, *"gp3 volumes do not use burst performance. They can indefinitely sustain their full provisioned IOPS and throughput."* This is why gp3 displaced gp2 for Valkey — AOF rewrite is a sustained sequential write that would drain a gp2 burst balance.
+
+| Working set per shard | PVC size | gp3 IOPS | gp3 throughput | StorageClass |
+|---|---|---|---|---|
+| ≤ 12 GiB | 64 GiB | 3,000 (baseline) | 125 MiB/s (baseline) | default `gp3` |
+| 12 – 64 GiB | 200 GiB | 6,000 | 500 MiB/s | `valkey-gp3` (example below) |
+| 64 – 256 GiB | 800 GiB | 12,000 | 750 MiB/s | custom gp3 |
+| > 256 GiB OR p99-sensitive | 1+ TiB | up to 16,000 / 1,000 MiB/s (gp3 ceiling) | — | upgrade to **io2 Block Express** |
+
+PVC size = ~3× working set: current AOF + rewritten AOF + RDB snapshot must coexist during a rewrite.
+
+### When to step up from gp3
+
+**io2 Block Express** when AOF p99 latency on gp3 (1–3 ms typical) is unacceptable. AWS describes it as *"designed to deliver an average latency of under 500 microseconds for 16 KiB I/O operations, reducing the frequency of I/Os exceeding 800 microseconds by over 10×"*. Premium is ~3–5× gp3. **Do not enable Multi-Attach** — each Valkey pod owns its own shard; sharing a volume violates the single-writer assumption and corrupts `nodes.conf` and AOF.
+
+**Local NVMe instance store (`r6gd`/`r7gd`)** for ultra-low-latency caches where occasional resync is acceptable. In this chart you'd use the `local-storage` StorageClass and accept that pod rescheduling = total data loss for that pod, then rely on replica resync. ElastiCache uses NVMe internally only for [data tiering](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/data-tiering.html), not primary persistence.
+
+**Never EFS/FSx.** AOF is latency-sensitive small-IO; NFS `fsync` latencies are an order of magnitude worse than EBS, and `nodes.conf` rename semantics over NFS have caused real corruption in production. Block storage only.
+
+### The `valkey-gp3` StorageClass
+
+This stack ships a higher-spec gp3 StorageClass example at [`data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml):
 
 ```yaml
-apiVersion: v1
-kind: Service
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
 metadata:
-  name: valkey-cluster-headless
-  namespace: valkey-cluster
-spec:
-  type: ClusterIP
-  clusterIP: None                  # Headless — DNS publishes per-pod records
-  publishNotReadyAddresses: true   # Critical: bootstrap needs DNS during init
-  selector:
-    app.kubernetes.io/name: valkey-cluster
-  ports:
-    - { name: tcp, port: 6379, targetPort: tcp }
-    - { name: bus, port: 16379, targetPort: bus }
+  name: valkey-gp3
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  iops: "6000"           # 2× gp3 baseline
+  throughput: "500"      # 4× gp3 baseline
+  encrypted: "true"
+  fsType: xfs            # better than ext4 for sustained AOF rewrites > 50 GiB
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
 ```
 
-`publishNotReadyAddresses: true` is essential. During first-boot bootstrap, `valkey-cli --cluster create` needs to PING all 6 nodes — but at that moment none of them are Ready yet (the init script runs concurrently with the Valkey server). Without this flag, CoreDNS doesn't publish A records for not-Ready pods, and the bootstrap stalls.
+Apply once per cluster:
 
-### `valkey.conf`
-
-```ini
-# Cluster mode
-cluster-enabled yes
-cluster-config-file /data/nodes.conf
-cluster-node-timeout 15000
-cluster-require-full-coverage no       # Tolerate partial slot loss during recovery
-cluster-allow-reads-when-down no       # Reject reads when this node loses majority
-
-# Hostname-aware (Valkey 7.2+)
-cluster-preferred-endpoint-type hostname
-
-# Persistence — both AOF and RDB for max durability
-appendonly yes
-appendfsync everysec
-auto-aof-rewrite-percentage 100
-auto-aof-rewrite-min-size 64mb
-save 900 1
-save 300 10
-save 60 10000
-
-# Memory and eviction
-maxmemory 12gb                         # Match container resources.requests.memory
-maxmemory-policy noeviction            # Cluster mode: never evict, prefer write rejection
-
-# ACL
-aclfile /etc/valkey/users.acl
-
-# Slow log + latency monitoring (operational visibility)
-slowlog-log-slower-than 10000
-latency-monitor-threshold 100
+```bash
+kubectl apply -f data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml
 ```
 
-The matching ACL file lives in the auth Secret:
+Then in the chart values:
 
-```
-user default on >${VALKEY_DEFAULT_PASSWORD} ~* &* +@all -@dangerous
-user replication-user on >${VALKEY_REPLICATION_PASSWORD} +psync +replconf +ping
-user default off                       # Disable passwordless default
-```
-
-## Bootstrap and Rejoin Logic
-
-The cleverest part of the manifest design is `init-cluster.sh`. It runs in the **same container** as Valkey itself (`init-cluster.sh & exec valkey-server`), so it can drive `valkey-cli` against `localhost:6379` once the server is up. Pseudocode:
-
-```text
-ORDINAL = parse from $HOSTNAME (e.g., valkey-cluster-3 → 3)
-PRIMARIES = ceil(REPLICAS / 2)           # 6 / 2 = 3
-REPLICA_COUNT = (REPLICAS - PRIMARIES) / PRIMARIES   # (6 - 3) / 3 = 1
-
-wait_for_local_valkey_ping()             # PING localhost until PONG
-
-# Look for any existing healthy peer (rejoin path)
-healthy_peer = scan_peers_for_cluster_state_ok()
-
-if healthy_peer:
-    # === REJOIN PATH ===
-    # Forget any stale `myIP:6379-as-failed` entry on the healthy peer
-    if peer_sees_my_ip_as_failed():
-        valkey-cli --cluster call $peer:6379 cluster forget $stale_id
-        sleep 3
-    # Meet the cluster
-    valkey-cli -h localhost cluster meet $peer_ip 6379
-    # Find an under-replicated primary that isn't us, and become its replica
-    target = pick_master_with_fewest_replicas(exclude=my_node_id)
-    if target:
-        valkey-cli -h localhost cluster replicate $target
-    else:
-        # Empty master with no slots — request rebalance from peer
-        wait_for_majority_consensus()
-        valkey-cli --cluster rebalance $peer:6379 --cluster-use-empty-masters --cluster-yes
-    exit 0
-
-# === BOOTSTRAP PATH ===
-if ORDINAL == 0:
-    # Wait for all 6 peers to PING (they're all booting concurrently)
-    nodes = []
-    for i in 0..5:
-        wait_for_ping(valkey-cluster-${i}.headless...:6379)
-        nodes.append("valkey-cluster-${i}.headless...:6379")
-    sleep 10                              # Settle CoreDNS
-    yes | valkey-cli --cluster create $nodes --cluster-replicas 1
-else:
-    wait_for_pod_0_to_say_cluster_state_ok()
+```yaml
+persistence:
+  storageClass: valkey-gp3
+  size: 200Gi
 ```
 
-Key properties:
+### Filesystem and mount tuning
 
-1. **Idempotent**: the rejoin path runs on every pod start. If the cluster is already healthy, the pod's `CLUSTER MEET` is a no-op (the peer already knows us); `CLUSTER REPLICATE` against the same primary is a no-op.
-2. **No leader election**: ordinal 0 is the bootstrapper *only* on first boot when no healthy cluster exists. After the cluster is formed, ordinal 0 is no different from any other pod.
-3. **Self-healing**: if all 6 pods restart simultaneously (e.g., AMI rollover), the first one back up that finds at least one peer Ready does the rejoin path. The on-disk `nodes.conf` (in the PVC) carries each pod's node ID across restarts, so cluster identity is preserved.
-4. **Failed-self cleanup**: when a pod restarts with a fresh IP, peers may still hold `myOldIP:6379` in their gossip tables marked `fail`. The script issues `CLUSTER FORGET` against any healthy peer to clear that entry before issuing `CLUSTER MEET` from the new IP.
+- **xfs** for shards > 50 GiB — better large-sequential-write throughput than ext4. The `valkey-gp3` StorageClass uses xfs.
+- **`noatime,nodiratime`** mount options eliminate a metadata write per AOF read (matters during PSYNC).
+- **Do not enable** `data=journal` on ext4 — doubles write amplification on AOF.
 
-### Readiness probe — consensus-based
+### When to skip persistence entirely
 
-A pod is Ready only when **a majority of its peers see it as healthy**:
+For pure caches (data reconstructible from an upstream source-of-truth) set `appendonly no` and `save ""`. Operationally:
 
-```sh
-# /scripts/readiness.sh (simplified)
-my_id=$(valkey-cli cluster myid)
-peers=$(valkey-cli cluster nodes | grep -v myself | grep -v fail | awk '{print $2}' | cut -d@ -f1)
-total=$(echo "$peers" | wc -w)
-required=$(( total - 1 ))    # tolerate 1 peer disagreement
-success=0
-for peer in $peers; do
-  if valkey-cli -h "${peer%:*}" -p "${peer##*:}" cluster nodes | grep "$my_id" | grep -q connected; then
-    success=$(( success + 1 ))
-  fi
-done
-[ "$success" -ge "$required" ] && exit 0 || exit 1
-```
+- Pod restart = empty shard. In cluster mode with replicas, the primary failover promotes a replica with the data still in RAM; the restarted pod becomes empty and triggers a full resync.
+- Set `cluster-require-full-coverage no` (already the chart default) so a single empty shard doesn't block the whole cluster.
+- Drop the PVC entirely (`persistence.enabled: false`) — `emptyDir` will be used and `nodes.conf` is regenerated on cluster join.
+- Removes BGSAVE fork latency spikes and EBS as a failure mode. Common for L1 caches fronting RDS/DynamoDB.
 
-This prevents the Service from sending traffic to a pod that's locally healthy but not yet visible to its peers — the symptom otherwise is `MOVED` redirect storms when clients query the new pod and it doesn't yet know its slot ownership.
+## Cluster scaling limits
 
-### preStop — graceful master failover
+> "The cluster's key space is split into 16384 slots, effectively setting an upper limit for the cluster size of 16384 primary nodes (however, the suggested max size of nodes is on the order of ~ 1000 nodes)."
+> — [Valkey Cluster Specification](https://valkey.io/topics/cluster-spec/)
 
-Set `terminationGracePeriodSeconds: 60` so the preStop hook has time to complete before SIGKILL:
+The ~1000-node guidance is a *gossip-protocol* limit, not a slot limit. AWS ElastiCache caps at 500 nodes per cluster (83–500 shards) for Valkey ≥ 5.0.6 — [docs](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/CacheNodes.NodeGroups.html). The Valkey project [demonstrated 2,000 nodes](https://valkey.io/blog/1-billion-rps/) (1000 shards × 1 replica) driving 1 billion RPS — beyond the recommended ceiling but possible.
 
-```sh
-# /scripts/prestop.sh (essentials)
-role=$(valkey-cli info replication | awk -F: '/^role:/ {print $2}' | tr -d '\r')
-node_id=$(valkey-cli cluster nodes | awk '/myself/ {print $1}')
+Practical buckets (this chart):
 
-if [ "$role" = "master" ]; then
-  # Find a slave of mine and trigger TAKEOVER
-  slave=$(valkey-cli cluster nodes | awk -v me="$node_id" '$4==me && /slave/ {print $2; exit}' | cut -d@ -f1)
-  if [ -n "$slave" ]; then
-    valkey-cli -h "${slave%:*}" -p "${slave##*:}" cluster failover takeover
-  fi
-fi
+| Bucket | Shards | Total pods (1 replica each) | Working set | What to watch | When to split |
+|---|---|---|---|---|---|
+| **Small** | 3–10 | 6–20 | < 100 GB | Trivial; default `cluster-node-timeout: 15s` is fine | Never on size |
+| **Medium** | 10–50 | 20–100 | 100 GB – 1 TB | Client topology refresh storms — prefer clients that cache `CLUSTER SHARDS` | If RPS > 5M, consider tenant-split |
+| **Large** | 50–200 | 100–400 | 1–5 TB | Gossip CPU; raise `cluster-node-timeout` to 30s; legacy reshard slow (~30–60 s/GB) | If a single reshard > 1 hr, multi-cluster |
+| **Very large** | 200–500 | 400–1000 | 5–25 TB | Approaching gossip ceiling; rolling upgrade ≈ pods × 90s ≈ several hours; ENI / IP plan critical | **Shard at the application layer** |
+| **Beyond** | > 500 | > 1000 | > 25 TB | Officially "unsupported scale"; only proven by valkey.io benchmark teams | Always split |
 
-# Tell every peer to forget me — keeps gossip tables clean
-for peer in $(valkey-cli cluster nodes | grep -v myself | awk '{print $2}' | cut -d@ -f1); do
-  valkey-cli -h "${peer%:*}" -p "${peer##*:}" cluster forget "$node_id" &
-done
-wait
+### What gets harder at scale
 
-valkey-cli shutdown save
-```
+- **Gossip CPU.** Each PING/PONG payload gossips a random subset of node metadata. At 500 nodes that's ~1–5% steady CPU per pod. At 1000+ nodes, expect 5–15%.
+- **`CLUSTER NODES` size.** ~150 bytes per node. 1000 nodes = 150 KB response. Every client that issues `CLUSTER NODES` (vs `CLUSTER SHARDS`) eats this on startup. Use `CLUSTER SHARDS` clients (jedis 4.4+, lettuce 6.2+, go-redis v9, redis-py 5+).
+- **Rolling upgrade time.** PDB `maxUnavailable: 1` means serial pod restarts. At ~90s per restart, 100 pods = 2.5 hours, 500 pods = 12+ hours. Plan maintenance windows accordingly.
+- **Slot resharding.** Valkey 7.2/8.0 uses key-by-key `MIGRATE`, ~30–60 seconds per GB per slot range. Atomic Slot Migration (ASM) in newer engines is ~100× faster but not yet in stable Valkey.
 
-Without this, master pod restarts cause a 10–15 second write outage per shard while gossip detects the failure and elects a new primary. With it, restarts are sub-second from the client's point of view because failover is initiated *before* the pod stops accepting writes.
+If any of these become operationally painful, **shard at the application layer** into multiple smaller Valkey clusters rather than scaling a single cluster past ~200 shards.
 
 ## Deployment
 
-The example manifests deploy alongside the replication-mode default in a separate namespace:
+The chart deploys alongside the replication-mode default in a separate namespace (`valkey-cluster`).
+
+### Prerequisites
+
+- Data-on-eks Valkey stack already deployed (the Valkey NodePool, the `gp3` StorageClass, ArgoCD, and the existing replication-mode release are all expected).
+- `helm` 3.13+ and `kubectl` configured for the EKS cluster.
+- (Recommended for production-grade I/O) the `valkey-gp3` StorageClass applied — see [storage section](#choosing-storage).
+
+### Quickstart
 
 ```bash
-kubectl apply -f data-stacks/valkey-on-eks/examples/cluster-mode/
+cd data-stacks/valkey-on-eks/examples
+./install-cluster-mode.sh                              # default: 6 pods, ns=valkey-cluster
+./install-cluster-mode.sh --replicas 9 \
+   --replicas-per-primary 2                            # 3 primaries × 2 replicas each
+./install-cluster-mode.sh --values my-values.yaml      # custom overrides
+./install-cluster-mode.sh --dry-run                    # render templates only
 ```
 
-Order of resources matters slightly (the StatefulSet's `volumeClaimTemplates` need the StorageClass to exist; the Secret needs to exist before the StatefulSet pulls the auth):
+The script wraps `helm install/upgrade` with the right defaults. To uninstall:
 
 ```bash
-# Apply in order — kustomize would handle this automatically
-for f in namespace.yaml secret.yaml configmap-config.yaml configmap-scripts.yaml \
-         serviceaccount.yaml service-headless.yaml service-client.yaml pdb.yaml \
-         networkpolicy.yaml statefulset.yaml; do
-  kubectl apply -f data-stacks/valkey-on-eks/examples/cluster-mode/$f
-done
+./uninstall-cluster-mode.sh           # keeps PVCs and the auth Secret
+./uninstall-cluster-mode.sh --purge   # delete everything
 ```
 
-Watch the bootstrap:
+### What the chart deploys
 
-```bash
-kubectl -n valkey-cluster get pods -w
-# valkey-cluster-0   0/1   ContainerCreating
-# valkey-cluster-0   1/1   Running          (bootstrap script kicks off)
-# valkey-cluster-1   0/1   ContainerCreating  (OrderedReady — pod 1 starts after pod 0 is Ready)
-# ...
-# valkey-cluster-5   1/1   Running
+| Resource | Purpose |
+|---|---|
+| `StatefulSet/valkey-cluster` | 6 pods (`podManagementPolicy: Parallel`), kernel-tuning init container, prepare-config init container, valkey + metrics containers |
+| `Service/valkey-cluster-headless` | Headless service (`clusterIP: None`, `publishNotReadyAddresses: true`) — per-pod DNS + cluster bus discovery |
+| `Secret/valkey-cluster-auth` | Auto-generated 32-char password; preserved across `helm upgrade` via `lookup` |
+| `ConfigMap/valkey-cluster-config` | `valkey.conf` — cluster mode + persistence + the include for `/data/conf/auth.conf` |
+| `ConfigMap/valkey-cluster-scripts` | `topology.sh`, `bootstrap.sh`, `readiness.sh`, `prestop.sh` |
+| `Job/valkey-cluster-bootstrap` | Post-install / post-upgrade Hook — runs `valkey-cli --cluster create` once; idempotent on re-runs |
+| `Role`, `RoleBinding`, `ClusterRole`, `ClusterRoleBinding` | Minimal RBAC for the bootstrap Job's kubectl init container (pod list, node read) |
+| `ServiceAccount/valkey-cluster` | Pod identity (no IAM yet; reserved for future restore-from-S3) |
+| `PodDisruptionBudget` | `maxUnavailable: 1` |
+| `ServiceMonitor` | Prometheus scrape config for the redis_exporter sidecar |
+| `NetworkPolicy` (opt-in) | Default-deny + explicit allow for intra-cluster, application namespaces, and Prometheus scrape |
 
-# Watch the bootstrap on pod-0
-kubectl -n valkey-cluster logs valkey-cluster-0 -f | grep -E '(cluster|MEET|REPLICATE|create)'
+### AZ-aware bootstrap (default ON)
+
+The post-install Hook Job runs a `topology.sh` init container with kubectl that maps each pod to its node's `topology.kubernetes.io/zone` label. The main bootstrap container reads this map and pairs each replica with a primary **in a different AZ**, so any single-AZ outage can be survived by failover. Without this, `valkey-cli --cluster create --cluster-replicas N` would pair by hostname pattern only — which, for a single StatefulSet, often produces same-AZ pairs and defeats the HA guarantee.
+
+To disable (single-AZ dev environments):
+
+```yaml
+topology:
+  azAwareBootstrap: false
 ```
 
-Verify cluster health:
+### Verifying the install
 
 ```bash
-PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
+PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth \
+        -o jsonpath='{.data.default}' | base64 -d)
 
+# Cluster info — expect all six lines
 kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
-  valkey-cli -a "$PASS" --no-auth-warning cluster info
+  valkey-cli -a "$PASS" --no-auth-warning cluster info | head -6
 # cluster_state:ok
 # cluster_slots_assigned:16384
 # cluster_slots_ok:16384
+# cluster_slots_pfail:0
+# cluster_slots_fail:0
 # cluster_known_nodes:6
-# cluster_size:3
 
+# Topology
 kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
-  valkey-cli -a "$PASS" --no-auth-warning cluster nodes
-# Output: 6 lines, 3 marked `master`, 3 marked `slave`, all `connected`,
-# slave→master `<slave-id> <slave-addr>... slave <master-id> 0 ...`
+  valkey-cli -a "$PASS" --no-auth-warning cluster shards
 ```
 
-## Connecting Clients
+Then run a smoke test:
 
-Cluster mode requires a **cluster-aware client**. Cluster-aware clients understand `MOVED` and `ASK` redirects, refresh slot maps after topology changes, and route same-slot multi-key operations correctly.
+```bash
+# Cluster-aware writes/reads
+kubectl -n valkey-cluster exec -i valkey-cluster-0 -c valkey -- \
+  valkey-cli -c -a "$PASS" --no-auth-warning <<'CMD'
+SET test:user:42 alice
+SET test:order:9001 "$50"
+GET test:user:42
+GET test:order:9001
+CMD
+
+# Quick benchmark
+kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+  valkey-benchmark -a "$PASS" --cluster \
+    -h valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local \
+    -p 6379 -t set,get -n 10000 -c 50 -q
+```
+
+## Connecting clients
+
+Cluster mode requires a **cluster-aware client**.
 
 | Library | Cluster-aware client class |
 |---|---|
-| `redis-py` | `redis.cluster.RedisCluster` |
-| `redis-py-cluster` (legacy) | use `redis-py` ≥ 4.1 instead |
+| `redis-py` ≥ 4.1 | `redis.cluster.RedisCluster` |
 | Lettuce (Java) | `RedisClusterClient` |
 | Jedis | `JedisCluster` |
 | ioredis | `Redis.Cluster` |
 | `go-redis` | `redis.NewClusterClient` |
 | valkey-glide | native cluster mode support |
 
-Connect via the **headless Service**:
+Connect via the headless service:
 
 ```python
 from redis.cluster import RedisCluster, ClusterNode
 
-nodes = [ClusterNode(f"valkey-cluster-{i}.valkey-cluster-headless.valkey-cluster.svc.cluster.local", 6379)
-         for i in range(6)]
-client = RedisCluster(startup_nodes=nodes, password=os.environ["VALKEY_PASSWORD"], decode_responses=True)
+nodes = [
+    ClusterNode(f"valkey-cluster-{i}.valkey-cluster-headless.valkey-cluster.svc.cluster.local", 6379)
+    for i in range(6)
+]
+client = RedisCluster(
+    startup_nodes=nodes,
+    password=os.environ["VALKEY_PASSWORD"],
+    decode_responses=True,
+)
 client.set("user:42:profile", "carol@example.com")
-client.get("user:42:profile")    # cluster client follows MOVED redirect to the right shard
+client.get("user:42:profile")
 ```
 
-The cluster client calls `CLUSTER SLOTS` (or `CLUSTER SHARDS` on Valkey 7.2+) once at startup to learn the slot→primary map, then routes every command directly to the owning primary. Writes go to primaries; reads go to primaries by default — clients that want to load-balance reads across replicas issue `READONLY` after the connection is established.
+The cluster client calls `CLUSTER SHARDS` once at startup to learn the slot map, then routes commands directly to the owning primary. Writes go to primaries; default reads also go to primaries. To load-balance reads across replicas, call `READONLY` on the connection after open — most cluster clients expose a `read_from_replicas=True` flag for this.
 
-## Best Practices
+## Best practices
 
-### Persistence (required for cluster mode)
+### Authentication
 
-Always enable AOF + RDB:
+The chart enables auth by default with `requirepass` + `primaryauth` sharing the same auto-generated 32-char password from a Kubernetes Secret. The Secret is preserved across `helm upgrade` via a `lookup` guard — running upgrade does NOT rotate the password (which would break the cluster, because running pods cache the password in env at startup).
 
-```ini
-appendonly yes
-appendfsync everysec
-save 900 1
-save 300 10
-save 60 10000
+To use your own externally-managed Secret:
+
+```yaml
+auth:
+  enabled: true
+  existingSecret: my-valkey-secret      # must contain key `default`
+  existingSecretPasswordKey: default
 ```
 
-Without persistence, a pod restart restores an empty dataset. The replica resyncs via PSYNC from the primary — fine in steady state, but during a controlled rolling restart of the entire cluster (e.g., AMI bump), the first pod back up must have its data on disk or the cluster permanently loses that shard's keyspace.
+The chart deliberately does NOT use an ACL file. It would add a separate `replication-user` ACL that needs `+psync +replconf +ping` (and **not** the non-existent `+@replication` category — a common copy-paste trap). `requirepass` + `primaryauth` is simpler and matches the [Microsoft AKS reference](https://learn.microsoft.com/en-us/azure/aks/deploy-valkey-cluster) for Valkey cluster mode.
 
-### AZ spread (the strict version)
+### Strict AZ spread
 
-Use `whenUnsatisfiable: DoNotSchedule` to make the spread mandatory. With 6 pods and 3 AZs, two pods land per AZ — pair them so a primary and its replica are never in the same AZ:
+Default:
 
 ```yaml
 topologySpreadConstraints:
@@ -482,257 +444,390 @@ topologySpreadConstraints:
         app.kubernetes.io/name: valkey-cluster
 ```
 
-Cluster bootstrap (`valkey-cli --cluster create --cluster-replicas 1`) does not natively respect AZ topology when assigning replicas — it picks the next pod in the list. To enforce primary→replica AZ separation, run the bootstrap with an **explicit node list** that interleaves AZs:
+`DoNotSchedule` is critical — `ScheduleAnyway` lets two pods land in the same AZ, and combined with the AZ-aware bootstrap puts you in a state where one AZ has no replica. For dev/test in single-AZ clusters, switch to `ScheduleAnyway`.
 
-```bash
-# Get pod-to-AZ map
-kubectl -n valkey-cluster get pods -o json | jq -r '
-  .items[] |
-  "\(.metadata.name) \(.spec.nodeName)"' | \
-while read pod node; do
-  az=$(kubectl get node "$node" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}')
-  echo "$pod $az"
-done
+### Persistence (required for cluster mode)
 
-# Manually create the cluster with primaries 0/1/2 in distinct AZs
-# and replicas 3/4/5 mapped to primaries in different AZs:
-valkey-cli --cluster create \
-  valkey-cluster-0.valkey-cluster-headless...:6379 \
-  valkey-cluster-1.valkey-cluster-headless...:6379 \
-  valkey-cluster-2.valkey-cluster-headless...:6379 \
-  valkey-cluster-3.valkey-cluster-headless...:6379 \
-  valkey-cluster-4.valkey-cluster-headless...:6379 \
-  valkey-cluster-5.valkey-cluster-headless...:6379 \
-  --cluster-replicas 1
-# valkey-cli pairs replicas to primaries in declaration order; verify with CLUSTER NODES
-# and use CLUSTER REPLICATE to fix any same-AZ pairs.
+```ini
+appendonly yes
+appendfsync everysec
+save 900 1
+save 300 10
+save 60 10000
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
 ```
 
-After the cluster is formed, a verification script:
+Without persistence, a pod restart restores an empty dataset. The replica resyncs via PSYNC from the primary — fine in steady state, but during a controlled rolling restart of the *entire* cluster (e.g., AMI bump), the first pod back up must have its data on disk or that shard's keyspace is gone.
 
-```bash
-PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
-kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
-  valkey-cli -a "$PASS" --no-auth-warning cluster nodes | \
-  awk '/master/ {m[$1]=$2} /slave/ {pairs[$1]=$4 " " $2} END {
-    for (s in pairs) {
-      split(pairs[s], a, " ");
-      m_id = a[1]; s_addr = a[2];
-      printf "slave %s replicates master %s\n", s_addr, m[m_id]
-    }
-  }'
+### Kernel tuning (Transparent Huge Pages)
+
+Valkey [docs require](https://valkey.io/topics/admin/) THP disabled:
+
+> "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+
+With THP enabled, a single-byte write by the BGSAVE parent copies a 2 MB page — ~500× write amplification. The chart's `kernel-tuning` init container handles this with a privileged container that runs as root for ~1 second:
+
+```yaml
+kernelTuning:
+  enabled: true        # default
 ```
 
-Cross-reference with the pod-to-AZ map; any same-AZ pair needs a manual `CLUSTER REPLICATE` to migrate.
+It also sets `net.core.somaxconn=65535` and `vm.overcommit_memory=1`.
+
+If your namespace has the [restricted PSA profile](https://kubernetes.io/docs/concepts/security/pod-security-standards/) set, this container will be rejected. Two options:
+
+1. Apply the same tuning at the node level via a separate DaemonSet that runs once at boot, then set `kernelTuning.enabled: false`.
+2. Move Valkey to a namespace with `baseline` or no PSA enforcement.
+
+### PodDisruptionBudget — `maxUnavailable: 1`
+
+```yaml
+pdb:
+  enabled: true
+  maxUnavailable: 1
+```
+
+Cluster mode tolerates **one primary down** because failover requires a majority of the remaining 2 primaries to agree (2/3 = quorum). `maxUnavailable: 2` could remove 2 primaries simultaneously and stall failover.
+
+For deeper safety during voluntary disruptions (node drains, Karpenter consolidation), pair the PDB with `pod-deletion-cost` annotations to bias eviction toward replicas first.
 
 ### Network policy
 
-Cluster mode requires unrestricted east-west traffic between Valkey pods on **both** `:6379` and `:16379`:
+Off by default in the chart. Turn on once you know which application namespaces need port 6379:
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: valkey-cluster
-  namespace: valkey-cluster
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: valkey-cluster
-  policyTypes: ["Ingress", "Egress"]
-  ingress:
-    # Allow other Valkey pods in the same namespace
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: valkey-cluster
-      ports:
-        - { protocol: TCP, port: 6379 }
-        - { protocol: TCP, port: 16379 }
-    # Allow application namespaces (replace with your actual app namespace)
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              role: app
-      ports:
-        - { protocol: TCP, port: 6379 }
-    # Allow Prometheus
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - { protocol: TCP, port: 9121 }
-  egress:
-    # Allow cluster bus + replication to peers
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: valkey-cluster
-      ports:
-        - { protocol: TCP, port: 6379 }
-        - { protocol: TCP, port: 16379 }
-    # DNS
-    - to:
-        - namespaceSelector: {}
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - { protocol: UDP, port: 53 }
+networkPolicy:
+  enabled: true
+  allowedFrom:
+    - matchLabels:
+        role: app
+    - matchLabels:
+        team: ml-platform
 ```
 
-### PodDisruptionBudget
+Intra-cluster traffic on 6379 + 16379 is always allowed (every Valkey pod talks to every other). DNS egress to kube-dns is allowed. Prometheus is permitted on `:9121`.
+
+## How failover works
+
+Failover happens in two flavors: **unplanned** (a pod or node dies) and **planned** (you want to rotate the primary role, e.g., for a node upgrade).
+
+### Unplanned (automatic, gossip-driven)
+
+```
+T+0s    Primary pod-0 dies (kernel panic, AZ outage, OOM-kill)
+T+0-15s Pod-3 (the replica) keeps trying to send REPLCONF heartbeats — no response
+T+15s   `cluster-node-timeout` expires. Pod-3 marks pod-0 as PFAIL and gossips it.
+T+15-30s Pods 1, 2, 4, 5 receive the PFAIL gossip. Each compares against their own
+        view. When the majority of primaries (pod-1 and pod-2) agree, pod-0 is FAIL.
+T+30-45s Pod-3 starts a failover election: it broadcasts a FAILOVER_AUTH_REQUEST to
+        all primaries. Each primary checks its `lastVoteEpoch` and votes once per
+        epoch. If pod-3 receives majority votes (>1 of 2 remaining primaries), it
+        promotes.
+T+45s   Pod-3 issues `CLUSTER FAILOVER TAKEOVER` and bumps its config epoch. Its
+        slot range (0-5460) is now owned by pod-3 across the gossip table.
+T+45-60s Existing client connections hit `MOVED 5403 pod-3:6379` on the next command
+        for that slot range. Clients update their slot map. Writes resume.
+```
+
+End-to-end, expect **30–60 seconds of write unavailability** for the affected shard in the default `cluster-node-timeout: 15s` configuration. Reads continue to the replica (now primary) once promoted.
+
+To tune: lower `cluster-node-timeout` for faster detection (cost: higher gossip rate, more false positives under transient network blips). Don't go below 5s on multi-AZ deployments.
+
+### Planned (graceful, via CLUSTER FAILOVER)
+
+Use this to rotate the primary role onto a specific replica — e.g., before a node upgrade or to rebalance load.
+
+```bash
+PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
+
+# Find the replica you want to promote (e.g., valkey-cluster-3 replicates valkey-cluster-0)
+kubectl -n valkey-cluster exec valkey-cluster-3 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning cluster failover
+
+# Verify
+kubectl -n valkey-cluster exec valkey-cluster-3 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning role | head -1
+# master
+```
+
+`CLUSTER FAILOVER` (without `FORCE` or `TAKEOVER`) coordinates with the primary: the replica catches up to the primary's offset, then both swap roles atomically. The window where writes can't proceed is **typically < 1 second** — much faster than the unplanned 30-60s.
+
+The chart's `preStop` hook (`/scripts/prestop.sh`) does exactly this when a pod is being terminated: if the pod is currently a primary, it picks a healthy replica and runs `CLUSTER FAILOVER`, waits up to 10s for the role swap, then `SHUTDOWN`. This is what makes the rolling upgrade smooth — see the next section.
+
+### When failover stalls
+
+`cluster_state:fail` after a multi-pod outage means the cluster lost quorum. Recovery:
+
+```bash
+PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
+
+# 1. Wait for failed pods to come back. The chart's prepare-config init container
+#    rewrites /data/conf/auth.conf and the bootstrap.sh in the StatefulSet's
+#    main container restarts. Each pod loads its previous nodes.conf from PVC
+#    and rejoins via gossip — no manual MEET needed.
+kubectl -n valkey-cluster get pods
+
+# 2. If pods rejoin but the cluster stays in fail state, identify the surviving
+#    primaries and check their voting state:
+for i in 0 1 2 3 4 5; do
+  kubectl -n valkey-cluster exec valkey-cluster-$i -c valkey -- \
+    valkey-cli -a "$PASS" --no-auth-warning cluster info | grep cluster_state
+done
+
+# 3. As a last resort, force a slot takeover on a surviving primary that owns
+#    the orphaned slot range:
+kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning cluster failover takeover
+```
+
+`FAILOVER TAKEOVER` skips the consensus wait — only use when you've confirmed the original primary is permanently lost. If `nodes.conf` is corrupted across multiple PVCs simultaneously (rare; would require multiple PVC failures), the only path is **restore from RDB backup** per shard via the [EC2 → EKS migration runbook](./ec2-migration.md).
+
+## Planned upgrades
+
+Three independent upgrade dimensions — handle them one at a time. The cluster's `cluster_state` should stay `:ok` throughout each one.
+
+### Pre-flight checklist
+
+```bash
+PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
+
+# 1. All 6 pods 2/2 Ready
+kubectl -n valkey-cluster get pods
+
+# 2. cluster_state:ok, all 16384 slots covered
+kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning cluster info | head -6
+
+# 3. Replication healthy on every replica
+for i in 3 4 5; do
+  kubectl -n valkey-cluster exec valkey-cluster-$i -c valkey -- \
+    valkey-cli -a "$PASS" --no-auth-warning info replication | grep -E '^(role|master_link_status):'
+done
+
+# 4. PDB allows 1 disruption
+kubectl -n valkey-cluster get pdb valkey-cluster
+# expect: maxUnavailable=1, disruptionsAllowed=1
+```
+
+If any pre-flight fails, fix before upgrading.
+
+### Chart bump (config-only)
+
+For chart changes that don't touch the StatefulSet's pod template (e.g., a new ServiceMonitor label, a NetworkPolicy tweak):
+
+```bash
+helm upgrade valkey-cluster ./cluster-mode-helm-chart -n valkey-cluster
+```
+
+No pod restart. The post-upgrade Hook Job runs `bootstrap.sh`, sees `cluster_state:ok` already, and exits 0.
+
+### Valkey image version bump
+
+For the underlying Valkey container image (e.g., 9.0.2 → 9.0.3):
 
 ```yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: valkey-cluster
-  namespace: valkey-cluster
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: valkey-cluster
+# overrides.yaml
+image:
+  tag: "9.0.3"
 ```
 
-`maxUnavailable: 1` is the right call: cluster mode tolerates **one primary down** because failover requires a majority of the remaining 2 primaries to agree (2/3 = quorum). Setting `maxUnavailable: 2` could remove 2 primaries simultaneously and stall failover.
-
-For deeper safety during voluntary disruptions (drains, node replacements), pair the PDB with `pod-deletion-cost` annotations to bias eviction toward replicas first:
-
-```yaml
-annotations:
-  controller.kubernetes.io/pod-deletion-cost: "-100"   # set on replicas; primaries get +100
+```bash
+helm upgrade valkey-cluster ./cluster-mode-helm-chart -n valkey-cluster -f overrides.yaml
 ```
 
-### Sizing
+The StatefulSet's pod template changes → rolling restart in **reverse-ordinal order** (pod 5 → 4 → 3 → 2 → 1 → 0), one pod at a time (enforced by PDB `maxUnavailable: 1`). For each pod:
 
-| Workload | Pod size (memory request = limit) | Node instance | Total cluster memory (3 primaries) |
-|---|---|---|---|
-| Dev / staging | 4 GiB | `r7g.large` (16 GiB) | 12 GiB primary capacity |
-| Small prod | 12 GiB | `r7g.large` (16 GiB) | 36 GiB |
-| Medium prod | 24 GiB | `r7g.xlarge` (32 GiB) | 72 GiB |
-| Large prod | 48 GiB | `r7g.2xlarge` (64 GiB) | 144 GiB |
-| Very large | 96 GiB | `r7g.4xlarge` (128 GiB) | 288 GiB |
+1. K8s sends SIGTERM. `preStop` runs.
+2. If the pod is a **primary**, `prestop.sh` issues `CLUSTER FAILOVER` to its replica. The replica's role flips to primary within ~1 second; clients see at most one `MOVED` redirect.
+3. `SHUTDOWN` is sent; the server flushes AOF and exits.
+4. Pod re-creates with the new image, runs the init containers (kernel tuning + prepare-config), then the main container.
+5. New container starts — the existing `/data/nodes.conf` carries this pod's node ID. The cluster's other 5 pods recognize it via gossip.
+6. Readiness probe waits for `cluster_state:ok` + `cluster_slots_assigned:16384`.
+7. PDB releases — next pod can roll.
 
-Always set `requests.memory == limits.memory`. Set `maxmemory` in `valkey.conf` to ~80% of `requests.memory`. The remainder is fork-time CoW headroom for `BGSAVE`. Set `maxmemory-policy noeviction` so the cluster prefers write rejection over eviction (eviction in cluster mode complicates slot ownership).
+End-to-end for 6 pods at ~90s per pod: ~10 minutes. Tested in the chart development with sustained writes — 97% write success during the upgrade window, with the 3% gap landing in the seconds when the last primary (pod 0) failed over to its replica.
 
-## Operational Runbooks
+After upgrade, the master/replica roles are typically **flipped** vs the start (every primary's `preStop` triggers a failover to its replica). This is intentional and harmless; you can flip them back later via `CLUSTER FAILOVER` if you want a stable mapping for monitoring dashboards.
+
+### Karpenter AMI rollover
+
+When the Karpenter NodePool's underlying AMI bumps (e.g., AL2023 security patch), the existing nodes drift and get replaced. Karpenter respects PDBs, so the cluster mode rollover behaves exactly like the image bump above — one pod evicted at a time, `preStop` does graceful failover, replica catches up before next pod.
+
+To control timing:
+
+```bash
+# Disable Karpenter's automatic drift correction temporarily
+kubectl -n karpenter patch nodepool valkey --type merge -p \
+  '{"spec":{"disruption":{"budgets":[{"nodes":"0"}]}}}'
+
+# … manually drain when ready …
+kubectl drain ip-100-64-xxx --ignore-daemonsets --delete-emptydir-data
+
+# Re-enable
+kubectl -n karpenter patch nodepool valkey --type merge -p \
+  '{"spec":{"disruption":{"budgets":[{"nodes":"1"}]}}}'
+```
+
+### Rolling upgrade test (verification)
+
+Before relying on the upgrade path in production, exercise it once with sustained traffic. A pattern that worked during chart development:
+
+```bash
+PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
+
+# Terminal A — sustained workload
+for i in $(seq 1 600); do
+  kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+    valkey-cli -c -a "$PASS" --no-auth-warning SET "upgrade:probe:$i" "v" \
+    && echo "$(date +%T) ok" || echo "$(date +%T) FAIL"
+  sleep 0.5
+done > /tmp/probe.log &
+
+# Terminal B — monitor cluster health
+while true; do
+  kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+    valkey-cli -a "$PASS" --no-auth-warning cluster info | grep cluster_state
+  sleep 2
+done
+
+# Terminal C — trigger the upgrade
+helm upgrade valkey-cluster ./cluster-mode-helm-chart -n valkey-cluster -f overrides.yaml
+
+# After completion
+grep -c FAIL /tmp/probe.log
+# expect < 5% — failures concentrate at the moment the last primary fails over
+```
+
+## Operational runbooks
 
 ### Scale out (add a shard)
 
-Cluster mode scales by adding shards (a primary + its replica), not by adding pods to existing shards.
+Cluster mode scales by adding shards (a primary + its replica), not by adding pods to existing shards. The chart's bootstrap is one-shot — for scale-out, follow this manual procedure:
 
 ```bash
-# 1. Bump replicas in the StatefulSet
-kubectl -n valkey-cluster scale statefulset valkey-cluster --replicas=8
-
-# 2. Wait for the new pods to be Running and Ready
-kubectl -n valkey-cluster rollout status statefulset/valkey-cluster
-
-# 3. Have the new primary join the cluster (init script does this automatically,
-#    but for an explicit shard add, use --cluster add-node)
 PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
 
-# Add new primary (pod 6)
+# 1. Scale the StatefulSet
+kubectl -n valkey-cluster scale statefulset valkey-cluster --replicas=8
+
+# 2. Wait for pods 6 and 7 to be Running (they'll be in "bootstrap-pending"
+#    Readiness state — that's expected, they haven't been joined yet)
+kubectl -n valkey-cluster get pods
+
+# 3. Add pod 6 as a new primary
 kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
   valkey-cli -a "$PASS" --no-auth-warning --cluster add-node \
     valkey-cluster-6.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
     valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379
 
-# Reshard hash slots — move 4096 slots from existing primaries to the new one
+# 4. Reshard — move ~4096 slots from existing primaries to pod 6
+NEW_PRIMARY_ID=$(kubectl -n valkey-cluster exec valkey-cluster-6 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning cluster myid)
+
 kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
   valkey-cli -a "$PASS" --no-auth-warning --cluster reshard \
     valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
-    --cluster-from all --cluster-to <new-primary-node-id> \
+    --cluster-from all --cluster-to "$NEW_PRIMARY_ID" \
     --cluster-slots 4096 --cluster-yes
 
-# Add the new replica (pod 7) and assign it to the new primary
+# 5. Add pod 7 as a replica of pod 6, in a different AZ if possible
 kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
   valkey-cli -a "$PASS" --no-auth-warning --cluster add-node \
     valkey-cluster-7.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
     valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
-    --cluster-slave --cluster-master-id <new-primary-node-id>
+    --cluster-slave --cluster-master-id "$NEW_PRIMARY_ID"
 ```
 
-Plan for **15–30 minutes of rebalancing per 10 GiB of data**. Resharding is online — clients see brief `MOVED` redirects but no errors.
+Resharding is **online** — clients see brief `MOVED` / `ASK` redirects but no errors. Budget **30–60 seconds per GB** of resharded data on legacy migration.
 
-### Recover from quorum loss
-
-If 2+ primaries fail simultaneously (e.g., 2 AZs go down), the surviving primary cannot fail over its slot range — it has no quorum. The cluster reports `cluster_state:fail` and rejects writes.
-
-Recovery:
+### Scale in (remove a shard)
 
 ```bash
-# 1. Restore the failed pods (Karpenter brings new nodes; pods rejoin via init script)
-kubectl -n valkey-cluster get pods   # wait for all 6 pods to be Running
+# 1. Drain slots off the shard being removed (move them to another primary)
+DRAIN_ID=$(kubectl -n valkey-cluster exec valkey-cluster-6 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning cluster myid)
+DEST_ID=$(kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning cluster myid)
 
-# 2. If pods rejoin but the cluster stays in fail state, force a slot takeover
-#    on each surviving primary:
-PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
-for pod in valkey-cluster-0 valkey-cluster-1 valkey-cluster-2; do
-  kubectl -n valkey-cluster exec "$pod" -c valkey -- \
-    valkey-cli -a "$PASS" --no-auth-warning cluster reset hard 2>/dev/null || true
+kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+  valkey-cli -a "$PASS" --no-auth-warning --cluster reshard \
+    valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
+    --cluster-from "$DRAIN_ID" --cluster-to "$DEST_ID" \
+    --cluster-slots 16384 --cluster-yes
+
+# 2. Remove pod 6 and 7 from the cluster
+for ID in $DRAIN_ID $REPLICA_ID; do
+  kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
+    valkey-cli -a "$PASS" --no-auth-warning --cluster del-node \
+      valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
+      "$ID"
 done
-# Then re-bootstrap from the freshest primary's nodes.conf (in PVC):
-# Restore the cluster.conf from PVC backup, restart all pods.
+
+# 3. Scale the StatefulSet down
+kubectl -n valkey-cluster scale statefulset valkey-cluster --replicas=6
+
+# 4. Clean up the orphaned PVCs (StatefulSet doesn't auto-delete them)
+kubectl -n valkey-cluster delete pvc data-valkey-cluster-6 data-valkey-cluster-7
 ```
 
-If `nodes.conf` on disk is corrupted across multiple PVCs, the only path is **restore from RDB backup**: `kubectl exec` into each surviving pod, copy `/data/dump.rdb` and `/data/appendonly.aof.*` out via S3, then redeploy a fresh cluster and restore via the [EC2 → EKS migration runbook](./ec2-migration.md) per shard.
+### Recover from a wedged bootstrap
 
-### Forced primary failover (planned)
-
-To rotate the primary role onto a specific replica (e.g., for a planned upgrade of the current primary's underlying node):
+If the post-install Hook Job fails (e.g., a pod is stuck restarting), the Job stays in `Failed` state for debugging (the chart uses `hook-delete-policy: before-hook-creation,hook-succeeded`).
 
 ```bash
-# Find the replica ordinal that should become primary (e.g., valkey-cluster-3 replicates valkey-cluster-0)
-PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
+# Inspect logs
+kubectl -n valkey-cluster logs -l app.kubernetes.io/component=bootstrap -c topology
+kubectl -n valkey-cluster logs -l app.kubernetes.io/component=bootstrap -c bootstrap
 
-# On the replica, issue the failover (FORCE makes it skip the consensus wait — use sparingly)
-kubectl -n valkey-cluster exec valkey-cluster-3 -c valkey -- \
-  valkey-cli -a "$PASS" --no-auth-warning cluster failover
-
-# Verify role flipped
-kubectl -n valkey-cluster exec valkey-cluster-3 -c valkey -- \
-  valkey-cli -a "$PASS" --no-auth-warning info replication | grep '^role:'
-# role:master
+# Fix the underlying issue (config error, image pull, etc.), then re-run helm
+kubectl -n valkey-cluster delete job valkey-cluster-bootstrap
+helm upgrade valkey-cluster ./cluster-mode-helm-chart -n valkey-cluster
 ```
 
-## Roll Your Own
+`bootstrap.sh` is idempotent — if `cluster_state:ok` already, it exits 0 without re-running `--cluster create`.
 
-The example manifests are intended as a starting point. Customize them by:
+### Reset everything (dev / test)
 
-1. **Tuning shard count**: change `replicas` in the StatefulSet (must stay even — half are primaries, half are replicas under the default 1:1 layout) and update `REPLICAS` env var on the bootstrap script.
-2. **Tuning replicas per primary**: pass `--cluster-replicas N` (instead of `1`) to the bootstrap script, and set `replicas` to `primaries × (1 + N)`.
-3. **Tuning persistence**: drop `appendonly yes` if you want RDB-only (faster but coarser durability). Increase the `save` cadence for tighter RPO.
-4. **Tuning eviction**: switch `maxmemory-policy` to `allkeys-lru` if you can tolerate eviction (cache-mode), but understand that eviction reshuffles slot ownership semantics and complicates client behavior.
-5. **TLS**: set `tls-port 6379` and `port 0` in `valkey.conf`, mount cert/key/CA from a secret, update the readiness/preStop scripts to use `--tls --cert ... --key ... --cacert ...`. Lettuce / `redis-py` ≥ 4.1 / Jedis 4+ support cluster TLS natively.
+```bash
+./uninstall-cluster-mode.sh --purge     # removes PVCs + Secret + namespace
+./install-cluster-mode.sh               # fresh install
+```
 
-## Migration: Replication → Cluster
+## Migration from Replication Mode
 
 Already running this stack's replication mode and want to migrate to cluster mode without downtime?
 
-1. Deploy the cluster-mode manifests in a separate namespace (`valkey-cluster`) so both releases run in parallel.
-2. Use `valkey-cli --cluster import` from a temporary client pod to copy keys from the replication primary into the cluster:
+1. Deploy the cluster-mode chart in the `valkey-cluster` namespace (the default). Both releases run in parallel.
+2. Use `valkey-cli --cluster import` from a temporary client pod to live-migrate keys:
+
    ```bash
-   kubectl run valkey-cli --rm -it --image=docker.io/valkey/valkey:9.0.2 --restart=Never -- /bin/sh
+   kubectl -n valkey-cluster run valkey-migrate --rm -it \
+     --image=docker.io/valkey/valkey:9.0.2 --restart=Never -- /bin/sh
+
+   # Inside the pod:
    valkey-cli --cluster import \
      valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
      --cluster-from valkey.valkey.svc.cluster.local:6379 \
      --cluster-from-pass "$REPLICATION_PASS" \
      --cluster-from-user default \
-     --cluster-to valkey-cluster-0.valkey-cluster-headless.valkey-cluster.svc.cluster.local:6379 \
      --cluster-replace
    ```
-3. Cut application traffic over to the cluster mode endpoints (a cluster-aware client library is required — see the client compatibility table earlier).
+
+3. Cut application traffic over to the cluster-mode endpoints (cluster-aware client library required).
 4. Once stable, decommission the replication-mode release.
 
-`--cluster import` does live key migration with `DUMP` / `RESTORE`. Expect throughput around 5–20 MB/s per source connection; for very large datasets, parallelize by hash-slot range.
+`--cluster import` uses `DUMP` / `RESTORE` for live key migration. Expect ~5–20 MB/s per source connection; parallelize by hash-slot range for very large datasets.
 
 ## References
 
-- [valkey-helm PR #51](https://github.com/valkey-io/valkey-helm/pull/51) — the upstream PR this design is based on.
-- [valkey-helm issue #18](https://github.com/valkey-io/valkey-helm/issues/18) — tracking native cluster support in the official chart.
 - [Valkey Cluster Specification](https://valkey.io/topics/cluster-spec/) — protocol-level reference for slot assignment, gossip, failover.
-- [Valkey Cluster Tutorial](https://valkey.io/topics/cluster-tutorial/) — the hands-on companion to the spec.
+- [Valkey Cluster Tutorial](https://valkey.io/topics/cluster-tutorial/) — hands-on companion to the spec.
+- [Valkey Administration Docs](https://valkey.io/topics/admin/) — THP, fork tuning, kernel guidance.
+- [Valkey 1B RPS benchmark](https://valkey.io/blog/1-billion-rps/) — scale ceiling demo (1000 shards).
+- [Microsoft AKS Valkey Cluster reference](https://learn.microsoft.com/en-us/azure/aks/deploy-valkey-cluster) — the architectural pattern this chart adopts.
+- [valkey-helm PR #51](https://github.com/valkey-io/valkey-helm/pull/51) — the upstream PR being tracked for native cluster support.
+- [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) — official cluster-mode roadmap.
+- [AWS ElastiCache supported node types](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/CacheNodes.SupportedTypes.html) — current instance families AWS recommends.
+- [AWS gp3 EBS docs](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html) — IOPS/throughput knobs and pricing.
+- [AWS VPC CNI Prefix Delegation](https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html) — pod-density planning.
