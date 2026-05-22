@@ -124,7 +124,10 @@ valkeyConfig: |
   maxmemory 12gb
   maxmemory-policy noeviction
 
-  # Persistence — both AOF and RDB for max durability
+  # Persistence — both AOF and RDB for max durability.
+  # For RDB-only (saves replication / network bandwidth at the cost of up to
+  # 15 minutes of potential data loss on crash), comment out `appendonly yes`
+  # and tighten the `save` cadence to match your RPO.
   appendonly yes
   appendfsync everysec
   auto-aof-rewrite-percentage 100
@@ -132,6 +135,18 @@ valkeyConfig: |
   save 900 1
   save 300 10
   save 60 10000
+
+  # I/O threading (Valkey 7+). Parallelizes socket reads/writes/TLS while the
+  # main command-execution loop stays single-threaded. Major win for multi-KB
+  # values and high QPS. Recommended: io-threads = min(8, vCPU - 2).
+  io-threads 4
+  io-threads-do-reads yes
+
+  # Diskless replication — sends the RDB to replicas over a socket without
+  # writing it to the primary's disk first. Saves an EBS write burst during
+  # PSYNC full-resync. Safe to enable when the network between pods is fast.
+  repl-diskless-sync yes
+  repl-diskless-sync-delay 5
 
   # Operational visibility
   slowlog-log-slower-than 10000
@@ -179,7 +194,8 @@ topologySpreadConstraints:
         app.kubernetes.io/name: valkey-cluster
 
 # Soft pod anti-affinity at the host level — keeps pods on different nodes
-# when capacity allows, without blocking scheduling when it doesn't.
+# when capacity allows, without blocking scheduling when it doesn't. Override
+# via `tuning.strictHostAntiAffinity: true` for strict one-pod-per-node.
 affinity:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
@@ -189,6 +205,27 @@ affinity:
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: valkey-cluster
+
+# -----------------------------------------------------------------------------
+# Tuning knobs that flip multiple lower-level settings at once.
+#
+# networkOptimized:
+#   When true, pin pods to the n-suffix Graviton families (r7gn/r8gn/m7gn)
+#   for sustained > 10 Gbps client traffic, multi-KB values, or PSYNC full-
+#   resync of large shards. Implemented as a hard nodeAffinity on
+#   karpenter.k8s.aws/instance-family. Default false — typical workloads
+#   should not pay the n-suffix cost premium.
+#
+# strictHostAntiAffinity:
+#   When true, replaces the soft podAntiAffinity above with HARD
+#   requiredDuringSchedulingIgnoredDuringExecution so two Valkey pods can
+#   NEVER land on the same node — mitigates noisy-neighbor effects from
+#   pod-to-pod CPU / NIC contention. Requires the Valkey NodePool to have
+#   at least `replicaCount` nodes worth of capacity at all times.
+# -----------------------------------------------------------------------------
+tuning:
+  networkOptimized: false
+  strictHostAntiAffinity: false
 
 # -----------------------------------------------------------------------------
 # Kernel tuning (privileged init container)

@@ -57,10 +57,31 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- if .Values.tuning.networkOptimized }}
+        # tuning.networkOptimized=true → pin to n-suffix Graviton families.
+        # Karpenter's instance-family label is set on the node at provisioning
+        # time; this nodeAffinity is what tells Karpenter "only spin up these".
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: karpenter.k8s.aws/instance-family
+                    operator: In
+                    values: ["r7gn", "r8gn", "m7gn"]
+        {{- end }}
+        {{- if .Values.tuning.strictHostAntiAffinity }}
+        # tuning.strictHostAntiAffinity=true → hard one-pod-per-node.
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: valkey-cluster
+        {{- else if .Values.affinity.podAntiAffinity }}
+        podAntiAffinity:
+          {{- toYaml .Values.affinity.podAntiAffinity | nindent 10 }}
+        {{- end }}
       {{- with .Values.topologySpreadConstraints }}
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
