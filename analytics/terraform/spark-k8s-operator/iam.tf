@@ -83,6 +83,76 @@ resource "aws_iam_policy" "s3_irsa_access_policy" {
   })
 }
 
+#---------------------------------------------------------------
+# IRSA for EFS CSI Driver
+#---------------------------------------------------------------
+module "efs_csi_driver_irsa" {
+  source           = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version          = "5.60.0"
+  role_name_prefix = format("%s-%s-", local.name, "efs-csi-driver")
+
+  attach_efs_csi_policy = false
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:efs-csi-controller-sa", "kube-system:efs-csi-node-sa"]
+    }
+  }
+  tags = local.tags
+}
+
+# Inline policy for EFS CSI driver (avoids iam:CreatePolicy permission requirement)
+resource "aws_iam_role_policy" "efs_csi_driver" {
+  name_prefix = "${local.name}-efs-csi-"
+  role        = module.efs_csi_driver_irsa.iam_role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticfilesystem:DescribeAccessPoints",
+          "elasticfilesystem:DescribeFileSystems",
+          "elasticfilesystem:DescribeMountTargets",
+          "elasticfilesystem:CreateAccessPoint",
+          "elasticfilesystem:DeleteAccessPoint",
+          "ec2:DescribeAvailabilityZones"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Additional S3 Files permissions for EFS CSI driver
+# TODO: Replace with AmazonS3FilesCSIDriverPolicy managed policy when available
+resource "aws_iam_role_policy" "efs_csi_s3files" {
+  name_prefix = "${local.name}-efs-csi-s3files-"
+  role        = module.efs_csi_driver_irsa.iam_role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3files:ClientMount",
+          "s3files:ClientWrite",
+          "s3files:ClientRootAccess",
+          "s3files:GetFileSystem",
+          "s3files:ListFileSystems",
+          "s3files:GetMountTarget",
+          "s3files:ListMountTargets",
+          "s3files:GetAccessPoint",
+          "s3files:ListAccessPoints"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
 
 #---------------------------------------------------------------
 # IRSA for Kubecost EC2 access
@@ -193,6 +263,18 @@ data "aws_iam_policy_document" "spark_operator" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",
       "logs:PutLogEvents",
+    ]
+  }
+
+  statement {
+    sid       = "S3FilesAccess"
+    effect    = "Allow"
+    resources = ["*"]
+
+    actions = [
+      "s3files:ClientMount",
+      "s3files:ClientWrite",
+      "s3files:ClientRootAccess",
     ]
   }
 }

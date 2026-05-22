@@ -67,6 +67,25 @@ output "s3directory_bucket_zone" {
 }
 
 ################################################################################
+# S3 Files Configuration
+################################################################################
+
+output "s3_files_filesystem_id" {
+  description = "S3 Files filesystem ID - use this in PersistentVolume manifests"
+  value       = aws_cloudformation_stack.s3_files_fs.outputs["FileSystemId"]
+}
+
+output "s3_files_access_point_id" {
+  description = "S3 Files Access Point ID for spark-team-a"
+  value       = aws_cloudformation_stack.s3_files_resources.outputs["AccessPointId"]
+}
+
+output "s3_files_mount_target_ip" {
+  description = "S3 Files mount target IP for PV configuration"
+  value       = data.external.s3_files_mount_target_ip.result["ip"]
+}
+
+################################################################################
 # Ray Data Configuration
 ################################################################################
 

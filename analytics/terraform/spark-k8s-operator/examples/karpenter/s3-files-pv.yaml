@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: s3files-pv
+  labels:
+    type: s3-files
+    usage: spark-data
+spec:
+  capacity:
+    storage: 100Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: s3-files-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: s3files:<S3_FILES_FS_ID>::<S3_FILES_AP_ID>
+    volumeAttributes:
+      mounttargetip: "<S3_FILES_MOUNT_TARGET_IP>"
