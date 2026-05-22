@@ -1,8 +1,8 @@
 # EMR on EKS Data Stack Configuration
 # This file enables EMR on EKS Virtual Clusters for running Spark jobs
 
-name          = "emr-on-eks"
-region        = "us-west-2"
+name   = "emr-on-eks"
+region = "us-west-2"
 # Unique ID used to tag all AWS resources for this deployment.
 # Enables identification of orphaned resources and cleanup in case of Terraform state loss.
 # Auto-generated on first deploy — do not edit manually.

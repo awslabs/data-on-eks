@@ -85,7 +85,7 @@ Extend your data platform with AWS Partner solutions built for Amazon EKS. These
 </div>
 <div className="datastack-content">
 <h3>DataPelago</h3>
-<div className="datastack-description">DataPelago Accelerator for Spark (DPA-S) reduces costs by up to 80% and accelerates Spark workloads by up to 10x. DPA-S seamlessly integrates with Apache Spark on EKS and enables CPU/GPU acceleration for Data Engineering/ETL, BI, and AI workloads.</div> 
+<div className="datastack-description">DataPelago Accelerator for Spark (DPA-S) reduces costs by up to 80% and accelerates Spark workloads by up to 10x. DPA-S seamlessly integrates with Apache Spark on EKS and enables CPU/GPU acceleration for Data Engineering/ETL, BI, and AI workloads.</div>
 </div>
 </div>
 <div className="datastack-features">
