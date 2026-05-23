@@ -9,7 +9,7 @@ import '@site/src/css/datastack-tiles.css';
 
 [Valkey](https://valkey.io) is an open-source, in-memory key/value datastore — a Linux Foundation–maintained fork of Redis 7.2.4 that continues the BSD-licensed lineage. Wire-compatible with Redis: same protocol, same client libraries (Lettuce, Jedis, ioredis, redis-py, go-redis), same data structures (strings, hashes, lists, sets, sorted sets, streams).
 
-This data stack delivers a production-grade Valkey deployment on Amazon EKS using the **official `valkey-io/valkey-helm` chart** as the default (replication mode), fronted by a dedicated Karpenter NodePool of Graviton (`r7g`/`r8g`) on-demand instances spread across three Availability Zones. **Cluster mode** (sharded with gossip) is also supported via plain Kubernetes manifests — see the [Cluster Mode guide](./cluster-mode.md). The cluster-mode manifest design will be replaced by the official chart's native support once [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) ships.
+This data stack delivers a production-grade Valkey deployment on Amazon EKS using the **official `valkey-io/valkey-helm` chart** for replication mode and a **local Helm chart** for cluster mode (sharded with gossip), both fronted by a dedicated Karpenter NodePool of Graviton (`r7g`/`r8g`/`r7gn`/`r8gn`/`m7gn`) on-demand instances spread across three Availability Zones. The local cluster-mode chart will retire in favor of the official chart's native support once [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) ships.
 
 ## Why this stack
 
@@ -74,15 +74,15 @@ This data stack delivers a production-grade Valkey deployment on Amazon EKS usin
 <div className="showcase-header">
 <div className="showcase-icon">🧩</div>
 <div className="showcase-content">
-<h3>Cluster Mode (Self-Managed)</h3>
-<p className="showcase-description">3 primaries × 1 replica with hash-slot sharding and gossip-based failover. Plain Kubernetes manifests — no Helm chart, no operator. Based on <a href="https://github.com/valkey-io/valkey-helm/pull/51">valkey-helm PR #51</a>.</p>
+<h3>Cluster Mode</h3>
+<p className="showcase-description">3 primaries × 1 replica with hash-slot sharding, AZ-aware bootstrap, gossip-based failover. Local Helm chart with post-install bootstrap Job, until upstream cluster mode ships (<a href="https://github.com/valkey-io/valkey-helm/issues/18">valkey-helm #18</a>).</p>
 </div>
 </div>
 <div className="showcase-tags">
 <span className="tag performance">Sharding</span>
 <span className="tag">Gossip</span>
 <span className="tag">Multi-AZ</span>
-<span className="tag">No Operator</span>
+<span className="tag">Helm</span>
 </div>
 <div className="showcase-footer">
 <a href="/data-on-eks/docs/datastacks/databases/valkey-on-eks/cluster-mode" className="showcase-link">
@@ -151,7 +151,7 @@ This data stack delivers a production-grade Valkey deployment on Amazon EKS usin
 | Standalone | 1 pod | ✗ | ✗ | Dev / test, ephemeral cache | Available — set `replica.enabled: false` |
 | **Primary + Replica** | 1 primary + N replicas | Manual failover | ✗ | Read-heavy, < 25 GB dataset, Lua scripts, multi-key ops | **Default deployment** (official chart) |
 | Sentinel | Primary + replicas + Sentinel | ✓ | ✗ | HA without sharding | Not yet in official chart |
-| **Cluster Mode** | 3+ primaries × 1+ replica each | ✓ | ✓ | Large datasets, write throughput | **Self-managed manifests** — see [Cluster Mode guide](./cluster-mode.md). Will switch to official chart when [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) lands. |
+| **Cluster Mode** | 3+ primaries × 1+ replica each | ✓ (automatic via gossip) | ✓ | Large datasets, write throughput | **Local Helm chart** (`examples/cluster-mode-helm-chart/`) — see [Cluster Mode guide](./cluster-mode.md). Switches to upstream chart when [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) lands. |
 
 ## Quick Reference
 

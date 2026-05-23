@@ -265,153 +265,62 @@ Enable **VPC CNI prefix delegation** (`ENABLE_PREFIX_DELEGATION=true`) for dense
 
 ## Choosing storage
 
-The per-pod PVC carries AOF, RDB, and `nodes.conf` (cluster state). Its specs directly drive AOF write latency, BGSAVE / AOF-rewrite throughput, and PSYNC full-resync speed.
+The per-pod PVC carries AOF, RDB, and `nodes.conf`. Its specs drive AOF write latency, BGSAVE / rewrite throughput, and PSYNC full-resync speed.
 
-### EBS PV/PVC vs local NVMe (instance store)
+### EBS gp3 is the right default (not local NVMe)
 
-A common question when migrating from EC2: should we keep using EBS, or switch to instance-attached NVMe (`r6gd`, `r7gd`, `r8gd`)? The trade-off is **resilience vs raw I/O latency**, and for almost every Valkey cluster-mode deployment on this stack, **EBS gp3 (or `valkey-gp3`) is the right choice**.
+A common question when migrating from EC2: keep EBS, or switch to instance-attached NVMe (`r6gd`/`r7gd`/`r8gd`)? For nearly every Valkey cluster-mode deployment, **EBS gp3 wins** — Valkey is RAM-and-network-bound, and EBS gives you resilience that NVMe can't.
 
-| | EBS gp3 / `valkey-gp3` (default) | Local NVMe (`r7gd`/`r8gd`) |
+| | EBS gp3 / `valkey-gp3` | Local NVMe (`r7gd`/`r8gd`) |
 |---|---|---|
-| Read/write latency | 1–3 ms p99 | 50–150 µs p99 (10–20× faster) |
-| IOPS / throughput ceiling | 16,000 IOPS / 1,000 MiB/s (gp3); 256,000 / 4,000 MiB/s (io2 Block Express) | 100,000+ IOPS, 3,500+ MiB/s per device |
-| Cost | Separate line item (~$58/mo for 100 GiB at 6000 IOPS / 500 MiB/s) | Included in the EC2 hourly rate |
-| Pod restart | ✅ volume re-attaches | ❌ data lost; pod rejoins empty and triggers full PSYNC |
-| Node failure | ✅ volume detaches/re-attaches to a new node | ❌ data on that node is gone |
-| Reshard / scale-out | Data follows the PVC | Every moved slot triggers a PSYNC over the network |
-| Rolling upgrade | Pod re-attaches existing PV, partial-resync from backlog (~seconds) | Each pod = full ~working-set PSYNC over the network (~minutes) |
-| Multi-pod failure (rare) | ✅ EBS volumes survive independently | ❌ if primary + its only replica both lose NVMe inside `cluster-node-timeout`, that shard is gone |
+| Latency p99 | 1–3 ms | 50–150 µs (10–20× faster) |
+| Pod restart / node replacement | ✅ volume re-attaches | ❌ data lost; full PSYNC over network |
+| Reshard / scale-out | Data follows the PVC | Every moved slot triggers a PSYNC |
+| Multi-pod correlated failure | ✅ EBS volumes survive | ❌ if primary + replica both lose NVMe inside `cluster-node-timeout`, that shard is gone |
+| Cost | ~$58/mo per 100 GiB at 6 k IOPS / 500 MiB/s | Bundled in EC2 hourly rate |
 
-For the typical Valkey workload (memory + network bound, sub-10k ops/sec per shard, dataset durability matters), EBS gives:
+ElastiCache itself uses local NVMe (`r6gd`) only for [data tiering](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/data-tiering.html), not primary persistence — match that pattern: **EBS for the data-of-record; NVMe (if at all) for pure caches**.
 
-1. **Independence of pod and storage lifecycle.** A node can be replaced for OS patching, instance-class change, or AZ rebalance without triggering a cross-AZ resync storm.
-2. **Predictable scale-out.** Adding shards reshards slots — data moves at the network limit. Removing shards drains slots cleanly without re-PSYNCing the survivors.
-3. **Lower blast radius.** A correlated double-pod failure (e.g., AZ flap during a deploy) is still recoverable from EBS. On NVMe it's data loss.
+If you must use NVMe (you've measured EBS to be the bottleneck, which is rare): add `r6gd`/`r7gd` to the NodePool, install a local-path provisioner, set `persistence.storageClass: local-storage`. AZ-aware replicas are the only recovery layer in that mode.
 
-NVMe-only deployments make sense for **pure caches** (data reconstructible upstream, no durability ask) and for sustained workloads where you've **measured** EBS to be the bottleneck — almost never the case for Valkey, which is RAM-bound. The ElastiCache equivalent — `cache.r6gd` — uses NVMe for the **warm tier** of [data tiering](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/data-tiering.html), not for primary persistence. Match that pattern: **EBS for the source-of-truth, NVMe (if at all) for caches**.
+### gp3 sizing by working set
 
-If you do decide on NVMe for a specific workload, the path is:
-
-1. Add the `r6gd` / `r7gd` family to your NodePool's `instance-family` list.
-2. Pre-create an `local-storage` StorageClass with `volumeBindingMode: WaitForFirstConsumer` and a `local-path-provisioner` (or similar) installed.
-3. Set `persistence.storageClass: local-storage` in the chart values.
-4. Set `cluster-require-full-coverage no` (already the chart default) so a single empty shard during recovery doesn't block the cluster.
-5. Verify replicas are in different AZs from their primary (already the chart default via AZ-aware bootstrap) — this is your only recovery layer.
-
-For everything else, the `valkey-gp3` StorageClass at 6,000 IOPS / 500 MiB/s already exceeds the customer-stated 4,000 IOPS baseline with 50% headroom for BGSAVE bursts. Upgrade path past that is **io2 Block Express** before NVMe — same durability guarantees, sub-millisecond p99.
-
-### gp3 is the right default
-
-> "gp3 volumes deliver a consistent baseline IOPS performance of 3,000 IOPS… you can provision additional IOPS (up to a maximum of 80,000)… at a ratio of 500 IOPS per GiB."
-> — [AWS EBS docs](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html)
-
-Critically, *"gp3 volumes do not use burst performance. They can indefinitely sustain their full provisioned IOPS and throughput."* This is why gp3 displaced gp2 for Valkey — AOF rewrite is a sustained sequential write that would drain a gp2 burst balance.
+> "gp3 volumes deliver a consistent baseline of 3,000 IOPS and 125 MiB/s, scaling to 16,000 IOPS and 1,000 MiB/s. They do not use burst performance — they sustain provisioned IOPS indefinitely." — [AWS EBS docs](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html)
 
 | Working set per shard | PVC size | gp3 IOPS | gp3 throughput | StorageClass |
 |---|---|---|---|---|
 | ≤ 12 GiB | 64 GiB | 3,000 (baseline) | 125 MiB/s (baseline) | default `gp3` |
-| 12 – 64 GiB | 200 GiB | 6,000 | 500 MiB/s | `valkey-gp3` (example below) |
+| 12 – 64 GiB | 200 GiB | 6,000 | 500 MiB/s | **`valkey-gp3`** (this stack ships it) |
 | 64 – 256 GiB | 800 GiB | 12,000 | 750 MiB/s | custom gp3 |
-| > 256 GiB OR p99-sensitive | 1+ TiB | up to 16,000 / 1,000 MiB/s (gp3 ceiling) | — | upgrade to **io2 Block Express** |
+| > 256 GiB OR p99-sensitive | 1+ TiB | 16,000 / 1,000 MiB/s (gp3 ceiling) | — | step up to **io2 Block Express** (~3–5× gp3 cost, sub-ms p99) |
 
-PVC size = ~3× working set: current AOF + rewritten AOF + RDB snapshot must coexist during a rewrite.
+PVC sized at ~3× working set: current AOF + rewritten AOF + RDB must coexist during a rewrite.
 
-### When to step up from gp3
+This stack ships [`storageclass-valkey-gp3.yaml`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml) (gp3, 6,000 IOPS, 500 MiB/s, xfs). Apply once per cluster, then set `persistence.storageClass: valkey-gp3` in chart values. **Never use EFS/FSx** — NFS `fsync` latency + rename semantics have caused real `nodes.conf` corruption.
 
-**io2 Block Express** when AOF p99 latency on gp3 (1–3 ms typical) is unacceptable. AWS describes it as *"designed to deliver an average latency of under 500 microseconds for 16 KiB I/O operations, reducing the frequency of I/Os exceeding 800 microseconds by over 10×"*. Premium is ~3–5× gp3. **Do not enable Multi-Attach** — each Valkey pod owns its own shard; sharing a volume violates the single-writer assumption and corrupts `nodes.conf` and AOF.
+Mount tuning: xfs > ext4 for shards > 50 GiB (better sustained-sequential-write); `noatime,nodiratime` saves a metadata write per AOF read.
 
-**Local NVMe instance store (`r6gd`/`r7gd`)** for ultra-low-latency caches where occasional resync is acceptable. In this chart you'd use the `local-storage` StorageClass and accept that pod rescheduling = total data loss for that pod, then rely on replica resync. ElastiCache uses NVMe internally only for [data tiering](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/data-tiering.html), not primary persistence.
+### Persistence mode — pick one
 
-**Never EFS/FSx.** AOF is latency-sensitive small-IO; NFS `fsync` latencies are an order of magnitude worse than EBS, and `nodes.conf` rename semantics over NFS have caused real corruption in production. Block storage only.
+| Mode | Durability | When |
+|---|---|---|
+| **AOF + RDB** (chart default) | up to 1 s data loss on crash | Production data of record |
+| **RDB-only** | up to ~15 min data loss; lower steady-state I/O, no AOF-rewrite bandwidth spikes | Network-bound workloads where the replica IS your durability layer |
+| **No persistence** (`appendonly no`, `save ""`, `persistence.enabled: false`) | Pod restart = empty shard | Pure caches reconstructible upstream |
 
-### The `valkey-gp3` StorageClass
-
-This stack ships a higher-spec gp3 StorageClass example at [`data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml):
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: valkey-gp3
-provisioner: ebs.csi.aws.com
-parameters:
-  type: gp3
-  iops: "6000"           # 2× gp3 baseline
-  throughput: "500"      # 4× gp3 baseline
-  encrypted: "true"
-  fsType: xfs            # better than ext4 for sustained AOF rewrites > 50 GiB
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
-allowVolumeExpansion: true
-```
-
-Apply once per cluster:
-
-```bash
-kubectl apply -f data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml
-```
-
-Then in the chart values:
-
-```yaml
-persistence:
-  storageClass: valkey-gp3
-  size: 200Gi
-```
-
-### Filesystem and mount tuning
-
-- **xfs** for shards > 50 GiB — better large-sequential-write throughput than ext4. The `valkey-gp3` StorageClass uses xfs.
-- **`noatime,nodiratime`** mount options eliminate a metadata write per AOF read (matters during PSYNC).
-- **Do not enable** `data=journal` on ext4 — doubles write amplification on AOF.
-
-### RDB-only and the snapshot bandwidth trade-off
-
-The chart defaults to **AOF + RDB** for the strongest durability. The trade-off: AOF rewrites and BGSAVE both consume disk and network bandwidth, and on the same pod that BGSAVE forks, the fork itself briefly stalls writes (CoW page-fault latency).
-
-Many production EC2 Valkey installs run **RDB-only** to minimize that footprint — accepting up to ~15 minutes of potential data loss on crash in exchange for lower steady-state I/O and a cleaner replication picture. Override the chart's `valkeyConfig` to opt in:
+Switch to RDB-only by overriding `valkeyConfig` (the chart's `repl-diskless-sync` and `io-threads` defaults still apply):
 
 ```yaml
 valkeyConfig: |
   maxmemory 12gb
   maxmemory-policy noeviction
-
-  # RDB-only — no AOF.
   appendonly no
   save 900 1
   save 300 10
   save 60 10000
-
-  # Diskless replication — already in the chart defaults; especially useful
-  # in RDB-only mode because the replica gets the dataset over the socket
-  # without the primary's EBS being involved.
-  repl-diskless-sync yes
-  repl-diskless-sync-delay 5
-
-  io-threads 4
-  io-threads-do-reads yes
 ```
 
-When RDB-only makes sense:
-
-- **Network is the bottleneck, not durability.** AOF doubles the per-write I/O budget (one for in-memory + one for AOF append).
-- **Replication is your real durability layer.** With 1+ replica in another AZ, an unplanned primary loss promotes the replica with sub-second data divergence — much tighter than AOF can guarantee anyway.
-- **You snapshot to S3** out-of-band (e.g., on a schedule via the [migration script](./ec2-migration.md)) for the bulk-recovery story.
-
-**Snapshot bandwidth caveat.** BGSAVE writes the full dataset to disk. On a 64 GiB working set with `auto-aof-rewrite-percentage 100` (the chart default), an AOF rewrite triggers when the AOF doubles since the last rewrite — and writes ~64 GiB while the original AOF and the new RDB coexist. With 500 MiB/s throughput (the `valkey-gp3` SC), that's ~2 minutes of EBS-saturating writes during which client p99 can spike 5–10×. The mitigation is either:
-
-1. **RDB-only** (above) — eliminates AOF rewrites.
-2. **Bigger PVC + bigger IOPS / throughput** (`valkey-gp3` at the gp3 ceiling of 16000 IOPS / 1000 MiB/s).
-3. **Reschedule rewrites to off-peak** by manually triggering `BGREWRITEAOF` during a maintenance window after disabling automatic rewrites (`auto-aof-rewrite-percentage 0`).
-
-### When to skip persistence entirely
-
-For pure caches (data reconstructible from an upstream source-of-truth) set `appendonly no` and `save ""`. Operationally:
-
-- Pod restart = empty shard. In cluster mode with replicas, the primary failover promotes a replica with the data still in RAM; the restarted pod becomes empty and triggers a full resync.
-- Set `cluster-require-full-coverage no` (already the chart default) so a single empty shard doesn't block the whole cluster.
-- Drop the PVC entirely (`persistence.enabled: false`) — `emptyDir` will be used and `nodes.conf` is regenerated on cluster join.
-- Removes BGSAVE fork latency spikes and EBS as a failure mode. Common for L1 caches fronting RDS/DynamoDB.
+**Snapshot bandwidth caveat for AOF + RDB.** On a 64 GiB working set with `auto-aof-rewrite-percentage 100`, an AOF rewrite writes ~64 GiB while the original AOF and new RDB coexist — at `valkey-gp3`'s 500 MiB/s that's ~2 minutes of EBS-saturating writes, p99 spikes 5–10×. Mitigations: RDB-only (above), bump to the gp3 ceiling (16k IOPS / 1 GiB/s), or schedule manual `BGREWRITEAOF` off-peak after `auto-aof-rewrite-percentage 0`.
 
 ## Cluster scaling limits
 
@@ -420,24 +329,17 @@ For pure caches (data reconstructible from an upstream source-of-truth) set `app
 
 The ~1000-node guidance is a *gossip-protocol* limit, not a slot limit. AWS ElastiCache caps at 500 nodes per cluster (83–500 shards) for Valkey ≥ 5.0.6 — [docs](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/CacheNodes.NodeGroups.html). The Valkey project [demonstrated 2,000 nodes](https://valkey.io/blog/1-billion-rps/) (1000 shards × 1 replica) driving 1 billion RPS — beyond the recommended ceiling but possible.
 
-Practical buckets (this chart):
+Practical buckets:
 
-| Bucket | Shards | Total pods (1 replica each) | Working set | What to watch | When to split |
-|---|---|---|---|---|---|
-| **Small** | 3–10 | 6–20 | < 100 GB | Trivial; default `cluster-node-timeout: 15s` is fine | Never on size |
-| **Medium** | 10–50 | 20–100 | 100 GB – 1 TB | Client topology refresh storms — prefer clients that cache `CLUSTER SHARDS` | If RPS > 5M, consider tenant-split |
-| **Large** | 50–200 | 100–400 | 1–5 TB | Gossip CPU; raise `cluster-node-timeout` to 30s; legacy reshard slow (~30–60 s/GB) | If a single reshard > 1 hr, multi-cluster |
-| **Very large** | 200–500 | 400–1000 | 5–25 TB | Approaching gossip ceiling; rolling upgrade ≈ pods × 90s ≈ several hours; ENI / IP plan critical | **Shard at the application layer** |
-| **Beyond** | > 500 | > 1000 | > 25 TB | Officially "unsupported scale"; only proven by valkey.io benchmark teams | Always split |
+| Bucket | Shards | Pods (1 replica each) | Working set | What gets hard |
+|---|---|---|---|---|
+| **Small** | 3–10 | 6–20 | < 100 GB | Trivial. Default `cluster-node-timeout: 15s` works. |
+| **Medium** | 10–50 | 20–100 | 100 GB – 1 TB | Client `CLUSTER NODES` startup storms — use clients that cache `CLUSTER SHARDS` (jedis 4.4+, lettuce 6.2+, go-redis v9, redis-py 5+). |
+| **Large** | 50–200 | 100–400 | 1–5 TB | Gossip ~1–5% CPU/pod. Bump `cluster-node-timeout` to 30 s. Reshard at 30–60 s/GB on legacy migration. |
+| **Very large** | 200–500 | 400–1000 | 5–25 TB | Gossip 5–15% CPU/pod. PDB `maxUnavailable: 1` → rolling upgrade serial at ~90 s/pod (500 pods = 12+ h). ENI/IP planning critical. **Shard at the application layer instead.** |
+| **Beyond** | > 500 | > 1000 | > 25 TB | Unsupported scale outside the valkey.io benchmark team. Always split into multiple clusters. |
 
-### What gets harder at scale
-
-- **Gossip CPU.** Each PING/PONG payload gossips a random subset of node metadata. At 500 nodes that's ~1–5% steady CPU per pod. At 1000+ nodes, expect 5–15%.
-- **`CLUSTER NODES` size.** ~150 bytes per node. 1000 nodes = 150 KB response. Every client that issues `CLUSTER NODES` (vs `CLUSTER SHARDS`) eats this on startup. Use `CLUSTER SHARDS` clients (jedis 4.4+, lettuce 6.2+, go-redis v9, redis-py 5+).
-- **Rolling upgrade time.** PDB `maxUnavailable: 1` means serial pod restarts. At ~90s per restart, 100 pods = 2.5 hours, 500 pods = 12+ hours. Plan maintenance windows accordingly.
-- **Slot resharding.** Valkey 7.2/8.0 uses key-by-key `MIGRATE`, ~30–60 seconds per GB per slot range. Atomic Slot Migration (ASM) in newer engines is ~100× faster but not yet in stable Valkey.
-
-If any of these become operationally painful, **shard at the application layer** into multiple smaller Valkey clusters rather than scaling a single cluster past ~200 shards.
+The break point is **~200 shards** — beyond that, a single reshard or rolling upgrade routinely exceeds a maintenance window. Tenant-shard at the application layer instead.
 
 ## Deployment
 
@@ -969,257 +871,104 @@ helm upgrade valkey-cluster ./cluster-mode-helm-chart -n valkey-cluster
 
 ## Observability
 
-The data stack ships [`kube-prometheus-stack`](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) in the `monitoring` namespace. The cluster-mode chart's `ServiceMonitor` is loaded automatically, so Prometheus discovers the 6 pods and scrapes the bundled `oliver006/redis_exporter` sidecar (port `9121`) on each. No extra wiring required. Metrics use the `redis_*` prefix even though the server is Valkey.
+The cluster-mode chart's `ServiceMonitor` is auto-discovered by `kube-prometheus-stack` (in the `monitoring` namespace), and the `oliver006/redis_exporter` sidecar is scraped on `:9121`. The general Grafana access pattern, dashboard import, and shared `redis_*` metrics are documented in the [Replication → Observability](./replication.md#observability) section — the bundled dashboard's `namespace` template variable switches between `valkey` and `valkey-cluster`.
 
-### Cluster-mode-specific metrics
-
-These are the metrics that only mean something for cluster mode (replication-mode equivalents are listed in the [replication doc's observability section](./replication.md#observability)):
+The cluster-specific metrics:
 
 | Metric | Meaning | Suggested alert |
 |---|---|---|
-| `redis_up` | Exporter could scrape the pod | `== 0 for 2m`, severity critical |
-| `redis_cluster_enabled` | Pod is configured for cluster mode | `== 0`, severity critical (config drift) |
-| `redis_cluster_slots_ok` | Slots in `OK` state across the cluster | `< 16384 for 2m`, severity critical |
-| `redis_cluster_slots_pfail` + `redis_cluster_slots_fail` | Slots that the gossip layer suspects or has marked failed | `> 0 for 2m`, severity warning |
-| `redis_cluster_known_nodes` | Total nodes the gossip view can see | `!= primaries × (1 + replicasPerPrimary) for 5m`, severity warning |
-| `redis_cluster_size` | Number of primaries with at least one slot | `!= expected for 5m`, severity warning |
-| `redis_master_link_up` | Replica's link to its primary is healthy (per-shard, not cluster-wide) | `== 0 for 2m`, severity critical |
-| `redis_memory_used_bytes / redis_memory_max_bytes` | Per-shard memory pressure | `> 0.9 for 10m`, severity warning — different shards age out differently with default key distribution |
-| `redis_evicted_keys_total` | Keys evicted by `maxmemory-policy` | `rate > 0 for 5m`, severity warning |
+| `redis_cluster_enabled` | Pod configured for cluster mode | `== 0`, critical (config drift) |
+| `redis_cluster_slots_ok` | Slots in `OK` state across the cluster | `< 16384 for 2m`, critical |
+| `redis_cluster_slots_pfail` + `redis_cluster_slots_fail` | Slots gossip suspects or has marked failed | `> 0 for 2m`, warning |
+| `redis_cluster_known_nodes` | Total nodes gossip can see | `!= primaries × (1 + replicasPerPrimary) for 5m`, warning |
+| `redis_cluster_size` | Primaries with at least one slot | `!= expected for 5m`, warning |
+| `redis_cluster_slots_assigned` | Per-primary slot count — graph this during a reshard to watch slots migrate in real time | — |
 
-The `cluster_state:ok` check in `verify-cluster.sh` is the cheap synchronous version of `redis_cluster_slots_ok == 16384`. Use the metric for alerting; use the script for human-driven verification.
-
-### Verify the scrape is healthy
-
-```bash
-# All 6 cluster-mode pods should return redis_up=1.
-kubectl -n monitoring exec prometheus-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=redis_up{namespace="valkey-cluster"}' \
-  | jq '.data.result[].metric.pod'
-```
-
-Expect six pod names (`valkey-cluster-0` through `valkey-cluster-5`). Fewer means the exporter sidecar crashed on one of them — `kubectl -n valkey-cluster logs <pod> -c metrics` to triage.
-
-### Access Grafana
-
-Grafana is deployed at `monitoring/monitoring-grafana` (ClusterIP). The data stack creates an admin secret with a randomly generated password.
-
-```bash
-# 1. Pull the admin password from the cluster.
-kubectl -n monitoring get secret grafana-admin-secret \
-  -o jsonpath='{.data.admin-password}' | base64 -d; echo
-
-# 2. Port-forward Grafana to localhost.
-kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
-```
-
-Open [http://localhost:3000](http://localhost:3000) and log in:
-
-- **User:** `admin`
-- **Password:** the value printed by step 1
-
-The Prometheus data source is already wired. Useful starting queries in **Explore**, scoped to the cluster-mode namespace:
+Useful cluster-scoped PromQL (in Grafana **Explore**):
 
 ```promql
-# Cluster health — every pod should report ok (1)
-redis_cluster_slots_ok{namespace="valkey-cluster"}
+# Cluster health
+max(redis_cluster_slots_ok{namespace="valkey-cluster"})       # expect 16384
+max(redis_cluster_size{namespace="valkey-cluster"})           # expect = primaries
 
-# Per-shard throughput — three lines for three primaries
+# Per-shard throughput / memory / lag
 sum by (pod) (rate(redis_commands_processed_total{namespace="valkey-cluster"}[1m]))
-
-# Per-shard memory used (MiB)
 redis_memory_used_bytes{namespace="valkey-cluster"} / 1024 / 1024
-
-# Per-shard key count — uniform random keys land roughly evenly
-redis_db_keys{namespace="valkey-cluster"}
-
-# Replication lag (per replica)
 redis_master_last_io_seconds_ago{namespace="valkey-cluster"}
-
-# Cluster size — primaries with slots
-max(redis_cluster_size{namespace="valkey-cluster"})
-
-# Slot health — should be 16384 in steady state
-max(redis_cluster_slots_ok{namespace="valkey-cluster"})
 ```
 
-### Import the bundled dashboard
-
-The same dashboard at [`data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json) covers both modes — its `namespace` template variable lets you switch between `valkey` and `valkey-cluster`.
-
-**Auto-import (recommended).** Grafana's sidecar (`grafana-sc-dashboard`) watches every namespace for ConfigMaps labeled `grafana_dashboard=1` and auto-imports them:
-
-```bash
-kubectl create configmap valkey-grafana-dashboard \
-  --namespace monitoring \
-  --from-file=valkey.json=data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json
-kubectl label configmap valkey-grafana-dashboard \
-  --namespace monitoring \
-  grafana_dashboard=1
-```
-
-The dashboard appears under **Dashboards → Browse** within ~30 seconds.
-
-**Manual import.** Grafana → **Dashboards → New → Import** → paste the JSON contents → pick **Prometheus** as the data source → **Import**.
-
-**Community fallback.** [Dashboard 11835](https://grafana.com/grafana/dashboards/11835-redis-dashboard-for-prometheus-redis-exporter-1-x/) is built for the same `oliver006/redis_exporter` and works as a drop-in if the bundled dashboard's panels show "No data" because of a metric-prefix mismatch on a custom exporter version.
-
-### Direct Prometheus access
-
-```bash
-kubectl -n monitoring port-forward svc/prometheus-prometheus 9090:9090
-# http://localhost:9090
-```
-
-In **Status → Targets**, filter on `valkey-cluster` — all six pods should be `UP`. The endpoint URL will look like `http://<pod-ip>:9121/metrics`. The Prometheus job name is `serviceMonitor/valkey-cluster/valkey-cluster/0`.
-
-### Watch a live shard rebalance
-
-A practical use of the dashboard: open it in one browser tab, run a `valkey-cli --cluster reshard` operation in another terminal, and watch slot counts redistribute in real time. The two metrics to graph side-by-side are:
-
-```promql
-# Slot count per primary — should change as the reshard runs
-redis_cluster_slots_assigned{namespace="valkey-cluster"}
-
-# Throughput per primary — receiving primary spikes during the migration
-sum by (pod) (rate(redis_commands_processed_total{namespace="valkey-cluster"}[10s]))
-```
-
-This is the same pattern used to verify [scale-out](#scale-out-add-a-shard) and [primary-rotation upgrades](#planned-upgrades) without trusting only the verifier script.
+For a live reshard demo, graph `redis_cluster_slots_assigned` per pod alongside the throughput query above — you'll see slot counts redistribute and the receiving primary's throughput spike.
 
 ## Cross-region disaster recovery
 
-This section is your playbook for the **region-loss** scenario — `us-west-2` is unavailable and you need to bring the cluster up in `us-east-1` (or any peer region). Same-region failures are handled by the cluster's gossip-driven failover (see [How failover works](#how-failover-works)) and do not need this runbook.
+For the **region-loss** scenario (single-AZ failures are handled by [gossip-driven failover](#how-failover-works) automatically — no DR runbook needed).
 
-### The DR posture this chart supports
-
-The chart does not ship with built-in cross-region replication (Valkey has no native CRR like DynamoDB Global Tables or Aurora Global). What you can achieve with the bundled migration tooling:
+Valkey has no native cross-region replication. The supported pattern is **periodic BGSAVE → S3 CRR → target-region restore**, achievable with the bundled migration tooling:
 
 | RPO | RTO | Method |
 |---|---|---|
-| **Up to scheduled-snapshot interval** (e.g., 1 hour) | **15–45 minutes** | Periodic BGSAVE → S3 cross-region replication → target-region restore. The default for most production users. |
-| **Up to 5 minutes** | **15–45 minutes** | S3 cross-region replication on the bucket — RPO bounded by S3 CRR replication time (typically < 5 min). |
-| **Near-zero** | **~30 seconds** | Application-layer dual-write to two clusters in different regions, with cutover at the load-balancer / DNS. Out of scope for this runbook — application work, not a Valkey feature. |
+| ≤ snapshot interval (e.g., 1 h) | 15–45 min | Cron BGSAVE → S3 CRR → restore in DR region |
+| ≤ 5 min | 15–45 min | Same as above with tighter snapshot cadence |
+| Near-zero | ~30 s | App-layer dual-write to two regional clusters, DNS cutover — out of scope (app work, not a Valkey feature) |
 
-The runbook below covers the snapshot-based pattern, which matches what the [EC2 → EKS migration](./ec2-migration.md) tooling already provides.
-
-### Preparation (do this BEFORE you need it)
+### Prepare ahead of time
 
 ```bash
-# 1. Decide on a DR region. For an active stack in us-west-2 the natural
-#    pair is us-east-1 (lowest cross-region latency for control-plane work).
 DR_REGION=us-east-1
-PRIMARY_REGION=us-west-2
-
-# 2. Pre-create an S3 bucket in the DR region for restore staging.
-#    (The valkey-migration bucket in the primary region holds the snapshots;
-#     we replicate them to a bucket in the DR region.)
 DR_BUCKET="valkey-dr-snapshots-${DR_REGION}-$(aws sts get-caller-identity --query Account --output text)"
 aws s3 mb "s3://${DR_BUCKET}" --region "${DR_REGION}"
 
-# 3. Enable S3 cross-region replication on the primary-region migration bucket
-#    so every BGSAVE upload is automatically copied to the DR bucket.
-#    (See AWS S3 CRR docs for the IAM role + replication-config setup.)
+# Enable S3 CRR on the primary-region valkey-migration bucket → DR_BUCKET.
+# See AWS S3 CRR docs for the IAM role + replication-config.
 
-# 4. Pre-deploy the EKS infrastructure in the DR region (no Valkey yet) so
-#    that on failover all you have to do is run the chart install. This is
-#    the data-on-eks/infra/terraform stack with a different region/cluster
-#    name override.
+# Pre-deploy the EKS infra in the DR region (no Valkey yet) so failover
+# is just `helm install`.
 ```
 
-### Snapshot schedule (steady state)
+### Steady state — periodic snapshots
 
-Run the migration script on the primary-region cluster on a cron schedule to push the latest snapshot to S3:
+Cron job (Argo CronWorkflow / EKS CronJob / Lambda) in the primary region, per shard:
 
 ```bash
-# A cron job (Argo CronWorkflow, EKS CronJob, or a Lambda) that runs hourly:
 PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
-PRIMARY_REGION=us-west-2
-
-# For cluster mode: snapshot every primary's shard. The migration script
-# was written for replication mode; for cluster mode, iterate per shard.
 for shard in 0 1 2; do
   POD="valkey-cluster-${shard}"
-  # Find the primary pod for this shard (after failovers it may have moved)
   ROLE=$(kubectl -n valkey-cluster exec "$POD" -c valkey -- \
            valkey-cli -a "$PASS" --no-auth-warning role | head -1)
-  if [ "$ROLE" != "master" ]; then continue; fi
+  [ "$ROLE" = "master" ] || continue        # skip if not the current primary
 
-  # BGSAVE on the primary
   kubectl -n valkey-cluster exec "$POD" -c valkey -- \
     valkey-cli -a "$PASS" --no-auth-warning BGSAVE
-
-  # Wait for it to complete, then kubectl cp the dump.rdb out
-  # and upload to s3://<bucket>/cluster-mode/<shard>/dump.rdb
-  # See the EC2 migration runbook script for the LASTSAVE polling pattern.
+  # Wait for LASTSAVE to advance (see migration script), then kubectl cp
+  # /data/dump.rdb out and aws s3 cp to <bucket>/cluster-mode/<shard>/dump.rdb.
 done
 ```
 
-The on-disk snapshot lives at `/data/dump.rdb` inside each primary pod. With S3 CRR enabled, the upload is replicated to the DR-region bucket within ~5 minutes.
+S3 CRR replicates to the DR bucket within ~5 minutes.
 
-### Failover to the DR region
-
-When the primary region is lost:
+### Failover to DR
 
 ```bash
-# 1. Verify the DR bucket has recent snapshots (and they look right)
-aws s3 ls "s3://${DR_BUCKET}/cluster-mode/" --recursive --region "${DR_REGION}"
-
-# 2. Bring up the EKS cluster in the DR region (pre-deployed Terraform)
+aws s3 ls "s3://${DR_BUCKET}/cluster-mode/" --recursive --region "${DR_REGION}"   # verify snapshots present
 cd data-stacks/valkey-on-eks
-AWS_REGION="${DR_REGION}" ./deploy.sh
+AWS_REGION="${DR_REGION}" ./deploy.sh                                              # bring up EKS in DR
+./install-cluster-mode.sh                                                          # install chart (empty cluster)
 
-# 3. Install the cluster-mode chart in the DR region. Critical: tell the
-#    bootstrap Job's restore initContainer (if you've added one for cluster
-#    mode — currently in the replication-mode chart only; see below) to
-#    pull from the DR bucket, NOT the primary-region one.
-#    For cluster mode, the bootstrap Job's current default is to run
-#    `valkey-cli --cluster create` on empty pods. To restore from RDB:
-#    pre-populate /data/dump.rdb on each pod via an initContainer that
-#    pulls s3://<DR_BUCKET>/cluster-mode/<ordinal>/dump.rdb before
-#    valkey-server starts. The shard-aware migration tooling for cluster
-#    mode is in progress — for now, the simplest path is to:
-#       a) install the chart empty
-#       b) use `valkey-cli --cluster import` from a one-off pod to read the
-#          source-region snapshot into the DR cluster (re-hydrates all
-#          shards via slot-aware key migration)
-./install-cluster-mode.sh
+# Re-hydrate via valkey-cli --cluster import from a temp pod that can reach
+# the source RDB on S3. (Per-shard initContainer RDB restore is on the
+# chart's roadmap; until then, --cluster import is the cleanest path.)
+# See: ./ec2-migration.md and ./cluster-mode.md#migration-from-replication-mode
 
-# 4. Verify
+# Verify + cut over
 PASS=$(kubectl -n valkey-cluster get secret valkey-cluster-auth -o jsonpath='{.data.default}' | base64 -d)
 kubectl -n valkey-cluster exec valkey-cluster-0 -c valkey -- \
-  valkey-cli -a "$PASS" --no-auth-warning cluster info
-# expect: cluster_state:ok, cluster_slots_assigned:16384
-
-# 5. Validate the data — DBSIZE and a few sentinel keys should match what
-#    you wrote in the primary region within the snapshot interval.
-for i in 0 1 2; do
-  kubectl -n valkey-cluster exec valkey-cluster-$i -c valkey -- \
-    valkey-cli -a "$PASS" --no-auth-warning DBSIZE
-done
-
-# 6. Cut over application traffic — update DNS / load-balancer to point at
-#    the DR cluster's endpoint (cluster-aware client config).
+  valkey-cli -a "$PASS" --no-auth-warning cluster info | head -3
+# Update app DNS / LB to the DR cluster's endpoint.
 ```
 
-### Practice the DR drill
+**Quarterly DR drill** — snapshot, verify CRR copied, restore into a shadow namespace (`valkey-cluster-dr`), validate `DBSIZE` + sentinel keys, tear down. Record wall-clock time. The first drill always exposes one missing IAM permission or wrong-region path — catch it here, not during a real region loss.
 
-Schedule a quarterly DR drill where you:
-
-1. Take a snapshot in the primary region.
-2. Verify CRR copied it to the DR bucket within RPO.
-3. Run steps 2–6 above against a **shadow** namespace in the DR region (e.g., `valkey-cluster-dr`) without cutting traffic.
-4. Validate DBSIZE + sentinel keys.
-5. Tear down the shadow namespace.
-
-Record the wall-clock time on each step. The first drill almost always exposes a gap (missing IAM permission, wrong region in a script, S3 CRR config drift). Catch these in a drill, not during a real region failure.
-
-### Limits and gotchas
-
-- **Cluster-mode RDB restore is not yet a one-command operation in this chart.** The current cluster bootstrap Job creates an empty cluster. Restoring from per-shard RDBs requires either: (a) a custom initContainer pattern (similar to the replication-mode chart's `extraInitContainers`), or (b) the `valkey-cli --cluster import` pattern from a one-off pod. We track adding (a) as a chart enhancement.
-- **AZ-aware bootstrap re-runs on the DR side.** The new cluster's primary/replica AZ pairings will be derived from the DR cluster's topology, not preserved from the source. This is correct behavior — the source's AZ identity is meaningless in the new region.
-- **Hash-slot identity is preserved.** Slots 0–5460 stay on shard 0 after restore, etc. Applications using hash tags continue to work without re-keying.
-- **Passwords differ.** The DR cluster's auto-generated Secret is a fresh password. Pre-create the Secret out-of-band in the DR cluster if you need to preserve credentials (`auth.existingSecret`).
+**Gotchas.** AZ pairings derive from the DR cluster's topology, not preserved from source — correct. Hash slot identity IS preserved (slots 0–5460 stay on shard 0). Auth Secret in DR is a fresh password unless you pre-create it via `auth.existingSecret`. The shard-aware initContainer RDB restore for cluster mode is a chart enhancement on the roadmap.
 
 ## Migration from Replication Mode
 
