@@ -7,7 +7,7 @@ sidebar_label: Overview
 import '@site/src/css/datastack-tiles.css';
 import '@site/src/css/getting-started.css';
 import BenchmarksHero from '@site/src/components/Benchmarks/BenchmarksHero';
-import { Settings, BarChart3, Cpu, Zap } from 'lucide-react';
+import { Settings, BarChart3, Cpu, Zap, Database } from 'lucide-react';
 
 <BenchmarksHero />
 
@@ -107,6 +107,31 @@ import { Settings, BarChart3, Cpu, Zap } from 'lucide-react';
 </div>
 <div className="datastack-footer">
 <a href="/data-on-eks/docs/benchmarks/spark-gluten-velox-benchmark" className="datastack-link">
+<span>View Results</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Database size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Valkey on EKS</h3>
+<p className="datastack-description">Throughput and latency comparison of Valkey cluster mode (3 primaries + 3 replicas, 6 pods) vs replication mode (1 primary + 3 replicas, 4 pods) on Graviton r7g.large.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Cluster vs Replication</span>
+<span className="feature-tag">valkey-benchmark</span>
+<span className="feature-tag">Graviton r7g</span>
+</div>
+<div className="datastack-footer">
+<a href="/data-on-eks/docs/benchmarks/valkey-on-eks" className="datastack-link">
 <span>View Results</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

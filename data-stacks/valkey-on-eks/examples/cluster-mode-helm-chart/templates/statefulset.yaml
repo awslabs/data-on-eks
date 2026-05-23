@@ -1,0 +1,298 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "valkey-cluster.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "valkey-cluster.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "valkey-cluster.headlessServiceName" . }}
+  replicas: {{ .Values.replicaCount }}
+  # Parallel is mandatory for cluster mode: the post-install Hook Job needs
+  # every pod reachable before it can call --cluster create, but readiness
+  # depends on the cluster being formed. OrderedReady deadlocks.
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "valkey-cluster.selectorLabels" . | nindent 6 }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+      # One pod at a time — matches the PDB and gives the cluster's failure
+      # detector room to promote a replica before the next pod restarts.
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        {{- include "valkey-cluster.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-config.yaml") . | sha256sum }}
+        checksum/scripts: {{ include (print $.Template.BasePath "/configmap-scripts.yaml") . | sha256sum }}
+        {{- if .Values.metrics.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.ports.metrics }}"
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "valkey-cluster.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.statefulset.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- if .Values.tuning.networkOptimized }}
+        # tuning.networkOptimized=true → pin to n-suffix Graviton families.
+        # Karpenter's instance-family label is set on the node at provisioning
+        # time; this nodeAffinity is what tells Karpenter "only spin up these".
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: karpenter.k8s.aws/instance-family
+                    operator: In
+                    values: ["r7gn", "r8gn", "m7gn"]
+        {{- end }}
+        {{- if .Values.tuning.strictHostAntiAffinity }}
+        # tuning.strictHostAntiAffinity=true → hard one-pod-per-node.
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: valkey-cluster
+        {{- else if .Values.affinity.podAntiAffinity }}
+        podAntiAffinity:
+          {{- toYaml .Values.affinity.podAntiAffinity | nindent 10 }}
+        {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+        # -------------------------------------------------------------------
+        # 1. sysctl / THP — production tuning. Runs privileged for ~1 second.
+        #    Valkey will refuse to fork during BGSAVE/AOF rewrite if THP is
+        #    enabled — write amplification can be ~500x.
+        # -------------------------------------------------------------------
+        {{- if .Values.kernelTuning.enabled }}
+        - name: kernel-tuning
+          image: {{ include "valkey-cluster.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsNonRoot: false
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # Disable Transparent Huge Pages.
+              for f in /host-sys/kernel/mm/transparent_hugepage/enabled \
+                       /host-sys/kernel/mm/transparent_hugepage/defrag; do
+                if [ -w "${f}" ]; then
+                  echo never > "${f}"
+                fi
+              done
+              # net.core.somaxconn — backlog for tcp-backlog (default 511 is fine,
+              # but raising the kernel ceiling avoids silent clipping).
+              sysctl -w net.core.somaxconn=65535 || true
+              # vm.overcommit_memory=1 — required to avoid BGSAVE/COPY failures
+              # when memory is tight (Valkey advisory in startup logs).
+              sysctl -w vm.overcommit_memory=1 || true
+              echo "[kernel-tuning] done"
+          volumeMounts:
+            - { name: host-sys, mountPath: /host-sys }
+        {{- end }}
+
+        # -------------------------------------------------------------------
+        # 2. prepare-config — render /data/conf/auth.conf with requirepass +
+        #    primaryauth, sourced from the Secret. The main valkey.conf is a
+        #    ConfigMap mount and never carries the password.
+        # -------------------------------------------------------------------
+        - name: prepare-config
+          image: {{ include "valkey-cluster.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /data/conf
+              {{- if .Values.auth.enabled }}
+              # Rewrite each pod start so a rotated Secret (rare — the chart's
+              # `lookup` keeps it stable across upgrades) actually takes effect.
+              # primaryauth = Valkey's renamed `masterauth`; both names work
+              # but the rename has been preferred since 8.0.
+              umask 077
+              cat > /data/conf/auth.conf <<EOF
+              requirepass ${VALKEY_PASSWORD}
+              primaryauth ${VALKEY_PASSWORD}
+              EOF
+              chmod 0600 /data/conf/auth.conf
+              {{- else }}
+              # Auth disabled — write an empty include target so valkey.conf's
+              # `include` directive doesn't fail.
+              : > /data/conf/auth.conf
+              {{- end }}
+          env:
+            {{- if .Values.auth.enabled }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            {{- end }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+
+      containers:
+        - name: valkey
+          image: {{ include "valkey-cluster.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          # --cluster-announce-* values are mandatory for cluster mode in K8s.
+          # The pod's IP changes on restart, but cluster-preferred-endpoint-type
+          # hostname makes clients use the stable per-pod DNS name. Bus port is
+          # announced explicitly because we set a non-default 16379.
+          command: ["valkey-server"]
+          args:
+            - /chart-config/valkey.conf
+            - --cluster-announce-hostname
+            - $(POD_FQDN)
+            - --cluster-announce-port
+            - "{{ .Values.ports.client }}"
+            - --cluster-announce-bus-port
+            - "{{ .Values.ports.bus }}"
+          env:
+            - name: NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: HOSTNAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_IP
+              valueFrom: { fieldRef: { fieldPath: status.podIP } }
+            - name: POD_FQDN
+              value: "$(HOSTNAME).{{ include "valkey-cluster.headlessServiceName" . }}.$(NAMESPACE).svc.cluster.local"
+            {{- if .Values.auth.enabled }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            {{- end }}
+          ports:
+            - { name: tcp-client, containerPort: {{ .Values.ports.client }}, protocol: TCP }
+            - { name: tcp-bus, containerPort: {{ .Values.ports.bus }}, protocol: TCP }
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli ${VALKEY_PASSWORD:+-a $VALKEY_PASSWORD --no-auth-warning} ping"]
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli ${VALKEY_PASSWORD:+-a $VALKEY_PASSWORD --no-auth-warning} ping"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            exec:
+              command: ["/scripts/readiness.sh"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 6
+            failureThreshold: 6
+            successThreshold: 1
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/scripts/prestop.sh"]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: chart-config, mountPath: /chart-config, readOnly: true }
+            - { name: scripts, mountPath: /scripts, readOnly: true }
+
+        {{- if .Values.metrics.enabled }}
+        - name: metrics
+          image: {{ include "valkey-cluster.metricsImage" . }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: REDIS_EXPORTER_IS_CLUSTER
+              value: "true"
+            - name: REDIS_ADDR
+              value: "redis://127.0.0.1:{{ .Values.ports.client }}"
+            {{- if .Values.auth.enabled }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "valkey-cluster.secretName" . }}
+                  key: {{ .Values.auth.existingSecretPasswordKey }}
+            {{- end }}
+          ports:
+            - { name: http-metrics, containerPort: {{ .Values.ports.metrics }}, protocol: TCP }
+          {{- with .Values.metrics.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
+
+      volumes:
+        - name: chart-config
+          configMap:
+            name: {{ include "valkey-cluster.fullname" . }}-config
+            defaultMode: 0444
+        - name: scripts
+          configMap:
+            name: {{ include "valkey-cluster.fullname" . }}-scripts
+            defaultMode: 0555
+        {{- if .Values.kernelTuning.enabled }}
+        - name: host-sys
+          hostPath:
+            path: /sys
+            type: Directory
+        {{- end }}
+        {{- if not .Values.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "valkey-cluster.labels" . | nindent 10 }}
+      spec:
+        accessModes:
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}

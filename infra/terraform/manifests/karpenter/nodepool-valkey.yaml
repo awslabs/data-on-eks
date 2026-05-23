@@ -1,0 +1,80 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: valkey
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        NodeGroupType: valkey
+        workload: valkey
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: ebs-gp3-1000gi-6000iops-1000tp
+
+      taints:
+        - key: workload
+          value: valkey
+          effect: NoSchedule
+
+      requirements:
+        # Capacity type - on-demand only for stateful Valkey workloads
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+
+        # Architecture - ARM64 only (Graviton)
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+
+        # Instance families - Graviton-only.
+        #   r7g / r8g         : memory-optimized (default for typical Valkey
+        #                       workloads — small values, single-digit Gbps).
+        #   r7gn / r8gn       : memory-optimized + network-optimized (up to
+        #                       200 Gbps). Use for multi-KB values, sustained
+        #                       client throughput > 10 Gbps, or PSYNC full-
+        #                       resync of large shards. Opt-in via pod
+        #                       nodeAffinity (see values.yaml
+        #                       `tuning.networkOptimized: true`).
+        #   m7gn              : general-purpose + network-optimized. Cheaper
+        #                       than r7gn for shards whose memory headroom
+        #                       isn't the dominant cost driver.
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["r7g", "r8g", "r7gn", "r8gn", "m7gn"]
+
+        # Instance sizes - large to 16xlarge. 16xlarge covers up to
+        # ~512 GiB / 64 vCPU per node. Beyond 16xlarge runs into ENI / pod-
+        # density limits without VPC CNI prefix-delegation tuning.
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge", "16xlarge"]
+
+        # Nitro system
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+        # AZ spread - permit any zone, drives topologySpreadConstraints
+        - key: topology.kubernetes.io/zone
+          operator: Exists
+
+  # Resource limits for the Valkey NodePool
+  limits:
+    cpu: "1000"
+    memory: "4000Gi"
+
+  # Conservative disruption policy for stateful Valkey pods.
+  # Never use WhenEmptyOrUnderutilized - rolling consolidation would
+  # break gossip stability and force unnecessary BGSAVE fork pressure.
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: "1h"
+
+  # Higher weight than general-purpose pools so Valkey pods land here first
+  weight: 50

@@ -17,7 +17,7 @@ fi
 
 # Fallback: get region from tfvars if terraform output fails
 if [ -z "$REGION" ] && [ -f "../data-stack.tfvars" ]; then
-  REGION=$(grep -E '^\s*region\s*=' ../data-stack.tfvars | sed 's/.*=\s*"\(.*\)".*/\1/')
+  REGION=$(grep -E '^[[:space:]]*region[[:space:]]*=' ../data-stack.tfvars | sed -E 's/.*=[[:space:]]*"([^"]*)".*/\1/')
 fi
 
 # Final fallback: use AWS CLI default region
@@ -42,7 +42,7 @@ fi
 
 # Fallback: get deployment_id from tfvars if terraform output fails
 if [ -z "$DEPLOYMENT_ID" ] && [ -f "../data-stack.tfvars" ]; then
-  DEPLOYMENT_ID=$(grep -E '^\s*deployment_id\s*=' ../data-stack.tfvars | sed 's/.*=\s*"\(.*\)".*/\1/')
+  DEPLOYMENT_ID=$(grep -E '^[[:space:]]*deployment_id[[:space:]]*=' ../data-stack.tfvars | sed -E 's/.*=[[:space:]]*"([^"]*)".*/\1/')
 fi
 
 

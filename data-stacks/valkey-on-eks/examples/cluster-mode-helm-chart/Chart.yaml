@@ -1,0 +1,24 @@
+apiVersion: v2
+name: valkey-cluster
+description: |
+  Local Helm chart for deploying Valkey in cluster mode (sharded, gossip-based)
+  on Amazon EKS. Self-contained — no operator, no external chart dependency.
+
+  Design adapted from valkey-helm PR #51 (https://github.com/valkey-io/valkey-helm/pull/51).
+  This chart will be retired in favor of the upstream `valkey-io/valkey-helm`
+  chart once cluster mode lands there (tracked at valkey-helm issue #18).
+type: application
+version: 0.1.0
+appVersion: "9.0.2"
+keywords:
+  - valkey
+  - redis
+  - cluster
+  - cache
+home: https://github.com/awslabs/data-on-eks
+sources:
+  - https://github.com/awslabs/data-on-eks
+  - https://github.com/valkey-io/valkey-helm/pull/51
+maintainers:
+  - name: data-on-eks
+    url: https://github.com/awslabs/data-on-eks

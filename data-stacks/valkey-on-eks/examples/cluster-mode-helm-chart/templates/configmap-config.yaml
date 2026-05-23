@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "valkey-cluster.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "valkey-cluster.labels" . | nindent 4 }}
+data:
+  valkey.conf: |
+    # ----- Cluster mode -----
+    cluster-enabled yes
+    cluster-config-file /data/nodes.conf
+    cluster-node-timeout 15000
+    cluster-require-full-coverage no
+    cluster-allow-reads-when-down no
+    cluster-preferred-endpoint-type hostname
+
+    # ----- Networking -----
+    bind 0.0.0.0
+    port {{ .Values.ports.client }}
+    cluster-port {{ .Values.ports.bus }}
+    protected-mode no
+    tcp-keepalive 300
+
+    # ----- Logging -----
+    loglevel {{ .Values.valkeyLogLevel }}
+
+    # ----- Persistence -----
+    dir /data
+
+    {{- if .Values.auth.enabled }}
+    # ----- Auth -----
+    # requirepass + primaryauth (Valkey rename of masterauth) are written by
+    # the init container into /data/conf/auth.conf so the password is never
+    # baked into this ConfigMap. The include is mandatory: without it the
+    # server starts up with no auth and the cluster handshake fails NOAUTH
+    # the moment a replica reaches a primary.
+    include /data/conf/auth.conf
+    {{- end }}
+
+    # ----- User-supplied valkeyConfig -----
+    {{- with .Values.valkeyConfig }}
+    {{- nindent 4 . }}
+    {{- end }}

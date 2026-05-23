@@ -1,0 +1,261 @@
+# =============================================================================
+# Valkey on EKS — Helm values for the OFFICIAL valkey-io/valkey-helm chart.
+#
+# Chart source: https://github.com/valkey-io/valkey-helm
+# Chart repo  : https://valkey.io/valkey-helm/
+# Chart docs  : https://valkey.io/blog/valkey-helm-chart/
+#
+# This file is the SINGLE SOURCE OF TRUTH for Valkey configuration. Edit the
+# values here directly to change topology, persistence, ACL users, scheduling,
+# metrics, etc.
+#
+# Terraform injects only three placeholders via `templatefile`:
+#   ${namespace}              — Kubernetes namespace for the Valkey release
+#   ${service_account_name}   — ServiceAccount used by the restore initContainer
+#   ${region}                 — AWS region (used by the restore initContainer)
+#
+# Note on topology: the official chart currently supports STANDALONE and
+# REPLICATION (1 primary + N replicas) modes. Cluster mode (sharded with
+# gossip) is on the chart roadmap as valkey-helm issue #18 but not yet
+# released. We default to replication for HA + read scaling. When cluster
+# mode lands, swap `replica.enabled` for the cluster equivalent.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Identity
+# -----------------------------------------------------------------------------
+fullnameOverride: valkey
+clusterDomain: cluster.local
+
+image:
+  registry: docker.io
+  repository: valkey/valkey
+  pullPolicy: IfNotPresent
+  # Leave empty to use the chart's pinned appVersion (currently 9.0.2).
+  tag: ""
+
+# -----------------------------------------------------------------------------
+# ServiceAccount — used by the restore initContainer for AWS Pod Identity.
+# -----------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  automount: true
+  name: ${service_account_name}
+
+# -----------------------------------------------------------------------------
+# AUTH — ACL-based.
+#
+# The chart REQUIRES the `default` user when auth is enabled, otherwise anyone
+# can connect without credentials. Passwords are sourced from the Kubernetes
+# Secret created by Terraform (`valkey-auth`). The secret holds two keys:
+#   default            — the application password
+#   replication-user   — the password used by replicas to authenticate to
+#                        the primary
+# `usersExistingSecret` takes precedence over inline passwords.
+# -----------------------------------------------------------------------------
+auth:
+  enabled: true
+  usersExistingSecret: "valkey-auth"
+  aclUsers:
+    default:
+      permissions: "~* &* +@all"
+    replication-user:
+      permissions: "+psync +replconf +ping"
+
+# -----------------------------------------------------------------------------
+# Replication — 1 primary + 3 replicas with read scaling.
+# minReplicasToWrite ensures durability: writes are rejected if fewer than 1
+# replica is in sync. Adjust upward for stricter durability.
+# -----------------------------------------------------------------------------
+replica:
+  enabled: true
+  replicas: 3
+  replicationUser: "replication-user"
+  disklessSync: false
+  minReplicasToWrite: 1
+  minReplicasMaxLag: 10
+
+  service:
+    enabled: true                  # Read service: valkey-read.<ns>.svc...
+    type: ClusterIP
+    port: 6379
+
+  persistence:
+    size: 50Gi                     # required when replica.enabled is true
+    storageClass: gp3
+    accessModes:
+      - ReadWriteOnce
+
+# -----------------------------------------------------------------------------
+# Primary service — write endpoint: valkey.<ns>.svc.cluster.local:6379
+# -----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 6379
+
+# -----------------------------------------------------------------------------
+# Pod Disruption Budget — protects the replica pool during voluntary
+# disruptions (node drains, rolling updates, Karpenter consolidation).
+# -----------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# -----------------------------------------------------------------------------
+# Scheduling — must agree with the Valkey Karpenter NodePool
+# (label `NodeGroupType=valkey`, taint `workload=valkey:NoSchedule`).
+# -----------------------------------------------------------------------------
+nodeSelector:
+  NodeGroupType: valkey
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: valkey
+    effect: NoSchedule
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: valkey
+
+deploymentStrategy: RollingUpdate
+
+# -----------------------------------------------------------------------------
+# Valkey config — applied to every pod via the chart's ConfigMap.
+#
+# Stable identity across pod restarts is provided by the StatefulSet +
+# headless Service combination, NOT by replica-announce-ip:
+#   - Each pod has the stable hostname valkey-N.valkey-headless.${namespace}
+#     .svc.cluster.local published by the headless Service. The DNS A record
+#     follows the pod's current IP automatically.
+#   - On pod restart the primary's `INFO replication` view briefly drops the
+#     replica, then the replica reconnects via the stable hostname (the
+#     chart sets `--replicaof valkey-0.valkey-headless... 6379` for replicas)
+#     and replication resumes.
+#
+# We deliberately do NOT set `replica-announce-ip` here. Valkey config files
+# are loaded by Valkey directly (no shell expansion), so a `$(POD_NAME)`
+# placeholder would be gossiped LITERALLY rather than resolved per pod.
+# Letting Valkey announce its current pod IP is correct: peers re-resolve
+# on the next reconnect from CoreDNS, not from the announce field.
+# -----------------------------------------------------------------------------
+valkeyConfig: |
+  appendonly yes
+
+valkeyLogLevel: "notice"
+
+# -----------------------------------------------------------------------------
+# Resources — sized for r7g.xlarge (4 vCPU, 32 GiB) at ~50% maxmemory budget.
+# Adjust upward when you change instance class.
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: 500m
+    memory: 12Gi
+  limits:
+    memory: 16Gi
+
+# -----------------------------------------------------------------------------
+# Metrics — Prometheus exporter + ServiceMonitor for kube-prometheus-stack.
+# -----------------------------------------------------------------------------
+metrics:
+  enabled: true
+  service:
+    enabled: true
+    type: ClusterIP
+    ports:
+      http: 9121
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+# =============================================================================
+# Restore initContainer — always rendered; gated at runtime via RESTORE_ENABLED.
+# Downloads `dump.rdb` from S3 to the data PVC before Valkey starts so an
+# EC2-to-EKS migration can hand off through S3 instead of online replication.
+#
+# The init container authenticates to S3 via the pod's ServiceAccount (Pod
+# Identity / IRSA). To enable, edit the env vars below: set RESTORE_ENABLED
+# to "true" and S3_BUCKET to your migration bucket.
+#
+# Shell variables are escaped as `$$VAR` for Terraform's templatefile.
+# =============================================================================
+extraInitContainers:
+  - name: restore-rdb
+    image: amazon/aws-cli:2.17.0
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: RESTORE_ENABLED
+        value: "false"
+      - name: AWS_REGION
+        value: ${region}
+      - name: S3_BUCKET
+        value: ""
+      - name: S3_PREFIX
+        value: "valkey-migration"
+      - name: ON_MISSING
+        value: "fail"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+
+        DEST_DIR="/data"
+        DEST="$${DEST_DIR}/dump.rdb"
+        TMP="$${DEST_DIR}/dump.rdb.partial"
+
+        # Runtime gate — when restore is disabled, do nothing.
+        if [ "$${RESTORE_ENABLED}" != "true" ]; then
+          echo "restore: disabled (RESTORE_ENABLED=$${RESTORE_ENABLED}); skipping"
+          exit 0
+        fi
+
+        # Idempotency — if a dump.rdb is already on the PV, never overwrite.
+        if [ -s "$${DEST}" ]; then
+          echo "restore: existing dump.rdb found at $${DEST}; skipping download"
+          exit 0
+        fi
+
+        if [ -z "$${S3_BUCKET}" ]; then
+          echo "restore: S3_BUCKET is empty but RESTORE_ENABLED=true" >&2
+          exit 1
+        fi
+
+        KEY="$${S3_PREFIX}/dump.rdb"
+        echo "restore: checking s3://$${S3_BUCKET}/$${KEY}"
+
+        if ! HEAD=$(aws s3api head-object --bucket "$${S3_BUCKET}" --key "$${KEY}" --region "$${AWS_REGION}" 2>/dev/null); then
+          if [ "$${ON_MISSING}" = "skip" ]; then
+            echo "restore: object missing; ON_MISSING=skip; exiting 0"
+            exit 0
+          fi
+          echo "restore: object missing at s3://$${S3_BUCKET}/$${KEY}; ON_MISSING=$${ON_MISSING}; failing" >&2
+          exit 1
+        fi
+
+        EXPECTED=$(echo "$${HEAD}" | awk -F'[:,]' '/"ContentLength"/ {gsub(/[ ]/,"",$$2); print $$2}')
+        if [ -z "$${EXPECTED}" ]; then
+          echo "restore: could not parse ContentLength from head-object response" >&2
+          exit 1
+        fi
+
+        echo "restore: downloading $${EXPECTED} bytes to $${TMP}"
+        aws s3 cp "s3://$${S3_BUCKET}/$${KEY}" "$${TMP}" --region "$${AWS_REGION}"
+
+        ACTUAL=$(stat -c %s "$${TMP}")
+        if [ "$${ACTUAL}" != "$${EXPECTED}" ]; then
+          echo "restore: size mismatch — expected=$${EXPECTED} actual=$${ACTUAL}" >&2
+          rm -f "$${TMP}"
+          exit 1
+        fi
+
+        mv "$${TMP}" "$${DEST}"
+        echo "restore: placed dump.rdb ($${ACTUAL} bytes) at $${DEST}"
+    volumeMounts:
+      - name: valkey-data
+        mountPath: /data
