@@ -162,4 +162,3 @@ BUCKET=$(terraform -chdir=terraform/_local output -raw valkey_migration_bucket)
 aws s3 sync "s3://${BUCKET}" ./valkey-migration-archive/
 ./cleanup.sh
 ```
-
