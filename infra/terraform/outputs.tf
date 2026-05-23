@@ -120,3 +120,11 @@ output "data_bucket_arn" {
   description = "ARN of the shared data stacks S3 bucket"
   value       = module.data_bucket.s3_bucket_arn
 }
+
+#---------------------------------------------------------------
+# Outputs
+#---------------------------------------------------------------
+output "valkey_migration_bucket" {
+  description = "S3 bucket used as the source for the Valkey restore initContainer (EC2-to-EKS migration). Empty when enable_valkey is false."
+  value       = try(aws_s3_bucket.valkey_migration[0].id, "")
+}

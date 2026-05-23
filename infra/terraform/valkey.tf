@@ -216,11 +216,3 @@ resource "kubectl_manifest" "valkey" {
     kubectl_manifest.valkey_namespace,
   ]
 }
-
-#---------------------------------------------------------------
-# Outputs
-#---------------------------------------------------------------
-output "valkey_migration_bucket" {
-  description = "S3 bucket used as the source for the Valkey restore initContainer (EC2-to-EKS migration). Empty when enable_valkey is false."
-  value       = try(aws_s3_bucket.valkey_migration[0].id, "")
-}

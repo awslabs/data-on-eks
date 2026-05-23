@@ -276,7 +276,7 @@ DESC
 #---------------------------------------------------------------
 
 variable "enable_valkey" {
-  description = "Enable Valkey, an in-memory key/value datastore (Redis fork), deployed in cluster mode via the Bitnami Helm chart. All other Valkey configuration (cluster topology, persistence, AUTH secret name, backup schedule, restore source, etc.) lives in `helm-values/valkey.yaml`."
+  description = "Enable Valkey, an in-memory key/value datastore (Redis fork)"
   type        = bool
   default     = false
 }
