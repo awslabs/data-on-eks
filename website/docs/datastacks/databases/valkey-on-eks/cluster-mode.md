@@ -967,6 +967,126 @@ helm upgrade valkey-cluster ./cluster-mode-helm-chart -n valkey-cluster
 ./install-cluster-mode.sh               # fresh install
 ```
 
+## Observability
+
+The data stack ships [`kube-prometheus-stack`](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) in the `monitoring` namespace. The cluster-mode chart's `ServiceMonitor` is loaded automatically, so Prometheus discovers the 6 pods and scrapes the bundled `oliver006/redis_exporter` sidecar (port `9121`) on each. No extra wiring required. Metrics use the `redis_*` prefix even though the server is Valkey.
+
+### Cluster-mode-specific metrics
+
+These are the metrics that only mean something for cluster mode (replication-mode equivalents are listed in the [replication doc's observability section](./replication.md#observability)):
+
+| Metric | Meaning | Suggested alert |
+|---|---|---|
+| `redis_up` | Exporter could scrape the pod | `== 0 for 2m`, severity critical |
+| `redis_cluster_enabled` | Pod is configured for cluster mode | `== 0`, severity critical (config drift) |
+| `redis_cluster_slots_ok` | Slots in `OK` state across the cluster | `< 16384 for 2m`, severity critical |
+| `redis_cluster_slots_pfail` + `redis_cluster_slots_fail` | Slots that the gossip layer suspects or has marked failed | `> 0 for 2m`, severity warning |
+| `redis_cluster_known_nodes` | Total nodes the gossip view can see | `!= primaries × (1 + replicasPerPrimary) for 5m`, severity warning |
+| `redis_cluster_size` | Number of primaries with at least one slot | `!= expected for 5m`, severity warning |
+| `redis_master_link_up` | Replica's link to its primary is healthy (per-shard, not cluster-wide) | `== 0 for 2m`, severity critical |
+| `redis_memory_used_bytes / redis_memory_max_bytes` | Per-shard memory pressure | `> 0.9 for 10m`, severity warning — different shards age out differently with default key distribution |
+| `redis_evicted_keys_total` | Keys evicted by `maxmemory-policy` | `rate > 0 for 5m`, severity warning |
+
+The `cluster_state:ok` check in `verify-cluster.sh` is the cheap synchronous version of `redis_cluster_slots_ok == 16384`. Use the metric for alerting; use the script for human-driven verification.
+
+### Verify the scrape is healthy
+
+```bash
+# All 6 cluster-mode pods should return redis_up=1.
+kubectl -n monitoring exec prometheus-prometheus-0 -c prometheus -- \
+  wget -qO- 'http://localhost:9090/api/v1/query?query=redis_up{namespace="valkey-cluster"}' \
+  | jq '.data.result[].metric.pod'
+```
+
+Expect six pod names (`valkey-cluster-0` through `valkey-cluster-5`). Fewer means the exporter sidecar crashed on one of them — `kubectl -n valkey-cluster logs <pod> -c metrics` to triage.
+
+### Access Grafana
+
+Grafana is deployed at `monitoring/monitoring-grafana` (ClusterIP). The data stack creates an admin secret with a randomly generated password.
+
+```bash
+# 1. Pull the admin password from the cluster.
+kubectl -n monitoring get secret grafana-admin-secret \
+  -o jsonpath='{.data.admin-password}' | base64 -d; echo
+
+# 2. Port-forward Grafana to localhost.
+kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
+```
+
+Open [http://localhost:3000](http://localhost:3000) and log in:
+
+- **User:** `admin`
+- **Password:** the value printed by step 1
+
+The Prometheus data source is already wired. Useful starting queries in **Explore**, scoped to the cluster-mode namespace:
+
+```promql
+# Cluster health — every pod should report ok (1)
+redis_cluster_slots_ok{namespace="valkey-cluster"}
+
+# Per-shard throughput — three lines for three primaries
+sum by (pod) (rate(redis_commands_processed_total{namespace="valkey-cluster"}[1m]))
+
+# Per-shard memory used (MiB)
+redis_memory_used_bytes{namespace="valkey-cluster"} / 1024 / 1024
+
+# Per-shard key count — uniform random keys land roughly evenly
+redis_db_keys{namespace="valkey-cluster"}
+
+# Replication lag (per replica)
+redis_master_last_io_seconds_ago{namespace="valkey-cluster"}
+
+# Cluster size — primaries with slots
+max(redis_cluster_size{namespace="valkey-cluster"})
+
+# Slot health — should be 16384 in steady state
+max(redis_cluster_slots_ok{namespace="valkey-cluster"})
+```
+
+### Import the bundled dashboard
+
+The same dashboard at [`data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json) covers both modes — its `namespace` template variable lets you switch between `valkey` and `valkey-cluster`.
+
+**Auto-import (recommended).** Grafana's sidecar (`grafana-sc-dashboard`) watches every namespace for ConfigMaps labeled `grafana_dashboard=1` and auto-imports them:
+
+```bash
+kubectl create configmap valkey-grafana-dashboard \
+  --namespace monitoring \
+  --from-file=valkey.json=data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json
+kubectl label configmap valkey-grafana-dashboard \
+  --namespace monitoring \
+  grafana_dashboard=1
+```
+
+The dashboard appears under **Dashboards → Browse** within ~30 seconds.
+
+**Manual import.** Grafana → **Dashboards → New → Import** → paste the JSON contents → pick **Prometheus** as the data source → **Import**.
+
+**Community fallback.** [Dashboard 11835](https://grafana.com/grafana/dashboards/11835-redis-dashboard-for-prometheus-redis-exporter-1-x/) is built for the same `oliver006/redis_exporter` and works as a drop-in if the bundled dashboard's panels show "No data" because of a metric-prefix mismatch on a custom exporter version.
+
+### Direct Prometheus access
+
+```bash
+kubectl -n monitoring port-forward svc/prometheus-prometheus 9090:9090
+# http://localhost:9090
+```
+
+In **Status → Targets**, filter on `valkey-cluster` — all six pods should be `UP`. The endpoint URL will look like `http://<pod-ip>:9121/metrics`. The Prometheus job name is `serviceMonitor/valkey-cluster/valkey-cluster/0`.
+
+### Watch a live shard rebalance
+
+A practical use of the dashboard: open it in one browser tab, run a `valkey-cli --cluster reshard` operation in another terminal, and watch slot counts redistribute in real time. The two metrics to graph side-by-side are:
+
+```promql
+# Slot count per primary — should change as the reshard runs
+redis_cluster_slots_assigned{namespace="valkey-cluster"}
+
+# Throughput per primary — receiving primary spikes during the migration
+sum by (pod) (rate(redis_commands_processed_total{namespace="valkey-cluster"}[10s]))
+```
+
+This is the same pattern used to verify [scale-out](#scale-out-add-a-shard) and [primary-rotation upgrades](#planned-upgrades) without trusting only the verifier script.
+
 ## Cross-region disaster recovery
 
 This section is your playbook for the **region-loss** scenario — `us-west-2` is unavailable and you need to bring the cluster up in `us-east-1` (or any peer region). Same-region failures are handled by the cluster's gossip-driven failover (see [How failover works](#how-failover-works)) and do not need this runbook.

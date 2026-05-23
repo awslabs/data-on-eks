@@ -5,10 +5,17 @@ sidebar_position: 4
 
 # Self-Managed Valkey/Redis on EC2 → EKS Migration
 
-Move a self-managed Valkey or Redis instance running on EC2 (or any other host) onto the EKS-hosted **replication-mode** cluster. The migration is **offline RDB snapshot through S3**: stop writes on the source, snapshot, upload, restore on the target. Online replication via `REPLICAOF` between EC2 and EKS is out of scope here — it is fragile across networks and version skew, and depends on routing/security-group setup outside the data plane.
+Move a self-managed Valkey or Redis instance running on EC2 (or any other host) onto the EKS-hosted **replication-mode** cluster. This document covers two paths:
+
+- **[Approach A — RDB through S3](#approach-a--rdb-through-s3).** Stop writes on the source, BGSAVE, upload to S3, restore on the target via an initContainer. Works in restricted networks, across accounts, and across regions; this stack ships the IAM, S3 bucket, and initContainer for it. Trade-off: a brief write freeze (5–30 minutes for ≤ 50 GiB on gp3, scales linearly).
+- **[Approach B — Live PSYNC replication](#approach-b--live-psync-replication).** EKS pod becomes a temporary replica of the EC2 source over `REPLICAOF`, streams writes live, then promotes on cutover. Cutover window is **seconds**. Trade-off: requires a low-latency network path EKS → EC2, source RAM headroom for the replication backlog, and matching auth/TLS config.
+
+Both paths converge on the same end state — Valkey on EKS holding all the source data, replicas back-filling, application traffic cut over. Pick based on your network topology, RAM headroom, and downtime budget. There is a [decision matrix below](#choose-your-migration-approach).
 
 :::warning Production-safety reminder
-This runbook is **destructive** to the target cluster on the happy path — it deletes the target's PVCs before restoring. **Read the entire doc once before running anything.** Capture the source's `DBSIZE` and `used_memory_human` first; you will cross-check them after the restore. If your target cluster is already serving production data, jump to [Already-serving target](#already-serving-target) — the destructive path is wrong for you.
+**Approach A is destructive to the target cluster on the happy path** — it deletes the target's PVCs before restoring. **Read the entire doc once before running anything.** Capture the source's `DBSIZE` and `used_memory_human` first; you will cross-check them after the restore. If your target cluster is already serving production data, jump to [Already-serving target](#already-serving-target) — the destructive path is wrong for you.
+
+**Approach B is non-destructive on both ends** until you run `REPLICAOF NO ONE` at cutover, but it places sustained read load on the source primary during the initial sync. Do not run it on a source whose primary is already > 70% memory-utilized.
 :::
 
 ## Which migration is this?
@@ -18,7 +25,32 @@ This runbook is **destructive** to the target cluster on the happy path — it d
 | **Replication mode** (this stack's default: 1 primary + N replicas in the `valkey` namespace) | **This document.** |
 | **Cluster mode** (sharded, in the `valkey-cluster` namespace) | See [Cluster Mode → Migration from Replication Mode](./cluster-mode.md#migration-from-replication-mode). The cluster-mode path uses `valkey-cli --cluster import` from a temporary pod, not RDB-through-S3. |
 
-## When to use this runbook
+## Choose your migration approach
+
+| Constraint / requirement | Approach A: RDB through S3 | Approach B: Live PSYNC |
+|---|---|---|
+| **Cutover downtime** | 5–30 min for ≤ 50 GiB; scales linearly | Seconds |
+| **Network path** | Both sides → S3 (egress to AWS endpoints) | EKS pod → EC2 on TCP `:6379`, low-latency, no firewall in the middle |
+| **Cross-account / cross-region** | ✓ Works as long as both sides can reach the S3 bucket | ✗ Requires VPC peering / TGW with sec-group rules |
+| **Source RAM headroom** | Not required (BGSAVE happens once) | **Required** — primary buffers writes in `repl-backlog-size` until lag = 0; OOM risk if source already > 70% memory |
+| **Source TLS / auth** | Not in scope (RDB is local-disk-then-S3) | Replica must hold `masterauth`/`primaryauth`, and CA bundle if source uses TLS |
+| **Network blip mid-migration** | No source impact; re-upload and retry | Source primary backlog grows; long blips force a full resync (more source CPU + RAM) |
+| **Cluster mode target** | ✗ Use [`--cluster import`](./cluster-mode.md#migration-from-replication-mode) instead | ✗ PSYNC puts every key on shard 0; same redirect to `--cluster import` |
+| **Rehearse against a copy first** | ✓ Easy — copy the RDB to a test bucket, run the same flow | Possible but fiddly — needs a test EC2 instance |
+| **Operational complexity** | Higher: S3 + IAM + initContainer + Pod Identity | Lower: one `REPLICAOF` command on a healthy network |
+| **Best when…** | Production data, regulated network, > 50 GiB working set, source already memory-tight, or any cross-account/region work | Same VPC, < 50 GiB, source has RAM headroom, ops team comfortable debugging engine state under time pressure |
+
+**If you can't decide:** start with Approach A. The downtime window is annoying but the failure modes are well-understood and you can rehearse against a copied RDB. Approach B is faster but unforgiving.
+
+There is a third option many teams gravitate to:
+
+- **[RedisShake](https://github.com/tair-opensource/RedisShake)** — a hardened, external implementation of PSYNC plus offline-RDB plus key-level filtering. **Strongly recommend it over a hand-rolled `REPLICAOF`** when your network is asymmetric, when you want to filter by DB/keyspace pattern, when you need rate-limiting, or when you simply don't want to debug engine-level replication state. Covered in [Approach B → RedisShake variant](#variant-redisshake).
+
+## Approach A — RDB through S3
+
+The remainder of this section (when to use it, compatibility, architecture, pre-flight, downtime strategy, step-by-step) is the runbook for Approach A. Skip to [Approach B](#approach-b--live-psync-replication) if you've decided to use live PSYNC instead.
+
+### When to use Approach A
 
 - **Source**: a single Valkey or Redis instance running on EC2 (or any host with network reach to AWS S3) — any version compatible with the target's Valkey image, see the [compatibility matrix](#compatibility-matrix) below.
 - **Target**: this stack's EKS replication cluster — freshly deployed (recommended) **or** already-serving with the [Already-serving target flow](#already-serving-target).
@@ -524,6 +556,364 @@ done
 ```
 
 This flow has more moving parts than the destructive flow. Use it only when the existing cluster has data you want to preserve up to the moment of the swap.
+
+## Approach B — Live PSYNC replication
+
+This approach establishes a temporary **primary → replica** relationship across the wire: the EKS pod becomes a replica of the EC2 source, the source streams its current state plus all subsequent writes to the EKS pod, and you cut over with `REPLICAOF NO ONE` once `master_repl_offset` matches.
+
+The cutover window is **seconds**. The trade-off is operational fragility — every condition in the [decision matrix](#choose-your-migration-approach) needs to hold for the duration of the migration, which can be hours for a large dataset.
+
+### Architecture
+
+```
+┌──────────────────── EC2 source host ────────────────────┐    ┌──────────── EKS valkey-on-eks ────────────┐
+│                                                         │    │                                           │
+│  ┌─────────────────────────┐                            │    │   ┌─────── valkey-0 pod ─────────┐        │
+│  │  Valkey/Redis primary   │   1. PSYNC handshake       │    │   │                              │        │
+│  │   serving prod traffic  │ ─────────────────────────► │    │   │  Valkey 9.0.x, configured    │        │
+│  │                         │                            │    │   │  as a replica via:           │        │
+│  │  fork → BGSAVE → RDB    │   2. RDB stream (one-shot) │    │   │  REPLICAOF <ec2-ip> 6379     │        │
+│  │  → wire stream          │ ─────────────────────────► │    │   │                              │        │
+│  │                         │                            │    │   │  Loads RDB → role=slave      │        │
+│  │  repl-backlog buffer    │   3. live command stream   │    │   │  Streams writes from primary │        │
+│  │  (ring buffer, RAM)     │ ─────────────────────────► │    │   │  master_link_status: up      │        │
+│  │                         │                            │    │   │                              │        │
+│  └─────────────────────────┘                            │    │   └──────────────────────────────┘        │
+│                                                         │    │              │ at cutover               │
+└─────────────────────────────────────────────────────────┘    │              ▼                          │
+                                                               │   REPLICAOF NO ONE → role=master         │
+                                                               │   replicas (valkey-1..3) PSYNC from it   │
+                                                               └──────────────────────────────────────────┘
+```
+
+### Pre-flight checks (Approach B specific)
+
+Run **all** of these in addition to the EC2-side state capture from [Approach A's pre-flight](#1-source-state-and-compatibility):
+
+#### 1. Source RAM headroom
+
+The source primary forks for the initial BGSAVE (CoW doubling under heavy write traffic) **and** holds every write that happens during the sync in the replication backlog buffer. Both come out of the source's RAM.
+
+```bash
+# On the EC2 source host
+valkey-cli INFO memory | grep -E '^(used_memory_human|used_memory_peak_human|maxmemory_human):'
+valkey-cli CONFIG GET repl-backlog-size       # default 1 MiB; production should be much larger
+valkey-cli INFO replication | grep -E '^(role|connected_slaves|repl_backlog_size):'
+```
+
+**Required headroom**: at least `(used_memory × 1.5) + (peak_write_rate_in_bytes × expected_sync_duration_seconds)`. As a rough heuristic, for a 30 GiB working set you want at least 60 GiB of source RAM available, more if the source already has replicas attached.
+
+If the source is > 70% memory-utilized in steady state, **do not use Approach B** — use Approach A instead. PSYNC will OOM the source primary mid-migration.
+
+#### 2. Tune `repl-backlog-size` on the source
+
+The default `repl-backlog-size` of 1 MiB is far too small for a real migration. If the buffer fills before the replica catches up, the source falls back from partial-resync to **full-resync**, which means another fork + RDB stream and the work-so-far is wasted.
+
+```bash
+# Size the backlog to hold ~10 minutes of writes at peak rate.
+# Example: 100k writes/sec * 256 bytes avg = 25.6 MB/s * 600s = ~15 GB.
+# Round up to next power of 2 for efficiency.
+valkey-cli CONFIG SET repl-backlog-size 16gb
+valkey-cli CONFIG REWRITE     # persist to valkey.conf so it survives restart
+
+# Verify
+valkey-cli CONFIG GET repl-backlog-size
+```
+
+For datasets > 50 GiB, expect the initial sync alone to take 10–30 minutes. Size the backlog for the **full sync duration plus a buffer**, not just the steady-state lag.
+
+#### 3. Network reachability — EKS pod → EC2
+
+```bash
+# (a) Open the source security group to the EKS pod CIDR(s)
+EKS_POD_CIDRS=$(aws ec2 describe-vpcs \
+  --vpc-ids $(aws eks describe-cluster --name <cluster> --query 'cluster.resourcesVpcConfig.vpcId' --output text) \
+  --query 'Vpcs[0].CidrBlockAssociationSet[].CidrBlock' --output text)
+echo "EKS pod CIDRs: $EKS_POD_CIDRS"
+
+# Add an inbound rule to the EC2 source SG: TCP 6379 from those CIDRs.
+
+# (b) Probe from a pod
+kubectl -n valkey run conn-probe --rm -i -t --restart=Never \
+  --image=docker.io/valkey/valkey:9.0.2 -- \
+  valkey-cli -h <ec2-private-ip> -p 6379 -a <source-password> ping
+# Expect: PONG
+```
+
+Latency between the pod and the EC2 source matters. Sustained replication is sensitive to RTT and packet loss. A same-VPC migration is the supported case; cross-VPC peering works but expect higher full-sync wall-clock time.
+
+#### 4. Source `bind` directive
+
+```bash
+# On the EC2 source
+grep -E '^bind' /etc/valkey/valkey.conf
+# bind 0.0.0.0 -::*    OK
+# bind 127.0.0.1        BAD — replica cannot connect
+# bind 10.0.1.5         OK if 10.0.1.5 is the EC2's VPC IP that the pod CIDR can reach
+```
+
+If `bind` is too restrictive, update the config and `valkey-cli SHUTDOWN NOSAVE` then restart — losing the in-memory state would defeat the migration. Instead, edit the config, then `valkey-cli CONFIG SET bind "0.0.0.0 -::*"` followed by `CONFIG REWRITE` to apply without restart.
+
+#### 5. Auth, TLS, and ACL alignment
+
+This is where most live-replication migrations fall over.
+
+```bash
+# On the source
+valkey-cli CONFIG GET requirepass             # password auth
+valkey-cli CONFIG GET masterauth              # for source's own replicas (if any)
+valkey-cli CONFIG GET tls-port                # TLS-only, mTLS, or plain?
+valkey-cli ACL LIST                            # any non-default users that need to be replicated?
+```
+
+The replica (EKS pod) must:
+
+- Hold the source's password in `masterauth` (Valkey ≤ 7.x) or `primaryauth` (Valkey 8+).
+- Trust the source's TLS CA if the source listens on `tls-port`. Mount the CA bundle into the pod and set `tls-cluster yes` + `tls-replication yes` on the replica.
+- Match the source's ACL configuration if non-default users are in use. ACLs do **not** propagate via `PSYNC` automatically — you must export `ACL LIST` from the source and re-issue on the target after cutover.
+
+If any of these don't line up, PSYNC fails with `NOAUTH Authentication required` or an SSL handshake error. We saw this exact pattern in a recent debug session — the symptom is a tight loop of `Replica bio thread: Error reading sync metadata` in the replica logs.
+
+### Step-by-step (Approach B)
+
+#### Step 1 — Configure the EKS pod as a replica
+
+The official `valkey-io/valkey-helm` chart deploys this stack with all four pods configured as a replication set already (`valkey-0` is primary, `valkey-1..3` are replicas of `valkey-0`). For Approach B, you instead want `valkey-0` to be a replica of the **EC2 source**.
+
+The cleanest way is a temporary helm values override:
+
+```yaml
+# Add to infra/terraform/helm-values/valkey.yaml under primary:
+primary:
+  extraEnvVars:
+    - name: VALKEY_MASTER_HOST
+      value: "<ec2-source-private-ip>"
+    - name: VALKEY_MASTER_PORT_NUMBER
+      value: "6379"
+    - name: VALKEY_MASTER_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: valkey-source-auth
+          key: source-password
+```
+
+Or, simpler for a one-time migration, do it manually on a freshly-restarted pod:
+
+```bash
+# Delete PVCs first so the pod starts empty
+kubectl -n valkey scale statefulset valkey --replicas=0
+kubectl -n valkey delete pvc -l app.kubernetes.io/name=valkey
+kubectl -n valkey scale statefulset valkey --replicas=1   # bring up only valkey-0
+
+# Wait for valkey-0 ready
+kubectl -n valkey wait --for=condition=Ready pod/valkey-0 --timeout=300s
+
+# Set the source password as masterauth, then issue REPLICAOF
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli \
+  -a "$TARGET_PASS" --no-auth-warning \
+  CONFIG SET masterauth "$SOURCE_PASS"
+
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli \
+  -a "$TARGET_PASS" --no-auth-warning \
+  REPLICAOF "$EC2_SOURCE_IP" 6379
+```
+
+#### Step 2 — Watch the initial sync
+
+```bash
+# On the EKS replica (valkey-0)
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli \
+  -a "$TARGET_PASS" --no-auth-warning INFO replication
+
+# Look for:
+#   role:slave
+#   master_link_status:up                      ← critical
+#   master_sync_in_progress:1 → 0              ← flips to 0 when initial sync done
+#   master_last_io_seconds_ago: <small number> ← steady stream is healthy
+#   master_repl_offset: <large monotonic int>  ← matches the source's repl_offset
+```
+
+Tail the pod logs in another window — the initial sync produces clear `Loading RDB`, `MASTER <-> REPLICA sync started`, `Full resync from master`, then `MASTER <-> REPLICA sync: Finished with success`. Any `NOAUTH`, `Connection refused`, or `Loading RDB produced by version` messages mean a pre-flight check missed something — fix and retry.
+
+For datasets > 10 GiB, the initial sync's wall-clock time scales with the EC2 → pod network throughput. Expect 100 Mbps to 1 Gbps in practice depending on instance type and AZ topology.
+
+#### Step 3 — Validate before cutover
+
+Once `master_sync_in_progress = 0` and `master_link_status = up`:
+
+```bash
+# Compare DBSIZE
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli -a "$TARGET_PASS" --no-auth-warning DBSIZE
+ssh ec2-user@$EC2_SOURCE_IP -- valkey-cli -a "$SOURCE_PASS" DBSIZE
+
+# Compare master_repl_offset — must be within ~1000 of each other in steady state
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli -a "$TARGET_PASS" --no-auth-warning \
+  INFO replication | grep -E 'master_repl_offset|slave_repl_offset'
+ssh ec2-user@$EC2_SOURCE_IP -- valkey-cli -a "$SOURCE_PASS" \
+  INFO replication | grep master_repl_offset
+
+# Sample 5 random keys on both sides and verify identical values
+KEYS=$(ssh ec2-user@$EC2_SOURCE_IP -- valkey-cli -a "$SOURCE_PASS" --scan | shuf -n 5)
+for k in $KEYS; do
+  src=$(ssh ec2-user@$EC2_SOURCE_IP -- valkey-cli -a "$SOURCE_PASS" GET "$k")
+  dst=$(kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli -a "$TARGET_PASS" --no-auth-warning GET "$k")
+  [[ "$src" == "$dst" ]] && echo "OK   $k" || echo "DIFF $k: src=$src dst=$dst"
+done
+```
+
+If any sample differs, do not cut over. Investigate before continuing — usually the source had a write that lost during a brief network blip, and re-running `REPLICAOF` to force a full resync resolves it.
+
+#### Step 4 — Quiesce writes and final lag check
+
+```bash
+# On the source — pause writes
+ssh ec2-user@$EC2_SOURCE_IP -- valkey-cli -a "$SOURCE_PASS" CLIENT PAUSE 30000 WRITE
+
+# On the replica — wait for full catch-up
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli \
+  -a "$TARGET_PASS" --no-auth-warning INFO replication | grep master_repl_offset
+# Confirm matches source's master_repl_offset to the byte
+```
+
+`CLIENT PAUSE WRITE` blocks new writes for the specified duration but reads continue serving — applications time-out gracefully or buffer if they're well-behaved. The pause window must be long enough for the final replication lag (typically < 1 second on a healthy network) to drain.
+
+#### Step 5 — Promote the EKS replica
+
+```bash
+# Detach from the source
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli \
+  -a "$TARGET_PASS" --no-auth-warning REPLICAOF NO ONE
+
+# Verify
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli \
+  -a "$TARGET_PASS" --no-auth-warning INFO replication | grep '^role:'
+# Expect: role:master
+```
+
+#### Step 6 — Bring up the rest of the replication set
+
+```bash
+# Scale back up — valkey-1..3 will PSYNC from valkey-0 (the new primary)
+kubectl -n valkey scale statefulset valkey --replicas=4
+kubectl -n valkey wait --for=condition=Ready pod/valkey-1 --timeout=300s
+kubectl -n valkey wait --for=condition=Ready pod/valkey-2 --timeout=300s
+kubectl -n valkey wait --for=condition=Ready pod/valkey-3 --timeout=300s
+
+# Confirm all three replicas are connected and synced
+kubectl -n valkey exec valkey-0 -c valkey -- valkey-cli \
+  -a "$TARGET_PASS" --no-auth-warning INFO replication | grep -E '^(connected_slaves|slave[0-9]):'
+# Expect: connected_slaves:3 with all three slaveN lines showing state=online lag=0
+```
+
+#### Step 7 — Cut over application traffic
+
+Same as [Approach A → Step 9](#step-9--cut-over-application-traffic). Update application config to point at:
+
+- Writes: `valkey.valkey.svc.cluster.local:6379`
+- Reads: `valkey-read.valkey.svc.cluster.local:6379`
+
+Roll one application at a time, monitor error rates and `instantaneous_ops_per_sec` on the target.
+
+#### Step 8 — Decommission the source
+
+Once the target has been stable for > 24 hours (recommend > 1 week), proceed with the standard EC2 decommission:
+
+```bash
+# Stop the source's writers (if any beyond the migrated app)
+ssh ec2-user@$EC2_SOURCE_IP -- valkey-cli -a "$SOURCE_PASS" CLIENT KILL TYPE normal
+
+# Final cold-storage backup
+ssh ec2-user@$EC2_SOURCE_IP -- valkey-cli -a "$SOURCE_PASS" BGSAVE
+ssh ec2-user@$EC2_SOURCE_IP -- aws s3 cp /var/lib/valkey/dump.rdb \
+  s3://your-cold-archive-bucket/valkey-source-final-$(date +%Y%m%d).rdb \
+  --storage-class GLACIER
+
+# Stop and terminate the EC2 instance per your standard decommission process
+```
+
+### Variant: RedisShake
+
+[RedisShake](https://github.com/tair-opensource/RedisShake) is a hardened, external implementation of the same primary→replica relationship — but it runs as a separate process (or pod) rather than embedding in the engine. **Use it instead of native PSYNC when**:
+
+- You need to filter by DB number, key pattern, or data type (e.g. only migrate keys matching `user:*`).
+- You need rate-limiting (don't saturate the source's NIC).
+- You want the migration to survive a network blip without falling back to full-resync (RedisShake buffers to disk).
+- You need cross-version migrations where RDB format compatibility is in question (RedisShake uses key-level operations, not RDB stream).
+- The source uses ACLs and you only want to migrate keys readable by a specific user.
+
+The deployment shape is a one-off Kubernetes Job in the `valkey` namespace that:
+
+1. Connects to the EC2 source (read-only, with credentials).
+2. Connects to the EKS pod's primary endpoint (`valkey.valkey.svc.cluster.local:6379`).
+3. Streams data from source to target with whatever filters you configured.
+4. Logs progress and exits when caught up — at which point you cut over and decommission the source.
+
+A skeleton RedisShake config:
+
+```toml
+# redisshake.toml
+[sync_reader]
+  cluster = false
+  address = "<ec2-source-ip>:6379"
+  username = ""
+  password = "<source-password>"
+  tls = false
+  sync_rdb = true
+  sync_aof = true
+
+[redis_writer]
+  cluster = false
+  address = "valkey.valkey.svc.cluster.local:6379"
+  username = ""
+  password = "<target-password>"
+  tls = false
+
+[filter]
+  allow_db = [0]              # only db0
+  # allow_key_prefix = ["user:", "session:"]
+```
+
+Run as a Kubernetes Job (cluster-mode equivalent uses `[sync_reader] cluster = true`):
+
+```bash
+kubectl -n valkey run redisshake \
+  --image=ghcr.io/tair-opensource/redisshake:latest \
+  --restart=Never \
+  --overrides='{"spec":{"containers":[{"name":"redisshake","image":"ghcr.io/tair-opensource/redisshake:latest","command":["redis-shake","/config/redisshake.toml"],"volumeMounts":[{"name":"config","mountPath":"/config"}]}],"volumes":[{"name":"config","configMap":{"name":"redisshake-config"}}]}}' \
+  --dry-run=client -o yaml > redisshake-job.yaml
+
+# Create the ConfigMap from your toml above, then kubectl apply both.
+```
+
+For most hand-rolled `REPLICAOF` migrations, a RedisShake-based migration is what you'd evolve to on the second attempt anyway — start with it.
+
+### Rollback (Approach B)
+
+If validation in Step 3 fails or the cutover in Step 7 surfaces issues:
+
+1. **Before `REPLICAOF NO ONE`** — easy rollback. The EC2 source is still authoritative, the EKS pod is just a replica. Run `REPLICAOF NO ONE` on the EKS pod to detach (so it stops chasing the source), wipe the EKS PVCs, and restart the migration. No data loss.
+
+2. **After `REPLICAOF NO ONE` but before app cutover** — the EKS pod is now an independent primary holding a snapshot, and the EC2 source has resumed serving writes (which the EKS pod no longer sees). To roll back:
+   - Resume normal traffic on the EC2 source.
+   - Use Approach A's destructive flow to wipe the EKS pod and re-migrate from a fresh BGSAVE later.
+
+3. **After app cutover** — the EKS pod has been accepting writes that the EC2 source doesn't know about. Rolling back to EC2 means losing those writes. Pick one:
+   - Accept the loss, point apps back at EC2, reconcile diverged keys manually (rare; only feasible for small datasets).
+   - Don't roll back; debug forward on the EKS side.
+
+The lesson: **validate aggressively before Step 5**. Once you run `REPLICAOF NO ONE` and the source resumes writes, your rollback options narrow fast.
+
+### Common failure modes
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `Replica bio thread: Error reading sync metadata` looping | Auth mismatch — source has password, replica didn't set `masterauth` / `primaryauth` | `CONFIG SET masterauth <source-password>` on replica |
+| `MASTER aborted replication with an error: NOAUTH` | Same as above | Same as above |
+| Initial sync runs forever | `repl-backlog-size` too small; backlog overflows mid-sync, loops back to full-resync | Raise `repl-backlog-size` on source (Step 2 of pre-flight) |
+| `master_link_status: down` flapping | Network instability or sec-group drop | Run `ping`/`mtr` from pod to source IP; verify SG rule on the source |
+| `Loading RDB produced by version X.Y.Z, my version is A.B.C` | Source RDB version newer than target | Pin a Valkey image of the source's matching major in `helm-values/valkey.yaml`, then upgrade after migration |
+| Replica's `master_repl_offset` < source's by a constant amount | Replica fell behind, can't catch up | Check pod CPU — replica may need more cores; or source write rate exceeds replica apply rate |
+| `slave_read_only` blocks writes during validation | Default `slave-read-only yes` on the replica | Expected; do all writes on the source until cutover |
 
 ## Cluster-mode migration
 

@@ -195,6 +195,10 @@ For automatic primary failover, the Valkey project's options are Sentinel (not y
 
 ## Observability
 
+The data stack ships [`kube-prometheus-stack`](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) in the `monitoring` namespace. Both Valkey clusters (replication and cluster mode) are scraped automatically via their `ServiceMonitor`s — no extra wiring needed. The exporter is `oliver006/redis_exporter` (sidecar in each pod), so metrics use the `redis_*` prefix even though the server is Valkey.
+
+### Key metrics and alerts
+
 | Metric | Meaning | Suggested alert |
 |---|---|---|
 | `redis_up` | Exporter could scrape the pod | `for 2m`, severity critical |
@@ -204,7 +208,61 @@ For automatic primary failover, the Valkey project's options are Sentinel (not y
 | `redis_memory_used_bytes / redis_memory_max_bytes` | Memory pressure | `> 0.9 for 10m`, severity warning |
 | `redis_evicted_keys_total` | Keys evicted under memory pressure | `increase > 0 for 5m`, severity warning |
 
-A starter Grafana dashboard ships at `data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json`. Import via the standard `kube-prometheus-stack` ConfigMap discovery:
+### Verify the scrape is healthy
+
+```bash
+# Both Valkey clusters should return redis_up=1.
+kubectl -n monitoring exec prometheus-prometheus-0 -c prometheus -- \
+  wget -qO- 'http://localhost:9090/api/v1/query?query=redis_up' | jq '.data.result[].metric | {pod, namespace}'
+```
+
+Expect one entry per Valkey pod, e.g. `{pod: valkey-0, namespace: valkey}` and (if cluster mode is also installed) `{pod: valkey-cluster-0, namespace: valkey-cluster}`.
+
+### Access Grafana
+
+Grafana is deployed as `monitoring/monitoring-grafana` (ClusterIP). The data stack creates an admin secret with a randomly generated password.
+
+```bash
+# 1. Pull the admin password from the cluster.
+kubectl -n monitoring get secret grafana-admin-secret \
+  -o jsonpath='{.data.admin-password}' | base64 -d; echo
+
+# 2. Port-forward Grafana to localhost.
+kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
+```
+
+Open [http://localhost:3000](http://localhost:3000) and log in:
+
+- **User:** `admin`
+- **Password:** the value printed by step 1
+
+The Prometheus data source is already wired. Open **Explore** (compass icon) and run `redis_up` to confirm metrics are flowing. Useful starting queries:
+
+```promql
+# Active connections per pod
+redis_connected_clients{namespace="valkey"}
+
+# Throughput in ops/sec
+sum by (pod) (rate(redis_commands_processed_total{namespace="valkey"}[1m]))
+
+# Cache hit rate
+sum(rate(redis_keyspace_hits_total{namespace="valkey"}[5m]))
+  / sum(rate(redis_keyspace_hits_total{namespace="valkey"}[5m]) + rate(redis_keyspace_misses_total{namespace="valkey"}[5m]))
+
+# Replication lag in seconds (per replica)
+redis_master_last_io_seconds_ago{namespace="valkey"}
+
+# Memory headroom
+redis_memory_used_bytes{namespace="valkey"} / redis_memory_max_bytes{namespace="valkey"}
+```
+
+### Import the bundled dashboard
+
+A starter dashboard ships at [`data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/grafana-valkey-dashboard.json). Two ways to load it.
+
+**Option 1 — auto-import via ConfigMap (recommended for repeatable installs).**
+
+The Grafana sidecar (`grafana-sc-dashboard`, label selector `grafana_dashboard=1`) watches every namespace and auto-imports any matching ConfigMap.
 
 ```bash
 kubectl create configmap valkey-grafana-dashboard \
@@ -215,4 +273,21 @@ kubectl label configmap valkey-grafana-dashboard \
   grafana_dashboard=1
 ```
 
-The Grafana sidecar picks up any ConfigMap with the `grafana_dashboard: "1"` label and auto-imports it.
+The dashboard appears under **Dashboards → Browse** within ~30 seconds. Use the `namespace` template variable at the top to switch between `valkey` (replication) and `valkey-cluster` (cluster mode).
+
+**Option 2 — manual import via the UI.**
+
+Grafana → **Dashboards → New → Import** → paste the JSON file's contents → pick the **Prometheus** data source → **Import**. Faster for ad-hoc inspection, doesn't survive a Grafana restart.
+
+**Option 3 — community dashboard.** If the bundled dashboard panels show "No data" because of a metric-prefix mismatch on older exporter versions, [dashboard 11835](https://grafana.com/grafana/dashboards/11835-redis-dashboard-for-prometheus-redis-exporter-1-x/) ("Redis Dashboard for Prometheus Redis Exporter 1.x") is a known-good fallback for the same exporter family.
+
+### Direct Prometheus access
+
+For PromQL queries against raw metrics or to inspect target health:
+
+```bash
+kubectl -n monitoring port-forward svc/prometheus-prometheus 9090:9090
+# http://localhost:9090
+```
+
+Check **Status → Targets** and filter on `valkey` — both `valkey/valkey/0` (replication) and `valkey-cluster/valkey-cluster/0` (cluster mode, if installed) should show `UP`.
