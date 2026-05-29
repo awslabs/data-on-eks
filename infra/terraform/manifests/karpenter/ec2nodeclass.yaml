@@ -330,6 +330,96 @@ spec:
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
+  name: ebs-gp3-1000gi-6000iops-1000tp-x86
+  namespace: karpenter
+spec:
+  # Use Amazon Linux 2023 for better performance and security
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+
+  # Instance store optimization - RAID0 handles everything automatically
+  instanceStorePolicy: RAID0
+
+  # Block device mappings for additional storage
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 1000Gi
+        volumeType: gp3
+        iops: 6000
+        throughput: 1000
+        encrypted: true
+        deleteOnTermination: true
+
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            MemoryQoS: true
+          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
+          # memory.high = request + 0.7 * (limit - request)
+          memoryThrottlingFactor: 0.7
+          # CPU manager: static policy pins integer-CPU Guaranteed-QoS pods to
+          # exclusive cores. Only Guaranteed-QoS pods with integer cpu
+          # requests==limits get pinned; Burstable/BestEffort pods continue to
+          # use the shared pool.
+          #
+          #   full-pcpus-only: allocate at full-physical-core granularity so
+          #     a pod never shares an SMT (hyperthread) sibling with another
+          #     workload. Relevant on any SMT-enabled CPU. GA in K8s 1.33.
+          #
+          #   prefer-align-cpus-by-uncorecache: prefer cores that share the
+          #     same LLC/uncore-cache slice. Material on chips with split LLC
+          #     domains — notably AMD EPYC and large Intel Sapphire Rapids with 
+          #     sub-NUMA clustering. It is a preference, so it is a silent no-op 
+          #     on unified-LLC chips
+          cpuManagerPolicy: static
+          cpuManagerPolicyOptions:
+            full-pcpus-only: "true"
+            prefer-align-cpus-by-uncorecache: "true"
+          # Static CPU manager requires kubeReserved.cpu + systemReserved.cpu > 0,
+          # otherwise kubelet refuses to start. Reserving 2 vCPUs total (== 1
+          # full physical core on SMT-enabled x86 instances) keeps the reserved
+          # set aligned with physical-core boundaries, so full-pcpus-only does
+          # not strand SMT siblings, and ensures the shared pool always has CPU
+          # budget for kubelet/containerd/system daemons.
+          kubeReserved:
+            cpu: 1000m
+          systemReserved:
+            cpu: 1000m
+
+    --//--
+
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
   name: streaming-optimized
   namespace: karpenter
 spec:

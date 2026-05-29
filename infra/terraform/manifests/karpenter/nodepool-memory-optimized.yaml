@@ -16,7 +16,7 @@ spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: ebs-gp3-1000gi-6000iops-1000tp
+        name: ebs-gp3-1000gi-6000iops-1000tp-x86
 
       requirements:
         # Capacity type - prefer spot for cost optimization
