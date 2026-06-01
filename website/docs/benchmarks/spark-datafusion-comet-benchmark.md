@@ -65,8 +65,8 @@ To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran o
 |-----------|--------------|
 | **EKS Cluster** | [Amazon EKS](https://aws.amazon.com/eks/) 1.34 |
 | **Node Instance Type** | r8gd.12xlarge (48 vCPUs, 384GB RAM, 1.8TB NVMe SSD) |
-| **Node Group** | 24 nodes dedicated for benchmark workloads |
-| **Executor Configuration** | 23 executors × 5 cores × 58GB RAM each |
+| **Node Group** | 12 nodes dedicated for benchmark workloads |
+| **Executor Configuration** | 23 executors × 5 cores (requests) × 58GB RAM each |
 | **Driver Configuration** | 5 cores × 20GB RAM |
 | **Dataset** | [TPC-DS](https://www.tpc.org/tpcds/) 3TB (Parquet format) |
 | **Storage** | [Amazon S3](https://aws.amazon.com/s3/) with optimized S3A connector |
