@@ -29,14 +29,14 @@ const WorkshopBanner = () => {
 
        <div className={styles.workshopCards}>
          <a
-           href="https://aws-experience.com/emea/smb/events/series/get-hands-on-with-amazon-eks?trk=f26b398b-f6b5-458d-bbcc-ab6d18efa5a3&sc_channel=el"
+           href="https://events.eksworkshop.com/workshops/analytics/"
            target="_blank"
            rel="noopener noreferrer"
            className={styles.workshopCard}
          >
            <div className={styles.cardIcon}>⚡</div>
            <div className={styles.cardContent}>
-             <h3 className={styles.cardTitle}>Spark on EKS Workshop</h3>
+             <h3 className={styles.cardTitle}>Analytics on EKS Workshop</h3>
              <p className={styles.cardDescription}>
                Get hands-on with Amazon EKS and learn to run Apache Spark workloads at scale
              </p>
