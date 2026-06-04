@@ -21,7 +21,7 @@ const config = {
 
   // Enable experimental faster builds with Rspack and v4 future flags
   future: {
-    experimental_faster: true,
+    faster: true,
     v4: true,
   },
 
@@ -61,6 +61,13 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      announcementBar: {
+        id: 'analytics-workshop-banner-v2',
+        content:
+          '<span class="announcement-spark">✨</span> <span class="announcement-text"><strong>Analytics on EKS Workshop</strong> — get hands-on running analytics workloads at scale</span> <a class="announcement-cta" target="_blank" rel="noopener noreferrer" href="https://events.eksworkshop.com/workshops/analytics/">Register now →</a>',
+        textColor: '#ffffff',
+        isCloseable: true,
+      },
       navbar: {
         // title: 'DoEKS',
         logo: {

@@ -1047,3 +1047,142 @@ code:not([class*="language-"]) {
     transform: translateX(4px);
   }
 }
+
+/* ==========================================================================
+   Analytics on EKS Workshop announcement ribbon
+   Upgrades the default Docusaurus announcementBar with an animated gradient
+   background and a pill-style call-to-action button.
+   NOTE: Docusaurus renders the container with the stable class
+   `theme-announcement-bar`, so target that (not the hashed module class).
+   ========================================================================== */
+
+/* Make room for the ribbon so it doesn't feel cramped */
+:root {
+  --docusaurus-announcement-bar-height: 3rem !important;
+}
+
+@media (min-width: 997px) {
+  :root {
+    --docusaurus-announcement-bar-height: 3rem !important;
+  }
+}
+
+/* The announcement bar container */
+.theme-announcement-bar {
+  border-bottom: none !important;
+  font-family: var(--ifm-font-family-base);
+  /* Animated AWS-themed gradient (overrides the theme's white default) */
+  background: linear-gradient(
+    100deg,
+    #232f3e 0%,
+    #2b4a6f 25%,
+    #1f6feb 50%,
+    #2b4a6f 75%,
+    #232f3e 100%
+  ) !important;
+  background-size: 300% 100% !important;
+  animation: announcement-gradient 12s ease infinite;
+  color: #ffffff !important;
+}
+
+@keyframes announcement-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Content wrapper: center items and give them breathing room */
+.theme-announcement-bar > div[class*='content'] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  padding: 0 1rem;
+}
+
+.announcement-text {
+  color: #ffffff;
+}
+
+.announcement-text strong {
+  font-weight: 700;
+}
+
+/* Sparkle accent with a gentle twinkle */
+.announcement-spark {
+  display: inline-block;
+  animation: announcement-twinkle 2.5s ease-in-out infinite;
+}
+
+@keyframes announcement-twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.82); }
+}
+
+/* Pill-style call-to-action button */
+.theme-announcement-bar a.announcement-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.95rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1f6feb !important;
+  font-weight: 700;
+  text-decoration: none !important;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.theme-announcement-bar a.announcement-cta:hover {
+  transform: translateY(-1px);
+  background: #f0f6ff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Make the dismiss (x) button blend with the ribbon */
+.theme-announcement-bar button {
+  color: #ffffff;
+  opacity: 0.85;
+}
+
+.theme-announcement-bar button:hover {
+  opacity: 1;
+}
+
+/* Dark mode: slightly deeper gradient for contrast */
+html[data-theme='dark'] .theme-announcement-bar {
+  background: linear-gradient(
+    100deg,
+    #0f1b2d 0%,
+    #1b3556 25%,
+    #1657c4 50%,
+    #1b3556 75%,
+    #0f1b2d 100%
+  ) !important;
+  background-size: 300% 100% !important;
+}
+
+html[data-theme='dark'] .theme-announcement-bar a.announcement-cta {
+  background: #e8f0ff;
+  color: #1657c4 !important;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .theme-announcement-bar,
+  .announcement-spark {
+    animation: none;
+  }
+}
+
+/* Narrow screens: tighten spacing, keep everything readable */
+@media (max-width: 600px) {
+  .theme-announcement-bar > div[class*='content'] {
+    font-size: 0.85rem;
+    gap: 0.5rem;
+  }
+}
