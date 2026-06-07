@@ -3,6 +3,11 @@
 read -p "Enter the region: " region
 export AWS_DEFAULT_REGION=$region
 
+command -v terraform >/dev/null 2>&1 || {
+  echo "ERROR: terraform is not installed or not in PATH. Install Terraform >= 1.5.7 and retry."
+  exit 1
+}
+
 # List of Terraform modules to apply in sequence
 targets=(
   "module.vpc"
