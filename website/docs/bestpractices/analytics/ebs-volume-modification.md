@@ -5,6 +5,8 @@ sidebar_label: In-Place EBS Volume Modification for Stateful Workloads
 
 # In-Place EBS Volume Modification for Stateful Workloads
 
+# In-Place EBS Volume Modification for Stateful Workloads
+
 Almost every stateful data workload on EKS sits on EBS. Celeborn shuffle workers, Valkey cluster nodes, Kafka brokers, Trino spill, Pinot servers, ClickHouse, Starrocks. They all run as StatefulSets where each pod owns a PersistentVolumeClaim backed by an EBS volume. The capacity and IOPS that looked right when the cluster was first provisioned rarely stay right for long. This page is about modifying those volumes in place, while the pods keep serving traffic, with zero restarts and zero cluster impact.
 
 :::caution Not on gp2?
