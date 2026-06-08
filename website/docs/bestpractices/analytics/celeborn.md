@@ -680,7 +680,7 @@ spec:
 
 **Why disable automatic consolidation?**
 - Celeborn workers hold shuffle data that must be gracefully drained
-- Automatic consolidation can disrupt multipe workers simultaneously
+- Automatic consolidation can disrupt multiple workers simultaneously
 - Controlled rolling restarts (documented above) provide safer, predictable maintenance windows
 - The decommission API provides explicit coordination that automatic consolidation cannot guarantee
 

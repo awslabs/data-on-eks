@@ -317,7 +317,7 @@ done
 
 This discovers all PVCs in the namespace rather than assuming a fixed replica count — works for 6-replica clusters, 9-replica clusters, or any other size.
 
-For the full reference — prerequisites, cooldown rules, scaling across hundreds of clusters — see [In-Place EBS Volume Modification for Stateful Workloads](../../bestpractices/analytics/ebs-volume-modification).
+For the full reference — prerequisites, cooldown rules, scaling across hundreds of clusters — see [In-Place EBS Volume Modification for Stateful Workloads](../../../bestpractices/analytics/ebs-volume-modification).
 
 Mount tuning: xfs > ext4 for shards > 50 GiB (better sustained-sequential-write); `noatime,nodiratime` saves a metadata write per AOF read.
 
@@ -504,8 +504,6 @@ auth:
   existingSecret: my-valkey-secret      # must contain key `default`
   existingSecretPasswordKey: default
 ```
-
-The chart deliberately does NOT use an ACL file. It would add a separate `replication-user` ACL that needs `+psync +replconf +ping` (and **not** the non-existent `+@replication` category — a common copy-paste trap). `requirepass` + `primaryauth` is simpler and matches the [Microsoft AKS reference](https://learn.microsoft.com/en-us/azure/aks/deploy-valkey-cluster) for Valkey cluster mode.
 
 ### Strict AZ spread
 
