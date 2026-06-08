@@ -1020,7 +1020,6 @@ Already running this stack's replication mode and want to migrate to cluster mod
 - [Valkey Cluster Tutorial](https://valkey.io/topics/cluster-tutorial/) — hands-on companion to the spec.
 - [Valkey Administration Docs](https://valkey.io/topics/admin/) — THP, fork tuning, kernel guidance.
 - [Valkey 1B RPS benchmark](https://valkey.io/blog/1-billion-rps/) — scale ceiling demo (1000 shards).
-- [Microsoft AKS Valkey Cluster reference](https://learn.microsoft.com/en-us/azure/aks/deploy-valkey-cluster) — the architectural pattern this chart adopts.
 - [valkey-helm PR #51](https://github.com/valkey-io/valkey-helm/pull/51) — the upstream PR being tracked for native cluster support.
 - [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) — official cluster-mode roadmap.
 - [AWS ElastiCache supported node types](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/CacheNodes.SupportedTypes.html) — current instance families AWS recommends.
