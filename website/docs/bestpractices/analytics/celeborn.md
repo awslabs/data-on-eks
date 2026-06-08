@@ -531,7 +531,102 @@ Decommission drain time is typically 0-5 seconds because it only waits for in-fl
 
 ### Storage Vertical Scaling
 
-EBS volumes backing Celeborn workers can be resized online without pod restarts or data movement. Patch the existing PVCs directly and update the Helm values to match — Kubernetes handles the underlying volume expansion transparently.
+EBS volumes backing Celeborn workers can be resized and have their IOPS and throughput changed online — without pod restarts, without data movement, and without any impact to in-flight Spark shuffle jobs.
+
+**Step 1 — Apply the VolumeAttributesClass once per cluster.** A VAC is a Kubernetes object that names a performance tier. Applying it does nothing to existing volumes — it just makes the tier available to reference.
+
+```bash
+kubectl apply -f infra/terraform/manifests/celeborn/volumeattributesclass-celeborn-gp3-high.yaml
+```
+
+This creates `celeborn-gp3-high` (10,000 IOPS / 1,000 MiB/s). The VAC is what allows changing IOPS and throughput on existing volumes after they are provisioned. Updating the StorageClass alone cannot do this.
+
+**Step 2 — Patch all worker PVCs.** Each worker has 4 PVCs (`disk1`–`disk4`). Patch them all in one loop:
+
+```bash
+kubectl get pvc -n celeborn --no-headers -o custom-columns="NAME:.metadata.name" | while read pvc; do
+  kubectl patch pvc "$pvc" -n celeborn \
+    --type='merge' \
+    -p '{"spec":{"volumeAttributesClassName":"celeborn-gp3-high"}}'
+  echo "patched: $pvc"
+done
+```
+
+No pod restarts. Celeborn workers keep accepting push and fetch requests from Spark executors while EBS applies the new settings on each volume in the background.
+
+**Step 3 — Verify.** The `VOLUMEATTRIBUTESCLASS` column confirms the tier is applied at the Kubernetes layer. Cross-check against the EBS API to confirm the settings are live on the actual volume:
+
+```bash
+kubectl get pvc -n celeborn -o wide
+
+VOL_ID=$(kubectl get pv \
+  "$(kubectl get pvc disk1-celeborn-worker-0 -n celeborn -o jsonpath='{.spec.volumeName}')" \
+  -o jsonpath='{.spec.csi.volumeHandle}')
+aws ec2 describe-volumes --volume-ids "$VOL_ID" --region us-west-2 \
+  --query 'Volumes[0].{Size:Size,Iops:Iops,Throughput:Throughput,State:State}'
+```
+
+**Step 4 — Lock in the new tier for future scale-out.** The patch above updates existing volumes. But `volumeClaimTemplates` in a StatefulSet is immutable after creation — new replicas added by scaling out will provision PVCs using the original template, with no VAC set and default gp3 IOPS. To fix this, update the Helm values and recreate the StatefulSet object without deleting pods or PVCs.
+
+Add `volumeAttributesClassName` to each disk entry in your Helm values:
+
+```yaml
+# infra/terraform/helm-values/celeborn.yaml
+worker:
+  volumeClaimTemplates:
+    - metadata:
+        name: disk1
+      spec:
+        storageClassName: gp3-faster
+        volumeAttributesClassName: celeborn-gp3-high
+        resources:
+          requests:
+            storage: 1000Gi
+    - metadata:
+        name: disk2
+      spec:
+        storageClassName: gp3-faster
+        volumeAttributesClassName: celeborn-gp3-high
+        resources:
+          requests:
+            storage: 1000Gi
+    - metadata:
+        name: disk3
+      spec:
+        storageClassName: gp3-faster
+        volumeAttributesClassName: celeborn-gp3-high
+        resources:
+          requests:
+            storage: 1000Gi
+    - metadata:
+        name: disk4
+      spec:
+        storageClassName: gp3-faster
+        volumeAttributesClassName: celeborn-gp3-high
+        resources:
+          requests:
+            storage: 1000Gi
+```
+
+Then delete the StatefulSet object only — pods and PVCs stay running:
+
+```bash
+kubectl delete statefulset celeborn-worker -n celeborn --cascade=orphan
+```
+
+:::caution This does not restart pods or delete PVCs
+`--cascade=orphan` removes only the StatefulSet controller object. All worker pods keep serving shuffle traffic. All PVCs and their data are untouched. Workers do not restart.
+:::
+
+Now apply the updated Helm values. This recreates the StatefulSet with the new `volumeClaimTemplates`:
+
+```bash
+helm upgrade celeborn <chart> -n celeborn -f infra/terraform/helm-values/celeborn.yaml
+```
+
+From this point, any new replicas added by scaling out (Karpenter adding nodes, increasing `worker.replicas`) will automatically provision PVCs with `celeborn-gp3-high` (10,000 IOPS / 1,000 MiB/s). No manual patching needed for scale-out.
+
+For the full in-place modification reference — including the 6-hour EBS cooldown, batching capacity and IOPS changes, scaling across hundreds of clusters, and prerequisites checklist — see [In-Place EBS Volume Modification for Stateful Workloads](./ebs-volume-modification).
 
 ### Blue-Green Worker Pool Upgrade
 

@@ -396,8 +396,8 @@ spec:
           #
           #   prefer-align-cpus-by-uncorecache: prefer cores that share the
           #     same LLC/uncore-cache slice. Material on chips with split LLC
-          #     domains — notably AMD EPYC and large Intel Sapphire Rapids with 
-          #     sub-NUMA clustering. It is a preference, so it is a silent no-op 
+          #     domains — notably AMD EPYC and large Intel Sapphire Rapids with
+          #     sub-NUMA clustering. It is a preference, so it is a silent no-op
           #     on unified-LLC chips
           cpuManagerPolicy: static
           cpuManagerPolicyOptions:

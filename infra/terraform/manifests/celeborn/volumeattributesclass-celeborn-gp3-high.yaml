@@ -1,0 +1,8 @@
+apiVersion: storage.k8s.io/v1
+kind: VolumeAttributesClass
+metadata:
+  name: celeborn-gp3-high
+driverName: ebs.csi.aws.com
+parameters:
+  iops: "10000"
+  throughput: "1000"

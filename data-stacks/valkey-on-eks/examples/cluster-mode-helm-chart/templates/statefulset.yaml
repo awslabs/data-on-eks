@@ -292,6 +292,9 @@ spec:
         {{- if .Values.persistence.storageClass }}
         storageClassName: {{ .Values.persistence.storageClass }}
         {{- end }}
+        {{- if .Values.persistence.volumeAttributesClassName }}
+        volumeAttributesClassName: {{ .Values.persistence.volumeAttributesClassName }}
+        {{- end }}
         resources:
           requests:
             storage: {{ .Values.persistence.size }}
