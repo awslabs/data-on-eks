@@ -9,7 +9,7 @@
 #     '{"spec":{"volumeAttributesClassName":"celeborn-gp3-high"}}'
 #
 # To increase capacity AND IOPS/throughput together (do this in one patch — EBS enforces a
-# 6-hour cooldown per volume, so two separate patches wastes one cooldown window):
+# EBS allows up to 4 modifications per volume per 24-hour window, so batching saves a slot):
 #   kubectl patch pvc disk1-celeborn-worker-0 -n celeborn --type=merge -p \
 #     '{"spec":{"resources":{"requests":{"storage":"2000Gi"}},"volumeAttributesClassName":"celeborn-gp3-high"}}'
 #
