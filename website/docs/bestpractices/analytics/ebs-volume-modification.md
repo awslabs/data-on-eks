@@ -32,7 +32,7 @@ One `kubectl patch` per PVC. Everything else (the EBS API call, the volume resiz
 A StatefulSet treats `volumeClaimTemplates` as immutable after creation. Editing the field does nothing to PVCs that already exist. Only new replicas created by scaling out pick up the change. Every existing PVC must be patched individually.
 
 :::caution EBS limits each volume to 4 modifications per 24-hour window
-As of January 2026, the previous 6-hour fixed cooldown is replaced by a rolling limit: each volume supports up to **4 modifications in any 24-hour window**. You can start the next modification as soon as the previous one reaches `completed` state — no fixed wait. If a volume needs both more capacity and more IOPS, patch both in a **single operation** to avoid using two of your four daily slots. The limit is per volume, not per cluster, so patching multiple volumes in the same loop is fine.
+As of January 2026, the previous 6-hour fixed cooldown is replaced by a rolling limit: each volume supports up to **4 modifications in any 24-hour window** ([AWS announcement](https://aws.amazon.com/about-aws/whats-new/2026/01/amazon-ebs-up-to-four-volume-modifications/), [AWS docs](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modify-volume.html)). You can start the next modification as soon as the previous one reaches `completed` state — no fixed wait. If a volume needs both more capacity and more IOPS, patch both in a **single operation** to avoid using two of your four daily slots. The limit is per volume, not per cluster, so patching multiple volumes in the same loop is fine.
 :::
 
 :::caution StorageClass changes do not affect existing volumes
