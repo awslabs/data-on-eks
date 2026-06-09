@@ -131,9 +131,12 @@ parameters:
 ```bash
 # Valkey cluster
 kubectl apply -f data-stacks/valkey-on-eks/examples/volumeattributesclass-valkey-gp3-perf.yaml
+```
 
-# Celeborn cluster
-kubectl apply -f infra/terraform/manifests/celeborn/volumeattributesclass-celeborn-gp3-high.yaml
+For **Celeborn**, the VAC is applied automatically by Terraform as part of the Celeborn stack (`infra/terraform/celeborn.tf`). Verify it exists:
+
+```bash
+kubectl get volumeattributesclass celeborn-gp3-high
 ```
 
 ## Walkthrough: Valkey Cluster

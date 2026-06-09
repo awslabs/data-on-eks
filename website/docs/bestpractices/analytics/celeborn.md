@@ -533,13 +533,23 @@ Decommission drain time is typically 0-5 seconds because it only waits for in-fl
 
 EBS volumes backing Celeborn workers can be resized and have their IOPS and throughput changed online — without pod restarts, without data movement, and without any impact to in-flight Spark shuffle jobs.
 
-**Step 1 — Apply the VolumeAttributesClass once per cluster.** A VAC is a Kubernetes object that names a performance tier. Applying it does nothing to existing volumes — it just makes the tier available to reference.
+**Step 1 — Ensure the VolumeAttributesClass is deployed.** The `celeborn-gp3-high` VAC (10,000 IOPS / 1,000 MiB/s) is applied automatically by Terraform as part of the Celeborn stack, alongside the StorageClass:
 
-```bash
-kubectl apply -f infra/terraform/manifests/celeborn/volumeattributesclass-celeborn-gp3-high.yaml
+```hcl
+# infra/terraform/celeborn.tf
+resource "kubectl_manifest" "celeborn_volumeattributesclass" {
+  count     = var.enable_celeborn ? 1 : 0
+  yaml_body = file("${path.module}/manifests/celeborn/volumeattributesclass-celeborn-gp3-high.yaml")
+}
 ```
 
-This creates `celeborn-gp3-high` (10,000 IOPS / 1,000 MiB/s). The VAC is what allows changing IOPS and throughput on existing volumes after they are provisioned. Updating the StorageClass alone cannot do this.
+Verify it exists on the cluster:
+
+```bash
+kubectl get volumeattributesclass celeborn-gp3-high
+```
+
+A VAC is a cluster-scoped object that names a performance tier. It does nothing to existing volumes on its own. The next step is what actually changes the volumes.
 
 **Step 2 — Patch all worker PVCs.** Each worker has 4 PVCs (`disk1`–`disk4`). Patch them all in one loop:
 
@@ -616,6 +626,8 @@ kubectl delete statefulset celeborn-worker -n celeborn --cascade=orphan
 
 :::caution This does not restart pods or delete PVCs
 `--cascade=orphan` removes only the StatefulSet controller object. All worker pods keep serving shuffle traffic. All PVCs and their data are untouched. Workers do not restart.
+
+When `helm upgrade` recreates the StatefulSet with the same name and the same `selector.matchLabels`, Kubernetes re-adopts the orphaned pods into the new StatefulSet. The pods are not replaced or restarted — the StatefulSet controller simply sets their `ownerReference` back to the newly created object. Only pods that are missing or whose labels no longer match will be created or replaced.
 :::
 
 Now apply the updated Helm values. This recreates the StatefulSet with the new `volumeClaimTemplates`:
