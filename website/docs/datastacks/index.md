@@ -29,7 +29,6 @@ import { Cpu, Waves, GitBranch, Database, BookOpen, Handshake } from 'lucide-rea
 <span className="feature-tag">Spark on EKS</span>
 <span className="feature-tag">EMR Variants</span>
 <span className="feature-tag">Ray Data</span>
-<span className="feature-tag">AWS Batch</span>
 </div>
 <div className="datastack-footer">
 <a href="/data-on-eks/docs/datastacks/processing/" className="datastack-link">
@@ -74,13 +73,12 @@ import { Cpu, Waves, GitBranch, Database, BookOpen, Handshake } from 'lucide-rea
 </div>
 <div className="datastack-content">
 <h3>Orchestration</h3>
-<p className="datastack-description">Workflow automation and pipeline orchestration with Airflow, Argo, and MWAA.</p>
+<p className="datastack-description">Workflow automation and pipeline orchestration with Airflow and Argo.</p>
 </div>
 </div>
 <div className="datastack-features">
 <span className="feature-tag">Airflow on EKS</span>
 <span className="feature-tag">Argo Workflows</span>
-<span className="feature-tag">Amazon MWAA</span>
 <span className="feature-tag">DAG Workflows</span>
 </div>
 <div className="datastack-footer">

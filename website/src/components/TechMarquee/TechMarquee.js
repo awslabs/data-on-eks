@@ -126,18 +126,6 @@ const technologies = [
     )
   },
   {
-    name: "Amazon MWAA",
-    category: "Orchestration",
-    gradient: "linear-gradient(135deg, #FF9900 0%, #FF6B00 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 12H8M16 12H20M8 6H16M8 18H16" stroke="currentColor" strokeWidth="2"/>
-        <circle cx="8" cy="12" r="2.5" fill="currentColor"/>
-        <circle cx="16" cy="12" r="2.5" fill="currentColor"/>
-      </svg>
-    )
-  },
-  {
     name: "Kubeflow",
     category: "Orchestration",
     gradient: "linear-gradient(135deg, #326CE5 0%, #00BCD4 100%)",

@@ -13,7 +13,7 @@ This guide provides three practical examples of how to run Spark jobs on Amazon 
 2.  **Example 2: Using the Spark Operator:** Orchestrate a Spark job by having Argo Workflows create a `SparkApplication` custom resource, which is then managed by the Spark Operator.
 3.  **Example 3: Event-Driven Workflows with Argo Events:** Trigger a Spark job automatically when a message is sent to an Amazon SQS queue.
 
-The Terraform code to provision Argo Workflows can be found in the [schedulers/terraform/argo-workflow](https://github.com/awslabs/data-on-eks/tree/main/schedulers/terraform/argo-workflow) directory. The Kubernetes manifests for the examples in this guide are located in the `data-stacks/spark-on-eks/examples/argo-workflows/manifests/` directory.
+The Terraform configuration that provisions Argo Workflows lives in the base infrastructure at [`infra/terraform/argo-workflows.tf`](https://github.com/awslabs/data-on-eks/blob/main/infra/terraform/argo-workflows.tf) and is deployed automatically with Spark on EKS. The Kubernetes manifests for the examples in this guide are located in the `data-stacks/spark-on-eks/examples/argo-workflows/manifests/` directory.
 
 ## Prerequisites
 

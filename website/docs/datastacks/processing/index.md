@@ -131,30 +131,6 @@ Scalable data processing and analytics platforms on Amazon EKS. Run batch proces
 </div>
 </div>
 
-<div className="datastack-card">
-<div className="datastack-header">
-<div className="datastack-icon">📦</div>
-<div className="datastack-content">
-<h3>AWS Batch on EKS</h3>
-<p className="datastack-description">AWS Batch integration with EKS for managed batch computing workloads.</p>
-</div>
-</div>
-<div className="datastack-features">
-<span className="feature-tag">Managed Batch</span>
-<span className="feature-tag">Job Scheduling</span>
-<span className="feature-tag">Cost Optimized</span>
-<span className="feature-tag">Spot Instances</span>
-</div>
-<div className="datastack-footer">
-<a href="/data-on-eks/docs/datastacks/processing/aws-batch-eks/" className="datastack-link">
-<span>Explore Batch</span>
-<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-</svg>
-</a>
-</div>
-</div>
-
 </div>
 
 {/* End of DataStacks grid */}
