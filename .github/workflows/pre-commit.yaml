@@ -32,6 +32,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Get root directories
         id: dirs
@@ -50,6 +52,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
@@ -63,7 +67,7 @@ jobs:
 
       - name: Config Terraform plugin cache
         if: steps.changes.outputs.src== 'true'
-        run: mkdir --parents ${{ env.TF_PLUGIN_CACHE_DIR }}
+        run: mkdir --parents ${TF_PLUGIN_CACHE_DIR}
 
       - name: Restore Terraform Cache
         id: restore-cache
@@ -111,6 +115,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
@@ -121,7 +127,7 @@ jobs:
 
       - name: Config Terraform plugin cache
         if: steps.changes.outputs.src== 'true'
-        run: mkdir --parents ${{ env.TF_PLUGIN_CACHE_DIR }}
+        run: mkdir --parents ${TF_PLUGIN_CACHE_DIR}
 
       - name: Restore Terraform Cache
         id: restore-cache
