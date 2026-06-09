@@ -298,6 +298,27 @@ PVC sized at ~3× working set: current AOF + rewritten AOF + RDB must coexist du
 
 This stack ships [`storageclass-valkey-gp3.yaml`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml) (gp3, 6,000 IOPS, 500 MiB/s, xfs). Apply once per cluster, then set `persistence.storageClass: valkey-gp3` in chart values. **Never use EFS/FSx** — NFS `fsync` latency + rename semantics have caused real `nodes.conf` corruption.
 
+This stack also ships [`volumeattributesclass-valkey-gp3-perf.yaml`](https://github.com/awslabs/data-on-eks/blob/main/data-stacks/valkey-on-eks/examples/volumeattributesclass-valkey-gp3-perf.yaml) — a VolumeAttributesClass (VAC) that lets you increase IOPS and throughput on existing PVCs without restarting pods or reprovisioning volumes. Apply it alongside the StorageClass:
+
+```bash
+kubectl apply -f data-stacks/valkey-on-eks/examples/storageclass-valkey-gp3.yaml
+kubectl apply -f data-stacks/valkey-on-eks/examples/volumeattributesclass-valkey-gp3-perf.yaml
+```
+
+To apply the performance tier to running Valkey pods (no restarts, no cluster impact):
+
+```bash
+kubectl get pvc -n valkey-cluster --no-headers -o custom-columns="NAME:.metadata.name" | while read pvc; do
+  kubectl patch pvc "$pvc" -n valkey-cluster \
+    --type='merge' \
+    -p '{"spec":{"volumeAttributesClassName":"valkey-gp3-perf"}}'
+done
+```
+
+This discovers all PVCs in the namespace rather than assuming a fixed replica count — works for 6-replica clusters, 9-replica clusters, or any other size.
+
+For the full reference — prerequisites, cooldown rules, scaling across hundreds of clusters — see [In-Place EBS Volume Modification for Stateful Workloads](../../../bestpractices/analytics/ebs-volume-modification).
+
 Mount tuning: xfs > ext4 for shards > 50 GiB (better sustained-sequential-write); `noatime,nodiratime` saves a metadata write per AOF read.
 
 ### Persistence mode — pick one
@@ -349,7 +370,7 @@ The chart deploys alongside the replication-mode default in a separate namespace
 
 - Data-on-eks Valkey stack already deployed (the Valkey NodePool, the `gp3` StorageClass, ArgoCD, and the existing replication-mode release are all expected).
 - `helm` 3.13+ and `kubectl` configured for the EKS cluster.
-- (Recommended for production-grade I/O) the `valkey-gp3` StorageClass applied — see [storage section](#choosing-storage).
+- (Recommended for production-grade I/O) the `valkey-gp3` StorageClass and `valkey-gp3-perf` VolumeAttributesClass applied — see [storage section](#choosing-storage).
 
 ### Quickstart
 
@@ -483,8 +504,6 @@ auth:
   existingSecret: my-valkey-secret      # must contain key `default`
   existingSecretPasswordKey: default
 ```
-
-The chart deliberately does NOT use an ACL file. It would add a separate `replication-user` ACL that needs `+psync +replconf +ping` (and **not** the non-existent `+@replication` category — a common copy-paste trap). `requirepass` + `primaryauth` is simpler and matches the [Microsoft AKS reference](https://learn.microsoft.com/en-us/azure/aks/deploy-valkey-cluster) for Valkey cluster mode.
 
 ### Strict AZ spread
 
@@ -1001,7 +1020,6 @@ Already running this stack's replication mode and want to migrate to cluster mod
 - [Valkey Cluster Tutorial](https://valkey.io/topics/cluster-tutorial/) — hands-on companion to the spec.
 - [Valkey Administration Docs](https://valkey.io/topics/admin/) — THP, fork tuning, kernel guidance.
 - [Valkey 1B RPS benchmark](https://valkey.io/blog/1-billion-rps/) — scale ceiling demo (1000 shards).
-- [Microsoft AKS Valkey Cluster reference](https://learn.microsoft.com/en-us/azure/aks/deploy-valkey-cluster) — the architectural pattern this chart adopts.
 - [valkey-helm PR #51](https://github.com/valkey-io/valkey-helm/pull/51) — the upstream PR being tracked for native cluster support.
 - [valkey-helm #18](https://github.com/valkey-io/valkey-helm/issues/18) — official cluster-mode roadmap.
 - [AWS ElastiCache supported node types](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/CacheNodes.SupportedTypes.html) — current instance families AWS recommends.

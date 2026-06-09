@@ -6,8 +6,8 @@ locals {
 
   emr_team_names = {
     for k, v in local.emr_teams : k => {
-      team_key  = "${k}"
-      namespace = "${v.namespace}"
+      team_key  = k
+      namespace = v.namespace
     } if var.enable_emr_flink_operator
   }
 

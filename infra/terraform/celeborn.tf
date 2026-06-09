@@ -85,6 +85,15 @@ resource "kubectl_manifest" "celeborn_manifests" {
   ]
 }
 
+resource "kubectl_manifest" "celeborn_volumeattributesclass" {
+  count     = var.enable_celeborn ? 1 : 0
+  yaml_body = file("${path.module}/manifests/celeborn/volumeattributesclass-celeborn-gp3-high.yaml")
+
+  depends_on = [
+    kubernetes_namespace.celeborn[0]
+  ]
+}
+
 #---------------------------------------------------------------
 # Celeborn Application
 #---------------------------------------------------------------

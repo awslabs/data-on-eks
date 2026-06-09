@@ -1,0 +1,24 @@
+# VolumeAttributesClass for Celeborn workers — high-performance gp3 tier.
+# Controls IOPS and throughput on existing EBS volumes without pod restarts.
+# Apply once per cluster, then patch PVCs to reference this class.
+#
+# gp3 limits: max 16,000 IOPS | max 1,000 MiB/s throughput | max 64 TiB capacity
+#
+# To increase IOPS and throughput only:
+#   kubectl patch pvc disk1-celeborn-worker-0 -n celeborn --type=merge -p \
+#     '{"spec":{"volumeAttributesClassName":"celeborn-gp3-high"}}'
+#
+# To increase capacity AND IOPS/throughput together (do this in one patch — EBS enforces a
+# 6-hour cooldown per volume, so two separate patches wastes one cooldown window):
+#   kubectl patch pvc disk1-celeborn-worker-0 -n celeborn --type=merge -p \
+#     '{"spec":{"resources":{"requests":{"storage":"2000Gi"}},"volumeAttributesClassName":"celeborn-gp3-high"}}'
+#
+# Note: capacity resize requires allowVolumeExpansion: true on the StorageClass (already set on gp3-faster).
+apiVersion: storage.k8s.io/v1
+kind: VolumeAttributesClass
+metadata:
+  name: celeborn-gp3-high
+driverName: ebs.csi.aws.com
+parameters:
+  iops: "10000"
+  throughput: "1000"

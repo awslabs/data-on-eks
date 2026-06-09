@@ -86,6 +86,11 @@ persistence:
   size: 100Gi
   accessModes:
     - ReadWriteOnce
+  # Optional: set a VolumeAttributesClass to control IOPS and throughput for
+  # new PVCs at provisioning time. Requires the VAC to exist in the cluster
+  # and EBS CSI driver >= v1.35. Leave empty to use the StorageClass defaults.
+  # Example: volumeAttributesClassName: valkey-gp3-perf
+  volumeAttributesClassName: ""
 
 # -----------------------------------------------------------------------------
 # Service ports

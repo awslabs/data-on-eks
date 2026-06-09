@@ -1179,6 +1179,66 @@ html[data-theme='dark'] .theme-announcement-bar a.announcement-cta {
   }
 }
 
+/* ==========================================================================
+   DOC PAGE HEADING HIERARCHY
+   Make the document title (H1) clearly dominant over section headings.
+   Infima defaults plus --ifm-font-size-base: 95% were leaving the H1
+   smaller than H2 on some pages, which broke the visual hierarchy.
+   ========================================================================== */
+
+article header h1,
+article .markdown > header > h1,
+.theme-doc-markdown > header > h1,
+.markdown > h1:first-child {
+  font-size: 2.75rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.02em;
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.markdown h2 {
+  font-size: 1.85rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown h3 {
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown h4 {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  article header h1,
+  article .markdown > header > h1,
+  .theme-doc-markdown > header > h1,
+  .markdown > h1:first-child {
+    font-size: 2.1rem !important;
+  }
+
+  .markdown h2 {
+    font-size: 1.5rem !important;
+  }
+
+  .markdown h3 {
+    font-size: 1.2rem !important;
+  }
+}
+
 /* Narrow screens: tighten spacing, keep everything readable */
 @media (max-width: 600px) {
   .theme-announcement-bar > div[class*='content'] {

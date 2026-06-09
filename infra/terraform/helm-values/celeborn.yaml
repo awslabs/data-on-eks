@@ -157,6 +157,7 @@ worker:
         accessModes:
           - ReadWriteOnce
         storageClassName: gp3-faster # do not use default
+        volumeAttributesClassName: celeborn-gp3-high
         resources:
           requests:
             storage: 1000Gi
@@ -166,6 +167,7 @@ worker:
         accessModes:
           - ReadWriteOnce
         storageClassName: gp3-faster # do not use default
+        volumeAttributesClassName: celeborn-gp3-high
         resources:
           requests:
             storage: 1000Gi
@@ -175,6 +177,7 @@ worker:
         accessModes:
           - ReadWriteOnce
         storageClassName: gp3-faster # do not use default
+        volumeAttributesClassName: celeborn-gp3-high
         resources:
           requests:
             storage: 1000Gi
@@ -184,6 +187,7 @@ worker:
         accessModes:
           - ReadWriteOnce
         storageClassName: gp3-faster # do not use default
+        volumeAttributesClassName: celeborn-gp3-high
         resources:
           requests:
             storage: 1000Gi
