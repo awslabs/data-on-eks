@@ -618,16 +618,32 @@ worker:
             storage: 1000Gi
 ```
 
+Before deleting the StatefulSet, record the pod UIDs. You will use these to confirm no pods were restarted after the upgrade:
+
+```bash
+kubectl get pods -n celeborn -o custom-columns="NAME:.metadata.name,UID:.metadata.uid,AGE:.metadata.creationTimestamp"
+```
+
 Then delete the StatefulSet object only — pods and PVCs stay running:
 
 ```bash
 kubectl delete statefulset celeborn-worker -n celeborn --cascade=orphan
 ```
 
-:::caution This does not restart pods or delete PVCs
-`--cascade=orphan` removes only the StatefulSet controller object. All worker pods keep serving shuffle traffic. All PVCs and their data are untouched. Workers do not restart.
+:::caution What happens to the pods after helm upgrade?
+`--cascade=orphan` removes only the StatefulSet controller object — pods and PVCs are untouched and keep running.
 
-When `helm upgrade` recreates the StatefulSet with the same name and the same `selector.matchLabels`, Kubernetes re-adopts the orphaned pods into the new StatefulSet. The pods are not replaced or restarted — the StatefulSet controller simply sets their `ownerReference` back to the newly created object. Only pods that are missing or whose labels no longer match will be created or replaced.
+When `helm upgrade` recreates the StatefulSet with the same name and `selector.matchLabels`, Kubernetes **re-adopts** the orphaned pods into the new StatefulSet. The StatefulSet controller sets their `ownerReference` back to the new object. The pods are not restarted and no new pods are created — they continue serving shuffle traffic throughout. Only pods that are missing or whose labels no longer match the selector will be created or replaced.
+
+Confirm re-adoption by verifying the UIDs are unchanged and every pod is owned by the StatefulSet:
+
+```bash
+kubectl get pods -n celeborn -o custom-columns="NAME:.metadata.name,UID:.metadata.uid,AGE:.metadata.creationTimestamp"
+
+kubectl get pods -n celeborn -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.ownerReferences[0].name}{"\n"}{end}'
+```
+
+If the UIDs match what you recorded before the delete, no pods were restarted. If `ownerReferences` shows the StatefulSet name for every pod, adoption succeeded.
 :::
 
 Now apply the updated Helm values. This recreates the StatefulSet with the new `volumeClaimTemplates`:
