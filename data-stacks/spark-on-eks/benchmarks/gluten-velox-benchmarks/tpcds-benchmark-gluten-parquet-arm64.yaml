@@ -177,7 +177,7 @@ spec:
     # Currently velox does not surface this information and keeps re-trying forever
     # Check logs at /opt/spark/aws_sdk* on EXECUTORS
     # "spark.gluten.velox.awsSdkLogLevel": "Trace"
-    
+
 
     # Required JVM options for Gluten-Velox compatibility (Java 17+)
     "spark.driver.extraJavaOptions": "--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70 -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
