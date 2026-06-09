@@ -1,0 +1,280 @@
+# ============================================================
+# Gluten + Velox + Apache Iceberg + Celeborn + TPC-DS v4.0 benchmark image for ARM64
+#
+# Bundles:
+#   - Spark 3.5.8 + Scala 2.12 + Java 17 (base: apache/spark:3.5.8-...)
+#   - Apache Gluten 1.6.0 + Velox
+#       * arm64: built from source with static linking (vcpkg)
+#   - Apache Iceberg 1.10.1 (spark-runtime + aws-bundle)
+#   - Apache Celeborn 0.5.4 shaded Spark 3 client
+#   - Hadoop 3.4.3 + AWS SDK v2 (for S3A)
+#   - TPC-DS toolkit v4.0.0 (dsdgen/dsqgen)
+#
+# NOTE: The arm64 build compiles Gluten + Velox from source with vcpkg static
+# linking. Expect the first build to take 45–90 minutes depending on host
+# hardware.
+# ============================================================
+# WARNING:
+# This Dockerfile is provided for sample and demonstration purposes only.
+# It is NOT intended for production use.
+# ============================================================
+
+# Populated automatically by `docker buildx build --platform=...`.
+ARG TARGETARCH
+
+# ============================================================
+### Stage 1a – Build Gluten + Velox from source (arm64 only)
+#
+# Uses Gluten's own CI base image (apache/gluten:vcpkg-centos-9), which:
+#   - ships gcc-toolset-12 pre-installed
+#   - has vcpkg build deps pre-installed
+#   - has Arrow C++ + Arrow Java jars (15.0.0-gluten) pre-built and already
+#     installed to /root/.m2/repository/org/apache/arrow/
+#   - is the exact image Gluten tests arm64 in CI
+# ============================================================
+FROM apache/gluten:vcpkg-centos-9 AS gluten_builder_arm64
+ARG GLUTEN_VERSION=1.6.0
+ARG SPARK_VERSION=3.5.8
+
+# Fetch the Gluten 1.6.0 source tarball.
+WORKDIR /build
+RUN set -eux; \
+    wget https://dlcdn.apache.org/gluten/${GLUTEN_VERSION}/apache-gluten-${GLUTEN_VERSION}-src.tar.gz -O gluten-src.tgz; \
+    mkdir -p gluten; \
+    tar -xzf gluten-src.tgz -C gluten --strip-components=1; \
+    rm gluten-src.tgz
+
+WORKDIR /build/gluten
+
+# Build Velox + Gluten CPP using Gluten's CI arm64 static-link recipe.
+RUN set -eux; \
+    source /opt/rh/gcc-toolset-12/enable; \
+    if [ "$(uname -m)" = "aarch64" ]; then \
+        export CPU_TARGET=aarch64; \
+        export VCPKG_FORCE_SYSTEM_BINARIES=1; \
+    fi; \
+    export NUM_THREADS=8; \
+    find /build -name "*.sh" -exec sed -i 's/sudo //g' {} + && \
+    ./dev/builddeps-veloxbe.sh \
+        --enable_vcpkg=ON \
+        --build_examples=OFF \
+        --enable_s3=ON
+
+# Maven install: produces the Velox backend bundle jar.
+RUN set -eux; \
+    source /opt/rh/gcc-toolset-12/enable; \
+    ./build/mvn -B -e clean install \
+        -Pbackends-velox \
+        -Pspark-3.5 \
+        -Pceleborn \
+        -Puniffle \
+        -Piceberg \
+        -Dspark.version=${SPARK_VERSION} \
+        -DskipTests \
+        -Dmaven.source.skip
+
+# Collect the produced jars into a single directory for the final stage.
+RUN set -eux; \
+    mkdir -p /out/jars; \
+    # The Velox backend bundle jar (contains libvelox.so + libgluten.so)
+    find package/target -maxdepth 2 -type f -name 'gluten-velox-bundle-*.jar' \
+        ! -name '*-sources.jar' ! -name '*-javadoc.jar' -exec cp -v {} /out/jars/ \; ; \
+    # Fallback: if the bundle layout changed, copy any gluten-*.jar produced
+    if [ -z "$(ls -A /out/jars)" ]; then \
+        find . -type f -name 'gluten-*.jar' \
+            ! -name '*-sources.jar' ! -name '*-javadoc.jar' -exec cp -v {} /out/jars/ \; ; \
+    fi; \
+    ls -la /out/jars
+
+# ============================================================
+### Stage 1c – Arch-resolving alias stage
+#
+# BuildKit does not allow ARG expansion directly in `COPY --from=<stage>`.
+# The documented workaround is to introduce a thin alias stage whose FROM
+# uses the global ARG, then COPY from the alias with a literal stage name.
+# ============================================================
+FROM gluten_builder_${TARGETARCH} AS gluten_builder
+
+# ============================================================
+### Stage 2 – Build spark-sql-perf (TPC-DS v4 support)
+# ============================================================
+FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS spark_sql_perf_builder
+ARG SCALA_VERSION=2.12.15
+ARG SPARK_VERSION=3.5.8
+ARG SBT_VERSION=1.9.7
+
+RUN git clone --depth 1 --branch support-iceberg-tpcds-v4.0 \
+      https://github.com/KubedAI/spark-sql-perf.git /build/spark-sql-perf
+WORKDIR /build/spark-sql-perf
+
+# Minimal plugin — only sbt-assembly needed
+RUN rm -f project/plugins.sbt && \
+    mkdir -p project && \
+    echo 'addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.2.0")' > project/plugins.sbt
+
+# Pin sbt version
+RUN echo "sbt.version=${SBT_VERSION}" > project/build.properties
+
+# Minimal build.sbt
+RUN rm -f build.sbt && \
+    cat > build.sbt <<SBT
+name := "spark-sql-perf"
+organization := "com.databricks"
+scalaVersion := "${SCALA_VERSION}"
+crossScalaVersions := Seq("${SCALA_VERSION}")
+
+val sparkVer = "${SPARK_VERSION}"
+
+libraryDependencies ++= Seq(
+  "org.apache.spark" %% "spark-sql"   % sparkVer % "provided",
+  "org.apache.spark" %% "spark-hive"  % sparkVer % "provided",
+  "org.apache.spark" %% "spark-mllib" % sparkVer % "provided",
+  "com.github.scopt" %% "scopt"       % "3.7.1",
+  "com.twitter"     %% "util-jvm"    % "6.45.0" % "provided",
+  "org.scalatest"   %% "scalatest"   % "3.0.5" % Test,
+  "org.yaml"        %  "snakeyaml"   % "1.23"
+)
+SBT
+
+# Use Maven Central only — avoids dead Ivy/Typesafe repos
+RUN mkdir -p ~/.sbt && \
+    cat > ~/.sbt/repositories <<'EOF'
+[repositories]
+local
+maven-central: https://repo1.maven.org/maven2/
+typesafe-ivy-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+EOF
+
+RUN sbt -Dsbt.override.build.repos=true -batch clean package
+
+# ============================================================
+### Stage 3 – Build spark-k8s-benchmarks
+# ============================================================
+FROM hseeberger/scala-sbt:11.0.13_1.5.5_2.12.15 AS benchmark_builder
+ARG SCALA_VERSION=2.12.18
+ARG SPARK_VERSION=3.5.8
+ARG SBT_VERSION=1.9.9
+
+RUN git clone --depth 1 --branch support-iceberg-tpcds-v4.0 \
+      https://github.com/KubedAI/spark-k8s-benchmarks.git /build/spark-k8s-benchmarks
+WORKDIR /build/spark-k8s-benchmarks
+
+RUN mkdir -p lib
+COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar lib/
+
+RUN mkdir -p ~/.sbt && \
+    cat > ~/.sbt/repositories <<'EOF'
+[repositories]
+local
+maven-central: https://repo1.maven.org/maven2/
+typesafe-ivy-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+EOF
+
+RUN sbt -Dsbt.override.build.repos=true -batch clean assembly
+
+# ============================================================
+### Stage 4 – Build TPC-DS toolkit (v4.0.0)
+# ============================================================
+FROM ubuntu:22.04 AS tpcds_builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libc6-dev make flex bison git ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN git clone -b v4.0.0 https://github.com/heyujiao99/tpcds-kit.git /opt/tpcds-kit && \
+    cd /opt/tpcds-kit/tools && \
+    make OS=LINUX CFLAGS="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DYYDEBUG -DLINUX -g -Wall -fcommon"
+
+# ============================================================
+### Stage 5 – Final runtime image
+# ============================================================
+FROM apache/spark:3.5.8-scala2.12-java17-python3-ubuntu
+
+ARG SPARK_VERSION=3.5.8
+ARG HADOOP_VERSION=3.4.3
+ARG AWS_SDK_VERSION=2.30.31
+ARG ICEBERG_VERSION=1.10.1
+ARG CELEBORN_VERSION=0.5.4
+ARG SCALA_BINARY=2.12
+ARG SPARK_UID=185
+ARG SPARK_GID=185
+
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+ENV JAVA_HOME=/opt/java/openjdk
+
+USER root
+WORKDIR ${SPARK_HOME}
+
+# Non-root Spark user — UID 185 matches Kubernetes runAsUser convention
+RUN (groupadd -g ${SPARK_GID} spark 2>/dev/null || true) && \
+    (useradd -m -u ${SPARK_UID} -g ${SPARK_GID} -s /bin/bash spark 2>/dev/null || true)
+
+# No extra runtime libs needed: the Gluten bundle jar's libvelox.so and
+# libgluten.so are statically linked via vcpkg and depend only on libc/libm.
+
+# ── Hadoop upgrade + dependency JARs ──────────────
+RUN cd ${SPARK_HOME}/jars && \
+    find . -maxdepth 1 -type f -name 'hadoop-*.jar' -delete || true && \
+    find . -maxdepth 1 -type f -name 'aws-java-sdk-*.jar' -delete || true && \
+    # Core Hadoop 3.4.3
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/${HADOOP_VERSION}/hadoop-common-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-auth/${HADOOP_VERSION}/hadoop-auth-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/${HADOOP_VERSION}/hadoop-client-api-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/${HADOOP_VERSION}/hadoop-client-runtime-${HADOOP_VERSION}.jar && \
+    # S3A connector + AWS SDK v2 standalone bundle
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar && \
+    # commons-configuration2 required by Hadoop 3.4.x
+    wget -q https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.9.0/commons-configuration2-2.9.0.jar && \
+    # Spark cloud committers
+    wget -q https://repo1.maven.org/maven2/org/apache/spark/spark-hadoop-cloud_${SCALA_BINARY}/${SPARK_VERSION}/spark-hadoop-cloud_${SCALA_BINARY}-${SPARK_VERSION}.jar && \
+    # XML deps for jackson-dataformat-xml
+    wget -q https://repo1.maven.org/maven2/com/fasterxml/woodstox/woodstox-core/6.5.1/woodstox-core-6.5.1.jar && \
+    wget -q https://repo1.maven.org/maven2/org/codehaus/woodstox/stax2-api/4.2.2/stax2-api-4.2.2.jar && \
+    # Apache Iceberg (spark-runtime + aws-bundle)
+    wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_${SCALA_BINARY}/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_${SCALA_BINARY}-${ICEBERG_VERSION}.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar && \
+    # Apache Celeborn 0.5.x shaded Spark 3 client (single artifact covers all Spark 3.x)
+    wget -q https://repo1.maven.org/maven2/org/apache/celeborn/celeborn-client-spark-3-shaded_${SCALA_BINARY}/${CELEBORN_VERSION}/celeborn-client-spark-3-shaded_${SCALA_BINARY}-${CELEBORN_VERSION}.jar
+
+# ── TPC-DS toolkit binaries ──────────────────────────────────────────────────
+COPY --from=tpcds_builder /opt/tpcds-kit /opt/tpcds-kit
+COPY --from=tpcds_builder /opt/tpcds-kit/tools/dsdgen /usr/local/bin/dsdgen
+COPY --from=tpcds_builder /opt/tpcds-kit/tools/dsqgen /usr/local/bin/dsqgen
+
+# ── Benchmark JARs from build stages ─────────────────────────────────────────
+COPY --from=spark_sql_perf_builder /build/spark-sql-perf/target/scala-2.12/*.jar \
+    ${SPARK_HOME}/jars/
+COPY --from=benchmark_builder /build/spark-k8s-benchmarks/target/scala-2.12/*.jar \
+    ${SPARK_HOME}/jars/
+
+# ── Gluten + Velox jars (arch-specific) ──────────────────────────────────────
+COPY --from=gluten_builder /out/jars/*.jar ${SPARK_HOME}/jars/
+
+# ── Parquet-to-Iceberg conversion script ─────────────────────────────────────
+COPY --chown=spark:spark convert_parquet_to_iceberg.py /opt/scripts/convert_parquet_to_iceberg.py
+
+# ── Spark defaults: JDK17 module opens for Gluten+Velox ─────────────────────
+# Gluten's Velox backend uses sun.misc.Unsafe and direct ByteBuffer access,
+# which JDK17 locks down behind module exports. These flags must be set on
+# every driver and executor JVM; baking them into spark-defaults.conf avoids
+# having to repeat them in every SparkApplication spec.
+RUN mkdir -p $SPARK_HOME/conf && cat >> $SPARK_HOME/conf/spark-defaults.conf <<'CONF'
+spark.driver.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+spark.executor.extraJavaOptions=--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true
+CONF
+
+# Velox SDK looks for this file by default
+RUN mkdir -p /etc/pki/tls/certs && \
+      ln -sf /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
+
+# ── Permissions ──────────────────────────────────────────────────────────────
+RUN chown -R spark:spark ${SPARK_HOME} && \
+    chown -R spark:spark /opt/tpcds-kit && \
+    chown -R spark:spark /opt/scripts
+
+USER ${SPARK_UID}
+WORKDIR ${SPARK_HOME}
+
+ENTRYPOINT ["/opt/entrypoint.sh"]
