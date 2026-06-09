@@ -28,7 +28,7 @@ const FeatureList = [
   {
     title: 'Workflow Orchestration',
     Svg: require('@site/static/img/green-schd.svg').default,
-    description: 'Orchestrate complex data workflows with precision. Deploy Apache Airflow, Argo Workflows, and Amazon MWAA to automate ETL pipelines, ML training, and data quality checks. Never miss a dependency again.',
+    description: 'Orchestrate complex data workflows with precision. Deploy Apache Airflow and Argo Workflows to automate ETL pipelines, ML training, and data quality checks. Never miss a dependency again.',
     link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/orchestration',
     imagePosition: 'right'
   },

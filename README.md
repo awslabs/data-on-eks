@@ -34,7 +34,7 @@ Data on EKS(DoEKS) solution is categorized into the following focus areas.
 
 🎯  [Streaming Platforms](https://awslabs.github.io/data-on-eks/docs/datastacks/streaming) on EKS (Kafka, Flink)
 
-🎯  [Orchestration](https://awslabs.github.io/data-on-eks/docs/datastacks/orchestration) on EKS (Airflow, MWAA)
+🎯  [Orchestration](https://awslabs.github.io/data-on-eks/docs/datastacks/orchestration) on EKS (Airflow, Argo Workflows)
 
 🎯  [Databases & Query Engines](https://awslabs.github.io/data-on-eks/docs/datastacks/databases) on EKS (Trino, Pinot, ClickHouse)
 
