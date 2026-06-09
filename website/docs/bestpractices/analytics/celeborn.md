@@ -654,7 +654,7 @@ helm upgrade celeborn <chart> -n celeborn -f infra/terraform/helm-values/celebor
 
 From this point, any new replicas added by scaling out (Karpenter adding nodes, increasing `worker.replicas`) will automatically provision PVCs with `celeborn-gp3-high` (10,000 IOPS / 1,000 MiB/s). No manual patching needed for scale-out.
 
-For the full in-place modification reference — including the 6-hour EBS cooldown, batching capacity and IOPS changes, scaling across hundreds of clusters, and prerequisites checklist — see [In-Place EBS Volume Modification for Stateful Workloads](./ebs-volume-modification).
+For the full in-place modification reference — including the 4-modification-per-24-hour EBS limit, batching capacity and IOPS changes, scaling across hundreds of clusters, and prerequisites checklist — see [In-Place EBS Volume Modification for Stateful Workloads](./ebs-volume-modification).
 
 ### Blue-Green Worker Pool Upgrade
 

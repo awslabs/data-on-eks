@@ -31,8 +31,8 @@ One `kubectl patch` per PVC. Everything else (the EBS API call, the volume resiz
 
 A StatefulSet treats `volumeClaimTemplates` as immutable after creation. Editing the field does nothing to PVCs that already exist. Only new replicas created by scaling out pick up the change. Every existing PVC must be patched individually.
 
-:::caution EBS enforces a 6-hour cooldown per volume
-After any modification, the same volume cannot be modified again for 6 hours. If a volume needs both more capacity and more IOPS, patch both in a **single operation**, not two sequential patches. The cooldown is per volume, not per cluster, so patching multiple volumes in the same loop is fine.
+:::caution EBS limits each volume to 4 modifications per 24-hour window
+As of January 2026, the previous 6-hour fixed cooldown is replaced by a rolling limit: each volume supports up to **4 modifications in any 24-hour window**. You can start the next modification as soon as the previous one reaches `completed` state — no fixed wait. If a volume needs both more capacity and more IOPS, patch both in a **single operation** to avoid using two of your four daily slots. The limit is per volume, not per cluster, so patching multiple volumes in the same loop is fine.
 :::
 
 :::caution StorageClass changes do not affect existing volumes
@@ -161,7 +161,7 @@ This discovers all PVCs dynamically and works for 6-replica clusters, 9-replica 
 
 ### Increase Capacity and IOPS Together
 
-If you need both more space and more IOPS, always patch both in a single operation. Two separate patches burn two 6-hour cooldown windows on the same volume:
+If you need both more space and more IOPS, always patch both in a single operation. Two separate patches use two of your four daily modification slots on the same volume unnecessarily:
 
 ```bash
 kubectl get pvc -n valkey-cluster --no-headers -o custom-columns="NAME:.metadata.name" | while read pvc; do
@@ -325,7 +325,7 @@ From this point, any new replicas provisioned by scale-out (Karpenter adding nod
 
 ## Applying Across Hundreds of Clusters
 
-For organizations running Celeborn or Valkey across many EKS clusters, the PVC patch loop is the same. Only the iteration layer changes. EBS modifications are **independent per volume** and fully asynchronous. You can patch volumes across different clusters simultaneously without any coordination. The 6-hour cooldown only applies to the same volume being modified twice.
+For organizations running Celeborn or Valkey across many EKS clusters, the PVC patch loop is the same. Only the iteration layer changes. EBS modifications are **independent per volume** and fully asynchronous. You can patch volumes across different clusters simultaneously without any coordination. The 4-modification-per-24-hour limit applies per volume independently — patching thousands of volumes in parallel across clusters is fine.
 
 ### Prerequisites Per Cluster (Run Before Patching)
 
@@ -404,8 +404,8 @@ aws ec2 describe-volumes --region us-west-2 \
 
 ## What to Know Before Running This at Scale
 
-:::caution Always batch capacity and IOPS into one patch
-The 6-hour EBS cooldown is per volume. If a volume needs both more capacity and more IOPS, patch both in a **single operation**. Two sequential patches means the second one blocks for up to 6 hours:
+:::caution Batch capacity and IOPS into one patch to conserve daily slots
+Each volume supports up to 4 modifications in a rolling 24-hour window. If a volume needs both more capacity and more IOPS, patch both in a **single operation** to avoid spending two slots where one would do:
 
 ```bash
 kubectl patch pvc disk1-celeborn-worker-0 -n celeborn --type='merge' -p \
@@ -413,8 +413,8 @@ kubectl patch pvc disk1-celeborn-worker-0 -n celeborn --type='merge' -p \
 ```
 :::
 
-:::tip Cooldown is per volume, so patch all replicas in the same loop
-Each EBS volume has its own independent 6-hour cooldown window. Patching all PVCs in a namespace in a single loop is safe. The cooldown only blocks the **same volume** being modified twice. Across hundreds of clusters, you can run the rollout script on all clusters simultaneously.
+:::tip The 4-modification limit is per volume — patch all replicas in the same loop
+Each EBS volume has its own independent 24-hour window. Patching all PVCs in a namespace in a single loop is safe. Across hundreds of clusters, you can run the rollout script on all clusters simultaneously — there is no cluster-level or account-level throttle on concurrent volume modifications.
 :::
 
 :::note Filesystem type only matters for capacity resize
