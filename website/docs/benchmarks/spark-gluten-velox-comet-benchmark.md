@@ -277,6 +277,10 @@ The 14× GC reduction in Gluten reflects Velox's off-heap compute pipeline: when
 
 ### Notes on Performance Differences
 
+:::note Analysis tooling
+The per-query plan diffs and stage-level metrics in this section were produced with [Kiro](https://kiro.dev) using the [`mcp-apache-spark-history-server`](https://github.com/kubeflow/mcp-apache-spark-history-server) MCP server, which exposes Spark History Server data to AI agents over the Model Context Protocol.
+:::
+
 #### Queries where Gluten + Velox is faster
 
 **q93-v4.0 — Gluten Velox 3.30× faster (157.1s → 47.7s)**
