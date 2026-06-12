@@ -137,6 +137,11 @@ variable "managed_node_groups" {
   description = "Map of EKS managed node group definitions to create"
   type        = any
   default     = {}
+
+  validation {
+    condition     = can(keys(var.managed_node_groups))
+    error_message = "managed_node_groups must be a map/object where each key is a managed node group name and each value is that node group's configuration."
+  }
 }
 
 variable "enable_ingress_nginx" {
