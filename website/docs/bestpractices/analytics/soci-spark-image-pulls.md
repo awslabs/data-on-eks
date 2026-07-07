@@ -25,16 +25,17 @@ Layer structure makes this worse for large JVM images. They tend to concentrate 
 
 ```bash
 # EMR on EKS base images are on the public ECR gallery (6.9.0+), so this
-# needs no auth. For any other image, point the command at your own tag.
-docker manifest inspect public.ecr.aws/emr-on-eks/spark/emr-7.12.0:latest
-# This image: 25 layers, ~3 GB compressed, with a single dominant ~1.2 GB layer.
+# needs no auth. Plain `docker manifest inspect` only lists the per-platform
+# digests; add --verbose to see each platform's layers and their sizes.
+docker manifest inspect --verbose public.ecr.aws/emr-on-eks/spark/emr-7.12.0:latest
+# On the linux/amd64 manifest: 25 layers, ~3 GB total, one dominant ~1.2 GB layer.
 ```
 
 ## SOCI parallel pull mode
 
-The [SOCI snapshotter](https://github.com/awslabs/soci-snapshotter) added a parallel pull and unpack mode in **v0.11.0**. It splits large layers into chunks, downloads the chunks over many concurrent HTTP connections, and unpacks multiple layers at once. This is not lazy loading. It is a full, up-front pull that parallelizes the work. There is no image rebuild, no SOCI index artifacts, and no pipeline changes. It works on your existing images, from any registry, for any workload.
+The [SOCI snapshotter](https://github.com/awslabs/soci-snapshotter) is best known for lazy loading, but its **v0.11.0** parallel pull mode does the opposite. Rather than deferring reads, it runs a complete, up-front pull: it splits large layers into chunks, fetches them over many concurrent HTTP connections, and unpacks several layers at once. Because nothing about the image itself changes, there are no index artifacts to build and no pipeline steps to add, and it works against whatever registry and images you already use.
 
-Recent Amazon EKS optimized AMIs for **Amazon Linux 2023 and Bottlerocket** ship the snapshotter built in, enabled through the `FastImagePull` nodeadm feature gate. `FastImagePull` is currently marked **experimental** by the EKS AMI project, so validate it on a staging node pool before rolling it out broadly. In our testing with a ~3 GB Spark image, enabling parallel pull together with the storage configuration below produced a large reduction in cold-pull time on fresh nodes.
+Recent Amazon EKS optimized AMIs for **Amazon Linux 2023 and Bottlerocket** ship the snapshotter built in, enabled through the `FastImagePull` nodeadm feature gate. `FastImagePull` is currently marked **experimental** by the EKS AMI project, so validate it on a staging node pool before rolling it out broadly. How much this speeds up a cold pull depends on your image's layer layout, the instance size, and the node's disk throughput, so measure it on your own workload using the verification steps below.
 
 One mental model before tuning: images are cached per node. Only the first pod on a fresh node pulls. Every subsequent executor scheduled to that node starts from cache in well under a second. All of this optimization targets the cold pull on new nodes, which is exactly where Spark autoscaling hurts.
 
@@ -123,13 +124,13 @@ spec:
 
 ## Should you enable lazy loading?
 
-No, not for Spark. Lazy loading does not eliminate download time; it moves it from pod startup into task runtime through a FUSE filesystem. A Spark JVM reads nearly its entire classpath at startup, so the working set is effectively the whole image. You would pay the same download cost spread across task execution, plus FUSE overhead, a runtime dependency on the registry, and the operational cost of building SOCI index artifacts for every image you ship.
+No, not for Spark. Lazy loading (SOCI's original mode) mounts the image through a FUSE filesystem and fetches file ranges from the registry on demand, so a container can start before the whole image is local. It does not eliminate download time; it moves it from pod startup into task runtime. A Spark JVM reads nearly its entire classpath at startup, so the working set is effectively the whole image. You would pay the same download cost spread across task execution, plus FUSE overhead, a runtime dependency on the registry, and the operational cost of building SOCI index artifacts for every image you ship.
 
 The same reasoning applies to other JVM-based engines. Flink and Trino also load large classpaths at startup, as do batch and compute workloads in general, whose entrypoint touches most of the image. Lazy loading is designed for services whose entrypoint touches a small fraction of the image. Batch compute is the opposite profile. Use parallel pull mode.
 
 ## Verifying it works
 
-On a fresh node, before trusting benchmark numbers:
+On a fresh node, confirm the feature is actually active before you trust any pull timings:
 
 ```bash
 # Parallel pull activity in the snapshotter logs
@@ -142,17 +143,17 @@ df -h /var/lib/containerd
 kubectl describe pod <pod> | grep -A1 Pulled
 ```
 
-The most common failure mode is a PoC run on an instance below the size threshold, where the feature gate no-ops and results look identical to baseline.
+The most common way to get misleading results is to test on an instance below the size threshold, where the feature gate silently no-ops and pull times look identical to baseline.
 
 ## Beyond SOCI
 
 Parallel pull attacks the pull. These attack the problem around it, roughly in order of impact:
 
-**Slim your custom layers.** Your base image is fixed, but everything you add on top is yours to cut. For Spark, ship application jars and Python dependencies from S3 via `spark.jars` and `--py-files` instead of baking them into the image. Anything removed comes straight off every cold pull. See [Loading Spark dependencies from S3](#loading-spark-dependencies-from-s3) below for concrete examples.
+**Keep the image lean, but cache-friendly.** Everything baked into the image is pulled once per node and shared by every pod there, and SOCI makes that pull cheap, so the goal is not to move jars out reflexively but to avoid bloat you do not need. Drop optional dependencies you never load. For artifacts that change on every deploy, chiefly your application jar and Python code, consider shipping them from S3 so a code change does not force an image rebuild and a fleet-wide re-pull. Weigh that against the tradeoff in [Loading Spark dependencies from S3](#loading-spark-dependencies-from-s3): S3 dependencies are fetched per executor and cannot use the node image cache.
 
 **Extend node lifetime.** Review Karpenter consolidation and `expireAfter` settings. Longer lived nodes mean more cache hits and fewer cold pulls. If nodes churn every few minutes, pull time dominates regardless of how fast the pull is.
 
-**Watch baseline network bandwidth.** At parallel pull speeds, smaller instances become network bound once ENA burst credits deplete. Baseline bandwidth, not burst, is what sustained scale-out sees.
+**Watch baseline network bandwidth.** Many instance types publish a burst bandwidth well above the baseline they sustain. At parallel pull speeds a smaller instance can saturate its link and, once ENA burst credits deplete, drop to baseline mid-pull. Size against the instance type's documented baseline bandwidth, not the burst headline.
 
 **Pre-baked EBS snapshots** with the image already cached, referenced in `blockDeviceMappings`, take pulls to near zero. The trade is a snapshot lifecycle per image release. Worth it only when the image changes rarely.
 
@@ -160,19 +161,29 @@ Keep ECR in the same region as the cluster with a VPC endpoint. This is table st
 
 ## Loading Spark dependencies from S3
 
-The biggest lever on cold-pull time you actually control is what you bake into the image. A connector, an application jar, and a few Python libraries can easily add a gigabyte that every fresh node re-pulls. Spark can fetch all of it from S3 at submit time instead, so those bytes never touch the image.
+Keeping the base image lean helps every cold pull, and one lever is to fetch some dependencies from S3 at submit time instead of baking them in. Spark's `--jars`, `--py-files`, and `--files` options accept any Hadoop-supported URI scheme, including `s3a://`. The driver and every executor download the referenced objects at startup and add jars to the classpath. The job's own artifact (the main jar or `.py` file) can live on S3 too.
 
-Spark's `--jars`, `--py-files`, and `--files` options accept any Hadoop-supported URI scheme, including `s3a://`. The driver and every executor download the referenced objects at startup and add jars to the classpath. The job's own artifact (the main jar or `.py` file) can live on S3 too.
+:::warning This trades the node cache for image size
 
-:::warning The one thing you must keep in the image
-
-The S3A filesystem client (`hadoop-aws` plus a matching AWS SDK, or EMRFS on EMR on EKS images) has to already be on the classpath, because Spark needs it to read S3 in the first place. You cannot bootstrap the S3 connector from S3. EMR on EKS base images include this; the plain `apache/spark` image does not, so add it there. Everything above the filesystem client is fair game to externalize.
+Anything baked into the image is pulled once per node and shared by every pod on it. With a per-executor S3A fetch (Pattern A below), each executor pulls its jars independently with no node-level dedup, which can bite when many executors share a node. A node-level mount (Pattern B below) restores that sharing. For large, stable, widely-shared dependencies such as connectors and common libraries, baking them in and letting SOCI pull them once is often simplest. Reserve S3 for jars that change often enough that rebuilding and re-pushing the image on every change would stall your CI/CD cycle, chiefly the application jar and Python code.
 
 :::
 
-Give the pods an IAM role via IRSA or EKS Pod Identity with `s3:GetObject` on the bucket, then reference the objects by URI.
+:::warning The one thing you must keep in the image
 
-### With `spark-submit`
+The S3A filesystem client (`hadoop-aws` plus a matching AWS SDK, or EMRFS on EMR on EKS images) has to already be on the classpath, because Spark needs it to read S3 in the first place. You cannot bootstrap the S3 connector from S3. EMR on EKS base images include this; the plain `apache/spark` image does not, so add it there. Everything above the filesystem client is fair game to externalize. Pattern B is the exception: because Mountpoint exposes the bucket as a plain filesystem, even the S3A client jars can live on the mount instead of in the image.
+
+:::
+
+Give the pods (for S3A) or the nodes (for Mountpoint) an IAM role with `s3:GetObject` on the bucket: IRSA or EKS Pod Identity for pods, the node instance profile for the host mount.
+
+Two patterns show up in production, and the right one depends on how many jars you have and how often they change.
+
+### Pattern A: S3A direct fetch (few jars, changed often)
+
+Best when a job needs one main jar, maybe with a couple of extras, and that jar changes on every deploy. Point `mainApplicationFile` and any extra `jars` at `s3a://`. The driver reads them straight from S3, with no mount, sidecar, or initContainer.
+
+#### With `spark-submit`
 
 ```bash
 spark-submit \
@@ -186,7 +197,7 @@ spark-submit \
   s3a://my-bucket/app/main.py
 ```
 
-### With the Spark Operator (`SparkApplication`)
+#### With the Spark Operator (`SparkApplication`)
 
 The operator exposes the same options under `spec.deps`, so the artifacts stay out of the image while the manifest stays declarative.
 
@@ -213,6 +224,65 @@ spec:
   executor:
     instances: 50
 ```
+
+:::tip Real-world: tuning S3A for large executor counts
+
+With a single, frequently-updated application jar fetched over S3A and a large number of executors (100 or more), the executors fetch that jar from the driver's file server as they come up. When they all launch at once, the burst can overwhelm the driver and cause fetch failures. Stagger executor allocation so the launches spread out:
+
+```yaml
+sparkConf:
+  spark.kubernetes.allocation.batch.size: "50"
+  spark.kubernetes.allocation.batch.delay: "5s"
+```
+
+This smooths the startup burst, not steady-state throughput, so total job time changes only marginally even at a few seconds of delay. Pairing it with the rarely-changed jars baked into the image, so only the hot jar comes from S3, is a proven setup for single-jar-per-job workloads.
+
+:::
+
+### Pattern B: Mountpoint for Amazon S3, node-level mount (many, independently updated jars)
+
+Best when jobs pull 10 to 20 additional jars that different teams update on their own cadence, and rebuilding the image for every change is not worth it. Mount the bucket once per node with [Mountpoint for Amazon S3](https://github.com/awslabs/mountpoint-s3), then reference the jars as local paths. Because the mount lives at the node (host) level, every pod on the node reads the same files and Mountpoint's cache avoids re-fetching, which brings back the node-level sharing that a per-executor S3A fetch gives up.
+
+Mount at node bring-up, from `userData` for dynamic Karpenter nodes, or from a DaemonSet for static node groups (easier to reconfigure later):
+
+```bash
+# userData or DaemonSet init. x86_64 shown; use the arm64 RPM on Graviton.
+wget https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.rpm
+yum install -y ./mount-s3.rpm
+mkdir -p /mnt/s3
+mount-s3 --allow-other --cache /tmp <your-bucket> /mnt/s3
+```
+
+Then reference the mounted jars from the `SparkApplication` through a hostPath volume. `mountPropagation: HostToContainer` ensures the pod sees the mount even if the node remounts it:
+
+```yaml
+spec:
+  mainApplicationFile: "local:///mnt/s3/jars/pyspark-taxi-trip.py"
+  deps:
+    jars:
+      - "local:///mnt/s3/jars/hadoop-aws-3.3.1.jar"
+      - "local:///mnt/s3/jars/aws-java-sdk-bundle-1.12.647.jar"
+  sparkConf:
+    "spark.driver.extraClassPath": "/mnt/s3/jars/*"
+    "spark.executor.extraClassPath": "/mnt/s3/jars/*"
+  volumes:
+    - name: s3-jars
+      hostPath:
+        path: /mnt/s3/jars
+        type: Directory
+  driver:
+    volumeMounts:
+      - name: s3-jars
+        mountPath: /mnt/s3/jars
+        mountPropagation: HostToContainer
+  executor:
+    volumeMounts:
+      - name: s3-jars
+        mountPath: /mnt/s3/jars
+        mountPropagation: HostToContainer
+```
+
+Avoid the S3 Mountpoint CSI driver mounted per pod for large Spark fleets. It adds a PV, a PVC, and a mount call per pod, which loads the Kubernetes API and S3 as you scale out. The node-level mount above serves every pod on the node from a single mount.
 
 ### Pulling from Maven instead
 
