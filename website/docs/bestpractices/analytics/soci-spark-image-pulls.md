@@ -9,7 +9,7 @@ Spark on Kubernetes has an image pull problem that most teams discover the hard 
 
 With default containerd behavior, that cold-pull wait can run to tens of seconds per node, longer for larger images. For a job that scales out to dozens of nodes, you pay that penalty on every fresh node, and your job's time to first task is gated by it. Autoscaling responsiveness, Spot interruption recovery, and cost all suffer because nodes sit idle while pulling.
 
-The fix is not lazy loading, a bigger instance, or a faster registry. It is parallelizing the pull itself.
+The fix is to parallelize the pull itself.
 
 :::info
 
@@ -113,13 +113,13 @@ spec:
 
 ## Tuning notes
 
-**Instance size matters.** `FastImagePull` is silently ignored below a vCPU and memory threshold. AWS currently recommends 2xlarge or larger, and that value may change. If your NodePool allows xlarge or smaller, those nodes fall back to standard pulls and you will see bimodal pull times across the fleet. Constrain instance sizes or accept the inconsistency knowingly.
+**Instance size** `FastImagePull` is silently ignored below a vCPU and memory threshold. AWS currently recommends 2xlarge or larger, and that value may change. If your NodePool allows xlarge or smaller, those nodes fall back to standard pulls and you will see bimodal pull times across the fleet. Constrain instance sizes or accept the inconsistency knowingly.
 
-**Storage is the second bottleneck.** Once downloads are parallel, disk writes become the limit. Prefer instance families with NVMe instance store (c5d, m5d, r5d, m6id, and similar) for Spark nodes; you likely want local NVMe for shuffle anyway. Where NVMe is not available, the gp3 throughput and IOPS in the config above are not optional. AWS recommends at least 600 MiB/s, with 1000 MiB/s and 16k IOPS giving better results.
+**Storage** Once downloads are parallel, disk writes become the limit. Prefer instance families with NVMe instance store (c5d, m5d, r5d, m6id, and similar) for Spark nodes; you likely want local NVMe for shuffle anyway. Where NVMe is not available, the gp3 throughput and IOPS in the config above are not optional. AWS recommends at least 600 MiB/s, with 1000 MiB/s and 16k IOPS giving better results.
 
-**Tune to your layer structure, not a formula.** `max_concurrent_unpacks_per_image` beyond your count of non-trivial layers buys nothing. The EMR 7.12.0 base image has roughly a dozen meaningful layers out of 25, so 12 is a reasonable ceiling for it. Check your own image with `docker manifest inspect`.
+**There's no universal setting** `max_concurrent_unpacks_per_image` beyond your count of non-trivial layers buys nothing. The EMR 7.12.0 base image has roughly a dozen meaningful layers out of 25, so 12 is a reasonable ceiling for it. Check your own image with `docker manifest inspect --verbose`.
 
-**The floor is the biggest layer's unpack.** Decompression of a single layer is one stream. A 1.2 GB layer's unpack is CPU and disk bound and cannot be parallelized further. If you control the Dockerfile, splitting one giant layer into several medium ones helps both download and unpack.
+**One layer can't be split** Decompression of a single layer is one stream. A 1.2 GB layer's unpack is CPU and disk bound and cannot be parallelized further. If you control the Dockerfile, splitting one giant layer into several medium ones helps both download and unpack.
 
 ## Should you enable lazy loading?
 
@@ -222,4 +222,4 @@ If a dependency is published to a Maven repository, `spark.jars.packages` (or `-
 --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0
 ```
 
-The trade-off is real: every driver and executor runs Ivy resolution at startup and reaches out to a Maven repository, which adds latency and a network dependency at exactly the moment you are trying to start fast. For a large scale-out, pre-stage the resolved jars in S3 and use `--jars s3a://...` instead. Reserve `--packages` for iteration and low-fan-out jobs. If you do use it, point `spark.jars.ivy` at a writable path (for example `/tmp/.ivy2`) and consider an internal mirror.
+The cost: every driver and executor runs Ivy resolution at startup and reaches out to a Maven repository, which adds latency and a network dependency at exactly the moment you are trying to start fast. For a large scale-out, pre-stage the resolved jars in S3 and use `--jars s3a://...` instead. Reserve `--packages` for iteration and low-fan-out jobs. If you do use it, point `spark.jars.ivy` at a writable path (for example `/tmp/.ivy2`) and consider an internal mirror.
