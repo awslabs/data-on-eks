@@ -41,7 +41,7 @@ One mental model before tuning: images are cached per node. Only the first pod o
 
 ## Karpenter configuration for SOCI
 
-Everything lives in the Karpenter `EC2NodeClass`. This single configuration handles fleets with and without NVMe instance store.
+On AL2023 the SOCI setup is simpler than it looks: `FastImagePull: true` is the entire switch, and nodeadm writes the parallel-pull config for you. The `EC2NodeClass` below adds only storage and a few kubelet settings, and handles fleets with and without NVMe instance store.
 
 ```yaml
 apiVersion: karpenter.k8s.aws/v1
@@ -55,16 +55,17 @@ spec:
   # and mounts it at /var/lib/containerd, so SOCI unpacks to local
   # NVMe instead of EBS. No-op on instances without instance store.
   instanceStorePolicy: RAID0
-  # Covers instances without NVMe. Parallel pull moves the bottleneck
-  # from network to disk; the default 125 MiB/s gp3 volume will cap
-  # your gains almost entirely.
+  # For instances without NVMe. Parallel pull shifts the bottleneck
+  # from network to disk, so the 125 MiB/s gp3 default caps your gains.
+  # 600 MiB/s / 3000 IOPS is a sane starting point; size it against your
+  # instance using the storage tuning note below (throughput binds, not IOPS).
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
         volumeSize: 200Gi
         volumeType: gp3
-        iops: 16000
-        throughput: 1000
+        iops: 3000
+        throughput: 600
         encrypted: true
         deleteOnTermination: true
   userData: |
@@ -78,47 +79,42 @@ spec:
     kind: NodeConfig
     spec:
       featureGates:
-        # Experimental. Activates the SOCI snapshotter's parallel
-        # pull/unpack mode. Ignored on instances below the size
-        # threshold (see tuning notes).
+        # Experimental. Turns on the SOCI snapshotter's parallel
+        # pull/unpack mode. On AL2023 this is the whole switch: nodeadm
+        # writes the parallel-pull config for you (20 connections,
+        # 16mb chunks, 12 unpacks per image, discard-after-unpack).
+        # Ignored below ~4 vCPU / 7 GiB (see tuning notes).
         FastImagePull: true
       kubelet:
         config:
-          # Helps when driver, executor, and DaemonSet images pull
-          # concurrently on a fresh node. Identical-image pulls are
-          # already deduplicated by kubelet.
+          # Valid NodeConfig merge path. Helps when driver, executor,
+          # and DaemonSet images pull concurrently on a fresh node.
           serializeImagePulls: false
           maxParallelImagePulls: 5
           registryPullQPS: 50
           registryBurst: 100
-      containerd:
-        config: |
-          [plugins."io.containerd.snapshotter.v1.soci"]
-            [plugins."io.containerd.snapshotter.v1.soci".blob]
-              # -1 removes node-level caps so per-image limits govern
-              max_concurrent_downloads = -1
-              max_concurrent_unpacks = -1
-              # 20 connections and 16mb chunks are the recommended
-              # band for ECR (default is 3 per image). A 1.2 GB layer
-              # then splits into ~80 chunks.
-              max_concurrent_downloads_per_image = 20
-              concurrent_download_chunk_size = "16mb"
-              # Match to the count of meaningful layers in your image
-              max_concurrent_unpacks_per_image = 12
-              # Drop compressed blobs after unpack to save disk. Safe
-              # for pull-only nodes; skip it if you build, push, or
-              # export images from the node, or run multiple snapshotters.
-              discard_unpacked_layers = true
     --BOUNDARY--
 ```
 
+:::warning Do not set SOCI parameters in `containerd.config`
+
+You will see examples (including earlier versions of this guide) that put a `[plugins."io.containerd.snapshotter.v1.soci".blob]` block in `spec.containerd.config`. It has no effect. containerd runs SOCI as an out-of-process gRPC snapshotter, registered as `[proxy_plugins.soci]` in the nodeadm containerd template, not an in-process plugin by that name, so containerd ignores the block. The real settings live in the snapshotter's own file, `/etc/soci-snapshotter-grpc/config.toml`, which nodeadm writes verbatim from an embedded template (the `[pull_modes.parallel_pull_unpack]` section) when `FastImagePull` is on. There is no merge path from NodeConfig into it. The embedded defaults are already the recommended values, which is why the dead block looks like it works: the behavior comes from the defaults, not the stanza.
+
+If you genuinely need different values on AL2023 today, the only path is a userData shell script that rewrites `/etc/soci-snapshotter-grpc/config.toml` and restarts the `soci-snapshotter` service. Bottlerocket, by contrast, exposes these as configurable settings.
+
+:::
+
 ## Tuning notes
 
-**Instance size** `FastImagePull` is silently ignored below a vCPU and memory threshold. AWS currently recommends 2xlarge or larger, and that value may change. If your NodePool allows xlarge or smaller, those nodes fall back to standard pulls and you will see bimodal pull times across the fleet. Constrain instance sizes or accept the inconsistency knowingly.
+**Instance size** The nodeadm source gates `FastImagePull` on at least 4 vCPU and 7 GiB (`UseSOCISnapshotter` in `config.go`), so it activates from xlarge up. AWS's docs recommend 2xlarge or larger as a conservative floor. Below the code threshold the feature gate silently no-ops, so a NodePool that also admits smaller nodes will show bimodal pull times across the fleet. Constrain instance sizes or accept the inconsistency knowingly.
 
-**Storage** Once downloads are parallel, disk writes become the limit. Prefer instance families with NVMe instance store (c5d, m5d, r5d, m6id, and similar) for Spark nodes; you likely want local NVMe for shuffle anyway. Where NVMe is not available, the gp3 throughput and IOPS in the config above are not optional. AWS recommends at least 600 MiB/s, with 1000 MiB/s and 16k IOPS giving better results.
+**Storage: throughput binds, not IOPS.** Once downloads are parallel, disk writes become the limit, and the constraint is throughput. Unpacking streams large sequential writes, and EBS bills any I/O up to 256 KiB as a single operation, so even baseline 3000 IOPS backs roughly 750 MiB/s of large-block writes. Provisioning 16k IOPS buys nothing here.
 
-**There's no universal setting** `max_concurrent_unpacks_per_image` beyond your count of non-trivial layers buys nothing. The EMR 7.12.0 base image has roughly a dozen meaningful layers out of 25, so 12 is a reasonable ceiling for it. Check your own image with `docker manifest inspect --verbose`.
+The right throughput does not depend on your image size. A larger image takes proportionally longer to unpack at the same throughput; it does not need more of it. It does depend on the instance, because a volume can only deliver up to the instance's EBS baseline bandwidth. On a small instance even 600 MiB/s may be unreachable, while on a large one the network or CPU caps the pull before the disk does. So treat 600 MiB/s / 3000 IOPS as a starting point (it matches AWS's floor guidance), then size it empirically: time a cold pull, raise throughput, and stop when the improvement flattens. That knee is the point where another stage took over, and more disk stops helping. For reference, AWS's launch blog goes as high as 1000 MiB/s / 16k IOPS to take disk out of the equation entirely for a 10 GB image on large hardware, while an [independent benchmark](https://medium.com/appsflyerengineering/how-we-cut-github-actions-runner-cold-start-by-82-on-eks-with-soci-parallel-pull-fe8a44faf313) found IOPS (3k, 6k, 16k) made no measurable difference and little gain past 600 MiB/s.
+
+Better still, avoid the question: use instance families with NVMe instance store (c5d, m5d, r5d, m6id) and let `instanceStorePolicy: RAID0` unpack to local NVMe. You likely want local NVMe for shuffle anyway.
+
+**Layer count sets the unpack ceiling** `max_concurrent_unpacks_per_image` beyond your number of non-trivial layers buys nothing. nodeadm defaults it to 12, which suits the EMR 7.12.0 base image (about a dozen meaningful layers out of 25). Check your own image with `docker manifest inspect --verbose`. Changing the value is rarely worth it, and on AL2023 it means overriding the snapshotter config file as described above, not editing the `EC2NodeClass`.
 
 **One layer can't be split** Decompression of a single layer is one stream. A 1.2 GB layer's unpack is CPU and disk bound and cannot be parallelized further. If you control the Dockerfile, splitting one giant layer into several medium ones helps both download and unpack.
 
@@ -155,7 +151,7 @@ Parallel pull attacks the pull. These attack the problem around it, roughly in o
 
 **Watch baseline network bandwidth.** Many instance types publish a burst bandwidth well above the baseline they sustain. At parallel pull speeds a smaller instance can saturate its link and, once ENA burst credits deplete, drop to baseline mid-pull. Size against the instance type's documented baseline bandwidth, not the burst headline.
 
-**Pre-baked EBS snapshots** with the image already cached, referenced in `blockDeviceMappings`, take pulls to near zero. The trade is a snapshot lifecycle per image release. Worth it only when the image changes rarely.
+**Pre-baked EBS snapshots** with the image already cached, referenced in `blockDeviceMappings`, take pulls to near zero, but only with Fast Snapshot Restore (FSR) enabled in the AZs you scale into. Without FSR the volume hydrates lazily from S3 and the first read of each block is slow, which can erase the saving on a large image. FSR is billed per snapshot per AZ-hour, so scope it to active AZs and rotate it when the image changes. The trade is a snapshot-and-FSR lifecycle per image release, worth it only when the image changes rarely.
 
 Keep ECR in the same region as the cluster with a VPC endpoint. This is table stakes, but it still gets missed.
 
