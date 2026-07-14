@@ -69,6 +69,89 @@ spec:
     --//--
 
 ---
+# GPU nodeclass with SOCI parallel image pull (FastImagePull).
+# Large inference images (10GB+ Ray/vLLM, Triton, DLC) are dominated by
+# containerd's single-connection download on fresh nodes. FastImagePull
+# switches to the SOCI snapshotter's parallel pull/unpack mode (20
+# connections, 16MB chunks, 12 concurrent unpacks). See
+# website/docs/bestpractices/analytics/soci-spark-image-pulls.md.
+# The feature gate silently no-ops below 4 vCPU / 7GiB; the gpu nodepool
+# floors at xlarge, so all admitted sizes qualify.
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: gpu
+  namespace: karpenter
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # IAM role for Karpenter nodes - from EKS module output
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+
+  # Subnet selection - private secondary subnets
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+
+  # Security group selection - use the node security group
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+
+  # On GPU instances with NVMe instance store (g6e, g6, g5), nodeadm
+  # assembles RAID0 and containerd/kubelet state lands on local NVMe,
+  # so SOCI unpacks to instance store instead of EBS.
+  instanceStorePolicy: RAID0
+
+  # Fallback for GPU instance types without instance store: parallel pull
+  # shifts the bottleneck from network to disk, so raise gp3 throughput
+  # past the 125MiB/s default (throughput binds, not IOPS).
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        iops: 3000
+        throughput: 600
+        encrypted: true
+        deleteOnTermination: true
+
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      featureGates:
+        # Experimental: SOCI snapshotter parallel pull/unpack mode.
+        # nodeadm writes the snapshotter config (20 connections, 16MB
+        # chunks, 12 unpacks per image, discard-after-unpack).
+        FastImagePull: true
+      kubelet:
+        config:
+          featureGates:
+            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
+            # Enables cgroupsv2 memory.high soft limit between request and limit.
+            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            MemoryQoS: true
+          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          memoryThrottlingFactor: 0.9
+          # Let the large inference image and DaemonSet images (nvidia
+          # device plugin, monitoring) pull concurrently on a fresh node.
+          serializeImagePulls: false
+          maxParallelImagePulls: 5
+          registryPullQPS: 50
+          registryBurst: 100
+
+    --//--
+
+---
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:

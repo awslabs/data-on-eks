@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://ray-project.github.io/kuberay-helm/
     chart: kuberay-operator
-    targetRevision: "1.4.2"
+    targetRevision: "1.6.1"
     helm:
       valuesObject:
         ${user_values_yaml}

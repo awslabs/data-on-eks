@@ -1,0 +1,205 @@
+# =============================================================================
+# Mock Support Ticket Generator (bounded Job)
+# =============================================================================
+# Simulates a real-world stream of customer support tickets. A single pod
+# appends a batch of ~200 randomized tickets to the Iceberg table
+# raydata_spark_logs.support_tickets (AWS Glue catalog, warehouse
+# s3://$S3_BUCKET/iceberg-warehouse/) every 2 minutes, 10 times, then
+# completes (about 20 minutes total, ~2,000 tickets). Each append commits
+# exactly one Iceberg snapshot. Tune with MAX_BATCHES / INTERVAL_SECONDS /
+# TICKETS_PER_BATCH. Re-run `./deploy.sh generator` for another round.
+#
+# The batch inference RayJobs (05/06) read the table incrementally: each
+# pattern tracks its own watermark in a table property and only processes
+# tickets appended since its last successful run. The single sequential
+# generator pod is the "single writer" that protocol assumes.
+#
+# Placeholders (substituted by deploy.sh):
+#   $S3_BUCKET   - S3 bucket
+#   $AWS_REGION  - AWS region
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ticket-generator
+  namespace: raydata
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ticket-generator
+    spec:
+      restartPolicy: Never
+      serviceAccountName: raydata
+      containers:
+        - name: generate
+          image: python:3.12-slim
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              pip install --quiet "pyiceberg[glue]>=0.9" pyarrow
+              exec python -u /scripts/generate_tickets.py
+          env:
+            - name: AWS_REGION
+              value: "$AWS_REGION"
+            - name: S3_BUCKET
+              value: "$S3_BUCKET"
+            - name: ICEBERG_TABLE
+              value: "raydata_spark_logs.support_tickets"
+            - name: TICKETS_PER_BATCH
+              value: "200"
+            - name: INTERVAL_SECONDS
+              value: "120"
+            - name: MAX_BATCHES
+              value: "10"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: ticket-generator-script
+      nodeSelector:
+        kubernetes.io/arch: amd64
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticket-generator-script
+  namespace: raydata
+data:
+  generate_tickets.py: |
+    """Append bounded batches of mock support tickets to Iceberg.
+
+    One pod, one loop: append ~200 tickets, sleep, repeat MAX_BATCHES
+    times, then exit. Every append commits one snapshot. The ingested_ms
+    column is the event-time watermark the batch jobs (05/06) filter on
+    for incremental processing.
+    """
+    import os
+    import random
+    import time
+    import uuid
+    from datetime import datetime, timezone
+
+    import pyarrow as pa
+    from pyiceberg.catalog import load_catalog
+
+    BUCKET = os.environ["S3_BUCKET"]
+    REGION = os.environ["AWS_REGION"]
+    TABLE_ID = os.environ.get("ICEBERG_TABLE", "raydata_spark_logs.support_tickets")
+    N = int(os.environ.get("TICKETS_PER_BATCH", "200"))
+    INTERVAL = int(os.environ.get("INTERVAL_SECONDS", "120"))
+    MAX_BATCHES = int(os.environ.get("MAX_BATCHES", "10"))
+
+    SCHEMA = pa.schema([
+        ("ticket_id", pa.string()),
+        ("created_at", pa.string()),
+        ("customer_tier", pa.string()),
+        ("channel", pa.string()),
+        ("subject", pa.string()),
+        ("body", pa.string()),
+        ("ingested_ms", pa.int64()),
+    ])
+
+    PRODUCTS = ["DataSync Pro", "CloudVault", "StreamLine API", "InsightBoard", "PayFlow"]
+    TIERS = ["free", "standard", "premium", "enterprise"]
+    CHANNELS = ["email", "chat", "phone", "web-form"]
+
+    SCENARIOS = [
+        ("Cannot log in after password reset",
+         "I reset my password {n} times but I still get an 'invalid credentials' error on {product}. "
+         "I have a client presentation in two hours and I am locked out of all my dashboards. "
+         "This is the third time this month this has happened."),
+        ("Charged twice for monthly subscription",
+         "My card statement shows two charges of $49.99 for {product} this month. "
+         "I only have one subscription. Please refund the duplicate charge and confirm "
+         "this won't happen again."),
+        ("API latency spiked to 30s",
+         "Since yesterday around 3pm UTC our calls to the {product} bulk endpoint take 25-30 seconds "
+         "instead of the usual 300ms. Our pipeline SLAs are breaching. Nothing changed on our side. "
+         "Region: {region}."),
+        ("Export to CSV silently fails",
+         "When I export a report larger than 10k rows from {product}, the download completes "
+         "but the file only contains the header row. Smaller exports work fine."),
+        ("Feature request: dark mode",
+         "Our team uses {product} all day and would love a dark mode option. "
+         "Not urgent, but it would reduce eye strain for on-call engineers."),
+        ("Data missing after migration",
+         "After migrating our workspace to the new {product} plan, dashboards from before "
+         "{year} show 'no data'. We need this data for an audit next week. Please treat as urgent."),
+        ("Webhook deliveries failing with 401",
+         "All webhook deliveries from {product} to our endpoint started failing with 401 errors "
+         "after we rotated our signing secret. The new secret is configured correctly as far as we can tell."),
+        ("Love the new dashboard update",
+         "Just wanted to say the new {product} dashboard layout is fantastic. "
+         "The team is really happy with the improved load times. Great job!"),
+        ("Cancel my account",
+         "I've been trying to cancel my {product} subscription for two weeks. The cancel button "
+         "does nothing and support chat keeps disconnecting. If this isn't resolved I will dispute "
+         "the charges with my bank."),
+        ("SSO integration with Okta broken",
+         "Our {product} SSO login via Okta returns a SAML assertion error since this morning. "
+         "500+ employees can't access the platform. We are an enterprise customer."),
+    ]
+
+    def make_ticket(i: int) -> dict:
+        subject, body_tpl = random.choice(SCENARIOS)
+        return {
+            "ticket_id": f"TCK-{uuid.uuid4().hex[:10].upper()}",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "customer_tier": random.choice(TIERS),
+            "channel": random.choice(CHANNELS),
+            "subject": subject,
+            "body": body_tpl.format(
+                product=random.choice(PRODUCTS),
+                n=random.randint(2, 5),
+                region=random.choice(["us-west-2", "eu-central-1", "ap-southeast-2"]),
+                year=random.choice([2023, 2024, 2025]),
+            ),
+            "ingested_ms": int(time.time() * 1000),
+        }
+
+    def main():
+        catalog = load_catalog(
+            "glue", **{"type": "glue", "glue.region": REGION, "s3.region": REGION}
+        )
+        table = catalog.create_table_if_not_exists(
+            TABLE_ID,
+            schema=SCHEMA,
+            location=f"s3://{BUCKET}/iceberg-warehouse/support_tickets",
+        )
+        print(f"Generator started: {MAX_BATCHES} batches of {N} tickets, "
+              f"{INTERVAL}s apart -> {TABLE_ID}")
+
+        appended = 0
+        for batch_no in range(1, MAX_BATCHES + 1):
+            try:
+                # The batch jobs commit watermark properties to this table;
+                # refresh so our append builds on the latest metadata.
+                table.refresh()
+                rows = [make_ticket(i) for i in range(N)]
+                table.append(pa.Table.from_pylist(rows, schema=SCHEMA))
+                appended += N
+                snap = table.current_snapshot()
+                print(f"[{batch_no}/{MAX_BATCHES}] Appended {N} tickets to "
+                      f"{TABLE_ID} (snapshot {snap.snapshot_id}, total "
+                      f"snapshots so far: {len(table.metadata.snapshots)})")
+            except Exception as exc:  # noqa: BLE001 - keep the stream alive
+                print(f"[{batch_no}/{MAX_BATCHES}] Append failed, "
+                      f"continuing: {exc}")
+            if batch_no < MAX_BATCHES:
+                time.sleep(INTERVAL)
+
+        print(f"Generator finished: {appended} tickets in "
+              f"{MAX_BATCHES} batches.")
+
+    if __name__ == "__main__":
+        main()

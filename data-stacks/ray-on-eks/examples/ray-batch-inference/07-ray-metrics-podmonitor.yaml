@@ -1,0 +1,36 @@
+# =============================================================================
+# PodMonitor: scrape Ray metrics from the batch inference pods
+# =============================================================================
+# Every Ray pod (head and workers, RayService and RayJobs alike) exports
+# Prometheus metrics on port 8080 (named "metrics" by KubeRay). This
+# PodMonitor points the stack's kube-prometheus (namespace: monitoring,
+# discovers monitors in all namespaces) at them.
+#
+# What you get in Prometheus/Grafana, all open source:
+#   - ray_data_* series: rows produced, bytes, task metrics per dataset
+#     operator (the batch pipeline's own progress)
+#   - ray_* scheduler/object store series: cluster health during the run
+#   - vLLM engine metrics where exported through Ray's metric registry
+# GPU utilization/power/memory come separately from the DCGM exporter
+# ServiceMonitor that the NVIDIA GPU operator already ships in this stack.
+#
+# Apply once: ./deploy.sh monitoring
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ray-batch-inference
+  namespace: raydata
+  labels:
+    release: kube-prometheus-stack
+spec:
+  jobLabel: ray-batch-inference
+  selector:
+    matchLabels:
+      ray.io/is-ray-node: "yes"
+  namespaceSelector:
+    matchNames:
+      - raydata
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 15s

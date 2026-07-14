@@ -1,6 +1,6 @@
 image:
   repository: quay.io/kuberay/operator
-  tag: v1.4.2
+  tag: v1.6.1
   pullPolicy: IfNotPresent
 
 # Resource configuration for operator pod
@@ -21,28 +21,25 @@ nodeSelector:
 # watchNamespace: ""
 
 # Enable leader election for HA
-leaderElection:
-  enabled: true
+leaderElectionEnabled: true
 
 # Logging configuration
 logging:
-  level: info
-  encoder:
-    stdout: json
-    file: json
+  stdoutEncoder: json
+  fileEncoder: json
 
 # Batch scheduler integration
 batchScheduler:
   enabled: false
-  # Uncomment to enable YuniKorn integration
-  # name: yunikorn
+  # Set to yunikorn/volcano/scheduler-plugins to enable integration
+  name: ""
 
-# Feature gates
+# Feature gates (v1.6.x chart defaults also enable RayMultiHostIndexing)
 featureGates:
   - name: RayClusterStatusConditions
     enabled: true
   - name: RayJobDeletionPolicy
-    enabled: false
+    enabled: true
 
 # Prometheus metrics
 metrics:
@@ -54,8 +51,8 @@ metrics:
     labels: {}
 
 # RBAC configuration
-rbac:
-  create: true
+rbacEnable: true
+crNamespacedRbacEnable: true
 
 serviceAccount:
   create: true
@@ -69,3 +66,5 @@ securityContext:
       - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault

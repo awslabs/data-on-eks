@@ -1,0 +1,313 @@
+# =============================================================================
+# Batch Inference Pattern 1: Ray Data -> RayService HTTP endpoint
+# =============================================================================
+# A CPU-only RayJob incrementally reads new support tickets from the Iceberg
+# table (tracked via a per-pattern watermark table property, see 06 for the
+# protocol), fans out concurrent requests to the OpenAI-compatible RayService endpoint
+# (which autoscales on request pressure), parses the structured LLM output,
+# and writes results to S3 as Parquet.
+#
+# This is the "shared online endpoint" pattern: the same deployment serves
+# interactive traffic and periodic batch backfills. CPU preprocessing runs on
+# cheap general-purpose nodes; GPUs stay dedicated to the vLLM engine.
+#
+# Placeholders (substituted by deploy.sh):
+#   $S3_BUCKET   - S3 bucket
+#   $AWS_REGION  - AWS region
+# =============================================================================
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: ticket-batch-endpoint
+  namespace: raydata
+spec:
+  entrypoint: python /scripts/process_tickets.py
+  shutdownAfterJobFinishes: true
+  ttlSecondsAfterFinished: 1200
+  runtimeEnvYAML: |
+    pip:
+      - openai>=1.60
+      - pyiceberg[glue]>=0.9
+    env_vars:
+      ICEBERG_TABLE: "raydata_spark_logs.support_tickets"
+      OUTPUT_PATH: "s3://$S3_BUCKET/ray-batch-inference/results/endpoint"
+      LLM_ENDPOINT: "http://deepseek-r1-8b-serve-svc.raydata.svc.cluster.local:8000/v1"
+      MODEL_ID: "deepseek-r1-distill-llama-8b"
+      AWS_REGION: "$AWS_REGION"
+      AWS_DEFAULT_REGION: "$AWS_REGION"
+      # Tokenomics: hourly cost of the GPU node serving the endpoint
+      # (default: g6e.2xlarge on-demand us-west-2) and how many GPU
+      # replicas served this batch. Used only for the cost report.
+      GPU_COST_PER_HOUR: "2.24208"
+      GPU_REPLICAS: "1"
+  rayClusterSpec:
+    rayVersion: "2.56.0"
+    headGroupSpec:
+      rayStartParams:
+        num-cpus: "0"
+      template:
+        metadata:
+          labels:
+            app: ticket-batch-endpoint
+        spec:
+          serviceAccountName: raydata
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.56.0-py312-cpu
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: AWS_REGION
+                  value: "$AWS_REGION"
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: 6Gi
+                limits:
+                  memory: 8Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+          volumes:
+            - name: scripts
+              configMap:
+                name: ticket-batch-endpoint-script
+          nodeSelector:
+            kubernetes.io/arch: amd64
+    workerGroupSpecs:
+      - groupName: cpu-workers
+        replicas: 2
+        minReplicas: 2
+        maxReplicas: 4
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              app: ticket-batch-endpoint
+          spec:
+            serviceAccountName: raydata
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.56.0-py312-cpu
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: AWS_REGION
+                    value: "$AWS_REGION"
+                resources:
+                  requests:
+                    cpu: "3"
+                    memory: 8Gi
+                  limits:
+                    memory: 10Gi
+            nodeSelector:
+              kubernetes.io/arch: amd64
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticket-batch-endpoint-script
+  namespace: raydata
+data:
+  process_tickets.py: |
+    """Batch ticket analysis by calling the shared RayService LLM endpoint.
+
+    Incrementally reads new tickets from the Iceberg table (pinned snapshot
+    plus watermark filter, see 06 for the protocol), sends concurrent chat
+    completion requests to the OpenAI-compatible endpoint, parses the
+    structured JSON verdicts, and writes Parquet results back to S3.
+    """
+    import asyncio
+    import json
+    import os
+    import re
+    import time
+    from datetime import datetime, timezone
+
+    import ray
+    from pyiceberg.catalog import load_catalog
+    from pyiceberg.expressions import GreaterThan
+
+    ICEBERG_TABLE = os.environ["ICEBERG_TABLE"]
+    OUTPUT_PATH = os.environ["OUTPUT_PATH"]
+    LLM_ENDPOINT = os.environ["LLM_ENDPOINT"]
+    MODEL_ID = os.environ["MODEL_ID"]
+    REGION = os.environ["AWS_REGION"]
+    WATERMARK_PROP = "watermark.endpoint"
+    CATALOG_PROPS = {"type": "glue", "glue.region": REGION, "s3.region": REGION}
+
+    SYSTEM_PROMPT = (
+        "You are a support ticket triage assistant. Analyze the customer ticket "
+        "and respond with ONLY a JSON object (no markdown fences) with exactly "
+        "these keys:\n"
+        '  "sentiment": one of "positive", "neutral", "negative"\n'
+        '  "urgency": one of "low", "medium", "high", "critical"\n'
+        '  "category": one of "authentication", "billing", "performance", '
+        '"bug", "feature_request", "cancellation", "praise", "other"\n'
+        '  "summary": one sentence (max 25 words) summarizing the issue\n'
+    )
+
+    def extract_json(text: str) -> dict:
+        """Parse the model verdict, tolerating R1-style <think> blocks."""
+        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+        if not match:
+            raise ValueError(f"no JSON object found in: {text[:200]!r}")
+        return json.loads(match.group(0))
+
+    class TicketAnalyzer:
+        """Ray Data UDF: one actor per CPU slot, async fan-out per batch."""
+
+        def __init__(self, endpoint: str, model_id: str, max_concurrency: int = 16):
+            from openai import AsyncOpenAI
+
+            # Ray Data invokes UDFs from worker threads that have no asyncio
+            # event loop; keep a dedicated loop per actor for the async client.
+            self.loop = asyncio.new_event_loop()
+            self.client = AsyncOpenAI(base_url=endpoint, api_key="none", timeout=180)
+            self.model_id = model_id
+            self.semaphore = asyncio.Semaphore(max_concurrency)
+
+        async def _analyze(self, subject: str, body: str) -> dict:
+            async with self.semaphore:
+                last_err = None
+                for attempt in range(3):
+                    try:
+                        t0 = time.perf_counter()
+                        resp = await self.client.chat.completions.create(
+                            model=self.model_id,
+                            messages=[
+                                {"role": "system", "content": SYSTEM_PROMPT},
+                                {"role": "user", "content": f"Subject: {subject}\n\n{body}"},
+                            ],
+                            temperature=0.6,
+                            top_p=0.95,
+                            max_tokens=1024,
+                        )
+                        latency = time.perf_counter() - t0
+                        verdict = extract_json(resp.choices[0].message.content)
+                        return {
+                            "sentiment": verdict.get("sentiment", "unknown"),
+                            "urgency": verdict.get("urgency", "unknown"),
+                            "category": verdict.get("category", "unknown"),
+                            "summary": verdict.get("summary", ""),
+                            "latency_s": round(latency, 3),
+                            "prompt_tokens": resp.usage.prompt_tokens,
+                            "completion_tokens": resp.usage.completion_tokens,
+                            "error": "",
+                        }
+                    except Exception as exc:  # noqa: BLE001 - record and retry
+                        last_err = exc
+                        await asyncio.sleep(2**attempt)
+                return {
+                    "sentiment": "unknown", "urgency": "unknown",
+                    "category": "unknown", "summary": "",
+                    "latency_s": -1.0, "prompt_tokens": 0, "completion_tokens": 0,
+                    "error": str(last_err),
+                }
+
+        def __call__(self, batch: dict) -> dict:
+            async def run_all():
+                tasks = [
+                    self._analyze(s, b)
+                    for s, b in zip(batch["subject"], batch["body"])
+                ]
+                return await asyncio.gather(*tasks)
+
+            verdicts = self.loop.run_until_complete(run_all())
+            for key in ("sentiment", "urgency", "category", "summary",
+                        "latency_s", "prompt_tokens", "completion_tokens",
+                        "error"):
+                batch[key] = [v[key] for v in verdicts]
+            return batch
+
+    def main():
+        ray.init()
+        run_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+        # ---- Incremental read: pin a snapshot, filter past the watermark ----
+        catalog = load_catalog("glue", **CATALOG_PROPS)
+        table = catalog.load_table(ICEBERG_TABLE)
+        snapshot = table.current_snapshot()
+        if snapshot is None:
+            print(f"{ICEBERG_TABLE} has no snapshots yet, nothing to process.")
+            return
+        watermark = int(table.properties.get(WATERMARK_PROP, "0"))
+
+        # NOTE: row_filter must be a pyiceberg expression object, not a
+        # string. Ray 2.56 hands the value straight to pyiceberg's bind(),
+        # which cannot parse strings ("Cannot visit unsupported expression").
+        ds = ray.data.read_iceberg(
+            table_identifier=ICEBERG_TABLE,
+            row_filter=GreaterThan("ingested_ms", watermark),
+            snapshot_id=snapshot.snapshot_id,
+            catalog_kwargs=dict(name="glue", **CATALOG_PROPS),
+        )
+        total = ds.count()
+        print("==== INCREMENTAL STATE ====")
+        print(f"table             : {ICEBERG_TABLE}")
+        print(f"snapshot pinned   : {snapshot.snapshot_id}")
+        print(f"watermark (prev)  : {watermark}")
+        print(f"new tickets       : {total}")
+        if total == 0:
+            print("No tickets appended since the last run. Exiting.")
+            return
+        new_watermark = ds.max("ingested_ms")
+
+        t0 = time.time()
+        results = ds.map_batches(
+            TicketAnalyzer,
+            fn_constructor_kwargs={
+                "endpoint": LLM_ENDPOINT,
+                "model_id": MODEL_ID,
+                "max_concurrency": 16,
+            },
+            batch_size=16,
+            concurrency=4,
+            num_cpus=1,
+        ).materialize()
+        wall = time.time() - t0
+
+        out_path = f"{OUTPUT_PATH}/run-{run_stamp}"
+        results.write_parquet(out_path)
+
+        # Advance the watermark only now that results are durable in S3.
+        table = catalog.load_table(ICEBERG_TABLE)
+        txn = table.transaction()
+        txn.set_properties({WATERMARK_PROP: str(new_watermark)})
+        txn.commit_transaction()
+        print(f"watermark (new)   : {new_watermark}")
+
+        failed = results.filter(lambda r: r["error"] != "").count()
+        print("==== BATCH SUMMARY ====")
+        print(f"tickets processed : {total}")
+        print(f"failed requests   : {failed}")
+        print(f"wall time         : {wall:.1f}s")
+        print(f"throughput        : {total / wall:.2f} tickets/s")
+        print(f"results           : {out_path}")
+        for col in ("urgency", "sentiment", "category"):
+            counts = results.groupby(col).count().take_all()
+            pretty = {row[col]: row["count()"] for row in counts}
+            print(f"{col:9s} breakdown: {pretty}")
+
+        # ---- Tokenomics: tokens consumed and GPU cost attribution ----
+        gpu_cost_hr = float(os.environ.get("GPU_COST_PER_HOUR", "0"))
+        gpu_replicas = int(os.environ.get("GPU_REPLICAS", "1"))
+        prompt_toks = results.sum("prompt_tokens")
+        output_toks = results.sum("completion_tokens")
+        print("==== TOKENOMICS ====")
+        print(f"prompt tokens     : {prompt_toks:,} "
+              f"({prompt_toks / total:.0f}/ticket)")
+        print(f"output tokens     : {output_toks:,} "
+              f"({output_toks / total:.0f}/ticket)")
+        print(f"output token rate : {output_toks / wall:,.0f} tok/s")
+        if gpu_cost_hr > 0:
+            gpu_hours = wall / 3600 * gpu_replicas
+            cost = gpu_hours * gpu_cost_hr
+            print(f"GPU cost          : ${cost:.4f} "
+                  f"({gpu_hours:.4f} GPU-h @ ${gpu_cost_hr}/h x {gpu_replicas} replica(s))")
+            print(f"cost per 1k tickets       : ${cost / total * 1000:.4f}")
+            print(f"cost per 1M output tokens : ${cost / output_toks * 1e6:.3f}")
+            print(f"cost per 1M total tokens  : "
+                  f"${cost / (prompt_toks + output_toks) * 1e6:.3f}")
+
+    if __name__ == "__main__":
+        main()

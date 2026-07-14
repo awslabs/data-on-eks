@@ -1,0 +1,139 @@
+# =============================================================================
+# RayService: DeepSeek-R1-Distill-Llama-8B on vLLM 0.22 / Ray 2.56
+# =============================================================================
+# Serves an OpenAI-compatible endpoint using ray.serve.llm (build_openai_app).
+#
+# Optimizations:
+#  - Model weights stream directly from S3 to GPU memory via Run:ai Model
+#    Streamer (load_format: runai_streamer) - no HuggingFace download, no
+#    local disk staging on the GPU node.
+#  - Image pulled from same-region private ECR (mirrored from
+#    rayproject/ray-llm) - avoids Docker Hub rate limits and cross-internet
+#    transfer on every GPU node launch.
+#  - Head node is CPU-only (num-cpus: 0 so no tasks schedule on it); the
+#    vLLM engine replicas run on a dedicated g6e.2xlarge (1x L40S 48GB)
+#    worker group provisioned on demand by Karpenter.
+#
+# Placeholders (substituted by deploy.sh):
+#   $S3_BUCKET      - bucket holding model weights under models/
+#   $AWS_REGION     - AWS region
+#   $ECR_REGISTRY   - e.g. 123456789012.dkr.ecr.us-west-2.amazonaws.com
+#   $RAY_LLM_TAG    - e.g. 2.56.0-py312-cu130
+# =============================================================================
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: deepseek-r1-8b
+  namespace: raydata
+spec:
+  serveConfigV2: |
+    applications:
+      - name: llm-app
+        import_path: ray.serve.llm:build_openai_app
+        route_prefix: "/"
+        args:
+          llm_configs:
+            - model_loading_config:
+                model_id: deepseek-r1-distill-llama-8b
+                model_source: s3://$S3_BUCKET/models/deepseek-r1-distill-llama-8b
+              accelerator_type: L40S
+              engine_kwargs:
+                # Stream safetensors from S3 straight to GPU memory.
+                load_format: runai_streamer
+                model_loader_extra_config:
+                  concurrency: 32
+                dtype: bfloat16
+                max_model_len: 8192
+                gpu_memory_utilization: 0.92
+                enable_prefix_caching: true
+              runtime_env:
+                # ray-llm image ships vLLM 0.22 but not the streamer extra.
+                pip:
+                  - runai-model-streamer[s3]>=0.15.7
+                env_vars:
+                  AWS_REGION: "$AWS_REGION"
+                  AWS_DEFAULT_REGION: "$AWS_REGION"
+              deployment_config:
+                autoscaling_config:
+                  min_replicas: 1
+                  max_replicas: 2
+                  target_ongoing_requests: 32
+                max_ongoing_requests: 128
+  rayClusterConfig:
+    rayVersion: "2.56.0"
+    enableInTreeAutoscaling: true
+    autoscalerOptions:
+      version: v2
+      idleTimeoutSeconds: 300
+    headGroupSpec:
+      rayStartParams:
+        # Keep the head as pure control plane: no tasks/actors schedule here.
+        num-cpus: "0"
+      template:
+        metadata:
+          labels:
+            app: deepseek-r1-8b
+        spec:
+          serviceAccountName: raydata
+          containers:
+            - name: ray-head
+              image: $ECR_REGISTRY/ray-llm:$RAY_LLM_TAG
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: AWS_REGION
+                  value: "$AWS_REGION"
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: 8Gi
+                limits:
+                  memory: 12Gi
+              ports:
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 8000
+                  name: serve
+          nodeSelector:
+            kubernetes.io/arch: amd64
+    workerGroupSpecs:
+      - groupName: gpu-workers
+        replicas: 1
+        minReplicas: 1
+        maxReplicas: 2
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              app: deepseek-r1-8b
+          spec:
+            serviceAccountName: raydata
+            containers:
+              - name: ray-worker
+                image: $ECR_REGISTRY/ray-llm:$RAY_LLM_TAG
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: AWS_REGION
+                    value: "$AWS_REGION"
+                resources:
+                  requests:
+                    cpu: "6"
+                    memory: 48Gi
+                    nvidia.com/gpu: "1"
+                  limits:
+                    memory: 54Gi
+                    nvidia.com/gpu: "1"
+            nodeSelector:
+              karpenter.sh/nodepool: gpu
+            # Prefer g6e.2xlarge but allow g6e.4xlarge as fallback (same
+            # single L40S 48GB GPU) - g6e.2xlarge frequently has capacity
+            # shortages (ICE) in us-west-2.
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: node.kubernetes.io/instance-type
+                          operator: In
+                          values:
+                            - g6e.2xlarge
+                            - g6e.4xlarge

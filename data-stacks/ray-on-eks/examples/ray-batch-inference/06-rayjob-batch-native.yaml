@@ -1,0 +1,306 @@
+# =============================================================================
+# Batch Inference Pattern 2: Native ray.data.llm (vLLM engine inside the job)
+# =============================================================================
+# The canonical high-throughput offline pattern: Ray Data pipes ticket rows
+# straight into a vLLM engine running inside the batch job itself - no HTTP
+# hop, no serving overhead. The engine streams the same S3-hosted weights via
+# Run:ai Model Streamer onto a dedicated g6e.2xlarge that exists only for the
+# lifetime of the job (Karpenter provisions and reclaims it).
+#
+# Use this pattern when latency does not matter and you want maximum
+# throughput per GPU-hour. Use pattern 1 (05-rayjob-batch-endpoint) when you
+# want to reuse a live online endpoint for periodic backfills.
+#
+# Placeholders (substituted by deploy.sh):
+#   $S3_BUCKET      - S3 bucket
+#   $AWS_REGION     - AWS region
+#   $ECR_REGISTRY   - private ECR registry hosting the mirrored ray-llm image
+#   $RAY_LLM_TAG    - image tag, e.g. 2.56.0-py312-cu130
+# =============================================================================
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: ticket-batch-native
+  namespace: raydata
+spec:
+  entrypoint: python /scripts/process_tickets_native.py
+  shutdownAfterJobFinishes: true
+  ttlSecondsAfterFinished: 1200
+  runtimeEnvYAML: |
+    pip:
+      - runai-model-streamer[s3]>=0.15.7
+      - pyiceberg[glue]>=0.9
+    env_vars:
+      ICEBERG_TABLE: "raydata_spark_logs.support_tickets"
+      OUTPUT_PATH: "s3://$S3_BUCKET/ray-batch-inference/results/native"
+      MODEL_SOURCE: "s3://$S3_BUCKET/models/deepseek-r1-distill-llama-8b"
+      AWS_REGION: "$AWS_REGION"
+      AWS_DEFAULT_REGION: "$AWS_REGION"
+      # Tokenomics: hourly cost of the GPU node this job provisions
+      # (default: g6e.2xlarge on-demand us-west-2). Used for the cost report.
+      GPU_COST_PER_HOUR: "2.24208"
+  rayClusterSpec:
+    rayVersion: "2.56.0"
+    headGroupSpec:
+      rayStartParams:
+        num-cpus: "0"
+      template:
+        metadata:
+          labels:
+            app: ticket-batch-native
+        spec:
+          serviceAccountName: raydata
+          containers:
+            - name: ray-head
+              image: $ECR_REGISTRY/ray-llm:$RAY_LLM_TAG
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: AWS_REGION
+                  value: "$AWS_REGION"
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: 8Gi
+                limits:
+                  memory: 12Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+          volumes:
+            - name: scripts
+              configMap:
+                name: ticket-batch-native-script
+          nodeSelector:
+            kubernetes.io/arch: amd64
+    workerGroupSpecs:
+      - groupName: gpu-workers
+        replicas: 1
+        minReplicas: 1
+        maxReplicas: 1
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              app: ticket-batch-native
+          spec:
+            serviceAccountName: raydata
+            containers:
+              - name: ray-worker
+                image: $ECR_REGISTRY/ray-llm:$RAY_LLM_TAG
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: AWS_REGION
+                    value: "$AWS_REGION"
+                resources:
+                  requests:
+                    cpu: "6"
+                    memory: 48Gi
+                    nvidia.com/gpu: "1"
+                  limits:
+                    memory: 54Gi
+                    nvidia.com/gpu: "1"
+            nodeSelector:
+              karpenter.sh/nodepool: gpu
+            # Prefer g6e.2xlarge but allow g6e.4xlarge as fallback (same
+            # single L40S 48GB GPU) - g6e.2xlarge frequently has capacity
+            # shortages (ICE) in us-west-2.
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: node.kubernetes.io/instance-type
+                          operator: In
+                          values:
+                            - g6e.2xlarge
+                            - g6e.4xlarge
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticket-batch-native-script
+  namespace: raydata
+data:
+  process_tickets_native.py: |
+    """Offline batch ticket analysis with ray.data.llm (vLLM in-job).
+
+    Builds a Ray Data LLM processor that runs the vLLM engine inside the
+    batch pipeline: rows flow tokenizer -> continuous-batched engine ->
+    detokenizer with no HTTP serving layer in between.
+
+    Input is the Iceberg table the ticket generator appends to. The job
+    pins the current snapshot, reads only rows newer than its watermark
+    (a table property), and commits the new watermark only after results
+    are safely written to S3. Reruns after a failure reprocess the same
+    increment (at-least-once); each run writes to its own results path,
+    so reprocessing never corrupts previous output.
+    """
+    import json
+    import os
+    import re
+    import time
+    from datetime import datetime, timezone
+
+    import ray
+    from ray.data.llm import build_processor, vLLMEngineProcessorConfig
+    from pyiceberg.catalog import load_catalog
+    from pyiceberg.expressions import GreaterThan
+
+    ICEBERG_TABLE = os.environ["ICEBERG_TABLE"]
+    OUTPUT_PATH = os.environ["OUTPUT_PATH"]
+    MODEL_SOURCE = os.environ["MODEL_SOURCE"]
+    REGION = os.environ["AWS_REGION"]
+    # Each pattern keeps its own watermark property, like a consumer group.
+    WATERMARK_PROP = "watermark.native"
+    CATALOG_PROPS = {"type": "glue", "glue.region": REGION, "s3.region": REGION}
+
+    SYSTEM_PROMPT = (
+        "You are a support ticket triage assistant. Analyze the customer ticket "
+        "and respond with ONLY a JSON object (no markdown fences) with exactly "
+        "these keys:\n"
+        '  "sentiment": one of "positive", "neutral", "negative"\n'
+        '  "urgency": one of "low", "medium", "high", "critical"\n'
+        '  "category": one of "authentication", "billing", "performance", '
+        '"bug", "feature_request", "cancellation", "praise", "other"\n'
+        '  "summary": one sentence (max 25 words) summarizing the issue\n'
+    )
+
+    def extract_json(text: str) -> dict:
+        """Parse the model verdict, tolerating R1-style <think> blocks."""
+        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+        if not match:
+            return {}
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return {}
+
+    def preprocess(row: dict) -> dict:
+        return dict(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": f"Subject: {row['subject']}\n\n{row['body']}"},
+            ],
+            sampling_params=dict(
+                temperature=0.6,
+                top_p=0.95,
+                max_tokens=1024,
+            ),
+            **row,
+        )
+
+    def postprocess(row: dict) -> dict:
+        verdict = extract_json(row["generated_text"])
+        return dict(
+            ticket_id=row["ticket_id"],
+            created_at=row["created_at"],
+            customer_tier=row["customer_tier"],
+            channel=row["channel"],
+            subject=row["subject"],
+            sentiment=verdict.get("sentiment", "unknown"),
+            urgency=verdict.get("urgency", "unknown"),
+            category=verdict.get("category", "unknown"),
+            summary=verdict.get("summary", ""),
+            # Exact per-request token counts from the vLLM engine stage
+            prompt_tokens=row["num_input_tokens"],
+            completion_tokens=row["num_generated_tokens"],
+        )
+
+    def main():
+        ray.init()
+        run_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+        config = vLLMEngineProcessorConfig(
+            model_source=MODEL_SOURCE,
+            engine_kwargs=dict(
+                load_format="runai_streamer",
+                model_loader_extra_config=dict(concurrency=32),
+                dtype="bfloat16",
+                max_model_len=8192,
+                gpu_memory_utilization=0.92,
+                enable_prefix_caching=True,
+                enable_chunked_prefill=True,
+                max_num_batched_tokens=8192,
+            ),
+            accelerator_type="L40S",
+            concurrency=1,
+            batch_size=64,
+        )
+        processor = build_processor(config, preprocess=preprocess, postprocess=postprocess)
+
+        # ---- Incremental read: pin a snapshot, filter past the watermark ----
+        catalog = load_catalog("glue", **CATALOG_PROPS)
+        table = catalog.load_table(ICEBERG_TABLE)
+        snapshot = table.current_snapshot()
+        if snapshot is None:
+            print(f"{ICEBERG_TABLE} has no snapshots yet, nothing to process.")
+            return
+        watermark = int(table.properties.get(WATERMARK_PROP, "0"))
+
+        # NOTE: row_filter must be a pyiceberg expression object, not a
+        # string. Ray 2.56 hands the value straight to pyiceberg's bind(),
+        # which cannot parse strings ("Cannot visit unsupported expression").
+        ds = ray.data.read_iceberg(
+            table_identifier=ICEBERG_TABLE,
+            row_filter=GreaterThan("ingested_ms", watermark),
+            snapshot_id=snapshot.snapshot_id,
+            catalog_kwargs=dict(name="glue", **CATALOG_PROPS),
+        )
+        total = ds.count()
+        print("==== INCREMENTAL STATE ====")
+        print(f"table             : {ICEBERG_TABLE}")
+        print(f"snapshot pinned   : {snapshot.snapshot_id}")
+        print(f"watermark (prev)  : {watermark}")
+        print(f"new tickets       : {total}")
+        if total == 0:
+            print("No tickets appended since the last run. Exiting.")
+            return
+        new_watermark = ds.max("ingested_ms")
+
+        t0 = time.time()
+        results = processor(ds).materialize()
+        wall = time.time() - t0
+
+        out_path = f"{OUTPUT_PATH}/run-{run_stamp}"
+        results.write_parquet(out_path)
+
+        # Advance the watermark only now that results are durable in S3.
+        table = catalog.load_table(ICEBERG_TABLE)
+        txn = table.transaction()
+        txn.set_properties({WATERMARK_PROP: str(new_watermark)})
+        txn.commit_transaction()
+        print(f"watermark (new)   : {new_watermark}")
+
+        print("==== BATCH SUMMARY (native ray.data.llm) ====")
+        print(f"tickets processed : {total}")
+        print(f"wall time         : {wall:.1f}s")
+        print(f"throughput        : {total / wall:.2f} tickets/s")
+        print(f"results           : {out_path}")
+        for col in ("urgency", "sentiment", "category"):
+            counts = results.groupby(col).count().take_all()
+            pretty = {row[col]: row["count()"] for row in counts}
+            print(f"{col:9s} breakdown: {pretty}")
+
+        # ---- Tokenomics: tokens consumed and GPU cost attribution ----
+        gpu_cost_hr = float(os.environ.get("GPU_COST_PER_HOUR", "0"))
+        prompt_toks = results.sum("prompt_tokens")
+        output_toks = results.sum("completion_tokens")
+        print("==== TOKENOMICS ====")
+        print(f"prompt tokens     : {prompt_toks:,} "
+              f"({prompt_toks / total:.0f}/ticket)")
+        print(f"output tokens     : {output_toks:,} "
+              f"({output_toks / total:.0f}/ticket)")
+        print(f"output token rate : {output_toks / wall:,.0f} tok/s")
+        if gpu_cost_hr > 0:
+            gpu_hours = wall / 3600  # this job holds exactly one GPU
+            cost = gpu_hours * gpu_cost_hr
+            print(f"GPU cost          : ${cost:.4f} "
+                  f"({gpu_hours:.4f} GPU-h @ ${gpu_cost_hr}/h)")
+            print(f"cost per 1k tickets       : ${cost / total * 1000:.4f}")
+            print(f"cost per 1M output tokens : ${cost / output_toks * 1e6:.3f}")
+            print(f"cost per 1M total tokens  : "
+                  f"${cost / (prompt_toks + output_toks) * 1e6:.3f}")
+
+    if __name__ == "__main__":
+        main()
