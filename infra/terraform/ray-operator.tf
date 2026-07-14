@@ -68,6 +68,23 @@ resource "aws_iam_policy" "raydata_iceberg" {
           "${module.s3_bucket.s3_bucket_arn}/iceberg-warehouse/*"
         ]
       },
+      # Allow reading/writing model weights and batch inference data
+      # (models/ holds safetensors streamed by vLLM via Run:ai Model Streamer,
+      #  ray-batch-inference/ holds mocked input data and inference results)
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListMultipartUploadParts",
+          "s3:AbortMultipartUpload"
+        ]
+        Resource = [
+          "${module.s3_bucket.s3_bucket_arn}/models/*",
+          "${module.s3_bucket.s3_bucket_arn}/ray-batch-inference/*"
+        ]
+      },
       # Allow listing bucket with prefix restriction
       {
         Effect = "Allow"
@@ -83,6 +100,8 @@ resource "aws_iam_policy" "raydata_iceberg" {
             "s3:prefix" = [
               "${local.s3_prefix}*",
               "iceberg-warehouse/*",
+              "models/*",
+              "ray-batch-inference/*",
               trimsuffix(local.s3_prefix, "/")
             ]
           }

@@ -1,0 +1,307 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "description": "Live GPU utilization, cost burn, and Ray Data pipeline throughput for the Ray batch LLM inference example (open source: DCGM exporter + Ray metrics + kube-prometheus-stack).",
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "panels": [],
+      "title": "GPU — the cost driver",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Live GPU utilization on the batch inference node. The whole cost argument is keeping this pinned near 100% while the job runs.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" },
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}",
+          "legendFormat": "GPU util {{gpu}} ({{exported_pod}})",
+          "refId": "A"
+        }
+      ],
+      "title": "GPU Utilization %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "GPU memory in use. DeepSeek-R1-8B weights plus the KV cache; gpu_memory_utilization is set to 0.92 in the engine config.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" },
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "DCGM_FI_DEV_FB_USED{exported_namespace=~\"$namespace\"} / (DCGM_FI_DEV_FB_USED{exported_namespace=~\"$namespace\"} + DCGM_FI_DEV_FB_FREE{exported_namespace=~\"$namespace\"}) * 100",
+          "legendFormat": "GPU mem {{gpu}} ({{exported_pod}})",
+          "refId": "A"
+        }
+      ],
+      "title": "GPU Memory Used %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "GPU power draw in watts. A saturated L40S pulls close to its 300W board limit.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" },
+          "min": 0,
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "DCGM_FI_DEV_POWER_USAGE{exported_namespace=~\"$namespace\"}",
+          "legendFormat": "power {{gpu}} ({{exported_pod}})",
+          "refId": "A"
+        }
+      ],
+      "title": "GPU Power Draw",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Actual GPU cost of the batch runs in the selected window. Counts real DCGM samples (the exporter only emits while the GPU node exists) x scrape interval to get true GPU-seconds, so it reflects only the time instances actually ran and stays flat when nothing is running. Sums across every GPU that ran in the window. Divide by tokens produced (results Parquet) for cost per token.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 9 },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(count_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}[$__range])) * $dcgm_scrape_seconds / 3600 * $gpu_hourly_rate",
+          "legendFormat": "GPU cost (actual runtime)",
+          "refId": "A"
+        }
+      ],
+      "title": "GPU Cost (actual runtime in window)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "GPU-hours actually consumed in the window (real DCGM sample time), and the configured hourly rate for reference. GPU-hours x rate = the cost stat to the left.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] },
+          "overrides": []
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "hourly rate" }, "properties": [ { "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 5 } ] },
+          { "matcher": { "id": "byName", "options": "GPU-hours (window)" }, "properties": [ { "id": "unit", "value": "h" }, { "id": "decimals", "value": 4 } ] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 9 },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "vertical",
+        "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(count_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace=~\"$namespace\"}[$__range])) * $dcgm_scrape_seconds / 3600",
+          "legendFormat": "GPU-hours (window)",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "$gpu_hourly_rate",
+          "legendFormat": "hourly rate",
+          "refId": "B"
+        }
+      ],
+      "title": "GPU-hours & rate",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 10,
+      "panels": [],
+      "title": "Ray Data pipeline throughput (verify metric names against your Ray version)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Rows per second flowing through each Ray Data operator (read, preprocess, engine, write). Watch the engine stage stay fed. NOTE: metric name verified against Ray 2.56 during the live pass; adjust if your Ray version differs.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "min": 0,
+          "unit": "rows/s (short)"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "id": 11,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (operator) (rate(ray_data_output_rows[1m]))",
+          "legendFormat": "{{operator}}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (operator) (rate(data_output_rows[1m]))",
+          "legendFormat": "{{operator}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Ray Data rows/sec by operator",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Cumulative rows output by the pipeline. Should climb to the ticket count for the run.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "id": 12,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (operator) (ray_data_output_rows)",
+          "legendFormat": "{{operator}}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (operator) (data_output_rows)",
+          "legendFormat": "{{operator}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Ray Data rows output (cumulative)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 40,
+  "tags": [ "ray", "batch-inference", "gpu", "tokenomics" ],
+  "templating": {
+    "list": [
+      {
+        "description": "Prometheus data source to use for dashboard",
+        "label": "Data Source",
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": { "text": "raydata", "value": "raydata" },
+        "description": "Namespace the batch inference pods run in",
+        "label": "Namespace",
+        "name": "namespace",
+        "options": [ { "selected": true, "text": "raydata", "value": "raydata" } ],
+        "query": "raydata",
+        "type": "textbox"
+      },
+      {
+        "current": { "text": "2.24208", "value": "2.24208" },
+        "description": "GPU node hourly rate in USD (default g6e.2xlarge on-demand us-west-2). Set to your Spot or negotiated rate.",
+        "label": "GPU $/hour",
+        "name": "gpu_hourly_rate",
+        "options": [ { "selected": true, "text": "2.24208", "value": "2.24208" } ],
+        "query": "2.24208",
+        "type": "constant"
+      },
+      {
+        "current": { "text": "30", "value": "30" },
+        "description": "Seconds between DCGM exporter scrapes (matches the GPU operator ServiceMonitor interval in this stack). Used to convert sample counts to GPU-seconds for the cost math.",
+        "label": "DCGM scrape (s)",
+        "name": "dcgm_scrape_seconds",
+        "options": [ { "selected": true, "text": "30", "value": "30" } ],
+        "query": "30",
+        "type": "constant"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Ray Batch Inference — GPU & Tokenomics",
+  "uid": "ray-batch-inference",
+  "version": 1,
+  "weekStart": ""
+}

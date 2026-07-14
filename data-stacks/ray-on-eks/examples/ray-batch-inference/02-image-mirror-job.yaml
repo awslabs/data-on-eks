@@ -1,0 +1,77 @@
+# =============================================================================
+# Image Mirror Job
+# =============================================================================
+# Mirrors the official rayproject/ray-llm image (~11.6GB) from Docker Hub to
+# a same-region private ECR repository using skopeo. Pulling from in-region
+# ECR is dramatically faster and avoids Docker Hub rate limits when GPU nodes
+# scale out.
+#
+# Prereqs (run locally, see deploy.sh):
+#   aws ecr create-repository --repository-name ray-llm --region $AWS_REGION
+#   kubectl create secret generic ecr-push-token -n raydata \
+#     --from-literal=token="$(aws ecr get-login-password --region $AWS_REGION)"
+#
+# Placeholders (substituted by deploy.sh):
+#   $ECR_REGISTRY   - e.g. 123456789012.dkr.ecr.us-west-2.amazonaws.com
+#   $RAY_LLM_TAG    - e.g. 2.56.0-py312-cu130
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mirror-ray-llm-image
+  namespace: raydata
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: image-mirror
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: skopeo
+          image: quay.io/skopeo/stable:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              SRC="docker://docker.io/rayproject/ray-llm:$RAY_LLM_TAG"
+              DST="docker://$ECR_REGISTRY/ray-llm:$RAY_LLM_TAG"
+              echo "=== Mirroring $SRC -> $DST ==="
+              T0=$(date +%s)
+              skopeo copy --retry-times 3 \
+                --dest-creds "AWS:$ECR_TOKEN" \
+                "$SRC" "$DST"
+              T1=$(date +%s)
+              echo "TIMING image_mirror_seconds=$((T1 - T0))"
+              echo "Image mirror complete."
+          env:
+            - name: RAY_LLM_TAG
+              value: "$RAY_LLM_TAG"
+            - name: ECR_REGISTRY
+              value: "$ECR_REGISTRY"
+            - name: ECR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ecr-push-token
+                  key: token
+            - name: TMPDIR
+              value: /scratch
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+              ephemeral-storage: 40Gi
+            limits:
+              memory: 8Gi
+              ephemeral-storage: 60Gi
+          volumeMounts:
+            - name: scratch
+              mountPath: /scratch
+      volumes:
+        - name: scratch
+          emptyDir:
+            sizeLimit: 50Gi
+      nodeSelector:
+        kubernetes.io/arch: amd64

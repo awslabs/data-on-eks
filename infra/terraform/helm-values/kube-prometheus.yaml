@@ -183,3 +183,6 @@ grafana:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/k8s-events-dashboard.json
       spark-logs-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/spark-logs-dashboard.json
+      # Ray batch inference: GPU utilization/cost (DCGM) + Ray Data throughput
+      ray-batch-inference-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/ray-batch-inference-dashboard.json

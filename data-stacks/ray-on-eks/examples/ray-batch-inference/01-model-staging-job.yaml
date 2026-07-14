@@ -1,0 +1,97 @@
+# =============================================================================
+# Model Staging Job
+# =============================================================================
+# Downloads DeepSeek-R1-Distill-Llama-8B safetensors from HuggingFace and
+# syncs them to S3. vLLM later streams these weights directly from S3 to GPU
+# memory using the Run:ai Model Streamer (no HuggingFace download on the GPU
+# node, no giant container image layers, no EBS snapshot baking).
+#
+# Placeholders (substituted by deploy.sh):
+#   $S3_BUCKET   - S3 bucket for model weights
+#   $AWS_REGION  - AWS region
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-staging-deepseek-r1-8b
+  namespace: raydata
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: model-staging
+    spec:
+      restartPolicy: Never
+      serviceAccountName: raydata
+      containers:
+        - name: stage-model
+          image: python:3.12-slim
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              MODEL_ID="deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+              S3_DEST="s3://$S3_BUCKET/models/deepseek-r1-distill-llama-8b"
+
+              echo "=== Installing tooling ==="
+              # awscli (not s5cmd): its SDK supports EKS Pod Identity credentials
+              pip install --quiet huggingface_hub awscli
+
+              # Xet-backed high-performance transfer (replaces hf_transfer)
+              export HF_XET_HIGH_PERFORMANCE=1
+              echo "=== Downloading $MODEL_ID from HuggingFace ==="
+              T0=$(date +%s)
+              hf download "$MODEL_ID" \
+                --local-dir /scratch/model \
+                --include "*.safetensors" --include "*.json" --include "*.txt"
+              T1=$(date +%s)
+              echo "TIMING hf_download_seconds=$((T1 - T0))"
+              rm -rf /scratch/model/.cache
+              du -sh /scratch/model
+
+              # Workaround for https://github.com/huggingface/transformers/issues/45488:
+              # transformers v5 LlamaTokenizer(Fast) force-installs a Metaspace
+              # pre-tokenizer that silently breaks DeepSeek R1-family tokenizers
+              # (spaces vanish on decode). Loading via PreTrainedTokenizerFast
+              # uses tokenizer.json as-is and behaves correctly.
+              python - <<'PYEOF'
+              import json
+              path = "/scratch/model/tokenizer_config.json"
+              cfg = json.load(open(path))
+              if cfg.get("tokenizer_class") == "LlamaTokenizerFast":
+                  cfg["tokenizer_class"] = "PreTrainedTokenizerFast"
+                  json.dump(cfg, open(path, "w"), indent=1)
+                  print("Patched tokenizer_class -> PreTrainedTokenizerFast")
+              PYEOF
+
+              echo "=== Syncing to $S3_DEST ==="
+              T2=$(date +%s)
+              aws s3 sync /scratch/model/ "$S3_DEST/" --no-progress
+              T3=$(date +%s)
+              echo "TIMING s3_upload_seconds=$((T3 - T2))"
+
+              echo "=== Verifying S3 contents ==="
+              aws s3 ls "$S3_DEST/" --recursive --human-readable
+              echo "Model staging complete."
+          env:
+            - name: AWS_REGION
+              value: "$AWS_REGION"
+          resources:
+            requests:
+              cpu: "4"
+              memory: 8Gi
+              ephemeral-storage: 40Gi
+            limits:
+              memory: 12Gi
+              ephemeral-storage: 60Gi
+          volumeMounts:
+            - name: scratch
+              mountPath: /scratch
+      volumes:
+        - name: scratch
+          emptyDir:
+            sizeLimit: 50Gi
+      nodeSelector:
+        kubernetes.io/arch: amd64

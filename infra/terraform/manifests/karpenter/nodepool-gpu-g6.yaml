@@ -12,10 +12,12 @@ spec:
         NodeGroupType: GPU
 
     spec:
+      # Dedicated GPU nodeclass: SOCI parallel image pull (FastImagePull)
+      # + RAID0 instance store for fast pulls of large inference images.
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: default
+        name: gpu
 
       requirements:
         # Capacity type - on-demand preferred for GPU (spot can be used for dev/test)
