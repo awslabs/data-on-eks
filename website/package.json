@@ -19,7 +19,7 @@
     "dev": "docusaurus start"
   },
   "dependencies": {
-    "@babel/core": "^7.22.1",
+    "@babel/core": "^7.29.6",
     "@babel/plugin-syntax-jsx": "^7.22.5",
     "@babel/preset-react": "^7.22.5",
     "@docusaurus/core": "^3.9.1",
