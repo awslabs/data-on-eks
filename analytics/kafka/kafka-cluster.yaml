@@ -1,0 +1,179 @@
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: cluster
+  namespace: kafka
+  annotations:
+    strimzi.io/kraft: enabled
+    strimzi.io/node-pools: enabled
+spec:
+  kafka:
+    version: 4.3.0
+    metadataVersion: 4.3-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+    jvmOptions:
+      "-Xmx": "3g"
+      "-Xms": "2g"
+    template:
+      pod:
+        # Pin Kafka broker/controller pods to the dedicated Kafka NodePool
+        # (NodeGroupType=KafkaBroker, On-Demand) provisioned by Terraform.
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: NodeGroupType
+                      operator: In
+                      values:
+                        - KafkaBroker
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                    - key: "strimzi.io/pool-name"
+                      operator: In
+                      values:
+                        - broker
+                        - controller
+                topologyKey: "kubernetes.io/hostname"
+        topologySpreadConstraints:
+          - labelSelector:
+              matchExpressions:
+                - key: "strimzi.io/pool-name"
+                  operator: In
+                  values:
+                    - broker
+                    - controller
+            maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
+        # Prevent EKS Auto Mode / Karpenter from consolidating stateful Kafka nodes
+        metadata:
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: kafka-metrics-config.yml
+    rack:
+      topologyKey: topology.kubernetes.io/zone
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  cruiseControl: {}
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: kafka-metrics
+  namespace: kafka
+  labels:
+    app: strimzi
+data:
+  kafka-metrics-config.yml: |
+    lowercaseOutputName: true
+    rules:
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels:
+          clientId: "$3"
+          topic: "$4"
+          partition: "$5"
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels:
+          clientId: "$3"
+          broker: "$4:$5"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Count
+        name: kafka_$1_$2_$3_count
+        type: COUNTER
+    cruise-control-config.yml: |
+      lowercaseOutputName: true
+      rules:
+        - pattern: kafka.cruisecontrol<name=(.+)><>(\w+)
+          name: kafka_cruisecontrol_$1_$2
+          type: GAUGE
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: controller
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: cluster
+spec:
+  replicas: 3
+  roles:
+    - controller
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: "1"
+    limits:
+      memory: 4Gi
+      cpu: "1"
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 20Gi
+        class: gp3
+        kraftMetadata: shared
+        deleteClaim: true
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: broker
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: cluster
+spec:
+  replicas: 3
+  roles:
+    - broker
+  resources:
+    requests:
+      memory: 6Gi
+      cpu: "1"
+    limits:
+      memory: 8Gi
+      cpu: "2"
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 20Gi
+        class: gp3
+        kraftMetadata: shared
+        deleteClaim: true
