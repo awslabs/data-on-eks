@@ -6,8 +6,15 @@ metadata:
   labels:
     strimzi.io/cluster: cluster
 spec:
+  # The workshop cluster commonly spans 2 Availability Zones (racks) while topics
+  # use replication factor 3. The strict RackAwareGoal requires racks >= RF and
+  # fails in that case, so we use the soft RackAwareDistributionGoal (best-effort
+  # rack spread) instead. Because RackAwareGoal is a configured hard goal and we
+  # are intentionally not enforcing it, skipHardGoalCheck must be true.
+  skipHardGoalCheck: true
   goals:
-    - RackAwareGoal
+    - RackAwareDistributionGoal
+    - MinTopicLeadersPerBrokerGoal
     - ReplicaCapacityGoal
     - DiskCapacityGoal
     - NetworkInboundCapacityGoal
@@ -22,4 +29,3 @@ spec:
     - TopicReplicaDistributionGoal
     - LeaderReplicaDistributionGoal
     - LeaderBytesInDistributionGoal
-    - PreferredLeaderElectionGoal
