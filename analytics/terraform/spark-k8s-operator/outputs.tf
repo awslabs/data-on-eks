@@ -116,3 +116,17 @@ output "celeborn_master_endpoint" {
   description = "Celeborn master endpoint for Spark shuffle configuration"
   value       = var.enable_celeborn ? "celeborn-master-0.celeborn-master-svc.celeborn.svc.cluster.local:9097" : null
 }
+
+################################################################################
+# Kafka Configuration
+################################################################################
+
+output "kafka_bootstrap_plain" {
+  description = "Kafka PLAINTEXT bootstrap servers (internal). Available after the Kafka cluster is deployed in the lab."
+  value       = var.enable_kafka ? "cluster-kafka-bootstrap.kafka.svc:9092" : null
+}
+
+output "kafka_bootstrap_tls" {
+  description = "Kafka TLS bootstrap servers (internal). Available after the Kafka cluster is deployed in the lab."
+  value       = var.enable_kafka ? "cluster-kafka-bootstrap.kafka.svc:9093" : null
+}

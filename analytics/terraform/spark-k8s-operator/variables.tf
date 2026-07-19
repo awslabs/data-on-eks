@@ -109,3 +109,15 @@ variable "enable_celeborn" {
   type        = bool
   default     = true
 }
+
+variable "enable_kafka" {
+  description = "Enable Apache Kafka on EKS. Installs the Strimzi Cluster Operator and a dedicated Kafka NodePool; the Kafka cluster itself is deployed by the participant during the lab."
+  type        = bool
+  default     = true
+}
+
+variable "strimzi_operator_version" {
+  description = "Strimzi Kafka Operator Helm chart version. Must support the Kafka version declared in the Kafka custom resource (Strimzi 1.1.0 supports Apache Kafka 4.3.0)."
+  type        = string
+  default     = "1.1.0"
+}

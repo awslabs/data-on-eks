@@ -1,0 +1,61 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: kafka
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: kafka
+        node.kubernetes.io/instance-category: memory
+        node.kubernetes.io/arch: amd64
+        # Kafka brokers/controllers target this pool via nodeSelector in the Kafka CR
+        NodeGroupType: "KafkaBroker"
+
+    spec:
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: ebs-gp3-1000gi-6000iops-1000tp
+
+      requirements:
+        # Kafka is stateful - keep brokers on On-Demand to avoid Spot interruptions
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+
+        # Architecture - x86 only
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+
+        # General purpose (m) and memory optimized (r) families suit Kafka
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values: ["m", "r"]
+
+        # Instance sizes - right-sized for a workshop-scale Kafka cluster
+        - key: eks.amazonaws.com/instance-size
+          operator: In
+          values: ["large", "xlarge", "2xlarge", "4xlarge"]
+
+        # Nitro system for better performance
+        - key: eks.amazonaws.com/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+
+        # Generation 4+
+        - key: eks.amazonaws.com/instance-generation
+          operator: Gt
+          values: ["4"]
+
+  # Resource limits for budget control
+  limits:
+    cpu: "200"
+    memory: "800Gi"
+
+  # Node lifecycle - only consolidate genuinely empty nodes so stateful
+  # Kafka brokers are not disrupted while the cluster is running.
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: "1h"
