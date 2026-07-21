@@ -12,7 +12,7 @@ variable "region" {
 
 variable "eks_cluster_version" {
   description = "EKS Cluster version"
-  default     = "1.33"
+  default     = "1.36"
   type        = string
 }
 
@@ -35,7 +35,7 @@ variable "secondary_cidr_blocks" {
 variable "az_count" {
   description = "Number of Availability Zones (2-4)"
   type        = number
-  default     = 2
+  default     = 3
 
   validation {
     condition     = var.az_count >= 2 && var.az_count <= 4
@@ -108,4 +108,15 @@ variable "enable_celeborn" {
   description = "Enable Apache Celeborn Remote Shuffle Service"
   type        = bool
   default     = true
+}
+variable "enable_kafka_lab" {
+  description = "Enable the Apache Kafka lab. When true, Terraform installs the Strimzi Cluster Operator into the 'kafka' namespace and creates the 'kafka-gp3' StorageClass. The dedicated Kafka Karpenter NodePool ('nodepool-kafka.yaml') is applied regardless — it is inert without Kafka pods."
+  type        = bool
+  default     = true
+}
+
+variable "strimzi_operator_version" {
+  description = "Strimzi Cluster Operator Helm chart version. Must be compatible with the Kafka version declared in analytics/kafka/kafka-cluster.yaml. Strimzi 1.1.0 supports Apache Kafka 4.2.x and 4.3.0 via the v1 CRD API."
+  type        = string
+  default     = "1.1.0"
 }

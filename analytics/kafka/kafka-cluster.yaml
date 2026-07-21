@@ -31,6 +31,18 @@ spec:
     template:
       pod:
         affinity:
+          # Route Kafka broker/controller pods to the dedicated Kafka NodePool
+          # (label `workload: kafka` on that pool's node template). Without
+          # this nodeAffinity, Karpenter picks another feasible pool based on
+          # weight — the taint on the Kafka NodePool only pushes non-Kafka
+          # workloads OFF it, it does not pull Kafka pods IN.
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: workload
+                      operator: In
+                      values: ["kafka"]
           podAntiAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
               - labelSelector:
@@ -41,6 +53,20 @@ spec:
                         - broker
                         - controller
                 topologyKey: "kubernetes.io/hostname"
+        # Tolerate the taint on the dedicated Kafka NodePool. Combined with the
+        # NodePool's `workload=kafka:NoSchedule` taint, this gives two-way
+        # exclusion: other workloads are pushed off the Kafka pool, and Kafka
+        # pods will not schedule anywhere else in the cluster.
+        tolerations:
+          - key: workload
+            operator: Equal
+            value: kafka
+            effect: NoSchedule
+        # DoNotSchedule (hard) — with replication.factor=3 topics and Cruise
+        # Control's strict RackAwareGoal, we need brokers spread across at
+        # least 3 AZs. ScheduleAnyway lets Karpenter pack multiple brokers
+        # into the cheapest AZ, which then trips RackAwareGoal with
+        # "Insufficient number of racks (Current: 2, Needed: 3)".
         topologySpreadConstraints:
           - labelSelector:
               matchExpressions:
@@ -51,7 +77,14 @@ spec:
                     - controller
             maxSkew: 1
             topologyKey: topology.kubernetes.io/zone
-            whenUnsatisfiable: ScheduleAnyway
+            whenUnsatisfiable: DoNotSchedule
+        # Kafka brokers hold state on their EBS PVC. Prevent Karpenter's
+        # voluntary consolidation (Balanced or WhenEmptyOrUnderutilized) from
+        # draining a broker to bin-pack: ISR would shrink below min.insync.replicas
+        # for the time it takes the pod to restart on a new node.
+        metadata:
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
     metricsConfig:
       type: jmxPrometheusExporter
       valueFrom:
@@ -132,7 +165,7 @@ spec:
       - id: 0
         type: persistent-claim
         size: 100Gi
-        class: gp3
+        class: kafka-gp3
         kraftMetadata: shared
         deleteClaim: true
 ---
@@ -160,6 +193,6 @@ spec:
       - id: 0
         type: persistent-claim
         size: 100Gi
-        class: gp3
+        class: kafka-gp3
         kraftMetadata: shared
         deleteClaim: true
