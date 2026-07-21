@@ -1,0 +1,198 @@
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: cluster
+  namespace: kafka
+  annotations:
+    strimzi.io/kraft: enabled
+    strimzi.io/node-pools: enabled
+spec:
+  kafka:
+    version: 4.3.0
+    metadataVersion: 4.3-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+    jvmOptions:
+      "-Xmx": "6g"
+      "-Xms": "4g"
+    template:
+      pod:
+        affinity:
+          # Route Kafka broker/controller pods to the dedicated Kafka NodePool
+          # (label `workload: kafka` on that pool's node template). Without
+          # this nodeAffinity, Karpenter picks another feasible pool based on
+          # weight — the taint on the Kafka NodePool only pushes non-Kafka
+          # workloads OFF it, it does not pull Kafka pods IN.
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: workload
+                      operator: In
+                      values: ["kafka"]
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                    - key: "strimzi.io/pool-name"
+                      operator: In
+                      values:
+                        - broker
+                        - controller
+                topologyKey: "kubernetes.io/hostname"
+        # Tolerate the taint on the dedicated Kafka NodePool. Combined with the
+        # NodePool's `workload=kafka:NoSchedule` taint, this gives two-way
+        # exclusion: other workloads are pushed off the Kafka pool, and Kafka
+        # pods will not schedule anywhere else in the cluster.
+        tolerations:
+          - key: workload
+            operator: Equal
+            value: kafka
+            effect: NoSchedule
+        # DoNotSchedule (hard) — with replication.factor=3 topics and Cruise
+        # Control's strict RackAwareGoal, we need brokers spread across at
+        # least 3 AZs. ScheduleAnyway lets Karpenter pack multiple brokers
+        # into the cheapest AZ, which then trips RackAwareGoal with
+        # "Insufficient number of racks (Current: 2, Needed: 3)".
+        topologySpreadConstraints:
+          - labelSelector:
+              matchExpressions:
+                - key: "strimzi.io/pool-name"
+                  operator: In
+                  values:
+                    - broker
+                    - controller
+            maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: DoNotSchedule
+        # Kafka brokers hold state on their EBS PVC. Prevent Karpenter's
+        # voluntary consolidation (Balanced or WhenEmptyOrUnderutilized) from
+        # draining a broker to bin-pack: ISR would shrink below min.insync.replicas
+        # for the time it takes the pod to restart on a new node.
+        metadata:
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: kafka-metrics-config.yml
+    rack:
+      topologyKey: topology.kubernetes.io/zone
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  cruiseControl: {}
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: kafka-metrics
+  namespace: kafka
+  labels:
+    app: strimzi
+data:
+  kafka-metrics-config.yml: |
+    lowercaseOutputName: true
+    rules:
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels:
+          clientId: "$3"
+          topic: "$4"
+          partition: "$5"
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels:
+          clientId: "$3"
+          broker: "$4:$5"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Count
+        name: kafka_$1_$2_$3_count
+        type: COUNTER
+  cruise-control-config.yml: |
+    lowercaseOutputName: true
+    rules:
+      - pattern: kafka.cruisecontrol<name=(.+)><>(\w+)
+        name: kafka_cruisecontrol_$1_$2
+        type: GAUGE
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: controller
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: cluster
+spec:
+  replicas: 3
+  roles:
+    - controller
+  resources:
+    requests:
+      memory: 4Gi
+      cpu: "1"
+    limits:
+      memory: 8Gi
+      cpu: "2"
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 100Gi
+        class: kafka-gp3
+        kraftMetadata: shared
+        deleteClaim: true
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: broker
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: cluster
+spec:
+  replicas: 3
+  roles:
+    - broker
+  resources:
+    requests:
+      memory: 58Gi
+      cpu: "6"
+    limits:
+      memory: 64Gi
+      cpu: "8"
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 100Gi
+        class: kafka-gp3
+        kraftMetadata: shared
+        deleteClaim: true
