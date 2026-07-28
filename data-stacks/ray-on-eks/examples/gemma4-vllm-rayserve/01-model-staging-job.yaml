@@ -1,0 +1,116 @@
+# =============================================================================
+# Model Staging Job - Gemma 4 12B
+# =============================================================================
+# Downloads google/gemma-4-12B-it safetensors from HuggingFace and syncs them
+# to S3. vLLM later streams these weights directly from S3 to GPU memory using
+# the Run:ai Model Streamer (load_format: runai_streamer) - no HuggingFace
+# download on the GPU node, no giant container image layers, no EBS snapshots.
+#
+# Gemma 4 is apache-2.0 and NOT gated - no HuggingFace token required. If you
+# swap in a gated variant, uncomment the HF_TOKEN env block below and create
+# the hf-token secret first.
+#
+# Model facts (from the HF model card / API):
+#   - google/gemma-4-12B-it: 11.96B params, bf16 => ~22.3 GiB, a SINGLE
+#     model.safetensors file (not sharded).
+#   - Gemma4UnifiedForConditionalGeneration (encoder-free multimodal:
+#     text + image + audio), model_type gemma4_unified, 128K context.
+#   - Tokenizer is tokenizer.json only (no SentencePiece tokenizer.model).
+#   - The instruction-tuned (-it) model ships its chat template as a separate
+#     chat_template.jinja file, so we must also stage *.jinja.
+#
+# $HF_MODEL_ID / $MODEL_DIR let deploy.sh point this at the base model or
+# other variants without editing the file.
+#
+# Placeholders (substituted by deploy.sh):
+#   $S3_BUCKET    - S3 bucket for model weights
+#   $AWS_REGION   - AWS region
+#   $HF_MODEL_ID  - HuggingFace repo id (default google/gemma-4-12B-it)
+#   $MODEL_DIR    - S3 subdir under models/ (default gemma-4-12b-it)
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-staging-gemma4-12b
+  namespace: raydata
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: model-staging
+    spec:
+      restartPolicy: Never
+      serviceAccountName: raydata
+      containers:
+        - name: stage-model
+          image: python:3.12-slim
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              # NOTE: use bash var names that are NOT deploy.sh render
+              # placeholders ($HF_MODEL_ID/$MODEL_DIR get sed-substituted to
+              # literals; $HF_REPO/$S3_DEST are left for the shell at runtime).
+              HF_REPO="$HF_MODEL_ID"
+              S3_DEST="s3://$S3_BUCKET/models/$MODEL_DIR"
+
+              echo "=== Installing tooling ==="
+              # awscli (not s5cmd): its SDK supports EKS Pod Identity credentials
+              pip install --quiet huggingface_hub awscli
+
+              # Xet-backed high-performance transfer (replaces hf_transfer)
+              export HF_XET_HIGH_PERFORMANCE=1
+              echo "=== Downloading $HF_REPO from HuggingFace ==="
+              T0=$(date +%s)
+              # Weights (*.safetensors + any index), all *.json config /
+              # tokenizer / processor files, and the *.jinja chat template
+              # (the -it model ships it as a separate file, not in json).
+              hf download "$HF_REPO" \
+                --local-dir /scratch/model \
+                --include "*.safetensors" --include "*.json" --include "*.jinja"
+              T1=$(date +%s)
+              echo "TIMING hf_download_seconds=$((T1 - T0))"
+              rm -rf /scratch/model/.cache
+              du -sh /scratch/model
+
+              echo "=== Syncing to $S3_DEST ==="
+              T2=$(date +%s)
+              aws s3 sync /scratch/model/ "$S3_DEST/" --no-progress
+              T3=$(date +%s)
+              echo "TIMING s3_upload_seconds=$((T3 - T2))"
+
+              echo "=== Verifying S3 contents ==="
+              aws s3 ls "$S3_DEST/" --recursive --human-readable
+              echo "Model staging complete."
+          env:
+            - name: AWS_REGION
+              value: "$AWS_REGION"
+            - name: HF_MODEL_ID
+              value: "$HF_MODEL_ID"
+            - name: MODEL_DIR
+              value: "$MODEL_DIR"
+            # Uncomment for gated variants (and create the hf-token secret):
+            # - name: HF_TOKEN
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: hf-token
+            #       key: token
+          resources:
+            requests:
+              cpu: "4"
+              memory: 8Gi
+              ephemeral-storage: 40Gi
+            limits:
+              memory: 12Gi
+              ephemeral-storage: 60Gi
+          volumeMounts:
+            - name: scratch
+              mountPath: /scratch
+      volumes:
+        - name: scratch
+          emptyDir:
+            sizeLimit: 60Gi
+      nodeSelector:
+        kubernetes.io/arch: amd64
