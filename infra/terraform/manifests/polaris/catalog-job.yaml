@@ -1,0 +1,87 @@
+# Creates the '${catalog}' Iceberg catalog in Polaris on the real S3 warehouse
+# bucket, via the Polaris management API. Idempotent: exits cleanly if the
+# catalog already exists.
+#
+# stsUnavailable=true: Polaris does not vend credentials. Every engine (Trino)
+# brings its own identity via Pod Identity — the least-privilege posture on EKS.
+#
+# The root secret is read from the Terraform-generated Secret polaris-credentials.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: polaris-catalog-create
+  namespace: ${namespace}
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        app: polaris-catalog-create
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        NodeGroupType: general-purpose
+      containers:
+        - name: create-catalog
+          image: curlimages/curl:8.11.1
+          command: ["/bin/sh", "-c"]
+          env:
+            - name: ROOT_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-credentials
+                  key: ROOT_CLIENT_SECRET
+            - name: CATALOG
+              value: "${catalog}"
+            - name: BASE
+              value: "s3://${warehouse_bucket}/${catalog}"
+            - name: REGION
+              value: "${region}"
+          args:
+            - |
+              set -eu
+              API="http://polaris.${namespace}.svc.cluster.local:8181"
+              # Wait for Polaris to be healthy. In Polaris 1.3.0 the health
+              # endpoint (/q/health) is served ONLY on the management interface
+              # (port 8182), which is exposed by the headless polaris-mgmt
+              # service — NOT on the main API port 8181 (that returns 404) and
+              # NOT on the polaris service (which only publishes 8181).
+              HEALTH="http://polaris-mgmt.${namespace}.svc.cluster.local:8182/q/health"
+              until curl -sf -o /dev/null "$HEALTH" 2>/dev/null; do
+                echo "waiting for polaris server..."; sleep 3
+              done
+              ACCESS=$(curl -s -X POST "$API/api/catalog/v1/oauth/tokens" \
+                -H 'Polaris-Realm: POLARIS' \
+                -d grant_type=client_credentials -d client_id=root \
+                -d "client_secret=$ROOT_CLIENT_SECRET" -d scope=PRINCIPAL_ROLE:ALL \
+                | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+              [ -n "$ACCESS" ] || { echo "TOKEN_FAIL"; exit 1; }
+              code=$(curl -s -o /dev/null -w '%%{http_code}' \
+                -H "Authorization: Bearer $ACCESS" -H 'Polaris-Realm: POLARIS' \
+                "$API/api/management/v1/catalogs/$CATALOG")
+              if [ "$code" = 200 ]; then
+                echo "CATALOG_EXISTS"
+              else
+                # Create the catalog. drop-with-purge is enabled so that
+                # `DROP TABLE` from Trino (which sends purgeRequested=true by
+                # default) succeeds instead of returning HTTP 403 — Polaris
+                # disables purge by default via DROP_WITH_PURGE_ENABLED.
+                BODY=$(printf '{"catalog":{"type":"INTERNAL","name":"%s","properties":{"default-base-location":"%s","polaris.config.drop-with-purge.enabled":"true"},"storageConfigInfo":{"storageType":"S3","allowedLocations":["%s"],"stsUnavailable":true,"region":"%s"}}}' \
+                  "$CATALOG" "$BASE" "$BASE" "$REGION")
+                code=$(curl -s -o /tmp/cr -w '%%{http_code}' -X POST "$API/api/management/v1/catalogs" \
+                  -H "Authorization: Bearer $ACCESS" -H 'Polaris-Realm: POLARIS' \
+                  -H 'Content-Type: application/json' -d "$BODY")
+                echo "CREATE_HTTP=$code"; cat /tmp/cr; echo
+                { [ "$code" = 201 ] || [ "$code" = 200 ]; } || exit 1
+              fi
+              # Ensure the catalog_admin catalog-role can manage table content
+              # (create/drop/write). By default it only has MANAGE_ACCESS and
+              # MANAGE_METADATA, so DROP_TABLE_WITH_PURGE returns HTTP 403
+              # without CATALOG_MANAGE_CONTENT. PUT is idempotent.
+              code=$(curl -s -o /dev/null -w '%%{http_code}' -X PUT \
+                "$API/api/management/v1/catalogs/$CATALOG/catalog-roles/catalog_admin/grants" \
+                -H "Authorization: Bearer $ACCESS" -H 'Polaris-Realm: POLARIS' \
+                -H 'Content-Type: application/json' \
+                -d '{"grant":{"type":"catalog","privilege":"CATALOG_MANAGE_CONTENT"}}')
+              echo "GRANT_MANAGE_CONTENT=$code"
+              [ "$code" = 201 ] || [ "$code" = 200 ]

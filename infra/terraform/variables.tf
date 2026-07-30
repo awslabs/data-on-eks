@@ -280,3 +280,13 @@ variable "enable_valkey" {
   type        = bool
   default     = false
 }
+
+#---------------------------------------------------------------
+# Apache Polaris
+#---------------------------------------------------------------
+
+variable "enable_polaris" {
+  description = "Enable Apache Polaris (incubating) as an Iceberg REST catalog, with a dedicated S3 warehouse bucket and Trino integration"
+  type        = bool
+  default     = false
+}

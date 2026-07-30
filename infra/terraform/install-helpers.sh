@@ -27,7 +27,37 @@ check_prerequisites() {
     # Check AWS credentials
     aws sts get-caller-identity >/dev/null 2>&1 || { print_error "AWS credentials not configured."; exit 1; }
 
+    # Docker credential helper sanity check.
+    # Several charts (e.g. Karpenter) are pulled by Helm from public OCI
+    # registries such as oci://public.ecr.aws. Even for anonymous pulls, Helm
+    # first invokes the credsStore/credHelper configured in ~/.docker/config.json.
+    # If that helper is missing from PATH (common when Docker Desktop is not
+    # installed/running), the chart download fails with an opaque
+    # "docker-credential-<x>: executable file not found" error. public.ecr.aws
+    # allows anonymous pulls, so we neutralize a broken helper for this run.
+    check_docker_creds_helper
+
     print_status "Prerequisites check passed"
+}
+
+# Detect a docker credsStore/credHelper that isn't installed and disable it for
+# this deployment so anonymous public-OCI (public.ecr.aws) chart pulls succeed.
+check_docker_creds_helper() {
+    local docker_config="$HOME/.docker/config.json"
+    [ -f "$docker_config" ] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+
+    local helper
+    helper=$(python3 -c "import json,sys; print(json.load(open('$docker_config')).get('credsStore',''))" 2>/dev/null)
+    [ -n "$helper" ] || return 0
+
+    if ! command -v "docker-credential-$helper" >/dev/null 2>&1; then
+        print_warning "Docker credsStore '$helper' is configured but docker-credential-$helper is not on PATH."
+        print_warning "This breaks Helm OCI chart pulls (e.g. Karpenter). Disabling it for this deployment."
+        cp "$docker_config" "$docker_config.doeks-bak" 2>/dev/null || true
+        python3 -c "import json; p='$docker_config'; c=json.load(open(p)); c.pop('credsStore',None); json.dump(c,open(p,'w'),indent=2)" \
+            && print_status "Removed broken credsStore from $docker_config (backup: $docker_config.doeks-bak)."
+    fi
 }
 
 # Verify deployment

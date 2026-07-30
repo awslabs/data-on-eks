@@ -123,10 +123,37 @@ additionalCatalogs:
     hive.metastore.glue.region=${region}
     hive.metastore.glue.default-warehouse-dir=s3://${trino_s3_bucket_id}/
     fs.native-s3.enabled=true
+%{ if enable_polaris ~}
+  # Apache Polaris Iceberg REST catalog. Added only when enable_polaris=true.
+  # The OAuth2 credential is read from the POLARIS_OAUTH2_CREDENTIAL env var,
+  # injected via the envFrom secretRef below (never inlined here).
+  polaris: |-
+    connector.name=iceberg
+    iceberg.catalog.type=rest
+    iceberg.rest-catalog.uri=http://polaris.${polaris_namespace}.svc.cluster.local:8181/api/catalog
+    iceberg.rest-catalog.warehouse=${polaris_catalog}
+    iceberg.rest-catalog.security=OAUTH2
+    iceberg.rest-catalog.oauth2.credential=$${ENV:POLARIS_OAUTH2_CREDENTIAL}
+    iceberg.rest-catalog.oauth2.scope=PRINCIPAL_ROLE:ALL
+    iceberg.rest-catalog.oauth2.server-uri=http://polaris.${polaris_namespace}.svc.cluster.local:8181/api/catalog/v1/oauth/tokens
+    iceberg.rest-catalog.vended-credentials-enabled=false
+    iceberg.file-format=PARQUET
+    fs.native-s3.enabled=true
+    s3.region=${region}
+%{ endif ~}
 
 serviceAccount:
   create: true
   name: ${trino_sa}
+%{ if enable_polaris ~}
+
+# Polaris OAuth2 client credential (root:<secret>), injected into every Trino
+# pod so the 'polaris' catalog can authenticate. The Secret is created in the
+# trino namespace by polaris.tf. Present only when enable_polaris=true.
+envFrom:
+  - secretRef:
+      name: ${polaris_secret_name}
+%{ endif ~}
 
 ingress:
   enabled: false

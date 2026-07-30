@@ -69,10 +69,19 @@ export TF_LOG=ERROR
 print_status "Changing directory to $LOCAL_DIR"
 cd "$LOCAL_DIR"
 
-# List of Terraform modules to apply in sequence
+# List of Terraform modules to apply in sequence.
+# Karpenter (controller + NodePools + EC2NodeClass) MUST come up before any
+# workloads. Otherwise the final apply races Karpenter against ~15 wait=true
+# workloads whose pods request Karpenter-provisioned capacity: those pod waits
+# consume terraform's parallelism slots and block forever on pods that can never
+# schedule, starving the Karpenter install -> full deadlock.
 targets=(
   "module.vpc"
   "module.eks"
+  "module.karpenter"
+  "helm_release.karpenter"
+  "kubectl_manifest.karpenter_resources"
+  "kubectl_manifest.ec2nodeclass"
 )
 
 # Initialize Terraform

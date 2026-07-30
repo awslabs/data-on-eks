@@ -1,0 +1,63 @@
+# One-shot bootstrap of realm POLARIS + root principal into the Polaris
+# metastore. The chart does not bootstrap, so this Job runs the official
+# polaris-admin-tool against the same Postgres the server uses. The Polaris
+# server's wait-bootstrap init container (helm-values/polaris.yaml) blocks until
+# this Job has written polaris_schema.version.
+#
+# The root secret is passed via Kubernetes $(VAR) expansion from the
+# Terraform-generated Secret polaris-credentials; it never appears in a manifest.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: polaris-bootstrap
+  namespace: ${namespace}
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        app: polaris-bootstrap
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        NodeGroupType: general-purpose
+      initContainers:
+        # Wait for Postgres to accept connections and for the 'polaris' role/db
+        # created by the postgres init ConfigMap to exist.
+        - name: wait-postgres
+          image: postgres:16
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              until psql -h polaris-postgres.${namespace}.svc.cluster.local -U polaris -d polaris \
+                    -tAc "SELECT 1" >/dev/null 2>&1; do
+                echo "waiting for postgres (role polaris / db polaris)..."; sleep 3
+              done
+              echo "postgres ready"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-postgres-credentials
+                  key: POLARIS_DB_PASSWORD
+      containers:
+        - name: bootstrap
+          image: apache/polaris-admin-tool:1.3.0-incubating
+          args: ["bootstrap", "-r", "POLARIS", "-c", "POLARIS,root,$(ROOT_CLIENT_SECRET)"]
+          env:
+            - name: ROOT_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-credentials
+                  key: ROOT_CLIENT_SECRET
+            - name: QUARKUS_DATASOURCE_DB_KIND
+              value: postgresql
+            - name: QUARKUS_DATASOURCE_USERNAME
+              value: polaris
+            - name: QUARKUS_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-postgres-credentials
+                  key: POLARIS_DB_PASSWORD
+            - name: QUARKUS_DATASOURCE_JDBC_URL
+              value: "jdbc:postgresql://polaris-postgres.${namespace}.svc.cluster.local:5432/polaris"

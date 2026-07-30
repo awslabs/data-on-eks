@@ -1,0 +1,101 @@
+# Apache Polaris (incubating) — Iceberg REST catalog.
+#
+# Deployed from the official community Helm chart. This file only overrides
+# what the semantic-on-eks stack needs; every other knob keeps the chart
+# default. Terraform injects namespace, service account, region and the
+# warehouse bucket at render time (see polaris.tf).
+#
+# Persistence is relational-jdbc against the in-cluster Postgres (see
+# manifests/polaris/postgres.yaml). Realm bootstrap (realm POLARIS + root
+# principal) is performed by a one-shot Job (manifests/polaris/bootstrap-job.yaml)
+# because the chart does not bootstrap; the server waits for that schema via the
+# wait-bootstrap init container below before it starts.
+#
+# AWS access is EKS Pod Identity on the ${service_account_name} ServiceAccount —
+# there are no static keys. The catalog is created with stsUnavailable=true, so
+# Polaris never vends credentials: each engine (Trino) brings its own identity.
+
+# Pin the service name to "polaris" so in-cluster clients (Trino, the catalog
+# Job) can hardcode polaris.${namespace}.svc.cluster.local:8181.
+fullnameOverride: polaris
+
+image:
+  repository: apache/polaris
+  tag: "1.3.0-incubating"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: ${service_account_name}
+  # Pod Identity needs no SA annotation (unlike IRSA); the association is
+  # created by module.polaris_pod_identity in polaris.tf.
+  annotations: {}
+
+persistence:
+  type: relational-jdbc
+  relationalJdbc:
+    secret:
+      name: polaris-persistence
+      username: username
+      password: password
+      jdbcUrl: jdbcUrl
+
+realmContext:
+  type: default
+  realms:
+    - POLARIS
+
+extraEnv:
+  # Pod Identity supplies the role via the SDK default chain; region only.
+  - name: AWS_REGION
+    value: ${region}
+  - name: JAVA_OPTS_APPEND
+    value: "-XX:MaxRAMPercentage=50.0"
+
+# Gate server startup on the bootstrap Job having created the schema. Without
+# this the server crash-loops against an un-bootstrapped database.
+extraInitContainers:
+  - name: wait-bootstrap
+    image: postgres:16
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        until psql -h polaris-postgres.${namespace}.svc.cluster.local -U polaris -d polaris \
+              -tAc "SELECT 1 FROM polaris_schema.version LIMIT 1" >/dev/null 2>&1; do
+          echo "waiting for polaris bootstrap..."; sleep 3
+        done
+        echo "bootstrap present"
+    env:
+      - name: PGPASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: polaris-postgres-credentials
+            key: POLARIS_DB_PASSWORD
+
+# Internal only. Reach Polaris with `kubectl port-forward`.
+# For production, front this with an INTERNAL load balancer scoped to your
+# organization's network — never a public/internet-facing endpoint.
+service:
+  type: ClusterIP
+  ports:
+    - name: polaris-http
+      port: 8181
+
+managementService:
+  type: ClusterIP
+  ports:
+    - name: polaris-mgmt
+      port: 8182
+  clusterIP: None
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 1Gi
+
+podLabels:
+  app: polaris

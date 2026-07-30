@@ -131,6 +131,30 @@ Scalable data processing and analytics platforms on Amazon EKS. Run batch proces
 </div>
 </div>
 
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">🧩</div>
+<div className="datastack-content">
+<h3>Semantic on EKS</h3>
+<p className="datastack-description">Semantic layer foundation with Trino, Apache Polaris, and DataHub for the Open Semantic Interchange operator.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">Trino</span>
+<span className="feature-tag">Apache Polaris</span>
+<span className="feature-tag">DataHub</span>
+<span className="feature-tag">Iceberg REST</span>
+</div>
+<div className="datastack-footer">
+<a href="/data-on-eks/docs/datastacks/processing/semantic-on-eks/" className="datastack-link">
+<span>Explore Semantic</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
 </div>
 
 {/* End of DataStacks grid */}

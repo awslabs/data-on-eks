@@ -177,6 +177,14 @@ resource "kubectl_manifest" "trino" {
       trino_irsa_arn     = module.trino_pod_identity.iam_role_arn
       trino_sa           = local.trino_sa
       trino_namespace    = local.trino_namespace
+
+      # Polaris Iceberg REST catalog wiring. When enable_polaris is false these
+      # produce no extra catalog and no envFrom, so the rendered values are
+      # identical to before for every other stack.
+      enable_polaris      = var.enable_polaris
+      polaris_namespace   = local.polaris_namespace
+      polaris_catalog     = local.polaris_catalog
+      polaris_secret_name = "trino-polaris-credentials"
     }))))
   })
 
