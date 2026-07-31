@@ -1,0 +1,83 @@
+# ---------------------------------------------------------------------
+# Dedicated Kafka NodePool
+# ---------------------------------------------------------------------
+# Kafka brokers are stateful and disk-heavy. They are pinned to this pool
+# rather than co-scheduled with Spark for two reasons:
+#
+#   1. Spot reclamation is a broker-death event. This pool is On-Demand only.
+#   2. Consolidation of a partially-loaded broker node causes an ISR shrink
+#      until the pod restarts on a new node with a fresh PVC attach cycle.
+#      We use WhenEmpty consolidation with a 5-minute delay so Karpenter
+#      only reclaims a node once it's fully drained (e.g. after cleanup.sh).
+#
+# Two-way isolation with the Kafka pods:
+#   - Node label `workload=kafka` — used for observability/selectors.
+#   - Taint  `workload=kafka:NoSchedule` — nothing else in the cluster
+#     tolerates this, so nothing else lands here.
+#   - The Kafka CR (analytics/kafka/kafka-cluster.yaml) carries the
+#     matching toleration.
+#
+# Instance selection (AWS Kafka-on-EBS guidance):
+#   - m/r families, Gen 7+, Nitro. `m7g` (Graviton3) is the AWS-validated
+#     benchmark instance for self-managed Kafka on EBS — EBS-optimized by
+#     default, dedicated EBS bandwidth up to 2.5 GB/sec on larger sizes,
+#     and better price-performance than the equivalent x86 generation.
+#     `r7g` follows for broker pods that need the 58 GiB memory request.
+#   - Both `arm64` and `amd64` are allowed. Karpenter picks the cheapest
+#     feasible option per NodeClaim, which is usually Graviton for these
+#     sizes; `amd64` (m7i/r7i) is kept as a fallback for capacity events.
+#   - Older `m5/r5/m6*/r6*` are explicitly excluded via `generation > 6`
+#     because they don't hit the same EBS bandwidth ceilings.
+#   - Sizes 2xlarge..8xlarge — the broker CR requests 6 CPU / 58 GiB
+#     memory, so `r7g.2xlarge` (8 vCPU / 64 GiB) is the smallest fit;
+#     4xlarge and 8xlarge give Karpenter alternatives during availability
+#     dips and let you scale up if broker CPU crosses the ~60% headroom.
+# ---------------------------------------------------------------------
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: kafka
+spec:
+  template:
+    metadata:
+      labels:
+        workload: kafka
+    spec:
+      taints:
+        - key: workload
+          value: kafka
+          effect: NoSchedule
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: ebs-gp3-1000gi-6000iops-1000tp
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        # Prefer Graviton (m7g/r7g) — AWS-validated Kafka benchmark family —
+        # but keep amd64 (m7i/r7i) as a fallback so Karpenter isn't stuck
+        # if arm64 capacity is unavailable in an AZ.
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64", "amd64"]
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values: ["m", "r"]
+        - key: eks.amazonaws.com/instance-size
+          operator: In
+          values: ["2xlarge", "4xlarge", "8xlarge"]
+        - key: eks.amazonaws.com/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+        # Gen 7+ only. Older m5/r5/m6*/r6* have lower EBS baselines and
+        # don't unlock the 1 GB/sec gp3 throughput we provision below.
+        - key: eks.amazonaws.com/instance-generation
+          operator: Gt
+          values: ["6"]
+  limits:
+    cpu: "200"
+    memory: 800Gi
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 5m
