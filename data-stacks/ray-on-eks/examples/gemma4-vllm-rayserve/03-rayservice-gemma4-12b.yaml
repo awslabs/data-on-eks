@@ -1,39 +1,17 @@
 # =============================================================================
-# RayService: Gemma 4 12B on vLLM / Ray 2.57
+# RayService: Gemma 4 12B (multimodal) on vLLM / Ray 2.57
 # =============================================================================
-# Serves an OpenAI-compatible endpoint using ray.serve.llm (build_openai_app).
+# OpenAI-compatible endpoint via ray.serve.llm. ~22.3 GiB bf16 weights on a
+# single L40S 48GB, weights pulled from a same-region S3 mirror.
 #
-# Gemma 4 12B (google/gemma-4-12B) is the encoder-free unified variant
-# (Gemma4UnifiedForConditionalGeneration): ~22.3 GiB bf16 weights that fit a
-# single L40S 48GB GPU with room for a large KV cache. This config is tuned for
-# high-throughput TEXT generation (image + audio inputs disabled to reclaim the
-# multimodal activation budget for KV cache).
+# Requires Ray 2.57.x / vLLM 0.25+ - older ray-llm images (e.g. the DeepSeek
+# example's 2.56.0) predate gemma4_unified. `deploy.sh verify` checks this.
 #
-# IMPORTANT - image / vLLM version:
-#   Gemma 4 (model_type gemma4_unified) is only supported by very recent vLLM.
-#   The DeepSeek example's ray-llm:2.56.0 image is TOO OLD. This uses a newer
-#   ray-llm build ($RAY_LLM_TAG, default a 2.57.x image) mirrored to ECR by
-#   deploy.sh. deploy.sh verifies the architecture is registered before deploy.
+# Engine config follows https://github.com/vllm-project/recipes/blob/main/Google/Gemma4.md
+# Measured cold-start and latency numbers: see README.md.
 #
-# Weight loading: model_source points at our same-region S3 mirror. ray-llm
-# downloads the weights from S3 to the node's NVMe at startup (no HuggingFace
-# pull, no rate limits), then vLLM loads them locally. See the NOTE on
-# engine_kwargs for why we don't use load_format: runai_streamer here.
-#
-# Engine config otherwise follows the official vLLM Gemma 4 recipe:
-#   https://github.com/vllm-project/recipes/blob/main/Google/Gemma4.md
-#  - limit_mm_per_prompt {image:0, audio:0}: text-only, skips MM profiling
-#  - async_scheduling: overlap scheduling with decode for throughput
-#  - enable_prefix_caching + chunked prefill: keep the batching queue full
-#  - max_model_len 32768 (Gemma 4 supports up to 131072; cap for KV cache)
-#
-# Placeholders (substituted by deploy.sh):
-#   $S3_BUCKET      - bucket holding model weights under models/
-#   $MODEL_ID       - served model id (default gemma-4-12b)
-#   $MODEL_DIR      - S3 subdir under models/ (default gemma-4-12b)
-#   $AWS_REGION     - AWS region
-#   $ECR_REGISTRY   - e.g. 123456789012.dkr.ecr.us-west-2.amazonaws.com
-#   $RAY_LLM_TAG    - e.g. 2.57.0.6c4022-py312-cu130
+# Placeholders substituted by deploy.sh:
+#   $S3_BUCKET  $MODEL_ID  $MODEL_DIR  $AWS_REGION  $ECR_REGISTRY  $RAY_LLM_TAG
 # =============================================================================
 apiVersion: ray.io/v1
 kind: RayService
@@ -53,73 +31,53 @@ spec:
                 model_source: s3://$S3_BUCKET/models/$MODEL_DIR
               accelerator_type: L40S
               engine_kwargs:
-                # NOTE: we deliberately do NOT set load_format: runai_streamer.
-                # ray.serve.llm 2.57 has an upstream regression (ray-project/ray
-                # issue #64978, fix PR #64996 unmerged): streaming load formats
-                # set worker_node_download_model=NONE but never repoint vLLM's
-                # `model` at the S3 URI - vLLM then tries to resolve the short
-                # model_id on HuggingFace and crashes. Ray 2.56.x streams
-                # correctly but its vLLM 0.22 predates gemma4_unified, so 2.57
-                # is required for this model. With the default loader, ray-llm
-                # downloads the weights from our same-region S3 mirror
-                # (model_source below) to the node's NVMe (boto3 parallel
-                # download), then vLLM loads them locally. No HuggingFace pull;
-                # clean served model_id. Revisit runai_streamer once #64996
-                # ships in a ray-llm release.
+                # DO NOT set load_format: runai_streamer - crashes on Ray 2.57
+                # (ray-project/ray#64978).
                 dtype: bfloat16
-                # Gemma 4 supports up to 131072; 32K keeps a generous KV cache
-                # on a single 48GB card while covering typical prompts.
-                max_model_len: 32768
+                # Model supports 262144. 64K covers long prompts plus
+                # multimodal inputs and still leaves generation headroom;
+                # max_model_len bounds input + output combined.
+                max_model_len: 65536
                 gpu_memory_utilization: 0.90
                 enable_prefix_caching: true
                 enable_chunked_prefill: true
                 async_scheduling: true
                 max_num_seqs: 256
-                # Multimodal enabled: up to 2 images + 1 audio clip per
-                # prompt, so the README's image/audio demos work out of the
-                # box. The multimodal encoder budget comes out of the same
-                # gpu_memory_utilization pool, shrinking the KV cache vs a
-                # text-only config. For max batch-text throughput set both
-                # to 0 (skips MM profiling entirely; see recipe).
+                # Set both to 0 for text-only serving (skips MM profiling).
                 limit_mm_per_prompt:
                   image: 2
                   audio: 1
               runtime_env:
-                # ray-llm:2.57.0 ships transformers 5.8.0, which predates
-                # gemma4_unified config support (Gemma 4 released 2026-07-15).
-                # vLLM 0.25.1 has the model code but defers config parsing to
-                # transformers, so we upgrade it here (vLLM only pins >=5.5.3).
-                # Verified: resolves to 5.14.1 and installs in ~8s on the node.
+                # Image ships transformers 5.8.0, which predates gemma4_unified
+                # config support; vLLM defers config parsing to transformers.
                 pip:
                   - "transformers>=5.10.4"
-                # S3 mirror download uses the node's Pod Identity creds; just
-                # make sure the region is set for the AWS SDK.
                 env_vars:
                   AWS_REGION: "$AWS_REGION"
                   AWS_DEFAULT_REGION: "$AWS_REGION"
               deployment_config:
+                # One replica: a second adds capacity, not speed. Raise
+                # max_replicas for throughput serving.
                 autoscaling_config:
                   min_replicas: 1
-                  max_replicas: 2
+                  max_replicas: 1
                   target_ongoing_requests: 32
                 max_ongoing_requests: 128
   rayClusterConfig:
     rayVersion: "2.57.0"
-    enableInTreeAutoscaling: true
-    autoscalerOptions:
-      version: v2
-      idleTimeoutSeconds: 300
+    # Off: with it on, a lost worker makes KubeRay recreate the pod *and* the
+    # autoscaler request another, so Karpenter launches two GPU nodes for one.
+    enableInTreeAutoscaling: false
     headGroupSpec:
       rayStartParams:
-        # Keep the head as pure control plane: no tasks/actors schedule here.
+        # Head is pure control plane - no tasks/actors schedule here.
         num-cpus: "0"
       template:
         metadata:
           labels:
             app: gemma4-12b
           annotations:
-            # Protect the head from Karpenter consolidation evictions too -
-            # losing the head takes down the whole Serve app.
+            # Losing the head takes down the whole Serve app.
             karpenter.sh/do-not-disrupt: "true"
         spec:
           serviceAccountName: raydata
@@ -143,21 +101,25 @@ spec:
                   name: serve
           nodeSelector:
             kubernetes.io/arch: amd64
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app: gemma4-12b
+                      ray.io/node-type: worker
+                  topologyKey: topology.kubernetes.io/zone
     workerGroupSpecs:
       - groupName: gpu-workers
         replicas: 1
         minReplicas: 1
-        maxReplicas: 2
+        maxReplicas: 1
         rayStartParams: {}
         template:
           metadata:
             labels:
               app: gemma4-12b
             annotations:
-              # Karpenter consolidation will otherwise evict this pod as
-              # "Underutilized" (GPU requests don't count toward its cpu/mem
-              # utilization math) and kill the live engine minutes after it
-              # becomes Ready. Observed in testing.
               karpenter.sh/do-not-disrupt: "true"
           spec:
             serviceAccountName: raydata
@@ -172,8 +134,7 @@ spec:
                   requests:
                     cpu: "6"
                     memory: 48Gi
-                    # ~22.3 GiB weights download to the node's NVMe (RAID0
-                    # instance store) before vLLM loads them locally.
+                    # Weights land on node NVMe before vLLM loads them.
                     ephemeral-storage: 40Gi
                     nvidia.com/gpu: "1"
                   limits:
@@ -181,9 +142,9 @@ spec:
                     nvidia.com/gpu: "1"
             nodeSelector:
               karpenter.sh/nodepool: gpu
-            # Prefer g6e.2xlarge but allow g6e.4xlarge as fallback (same
-            # single L40S 48GB GPU) - g6e.2xlarge frequently has capacity
-            # shortages (ICE) in us-west-2.
+              # A spot reclaim kills the engine and forces a full cold start.
+              karpenter.sh/capacity-type: on-demand
+            # Both are a single L40S 48GB; 2xlarge often hits ICE in us-west-2.
             affinity:
               nodeAffinity:
                 requiredDuringSchedulingIgnoredDuringExecution:

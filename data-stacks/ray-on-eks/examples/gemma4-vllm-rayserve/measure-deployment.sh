@@ -2,16 +2,23 @@
 # =============================================================================
 # Gemma 4 12B RayService - End-to-End Deployment Timer
 # =============================================================================
-# Applies the RayService fresh and measures wall-clock time from
-# "RayService applied" until "endpoint serves an OpenAI request", then prints a
-# phase breakdown reconstructed from Kubernetes event/object timestamps and the
-# vLLM engine log lines. Comparable to the DeepSeek example's timing table.
+# Applies the RayService fresh and reports how long it takes until the endpoint
+# can actually serve, broken into phases.
+#
+# All timings come from timestamps Kubernetes and Ray recorded themselves -
+# object creationTimestamps, pod condition lastTransitionTimes, and the Serve
+# replica log - never from this script's own wall clock. That matters: a poll
+# loop adds its sleep interval, and a curl check adds port-forward setup, so
+# wall-clock timing systematically overstates the deployment.
 #
 # Requires: S3_BUCKET, AWS_REGION (and valid AWS creds / kube context). Model
 # weights must already be staged in S3 (./deploy.sh prepare).
 #
 # Usage: ./measure-deployment.sh            (measures a fresh deploy)
 #        KEEP_EXISTING=1 ./measure-deployment.sh   (don't delete first)
+#
+# For a TRUE cold start there must be no GPU node AND no GPU NodeClaim - see
+# the warning this prints. Deleting the RayService alone leaves the node up.
 # =============================================================================
 set -uo pipefail
 
@@ -44,22 +51,41 @@ render() {
       "$1"
 }
 
-# epoch (s) of an ISO8601 k8s timestamp, portable across GNU/BSD date
+# epoch (s) of an ISO8601 k8s timestamp, portable across GNU/BSD date.
+# The -u on the BSD branch is required, not cosmetic: without it BSD date parses
+# the (UTC) input as local time, so on a non-UTC machine every k8s timestamp
+# comes back skewed by the UTC offset. Phases computed from two k8s timestamps
+# still look right because the error cancels - only comparisons against the
+# pod's own log clock go visibly wrong.
 iso_to_epoch() {
   local ts="$1"; [[ -z "$ts" || "$ts" == "null" ]] && { echo ""; return; }
-  date -d "$ts" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s 2>/dev/null || echo ""
+  date -d "$ts" +%s 2>/dev/null || date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s 2>/dev/null || echo ""
 }
 fmt() { # seconds -> "Xm Ys"
   local s="$1"; [[ -z "$s" ]] && { echo "n/a"; return; }
   printf "%dm %02ds" $((s/60)) $((s%60))
 }
+delta() { # $1 $2 -> fmt(b-a), or n/a if either missing
+  [[ -n "${1:-}" && -n "${2:-}" ]] || { echo "n/a"; return; }
+  fmt $(( $2 - $1 ))
+}
 
 # --- Cold vs warm classification ---------------------------------------------
-EXISTING_GPU=$(kubectl get nodes -l karpenter.sh/nodepool=gpu --no-headers 2>/dev/null | wc -l | tr -d ' ')
-if [[ "$EXISTING_GPU" -gt 0 ]]; then
-  warn "$EXISTING_GPU GPU node(s) already present -> this measures a WARM start."
+# Count NodeClaims as well as Nodes. Karpenter creates the claim ~60s before the
+# Node registers, so checking Nodes alone reports "cold" while an instance is
+# already booting - which silently understates a cold start by about a minute.
+GPU_NODES=$(kubectl get nodes -l karpenter.sh/nodepool=gpu --no-headers 2>/dev/null | wc -l | tr -d ' ')
+GPU_CLAIMS=$(kubectl get nodeclaims -l karpenter.sh/nodepool=gpu --no-headers 2>/dev/null | wc -l | tr -d ' ')
+if (( GPU_NODES > 0 || GPU_CLAIMS > 0 )); then
+  IS_COLD=0
+  warn "GPU capacity already exists (${GPU_NODES} node(s), ${GPU_CLAIMS} nodeclaim(s)) -> this is a WARM start."
+  warn "For a true cold start, first run:"
+  warn "    kubectl delete rayservice $SERVICE_NAME -n $NAMESPACE"
+  warn "    kubectl delete nodeclaim -l karpenter.sh/nodepool=gpu"
+  warn "  and wait until 'kubectl get nodeclaims' shows no gpu entries."
 else
-  info "No GPU nodes present -> this measures a COLD start (Karpenter provisions a node)."
+  IS_COLD=1
+  info "No GPU nodes or nodeclaims present -> measuring a COLD start."
 fi
 
 if [[ "${KEEP_EXISTING:-0}" != "1" ]]; then
@@ -68,15 +94,15 @@ if [[ "${KEEP_EXISTING:-0}" != "1" ]]; then
   kubectl wait --for=delete pod -l ray.io/cluster -n "$NAMESPACE" --timeout=180s >/dev/null 2>&1 || true
 fi
 
-# --- Apply and start the clock -----------------------------------------------
-T_START=$(date +%s)
+# --- Apply -------------------------------------------------------------------
 info "Applying RayService at $(date -u +%H:%M:%SZ)..."
 render 03-rayservice-gemma4-12b.yaml | kubectl apply -f - >/dev/null
+POLL_START=$(date +%s)
 
-# --- Poll until the Serve endpoint is Ready ----------------------------------
+# --- Wait until Ready (poll only to know when to stop; not used for timing) ---
 info "Waiting for RayService to become Ready (timeout ${TIMEOUT_SECONDS}s)..."
 READY=""
-while (( $(date +%s) - T_START < TIMEOUT_SECONDS )); do
+while (( $(date +%s) - POLL_START < TIMEOUT_SECONDS )); do
   cond=$(kubectl get rayservice "$SERVICE_NAME" -n "$NAMESPACE" \
     -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
   legacy=$(kubectl get rayservice "$SERVICE_NAME" -n "$NAMESPACE" \
@@ -84,10 +110,9 @@ while (( $(date +%s) - T_START < TIMEOUT_SECONDS )); do
   if [[ "$cond" == "True" || "$legacy" == "Running" ]]; then READY="yes"; break; fi
   sleep 5
 done
-T_READY=$(date +%s)
 [[ -n "$READY" ]] || warn "RayService not Ready within timeout; printing partial timings."
 
-# --- Verify it actually serves a request -------------------------------------
+# --- Verify it serves (pass/fail only - deliberately not part of any timing) --
 SERVE_OK=""
 kubectl port-forward "svc/${SERVICE_NAME}-serve-svc" 8000:8000 -n "$NAMESPACE" >/dev/null 2>&1 &
 PF_PID=$!; sleep 8
@@ -97,43 +122,67 @@ if curl -sS -m 60 http://localhost:8000/v1/chat/completions \
       2>/dev/null | grep -q '"choices"'; then
   SERVE_OK="yes"
 fi
-T_SERVED=$(date +%s)
 kill "$PF_PID" 2>/dev/null || true
 
-# --- Reconstruct phase timings from object timestamps ------------------------
+# --- Gather authoritative timestamps -----------------------------------------
 WORKER=$(kubectl get pods -n "$NAMESPACE" -l ray.io/group=gpu-workers \
   -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
 NODE=$(kubectl get pod "$WORKER" -n "$NAMESPACE" -o jsonpath='{.spec.nodeName}' 2>/dev/null || true)
 
+# Epoch of a Serve-replica log line, resolved with the *pod's* clock so its
+# local timezone is handled correctly.
+log_epoch() {
+  local pat="$1" ts
+  [[ -n "$WORKER" ]] || { echo ""; return; }
+  ts=$(kubectl exec "$WORKER" -n "$NAMESPACE" -c ray-worker -- bash -c \
+        "grep -rhE '$pat' /tmp/ray/session_latest/logs/serve/replica_llm-app_LLMServer*.log 2>/dev/null | head -1" 2>/dev/null \
+      | sed -nE 's/.*([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}).*/\1/p')
+  [[ -n "$ts" ]] || { echo ""; return; }
+  kubectl exec "$WORKER" -n "$NAMESPACE" -c ray-worker -- date -d "$ts" +%s 2>/dev/null || echo ""
+}
+
+t_applied=$(iso_to_epoch "$(kubectl get rayservice "$SERVICE_NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null)")
+t_rs_ready=$(iso_to_epoch "$(kubectl get rayservice "$SERVICE_NAME" -n "$NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].lastTransitionTime}' 2>/dev/null)")
 pod_created=$(iso_to_epoch "$(kubectl get pod "$WORKER" -n "$NAMESPACE" -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null)")
 pod_scheduled=$(iso_to_epoch "$(kubectl get pod "$WORKER" -n "$NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].lastTransitionTime}' 2>/dev/null)")
+pod_img=$(iso_to_epoch "$(kubectl get pod "$WORKER" -n "$NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="PodReadyToStartContainers")].lastTransitionTime}' 2>/dev/null)")
 pod_ready=$(iso_to_epoch "$(kubectl get pod "$WORKER" -n "$NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].lastTransitionTime}' 2>/dev/null)")
-node_created=$(iso_to_epoch "$(kubectl get node "$NODE" -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null)")
+claim_created=$(iso_to_epoch "$(kubectl get nodeclaims -l karpenter.sh/nodepool=gpu -o jsonpath='{.items[0].metadata.creationTimestamp}' 2>/dev/null)")
+
+rep_start=$(log_epoch "Started initializing replica")
+rep_dl=$(log_epoch "download model files")
+rep_engine=$(log_epoch "Started vLLM engine")
+rep_done=$(log_epoch "Finished initializing replica")
 
 # --- Report ------------------------------------------------------------------
 echo ""
 echo "==================================================================="
 echo " Gemma 4 12B RayService - end-to-end deployment timing"
-echo " $( [[ "$EXISTING_GPU" -gt 0 ]] && echo 'WARM start (GPU node pre-existed)' || echo 'COLD start (fresh Karpenter GPU node)')"
+echo " $( (( IS_COLD )) && echo 'COLD start (no GPU node or nodeclaim existed)' || echo 'WARM start (GPU capacity pre-existed)')"
 echo " worker pod : ${WORKER:-<none>}"
 echo " gpu node   : ${NODE:-<pending>}"
 echo "==================================================================="
-[[ -n "$pod_created" && -n "$pod_scheduled" ]] && \
-  printf " %-52s %s\n" "GPU pod created -> scheduled (node provisioned)" "$(fmt $((pod_scheduled - pod_created)))"
-[[ -n "$pod_scheduled" && -n "$pod_ready" ]] && \
-  printf " %-52s %s\n" "Pod scheduled -> container Ready (image pull+start)" "$(fmt $((pod_ready - pod_scheduled)))"
-printf " %-52s %s\n" "RayService applied -> Ready" "$(fmt $((T_READY - T_START)))"
-printf " %-52s %s\n" "TOTAL: applied -> serving a request" "$(fmt $((T_SERVED - T_START)))"
+if [[ -n "$claim_created" && -n "$t_applied" ]] && (( claim_created < t_applied )); then
+  warn "NodeClaim was created $(( t_applied - claim_created ))s BEFORE the RayService was applied."
+  warn "Node provisioning is therefore partly outside the measured window."
+fi
+printf " %-52s %s\n" "Applied -> GPU pod scheduled (node provisioned)"  "$(delta "$t_applied"    "$pod_scheduled")"
+printf " %-52s %s\n" "  of which: pod created -> scheduled"             "$(delta "$pod_created"  "$pod_scheduled")"
+printf " %-52s %s\n" "Pod scheduled -> image pulled"                    "$(delta "$pod_scheduled" "$pod_img")"
+printf " %-52s %s\n" "Image pulled -> container Ready (init + start)"   "$(delta "$pod_img"      "$pod_ready")"
+printf " %-52s %s\n" "Container Ready -> replica init started"          "$(delta "$pod_ready"    "$rep_start")"
+printf " %-52s %s\n" "  weight download + vLLM engine init"             "$(delta "$rep_dl"       "$rep_engine")"
+printf " %-52s %s\n" "  engine started -> replica serving"              "$(delta "$rep_engine"   "$rep_done")"
+echo " -------------------------------------------------------------------"
+printf " %-52s %s\n" "TOTAL: applied -> replica able to serve"          "$(delta "$t_applied"    "$rep_done")"
+printf " %-52s %s\n" "  (RayService Ready condition, for reference)"    "$(delta "$t_applied"    "$t_rs_ready")"
 echo "==================================================================="
 echo " Serve check: $( [[ -n "$SERVE_OK" ]] && echo 'PASS (endpoint returned choices)' || echo 'FAILED / not ready' )"
 echo ""
-echo " vLLM engine phase breakdown (from Ray session logs on the worker):"
+echo " vLLM self-reported phase durations (from the engine log):"
 if [[ -n "$WORKER" ]]; then
-  # These lines live in the Ray session logs inside the pod, not in the
-  # container's stdout, so kubectl exec + grep rather than kubectl logs.
-  kubectl exec "$WORKER" -n "$NAMESPACE" -- bash -c \
-    'grep -rhE "Started initializing replica|download model files|Started vLLM engine|Finished initializing replica" /tmp/ray/session_latest/logs/serve/replica_llm-app_LLMServer*.log 2>/dev/null;
-     grep -rhE "Model loading took|torch.compile took|Graph capturing finished|init engine .*took|GPU KV cache size" /tmp/ray/session_latest/logs/*.out 2>/dev/null | sed "s/^(EngineCore[^]]*]//" | sort -u' \
-    2>/dev/null | tail -n 20 | sed 's/^/   /' || true
+  kubectl exec "$WORKER" -n "$NAMESPACE" -c ray-worker -- bash -c \
+    'grep -rhE "Model loading took|torch.compile took|Graph capturing finished|init engine .*took|GPU KV cache size" /tmp/ray/session_latest/logs/*.out 2>/dev/null | sed "s/^(EngineCore[^]]*]//" | sort -u' \
+    2>/dev/null | tail -n 10 | sed 's/^/   /' || true
 fi
 echo "==================================================================="
