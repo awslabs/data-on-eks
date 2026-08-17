@@ -23,13 +23,14 @@
 #   export RAY_LLM_TAG="nightly-py312-cu130"        # if 2.57.x lacks gemma4
 #
 # Usage:
-#   ./deploy.sh prepare     # 01 + 02: stage model, mirror image (run once)
+#   ./deploy.sh prepare DEP-L40-BASE
 #   ./deploy.sh verify      # confirm the ECR image registers gemma4_unified
-#   ./deploy.sh service     # 03: deploy the RayService endpoint
-#   ./deploy.sh measure     # deploy fresh + time end-to-end until serving
-#   ./deploy.sh test        # send a sample OpenAI chat request
-#   ./deploy.sh status      # show everything
-#   ./deploy.sh cleanup     # delete the RayService (keeps S3 weights + image)
+#   ./deploy.sh render DEP-L40-BASE
+#   ./deploy.sh service DEP-L40-BASE
+#   ./deploy.sh measure DEP-L40-BASE
+#   ./deploy.sh test DEP-L40-BASE
+#   ./deploy.sh status DEP-L40-BASE
+#   ./deploy.sh cleanup DEP-L40-BASE
 # =============================================================================
 
 set -euo pipefail
@@ -39,10 +40,12 @@ NAMESPACE="raydata"
 RAY_LLM_TAG="${RAY_LLM_TAG:-2.57.0.6c4022-py312-cu130}"
 S3_BUCKET="${S3_BUCKET:-}"
 AWS_REGION="${AWS_REGION:-us-west-2}"
-HF_MODEL_ID="${HF_MODEL_ID:-google/gemma-4-12B-it}"   # download source (staging)
-MODEL_DIR="${MODEL_DIR:-gemma-4-12b-it}"              # S3 subdir under models/
-MODEL_ID="${MODEL_ID:-$MODEL_DIR}"                    # served id (RayService)
-SERVICE_NAME="gemma4-12b"
+SCENARIO_ID="${SCENARIO_ID:-DEP-L40-BASE}"
+HF_MODEL_ID=""
+MODEL_DIR=""
+MODEL_ID=""
+SERVICE_NAME=""
+NODEPOOL_NAME="gpu"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
 info()  { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -56,7 +59,29 @@ require_env() {
   ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 }
 
-render() {
+scenario_value() {
+  python3 - "$SCENARIO_FILE" "$1" "${2:-}" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    data=json.load(f)
+value=data.get(sys.argv[2], sys.argv[3])
+print(value)
+PY
+}
+
+load_scenario() {
+  SCENARIO_ID="${1:-$SCENARIO_ID}"
+  SCENARIO_ID=$(printf '%s' "$SCENARIO_ID" | tr '[:lower:]' '[:upper:]')
+  SCENARIO_FILE="$(dirname "$0")/scenarios/$(printf '%s' "$SCENARIO_ID" | tr '[:upper:]' '[:lower:]').json"
+  [[ -f "$SCENARIO_FILE" ]] || fail "unknown scenario: $SCENARIO_ID"
+  HF_MODEL_ID=$(scenario_value hf_model_id)
+  MODEL_DIR=$(scenario_value model_dir)
+  MODEL_ID=$(scenario_value model_id)
+  SERVICE_NAME=$(scenario_value service_name)
+  NODEPOOL_NAME=$(scenario_value nodepool_name gpu)
+}
+
+render_job() {
   sed -e "s|\$S3_BUCKET|$S3_BUCKET|g" \
       -e "s|\$AWS_REGION|$AWS_REGION|g" \
       -e "s|\$ECR_REGISTRY|$ECR_REGISTRY|g" \
@@ -67,7 +92,14 @@ render() {
       "$1"
 }
 
+render_service() {
+  S3_BUCKET="$S3_BUCKET" AWS_REGION="$AWS_REGION" ECR_REGISTRY="$ECR_REGISTRY" \
+    RAY_LLM_TAG="$RAY_LLM_TAG" \
+    python3 "$(dirname "$0")/render-scenario.py" "$SCENARIO_ID"
+}
+
 prepare() {
+  load_scenario "$1"
   require_env
   info "Model: $HF_MODEL_ID  ->  s3://$S3_BUCKET/models/$MODEL_DIR"
   info "Creating ECR repository (idempotent)..."
@@ -79,10 +111,10 @@ prepare() {
     --dry-run=client -o yaml | kubectl apply -f -
   info "Staging Gemma 4 12B weights in S3 (apache-2.0, no token needed)..."
   kubectl delete job model-staging-gemma4-12b -n "$NAMESPACE" --ignore-not-found
-  render 01-model-staging-job.yaml | kubectl apply -f -
+  render_job 01-model-staging-job.yaml | kubectl apply -f -
   info "Mirroring ray-llm:$RAY_LLM_TAG image to ECR..."
   kubectl delete job mirror-ray-llm-image -n "$NAMESPACE" --ignore-not-found
-  render 02-image-mirror-job.yaml | kubectl apply -f -
+  render_job 02-image-mirror-job.yaml | kubectl apply -f -
   info "Watch with: kubectl get pods -n $NAMESPACE -w"
   info "Staging done when job/model-staging-gemma4-12b shows Complete; then './deploy.sh verify'."
 }
@@ -114,21 +146,30 @@ verify() {
 }
 
 service() {
+  load_scenario "$1"
   require_env
-  render 03-rayservice-gemma4-12b.yaml | kubectl apply -f -
+  local active
+  active=$(kubectl get rayservice "$SERVICE_NAME" -n "$NAMESPACE" \
+    -o name 2>/dev/null || true)
+  [[ -z "$active" ]] || fail "benchmark RayService already exists: $active"
+  render_service | kubectl apply -f -
   info "Applied. Watch: kubectl get rayservice $SERVICE_NAME -n $NAMESPACE -w"
 }
 
 measure() {
+  load_scenario "$1"
   require_env
-  MODEL_ID="$MODEL_ID" MODEL_DIR="$MODEL_DIR" RAY_LLM_TAG="$RAY_LLM_TAG" \
+  SCENARIO_ID="$SCENARIO_ID" SERVICE_NAME="$SERVICE_NAME" MODEL_ID="$MODEL_ID" \
+    MODEL_DIR="$MODEL_DIR" RAY_LLM_TAG="$RAY_LLM_TAG" \
     exec "$(dirname "$0")/measure-deployment.sh"
 }
 
 test_endpoint() {
+  load_scenario "$1"
   info "Port-forwarding svc/${SERVICE_NAME}-serve-svc:8000 (background)..."
   kubectl port-forward "svc/${SERVICE_NAME}-serve-svc" 8000:8000 -n "$NAMESPACE" >/dev/null 2>&1 &
   local pf_pid=$!
+  trap 'kill "$pf_pid" 2>/dev/null || true' RETURN
   sleep 8
   info "Sending sample chat completion (model=$MODEL_ID)..."
   curl -sS -m 90 --retry 2 --retry-delay 3 http://localhost:8000/v1/chat/completions \
@@ -137,27 +178,34 @@ test_endpoint() {
     | (python3 -m json.tool 2>/dev/null || cat)
   echo
   kill "$pf_pid" 2>/dev/null || true
+  trap - RETURN
 }
 
 status() {
+  load_scenario "$1"
   kubectl get rayservice,rayjob,jobs,pods -n "$NAMESPACE"
   echo
-  kubectl get nodes -l karpenter.sh/nodepool=gpu -o wide 2>/dev/null || true
+  kubectl get nodes -l "karpenter.sh/nodepool=$NODEPOOL_NAME" -o wide 2>/dev/null || true
 }
 
 cleanup() {
+  load_scenario "$1"
   info "Deleting RayService $SERVICE_NAME (Karpenter reclaims the GPU node ~15m after)..."
   kubectl delete rayservice "$SERVICE_NAME" -n "$NAMESPACE" --ignore-not-found
   info "Kept: model weights in s3://$S3_BUCKET/models/$MODEL_DIR and ray-llm image in ECR."
 }
 
-case "${1:-help}" in
-  prepare)  prepare ;;
+COMMAND="${1:-help}"
+TARGET_SCENARIO="${2:-$SCENARIO_ID}"
+case "$COMMAND" in
+  prepare)  prepare "$TARGET_SCENARIO" ;;
   verify)   verify ;;
-  service)  service ;;
-  measure)  measure ;;
-  test)     test_endpoint ;;
-  status)   status ;;
-  cleanup)  cleanup ;;
+  render)   load_scenario "$TARGET_SCENARIO"; require_env; render_service ;;
+  service)  service "$TARGET_SCENARIO" ;;
+  measure)  measure "$TARGET_SCENARIO" ;;
+  test)     test_endpoint "$TARGET_SCENARIO" ;;
+  status)   status "$TARGET_SCENARIO" ;;
+  cleanup)  cleanup "$TARGET_SCENARIO" ;;
+  scenarios) printf '%s\n' "$(dirname "$0")"/scenarios/*.json | xargs -n1 basename | sed 's/\.json$//' ;;
   *) grep '^#' "$0" | head -34; ;;
 esac

@@ -16,8 +16,10 @@
 apiVersion: ray.io/v1
 kind: RayService
 metadata:
-  name: gemma4-12b
+  name: $SERVICE_NAME
   namespace: raydata
+  labels:
+    benchmark.data-on-eks/scenario: $SCENARIO_ID
 spec:
   serveConfigV2: |
     applications:
@@ -29,7 +31,7 @@ spec:
             - model_loading_config:
                 model_id: $MODEL_ID
                 model_source: s3://$S3_BUCKET/models/$MODEL_DIR
-              accelerator_type: L40S
+              accelerator_type: $ACCELERATOR_TYPE
               engine_kwargs:
                 # DO NOT set load_format: runai_streamer - crashes on Ray 2.57
                 # (ray-project/ray#64978).
@@ -41,8 +43,9 @@ spec:
                 gpu_memory_utilization: 0.90
                 enable_prefix_caching: true
                 enable_chunked_prefill: true
-                async_scheduling: true
+                async_scheduling: $ASYNC_SCHEDULING
                 max_num_seqs: 256
+$ENGINE_KWARGS_EXTRA
                 # Set both to 0 for text-only serving (skips MM profiling).
                 limit_mm_per_prompt:
                   image: 2
@@ -51,7 +54,11 @@ spec:
                 # Image ships transformers 5.8.0, which predates gemma4_unified
                 # config support; vLLM defers config parsing to transformers.
                 pip:
-                  - "transformers>=5.10.4"
+                  # Do not use an open-ended lower bound. Transformers 5.15
+                  # makes heterogeneous Gemma 4 head_dim strictly per-layer,
+                  # while the vLLM build in this Ray 2.57 image still reads the
+                  # global attribute and fails engine-config construction.
+                  - "transformers==5.10.4"
                 env_vars:
                   AWS_REGION: "$AWS_REGION"
                   AWS_DEFAULT_REGION: "$AWS_REGION"
@@ -75,7 +82,7 @@ spec:
       template:
         metadata:
           labels:
-            app: gemma4-12b
+                app: $SERVICE_NAME
           annotations:
             # Losing the head takes down the whole Serve app.
             karpenter.sh/do-not-disrupt: "true"
@@ -90,7 +97,12 @@ spec:
                   value: "$AWS_REGION"
               resources:
                 requests:
-                  cpu: "2"
+                  # The memory-optimized x86 EC2NodeClass reserves 2 vCPU.
+                  # A 2-CPU request plus DaemonSets cannot fit r6a.xlarge's
+                  # remaining 2 allocatable CPUs and causes Karpenter churn.
+                  # The head advertises num-cpus=0 and measured ~150m while
+                  # serving, so 1 CPU is sufficient for control-plane duties.
+                  cpu: "1"
                   memory: 8Gi
                 limits:
                   memory: 12Gi
@@ -101,14 +113,8 @@ spec:
                   name: serve
           nodeSelector:
             kubernetes.io/arch: amd64
-          affinity:
-            podAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                - labelSelector:
-                    matchLabels:
-                      app: gemma4-12b
-                      ray.io/node-type: worker
-                  topologyKey: topology.kubernetes.io/zone
+            karpenter.sh/nodepool: memory-optimized-x86
+            node.kubernetes.io/instance-type: r6a.2xlarge
     workerGroupSpecs:
       - groupName: gpu-workers
         replicas: 1
@@ -118,7 +124,7 @@ spec:
         template:
           metadata:
             labels:
-              app: gemma4-12b
+                app: $SERVICE_NAME
             annotations:
               karpenter.sh/do-not-disrupt: "true"
           spec:
@@ -132,26 +138,17 @@ spec:
                     value: "$AWS_REGION"
                 resources:
                   requests:
-                    cpu: "6"
-                    memory: 48Gi
+                    cpu: "$WORKER_CPU"
+                    memory: $WORKER_MEMORY_REQUEST
                     # Weights land on node NVMe before vLLM loads them.
                     ephemeral-storage: 40Gi
-                    nvidia.com/gpu: "1"
+                    nvidia.com/gpu: "$GPU_COUNT"
                   limits:
-                    memory: 56Gi
-                    nvidia.com/gpu: "1"
+                    memory: $WORKER_MEMORY_LIMIT
+                    nvidia.com/gpu: "$GPU_COUNT"
             nodeSelector:
-              karpenter.sh/nodepool: gpu
-              # A spot reclaim kills the engine and forces a full cold start.
-              karpenter.sh/capacity-type: on-demand
-            # Both are a single L40S 48GB; 2xlarge often hits ICE in us-west-2.
-            affinity:
-              nodeAffinity:
-                requiredDuringSchedulingIgnoredDuringExecution:
-                  nodeSelectorTerms:
-                    - matchExpressions:
-                        - key: node.kubernetes.io/instance-type
-                          operator: In
-                          values:
-                            - g6e.2xlarge
-                            - g6e.4xlarge
+              karpenter.sh/nodepool: $NODEPOOL_NAME
+              karpenter.sh/capacity-type: $CAPACITY_TYPE
+              # Every benchmark scenario selects one exact EC2 shape so
+              # Karpenter provisions the intended hardware just in time.
+              node.kubernetes.io/instance-type: $INSTANCE_TYPE

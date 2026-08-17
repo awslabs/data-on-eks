@@ -1,0 +1,71 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: gpu-capacity-block
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: karpenter-doeks-ray-on-eks
+  subnetSelectorTerms:
+    - tags:
+        Name: ray-on-eks-private-secondary*
+  securityGroupSelectorTerms:
+    - tags:
+        Name: ray-on-eks-node
+  capacityReservationSelectorTerms:
+    - id: "__CAPACITY_RESERVATION_ID__"
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        deleteOnTermination: true
+        encrypted: true
+        iops: 3000
+        throughput: 600
+        volumeSize: 200Gi
+        volumeType: gp3
+  instanceStorePolicy: RAID0
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 1
+    httpTokens: required
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: gpu-capacity-block
+spec:
+  template:
+    metadata:
+      labels:
+        node.kubernetes.io/workload-type: gpu-capacity-block
+        NodeGroupType: GPUCapacityBlock
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: gpu-capacity-block
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["reserved"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["p5.48xlarge"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["__CAPACITY_RESERVATION_AZ__"]
+        - key: karpenter.k8s.aws/instance-hypervisor
+          operator: In
+          values: ["nitro"]
+  limits:
+    cpu: "192"
+    nvidia.com/gpu: 8
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: Never
+  weight: 100

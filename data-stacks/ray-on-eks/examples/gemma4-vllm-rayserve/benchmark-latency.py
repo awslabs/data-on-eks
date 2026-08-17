@@ -53,6 +53,8 @@ Direct invocation, if you are already inside the cluster:
 """
 
 import argparse
+import concurrent.futures
+import datetime
 import json
 import os
 import statistics
@@ -110,6 +112,7 @@ def one_request(base_url, model, content, max_tokens, temperature, ignore_eos,
     text_len = 0
     usage = None
     pieces = []
+    finish_reason = None
 
     t0 = time.perf_counter()
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -133,6 +136,8 @@ def one_request(base_url, model, content, max_tokens, temperature, ignore_eos,
             if not choices:
                 continue
             delta = choices[0].get("delta") or {}
+            if choices[0].get("finish_reason") is not None:
+                finish_reason = choices[0]["finish_reason"]
             piece = delta.get("content") or ""
             if not piece:
                 # role-only opening chunk: not a token, do not count as TTFT
@@ -159,6 +164,18 @@ def one_request(base_url, model, content, max_tokens, temperature, ignore_eos,
         completion_tokens = n_content_chunks
         token_source = "chunks"
 
+    response_text = "".join(pieces)
+    candidate = response_text.strip()
+    if candidate.startswith("```json") and candidate.endswith("```"):
+        candidate = candidate[7:-3].strip()
+    elif candidate.startswith("```") and candidate.endswith("```"):
+        candidate = candidate[3:-3].strip()
+    try:
+        json.loads(candidate)
+        response_json_valid = True
+    except (json.JSONDecodeError, TypeError):
+        response_json_valid = False
+
     return {
         "ttft_s": ttft,
         "e2e_s": e2e,
@@ -167,11 +184,13 @@ def one_request(base_url, model, content, max_tokens, temperature, ignore_eos,
         "completion_tokens": completion_tokens,
         "token_source": token_source,
         "text_len": text_len,
-        "response": "".join(pieces),
+        "response": response_text,
+        "finish_reason": finish_reason,
+        "response_json_valid": response_json_valid,
     }
 
 
-def summarize(name, prompt_file_tokens, runs):
+def summarize(name, prompt_file_tokens, runs, batch_wall_s):
     """Aggregate repeats of one prompt into a report row."""
     ttfts = [r["ttft_s"] for r in runs if r["ttft_s"] is not None]
     e2es = [r["e2e_s"] for r in runs]
@@ -179,13 +198,20 @@ def summarize(name, prompt_file_tokens, runs):
     all_itls = [x for r in runs for x in r["itls"]]
 
     decodes = []
+    observed_prefills = []
     for r in runs:
+        if r["ttft_s"] and r.get("prompt_tokens"):
+            # Client-observed rate includes Ray Serve and scheduling overhead;
+            # server counters are captured separately by the wrapper.
+            observed_prefills.append(r["prompt_tokens"] / r["ttft_s"])
         if r["ttft_s"] is None or r["completion_tokens"] in (None, 0, 1):
             continue
         decode_window = r["e2e_s"] - r["ttft_s"]
         if decode_window > 0:
             decodes.append((r["completion_tokens"] - 1) / decode_window)
 
+    total_input = sum(r.get("prompt_tokens") or 0 for r in runs)
+    total_output = sum(r.get("completion_tokens") or 0 for r in runs)
     return {
         "prompt": name,
         "input_tokens_measured": runs[0].get("prompt_tokens"),
@@ -197,9 +223,17 @@ def summarize(name, prompt_file_tokens, runs):
         "e2e_p95_s": pct(e2es, 95),
         "out_tokens_med": statistics.median(outs) if outs else 0,
         "decode_med_tps": statistics.median(decodes) if decodes else float("nan"),
+        "observed_prefill_med_tps": (
+            statistics.median(observed_prefills) if observed_prefills else float("nan")
+        ),
         "itl_med_ms": statistics.median(all_itls) * 1000 if all_itls else float("nan"),
         "itl_p95_ms": pct(all_itls, 95) * 1000 if all_itls else float("nan"),
         "token_source": runs[0]["token_source"],
+        "json_valid_count": sum(1 for r in runs if r["response_json_valid"]),
+        "finish_reasons": sorted({str(r["finish_reason"]) for r in runs}),
+        "batch_wall_s": batch_wall_s,
+        "aggregate_input_tps": total_input / batch_wall_s if batch_wall_s else None,
+        "aggregate_output_tps": total_output / batch_wall_s if batch_wall_s else None,
         # Keep one full response per prompt so the report can show what the
         # model actually produced, not just how fast it produced it.
         "response_sample": runs[0].get("response", ""),
@@ -217,11 +251,16 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=512)
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--cache-mode", choices=["cold", "warm"], default="cold")
+    ap.add_argument("--concurrency", type=int, default=1)
+    ap.add_argument("--scenario", default="unknown")
+    ap.add_argument("--test-id", default="adhoc")
     ap.add_argument("--ignore-eos", action="store_true",
                     help="force exactly --max-tokens output for a clean decode rate")
     ap.add_argument("--timeout", type=int, default=1800)
     ap.add_argument("--out-json", default=None)
     args = ap.parse_args()
+    if args.repeats < 1 or args.concurrency < 1:
+        ap.error("--repeats and --concurrency must be at least 1")
 
     files = sorted(
         os.path.join(args.prompt_dir, f)
@@ -237,6 +276,8 @@ def main():
     print(f"cache mode  : {args.cache_mode}")
     print(f"max_tokens  : {args.max_tokens}  ignore_eos={args.ignore_eos}")
     print(f"repeats     : {args.repeats} (+{args.warmup} warmup)")
+    print(f"concurrency : {args.concurrency}")
+    print(f"scenario    : {args.scenario}  test={args.test_id}")
     print(f"prompts     : {len(files)}")
     print()
 
@@ -251,13 +292,35 @@ def main():
 
     results = []
     raw_records = []
+
+    def write_results(complete):
+        if not args.out_json:
+            return
+        tmp_path = args.out_json + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as fh:
+            json.dump({"generated_at_utc": datetime.datetime.now(
+                           datetime.timezone.utc).isoformat(),
+                       "complete": complete,
+                       "config": vars(args), "summary": results,
+                       "raw": raw_records}, fh, indent=2)
+        os.replace(tmp_path, args.out_json)
     for path in files:
         name = os.path.basename(path)
         with open(path, encoding="utf-8") as fh:
             base_content = fh.read()
 
-        runs = []
-        for i in range(args.repeats):
+        # Warm-prefix measurements must not include the priming request. This
+        # also prevents the almost-identical supplied A/B prompts from making
+        # the first measured request's cache state depend on file ordering.
+        if args.cache_mode == "warm":
+            try:
+                one_request(args.base_url, args.model, base_content,
+                            min(args.max_tokens, 8), args.temperature,
+                            False, args.timeout)
+            except Exception as e:  # noqa: BLE001
+                print(f"[warn] prompt prime failed for {name}: {e}")
+
+        def run_iteration(i):
             if args.cache_mode == "cold":
                 # Unique leading bytes invalidate the prefix cache from token 0.
                 content = f"[trace-id {uuid.uuid4().hex}]\n{base_content}"
@@ -270,9 +333,25 @@ def main():
             except urllib.error.HTTPError as e:
                 detail = e.read().decode("utf-8", "replace")[:400]
                 print(f"  {name} iter {i}: HTTP {e.code} {detail}")
-                continue
+                return i, None
             except Exception as e:  # noqa: BLE001
                 print(f"  {name} iter {i}: {type(e).__name__} {e}")
+                return i, None
+
+            return i, r
+
+        runs = []
+        batch_start = time.perf_counter()
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=args.concurrency) as executor:
+            futures = [executor.submit(run_iteration, i)
+                       for i in range(args.repeats)]
+            completed = [future.result()
+                         for future in concurrent.futures.as_completed(futures)]
+        batch_wall_s = time.perf_counter() - batch_start
+
+        for i, r in sorted(completed):
+            if r is None:
                 continue
 
             runs.append(r)
@@ -283,10 +362,14 @@ def main():
                   f"TTFT {r['ttft_s'] * 1000:8.1f} ms  "
                   f"E2E {r['e2e_s']:7.2f} s  "
                   f"in {str(r['prompt_tokens']):>6}  out {r['completion_tokens']:>5}"
+                  f"  finish={r['finish_reason']} json={r['response_json_valid']}"
                   f"  | {preview}", flush=True)
 
         if runs:
-            results.append(summarize(name, None, runs))
+            results.append(summarize(name, None, runs, batch_wall_s))
+            # Checkpoint after every prompt. A disconnected kubectl exec must
+            # not discard completed GPU work or leave all results in memory.
+            write_results(False)
         print()
 
     # ---- report -------------------------------------------------------------
@@ -312,9 +395,7 @@ def main():
           f"(token counts from '{results[0]['token_source'] if results else 'n/a'}')")
 
     if args.out_json:
-        with open(args.out_json, "w", encoding="utf-8") as fh:
-            json.dump({"config": vars(args), "summary": results,
-                       "raw": raw_records}, fh, indent=2)
+        write_results(True)
         print(f"\nwrote {args.out_json}")
 
 

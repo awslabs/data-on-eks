@@ -1,0 +1,20 @@
+{
+  "scenario_id": "DEP-H100-OPT",
+  "service_name": "gemma4-h100-opt",
+  "hf_model_id": "google/gemma-4-12B-it",
+  "model_dir": "gemma-4-12b-it",
+  "model_id": "gemma-4-12b-it",
+  "accelerator_type": "H100",
+  "instance_types": ["p5.48xlarge"],
+  "nodepool_name": "gpu-capacity-block",
+  "capacity_type": "reserved",
+  "gpu_count": 1,
+  "async_scheduling": false,
+  "worker_cpu": 12,
+  "worker_memory_request": "96Gi",
+  "worker_memory_limit": "128Gi",
+  "engine_kwargs_extra": {
+    "kv_cache_dtype": "fp8",
+    "speculative_config": {"method": "ngram", "num_speculative_tokens": 5, "prompt_lookup_max": 5}
+  }
+}

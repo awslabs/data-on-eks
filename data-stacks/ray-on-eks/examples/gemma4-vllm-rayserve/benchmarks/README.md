@@ -1,131 +1,110 @@
-# Single-request latency benchmark
+# Gemma 4 benchmark suite
 
-Measures what a latency-sensitive caller actually feels against the Gemma 4
-endpoint: **TTFT**, **end-to-end latency**, and **decode throughput**, one
-request at a time.
+Measures cold and warm-prefix latency, fixed decode, prefill, and throughput at
+concurrency 1, 4, 8, and 16. Every test has a separate executable request file
+and produces a separate local JSON artifact.
 
-## 1. Prerequisite: the endpoint must be running
+## Prerequisites
 
-The benchmark measures a live endpoint, so deploy it first. All commands run
-from the example directory one level up (`gemma4-vllm-rayserve/`).
+Run commands from `gemma4-vllm-rayserve/`:
 
 ```bash
-cd ..
-
 export KUBECONFIG=<repo>/data-stacks/ray-on-eks/kubeconfig.yaml
-export S3_BUCKET=$(cd ../../terraform/_local && terraform output -raw s3_bucket_id_spark_history_server)
+export S3_BUCKET=<existing-private-model-bucket>
 export AWS_REGION=us-west-2
+export SCENARIO=DEP-L40-BASE
 
-./deploy.sh prepare    # one-time: stage weights in S3, mirror image to ECR
-./deploy.sh service    # deploy the endpoint; Karpenter provisions the GPU node
+./deploy.sh prepare "$SCENARIO" # once per model variant
+./deploy.sh service "$SCENARIO"
+kubectl get rayservice -n raydata -w
+./deploy.sh test "$SCENARIO"
 ```
 
-**Wait for it to report Ready before benchmarking.** A cold deploy takes about
-10 minutes - Karpenter boots the node, pulls an 11.7 GB image, downloads 22.3 GiB
-of weights, then vLLM compiles and captures CUDA graphs.
+`./deploy.sh scenarios` lists all supported configurations. H100 scenarios
+require the isolated Capacity Block resources described in the parent README.
+
+## Prompt inputs
+
+The supplied prompts live in `prompts/`, one user message per file. That folder
+is ignored because customer inputs must remain local. Do not rename or edit the
+prompt corpus during a comparison.
+
+## Run one test
 
 ```bash
-kubectl get rayservice gemma4-12b -n raydata -w
-# wait for SERVICE STATUS: Running
-
-./deploy.sh test       # sanity-check that it answers a request
+./benchmarks/requests/T03-cold-latency.sh "$SCENARIO"
+./benchmarks/requests/T04-warm-latency.sh "$SCENARIO"
+./benchmarks/requests/T05-fixed-decode.sh "$SCENARIO"
+./benchmarks/requests/T06-prefill.sh "$SCENARIO"
+./benchmarks/requests/T07-throughput-c01.sh "$SCENARIO"
+./benchmarks/requests/T08-throughput-c04.sh "$SCENARIO"
+./benchmarks/requests/T09-throughput-c08.sh "$SCENARIO"
+./benchmarks/requests/T10-throughput-c16.sh "$SCENARIO"
 ```
 
-Benchmarking before the engine finishes initialising gives meaningless numbers,
-so do not skip the wait.
+## Run the full T03-T10 suite
 
-> If you also want deployment timings, run `./measure-deployment.sh` **instead
-> of** `./deploy.sh service`. It deletes any existing RayService before starting
-> its clock, so running it *after* a deploy throws that deploy away and starts
-> the ~10 minute cold start over.
-
-## 2. Add your prompts
-
-One prompt per file, any extension. The whole file becomes the user message.
+Start the continuation runner, then T03. The runner waits for a structurally
+valid T03 artifact before executing T04-T10 serially:
 
 ```bash
-mkdir -p benchmarks/prompt-files     # gitignored - your prompts stay local
-cp /path/to/your/prompts/* benchmarks/prompt-files/
+./run-scenario-after-t03.sh "$SCENARIO" &
+./benchmarks/requests/T03-cold-latency.sh "$SCENARIO"
 ```
 
-## 3. Run the benchmark
+Do not run two tests against the same GPU simultaneously. Scenarios may run in
+parallel only when they use separate physical GPUs. The harness selects the
+scenario-specific Ray head and worker using `app=<service-name>` labels.
 
-Run both modes - they bracket the real-world number (see *Why it is built this
-way* below).
+## Test definitions
+
+| Test | Purpose | Requests |
+|---|---|---:|
+| T03 | Cold-prefix latency, concurrency 1 | 60 |
+| T04 | Warm-prefix latency after per-prompt priming | 60 |
+| T05 | Fixed 512-token decode | 60 |
+| T06 | One-token prefill | 60 |
+| T07 | Fixed decode, concurrency 1 | 36 |
+| T08 | Fixed decode, concurrency 4 | 72 |
+| T09 | Fixed decode, concurrency 8 | 96 |
+| T10 | Fixed decode, concurrency 16 | 192 |
+
+Warm-prefix priming is performed independently for each prompt so similar A/B
+prompt files cannot silently prewarm one another. Cold requests receive a
+unique leading nonce to invalidate the prefix cache.
+
+## Results and validation
+
+Artifacts are written to:
+
+```text
+benchmarks/results/<SCENARIO>/<TEST>-<UTC timestamp>.json
+```
+
+`benchmarks/results/` is ignored and must remain unstaged because artifacts
+contain model responses derived from customer prompts. The JSON includes the
+run configuration, completion marker, six prompt summaries, and every raw
+request record. Results checkpoint after every prompt so a disconnected client
+does not discard completed GPU work.
+
+An accepted artifact must have:
+
+- `complete: true`;
+- the expected scenario and test ID;
+- six prompt summaries;
+- the expected raw request count from the table above; and
+- zero non-empty `error` values.
+
+T03/T04 use a 512-token output cap. If `finish_reason=length`, the latency is
+valid fixed-cap performance evidence but not proof of natural-completion JSON
+quality. Run a separate natural-EOS quality evaluation before selecting QAT.
+
+## Cleanup
 
 ```bash
-# cache-cold: every request prefills. The conservative number.
-./run-latency-benchmark.sh benchmarks/prompt-files \
-    --cache-mode cold --repeats 3 --max-tokens 512
-
-# cache-warm: repeated identical prefix. The best case.
-./run-latency-benchmark.sh benchmarks/prompt-files \
-    --cache-mode warm --repeats 3 --max-tokens 512
+./deploy.sh cleanup "$SCENARIO"
+kubectl delete nodeclaim -l karpenter.sh/nodepool=gpu # optional immediate release
 ```
 
-Each run takes a few minutes - it sends `repeats x prompts` requests
-sequentially, plus warmup.
-
-Useful flags: `--repeats N`, `--max-tokens N`, `--ignore-eos` (force exactly
-`--max-tokens` output for a clean decode rate), `--temperature`.
-
-## 4. Where to see the results
-
-**On screen**, live, one line per request as it completes, then a summary table:
-
-```
-prompt                        in tok  out tok  TTFT p50  TTFT p95  E2E p50   decode   ITL p50
--------------------------------------------------------------------------------------------
-prompt_2k_token.txt             2306      512    415.6m    459.2m   26.45s   19.6/s     50.0m
-prompt_20K_token               20554      512   3854.0m   3875.4m   24.67s   24.5/s     50.1m
-profile_fact_LARGE.txt         31405      512   6771.6m   6895.8m   31.02s   21.1/s     50.1m
-```
-
-Below that, vLLM's own server-side counters for the same window, as an
-independent cross-check on the client-side timings.
-
-**On disk**, full detail including every individual iteration and the model's
-responses:
-
-```
-benchmarks/results-latency-<timestamp>.json
-```
-
-That file is gitignored - it contains your prompts' responses.
-
-## Why it is built this way
-
-**It runs inside the cluster.** TTFT is a millisecond measurement. Driving it
-from a laptop through `kubectl port-forward` folds your internet round-trip and
-the port-forward's own jitter into every number. The script copies itself into
-the Ray head pod and runs there.
-
-**It streams.** TTFT is only observable on a streaming response, and token
-counts come from the server's `usage` block rather than being estimated.
-
-**Cache state is explicit.** vLLM's prefix cache makes a repeated prompt cheap
-to prefill, so averaging N repeats of one prompt silently reports a cache-hit
-TTFT. `--cache-mode cold` prepends a unique nonce per iteration to force a real
-prefill; `--cache-mode warm` repeats byte-identically. Real workloads sit
-between the two, so run both.
-
-## Reading the output
-
-- **Decode tok/s** is the number to trust for generation speed. Median
-  inter-token latency is misleading here - `async_scheduling` delivers tokens in
-  bursts.
-- **`max_model_len` bounds input + output combined.** If a prompt nearly fills
-  it, generation truncates and E2E looks deceptively fast. Check output token
-  counts against your cap before believing a result.
-- Prompts sharing a long prefix will cache across *different* files, not just
-  repeats of one.
-
-## When you are done
-
-```bash
-./deploy.sh cleanup                                  # delete the RayService
-kubectl delete nodeclaim -l karpenter.sh/nodepool=gpu # release the GPU now
-```
-
-Karpenter reclaims the node on its own after a few minutes, but the second
-command stops the billing immediately.
+For H100 Capacity Block scenarios, preserve and validate all evidence first,
+then remove the benchmark-only pool with `./manage-capacity-block.sh delete`.
