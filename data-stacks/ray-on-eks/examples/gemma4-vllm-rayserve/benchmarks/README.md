@@ -4,6 +4,10 @@ Measures cold and warm-prefix latency, fixed decode, prefill, and throughput at
 concurrency 1, 4, 8, and 16. Every test has a separate executable request file
 and produces a separate local JSON artifact.
 
+Published results and interpretation live in the
+[Gemma 4 12B GPU benchmark](https://awslabs.github.io/data-on-eks/docs/benchmarks/gemma-4-12b-rayserve-gpu-benchmark)
+on the Data on EKS website. This file is the execution runbook.
+
 ## Prerequisites
 
 Run commands from `gemma4-vllm-rayserve/`:
@@ -91,9 +95,18 @@ An accepted artifact must have:
 
 - `complete: true`;
 - the expected scenario and test ID;
-- six prompt summaries;
-- the expected raw request count from the table above; and
-- zero non-empty `error` values.
+- model identity and immutable image digest matching the rendered scenario;
+- the expected instance type, GPU model, and GPU count;
+- six prompt summaries with server-reported input-token counts;
+- the expected raw request count from the table above;
+- zero empty responses or non-empty `error` values; and
+- fixed-token targets and truncation status where the test requires them.
+
+A comparison run is valid only when the RayService is healthy before and after
+the test, warm measurements exclude priming requests, and no unrelated
+inference workload shares the allocated physical GPUs. Keep exact instance,
+NodePool, and capacity-type selectors in place so a scenario cannot fall back to
+different hardware.
 
 T03/T04 use a 512-token output cap. If `finish_reason=length`, the latency is
 valid fixed-cap performance evidence but not proof of natural-completion JSON
@@ -107,4 +120,9 @@ kubectl delete nodeclaim -l karpenter.sh/nodepool=gpu # optional immediate relea
 ```
 
 For H100 Capacity Block scenarios, preserve and validate all evidence first,
-then remove the benchmark-only pool with `./manage-capacity-block.sh delete`.
+then remove the benchmark-only resources:
+
+```bash
+kubectl delete nodepool gpu-capacity-block --ignore-not-found
+kubectl delete ec2nodeclass gpu-capacity-block --ignore-not-found
+```

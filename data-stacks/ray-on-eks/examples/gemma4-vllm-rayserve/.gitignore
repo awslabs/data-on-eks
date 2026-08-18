@@ -1,4 +1,0 @@
-# Supplied customer benchmark inputs and generated responses remain local.
-prompts/
-benchmarks/results/
-benchmarks/results-*.json

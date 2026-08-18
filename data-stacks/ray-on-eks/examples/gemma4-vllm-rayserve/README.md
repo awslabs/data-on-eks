@@ -71,17 +71,11 @@ export AWS_REGION=us-west-2
 | `DEP-H100-OPT` | 1x H100 on `p5.48xlarge` | BF16, FP8 KV, prefix cache, 5-token n-gram |
 | `DEP-H100-TP4` | 4x H100 on `p5.48xlarge` | BF16 tensor parallelism 4 |
 
-H100 scenarios select the isolated `gpu-capacity-block` NodePool. Create it
-from a Capacity Block reservation before deploying an H100 scenario:
-
-```bash
-./manage-capacity-block.sh render cr-0123456789abcdef0 us-west-2b
-./manage-capacity-block.sh apply  cr-0123456789abcdef0 us-west-2b
-./manage-capacity-block.sh status
-```
-
-The reservation ID and Availability Zone are rendered into a local ignored
-result file; do not add a real reservation ID to source control.
+H100 scenarios select the isolated `gpu-capacity-block` NodePool. Before an
+H100 run, render `karpenter-capacity-block.template.yaml` with the targeted
+Capacity Reservation ID and its Availability Zone. Keep the rendered manifest
+outside the repository, review it, and apply it with `kubectl`. Never commit a
+reservation ID or account-specific infrastructure details.
 
 ## Run it
 
@@ -236,9 +230,8 @@ the job) using this example's `engine_kwargs`.
 | `run-latency-benchmark.sh` | Runs that harness in-cluster and collects results |
 | `benchmarks/requests/T03...T10` | One executable request file per benchmark test |
 | `run-scenario-after-t03.sh` | Runs T04-T10 after validating a scenario's T03 artifact |
-| `karpenter-capacity-block.template.yaml` | Temporary isolated P5 Capacity Block resources |
-| `manage-capacity-block.sh` | Renders, applies, inspects, and deletes the temporary P5 pool |
-| `benchmarks/` | Runbook, matrix, reports, and ignored local results |
+| `karpenter-capacity-block.template.yaml` | Temporary isolated P5 Capacity Block resources; render outside the repository before applying |
+| `benchmarks/` | Benchmark execution and artifact-validation runbook; generated results remain local |
 
 ## Cleanup
 
@@ -249,10 +242,13 @@ the job) using this example's `engine_kwargs`.
 Karpenter reclaims the GPU node a few minutes later. To release it immediately,
 delete its NodeClaim: `kubectl delete nodeclaim -l karpenter.sh/nodepool=gpu`.
 
-After all H100 tests and evidence capture are complete:
+After all H100 tests and evidence capture are complete, remove the temporary
+benchmark capacity:
 
 ```bash
-./manage-capacity-block.sh delete
+kubectl delete nodepool gpu-capacity-block --ignore-not-found
+kubectl delete ec2nodeclass gpu-capacity-block --ignore-not-found
 ```
 
-This helper targets only the benchmark-specific `gpu-capacity-block` resources.
+These commands target only the benchmark-specific `gpu-capacity-block`
+resources.

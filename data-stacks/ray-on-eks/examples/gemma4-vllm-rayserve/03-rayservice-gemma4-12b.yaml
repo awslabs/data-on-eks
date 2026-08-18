@@ -97,11 +97,6 @@ $ENGINE_KWARGS_EXTRA
                   value: "$AWS_REGION"
               resources:
                 requests:
-                  # The memory-optimized x86 EC2NodeClass reserves 2 vCPU.
-                  # A 2-CPU request plus DaemonSets cannot fit r6a.xlarge's
-                  # remaining 2 allocatable CPUs and causes Karpenter churn.
-                  # The head advertises num-cpus=0 and measured ~150m while
-                  # serving, so 1 CPU is sufficient for control-plane duties.
                   cpu: "1"
                   memory: 8Gi
                 limits:

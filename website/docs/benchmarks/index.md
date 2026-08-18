@@ -140,6 +140,31 @@ import { Settings, BarChart3, Cpu, Zap, Database } from 'lucide-react';
 </div>
 </div>
 
+<div className="datastack-card">
+<div className="datastack-header">
+<div className="datastack-icon">
+  <Cpu size={32} strokeWidth={2} />
+</div>
+<div className="datastack-content">
+<h3>Gemma 4 12B on RayServe</h3>
+<p className="datastack-description">Latency and throughput comparison across L40S, H100, W4A16 QAT, speculative decoding, and four-GPU tensor parallelism.</p>
+</div>
+</div>
+<div className="datastack-features">
+<span className="feature-tag">RayServe + vLLM</span>
+<span className="feature-tag">L40S vs H100</span>
+<span className="feature-tag">Concurrency 1–16</span>
+</div>
+<div className="datastack-footer">
+<a href="/data-on-eks/docs/benchmarks/gemma-4-12b-rayserve-gpu-benchmark" className="datastack-link">
+<span>View Results</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
 </div>
 
 ## About TPC-DS Benchmarks
