@@ -23,7 +23,8 @@
 set -uo pipefail
 
 NAMESPACE="raydata"
-SERVICE_NAME="gemma4-12b"
+SCENARIO_ID="${SCENARIO_ID:-DEP-L40-BASE}"
+SERVICE_NAME="${SERVICE_NAME:-gemma4-l40-base}"
 MODEL_DIR="${MODEL_DIR:-gemma-4-12b-it}"
 MODEL_ID="${MODEL_ID:-$MODEL_DIR}"
 RAY_LLM_TAG="${RAY_LLM_TAG:-2.57.0.6c4022-py312-cu130}"
@@ -41,14 +42,10 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text) \
   || fail "AWS credentials invalid/expired - refresh and retry."
 ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-render() {
-  sed -e "s|\$S3_BUCKET|$S3_BUCKET|g" \
-      -e "s|\$AWS_REGION|$AWS_REGION|g" \
-      -e "s|\$ECR_REGISTRY|$ECR_REGISTRY|g" \
-      -e "s|\$RAY_LLM_TAG|$RAY_LLM_TAG|g" \
-      -e "s|\$MODEL_DIR|$MODEL_DIR|g" \
-      -e "s|\$MODEL_ID|$MODEL_ID|g" \
-      "$1"
+render_service() {
+  S3_BUCKET="$S3_BUCKET" AWS_REGION="$AWS_REGION" ECR_REGISTRY="$ECR_REGISTRY" \
+    RAY_LLM_TAG="$RAY_LLM_TAG" \
+    python3 "$(dirname "$0")/render-scenario.py" "$SCENARIO_ID"
 }
 
 # epoch (s) of an ISO8601 k8s timestamp, portable across GNU/BSD date.
@@ -96,7 +93,7 @@ fi
 
 # --- Apply -------------------------------------------------------------------
 info "Applying RayService at $(date -u +%H:%M:%SZ)..."
-render 03-rayservice-gemma4-12b.yaml | kubectl apply -f - >/dev/null
+render_service | kubectl apply -f - >/dev/null
 POLL_START=$(date +%s)
 
 # --- Wait until Ready (poll only to know when to stop; not used for timing) ---
@@ -158,6 +155,7 @@ rep_done=$(log_epoch "Finished initializing replica")
 echo ""
 echo "==================================================================="
 echo " Gemma 4 12B RayService - end-to-end deployment timing"
+echo " scenario   : $SCENARIO_ID"
 echo " $( (( IS_COLD )) && echo 'COLD start (no GPU node or nodeclaim existed)' || echo 'WARM start (GPU capacity pre-existed)')"
 echo " worker pod : ${WORKER:-<none>}"
 echo " gpu node   : ${NODE:-<pending>}"

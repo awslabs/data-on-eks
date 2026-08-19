@@ -1,0 +1,19 @@
+{
+  "scenario_id": "DEP-H100-TP4",
+  "service_name": "gemma4-h100-tp4",
+  "hf_model_id": "google/gemma-4-12B-it",
+  "model_dir": "gemma-4-12b-it",
+  "model_id": "gemma-4-12b-it",
+  "accelerator_type": "H100",
+  "instance_types": ["p5.48xlarge"],
+  "nodepool_name": "gpu-capacity-block",
+  "capacity_type": "reserved",
+  "gpu_count": 4,
+  "async_scheduling": true,
+  "worker_cpu": 48,
+  "worker_memory_request": "384Gi",
+  "worker_memory_limit": "512Gi",
+  "engine_kwargs_extra": {
+    "tensor_parallel_size": 4
+  }
+}

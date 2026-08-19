@@ -35,6 +35,8 @@ set -euo pipefail
 NAMESPACE="${NAMESPACE:-raydata}"
 SERVICE_NAME="${SERVICE_NAME:-gemma4-12b}"
 MODEL_ID="${MODEL_ID:-gemma-4-12b-it}"
+SCENARIO_ID="${SCENARIO_ID:-adhoc}"
+TEST_ID="${TEST_ID:-latency}"
 PROMPT_DIR="${1:?usage: ./run-latency-benchmark.sh <prompt-dir> [extra args]}"
 shift || true
 
@@ -45,11 +47,11 @@ fail() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 [[ -d "$PROMPT_DIR" ]] || fail "prompt dir not found: $PROMPT_DIR"
 
 HEAD_POD=$(kubectl get pods -n "$NAMESPACE" \
-  -l "ray.io/node-type=head,ray.io/serve=true" \
+  -l "ray.io/node-type=head,ray.io/serve=true,app=${SERVICE_NAME}" \
   -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
 [[ -n "$HEAD_POD" ]] || HEAD_POD=$(kubectl get pods -n "$NAMESPACE" \
-  -o name | grep -- '-head-' | head -1 | cut -d/ -f2)
-[[ -n "$HEAD_POD" ]] || fail "no Ray head pod found in $NAMESPACE"
+  -l "app=${SERVICE_NAME}" -o name | grep -- '-head-' | head -1 | cut -d/ -f2)
+[[ -n "$HEAD_POD" ]] || fail "no Ray head pod found for service $SERVICE_NAME in $NAMESPACE"
 
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 REMOTE_DIR="/tmp/latbench-$STAMP"
@@ -72,7 +74,7 @@ done
 # actually prefilled, prompt_tokens counts tokens submitted. Their ratio is the
 # real cache-miss rate, so a "cold" run that silently hit the prefix cache
 # cannot masquerade as a valid measurement.
-WORKER_POD=$(kubectl get pods -n "$NAMESPACE" -o name \
+WORKER_POD=$(kubectl get pods -n "$NAMESPACE" -l "app=${SERVICE_NAME}" -o name \
   | grep -- '-worker-' | head -1 | cut -d/ -f2 || true)
 
 snap_metrics() {
@@ -144,9 +146,9 @@ fi
 
 # Results always land in benchmarks/ regardless of where you invoked this from:
 # that directory is gitignored, and the JSON contains your prompts' responses.
-OUT_DIR="$(cd "$(dirname "$0")" && pwd)/benchmarks"
+OUT_DIR="$(cd "$(dirname "$0")" && pwd)/benchmarks/results/$SCENARIO_ID"
 mkdir -p "$OUT_DIR"
-LOCAL_OUT="$OUT_DIR/results-latency-$STAMP.json"
+LOCAL_OUT="$OUT_DIR/${TEST_ID}-$STAMP.json"
 kubectl cp "$NAMESPACE/$HEAD_POD:$REMOTE_DIR/results.json" "$LOCAL_OUT" \
   -c ray-head 2>/dev/null && info "Results written to $LOCAL_OUT" \
   || info "(no results.json copied back)"

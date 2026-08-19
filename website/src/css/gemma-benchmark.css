@@ -1,0 +1,349 @@
+.gemma-benchmark-hero {
+  margin: 0 0 2rem;
+  padding: 3rem 2.25rem;
+  color: #fff;
+  background: linear-gradient(125deg, #10233e 0%, #194f83 62%, #087d91 100%);
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(16, 35, 62, 0.18);
+}
+
+.gemma-benchmark-hero h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2.1rem, 5vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.gemma-benchmark-eyebrow {
+  margin: 0 0 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.gemma-benchmark-subtitle {
+  max-width: 52rem;
+  margin: 1rem 0 0;
+  color: #dcecff;
+  font-size: 1.1rem;
+}
+
+.gemma-benchmark-chips,
+.gemma-benchmark-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+}
+
+.gemma-benchmark-chips span {
+  padding: 0.42rem 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+}
+
+.gemma-benchmark-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 2rem;
+}
+
+.gemma-benchmark-grid-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gemma-benchmark-card {
+  position: relative;
+  padding: 1.4rem;
+  overflow: hidden;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 14px;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.07);
+}
+
+.gemma-benchmark-card h3 {
+  margin-top: 0;
+}
+
+.gemma-benchmark-card p:last-child,
+.gemma-benchmark-card ul:last-child {
+  margin-bottom: 0;
+}
+
+.gemma-benchmark-card-performance::before,
+.gemma-benchmark-card-balanced::before,
+.gemma-benchmark-card-value::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  content: "";
+}
+
+.gemma-benchmark-card-performance::before {
+  background: #2563eb;
+}
+
+.gemma-benchmark-card-balanced::before {
+  background: #0891b2;
+}
+
+.gemma-benchmark-card-value::before {
+  background: #16845b;
+}
+
+.gemma-benchmark-tag {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.28rem 0.55rem;
+  color: var(--ifm-color-primary-darkest);
+  background: var(--ifm-color-primary-lightest);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gemma-benchmark-metric {
+  margin-top: 1rem;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.gemma-benchmark-metric small {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.gemma-benchmark-table-shell {
+  max-width: 100%;
+  margin: 1rem 0 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 14px;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.07);
+  scrollbar-gutter: stable;
+}
+
+.gemma-benchmark-table-shell table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.gemma-benchmark-table-summary table {
+  min-width: 78rem;
+}
+
+.gemma-benchmark-table-detail table {
+  min-width: 60rem;
+}
+
+.gemma-benchmark-table-shell th,
+.gemma-benchmark-table-shell td {
+  padding: 0.75rem 0.85rem;
+  border: 0;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gemma-benchmark-table-shell thead th {
+  color: var(--ifm-color-content-secondary);
+  background: var(--ifm-color-emphasis-100);
+  font-size: 0.72rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.gemma-benchmark-table-shell th:first-child,
+.gemma-benchmark-table-shell td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 12rem;
+  text-align: left;
+  background: var(--ifm-background-surface-color);
+}
+
+.gemma-benchmark-table-summary th:first-child,
+.gemma-benchmark-table-summary td:first-child {
+  min-width: 13.5rem;
+}
+
+.gemma-benchmark-table-shell thead th:first-child {
+  z-index: 2;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.gemma-benchmark-table-shell tbody tr:nth-child(even) > * {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.gemma-benchmark-table-shell tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.gemma-benchmark-table-shell .gemma-benchmark-winner > * {
+  background: #eaf8f2;
+  font-weight: 700;
+}
+
+.gemma-benchmark-table-shell td small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.72rem;
+}
+
+.gemma-benchmark-table-note {
+  margin: -0.25rem 0 2rem;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.85rem;
+}
+
+.gemma-benchmark-table-note p {
+  margin: 0;
+}
+
+.gemma-benchmark-bars {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0 2rem;
+  padding: 1.4rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 14px;
+  background: var(--ifm-background-surface-color);
+}
+
+.gemma-benchmark-bar-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 13rem) 1fr 4rem;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.gemma-benchmark-bar-row > span {
+  font-weight: 650;
+}
+
+.gemma-benchmark-bar-row > strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gemma-benchmark-track {
+  height: 0.8rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ifm-color-emphasis-200);
+}
+
+.gemma-benchmark-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #0891b2);
+}
+
+.gemma-benchmark-fill-100 {
+  width: 100%;
+}
+.gemma-benchmark-fill-48 {
+  width: 48%;
+}
+.gemma-benchmark-fill-47 {
+  width: 47.5%;
+}
+.gemma-benchmark-fill-24 {
+  width: 23.7%;
+}
+.gemma-benchmark-fill-21 {
+  width: 21.3%;
+}
+.gemma-benchmark-fill-14 {
+  width: 13.8%;
+}
+
+.gemma-benchmark-decisions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 2rem;
+}
+
+.gemma-benchmark-evidence {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  background: var(--ifm-background-surface-color);
+}
+
+.gemma-benchmark-evidence span {
+  padding: 0.35rem 0.65rem;
+  color: var(--ifm-color-content);
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+[data-theme="dark"] .gemma-benchmark-card,
+[data-theme="dark"] .gemma-benchmark-bars,
+[data-theme="dark"] .gemma-benchmark-evidence,
+[data-theme="dark"] .gemma-benchmark-table-shell {
+  box-shadow: none;
+}
+
+[data-theme="dark"] .gemma-benchmark-table-shell .gemma-benchmark-winner > * {
+  background: #123d32;
+}
+
+@media (max-width: 900px) {
+  .gemma-benchmark-grid,
+  .gemma-benchmark-grid-metrics,
+  .gemma-benchmark-decisions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .gemma-benchmark-hero {
+    padding: 2rem 1.25rem;
+  }
+
+  .gemma-benchmark-bar-row {
+    grid-template-columns: 7.5rem 1fr 3.25rem;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+  }
+}
+
+@media print {
+  .gemma-benchmark-hero,
+  .gemma-benchmark-card,
+  .gemma-benchmark-bars,
+  .gemma-benchmark-table-shell {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .gemma-benchmark-table-shell {
+    overflow: visible;
+  }
+}

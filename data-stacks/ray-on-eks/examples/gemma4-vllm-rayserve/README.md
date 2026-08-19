@@ -3,8 +3,8 @@
 An OpenAI-compatible endpoint for
 [`google/gemma-4-12B-it`](https://huggingface.co/google/gemma-4-12B-it) on the
 `ray-on-eks` stack, served by **vLLM 0.25** on **Ray 2.57** (KubeRay), on a
-single **L40S 48GB** provisioned by Karpenter. Text, image and audio in; one
-GPU node; cold start tuned end to end.
+an **L40S 48GB** or **H100 80GB** provisioned by Karpenter. The example includes
+repeatable BF16, optimized, QAT W4A16, and H100 TP=4 benchmark scenarios.
 
 ## Model facts
 
@@ -26,7 +26,7 @@ GPU node; cold start tuned end to end.
 | Image pull | 11.7 GB ray-llm image mirrored to same-region ECR, pulled with SOCI parallel unpack (`FastImagePull` on the `gpu` EC2NodeClass) |
 | Weight staging | HuggingFace -> S3 once, ahead of time - never on the node's critical path |
 | Weight load | Same-region S3 -> node NVMe (parallel boto3), then NVMe -> GPU |
-| Engine | `async_scheduling`, chunked prefill, prefix caching, CUDA graphs - per the [official vLLM Gemma 4 recipe](https://github.com/vllm-project/recipes/blob/main/Google/Gemma4.md) |
+| Engine | Chunked prefill, prefix caching, CUDA graphs, and `async_scheduling` where compatible - per the [official vLLM Gemma 4 recipe](https://github.com/vllm-project/recipes/blob/main/Google/Gemma4.md) |
 | Isolation | Ray head is control-plane only (`num-cpus: 0`); the engine has the GPU node to itself |
 
 Two things worth knowing before you change the config:
@@ -43,7 +43,7 @@ Two things worth knowing before you change the config:
 > 22.83 GiB; at `gpu_memory_utilization: 0.90` an A10G or L4 budget is ~21.6 GiB,
 > short before a single KV-cache byte. Use the QAT variant
 > [`gemma-4-12B-it-qat-w4a16-ct`](https://huggingface.co/google/gemma-4-12B-it-qat-w4a16-ct)
-> (8.3 GiB) and drop `accelerator_type` accordingly.
+> (9.6 GiB staged in this run) and drop `accelerator_type` accordingly.
 
 ## Prerequisites
 
@@ -56,26 +56,49 @@ export S3_BUCKET=$(cd ../../terraform/_local && terraform output -raw s3_bucket_
 export AWS_REGION=us-west-2
 ```
 
+## Choose a scenario
+
+```bash
+./deploy.sh scenarios
+```
+
+| Scenario | Hardware | Configuration |
+|---|---|---|
+| `DEP-L40-BASE` | 1x L40S (`g6e.2xlarge`) | BF16 baseline |
+| `DEP-L40-OPT` | 1x L40S (`g6e.2xlarge`) | BF16, FP8 KV, prefix cache, 5-token n-gram |
+| `DEP-L40-QAT` | 1x L40S (`g6e.2xlarge`) | QAT W4A16, FP8 KV, prefix cache |
+| `DEP-H100-BASE` | 1x H100 on `p5.48xlarge` | BF16 baseline |
+| `DEP-H100-OPT` | 1x H100 on `p5.48xlarge` | BF16, FP8 KV, prefix cache, 5-token n-gram |
+| `DEP-H100-TP4` | 4x H100 on `p5.48xlarge` | BF16 tensor parallelism 4 |
+
+H100 scenarios select the isolated `gpu-capacity-block` NodePool. Before an
+H100 run, render `karpenter-capacity-block.template.yaml` with the targeted
+Capacity Reservation ID and its Availability Zone. Keep the rendered manifest
+outside the repository, review it, and apply it with `kubectl`. Never commit a
+reservation ID or account-specific infrastructure details.
+
 ## Run it
 
 ```bash
-./deploy.sh prepare    # one-time: stage weights in S3, mirror image to ECR
+SCENARIO=DEP-L40-BASE
+
+./deploy.sh prepare "$SCENARIO" # one-time: stage weights and mirror image
 ./deploy.sh verify     # confirm the image registers gemma4_unified
-./deploy.sh service    # deploy the endpoint (Karpenter provisions the GPU node)
+./deploy.sh render "$SCENARIO"  # inspect the rendered manifest
+./deploy.sh service "$SCENARIO" # deploy; Karpenter provisions exact hardware
 
-kubectl get rayservice gemma4-12b -n raydata -w   # wait for Ready (~10 min cold)
+kubectl get rayservice -n raydata -w # wait for SERVICE STATUS: Running
 
-./deploy.sh test       # send a sample request
+./deploy.sh test "$SCENARIO"     # send a sample request
 ```
 
 To deploy *and* get a phase-by-phase timing breakdown, run
-`./measure-deployment.sh` **instead of** `./deploy.sh service` - it deletes any
-existing RayService first so it can time a clean cold start.
+`./deploy.sh measure "$SCENARIO"` **instead of** `./deploy.sh service`.
 
 Query it directly:
 
 ```bash
-kubectl port-forward svc/gemma4-12b-serve-svc 8000 -n raydata &
+kubectl port-forward svc/gemma4-l40-base-serve-svc 8000:8000 -n raydata &
 curl http://localhost:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{
   "model": "gemma-4-12b-it",
   "messages": [{"role": "user", "content": "Explain vLLM continuous batching in two sentences."}],
@@ -187,7 +210,8 @@ Reproduce with `benchmarks/` - see that folder's README.
 
 This endpoint is OpenAI-compatible, so the `ray-batch-inference` example's
 Pattern 1 works against it unchanged. Point that example at
-`http://gemma4-12b-serve-svc.raydata:8000/v1` with `model: gemma-4-12b-it`. For
+`http://gemma4-l40-base-serve-svc.raydata:8000/v1` with
+`model: gemma-4-12b-it`. For
 best throughput per GPU-hour, adapt its Pattern 2 (`ray.data.llm`, engine inside
 the job) using this example's `engine_kwargs`.
 
@@ -198,17 +222,33 @@ the job) using this example's `engine_kwargs`.
 | `01-model-staging-job.yaml` | HuggingFace -> S3 weight staging (no token needed) |
 | `02-image-mirror-job.yaml` | Docker Hub -> ECR skopeo mirror |
 | `03-rayservice-gemma4-12b.yaml` | The RayService itself |
-| `deploy.sh` | Renders placeholders and applies everything |
+| `scenarios/*.json` | Exact model, GPU, instance, and engine configuration per scenario |
+| `render-scenario.py` | Validates a scenario and renders its RayService manifest |
+| `deploy.sh` | Stages, renders, deploys, tests, measures, and cleans up a scenario |
 | `measure-deployment.sh` | Times a fresh deploy end to end. **Deletes any existing RayService first** so the clock starts clean - use it *instead of* `./deploy.sh service`, not after it (`KEEP_EXISTING=1` skips the delete) |
 | `benchmark-latency.py` | TTFT / E2E / decode measurement against any OpenAI-compatible endpoint |
 | `run-latency-benchmark.sh` | Runs that harness in-cluster and collects results |
-| `benchmarks/` | Benchmark docs; prompts and results stay local (gitignored) |
+| `benchmarks/requests/T03...T10` | One executable request file per benchmark test |
+| `run-scenario-after-t03.sh` | Runs T04-T10 after validating a scenario's T03 artifact |
+| `karpenter-capacity-block.template.yaml` | Temporary isolated P5 Capacity Block resources; render outside the repository before applying |
+| `benchmarks/` | Benchmark execution and artifact-validation runbook; generated results remain local |
 
 ## Cleanup
 
 ```bash
-./deploy.sh cleanup   # deletes the RayService; keeps S3 weights + ECR image
+./deploy.sh cleanup DEP-L40-BASE # keeps S3 weights + ECR image
 ```
 
 Karpenter reclaims the GPU node a few minutes later. To release it immediately,
 delete its NodeClaim: `kubectl delete nodeclaim -l karpenter.sh/nodepool=gpu`.
+
+After all H100 tests and evidence capture are complete, remove the temporary
+benchmark capacity:
+
+```bash
+kubectl delete nodepool gpu-capacity-block --ignore-not-found
+kubectl delete ec2nodeclass gpu-capacity-block --ignore-not-found
+```
+
+These commands target only the benchmark-specific `gpu-capacity-block`
+resources.

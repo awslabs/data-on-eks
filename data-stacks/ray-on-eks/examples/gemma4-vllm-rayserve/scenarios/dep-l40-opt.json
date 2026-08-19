@@ -1,0 +1,18 @@
+{
+  "scenario_id": "DEP-L40-OPT",
+  "service_name": "gemma4-l40-opt",
+  "hf_model_id": "google/gemma-4-12B-it",
+  "model_dir": "gemma-4-12b-it",
+  "model_id": "gemma-4-12b-it",
+  "accelerator_type": "L40S",
+  "instance_types": ["g6e.2xlarge"],
+  "gpu_count": 1,
+  "async_scheduling": false,
+  "worker_cpu": 6,
+  "worker_memory_request": "48Gi",
+  "worker_memory_limit": "56Gi",
+  "engine_kwargs_extra": {
+    "kv_cache_dtype": "fp8",
+    "speculative_config": {"method": "ngram", "num_speculative_tokens": 5, "prompt_lookup_max": 5}
+  }
+}
