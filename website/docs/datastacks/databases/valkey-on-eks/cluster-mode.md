@@ -47,7 +47,7 @@ If you're migrating a self-managed Valkey or Redis cluster from EC2, this table 
 | Primary/replica ratio (read-heavy: more replicas) | `replicasPerPrimary: 2` (or higher) | Set total `replicaCount` to `primaries × (1+N)` |
 | `maxmemory = 75% of host RAM` | `valkeyConfig: maxmemory 12gb` + `resources.limits.memory: 16Gi` | 12 / 16 = 75% — same ratio |
 | `maxmemory-policy noeviction` (datastore) | `valkeyConfig: maxmemory-policy noeviction` | Default; cluster mode prefers write rejection over eviction |
-| RDB-only persistence | Comment out `appendonly yes` in `valkeyConfig` | Saves replication / network bandwidth; see [RDB-only override](#rdb-only-and-the-snapshot-bandwidth-trade-off) |
+| RDB-only persistence | Comment out `appendonly yes` in `valkeyConfig` | Saves replication / network bandwidth; see [RDB-only override](#persistence-mode--pick-one) |
 | gp3 EBS, generous IOPS | `persistence.storageClass: valkey-gp3` | Ships 6000 IOPS / 500 MiB/s vs gp3 baseline 3000 / 125 |
 | 4,000 IOPS / instance baseline | `valkey-gp3` exceeds with 6,000 IOPS | 50% headroom for BGSAVE bursts |
 | Network-optimized (n-suffix) for multi-KB values | `tuning.networkOptimized: true` | Pins pods to `r7gn`/`r8gn`/`m7gn` via hard `nodeAffinity` |

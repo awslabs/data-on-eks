@@ -73,7 +73,7 @@ echo $S3_BUCKET
 
 In order to generate the dataset for TPCDS benchmark tests, you will need to configure the S3 bucket name in the data generation manifest.
 
-<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+{/* Docusaurus will not render props.filename inside a code block. */}
 <ReplaceS3BucketPlaceholders filename="./tpcds-benchmark-data-generation-1t.yaml" />
 ```bash
 cd ${DOEKS_HOME}/data-stacks/spark-on-eks/benchmarks/spark-operator-benchmarks

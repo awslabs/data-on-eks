@@ -58,7 +58,7 @@ import { Cloud, Link2, Code, Sparkles, Globe, Users, Zap, TrendingUp, FlaskConic
 
 <DataStacksShowcase />
 
-## Quick Start: Deploy in 15 Minutes {#quick-start}
+## Quick Start: Deploy in 15 Minutes
 
 <div className="quick-start-timeline">
 

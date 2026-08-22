@@ -84,7 +84,7 @@ The number of nodes required varies based on the size of the instance and the re
 
 ### Set the S3 Bucket for input/output
 
-<!-- Docusaurus will not render the {props.filename} inside of a ```codeblock``` -->
+{/* Docusaurus will not render props.filename inside a code block. */}
 <ReplaceS3BucketPlaceholders filename="./tpcds-benchmark-1t-ebs.yaml" />
 ```bash
 cd ${DOEKS_HOME}/data-stacks/spark-on-eks/benchmarks/spark-operator-benchmarks
