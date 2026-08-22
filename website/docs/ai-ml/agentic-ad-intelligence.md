@@ -545,7 +545,7 @@ Useful metrics to expose:
 
 ---
 
-## Demo vs Production {#demo-vs-production}
+## Demo vs Production
 
 | Component | Demo | Production |
 |---|---|---|

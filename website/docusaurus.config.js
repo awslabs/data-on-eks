@@ -21,7 +21,7 @@ const config = {
 
   // Enable experimental faster builds with Rspack and v4 future flags
   future: {
-    experimental_faster: true,
+    faster: true,
     v4: true,
   },
 
