@@ -1,0 +1,24 @@
+clusterName: ${cluster_name}
+
+serviceAccount:
+  create: true
+  name: ${service_account}
+
+enableServiceMutatorWebhook: false
+
+region: ${region}
+
+vpcId: ${vpc_id}
+
+image:
+  repository: public.ecr.aws/eks/aws-load-balancer-controller
+  tag: v2.8.1
+
+replicaCount: 2
+
+nodeSelector:
+  NodeGroupType: core
+
+ingressClass: alb
+
+logLevel: info

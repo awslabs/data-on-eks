@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flink-operator
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: public.ecr.aws/emr-on-eks
+      chart: flink-kubernetes-operator
+      targetRevision: 7.1.0
+      helm:
+        values: |
+          ${user_values_yaml}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flink-kubernetes-operator
+  enableOCI: true
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

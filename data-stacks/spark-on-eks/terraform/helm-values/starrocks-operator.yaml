@@ -1,0 +1,28 @@
+global:
+  rbac:
+    create: true
+    serviceAccount:
+      name: ${starrocks_sa}
+      annotations:
+        eks.amazonaws.com/role-arn: ${irsa_arn}
+
+timeZone: UTC
+
+starrocksOperator:
+  enabled: true
+  image:
+    repository: starrocks/operator
+    tag: v1.11.3
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+serviceMonitor:
+  enabled: true
+  labels:
+    prometheus: kube-prometheus
+  interval: 15s

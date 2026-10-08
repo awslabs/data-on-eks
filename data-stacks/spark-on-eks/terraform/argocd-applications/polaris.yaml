@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: polaris
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # Official Apache Polaris (incubating) Helm chart.
+    # Repo:  https://downloads.apache.org/incubator/polaris/helm-chart/
+    # Chart: https://github.com/apache/polaris/tree/main/helm/polaris
+    repoURL: https://downloads.apache.org/incubator/polaris/helm-chart/
+    chart: polaris
+    targetRevision: "1.3.0-incubating"
+    helm:
+      releaseName: polaris
+      values: |
+        ${user_values_yaml}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: polaris
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

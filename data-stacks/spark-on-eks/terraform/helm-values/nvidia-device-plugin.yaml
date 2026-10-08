@@ -1,0 +1,13 @@
+# Enable GPU Feature Discovery (default: false)
+gfd:
+  enabled: true
+
+# Configure Node Feature Discovery components
+nfd:
+  enableNodeFeatureApi: true  # Required for ServiceAccount creation when GFD is enabled
+  worker:
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - operator: "Exists"

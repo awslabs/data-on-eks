@@ -1,0 +1,102 @@
+#---------------------------------------------------------------
+# KEDA ScaledObject for StarRocks CN (Shared-Data)
+#
+# Scales CN nodes based on StarRocks query rate from Prometheus.
+# Supports scale-to-zero during idle periods.
+#
+# Scaling signals:
+#   1. Query rate (starrocks_fe_query_total) - primary signal
+#   2. Connection count (starrocks_fe_connection_total) - secondary
+#
+# Behavior:
+#   - minReplicaCount: 0 (scales to zero when idle)
+#   - maxReplicaCount: 10
+#   - Activation threshold (>0.1 QPS) triggers scale from 0 → 1
+#   - Cooldown 300s prevents rapid scale-down thrashing
+#   - Pollinginterval 30s — responsive to query bursts
+#
+# Cost impact:
+#   - Scaling 3 CN → 0 during nights/weekends saves ~$1,400/node/month
+#   - First query after scale-up hits S3 (~10-50ms per read vs NVMe cache ~0.1ms)
+#     Cache rebuild on scale-up takes a few queries to reach steady state.
+#
+# Prerequisites:
+#   - KEDA operator installed (see keda.tf)
+#   - Prometheus PodMonitor for StarRocks FE (see pod-monitors.yaml)
+#   - StarRocksCluster with starRocksCnSpec (shared-data mode)
+#   - CN spec MUST NOT set `replicas` field when KEDA is active
+#
+# Deploy:
+#   Terraform deploys this automatically when enable_starrocks = true.
+#   KEDA operator (keda.tf) is always deployed as shared infra.
+#
+# Monitor:
+#   kubectl get scaledobject starrocks-cn-scaler -n starrocks
+#   kubectl get hpa -n starrocks  # KEDA creates an HPA under the hood
+#---------------------------------------------------------------
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: starrocks-cn-scaler
+  namespace: ${starrocks_namespace}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: starrocks-shared-data-cn
+
+  # Scale bounds
+  minReplicaCount: 0  # 0 enables scale-to-zero during idle
+  maxReplicaCount: 10
+
+  # Polling interval: how often KEDA checks the scaling trigger (seconds)
+  pollingInterval: 30
+
+  # Cooldown: wait this many seconds after last trigger before scaling down
+  cooldownPeriod: 300
+
+  # Idle replica count: number of replicas when no trigger activates
+  # Set to null for scale-to-zero
+  # idleReplicaCount: 0
+
+  # HPA behavior — controls how fast KEDA scales via the underlying HPA
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0      # react to bursts immediately
+          policies:
+            - type: Pods
+              value: 2                       # add up to 2 pods per period
+              periodSeconds: 30
+        scaleDown:
+          stabilizationWindowSeconds: 300    # wait 5min before scaling down
+          policies:
+            - type: Pods
+              value: 1                       # remove 1 pod per period
+              periodSeconds: 60
+
+  triggers:
+    # Primary scaler: query rate per CN
+    - type: prometheus
+      metadata:
+        serverAddress: ${prometheus_url}
+        metricName: starrocks_fe_query_rate
+        # Query rate over last 2 minutes, divided by target CNs
+        # Threshold 5 = scale up when >5 QPS per expected CN
+        query: |
+          sum(rate(starrocks_fe_query_total{job="starrocks-shared-data"}[2m]))
+        threshold: "5"
+        # Activation threshold: scale from 0 → 1 when exceeded
+        # Low value triggers quickly on first query arrival
+        activationThreshold: "0.1"
+
+    # Secondary scaler: active connections
+    - type: prometheus
+      metadata:
+        serverAddress: ${prometheus_url}
+        metricName: starrocks_fe_connections
+        query: |
+          sum(starrocks_fe_connection_total{job="starrocks-shared-data"})
+        threshold: "20"
+        activationThreshold: "1"

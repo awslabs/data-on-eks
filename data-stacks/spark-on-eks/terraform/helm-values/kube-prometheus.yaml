@@ -1,0 +1,188 @@
+fullnameOverride: prometheus
+cleanPrometheusOperatorObjectNames: true
+prometheus:
+  # The ClusterRole for Prometheus needs additional permissions for the EKS scheduler/controller metrics https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+  additionalRulesForClusterRole:
+  - apiGroups: [ "metrics.eks.amazonaws.com" ]
+    resources: [ "kcm/metrics", "ksh/metrics" ]
+    verbs: [ "get" ]
+  prometheusSpec:
+    retention: 30d
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    scrapeTimeout: 10s
+    storageSpec:
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          storageClassName: gp3
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
+    # Find monitors in all namespaces
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    additionalScrapeConfigs:
+      # Scrape metrics for Yunikorn
+      - job_name: yunikorn
+        honor_labels: true
+        scrape_interval: 3s
+        scrape_timeout: 3s
+        metrics_path: /ws/v1/metrics
+        scheme: http
+        dns_sd_configs:
+          - names:
+              - yunikorn-service.yunikorn-system.svc
+            type: 'A'
+            port: 9080
+      # Scrape metrics for Karpenter
+      - job_name: karpenter
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - karpenter
+        relabel_configs:
+        - source_labels:
+          - __meta_kubernetes_endpoints_name
+          - __meta_kubernetes_endpoint_port_name
+          action: keep
+          regex: karpenter;http-metrics
+      # Additional EKS Control plane metrics
+      # NOTE: you will need to patch the service account for prometheus as described here:  https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+      # Scheduler metrics
+      - job_name: 'ksh-metrics'
+        kubernetes_sd_configs:
+        - role: endpoints
+        metrics_path: /apis/metrics.eks.amazonaws.com/v1/ksh/container/metrics
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels:
+            [
+              __meta_kubernetes_namespace,
+              __meta_kubernetes_service_name,
+              __meta_kubernetes_endpoint_port_name,
+            ]
+          action: keep
+          regex: default;kubernetes;https
+      # Controller Manager metrics
+      - job_name: 'kcm-metrics'
+        kubernetes_sd_configs:
+        - role: endpoints
+        metrics_path: /apis/metrics.eks.amazonaws.com/v1/kcm/container/metrics
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels:
+            [
+              __meta_kubernetes_namespace,
+              __meta_kubernetes_service_name,
+              __meta_kubernetes_endpoint_port_name,
+            ]
+          action: keep
+          regex: default;kubernetes;https
+  # Monitors for Spark Jobs
+  additionalPodMonitors:
+    - name: "spark-job-monitoring"
+      jobLabel: "spark-job-monitoring"
+      selector:
+        matchLabels:
+          spark-role: driver
+      namespaceSelector:
+        matchNames:
+          - spark-team-a
+          - spark-team-b
+          - spark-team-c
+          - spark-s3-express
+      podMetricsEndpoints:
+        - port: "spark-ui"
+          interval: 30s
+          path: /metrics/driver/prometheus/
+        - port: "spark-ui"
+          interval: 30s
+          path: /metrics/executors/prometheus/
+
+# add ethtool metrics to node-exporter https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-network-performance-ena.html
+prometheus-node-exporter:
+  extraArgs:
+    - --collector.ethtool
+    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+    - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+  adminPassword: null
+  admin:
+    existingSecret: "grafana-admin-secret"
+    userKey: admin-user
+    passwordKey: admin-password
+  plugins:
+    - grafana-clickhouse-datasource
+  additionalDataSources:
+    - name: ClickHouse Observability
+      type: grafana-clickhouse-datasource
+      uid: clickhouse-observability
+      access: proxy
+      jsonData:
+        host: event-store-clickhouse-headless.logging.svc.cluster.local
+        port: 8123
+        protocol: http
+        defaultDatabase: k8s_events
+        username: default
+        logs:
+          defaultDatabase: app_logs
+          defaultTable: spark
+          timeColumn: timestamp
+          levelColumn: level
+          messageColumn: message
+      secureJsonData:
+        password: ${clickhouse_password}
+  defaultDashboardsEnabled: true
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      karpenter-capacity-dashboard:
+        url: https://raw.githubusercontent.com/aws/karpenter-provider-aws/d389d3c82f93b9abd713746ed3fefd3ef8f34d72/website/content/en/v1.2/getting-started/getting-started-with-karpenter/karpenter-capacity-dashboard.json
+      karpenter-performance-dashboard:
+        url: https://raw.githubusercontent.com/aws/karpenter-provider-aws/d389d3c82f93b9abd713746ed3fefd3ef8f34d72/website/content/en/v1.2/getting-started/getting-started-with-karpenter/karpenter-performance-dashboard.json
+      spark-job-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/emr-eks-grafana-dashboard.json
+      spark-operator-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/kubeflow-spark-operator-dashboard.json
+      # EKS PCP Control Plane monitoring dashboard for Spark/EMR benchmarks
+      # Tracks API concurrency seats, pod scheduling rate, etcd size, and Spark job metrics
+      eks-pcp-spark-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/eks-pcp-spark-dashboard.json
+      k8s-events-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/k8s-events-dashboard.json
+      spark-logs-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/spark-logs-dashboard.json
+      # Ray batch inference: GPU utilization/cost (DCGM) + Ray Data throughput
+      ray-batch-inference-dashboard:
+        url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/ray-batch-inference-dashboard.json

@@ -1,0 +1,7 @@
+watchNamespaces:
+  - clickhouse
+  - logging
+
+manager:
+  nodeSelector:
+    NodeGroupType: core

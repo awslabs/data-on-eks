@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${team_name}-role-binding
+  namespace: ${namespace}
+  labels:
+    app.kubernetes.io/name: flink-kubernetes-operator
+    app.kubernetes.io/version: "1.4.0"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ${team_name}-role
+subjects:
+- kind: ServiceAccount
+  name: ${service_account}
+  namespace: ${namespace}

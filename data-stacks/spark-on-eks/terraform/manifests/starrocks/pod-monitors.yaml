@@ -1,0 +1,107 @@
+# PodMonitors for StarRocks metrics scraping by Prometheus
+#
+# These PodMonitors configure Prometheus to scrape metrics from ALL StarRocks clusters.
+# No changes needed when new clusters are deployed — the cluster name is extracted
+# automatically from the operator label `app.starrocks.ownerreference/name`.
+#
+# Naming convention for StarRocks clusters:
+#   metadata.name in StarRocksCluster CR becomes the cluster identifier.
+#   Example: "starrocks-shared-data" → job="starrocks-shared-data" in Prometheus
+#   The Grafana dashboard cluster_name dropdown will show all deployed clusters.
+#
+# How it works:
+#   The StarRocks operator labels every pod with:
+#     app.starrocks.ownerreference/name: <cluster-name>-<component>
+#   Example: app.starrocks.ownerreference/name: starrocks-shared-data-fe
+#
+#   relabelings (applied at scrape time, has access to __meta_* labels):
+#     - Extracts cluster name by stripping -fe/-be/-cn suffix → sets as `job` label
+#     - Sets `group` label from the component (fe/be/cn)
+#
+# Grafana dashboard variables:
+#   cluster_name: label_values(up, job) with regex /starrocks-.*/
+#   This auto-populates with all deployed StarRocks cluster names.
+#
+# Deploy:
+#   kubectl apply -f starrocks-pod-monitors.yaml
+
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: starrocks-fe
+  namespace: starrocks
+  labels:
+    app: starrocks
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: fe
+  podMetricsEndpoints:
+  - path: /metrics
+    port: http-port
+    interval: 15s
+    relabelings:
+    # Extract cluster name from operator label and set as job
+    # "starrocks-shared-data-fe" → "starrocks-shared-data"
+    - sourceLabels: [__meta_kubernetes_pod_label_app_starrocks_ownerreference_name]
+      regex: (.+)-fe
+      targetLabel: job
+      replacement: $1
+    # Set group=fe
+    - targetLabel: group
+      replacement: fe
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: starrocks-be
+  namespace: starrocks
+  labels:
+    app: starrocks
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: be
+  podMetricsEndpoints:
+  - path: /metrics
+    port: webserver-port
+    interval: 15s
+    relabelings:
+    # Extract cluster name: "starrocks-shared-nothing-be" → "starrocks-shared-nothing"
+    - sourceLabels: [__meta_kubernetes_pod_label_app_starrocks_ownerreference_name]
+      regex: (.+)-be
+      targetLabel: job
+      replacement: $1
+    # Set group=be
+    - targetLabel: group
+      replacement: be
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: starrocks-cn
+  namespace: starrocks
+  labels:
+    app: starrocks
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cn
+  podMetricsEndpoints:
+  - path: /metrics
+    port: webserver-port
+    interval: 15s
+    relabelings:
+    # Extract cluster name: "starrocks-shared-data-cn" → "starrocks-shared-data"
+    - sourceLabels: [__meta_kubernetes_pod_label_app_starrocks_ownerreference_name]
+      regex: (.+)-cn
+      targetLabel: job
+      replacement: $1
+    # Set group=cn (CN uses same binary as BE)
+    - targetLabel: group
+      replacement: cn

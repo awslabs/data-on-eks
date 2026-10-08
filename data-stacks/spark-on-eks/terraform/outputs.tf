@@ -1,0 +1,141 @@
+################################################################################
+# Cluster
+################################################################################
+
+output "cluster_arn" {
+  description = "The Amazon Resource Name (ARN) of the cluster"
+  value       = module.eks.cluster_arn
+}
+
+output "cluster_name" {
+  description = "The Amazon Resource Name (ARN) of the cluster"
+  value       = module.eks.cluster_name
+}
+
+output "configure_kubectl" {
+  description = "Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig"
+  value       = "aws eks --region ${local.region} update-kubeconfig --name ${module.eks.cluster_name}"
+}
+
+output "region" {
+  description = "AWS region"
+  value       = local.region
+}
+
+output "deployment_id" {
+  description = "Deployment ID unique to this stack"
+  value       = var.deployment_id
+}
+
+################################################################################
+# Private Subnets
+################################################################################
+
+output "subnet_ids_starting_with_100" {
+  description = "Secondary CIDR Private Subnet IDs for EKS Data Plane"
+  value       = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
+}
+
+output "node_subnets_by_az" {
+  description = "Karpenter node subnets (Name tag <name>-private-secondary*) per AZ: subnet name => subnet ID"
+  value = {
+    for az in local.azs : az => {
+      for idx, name in local.private_subnet_names :
+      name => module.vpc.private_subnets[idx]
+      if idx >= length(local.azs) && endswith(name, "-${az}")
+    }
+  }
+}
+
+output "s3_bucket_id_spark_history_server" {
+  description = "Spark History server logs S3 bucket ID"
+  value       = module.s3_bucket.s3_bucket_id
+}
+
+output "s3_bucket_region_spark_history_server" {
+  description = "Spark History server logs S3 bucket ID"
+  value       = module.s3_bucket.s3_bucket_region
+}
+
+################################################################################
+# S3 Directory Bucket
+################################################################################
+
+
+output "s3directory_bucket_name" {
+  description = "s3 directory bucket name"
+  value       = aws_s3_directory_bucket.spark_data_bucket_express.bucket
+}
+
+output "s3directory_bucket_region" {
+  description = "s3 directory bucket region"
+  value       = local.region
+}
+
+output "s3directory_bucket_zone" {
+  description = "s3 directory bucket availability zone"
+  value       = local.s3_express_zone_name
+}
+
+################################################################################
+# Ray Data Configuration
+################################################################################
+
+output "raydata_config" {
+  description = "Configuration for Ray Data processing"
+  value = var.enable_raydata ? {
+    namespace         = "raydata"
+    service_account   = "raydata" # Created by spark-team.tf
+    s3_prefix         = local.s3_prefix
+    iceberg_database  = local.iceberg_database
+    iceberg_warehouse = "s3://${module.s3_bucket.s3_bucket_id}/iceberg-warehouse/"
+    iam_role_arn      = module.team_pod_identity["raydata"].iam_role_arn
+  } : null
+}
+
+output "grafana_password" {
+  description = "Grafana admin password"
+  value       = kubernetes_secret.grafana_admin.data["admin-password"]
+  sensitive   = true
+}
+
+################################################################################
+# EMR on EKS
+################################################################################
+
+output "emr_on_eks" {
+  description = "EMR on EKS Virtual Cluster configuration"
+  value = var.enable_emr_on_eks ? {
+    virtual_clusters        = module.emr_containers[0].virtual_clusters
+    job_execution_role_arns = module.emr_containers[0].job_execution_role_arns
+    cloudwatch_log_groups   = module.emr_containers[0].cloudwatch_log_groups
+    namespaces              = module.emr_containers[0].namespaces
+  } : null
+}
+
+output "emr_s3_bucket_name" {
+  description = "S3 bucket for EMR job artifacts and logs"
+  value       = var.enable_emr_on_eks ? module.s3_bucket.s3_bucket_id : null
+}
+
+################################################################################
+# Data Stacks S3 Bucket
+################################################################################
+
+output "data_bucket_id" {
+  description = "Shared S3 bucket for data stacks when data-stack-specific buckets are generally not required. Use prefixes to organize: pinot/segments/, etc."
+  value       = module.data_bucket.s3_bucket_id
+}
+
+output "data_bucket_arn" {
+  description = "ARN of the shared data stacks S3 bucket"
+  value       = module.data_bucket.s3_bucket_arn
+}
+
+#---------------------------------------------------------------
+# Outputs
+#---------------------------------------------------------------
+output "valkey_migration_bucket" {
+  description = "S3 bucket used as the source for the Valkey restore initContainer (EC2-to-EKS migration). Empty when enable_valkey is false."
+  value       = try(aws_s3_bucket.valkey_migration[0].id, "")
+}

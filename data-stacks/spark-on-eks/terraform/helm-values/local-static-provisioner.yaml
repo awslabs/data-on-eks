@@ -1,0 +1,11 @@
+# Helm values for local-volume-static-provisioner
+# See: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner for chart details
+nodeSelector:
+  NodeGroupType: EphemeralStorageLocalProvisioner
+# classes defines the storage classes to be created and managed by the provisioner.
+classes:
+  - name: local-storage
+    # hostDir is the path on the host node where the provisioner will discover and manage storage. We make ephemeral disks available in user data.
+    hostDir: /dev/disk/kubernetes
+    # This will create the 'local-storage' StorageClass object in Kubernetes.
+    storageClass: true

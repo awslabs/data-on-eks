@@ -3,6 +3,7 @@
 
 name                 = "spark-on-eks"
 region               = "us-west-2"
+eks_cluster_version  = "1.37"
 enable_ingress_nginx = true
 # Unique ID used to tag all AWS resources for this deployment.
 # Enables identification of orphaned resources and cleanup in case of Terraform state loss.
@@ -18,4 +19,4 @@ enable_nvidia_gpu_operator = false # Enable this for Spark RAPIDS on GPUs exampl
 #   2XL : 3400 API concurrency seats  | 283 pods/sec scheduling rate | 16 GB etcd
 #   4XL : 6800 API concurrency seats  | 400 pods/sec scheduling rate | 16 GB etcd
 #   8XL : 13600 API concurrency seats | 400 pods/sec scheduling rate | 16 GB etcd
-# eks_pcp_tier = "4XL"
+eks_pcp_tier = "8XL"

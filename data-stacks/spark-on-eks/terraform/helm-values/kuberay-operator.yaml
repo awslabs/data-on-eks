@@ -1,0 +1,70 @@
+image:
+  repository: quay.io/kuberay/operator
+  tag: v1.6.1
+  pullPolicy: IfNotPresent
+
+# Resource configuration for operator pod
+resources:
+  limits:
+    cpu: 200m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Deploy operator on core nodes
+nodeSelector:
+  NodeGroupType: core
+
+# Watch all namespaces for Ray resources
+# Leave commented to watch all namespaces
+# watchNamespace: ""
+
+# Enable leader election for HA
+leaderElectionEnabled: true
+
+# Logging configuration
+logging:
+  stdoutEncoder: json
+  fileEncoder: json
+
+# Batch scheduler integration
+batchScheduler:
+  enabled: false
+  # Set to yunikorn/volcano/scheduler-plugins to enable integration
+  name: ""
+
+# Feature gates (v1.6.x chart defaults also enable RayMultiHostIndexing)
+featureGates:
+  - name: RayClusterStatusConditions
+    enabled: true
+  - name: RayJobDeletionPolicy
+    enabled: true
+
+# Prometheus metrics
+metrics:
+  enabled: true
+  serviceMonitor:
+    # Enable if kube-prometheus-stack is deployed
+    enabled: true
+    interval: 30s
+    labels: {}
+
+# RBAC configuration
+rbacEnable: true
+crNamespacedRbacEnable: true
+
+serviceAccount:
+  create: true
+  name: kuberay-operator
+
+# Security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault

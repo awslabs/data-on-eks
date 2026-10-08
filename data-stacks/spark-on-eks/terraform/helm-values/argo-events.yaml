@@ -1,0 +1,8 @@
+## Argo Events admission webhook
+webhook:
+  # -- Enable admission webhook. Applies only for cluster-wide installation
+  enabled: true
+controller:
+  nodeSelector:
+    kubernetes.io/os: linux
+    NodeGroupType: core

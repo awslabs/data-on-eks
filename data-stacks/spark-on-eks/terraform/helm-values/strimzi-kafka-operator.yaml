@@ -1,0 +1,5 @@
+nodeSelector:
+  NodeGroupType: core
+
+watchNamespaces:
+  - kafka
