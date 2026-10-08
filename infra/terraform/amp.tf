@@ -136,3 +136,27 @@ module "amp_ingest_pod_identity" {
     }
   }
 }
+
+# Lets the in-cluster Grafana query AMP (SigV4) through its "Amazon Managed Prometheus" datasource
+module "grafana_amp_pod_identity" {
+  count = var.enable_amazon_prometheus ? 1 : 0
+
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
+  version = "~> 2.0"
+
+  name = "${local.name}-grafana-amp"
+
+  additional_policy_arns = {
+    amp_query = aws_iam_policy.grafana[0].arn
+  }
+
+  associations = {
+    grafana = {
+      cluster_name    = module.eks.cluster_name
+      namespace       = "monitoring"
+      service_account = "monitoring-grafana"
+    }
+  }
+
+  tags = local.tags
+}

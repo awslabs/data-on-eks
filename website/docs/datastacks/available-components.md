@@ -74,7 +74,9 @@ enable_superset = true
 
 | Component | Description | Variable | Default |
 |-----------|-------------|----------|---------|
+| ADOT | Enable the AWS Distro for OpenTelemetry add-on and a collector that sends metrics to Amazon Managed Prometheus and traces to AWS X-Ray. Requires `enable_amazon_prometheus` | `enable_adot` | ❌ |
 | Airflow | Enable Apache Airflow for workflow orchestration | `enable_airflow` | ❌ |
+| Amazon Managed Grafana | Enable an Amazon Managed Grafana workspace (IAM Identity Center sign-in) with read access to AMP, X-Ray and CloudWatch | `enable_amazon_managed_grafana` | ❌ |
 | Amazon Prometheus | Enable AWS Managed Prometheus service | `enable_amazon_prometheus` | ❌ |
 | Celeborn | Enable Apache Celeborn for remote shuffling service | `enable_celeborn` | ❌ |
 | Cluster Addons | A map of EKS addon names to boolean values that control whether each addon is enabled. This allows fine-grained control over which addons are deployed by this Terraform stack. To enable or disable an addon, set its value to `true` or `false` in your blueprint.tfvars file. If you need to add a new addon, update this variable definition and also adjust the logic in the EKS module (e.g., in eks.tf locals) to include any custom configuration needed. | `enable_cluster_addons` | ❌ |
@@ -83,6 +85,7 @@ enable_superset = true
 | Ipv6 | Enable IPv6 for the EKS cluster and its components | `enable_ipv6` | ❌ |
 | Jupyterhub | Enable Jupyter Hub | `enable_jupyterhub` | ✅ |
 | Nvidia Device Plugin | Enable NVIDIA Device plugin addon for GPU workloads | `enable_nvidia_device_plugin` | ❌ |
+| Ray History Server | Enable the KubeRay History Server, which replays the Ray Dashboard from S3 after a RayCluster is deleted. Requires `enable_raydata` | `enable_ray_history_server` | ❌ |
 | Raydata | Enable Ray Data via ArgoCD | `enable_raydata` | ❌ |
 | Superset | Enable Apache Superset for data exploration and visualization | `enable_superset` | ❌ |
 

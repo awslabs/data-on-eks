@@ -1,0 +1,20 @@
+{
+  "scenario_id": "EMB-L40",
+  "service_name": "e5-l40",
+  "hf_model_id": "intfloat/e5-large-v2",
+  "model_dir": "e5-large-v2",
+  "model_id": "e5-large-v2",
+  "template": "04-rayservice-embedding.yaml",
+  "gpu_count": 1,
+  "async_scheduling": true,
+  "history_server": true,
+  "engine_kwargs_extra": {},
+  "accelerator_type": "L40S",
+  "instance_types": [
+    "g6e.2xlarge"
+  ],
+  "capacity_type": "on-demand",
+  "worker_cpu": 6,
+  "worker_memory_request": "16Gi",
+  "worker_memory_limit": "24Gi"
+}

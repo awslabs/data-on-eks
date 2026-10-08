@@ -1,0 +1,86 @@
+Summarize this customer case thread for an executive escalation review in 5 bullet points, then give a one-line recommendation.
+
+CASE THREAD:
+--- Message 1 | From: Ana Souza | Product: Service Cloud | Day 1
+Hi team, following up on the Flow failing with UNABLE_TO_LOCK_ROW. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 8 hours. Impact: 195 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 12 days. Our admin Priya Raman attached debug logs showing a 401 from the IdP at step 5. Please confirm whether this is related to release Summer '24 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 2 | From: Tom Becker | Product: Agentforce | Day 1
+Hi team, following up on the territory assignment rules not firing. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 6 hours. Impact: 342 users in the NA org cannot complete their daily work, and the quarter-end close is in 6 days. Our admin Fatima Al-Sayed attached debug logs showing a governor limit at step 3. Please confirm whether this is related to release Spring '26 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 3 | From: Priya Raman | Product: Sales Cloud | Day 1
+Hi team, following up on the API rate limit errors during nightly sync. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 2 hours. Impact: 337 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 3 days. Our admin Tom Becker attached debug logs showing a 401 from the IdP at step 10. Please confirm whether this is related to release Summer '24 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 4 | From: Tom Becker | Product: Marketing Cloud | Day 2
+Hi team, following up on the territory assignment rules not firing. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 100) but the problem came back after 8 hours. Impact: 712 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 12 days. Our admin Tom Becker attached debug logs showing a 401 from the IdP at step 9. Please confirm whether this is related to release Spring '26 and whether a patch is planned. Priority from our side: P1.
+
+--- Message 5 | From: Lucia Rossi | Product: Sales Cloud | Day 2
+Hi team, following up on the Flow failing with UNABLE_TO_LOCK_ROW. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 7 hours. Impact: 316 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 6 days. Our admin Lucia Rossi attached debug logs showing a 401 from the IdP at step 12. Please confirm whether this is related to release Winter '26 and whether a patch is planned. Priority from our side: P1.
+
+--- Message 6 | From: Priya Raman | Product: Service Cloud | Day 2
+Hi team, following up on the duplicate leads created by web-to-lead. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 3 hours. Impact: 141 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 4 days. Our admin Tom Becker attached debug logs showing a 401 from the IdP at step 3. Please confirm whether this is related to release Spring '25 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 7 | From: Lucia Rossi | Product: MuleSoft | Day 3
+Hi team, following up on the email-to-case threading broken. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 8 hours. Impact: 698 users in the NA org cannot complete their daily work, and the quarter-end close is in 14 days. Our admin Ana Souza attached debug logs showing a timeout at step 11. Please confirm whether this is related to release Winter '27 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 8 | From: Ana Souza | Product: Marketing Cloud | Day 3
+Hi team, following up on the SSO login loop after IdP certificate rotation. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 6 hours. Impact: 574 users in the LATAM org cannot complete their daily work, and the quarter-end close is in 8 days. Our admin Fatima Al-Sayed attached debug logs showing a 401 from the IdP at step 5. Please confirm whether this is related to release Summer '24 and whether a patch is planned. Priority from our side: P1.
+
+--- Message 9 | From: Priya Raman | Product: Agentforce | Day 3
+Hi team, following up on the sandbox refresh stuck at 80 percent. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 7 hours. Impact: 77 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 12 days. Our admin Kenji Watanabe attached debug logs showing a deadlock at step 3. Please confirm whether this is related to release Winter '25 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 10 | From: Lucia Rossi | Product: Tableau | Day 4
+Hi team, following up on the report timeouts on large opportunity datasets. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 6 hours. Impact: 371 users in the NA org cannot complete their daily work, and the quarter-end close is in 7 days. Our admin Tom Becker attached debug logs showing a deadlock at step 10. Please confirm whether this is related to release Summer '27 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 11 | From: Fatima Al-Sayed | Product: Marketing Cloud | Day 4
+Hi team, following up on the duplicate leads created by web-to-lead. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 8 hours. Impact: 177 users in the LATAM org cannot complete their daily work, and the quarter-end close is in 2 days. Our admin Tom Becker attached debug logs showing a deadlock at step 3. Please confirm whether this is related to release Summer '25 and whether a patch is planned. Priority from our side: P1.
+
+--- Message 12 | From: Fatima Al-Sayed | Product: Tableau | Day 4
+Hi team, following up on the field history not retained beyond 18 months. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 6 hours. Impact: 161 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 2 days. Our admin Kenji Watanabe attached debug logs showing a 401 from the IdP at step 12. Please confirm whether this is related to release Winter '27 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 13 | From: Ana Souza | Product: Service Cloud | Day 5
+Hi team, following up on the API rate limit errors during nightly sync. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 8 hours. Impact: 361 users in the APAC org cannot complete their daily work, and the quarter-end close is in 6 days. Our admin Priya Raman attached debug logs showing a timeout at step 5. Please confirm whether this is related to release Spring '26 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 14 | From: Fatima Al-Sayed | Product: Tableau | Day 5
+Hi team, following up on the duplicate leads created by web-to-lead. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 100) but the problem came back after 5 hours. Impact: 784 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 11 days. Our admin David Okafor attached debug logs showing a deadlock at step 8. Please confirm whether this is related to release Summer '25 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 15 | From: Priya Raman | Product: Data Cloud | Day 5
+Hi team, following up on the sandbox refresh stuck at 80 percent. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 4 hours. Impact: 187 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 3 days. Our admin Priya Raman attached debug logs showing a 401 from the IdP at step 4. Please confirm whether this is related to release Spring '26 and whether a patch is planned. Priority from our side: P1.
+
+--- Message 16 | From: Ana Souza | Product: Marketing Cloud | Day 6
+Hi team, following up on the duplicate leads created by web-to-lead. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 7 hours. Impact: 516 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 13 days. Our admin Marcus Lee attached debug logs showing a deadlock at step 7. Please confirm whether this is related to release Summer '26 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 17 | From: Marcus Lee | Product: Tableau | Day 6
+Hi team, following up on the Apex CPU time limit exceeded in trigger. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 100) but the problem came back after 3 hours. Impact: 588 users in the NA org cannot complete their daily work, and the quarter-end close is in 7 days. Our admin David Okafor attached debug logs showing a 401 from the IdP at step 4. Please confirm whether this is related to release Winter '24 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 18 | From: Fatima Al-Sayed | Product: Agentforce | Day 6
+Hi team, following up on the report timeouts on large opportunity datasets. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 7 hours. Impact: 462 users in the APAC org cannot complete their daily work, and the quarter-end close is in 7 days. Our admin David Okafor attached debug logs showing a deadlock at step 8. Please confirm whether this is related to release Winter '25 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 19 | From: Kenji Watanabe | Product: Tableau | Day 7
+Hi team, following up on the sandbox refresh stuck at 80 percent. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 100) but the problem came back after 8 hours. Impact: 237 users in the NA org cannot complete their daily work, and the quarter-end close is in 9 days. Our admin Ana Souza attached debug logs showing a deadlock at step 7. Please confirm whether this is related to release Spring '24 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 20 | From: Fatima Al-Sayed | Product: Slack | Day 7
+Hi team, following up on the Flow failing with UNABLE_TO_LOCK_ROW. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 6 hours. Impact: 259 users in the APAC org cannot complete their daily work, and the quarter-end close is in 4 days. Our admin Marcus Lee attached debug logs showing a 401 from the IdP at step 7. Please confirm whether this is related to release Summer '27 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 21 | From: Lucia Rossi | Product: MuleSoft | Day 7
+Hi team, following up on the SSO login loop after IdP certificate rotation. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 7 hours. Impact: 710 users in the LATAM org cannot complete their daily work, and the quarter-end close is in 7 days. Our admin Marcus Lee attached debug logs showing a deadlock at step 11. Please confirm whether this is related to release Summer '25 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 22 | From: Tom Becker | Product: Tableau | Day 8
+Hi team, following up on the SSO login loop after IdP certificate rotation. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 100) but the problem came back after 4 hours. Impact: 30 users in the APAC org cannot complete their daily work, and the quarter-end close is in 10 days. Our admin Fatima Al-Sayed attached debug logs showing a timeout at step 8. Please confirm whether this is related to release Summer '27 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 23 | From: David Okafor | Product: Tableau | Day 8
+Hi team, following up on the SSO login loop after IdP certificate rotation. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 50) but the problem came back after 5 hours. Impact: 671 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 12 days. Our admin Fatima Al-Sayed attached debug logs showing a 401 from the IdP at step 3. Please confirm whether this is related to release Winter '27 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 24 | From: Fatima Al-Sayed | Product: Tableau | Day 8
+Hi team, following up on the API rate limit errors during nightly sync. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 5 hours. Impact: 571 users in the EMEA org cannot complete their daily work, and the quarter-end close is in 3 days. Our admin Ana Souza attached debug logs showing a 401 from the IdP at step 6. Please confirm whether this is related to release Spring '25 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 25 | From: Ana Souza | Product: Agentforce | Day 9
+Hi team, following up on the API rate limit errors during nightly sync. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 8 hours. Impact: 748 users in the NA org cannot complete their daily work, and the quarter-end close is in 3 days. Our admin Priya Raman attached debug logs showing a 401 from the IdP at step 9. Please confirm whether this is related to release Winter '25 and whether a patch is planned. Priority from our side: P3.
+
+--- Message 26 | From: Kenji Watanabe | Product: Slack | Day 9
+Hi team, following up on the sandbox refresh stuck at 80 percent. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 100) but the problem came back after 7 hours. Impact: 345 users in the LATAM org cannot complete their daily work, and the quarter-end close is in 6 days. Our admin David Okafor attached debug logs showing a 401 from the IdP at step 7. Please confirm whether this is related to release Winter '27 and whether a patch is planned. Priority from our side: P1.
+
+--- Message 27 | From: Priya Raman | Product: Slack | Day 9
+Hi team, following up on the sandbox refresh stuck at 80 percent. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 100) but the problem came back after 9 hours. Impact: 223 users in the APAC org cannot complete their daily work, and the quarter-end close is in 6 days. Our admin Lucia Rossi attached debug logs showing a 401 from the IdP at step 6. Please confirm whether this is related to release Summer '24 and whether a patch is planned. Priority from our side: P2.
+
+--- Message 28 | From: Marcus Lee | Product: Agentforce | Day 10
+Hi team, following up on the Apex CPU time limit exceeded in trigger. We tried the suggested workaround (clearing the cache, re-running the batch with a smaller chunk size of 200) but the problem came back after 3 hours. Impact: 893 users in the APAC org cannot complete their daily work, and the quarter-end close is in 9 days. Our admin Tom Becker attached debug logs showing a 401 from the IdP at step 8. Please confirm whether this is related to release Winter '24 and whether a patch is planned. Priority from our side: P3.

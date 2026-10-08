@@ -1,0 +1,20 @@
+{
+  "scenario_id": "DEP-G7-QAT",
+  "service_name": "gemma4-g7-qat",
+  "hf_model_id": "google/gemma-4-12B-it-qat-w4a16-ct",
+  "model_dir": "gemma-4-12b-it-qat-w4a16-ct",
+  "model_id": "gemma-4-12b-it-qat-w4a16-ct",
+  "instance_types": [
+    "g7.2xlarge"
+  ],
+  "capacity_type": "spot",
+  "gpu_count": 1,
+  "async_scheduling": true,
+  "worker_cpu": 5,
+  "worker_memory_request": "22Gi",
+  "worker_memory_limit": "26Gi",
+  "history_server": true,
+  "engine_kwargs_extra": {
+    "kv_cache_dtype": "fp8"
+  }
+}

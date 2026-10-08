@@ -128,3 +128,24 @@ output "valkey_migration_bucket" {
   description = "S3 bucket used as the source for the Valkey restore initContainer (EC2-to-EKS migration). Empty when enable_valkey is false."
   value       = try(aws_s3_bucket.valkey_migration[0].id, "")
 }
+
+################################################################################
+# Ray Observability (ADOT + KubeRay History Server)
+################################################################################
+
+output "ray_observability" {
+  description = "Endpoints and settings for Ray observability: history server collector config, OTLP endpoint and AMP workspace"
+  value = {
+    history_server = var.enable_ray_history_server ? {
+      namespace        = local.ray_history_server_namespace
+      collector_image  = local.ray_history_collector_image
+      s3_bucket        = module.s3_bucket.s3_bucket_id
+      storage_root_dir = local.ray_history_server_root_dir
+      dashboard        = "kubectl -n ${local.ray_history_server_namespace} port-forward svc/ray-history-dashboard 8265:8265"
+    } : null
+    otlp_endpoint_grpc = var.enable_adot ? "http://adot-collector.${local.adot_namespace}.svc.cluster.local:4317" : null
+    otlp_endpoint_http = var.enable_adot ? "http://adot-collector.${local.adot_namespace}.svc.cluster.local:4318" : null
+    amp_workspace_id   = var.enable_amazon_prometheus ? aws_prometheus_workspace.amp[0].id : null
+    amg_workspace_url  = var.enable_amazon_managed_grafana ? "https://${module.amg[0].workspace_endpoint}" : null
+  }
+}

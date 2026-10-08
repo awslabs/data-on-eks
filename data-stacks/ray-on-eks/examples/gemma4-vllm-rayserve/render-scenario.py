@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parent
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("scenario", help="scenario ID, for example DEP-L40-BASE")
-    parser.add_argument("--template", default=str(ROOT / "03-rayservice-gemma4-12b.yaml"))
+    parser.add_argument("--template", default=None,
+                        help="override the scenario's template (default: 03-rayservice-gemma4-12b.yaml)")
     args = parser.parse_args()
 
     scenario_id = args.scenario.upper()
@@ -45,6 +46,25 @@ def main():
             rendered = str(value)
         extra.append(f"                {key}: {rendered}")
 
+    # Optional KubeRay History Server collector (needs the RayClusterHistoryServer
+    # feature gate). Pods run as the raydata SA, which can write to the bucket.
+    history = ""
+    if config.get("history_server"):
+        history = "\n".join([
+            "    historyServerOptions:",
+            "      collectorOptions:",
+            "        image: " + os.environ.get("COLLECTOR_IMAGE", "quay.io/kuberay/collector:v1.7.1"),
+            "        env:",
+            "          - name: STORAGE_BACKEND",
+            "            value: s3",
+            "          - name: STORAGE_ROOT_DIR",
+            "            value: ray-history",
+            "          - name: S3_BUCKET",
+            "            value: " + os.environ["S3_BUCKET"],
+            "          - name: S3_REGION",
+            "            value: " + os.environ["AWS_REGION"],
+        ])
+
     replacements = {
         "$S3_BUCKET": os.environ["S3_BUCKET"],
         "$AWS_REGION": os.environ["AWS_REGION"],
@@ -54,7 +74,8 @@ def main():
         "$SERVICE_NAME": config["service_name"],
         "$MODEL_DIR": config["model_dir"],
         "$MODEL_ID": config["model_id"],
-        "$ACCELERATOR_TYPE": config["accelerator_type"],
+        "$ACCELERATOR_TYPE": config.get("accelerator_type") or "",
+        "$HISTORY_SERVER_OPTIONS": history,
         "$GPU_COUNT": str(config["gpu_count"]),
         "$ASYNC_SCHEDULING": str(config["async_scheduling"]).lower(),
         "$WORKER_CPU": str(config["worker_cpu"]),
@@ -66,7 +87,14 @@ def main():
         "$CAPACITY_TYPE": config.get("capacity_type", "on-demand"),
     }
 
-    rendered = Path(args.template).read_text(encoding="utf-8")
+    template = args.template or str(ROOT / config.get("template", "03-rayservice-gemma4-12b.yaml"))
+    rendered = Path(template).read_text(encoding="utf-8")
+    # Ray Serve LLM validates accelerator_type against a fixed list that does
+    # not include every GPU (e.g. RTX PRO 4500 on g7); omit it when unset.
+    if not config.get("accelerator_type"):
+        rendered = "\n".join(
+            line for line in rendered.split("\n") if "accelerator_type: $ACCELERATOR_TYPE" not in line
+        )
     for placeholder, value in replacements.items():
         rendered = rendered.replace(placeholder, value)
 

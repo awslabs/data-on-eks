@@ -1,0 +1,19 @@
+{
+  "scenario_id": "EMB-G7",
+  "service_name": "e5-g7",
+  "hf_model_id": "intfloat/e5-large-v2",
+  "model_dir": "e5-large-v2",
+  "model_id": "e5-large-v2",
+  "template": "04-rayservice-embedding.yaml",
+  "gpu_count": 1,
+  "async_scheduling": true,
+  "history_server": true,
+  "engine_kwargs_extra": {},
+  "instance_types": [
+    "g7.2xlarge"
+  ],
+  "capacity_type": "spot",
+  "worker_cpu": 5,
+  "worker_memory_request": "16Gi",
+  "worker_memory_limit": "24Gi"
+}

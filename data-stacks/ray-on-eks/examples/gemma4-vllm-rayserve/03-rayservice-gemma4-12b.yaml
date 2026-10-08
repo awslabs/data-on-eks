@@ -72,6 +72,7 @@ $ENGINE_KWARGS_EXTRA
                 max_ongoing_requests: 128
   rayClusterConfig:
     rayVersion: "2.57.0"
+$HISTORY_SERVER_OPTIONS
     # Off: with it on, a lost worker makes KubeRay recreate the pod *and* the
     # autoscaler request another, so Karpenter launches two GPU nodes for one.
     enableInTreeAutoscaling: false

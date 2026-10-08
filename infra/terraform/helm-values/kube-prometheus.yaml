@@ -133,7 +133,26 @@ grafana:
     passwordKey: admin-password
   plugins:
     - grafana-clickhouse-datasource
+%{ if amp_url != "" ~}
+  # SigV4 signing for the Amazon Managed Prometheus datasource (credentials via EKS Pod Identity, see amp.tf)
+  grafana.ini:
+    auth:
+      sigv4_auth_enabled: true
+%{ endif ~}
   additionalDataSources:
+%{ if amp_url != "" ~}
+    # Durable metrics written by the ADOT collector (adot.tf); survive RayCluster deletion
+    - name: Amazon Managed Prometheus
+      type: prometheus
+      uid: amazon-managed-prometheus
+      access: proxy
+      url: ${amp_url}
+      jsonData:
+        httpMethod: POST
+        sigV4Auth: true
+        sigV4AuthType: default
+        sigV4Region: ${region}
+%{ endif ~}
     - name: ClickHouse Observability
       type: grafana-clickhouse-datasource
       uid: clickhouse-observability

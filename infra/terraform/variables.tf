@@ -163,6 +163,24 @@ variable "enable_amazon_prometheus" {
   default     = false
 }
 
+variable "enable_amazon_managed_grafana" {
+  description = "Enable an Amazon Managed Grafana workspace (IAM Identity Center sign-in) with read access to Amazon Managed Prometheus, AWS X-Ray and CloudWatch"
+  type        = bool
+  default     = false
+}
+
+variable "amg_admin_user_ids" {
+  description = "IAM Identity Center user IDs to assign as Admin on the Amazon Managed Grafana workspace. Find one with: aws identitystore list-users --identity-store-id <id>"
+  type        = list(string)
+  default     = []
+}
+
+variable "amg_admin_group_ids" {
+  description = "IAM Identity Center group IDs to assign as Admin on the Amazon Managed Grafana workspace"
+  type        = list(string)
+  default     = []
+}
+
 variable "enable_datahub" {
   description = "Enable DataHub for metadata management"
   type        = bool
@@ -287,6 +305,22 @@ variable "enable_valkey" {
 
 variable "enable_polaris" {
   description = "Enable Apache Polaris (incubating) as an Iceberg REST catalog, with a dedicated S3 warehouse bucket and Trino integration"
+  type        = bool
+  default     = false
+}
+
+#---------------------------------------------------------------
+# Observability: ADOT and Ray History Server
+#---------------------------------------------------------------
+
+variable "enable_adot" {
+  description = "Enable the AWS Distro for OpenTelemetry (ADOT) EKS add-on and a collector that remote-writes Ray, node, and kube-state metrics to Amazon Managed Prometheus and exports OTLP traces to AWS X-Ray. Requires enable_amazon_prometheus = true"
+  type        = bool
+  default     = false
+}
+
+variable "enable_ray_history_server" {
+  description = "Enable the KubeRay History Server, which replays the Ray Dashboard (jobs, tasks, actors, logs) from S3 after a RayCluster is deleted. Requires enable_raydata = true"
   type        = bool
   default     = false
 }

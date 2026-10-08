@@ -1,0 +1,243 @@
+#---------------------------------------------------------------
+# ADOT Collector: durable metrics (AMP) and traces (X-Ray)
+#---------------------------------------------------------------
+# Metrics: scrapes Ray pods, kube-state-metrics, node-exporter, cAdvisor,
+#          DCGM and the KubeRay operator, then remote-writes to AMP so they
+#          outlive both the RayCluster and the in-cluster Prometheus.
+# Traces:  OTLP on adot-collector.${namespace}.svc:4317 (gRPC) / :4318 (HTTP),
+#          exported to AWS X-Ray.
+# Credentials come from EKS Pod Identity on ${service_account}.
+#
+# Note: `$$1` is left as-is by Terraform templatefile and unescaped to `$1`
+# by the collector (which expands `$` as env vars).
+#---------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${namespace}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${service_account}
+  namespace: ${namespace}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: adot-collector
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/metrics", "nodes/proxy", "services", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: adot-collector
+subjects:
+  - kind: ServiceAccount
+    name: ${service_account}
+    namespace: ${namespace}
+roleRef:
+  kind: ClusterRole
+  name: adot-collector
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: adot
+  namespace: ${namespace}
+spec:
+  mode: deployment
+  replicas: 1
+  image: ${collector_image}
+  serviceAccount: ${service_account}
+  nodeSelector:
+    NodeGroupType: core
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  config:
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      sigv4auth:
+        region: ${region}
+        service: aps
+
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      prometheus:
+        config:
+          global:
+            scrape_interval: 30s
+            scrape_timeout: 10s
+          scrape_configs:
+            # Every Ray head/worker exposes metrics on the container port KubeRay names "metrics"
+            - job_name: ray
+              scrape_interval: 15s
+              kubernetes_sd_configs:
+                - role: pod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_ray_io_is_ray_node]
+                  action: keep
+                  regex: "yes"
+                - source_labels: [__meta_kubernetes_pod_container_port_name]
+                  action: keep
+                  regex: metrics
+                - source_labels: [__meta_kubernetes_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
+                - source_labels: [__meta_kubernetes_pod_node_name]
+                  target_label: node
+                # ray_io_cluster is the label Ray's generated Grafana dashboards filter on
+                - source_labels: [__meta_kubernetes_pod_label_ray_io_cluster]
+                  target_label: ray_io_cluster
+                - source_labels: [__meta_kubernetes_pod_label_ray_io_node_type]
+                  target_label: ray_node_type
+
+            # kube-state-metrics / node-exporter from kube-prometheus-stack (release "monitoring")
+            - job_name: kube-state-metrics
+              honor_labels: true
+              kubernetes_sd_configs:
+                - role: endpointslice
+                  namespaces:
+                    names: [monitoring]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpointslice_port_name]
+                  action: keep
+                  regex: monitoring-kube-state-metrics;http
+
+            - job_name: node-exporter
+              kubernetes_sd_configs:
+                - role: endpointslice
+                  namespaces:
+                    names: [monitoring]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpointslice_port_name]
+                  action: keep
+                  regex: monitoring-prometheus-node-exporter;http-metrics
+                - source_labels: [__meta_kubernetes_endpointslice_endpoint_node_name]
+                  target_label: node
+
+            # Per-container CPU/memory/network via the kubelet, through the API server proxy
+            - job_name: cadvisor
+              scheme: https
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              kubernetes_sd_configs:
+                - role: node
+              relabel_configs:
+                - target_label: __address__
+                  replacement: kubernetes.default.svc:443
+                - source_labels: [__meta_kubernetes_node_name]
+                  regex: (.+)
+                  target_label: __metrics_path__
+                  replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
+                - source_labels: [__meta_kubernetes_node_name]
+                  target_label: node
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: container_(cpu_usage_seconds_total|cpu_cfs_throttled_periods_total|cpu_cfs_periods_total|memory_working_set_bytes|memory_rss|network_receive_bytes_total|network_transmit_bytes_total|oom_events_total)
+                - source_labels: [container]
+                  action: drop
+                  regex: ""
+
+            - job_name: dcgm-exporter
+              kubernetes_sd_configs:
+                - role: endpointslice
+                  namespaces:
+                    names: [gpu-operator]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpointslice_port_name]
+                  action: keep
+                  regex: nvidia-dcgm-exporter;gpu-metrics
+                - source_labels: [__meta_kubernetes_endpointslice_endpoint_node_name]
+                  target_label: node
+
+            - job_name: kuberay-operator
+              kubernetes_sd_configs:
+                - role: endpointslice
+                  namespaces:
+                    names: [kuberay-operator]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpointslice_port_name]
+                  action: keep
+                  regex: kuberay-operator;http
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 80
+        spike_limit_percentage: 20
+      batch:
+        timeout: 10s
+      k8sattributes:
+        auth_type: serviceAccount
+        passthrough: false
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.node.name
+            - k8s.deployment.name
+          labels:
+            - tag_name: ray.cluster
+              key: ray.io/cluster
+              from: pod
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.ip
+          - sources:
+              - from: connection
+      resource:
+        attributes:
+          - key: k8s.cluster.name
+            value: ${cluster_name}
+            action: upsert
+
+    exporters:
+      prometheusremotewrite:
+        endpoint: ${amp_remote_write_url}
+        auth:
+          authenticator: sigv4auth
+        external_labels:
+          cluster: ${cluster_name}
+        resource_to_telemetry_conversion:
+          enabled: false
+      awsxray:
+        region: ${region}
+
+    service:
+      extensions: [health_check, sigv4auth]
+      pipelines:
+        metrics:
+          receivers: [prometheus, otlp]
+          processors: [memory_limiter, batch]
+          exporters: [prometheusremotewrite]
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, resource, batch]
+          exporters: [awsxray]

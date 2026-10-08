@@ -1,6 +1,6 @@
 image:
   repository: quay.io/kuberay/operator
-  tag: v1.6.1
+  tag: v1.7.1
   pullPolicy: IfNotPresent
 
 # Resource configuration for operator pod
@@ -34,12 +34,16 @@ batchScheduler:
   # Set to yunikorn/volcano/scheduler-plugins to enable integration
   name: ""
 
-# Feature gates (v1.6.x chart defaults also enable RayMultiHostIndexing)
+# Feature gates (v1.7.x chart defaults also enable RayMultiHostIndexing)
 featureGates:
   - name: RayClusterStatusConditions
     enabled: true
   - name: RayJobDeletionPolicy
     enabled: true
+  # Alpha (v1.7): injects the History Server collector sidecar into Ray pods
+  # whose spec sets historyServerOptions.collectorOptions. See ray-history-server.tf
+  - name: RayClusterHistoryServer
+    enabled: ${enable_ray_history_server}
 
 # Prometheus metrics
 metrics:

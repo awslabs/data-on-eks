@@ -1,0 +1,123 @@
+# =============================================================================
+# RayJob with the KubeRay History Server collector
+# =============================================================================
+# spec.rayClusterSpec.historyServerOptions.collectorOptions is all a workload
+# needs: the KubeRay operator (RayClusterHistoryServer feature gate) injects the
+# collector sidecar, the shared /tmp/ray volume and the Ray event-export env
+# vars into every head and worker pod. The sidecar uploads logs and events to
+# s3://$S3_BUCKET/ray-history/ using the raydata Pod Identity role.
+#
+# After the job finishes the RayCluster is deleted (shutdownAfterJobFinishes),
+# and the run stays browsable in the history dashboard.
+#
+# Render: envsubst < 01-rayjob-history-server.yaml | kubectl apply -f -
+# =============================================================================
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: rayjob-history-demo
+  namespace: raydata
+spec:
+  entrypoint: python /home/ray/samples/sample_code.py
+  shutdownAfterJobFinishes: true
+  # Give the collector time to flush the final events before the cluster is deleted
+  ttlSecondsAfterFinished: 90
+  submitterPodTemplate:
+    spec:
+      serviceAccountName: raydata
+      restartPolicy: Never
+      containers:
+        - name: ray-job-submitter
+          image: rayproject/ray:2.56.0-py312
+  rayClusterSpec:
+    rayVersion: "2.56.0"
+    historyServerOptions:
+      collectorOptions:
+        image: $COLLECTOR_IMAGE
+        env:
+          - name: STORAGE_BACKEND
+            value: s3
+          - name: STORAGE_ROOT_DIR
+            value: ray-history
+          - name: S3_BUCKET
+            value: $S3_BUCKET
+          - name: S3_REGION
+            value: $AWS_REGION
+    headGroupSpec:
+      rayStartParams:
+        num-cpus: "0"
+      template:
+        spec:
+          serviceAccountName: raydata
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.56.0-py312
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: 4Gi
+                limits:
+                  memory: 4Gi
+              volumeMounts:
+                - name: code-sample
+                  mountPath: /home/ray/samples
+          volumes:
+            - name: code-sample
+              configMap:
+                name: rayjob-history-demo-code
+    workerGroupSpecs:
+      - groupName: cpu
+        replicas: 2
+        minReplicas: 2
+        maxReplicas: 2
+        rayStartParams: {}
+        template:
+          spec:
+            serviceAccountName: raydata
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.56.0-py312
+                resources:
+                  requests:
+                    cpu: "2"
+                    memory: 4Gi
+                  limits:
+                    memory: 4Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rayjob-history-demo-code
+  namespace: raydata
+data:
+  sample_code.py: |
+    import time
+    import ray
+
+    ray.init()
+
+    @ray.remote(num_cpus=0.5)
+    def square(x):
+        print(f"square({x})", flush=True)
+        time.sleep(1)
+        return x * x
+
+    @ray.remote(num_cpus=0.5)
+    class Counter:
+        def __init__(self):
+            self.n = 0
+
+        def incr(self):
+            self.n += 1
+            return self.n
+
+    print("tasks:", sum(ray.get([square.remote(i) for i in range(40)])))
+
+    counter = Counter.remote()
+    print("actor:", ray.get([counter.incr.remote() for _ in range(5)])[-1])
+
+    ds = ray.data.range(10_000).map_batches(lambda b: {"id": b["id"] * 2})
+    print("ray data rows:", ds.count())
+
+    # Let the collector receive the last task/actor events before the job exits
+    time.sleep(10)

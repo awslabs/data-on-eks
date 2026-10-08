@@ -1,0 +1,21 @@
+{
+  "scenario_id": "DEP-L40X4-QAT",
+  "service_name": "gemma4-l40x4-qat",
+  "hf_model_id": "google/gemma-4-12B-it-qat-w4a16-ct",
+  "model_dir": "gemma-4-12b-it-qat-w4a16-ct",
+  "model_id": "gemma-4-12b-it-qat-w4a16-ct",
+  "accelerator_type": "L40S",
+  "instance_types": [
+    "g6e.4xlarge"
+  ],
+  "gpu_count": 1,
+  "async_scheduling": true,
+  "worker_cpu": 6,
+  "worker_memory_request": "48Gi",
+  "worker_memory_limit": "56Gi",
+  "engine_kwargs_extra": {
+    "kv_cache_dtype": "fp8"
+  },
+  "history_server": true,
+  "capacity_type": "on-demand"
+}

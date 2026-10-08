@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>Ray on EKS observability architecture</title>
+  <desc>Metrics flow from Ray, DCGM, kube-state-metrics, node-exporter, cAdvisor and the KubeRay operator through the ADOT collector to Amazon Managed Prometheus and Amazon Managed Grafana. OTLP traces flow through ADOT to AWS X-Ray. Ray logs and events flow from a KubeRay-injected collector sidecar to Amazon S3 and are replayed by the KubeRay History Server and Ray Dashboard after the RayCluster is deleted.</desc>
+  <defs>
+    <marker id="a-metrics" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker>
+    <marker id="a-traces" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker>
+    <marker id="a-logs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ea580c"/></marker>
+    <marker id="a-ctl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker>
+    <style>
+      .t  { font-size: 13px; font-weight: 600; fill: #0f172a; }
+      .b  { font-size: 11.5px; fill: #334155; }
+      .s  { font-size: 11px; fill: #64748b; }
+      .g  { font-size: 12px; font-weight: 700; fill: #475569; letter-spacing: .04em; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .grp { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.2; }
+      .aws { fill: #fff7ed; stroke: #f59e0b; stroke-width: 1.4; }
+      .lbl { font-size: 11px; font-weight: 600; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="900" fill="#ffffff"/>
+
+  <text x="20" y="38" font-size="20" font-weight="700" fill="#0f172a">Ray on EKS: observability stack</text>
+  <text x="20" y="58" class="s">Metrics and traces via AWS Distro for OpenTelemetry · Ray logs and events via the KubeRay History Server</text>
+
+  <!-- ============ EKS cluster ============ -->
+  <rect x="20" y="75" width="830" height="765" rx="10" fill="#ffffff" stroke="#ff9900" stroke-width="1.6" stroke-dasharray="6 4"/>
+  <text x="36" y="97" class="g">AMAZON EKS CLUSTER · ray-on-eks</text>
+
+  <!-- Ray pods -->
+  <rect x="40" y="110" width="380" height="225" rx="8" class="grp"/>
+  <text x="56" y="132" class="t">Ray pods · RayJob / RayService (raydata ns)</text>
+  <rect x="56" y="148" width="160" height="170" rx="6" class="box"/>
+  <text x="68" y="170" class="t">ray-head / ray-worker</text>
+  <text x="68" y="194" class="b">:8080 Prometheus metrics</text>
+  <text x="68" y="214" class="b">Ray events → :8084</text>
+  <text x="68" y="234" class="b">session logs /tmp/ray</text>
+  <text x="68" y="254" class="b">OTLP spans (vLLM, apps)</text>
+  <text x="68" y="300" class="s">Ray 2.56 · SA raydata</text>
+  <rect x="244" y="148" width="160" height="170" rx="6" class="box" stroke="#ea580c"/>
+  <text x="256" y="170" class="t">collector sidecar</text>
+  <text x="256" y="194" class="b">injected by KubeRay</text>
+  <text x="256" y="214" class="b">tails /tmp/ray logs</text>
+  <text x="256" y="234" class="b">receives Ray events</text>
+  <text x="256" y="254" class="b">uploads to S3</text>
+  <text x="256" y="300" class="s">collector:v1.7.1</text>
+  <path d="M216,214 H242" stroke="#ea580c" stroke-width="2" fill="none" marker-end="url(#a-logs)"/>
+
+  <!-- Metric sources -->
+  <rect x="440" y="110" width="390" height="225" rx="8" class="grp"/>
+  <text x="456" y="132" class="t">Metric sources</text>
+  <rect x="456" y="148" width="176" height="44" rx="6" class="box"/>
+  <text x="468" y="167" class="t">DCGM exporter</text>
+  <text x="468" y="183" class="s">GPU util, memory, power</text>
+  <rect x="642" y="148" width="176" height="44" rx="6" class="box"/>
+  <text x="654" y="167" class="t">kube-state-metrics</text>
+  <text x="654" y="183" class="s">node/pod state, allocatable</text>
+  <rect x="456" y="202" width="176" height="44" rx="6" class="box"/>
+  <text x="468" y="221" class="t">node-exporter</text>
+  <text x="468" y="237" class="s">node CPU, memory, disk, ENA</text>
+  <rect x="642" y="202" width="176" height="44" rx="6" class="box"/>
+  <text x="654" y="221" class="t">kubelet / cAdvisor</text>
+  <text x="654" y="237" class="s">per-container usage</text>
+  <rect x="456" y="256" width="176" height="44" rx="6" class="box"/>
+  <text x="468" y="275" class="t">KubeRay operator 1.7.1</text>
+  <text x="468" y="291" class="s">reconcile metrics</text>
+  <text x="656" y="276" class="s">from GPU operator and</text>
+  <text x="656" y="292" class="s">kube-prometheus-stack</text>
+
+  <!-- KubeRay injects sidecar -->
+  <path d="M456,278 H430 V300 H406" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#a-ctl)"/>
+  <text x="330" y="331" class="s">injects sidecar</text>
+
+  <!-- kube-prometheus-stack -->
+  <rect x="40" y="410" width="240" height="170" rx="8" class="grp"/>
+  <text x="56" y="432" class="t">kube-prometheus-stack</text>
+  <rect x="56" y="446" width="208" height="54" rx="6" class="box"/>
+  <text x="68" y="466" class="t">Prometheus</text>
+  <text x="68" y="484" class="s">live views · 30d · in-cluster</text>
+  <rect x="56" y="510" width="208" height="54" rx="6" class="box"/>
+  <text x="68" y="530" class="t">Grafana (in-cluster)</text>
+  <text x="68" y="548" class="s">Prometheus + AMP datasources</text>
+
+  <!-- ADOT collector -->
+  <rect x="300" y="410" width="530" height="170" rx="8" class="grp" stroke="#2563eb"/>
+  <text x="484" y="432" class="t">ADOT collector (adot-collector ns)</text>
+  <text x="484" y="449" class="s">EKS add-on operator · OpenTelemetryCollector · Pod Identity</text>
+  <rect x="316" y="462" width="150" height="44" rx="6" class="box"/>
+  <text x="328" y="481" class="t">prometheus receiver</text>
+  <text x="328" y="497" class="s">k8s service discovery</text>
+  <rect x="316" y="518" width="150" height="44" rx="6" class="box"/>
+  <text x="328" y="537" class="t">OTLP receiver</text>
+  <text x="328" y="553" class="s">:4317 gRPC · :4318 HTTP</text>
+  <rect x="484" y="462" width="150" height="100" rx="6" class="box"/>
+  <text x="496" y="481" class="t">processors</text>
+  <text x="496" y="503" class="b">memory_limiter</text>
+  <text x="496" y="521" class="b">k8sattributes</text>
+  <text x="496" y="539" class="b">resource · batch</text>
+  <rect x="652" y="462" width="160" height="44" rx="6" class="box"/>
+  <text x="662" y="481" class="t" style="font-size:12px">prometheusremotewrite</text>
+  <text x="664" y="497" class="s">SigV4 · cluster label</text>
+  <rect x="652" y="518" width="160" height="44" rx="6" class="box"/>
+  <text x="664" y="537" class="t">awsxray exporter</text>
+  <text x="664" y="553" class="s">traces</text>
+  <path d="M466,484 H482" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-metrics)"/>
+  <path d="M466,540 H482" stroke="#7c3aed" stroke-width="2" fill="none" marker-end="url(#a-traces)"/>
+  <path d="M634,484 H650" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-metrics)"/>
+  <path d="M634,540 H650" stroke="#7c3aed" stroke-width="2" fill="none" marker-end="url(#a-traces)"/>
+
+  <!-- scrape flows into ADOT -->
+  <path d="M120,318 V372 H360 V460" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-metrics)"/>
+  <path d="M636,335 V388 H420 V460" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-metrics)"/>
+  <text x="440" y="382" class="lbl" fill="#2563eb">scrape every 15–30s</text>
+  <!-- traces into ADOT -->
+  <path d="M190,318 V352 H290 V540 H314" stroke="#7c3aed" stroke-width="2" fill="none" marker-end="url(#a-traces)"/>
+  <text x="196" y="348" class="lbl" fill="#7c3aed">OTLP</text>
+
+  <!-- History server -->
+  <rect x="40" y="640" width="790" height="185" rx="8" class="grp" stroke="#ea580c"/>
+  <text x="56" y="662" class="t">KubeRay History Server (ray-history-server ns)</text>
+  <text x="56" y="679" class="s">Replays the Ray Dashboard for RayClusters that no longer exist · logs, events, jobs, tasks, actors, Ray Data, Serve</text>
+  <rect x="56" y="696" width="228" height="112" rx="6" class="box"/>
+  <text x="68" y="718" class="t">Engineer access</text>
+  <text x="68" y="742" class="b">kubectl port-forward</text>
+  <text x="68" y="760" class="b">svc/ray-history-dashboard 8265</text>
+  <text x="68" y="778" class="b">→ /select_cluster</text>
+  <rect x="316" y="696" width="228" height="112" rx="6" class="box"/>
+  <text x="328" y="718" class="t">ray-history-dashboard</text>
+  <text x="328" y="742" class="b">stock Ray head, 0 CPUs</text>
+  <text x="328" y="760" class="b">ray start --proxy-server-url</text>
+  <text x="328" y="778" class="b">serves the Ray Dashboard UI</text>
+  <rect x="576" y="696" width="236" height="112" rx="6" class="box"/>
+  <text x="588" y="718" class="t">history server</text>
+  <text x="588" y="742" class="b">Ray Dashboard API from S3</text>
+  <text x="588" y="760" class="b">lazy load · LRU session cache</text>
+  <text x="588" y="778" class="b">SA ray-history-server</text>
+  <text x="588" y="796" class="s">historyserver:v1.7.1</text>
+  <path d="M574,752 H546" stroke="#ea580c" stroke-width="2" fill="none" marker-end="url(#a-logs)"/>
+  <text x="548" y="744" class="s">API</text>
+  <path d="M314,752 H286" stroke="#ea580c" stroke-width="2" fill="none" marker-end="url(#a-logs)"/>
+  <text x="290" y="744" class="s">UI</text>
+
+  <!-- ============ AWS services ============ -->
+  <text x="890" y="97" class="g">AWS MANAGED SERVICES</text>
+
+  <rect x="890" y="112" width="370" height="46" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="906" y="140" class="t">Platform / ML engineers</text>
+
+  <rect x="890" y="200" width="370" height="96" rx="8" class="aws"/>
+  <text x="906" y="224" class="t">Amazon Managed Grafana (AMG)</text>
+  <text x="906" y="246" class="b">Ray, Ray Data, Serve, GPU (DCGM) dashboards</text>
+  <text x="906" y="264" class="b">reads AMP · X-Ray · CloudWatch · IAM Identity Center</text>
+  <text x="906" y="284" class="s">via Terraform · AMP data source + dashboards added once</text>
+
+  <rect x="890" y="424" width="370" height="84" rx="8" class="aws"/>
+  <text x="906" y="448" class="t">Amazon Managed Prometheus (AMP)</text>
+  <text x="906" y="470" class="b">durable metrics · 150-day default retention</text>
+  <text x="906" y="490" class="s">survives RayCluster deletion</text>
+
+  <rect x="890" y="522" width="370" height="64" rx="8" class="aws"/>
+  <text x="906" y="546" class="t">AWS X-Ray</text>
+  <text x="906" y="568" class="b">distributed traces (vLLM, Ray Serve, apps)</text>
+
+  <rect x="890" y="700" width="370" height="104" rx="8" class="aws"/>
+  <text x="906" y="724" class="t">Amazon S3</text>
+  <text x="906" y="746" class="b">s3://&lt;spark-logs bucket&gt;/ray-history/</text>
+  <text x="906" y="766" class="b">Ray session logs, events, task/actor state</text>
+  <text x="906" y="786" class="s">written as raydata role · read by read-only role</text>
+
+  <!-- exporters to AWS -->
+  <path d="M812,484 H888" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-metrics)"/>
+  <path d="M812,540 H888" stroke="#7c3aed" stroke-width="2" fill="none" marker-end="url(#a-traces)"/>
+  <!-- AMP to AMG to users -->
+  <path d="M1075,422 V298" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-metrics)"/>
+  <text x="1084" y="370" class="lbl" fill="#2563eb">PromQL (SigV4)</text>
+  <path d="M1075,198 V160" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#a-metrics)"/>
+
+  <!-- logs: sidecar to S3, S3 to history server -->
+  <path d="M404,170 H430 V104 H870 V722 H888" stroke="#ea580c" stroke-width="2" fill="none" marker-end="url(#a-logs)"/>
+  <text x="600" y="99" class="lbl" fill="#ea580c">PUT logs + events (Pod Identity)</text>
+  <path d="M888,776 H814" stroke="#ea580c" stroke-width="2" fill="none" marker-end="url(#a-logs)"/>
+  <text x="857" y="768" class="lbl" fill="#ea580c">GET</text>
+
+  <!-- ============ Legend ============ -->
+  <g transform="translate(20,862)">
+    <path d="M0,0 H36" stroke="#2563eb" stroke-width="2" marker-end="url(#a-metrics)"/>
+    <text x="44" y="4" class="b">Metrics</text>
+    <path d="M120,0 H156" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-traces)"/>
+    <text x="164" y="4" class="b">Traces</text>
+    <path d="M236,0 H272" stroke="#ea580c" stroke-width="2" marker-end="url(#a-logs)"/>
+    <text x="280" y="4" class="b">Ray logs + events</text>
+    <path d="M410,0 H446" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-ctl)"/>
+    <text x="454" y="4" class="b">Control / query</text>
+    <rect x="580" y="-8" width="16" height="16" rx="3" class="aws"/>
+    <text x="604" y="4" class="b">AWS managed service</text>
+  </g>
+</svg>

@@ -47,3 +47,16 @@ resource "aws_eks_addon" "aws_mountpoint_s3_csi_driver" {
     service_account = "s3-csi-driver-sa"
   }
 }
+
+# AWS Distro for OpenTelemetry operator; the collector itself is in adot.tf
+resource "aws_eks_addon" "adot" {
+  count = var.enable_adot ? 1 : 0
+
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "adot"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  # The add-on's admission webhooks need cert-manager (installed via ArgoCD)
+  depends_on = [kubectl_manifest.cert_manager]
+}

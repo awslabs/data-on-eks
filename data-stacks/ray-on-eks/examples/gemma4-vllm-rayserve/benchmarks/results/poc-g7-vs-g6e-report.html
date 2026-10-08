@@ -1,0 +1,118 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gemma 4 GPU PoC</title>
+<style>
+:root{--bg:#fff;--fg:#14181f;--mut:#5b6472;--line:#e3e6eb;--card:#f6f7f9;--g7:#2f6fe4;--l40:#e07b24;--ok:#1f8a4c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111418;--fg:#e8eaee;--mut:#9aa3b0;--line:#2a2f37;--card:#181c22;--g7:#6b9cf5;--l40:#f0a058;--ok:#4cc27e}}
+:root[data-theme="dark"]{--bg:#111418;--fg:#e8eaee;--mut:#9aa3b0;--line:#2a2f37;--card:#181c22;--g7:#6b9cf5;--l40:#f0a058;--ok:#4cc27e}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0}
+main{max-width:980px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:36px 0 10px;padding-top:8px;border-top:1px solid var(--line)}
+.sub{color:var(--mut);margin:0 0 20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card b{display:block;font-size:22px;margin:4px 0} .card>span{color:var(--mut);font-size:13px} .card b span{font-size:inherit} .card b .g{color:var(--g7)} .card b .o{color:var(--l40)}
+.tw{overflow-x:auto} table{border-collapse:collapse;width:100%;font-size:13.5px;margin:8px 0}
+th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:right;white-space:nowrap} th:first-child,td:first-child{text-align:left;white-space:normal}
+th{color:var(--mut);font-weight:600} .g{color:var(--g7);font-weight:600} .o{color:var(--l40);font-weight:600}
+svg{max-width:560px;width:100%} svg .g7{fill:var(--g7)} svg .l40{fill:var(--l40)} svg .lab,svg .val{fill:var(--fg);font-size:12px}
+.legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin:0 6px -1px 14px}
+ul{padding-left:20px} li{margin:4px 0} .note{color:var(--mut);font-size:13px}
+code{background:var(--card);padding:1px 5px;border-radius:4px;font-size:12.5px}
+</style></head><body><main>
+<h1>Gemma 4 12B and e5-large-v2 on g7.2xlarge (compared with g6e.2xlarge)</h1>
+<p class="sub">Ray on EKS PoC · cluster <code>ray-on-eks</code> (us-west-2) · Ray 2.57 / vLLM 0.25.1 · run October 07, 2026</p>
+
+<h2 style="border-top:0;margin-top:20px">Summary and recommendation</h2>
+<p><b>Recommendation: standardise on g7.2xlarge.</b> EC2 has advised that g6e capacity is constrained and is not expected to grow, while g7 quota can be provided in all regions. This PoC saw the same thing: g6e.2xlarge had no capacity in us-west-2a, 2b or 2c for several hours (spot and on-demand), while g7.2xlarge launched immediately in all three zones. The tests below show what moving from g6e.2xlarge to g7.2xlarge means for both models.</p>
+<ul>
+<li><b>Gemma 4 12B QAT on g7.2xlarge:</b> runs well and generates at the same speed as g6e.2xlarge (~66 tok/s per user), with the same response time for cached prompts (61 ms). Prompt processing is slower: first token takes 1.07s vs 0.63s for a new prompt, so throughput under load is 26% lower at 16 concurrent users (310 vs 420 tok/s).</li>
+<li><b>e5-large-v2 on g7.2xlarge:</b> same performance as g6e.2xlarge (18 ms per single input, ~595 embeddings/s). No trade-off for embeddings.</li>
+<li><b>Cost (on-demand):</b> g7.2xlarge is 12% more per hour ($2.52 vs $2.24). Per million output tokens at 16 users, Gemma costs $2.26 on g7.2xlarge vs $1.48 on g6e.2xlarge (+52%); e5 costs $1.18 vs $1.05 per million embeddings (+12%).</li>
+<li><b>Closing the gap on g7.2xlarge:</b>
+  <ul>
+  <li><b>Avoid recomputing prompts.</b> g7's gap is in prompt processing, so caching pays off most there. Prefix caching already makes repeat prompts as fast as on g6e (61 ms). The tiered KV cache extends this beyond GPU memory: revisited long prompts ran at 1.9× the throughput of no tiering.</li>
+  <li><b>Scale out.</b> About 1.35 g7.2xlarge per g6e.2xlarge matches throughput at 16 concurrent users; Karpenter adds replicas, and g7 capacity is available.</li>
+  <li><b>Size by concurrency.</b> At lower concurrency the gap is smaller (14% at 4 users, 20% at 8 users).</li>
+  </ul></li>
+</ul>
+
+<div class="tw"><table>
+<tr><th>Metric</th><th>g7.2xlarge</th><th>g6e.2xlarge</th><th>g7.2xlarge vs g6e.2xlarge</th></tr>
+<tr><td>GPU</td><td>RTX PRO 4500 Blackwell, 32 GB</td><td>L40S, 48 GB</td><td></td></tr>
+<tr><td>On-demand price (us-west-2)</td><td>$2.52/h</td><td>$2.24/h</td><td>+12%</td></tr>
+<tr><td><b>Gemma 4 12B QAT</b></td><td></td><td></td><td></td></tr>
+<tr><td>First token, cold prompt, 1 user</td><td>1.07 s</td><td>0.63 s</td><td>+69%</td></tr>
+<tr><td>First token, cached prompt, 1 user</td><td>61 ms</td><td>62 ms</td><td>same</td></tr>
+<tr><td>Generation speed, 1 user</td><td>66 tok/s</td><td>66 tok/s</td><td>same</td></tr>
+<tr><td>Throughput, 16 users</td><td>310 tok/s</td><td>420 tok/s</td><td>-26%</td></tr>
+<tr><td>First token p95, 16 users</td><td>15.4 s</td><td>9.0 s</td><td>+71%</td></tr>
+<tr><td>Cost per 1M output tokens, 16 users</td><td>$2.26</td><td>$1.48</td><td>+52%</td></tr>
+<tr><td><b>e5-large-v2</b></td><td></td><td></td><td></td></tr>
+<tr><td>Latency, single input</td><td>18 ms</td><td>18 ms</td><td>same</td></tr>
+<tr><td>Max throughput (batch 32)</td><td>595 emb/s</td><td>594 emb/s</td><td>same</td></tr>
+<tr><td>Cost per 1M embeddings</td><td>$1.18</td><td>$1.05</td><td>+12%</td></tr>
+<tr><td><b>Tiered KV cache</b></td><td></td><td></td><td></td></tr>
+<tr><td>Revisit of evicted long prompts</td><td>1.9× throughput vs no tiering</td><td>not tested</td><td></td></tr>
+</table></div>
+<p class="note">All costs use on-demand prices. Differences are g7.2xlarge relative to g6e.2xlarge. g6e figures were measured on g6e.4xlarge (same single L40S GPU, more host CPU/RAM) because g6e.2xlarge had no capacity.</p>
+
+<h2>Setup</h2>
+<ul>
+<li><b>LLM:</b> <code>google/gemma-4-12B-it-qat-w4a16-ct</code> (QAT, W4A16), fp8 KV cache, 64K context, prefix caching on, one replica on one GPU. Weights loaded from S3.</li>
+<li><b>Embeddings:</b> <code>intfloat/e5-large-v2</code> (335M, 1024-dim), vLLM pooling runner, fp16, OpenAI <code>/v1/embeddings</code>.</li>
+<li><b>Serving:</b> RayService (<code>ray.serve.llm</code>), CPU head on r6a.2xlarge, GPU worker pinned to the instance type by Karpenter. Clients ran inside the cluster (no port-forward noise).</li>
+<li><b>Nodes:</b> g7.2xlarge (RTX PRO 4500 Blackwell 32 GB, 8 vCPU, 32 GiB, on-demand $2.52/h) and g6e.2xlarge (L40S 48 GB, 8 vCPU, 64 GiB, on-demand $2.24/h). g6e.2xlarge had no capacity in us-west-2a/b/c (spot and on-demand) for several hours, so the g6e runs used g6e.4xlarge, which has the same single L40S GPU. All costs use on-demand prices.</li>
+<li><b>Prompts:</b> the same six files on both instance types (CRM-style case triage, summaries, account briefs, JSON extraction), 2,744–6,324 input tokens, 512 output tokens. They are synthetic; rerun with the customer's own prompts for final sizing.</li>
+</ul>
+
+<h2>Gemma 4 12B QAT: latency and throughput</h2>
+<p class="note">Medians averaged over the six prompts. TTFT = time to first token.</p>
+<div class="tw"><table>
+<tr><th>Test</th><th>TTFT p50 ms <span class='g'>g7.2xlarge</span></th><th><span class='o'>g6e.2xlarge</span></th><th>TTFT p95 ms <span class='g'>g7.2xlarge</span></th><th><span class='o'>g6e.2xlarge</span></th><th>Decode tok/s/user <span class='g'>g7.2xlarge</span></th><th><span class='o'>g6e.2xlarge</span></th><th>Output tok/s total <span class='g'>g7.2xlarge</span></th><th><span class='o'>g6e.2xlarge</span></th></tr>
+<tr><td><b>T03</b> Cold prompt, 1 user</td><td>1,067</td><td>633</td><td>1,069</td><td>635</td><td>66.9</td><td>66.4</td><td>54</td><td>58</td></tr><tr><td><b>T04</b> Warm (cached) prompt, 1 user</td><td>61</td><td>62</td><td>63</td><td>64</td><td>66.7</td><td>66.4</td><td>66</td><td>66</td></tr><tr><td><b>T05</b> Fixed 512-token answer</td><td>1,076</td><td>634</td><td>1,078</td><td>648</td><td>66.4</td><td>66.1</td><td>58</td><td>61</td></tr><tr><td><b>T06</b> Prefill only (1 token)</td><td>1,048</td><td>613</td><td>1,049</td><td>620</td><td>nan</td><td>nan</td><td>–</td><td>–</td></tr><tr><td><b>T07</b> Throughput, 1 user</td><td>1,073</td><td>613</td><td>1,078</td><td>631</td><td>66.3</td><td>66.0</td><td>58</td><td>61</td></tr><tr><td><b>T08</b> Throughput, 4 users</td><td>2,606</td><td>1,481</td><td>3,786</td><td>2,181</td><td>53.1</td><td>56.8</td><td>168</td><td>196</td></tr><tr><td><b>T09</b> Throughput, 8 users</td><td>3,132</td><td>1,855</td><td>7,718</td><td>4,520</td><td>37.3</td><td>43.8</td><td>242</td><td>302</td></tr><tr><td><b>T10</b> Throughput, 16 users</td><td>3,106</td><td>1,864</td><td>15,414</td><td>8,994</td><td>22.1</td><td>29.3</td><td>310</td><td>420</td></tr>
+</table></div>
+<p><b>Total output tokens/s by concurrent users</b></p>
+<p class="legend note"><span style="background:var(--g7)"></span>g7.2xlarge<span style="background:var(--l40)"></span>g6e.2xlarge</p>
+<svg viewBox="0 0 520 260" role="img" aria-label="Aggregate output tokens per second by concurrency"><text x="0" y="42" class="lab">1 user</text><rect x="70" y="20" width="53" height="20" rx="3" class="g7"/><text x="128" y="35" class="val">58</text><rect x="70" y="44" width="56" height="20" rx="3" class="l40"/><text x="131" y="59" class="val">61</text><text x="0" y="100" class="lab">4 users</text><rect x="70" y="78" width="152" height="20" rx="3" class="g7"/><text x="227" y="93" class="val">168</text><rect x="70" y="102" width="177" height="20" rx="3" class="l40"/><text x="252" y="117" class="val">196</text><text x="0" y="158" class="lab">8 users</text><rect x="70" y="136" width="219" height="20" rx="3" class="g7"/><text x="294" y="151" class="val">242</text><rect x="70" y="160" width="273" height="20" rx="3" class="l40"/><text x="348" y="175" class="val">302</text><text x="0" y="216" class="lab">16 users</text><rect x="70" y="194" width="281" height="20" rx="3" class="g7"/><text x="356" y="209" class="val">310</text><rect x="70" y="218" width="380" height="20" rx="3" class="l40"/><text x="455" y="233" class="val">420</text></svg>
+<ul>
+<li><b>Prefill:</b> g6e.2xlarge processes prompts ~1.7× faster, so first-token latency is lower at every concurrency.</li>
+<li><b>Decode:</b> identical on both nodes at ~66 tok/s per user.</li>
+<li><b>Under load:</b> at 16 users g6e.2xlarge delivers +35% tokens/s and a lower TTFT p95 (9.0s vs 15.4s).</li>
+<li><b>Cost (on-demand):</b> per 1M output tokens at 16 users, g7.2xlarge $2.26 vs g6e.2xlarge $1.48.</li>
+</ul>
+
+<h2>e5-large-v2 embeddings</h2>
+<div class="tw"><table>
+<tr><th>Load</th><th>p50 ms <span class='g'>g7.2xlarge</span></th><th><span class='o'>g6e.2xlarge</span></th><th>p99 ms <span class='g'>g7.2xlarge</span></th><th><span class='o'>g6e.2xlarge</span></th><th>Embeddings/s <span class='g'>g7.2xlarge</span></th><th><span class='o'>g6e.2xlarge</span></th></tr>
+<tr><td>batch 1, 1 concurrent</td><td>18</td><td>18</td><td>20</td><td>21</td><td>54</td><td>54</td></tr><tr><td>batch 1, 8 concurrent</td><td>43</td><td>46</td><td>55</td><td>67</td><td>181</td><td>169</td></tr><tr><td>batch 1, 32 concurrent</td><td>163</td><td>164</td><td>222</td><td>201</td><td>193</td><td>193</td></tr><tr><td>batch 1, 64 concurrent</td><td>317</td><td>299</td><td>407</td><td>456</td><td>195</td><td>193</td></tr><tr><td>batch 32, 1 concurrent</td><td>125</td><td>146</td><td>133</td><td>165</td><td>254</td><td>216</td></tr><tr><td>batch 32, 8 concurrent</td><td>426</td><td>429</td><td>449</td><td>521</td><td>595</td><td>594</td></tr><tr><td>batch 32, 32 concurrent</td><td>1672</td><td>1629</td><td>1718</td><td>2089</td><td>601</td><td>594</td></tr><tr><td>batch 32, 64 concurrent</td><td>3168</td><td>2977</td><td>3386</td><td>4263</td><td>602</td><td>590</td></tr>
+</table></div>
+<p class="note">~256-token passages. Both nodes top out at ~590 embeddings/s with one replica: the limit is request handling (HTTP/JSON, tokenization) rather than the GPU, and a 335M model uses a small fraction of either GPU. g7.2xlarge is a like-for-like replacement for embeddings; add replicas for more throughput.</p>
+
+<h2>Tiered KV cache on g7.2xlarge</h2>
+<p>vLLM 0.25.1's native tiered offloading (<code>OffloadingConnector</code> + <code>TieringOffloadingSpec</code>) keeps KV blocks in three tiers: <b>GPU memory → 8 GiB pinned CPU RAM → local NVMe</b> (instance store). No LMCache or extra images were needed; it is set through <code>kv_transfer_config</code> in the RayService.</p>
+<div class="tw"><table>
+<tr><th>150 documents × ~7.5K tokens, 8 concurrent</th><th>First pass TTFT p50</th><th>Revisit TTFT p50</th><th>First pass wall time</th><th>Revisit wall time</th></tr>
+<tr><td>g7.2xlarge, no tiering</td><td>5.57s</td><td>5.57s</td><td>280s</td><td>280s</td></tr>
+<tr><td><b>g7.2xlarge, tiered KV cache</b></td><td>6.67s</td><td><b>5.86s</b></td><td>270s</td><td><b>148s (1.9×)</b></td></tr>
+</table></div>
+<ul>
+<li><b>How it helped:</b> the documents (~1.2M tokens) are more than the GPU cache holds, so without tiering every revisit recomputes the whole prompt. With tiering, evicted prefixes were loaded back from CPU/NVMe instead: over 11 GB of KV was reloaded and about a third of the revisit tokens came from cache, so the revisit pass completed in 148s instead of 280s without tiering: <b>1.9× the request throughput</b> on the same GPU. Median TTFT stayed about the same (5.9s vs 5.6s): the gain is less recomputation, which frees the GPU for more requests.</li>
+<li><b>Best fit:</b> multi-turn chats, agents and RAG over a recurring document set, where the same long prefixes come back after the GPU cache has moved on.</li>
+<li><b>Cost:</b> offloaded KV for this model is ~80 KB per token (all layers), so on g7.2xlarge's 32 GiB host the CPU tier holds only ~100K tokens; the 440 GB NVMe tier does most of the work. The first pass was ~1s slower per request (TTFT) because blocks are also written out to CPU and disk.</li>
+<li><b>Watch out:</b> vLLM's disk tier has no size limit or eviction yet. In an early run it filled the NVMe and Kubernetes evicted the pod. Production needs a dedicated, size-managed volume and cleanup.</li>
+</ul>
+
+<h2>Observability</h2>
+<ul>
+<li>Every RayService ran with the <b>KubeRay History Server</b> collector (KubeRay 1.7.1); after the services were deleted, their Ray Dashboards (nodes, actors, Serve replicas, logs) still replay from S3.</li>
+<li>Ray, vLLM (65 metric names) and GPU (DCGM) metrics flow through ADOT into <b>Amazon Managed Prometheus</b>, labelled per Ray cluster, for <b>Amazon Managed Grafana</b> dashboards (Ray Serve LLM, Ray default, NVIDIA DCGM).</li>
+<li>No public endpoints: all services are ClusterIP and the benchmarks ran inside the cluster.</li>
+</ul>
+
+<h2>Notes</h2>
+<ul class="note">
+<li>Single run per test (10–32 requests per prompt and test); differences under ~5% are within noise.</li>
+<li>g7.2xlarge ran on spot (capacity was available in us-west-2a/b/c); spot vs on-demand does not change performance. g6e.2xlarge was capacity-constrained throughout.</li>
+<li>Raw JSON artifacts: <code>data-stacks/ray-on-eks/examples/gemma4-vllm-rayserve/benchmarks/results/</code>.</li>
+</ul>
+</main></body></html>

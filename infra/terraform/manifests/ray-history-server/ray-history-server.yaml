@@ -1,0 +1,187 @@
+#---------------------------------------------------------------
+# KubeRay History Server
+#---------------------------------------------------------------
+# Collector sidecars (injected by the KubeRay operator into Ray pods that set
+# historyServerOptions.collectorOptions) upload logs and Ray events to
+# s3://${s3_bucket}/${storage_root_dir}/. This server reads them back and serves
+# the Ray Dashboard API for RayClusters that no longer exist.
+#
+# The history server image ships the API only. The UI comes from a stock Ray
+# head started with --proxy-server-url pointing at this server
+# (ray-history-dashboard below).
+#---------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${namespace}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${service_account}
+  namespace: ${namespace}
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ray-history-server-raycluster-reader
+rules:
+  - apiGroups: ["ray.io"]
+    resources: ["rayclusters"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ray-history-server-raycluster-reader
+subjects:
+  - kind: ServiceAccount
+    name: ${service_account}
+    namespace: ${namespace}
+roleRef:
+  kind: ClusterRole
+  name: ray-history-server-raycluster-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-history-server
+  namespace: ${namespace}
+  labels:
+    app: ray-history-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ray-history-server
+  template:
+    metadata:
+      labels:
+        app: ray-history-server
+    spec:
+      serviceAccountName: ${service_account}
+      nodeSelector:
+        NodeGroupType: core
+      containers:
+        - name: historyserver
+          image: ${historyserver_image}
+          imagePullPolicy: IfNotPresent
+          args:
+            # Soft cap on cached dead-session snapshots; keep below the memory limit
+            - --session-cache-max-memory=2Gi
+          env:
+            - name: STORAGE_BACKEND
+              value: s3
+            - name: STORAGE_ROOT_DIR
+              value: ${storage_root_dir}
+            - name: S3_BUCKET
+              value: ${s3_bucket}
+            - name: S3_REGION
+              value: ${region}
+            # No AWS_ACCESS_KEY_ID: the SDK default chain picks up EKS Pod Identity
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 3Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ray-history-server
+  namespace: ${namespace}
+  labels:
+    app: ray-history-server
+spec:
+  type: ClusterIP
+  selector:
+    app: ray-history-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+# Ray Dashboard UI for dead clusters: a single Ray head with no CPUs whose
+# dashboard backend requests are redirected to the history server.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-history-dashboard
+  namespace: ${namespace}
+  labels:
+    app: ray-history-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ray-history-dashboard
+  template:
+    metadata:
+      labels:
+        app: ray-history-dashboard
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        NodeGroupType: core
+      containers:
+        - name: ray-dashboard
+          image: ${ray_image}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "-c"]
+          args:
+            - >-
+              ray start --head --num-cpus=0 --disable-usage-stats
+              --dashboard-host=0.0.0.0 --dashboard-port=8265
+              --proxy-server-url=http://ray-history-server.${namespace}.svc.cluster.local:8080
+              --block
+          ports:
+            - name: dashboard
+              containerPort: 8265
+          readinessProbe:
+            tcpSocket:
+              port: dashboard
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ray-history-dashboard
+  namespace: ${namespace}
+  labels:
+    app: ray-history-dashboard
+spec:
+  type: ClusterIP
+  selector:
+    app: ray-history-dashboard
+  ports:
+    - name: dashboard
+      port: 8265
+      targetPort: dashboard

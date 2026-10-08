@@ -1,0 +1,29 @@
+# =============================================================================
+# OTLP -> ADOT -> X-Ray smoke test
+# =============================================================================
+# Sends a handful of synthetic traces to the ADOT collector's OTLP endpoint.
+# Point real workloads at the same endpoint, e.g. vLLM:
+#   --otlp-traces-endpoint=http://adot-collector.adot-collector.svc.cluster.local:4317
+# or OTEL_EXPORTER_OTLP_ENDPOINT for any OpenTelemetry SDK.
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: otlp-trace-test
+  namespace: raydata
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: telemetrygen
+          image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.135.0
+          args:
+            - traces
+            - --otlp-endpoint=adot-collector.adot-collector.svc.cluster.local:4317
+            - --otlp-insecure
+            - --service=ray-otlp-trace-test
+            - --traces=10
+            - --child-spans=3

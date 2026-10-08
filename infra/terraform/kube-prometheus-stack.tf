@@ -51,6 +51,7 @@ resource "kubectl_manifest" "kube_prometheus_stack" {
 
   depends_on = [
     helm_release.argocd,
-    module.amp_ingest_pod_identity
+    module.amp_ingest_pod_identity,
+    module.grafana_amp_pod_identity
   ]
 }

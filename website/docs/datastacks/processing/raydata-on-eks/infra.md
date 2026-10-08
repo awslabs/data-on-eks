@@ -18,7 +18,8 @@ The deployment provisions a complete Ray platform on EKS with automatic scaling,
 | **AWS Infrastructure** | VPC (dual CIDR), EKS v1.31+, S3, KMS | Network isolation, managed Kubernetes, storage, encryption |
 | **Platform** | Karpenter, ArgoCD, Prometheus Stack | Node autoscaling, GitOps deployment, monitoring |
 | **Security** | Pod Identity, cert-manager, external-secrets | IAM authentication, TLS, secrets management |
-| **Ray** | KubeRay Operator v1.4.2, RayCluster/Job/Service CRDs | Cluster management, job orchestration |
+| **Ray** | KubeRay Operator v1.7.1, RayCluster/Job/Service CRDs | Cluster management, job orchestration |
+| **Observability** | ADOT, Amazon Managed Prometheus, Amazon Managed Grafana, KubeRay History Server | Durable metrics, traces, Ray Dashboard for deleted clusters |
 
 ### Network Design
 
@@ -60,12 +61,17 @@ cd data-on-eks/data-stacks/ray-on-eks
 Edit `terraform/data-stack.tfvars`:
 
 ```hcl
-name                      = "ray-on-eks"      # Unique cluster name
-region                    = "us-west-2"       # AWS region
-enable_raydata            = true              # Deploy KubeRay operator
-enable_ingress_nginx      = true              # Ray Dashboard access (optional)
-enable_jupyterhub         = false             # Interactive notebooks (optional)
-enable_amazon_prometheus  = false             # AWS Managed Prometheus (optional)
+name                          = "ray-on-eks"  # Unique cluster name
+region                        = "us-west-2"   # AWS region
+enable_raydata                = true          # Deploy KubeRay operator
+enable_ingress_nginx          = true          # Ingress controller (optional)
+enable_nvidia_gpu_operator    = true          # GPU nodes and DCGM metrics
+
+# Observability, see the Ray Observability guide
+enable_amazon_prometheus      = true          # Amazon Managed Prometheus
+enable_amazon_managed_grafana = true          # Amazon Managed Grafana (needs IAM Identity Center)
+enable_adot                   = true          # ADOT collector: metrics to AMP, traces to X-Ray
+enable_ray_history_server     = true          # KubeRay History Server backed by S3
 ```
 
 ### 3. Deploy Infrastructure
@@ -79,7 +85,8 @@ enable_amazon_prometheus  = false             # AWS Managed Prometheus (optional
 2. ✅ Configure Karpenter for node autoscaling
 3. ✅ Deploy ArgoCD for GitOps
 4. ✅ Install KubeRay operator and platform addons
-5. ✅ Configure kubectl access
+5. ✅ Deploy observability: ADOT, AMP, AMG and the KubeRay History Server (when enabled)
+6. ✅ Configure kubectl access
 
 ### 4. Verify Deployment
 
@@ -129,14 +136,17 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443
 
 ```bash
 # Get password
-kubectl get secret -n monitoring kube-prometheus-stack-grafana \
+kubectl get secret -n monitoring grafana-admin-secret \
   -o jsonpath="{.data.admin-password}" | base64 -d
 
 # Port forward
-kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
 
 # Access: http://localhost:3000 (admin / <password>)
 ```
+
+For Amazon Managed Grafana, durable metrics in AMP and the Ray History Server, see
+[Ray Observability](./observability).
 
 ## Pod Identity for AWS Access
 
@@ -247,6 +257,9 @@ Configure optional components in `terraform/data-stack.tfvars`:
 | `enable_ingress_nginx` | false | Public dashboard access |
 | `enable_jupyterhub` | false | Interactive notebooks |
 | `enable_amazon_prometheus` | false | AWS Managed Prometheus |
+| `enable_amazon_managed_grafana` | false | Amazon Managed Grafana workspace |
+| `enable_adot` | false | ADOT collector: metrics to AMP, traces to X-Ray |
+| `enable_ray_history_server` | false | KubeRay History Server backed by S3 |
 
 ### Karpenter Autoscaling
 
@@ -338,9 +351,10 @@ This operation destroys all resources including S3 buckets. Back up important da
 ## Next Steps
 
 1. **[Spark Logs Processing](spark-logs-processing)** - Production example processing Spark logs with Ray Data and Iceberg
-2. **[KubeRay Examples](https://docs.ray.io/en/latest/cluster/kubernetes/examples/index.html)** - Official Ray on Kubernetes guides
-3. **[Ray Train](https://docs.ray.io/en/latest/train/train.html)** - Distributed ML training
-4. **[Ray Serve](https://docs.ray.io/en/latest/serve/index.html)** - Model serving
+2. **[Ray Observability](observability)** - Metrics, traces, Amazon Managed Grafana and the KubeRay History Server
+3. **[KubeRay Examples](https://docs.ray.io/en/latest/cluster/kubernetes/examples/index.html)** - Official Ray on Kubernetes guides
+4. **[Ray Train](https://docs.ray.io/en/latest/train/train.html)** - Distributed ML training
+5. **[Ray Serve](https://docs.ray.io/en/latest/serve/index.html)** - Model serving
 
 ## Resources
 

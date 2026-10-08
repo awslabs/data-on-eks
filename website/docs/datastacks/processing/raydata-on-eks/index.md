@@ -43,7 +43,7 @@ Production-ready Ray Data for scalable ML and data processing on Amazon EKS. Dep
 <div className="step-number">4</div>
 <div className="step-content">
 <h4>Monitor Performance</h4>
-<p>Use Ray Dashboard and metrics for observability</p>
+<p>Use Ray Dashboard, Amazon Managed Grafana and the History Server for observability</p>
 </div>
 </div>
 
@@ -90,6 +90,28 @@ Production-ready Ray Data for scalable ML and data processing on Amazon EKS. Dep
 <div className="showcase-footer">
 <a href="/data-on-eks/docs/datastacks/processing/raydata-on-eks/spark-logs-processing" className="showcase-link">
 <span>View Example</span>
+<svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+</a>
+</div>
+</div>
+
+<div className="showcase-card">
+<div className="showcase-header">
+<div className="showcase-icon">🔭</div>
+<div className="showcase-content">
+<h3>Ray Observability</h3>
+<p className="showcase-description">Metrics and traces with ADOT, Amazon Managed Prometheus and Amazon Managed Grafana, plus the KubeRay History Server for Ray Dashboards of deleted clusters</p>
+</div>
+</div>
+<div className="showcase-tags">
+<span className="tag infrastructure">Observability</span>
+<span className="tag guide">Guide</span>
+</div>
+<div className="showcase-footer">
+<a href="/data-on-eks/docs/datastacks/processing/raydata-on-eks/observability" className="showcase-link">
+<span>Set Up Observability</span>
 <svg className="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 </svg>

@@ -11,7 +11,9 @@
 # KubeRay Operator
 #---------------------------------------------------------------
 locals {
-  kuberay_operator_values = yamldecode(templatefile("${path.module}/helm-values/kuberay-operator.yaml", {})
+  kuberay_operator_values = yamldecode(templatefile("${path.module}/helm-values/kuberay-operator.yaml", {
+    enable_ray_history_server = var.enable_ray_history_server
+    })
   )
   s3_prefix        = "${local.name}/spark-application-logs/spark-team-a"
   iceberg_database = "raydata_spark_logs"

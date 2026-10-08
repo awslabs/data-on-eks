@@ -1,0 +1,126 @@
+# =============================================================================
+# RayService: text embeddings (e.g. intfloat/e5-large-v2) on vLLM / Ray 2.57
+# =============================================================================
+# OpenAI-compatible /v1/embeddings via ray.serve.llm, vLLM pooling runner.
+# Same cluster layout as 03-rayservice-gemma4-12b.yaml (CPU head + one GPU
+# worker pinned to the scenario's instance type).
+#
+# Placeholders substituted by render-scenario.py (see scenarios/emb-*.json).
+# =============================================================================
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: $SERVICE_NAME
+  namespace: raydata
+  labels:
+    benchmark.data-on-eks/scenario: $SCENARIO_ID
+spec:
+  serveConfigV2: |
+    applications:
+      - name: embedding-app
+        import_path: ray.serve.llm:build_openai_app
+        route_prefix: "/"
+        args:
+          llm_configs:
+            - model_loading_config:
+                model_id: $MODEL_ID
+                model_source: s3://$S3_BUCKET/models/$MODEL_DIR
+              accelerator_type: $ACCELERATOR_TYPE
+              engine_kwargs:
+                # Pooling runner: serves /v1/embeddings instead of generation
+                runner: pooling
+                convert: embed
+                dtype: float16
+                max_model_len: 512
+                gpu_memory_utilization: 0.85
+                max_num_seqs: 256
+                async_scheduling: $ASYNC_SCHEDULING
+$ENGINE_KWARGS_EXTRA
+              runtime_env:
+                env_vars:
+                  AWS_REGION: "$AWS_REGION"
+                  AWS_DEFAULT_REGION: "$AWS_REGION"
+              deployment_config:
+                autoscaling_config:
+                  min_replicas: 1
+                  max_replicas: 1
+                  target_ongoing_requests: 64
+                max_ongoing_requests: 512
+  rayClusterConfig:
+    rayVersion: "2.57.0"
+$HISTORY_SERVER_OPTIONS
+    # Off: with it on, a lost worker makes KubeRay recreate the pod *and* the
+    # autoscaler request another, so Karpenter launches two GPU nodes for one.
+    enableInTreeAutoscaling: false
+    headGroupSpec:
+      rayStartParams:
+        # Head is pure control plane - no tasks/actors schedule here.
+        num-cpus: "0"
+      template:
+        metadata:
+          labels:
+                app: $SERVICE_NAME
+          annotations:
+            # Losing the head takes down the whole Serve app.
+            karpenter.sh/do-not-disrupt: "true"
+        spec:
+          serviceAccountName: raydata
+          containers:
+            - name: ray-head
+              image: $ECR_REGISTRY/ray-llm:$RAY_LLM_TAG
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: AWS_REGION
+                  value: "$AWS_REGION"
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: 8Gi
+                limits:
+                  memory: 12Gi
+              ports:
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 8000
+                  name: serve
+          nodeSelector:
+            kubernetes.io/arch: amd64
+            karpenter.sh/nodepool: memory-optimized-x86
+            node.kubernetes.io/instance-type: r6a.2xlarge
+    workerGroupSpecs:
+      - groupName: gpu-workers
+        replicas: 1
+        minReplicas: 1
+        maxReplicas: 1
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+                app: $SERVICE_NAME
+            annotations:
+              karpenter.sh/do-not-disrupt: "true"
+          spec:
+            serviceAccountName: raydata
+            containers:
+              - name: ray-worker
+                image: $ECR_REGISTRY/ray-llm:$RAY_LLM_TAG
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: AWS_REGION
+                    value: "$AWS_REGION"
+                resources:
+                  requests:
+                    cpu: "$WORKER_CPU"
+                    memory: $WORKER_MEMORY_REQUEST
+                    # Weights land on node NVMe before vLLM loads them.
+                    ephemeral-storage: 40Gi
+                    nvidia.com/gpu: "$GPU_COUNT"
+                  limits:
+                    memory: $WORKER_MEMORY_LIMIT
+                    nvidia.com/gpu: "$GPU_COUNT"
+            nodeSelector:
+              karpenter.sh/nodepool: $NODEPOOL_NAME
+              karpenter.sh/capacity-type: $CAPACITY_TYPE
+              # Every benchmark scenario selects one exact EC2 shape so
+              # Karpenter provisions the intended hardware just in time.
+              node.kubernetes.io/instance-type: $INSTANCE_TYPE
