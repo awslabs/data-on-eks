@@ -97,10 +97,20 @@ for l in d.splitlines():
 BEFORE=$(snap_metrics)
 
 info "Running benchmark (model=$MODEL_ID) ..."
+# By default the client runs as a Ray job on the service's Ray cluster
+# (ray job submit), so each benchmark appears in the Ray Dashboard, the Ray
+# History Server and Heliostat. RUN_AS_RAY_JOB=0 runs it directly instead.
 # -u: kubectl exec gives Python a pipe, not a tty, so without unbuffered mode
 # the per-request progress lines sit in the buffer until the run ends.
+JOB_ID=$(printf '%s-%s-%s' "$SERVICE_NAME" "$TEST_ID" "$STAMP" | tr '[:upper:]' '[:lower:]')
+LAUNCH=(python3 -u)
+if [[ "${RUN_AS_RAY_JOB:-1}" == "1" ]]; then
+  info "Submitting as Ray job $JOB_ID"
+  LAUNCH=(ray job submit --address http://127.0.0.1:8265 --submission-id "$JOB_ID"
+          --entrypoint-num-cpus 0 -- python3 -u)
+fi
 kubectl exec "$HEAD_POD" -n "$NAMESPACE" -c ray-head -- \
-  python3 -u "$REMOTE_DIR/benchmark-latency.py" \
+  "${LAUNCH[@]}" "$REMOTE_DIR/benchmark-latency.py" \
     --base-url "http://${SERVICE_NAME}-serve-svc.${NAMESPACE}:8000" \
     --model "$MODEL_ID" \
     --prompt-dir "$REMOTE_DIR/prompts" \

@@ -1,0 +1,15 @@
+# Kyverno policy engine. Used for mutating defaults, e.g. adding the KubeRay
+# History Server collector to every new RayCluster (ray-history-server.tf).
+admissionController:
+  replicas: 1
+  nodeSelector:
+    NodeGroupType: core
+backgroundController:
+  nodeSelector:
+    NodeGroupType: core
+cleanupController:
+  nodeSelector:
+    NodeGroupType: core
+# Policy reports are not needed for mutation-only policies
+reportsController:
+  enabled: false

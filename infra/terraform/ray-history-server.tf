@@ -141,3 +141,29 @@ resource "kubectl_manifest" "ray_history_server" {
     time_sleep.ray_history_server_pod_identity,
   ]
 }
+
+#---------------------------------------------------------------
+# Default collector for every new RayCluster (requires Kyverno)
+#---------------------------------------------------------------
+resource "kubectl_manifest" "ray_history_server_default_collector" {
+  count = var.enable_ray_history_server && var.enable_kyverno ? 1 : 0
+
+  yaml_body = templatefile("${path.module}/manifests/ray-history-server/default-collector-policy.yaml", {
+    namespaces       = jsonencode(var.ray_history_server_default_namespaces)
+    collector_image  = local.ray_history_collector_image
+    storage_root_dir = local.ray_history_server_root_dir
+    s3_bucket        = module.s3_bucket.s3_bucket_id
+    region           = local.region
+  })
+
+  depends_on = [time_sleep.kyverno_crds]
+}
+
+# The ClusterPolicy CRD exists only after ArgoCD has synced Kyverno
+resource "time_sleep" "kyverno_crds" {
+  count = var.enable_ray_history_server && var.enable_kyverno ? 1 : 0
+
+  create_duration = "180s"
+
+  depends_on = [kubectl_manifest.kyverno]
+}

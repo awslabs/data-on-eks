@@ -1,0 +1,45 @@
+#---------------------------------------------------------------
+# Default the KubeRay History Server collector for new RayClusters
+#---------------------------------------------------------------
+# RayJobs and RayServices create their RayCluster through the KubeRay
+# operator, so mutating RayCluster CREATE covers all three. Clusters that
+# already set historyServerOptions are left unchanged. The collector uploads
+# with the pod's service account, so only namespaces whose Ray service account
+# can write to the bucket are listed. failurePolicy Ignore: a Kyverno outage
+# never blocks Ray workloads.
+#---------------------------------------------------------------
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: ray-history-server-default-collector
+  annotations:
+    policies.kyverno.io/title: Default KubeRay History Server collector
+    policies.kyverno.io/subject: RayCluster
+spec:
+  failurePolicy: Ignore
+  background: false
+  rules:
+    - name: add-history-server-collector
+      match:
+        any:
+          - resources:
+              kinds:
+                - ray.io/v1/RayCluster
+              namespaces: ${namespaces}
+              operations:
+                - CREATE
+      mutate:
+        patchStrategicMerge:
+          spec:
+            +(historyServerOptions):
+              collectorOptions:
+                image: ${collector_image}
+                env:
+                  - name: STORAGE_BACKEND
+                    value: s3
+                  - name: STORAGE_ROOT_DIR
+                    value: ${storage_root_dir}
+                  - name: S3_BUCKET
+                    value: ${s3_bucket}
+                  - name: S3_REGION
+                    value: ${region}

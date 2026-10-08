@@ -324,3 +324,15 @@ variable "enable_ray_history_server" {
   type        = bool
   default     = false
 }
+
+variable "enable_kyverno" {
+  description = "Enable the Kyverno policy engine. With enable_ray_history_server, it adds the KubeRay History Server collector to every new RayCluster in ray_history_server_default_namespaces"
+  type        = bool
+  default     = false
+}
+
+variable "ray_history_server_default_namespaces" {
+  description = "Namespaces where new RayClusters get the History Server collector by default (requires enable_kyverno). The Ray pods' service account must be able to write to the history S3 prefix"
+  type        = list(string)
+  default     = ["raydata"]
+}

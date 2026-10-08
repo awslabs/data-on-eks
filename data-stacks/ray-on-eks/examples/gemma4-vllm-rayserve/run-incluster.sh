@@ -20,7 +20,16 @@ kubectl exec -n "$NAMESPACE" "$HEAD_POD" -c ray-head -- mkdir -p "$REMOTE"
 for f in "$SCRIPT" benchmark-latency.py; do
   kubectl cp "$ROOT/$f" "$NAMESPACE/$HEAD_POD:$REMOTE/$f" -c ray-head
 done
-kubectl exec -n "$NAMESPACE" "$HEAD_POD" -c ray-head -- python "$REMOTE/$SCRIPT" \
+# Runs as a Ray job by default so it shows in the Ray Dashboard, History Server
+# and Heliostat; RUN_AS_RAY_JOB=0 runs the script directly on the head pod.
+JOB_ID=$(printf '%s-%s-%s' "$SERVICE_NAME" "$TEST" "$STAMP" | tr '[:upper:]_' '[:lower:]-')
+LAUNCH=(python -u)
+if [[ "${RUN_AS_RAY_JOB:-1}" == "1" ]]; then
+  echo "submitting as Ray job $JOB_ID"
+  LAUNCH=(ray job submit --address http://127.0.0.1:8265 --submission-id "$JOB_ID"
+          --entrypoint-num-cpus 0 -- python -u)
+fi
+kubectl exec -n "$NAMESPACE" "$HEAD_POD" -c ray-head -- "${LAUNCH[@]}" "$REMOTE/$SCRIPT" \
   --base-url "http://${SERVICE_NAME}-serve-svc.${NAMESPACE}:8000" --model "$MODEL_ID" --scenario "$SCENARIO_ID" \
   --out-json "$REMOTE/out.json" "$@"
 mkdir -p "$ROOT/benchmarks/results/$SCENARIO_ID"
