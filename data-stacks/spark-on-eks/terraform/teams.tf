@@ -212,6 +212,22 @@ data "aws_iam_policy_document" "spark_jobs" {
     ]
   }
 
+  # Read-only access to the TPC-DS source data for the Spark Operator scale test.
+  # The bucket is not managed by this configuration. Data layout: c01/ to c50/tpcds/sf30/
+  statement {
+    sid    = "TpcdsSourceDataRead"
+    effect = "Allow"
+    resources = [
+      "arn:${data.aws_partition.current.partition}:s3:::spark-scaletest-eks-tpcds-us-west-2",
+      "arn:${data.aws_partition.current.partition}:s3:::spark-scaletest-eks-tpcds-us-west-2/*"
+    ]
+
+    actions = [
+      "s3:GetObject",
+      "s3:ListBucket",
+    ]
+  }
+
   statement {
     sid    = "S3ExpressAccess"
     effect = "Allow"

@@ -105,22 +105,6 @@ additionalFilters: |
       Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
       Annotations         Off
 
-  # Reassemble multi-line stack traces before parsing
-  [FILTER]
-      Name                  multiline
-      Match                 spark.*
-      multiline.key_content log
-      multiline.parser      java
-
-  # Enriches spark records with Kubernetes metadata and parses the log line.
-  # Extracts level/message from plain-text Spark log format.
-  # Drops lines that don't match the expected pattern.
-  [FILTER]
-      Name                lua
-      Match               spark.*
-      call                enrich
-      code                function enrich(tag, timestamp, record) local k8s = record.kubernetes or {} local labels = k8s.labels or {} local line = record.log or "" local ts, lvl, cls, msg = line:match("^(%d+/%d+/%d+%s+%S+)%s+(%w+)%s+(%S+):%s+(.*)") if not lvl then lvl, msg = line:match("^(%u+)%s+(.*)") end if not lvl then lvl = "UNKNOWN" msg = line end return 1, timestamp, {namespace=k8s.namespace_name or "", pod_name=k8s.pod_name or "", container_name=k8s.container_name or "", node_name=k8s.host or "", app=labels["spark-app-selector"] or "", role=labels["spark-role"] or "", level=lvl, message=msg or ""} end
-
 cloudWatchLogs:
  enabled: false
  match: "systempods.*"
@@ -144,18 +128,6 @@ additionalOutputs: |
       log_key                         log
 
   [OUTPUT]
-      Name                http
-      Match               spark.*
-      Host                ${clickhouse_host}
-      Port                ${clickhouse_port}
-      URI                 /?query=INSERT+INTO+app_logs.spark+FORMAT+JSONEachRow&input_format_skip_unknown_fields=1&async_insert=1&wait_for_async_insert=0
-      Format              json_lines
-      http_User           $${CLICKHOUSE_USER}
-      http_Passwd         $${CLICKHOUSE_PASSWORD}
-      tls                 Off
-      Retry_Limit         3
-
-  [OUTPUT]
       Name                            s3
       Match                           spark.*
       region                          ${region}
@@ -164,7 +136,10 @@ additionalOutputs: |
       s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[1]/$TAG[3]/%H%M%S_$UUID.log
       s3_key_format_tag_delimiters    ..
       store_dir                       /home/ec2-user/buffer
-      upload_timeout                  5m
+      # One PUT for each object (not a 3-request multipart upload). About one object per pod.
+      use_put_object                  On
+      # Upload buffered data sooner, so less data is lost when Karpenter removes a node.
+      upload_timeout                  1m
       log_key                         log
 
 env:

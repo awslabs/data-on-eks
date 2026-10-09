@@ -23,7 +23,8 @@ data:
     #
 
     # Set everything to be logged to the console
-    rootLogger.level = info
+    # warn: less log volume at scale (about 300,000 Spark pods in the load test).
+    rootLogger.level = warn
     rootLogger.appenderRef.stdout.ref = console
 
     # In the pattern layout configuration below, we specify an explicit `%ex` conversion

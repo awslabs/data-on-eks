@@ -1,56 +1,58 @@
 # ============================================================
-# TPC-DS v4 Benchmark — Native Spark SQL on Parquet in S3
-# Instance: r8gd.12xlarge (Graviton4, 48 vCPU, 384 GB RAM, NVMe)
-# Scale: 3 TB   Iterations: 3
+# Spark Operator scale test: TPC-DS v4, scale factor 30 (30 GB), Parquet in S3.
+# Based on spark-app-without-webhook.yaml. The Spark Operator webhook is disabled, so all
+# pod settings are in spec.driver.template and spec.executor.template.
 #
-# Prerequisites:
-#   1. TPC-DS parquet data already exists in S3
-#   2. Image: public.ecr.aws/data-on-eks/spark-benchmark:3.5.8-tpcds4
+# Queries: q4, q24a, q24b, q67 (v2.4), 1 iteration. 1 driver + 30 executors.
 #
-# S3 layout:
-#   Source parquet : s3://${S3_BUCKET}/TPCDS-TEST-3TB/
-#   Results        : s3://${S3_BUCKET}/TPCDS-TEST-3TB-RESULT-PARQUET-R8G/
+# S3 layout (cNN = c01 to c50, to spread the S3 request load over 50 prefixes):
+#   Source  : s3a://spark-scaletest-eks-tpcds-us-west-2/cNN/tpcds/sf30/
+#   Results : s3a://spark-on-eks-spark-logs-344a3629d86dbc9b12395e5b87/cNN/tpcds-results/<app name>/
+# This file uses c01. The load test (locustfile.py) will set cNN, the app name, the
+# results path, and the namespace for each SparkApplication.
 #
-# Usage:
-#   kubectl apply -f tpcds-benchmark-parquet.yaml
+# Prerequisites in the job namespace:
+#   - ConfigMap spark-log4j2-config (../../spark-log4j2-configmap.yaml)
+#   - Service account with the spark_jobs IAM policy (spark-team-a/b/c)
 #
-# Monitor:
-#   kubectl get sparkapplication -n spark-team-a tpcds-benchmark-parquet -w
-#   kubectl logs -n spark-team-a -l spark-role=driver --tail=50 -f
+# Single run:
+#   kubectl apply -f tpcds-sf30-template.yaml
+#   kubectl get sparkapplication -n spark-team-a tpcds-sf30 -w
 # ============================================================
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: tpcds-benchmark-parquet
+  name: tpcds-sf30
   namespace: spark-team-a
 
 spec:
   type: Scala
   mode: cluster
   image: "public.ecr.aws/data-on-eks/spark-benchmark:tcpds-4-spark-3.5.8-comet-0.15.0-iceberg@sha256:8eb5dcfcc279b65c8a2aa6c0360813fe7774e4f06fe71dd34e0d9c3e3f058830"
-  imagePullPolicy: Always
+  # Pull each image one time per node. "Always" makes a registry call for every pod.
+  imagePullPolicy: IfNotPresent
   sparkVersion: "3.5.8"
   mainClass: com.k8s.spark.benchmark.BenchmarkSQL
   mainApplicationFile: "local:///opt/spark/jars/spark-k8s-benchmarks-assembly-1.0.0.jar"
 
   arguments:
-    # arg[0] tpcdsDataDir — root path of parquet data in S3
-    - "s3a://${S3_BUCKET}/TPCDS-TEST-3TB"
-    # arg[1] Results location
-    - "s3a://${S3_BUCKET}/TPCDS-TEST-3TB-RESULT-PARQUET-R8G"
-    # arg[2] Path to TPC-DS kit (dsdgen/dsqgen) in the image
+    # arg[0] tpcdsDataDir - root path of the parquet data in S3
+    - "s3a://spark-scaletest-eks-tpcds-us-west-2/c01/tpcds/sf30"
+    # arg[1] Results location (one path for each application)
+    - "s3a://spark-on-eks-spark-logs-344a3629d86dbc9b12395e5b87/c01/tpcds-results/tpcds-sf30"
+    # arg[2] Path to the TPC-DS kit (dsdgen/dsqgen) in the image
     - "/opt/tpcds-kit/tools"
     # arg[3] Data format
     - "parquet"
-    # arg[4] Scale factor (GB 1000, 3000, 10000)
-    - "3000"
+    # arg[4] Scale factor in GB
+    - "30"
     # arg[5] Iterations
-    - "5"
+    - "1"
     # arg[6] optimizeQueries
     - "true"
-    # arg[7] Query filter — change to "" to run all 99 queries
-    - ""
+    # arg[7] Query filter
+    - "q4-v2.4,q24a-v2.4,q24b-v2.4,q67-v2.4"
     # arg[8] Set log level to WARN
     - "true"
 
@@ -58,16 +60,15 @@ spec:
     type: Never
 
   driver:
-    cores: 5
-    memory: "20g"
-    memoryOverhead: "6g"
+    cores: 1
+    coreLimit: "1"
+    memory: "4g"
+    memoryOverhead: "1g"
     serviceAccount: spark-team-a
     template:
       metadata:
         annotations:
           karpenter.sh/do-not-disrupt: "true"
-        labels:
-          yunikorn.apache.org/queue: root.spark.spark-team-a
       spec:
         dnsConfig:
           options:
@@ -75,31 +76,32 @@ spec:
               value: "2"
         securityContext:
           runAsUser: 185
+          fsGroup: 185
         volumes:
+          # Spark uses volumes named "spark-local-dir-*" as local dirs (shuffle, spill).
+          # emptyDir is on the node root volume (on NVMe with instanceStorePolicy RAID0).
+          # fsGroup gives UID 185 write access, so no busybox init container is necessary.
           - name: spark-local-dir-1
-            hostPath:
-              path: "/mnt/k8s-disks/0"
-              type: Directory
+            emptyDir: {}
           - name: spark-log4j2
             configMap:
               name: spark-log4j2-config
-        initContainers:
-          - name: volume-permission
-            image: public.ecr.aws/docker/library/busybox
-            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
-            securityContext:
-              runAsUser: 0
-            volumeMounts:
-              - name: spark-local-dir-1
-                mountPath: /data1
-        tolerations:
-          - key: benchmark-default
-            operator: Exists
-            effect: NoSchedule
-        nodeSelector:
-          karpenter.sh/nodepool: benchmark-default
-          karpenter.sh/capacity-type: on-demand
-          node.kubernetes.io/instance-type: r8gd.12xlarge
+        # Existing NodePool memory-optimized-graviton (arm64). The pod narrows it to
+        # on-demand r8g/r8gd 8xlarge (32 vCPU, 256 GiB: about 30 pods of 1 vCPU / 5 GiB).
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: karpenter.sh/nodepool
+                      operator: In
+                      values: ["memory-optimized-graviton"]
+                    - key: karpenter.sh/capacity-type
+                      operator: In
+                      values: ["on-demand"]
+                    - key: node.kubernetes.io/instance-type
+                      operator: In
+                      values: ["r8g.8xlarge", "r8gd.8xlarge"]
         containers:
           - name: spark-kubernetes-driver
             env:
@@ -112,17 +114,16 @@ spec:
                 mountPath: /opt/spark/log4j2-custom
 
   executor:
-    cores: 5
-    memory: "20g"
-    memoryOverhead: "6g"
-    instances: 23
+    instances: 30
+    cores: 1
+    coreLimit: "1"
+    memory: "4g"
+    memoryOverhead: "1g"
     serviceAccount: spark-team-a
     template:
       metadata:
         annotations:
           karpenter.sh/do-not-disrupt: "true"
-        labels:
-          yunikorn.apache.org/queue: root.spark.spark-team-a
       spec:
         dnsConfig:
           options:
@@ -130,31 +131,28 @@ spec:
               value: "2"
         securityContext:
           runAsUser: 185
+          fsGroup: 185
         volumes:
           - name: spark-local-dir-1
-            hostPath:
-              path: "/mnt/k8s-disks/0"
-              type: Directory
+            emptyDir: {}
           - name: spark-log4j2
             configMap:
               name: spark-log4j2-config
-        initContainers:
-          - name: volume-permission
-            image: public.ecr.aws/docker/library/busybox
-            command: ['sh', '-c', 'mkdir -p /data1; chown -R 185:185 /data1']
-            securityContext:
-              runAsUser: 0
-            volumeMounts:
-              - name: spark-local-dir-1
-                mountPath: /data1
-        tolerations:
-          - key: benchmark-default
-            operator: Exists
-            effect: NoSchedule
-        nodeSelector:
-          karpenter.sh/nodepool: benchmark-default
-          karpenter.sh/capacity-type: on-demand
-          node.kubernetes.io/instance-type: r8gd.12xlarge
+        # Same node constraints as the driver.
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: karpenter.sh/nodepool
+                      operator: In
+                      values: ["memory-optimized-graviton"]
+                    - key: karpenter.sh/capacity-type
+                      operator: In
+                      values: ["on-demand"]
+                    - key: node.kubernetes.io/instance-type
+                      operator: In
+                      values: ["r8g.8xlarge", "r8gd.8xlarge"]
         containers:
           - name: spark-kubernetes-executor
             env:
@@ -167,8 +165,12 @@ spec:
                 mountPath: /opt/spark/log4j2-custom
 
   sparkConf:
-    "spark.memory.offHeap.enabled": "true"
-    "spark.memory.offHeap.size": "32g"
+    # ── Event logs: off for the scale test ──────────────────────────────────
+    "spark.eventLog.enabled": "false"
+
+    # ── Parallelism: 30 executors x 1 core = 30 task slots ─────────────────
+    "spark.sql.shuffle.partitions": "120"
+    "spark.default.parallelism": "60"
 
     # ── AQE (Adaptive Query Execution) ──────────────────────────────────────
     "spark.sql.adaptive.enabled": "true"
@@ -186,16 +188,14 @@ spec:
     "spark.hadoop.fs.s3a.buffer.dir": "/data1/s3a"
     "spark.hadoop.fs.s3a.multipart.size": "128M"
     "spark.hadoop.fs.s3a.multipart.threshold": "256M"
-    "spark.hadoop.fs.s3a.threads.max": "50"
-    "spark.hadoop.fs.s3a.connection.maximum": "200"
-    "spark.hadoop.fs.s3a.multipart.purge": "true"
+    # 1-core executors: fewer threads and connections for each JVM. At ~300,000 executors,
+    # the base values (50 threads, 200 connections) give too many S3 connections.
+    "spark.hadoop.fs.s3a.threads.max": "16"
+    "spark.hadoop.fs.s3a.connection.maximum": "32"
+    # purge=true deletes pending multipart uploads at start. With many jobs that write to the
+    # same bucket at the same time, it can delete uploads of other running jobs.
+    "spark.hadoop.fs.s3a.multipart.purge": "false"
     "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
-
-    # ── Event logs ──────────────────────────────────────────────────────────
-    "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://${S3_BUCKET}/spark-event-logs"
-    "spark.eventLog.rolling.enabled": "true"
-    "spark.eventLog.rolling.maxFileSize": "64m"
 
     # ── Prometheus metrics ───────────────────────────────────────────────────
     "spark.ui.prometheus.enabled": "true"
@@ -211,12 +211,14 @@ spec:
     "spark.kubernetes.submission.requestTimeout": "120000"
     "spark.kubernetes.driver.connectionTimeout": "120000"
     "spark.kubernetes.driver.requestTimeout": "120000"
-    "spark.kubernetes.executor.podNamePrefix": "tpcds-benchmark-parquet"
+    "spark.kubernetes.executor.podNamePrefix": "tpcds-sf30"
+    # Request executors in batches, to limit the pod create rate on the API server.
+    "spark.kubernetes.allocation.batch.size": "10"
 
     # ── Shuffle tuning ───────────────────────────────────────────────────────
     "spark.shuffle.file.buffer": "1m"
     "spark.reducer.maxSizeInFlight": "48m"
 
-    # ── GC ───────────────────────────────────────────────────────────────────
+    # ── GC / logging ─────────────────────────────────────────────────────────
     "spark.driver.extraJavaOptions": "-Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
-    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70 -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
