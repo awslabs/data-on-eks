@@ -1,9 +1,12 @@
 controller:
-  # -- Number of replicas of controller.
   replicas: 1
-  # -- Reconcile concurrency, higher values might increase memory usage.
-  # -- Increased from 10 to 20 to leverage more cores from the instance
-  workers: 20
+  # -- Tuned for about 200 SparkApplications per minute.
+  workers: 50
+  kubeAPIQPS: 100
+  kubeAPIBurst: 200
+  workqueueRateLimiter:
+    bucketQPS: 100
+    bucketSize: 1000
 %{ if enable_ipv6 ~}
   env:
     - name: _JAVA_OPTIONS
@@ -11,28 +14,30 @@ controller:
     - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION
       value: "true"
 %{ endif ~}
+  # Run on the dedicated Spark Operator node group (c6a.12xlarge, tainted).
   nodeSelector:
-    NodeGroupType: core
+    NodeGroupType: spark-operator-benchmark
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: spark-operator
+      effect: NoSchedule
+  # The controller runs one spark-submit JVM for each SparkApplication (CPU bound).
+  resources:
+    requests:
+      cpu: "36"
+      memory: 50Gi
+    limits:
+      memory: 50Gi
 batchScheduler:
   # -- Enable batch scheduler support
   enable: false
   # -- Default batch scheduler (will be overridden by user values)
   default: "yunikorn"
-#   -- Uncomment this for Spark Operator scale test
-#   -- Spark Operator is CPU bound so add more CPU or use compute optimized instance for handling large number of job submissions
-#   nodeSelector:
-#     NodeGroupType: spark-operator-benchmark
-#   resources:
-#     requests:
-#       cpu: 33000m
-#       memory: 50Gi
 webhook:
+  enable: false
   nodeSelector:
     NodeGroupType: core
-#   resources:
-#     requests:
-#       cpu: 1000m
-#       memory: 10Gi
 spark:
   # -- List of namespaces where to run spark jobs.
   # If empty string is included, all namespaces will be allowed.
@@ -67,4 +72,4 @@ prometheus:
     # -- Prometheus metrics endpoint properties. `metrics.portName` will be used as a port
     podMetricsEndpoint:
       scheme: http
-      interval: 5s
+      interval: 15s

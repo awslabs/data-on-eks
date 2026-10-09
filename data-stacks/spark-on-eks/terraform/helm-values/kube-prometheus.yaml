@@ -8,9 +8,18 @@ prometheus:
     verbs: [ "get" ]
   prometheusSpec:
     retention: 30d
+    retentionSize: 450GB
     scrapeInterval: 30s
     evaluationInterval: 30s
     scrapeTimeout: 10s
+    nodeSelector:
+      NodeGroupType: core
+    resources:
+      requests:
+        cpu: "8"
+        memory: 64Gi
+      limits:
+        memory: 96Gi
     storageSpec:
       volumeClaimTemplate:
         metadata:
@@ -21,7 +30,7 @@ prometheus:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 50Gi
+              storage: 500Gi
     # Find monitors in all namespaces
     podMonitorSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false

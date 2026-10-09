@@ -1,5 +1,14 @@
 
 locals {
+  # Pinned AMI for all EC2NodeClasses. With "@latest", Karpenter replaces nodes (drift)
+  # each time AWS releases a new AMI, also during a load test.
+  # The release must match the cluster Kubernetes version (var.eks_cluster_version).
+  # To update: change the version between tests. Karpenter then replaces all nodes.
+  # Find the latest release:
+  #   aws ssm get-parameter --name /aws/service/eks/optimized-ami/<k8s-version>/amazon-linux-2023/x86_64/standard/recommended/image_id
+  #   (then describe-images; the version is the "-vYYYYMMDD" suffix of the AMI name)
+  karpenter_ami_alias = "al2023@v20260930"
+
   karpenter_node_pools = {
     for f in fileset("${path.module}/manifests/karpenter", "nodepool*.yaml") :
     f => templatefile("${path.module}/manifests/karpenter/${f}", {
@@ -12,6 +21,9 @@ locals {
     templatefile("${path.module}/manifests/karpenter/ec2nodeclass.yaml", {
       CLUSTER_NAME                 = local.name
       KARPENTER_NODE_IAM_ROLE_NAME = module.karpenter.node_iam_role_name
+      # Used by the spark-operator EC2NodeClass to select the primary CIDR subnets.
+      REGION    = local.region
+      AMI_ALIAS = local.karpenter_ami_alias
     })
   )
 }

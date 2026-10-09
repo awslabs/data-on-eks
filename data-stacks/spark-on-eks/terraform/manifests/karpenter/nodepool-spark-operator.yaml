@@ -1,0 +1,49 @@
+# Dedicated NodePool for the Spark Operator controller (36 CPU, 50 Gi requests).
+# The label and taint match the controller nodeSelector and toleration in
+# helm-values/spark-operator.yaml. The taint keeps all other pods off this node.
+# Disruption is blocked, so Karpenter does not replace the node during a load test.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: spark-operator
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        NodeGroupType: spark-operator-benchmark
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: spark-operator
+      taints:
+        - key: dedicated
+          value: spark-operator
+          effect: NoSchedule
+      # No expiry: the node is not replaced after a fixed time.
+      expireAfter: Never
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["c6a", "c7a", "c7i"]
+        # 12xlarge = 48 vCPU, 96 GiB: room for the 36 CPU / 50 Gi controller and DaemonSets.
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["12xlarge"]
+  # One node only (48 vCPU).
+  limits:
+    cpu: "48"
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: Never
+    # Block all voluntary disruption (drift, consolidation, empty).
+    budgets:
+      - nodes: "0"
+  weight: 50

@@ -154,6 +154,10 @@ fi
 # consume terraform's parallelism slots and block forever on pods that can never
 # schedule, starving the Karpenter install -> full deadlock.
 targets=(
+    # All secondary CIDR associations first. The VPC module makes every subnet depend only on
+    # association [0], so without this step a subnet can be created before its own CIDR is
+    # associated (error: InvalidSubnet.Range "The CIDR '100.x.0.0/16' is invalid").
+    "module.vpc.aws_vpc_ipv4_cidr_block_association.this"
     "module.vpc"
     "module.eks"
     "module.karpenter"

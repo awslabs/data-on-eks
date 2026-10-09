@@ -4,7 +4,7 @@
 name                 = "spark-on-eks"
 region               = "us-west-2"
 eks_cluster_version  = "1.37"
-enable_ingress_nginx = true
+enable_ingress_nginx = false
 # Unique ID used to tag all AWS resources for this deployment.
 # Enables identification of orphaned resources and cleanup in case of Terraform state loss.
 # Auto-generated on first deploy — do not edit manually.
