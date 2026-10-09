@@ -3,33 +3,36 @@ data "aws_availability_zones" "available" {}
 locals {
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
 
-  # Extra secondary CIDRs for data node subnets. With secondary1 (var.secondary_cidrs),
-  # each AZ has 8 /16 data subnets: secondary1 to secondary8.
-  # Sizing: 10,000 nodes in one AZ. Each node uses 2 /28 prefixes + 1 node IP. In the worst
-  # case (node IPs fragment the /28 space) one /16 holds about 1,365 nodes, so 8 subnets
-  # hold about 10,900 nodes per AZ.
-  # 21 CIDRs: 100.67.0.0/16 to 100.87.0.0/16. AZs are assigned in order (AZ1, AZ2, AZ3, AZ1, ...).
-  # Karpenter selects these subnets with the "<name>-private-secondary*" Name tag.
-  # Only append to this list. Removing or reordering entries replaces subnets.
-  # VPC quota "IPv4 CIDR blocks per VPC" must be >= 25 (1 primary + 3 + 21).
-  additional_node_cidrs = [for i in range(21) : "100.${67 + i}.0.0/16"]
-
-  # Private subnet list order. Only append, so existing subnet indexes do not change:
-  #   [0 .. 2]  primary CIDR, one per AZ: core (EKS control plane ENIs, core node group)
-  #   [3 .. 5]  secondary1 (var.secondary_cidrs), one per AZ: data workloads (Karpenter)
-  #   [6 .. ]   secondary2 to secondary8 (local.additional_node_cidrs), AZ1, AZ2, AZ3, AZ1, ...: data workloads
+  # Private subnets in the VPC module (core layout, one per AZ):
+  #   [0 .. 2]  primary CIDR: core (EKS control plane ENIs, core node group, spark-operator node)
+  #   [3 .. 5]  secondary1 (var.secondary_cidrs): data workloads (Karpenter)
   private_subnet_cidrs = concat(
     [for k, v in local.azs : cidrsubnet(var.vpc_cidr, 4, k)],
-    [for k in range(length(local.azs)) : var.secondary_cidrs[k]],
-    local.additional_node_cidrs
+    [for k in range(length(local.azs)) : var.secondary_cidrs[k]]
   )
 
   private_subnet_names = concat(
     [for k, v in local.azs : "${var.name}-private-${v}"],
-    [for k, v in local.azs : "${var.name}-private-secondary1-${v}"],
-    [for i in range(length(local.additional_node_cidrs)) :
-    "${var.name}-private-secondary${floor(i / length(local.azs)) + 2}-${local.azs[i % length(local.azs)]}"]
+    [for k, v in local.azs : "${var.name}-private-secondary1-${v}"]
   )
+
+  # Extra secondary CIDRs for data node subnets: secondary2 to secondary8 (7 per AZ).
+  # With secondary1, each AZ has 8 /16 data subnets.
+  # Sizing: 10,000 nodes in one AZ. Each node uses 2 /28 prefixes + 1 node IP.
+  additional_node_cidrs = [for i in range(21) : "100.${67 + i}.0.0/16"]
+
+  # These subnets are created outside the VPC module (see "Data subnets" below), so each
+  # subnet depends on its own CIDR association. Map key = subnet Name tag.
+  data_subnets = {
+    for i, cidr in local.additional_node_cidrs :
+    "${var.name}-private-secondary${floor(i / length(local.azs)) + 2}-${local.azs[i % length(local.azs)]}" => {
+      cidr = cidr
+      az   = local.azs[i % length(local.azs)]
+      # IPv6 /64 prefix numbers: public 0-2, module private 3-8, data subnets 9 and up.
+      # Same numbers as before the move out of the module, so the IPv6 CIDRs do not change.
+      ipv6_prefix = length(local.azs) + length(local.private_subnet_cidrs) + i
+    }
+  }
 }
 
 #---------------------------------------------------------------
@@ -44,9 +47,9 @@ module "vpc" {
 
   azs = local.azs
 
-  # Secondary CIDRs - Private subnets for EKS pods and nodes.
-  # local.additional_node_cidrs is appended, so the existing associations keep their index.
-  secondary_cidr_blocks = concat(var.secondary_cidrs, local.additional_node_cidrs)
+  # Secondary CIDR (secondary1) - Private subnets for data workloads.
+  # The other data CIDRs and subnets are outside the module (see "Data subnets" below).
+  secondary_cidr_blocks = var.secondary_cidrs
 
   # Private subnets: see local.private_subnet_cidrs for the order.
   # The module assigns AZs by index (azs[index % 3]).
@@ -64,8 +67,8 @@ module "vpc" {
   create_egress_only_igw = true
 
   public_subnet_ipv6_prefixes = [for k, v in local.azs : k]
-  # Public subnets use prefixes 0-2. Private subnets start after them (3, 4, ...), in the
-  # same order as local.private_subnet_cidrs. Existing subnets keep their prefixes.
+  # Public subnets use prefixes 0-2. Module private subnets use 3-8, in the same order as
+  # local.private_subnet_cidrs. Data subnets use 9 and up (local.data_subnets).
   private_subnet_ipv6_prefixes = [for i in range(length(local.private_subnet_cidrs)) : i + length(local.azs)]
 
   public_subnet_assign_ipv6_address_on_creation = true
@@ -84,6 +87,51 @@ module "vpc" {
     "karpenter.sh/discovery" = var.name
   })
 
+}
+
+#---------------------------------------------------------------
+# Data subnets (secondary2 to secondary8)
+#---------------------------------------------------------------
+resource "aws_vpc_ipv4_cidr_block_association" "data" {
+  for_each = local.data_subnets
+
+  vpc_id     = module.vpc.vpc_id
+  cidr_block = each.value.cidr
+}
+
+resource "aws_subnet" "data" {
+  for_each = local.data_subnets
+
+  # Dependency on this subnet's own CIDR association.
+  vpc_id            = aws_vpc_ipv4_cidr_block_association.data[each.key].vpc_id
+  cidr_block        = each.value.cidr
+  availability_zone = each.value.az
+
+  ipv6_cidr_block = cidrsubnet(module.vpc.vpc_ipv6_cidr_block, 8, each.value.ipv6_prefix)
+  ipv6_native     = false
+  # The cluster is IPv4: nodes do not get IPv6 addresses (saves 1 NAU per node).
+  assign_ipv6_address_on_creation                = false
+  enable_dns64                                   = true
+  enable_resource_name_dns_aaaa_record_on_launch = true
+  enable_resource_name_dns_a_record_on_launch    = false
+
+  tags = merge(
+    { Name = each.key },
+    var.private_subnet_tags,
+    {
+      "kubernetes.io/role/internal-elb" = 1
+      # Karpenter EC2NodeClasses select data subnets with Name "<name>-private-secondary*".
+      "karpenter.sh/discovery" = var.name
+    }
+  )
+}
+
+resource "aws_route_table_association" "data" {
+  for_each = aws_subnet.data
+
+  subnet_id = each.value.id
+  # single_nat_gateway = true: the module has one private route table.
+  route_table_id = module.vpc.private_route_table_ids[0]
 }
 
 #---------------------------------------------------------------

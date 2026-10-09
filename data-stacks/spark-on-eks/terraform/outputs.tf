@@ -33,17 +33,26 @@ output "deployment_id" {
 
 output "subnet_ids_starting_with_100" {
   description = "Secondary CIDR Private Subnet IDs for EKS Data Plane"
-  value       = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null])
+  # sort(): same order as before the data subnets moved out of the VPC module (by subnet ID).
+  value = sort(concat(
+    compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) : substr(cidr_block, 0, 4) == "100." ? subnet_id : null]),
+    [for k in sort(keys(aws_subnet.data)) : aws_subnet.data[k].id]
+  ))
 }
 
 output "node_subnets_by_az" {
   description = "Karpenter node subnets (Name tag <name>-private-secondary*) per AZ: subnet name => subnet ID"
   value = {
-    for az in local.azs : az => {
-      for idx, name in local.private_subnet_names :
-      name => module.vpc.private_subnets[idx]
-      if idx >= length(local.azs) && endswith(name, "-${az}")
-    }
+    for az in local.azs : az => merge(
+      # secondary1 (in the VPC module)
+      {
+        for idx, name in local.private_subnet_names :
+        name => module.vpc.private_subnets[idx]
+        if idx >= length(local.azs) && endswith(name, "-${az}")
+      },
+      # secondary2 to secondary8 (outside the VPC module)
+      { for name, s in aws_subnet.data : name => s.id if s.availability_zone == az }
+    )
   }
 }
 
