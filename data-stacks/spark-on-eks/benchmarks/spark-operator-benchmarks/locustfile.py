@@ -1,4 +1,5 @@
 import copy
+import itertools
 import os
 import re
 
@@ -11,7 +12,7 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 
 from k8s_client import KubernetesClient
-from locust import HttpUser, task, env, events, constant
+from locust import HttpUser, task, env, events, constant_pacing
 
 
 @dataclass
@@ -28,6 +29,12 @@ class Configuration:
         self.submission_rate = parsed.jobs_per_min
         self.namespaces = parsed.spark_namespaces.split(",")
         self.cleanup_apps = not parsed.no_spark_cleanup
+        self.tpcds_bucket = parsed.tpcds_bucket
+        self.tpcds_data_path = parsed.tpcds_data_path.strip("/")
+        self.results_bucket = parsed.results_bucket
+        self.prefix_count = parsed.prefix_count
+        self.tpcds_iterations = parsed.tpcds_iterations
+        self.zone = parsed.zone
 
         # Validate configuration
         self.validate()
@@ -62,6 +69,15 @@ class Configuration:
             if not re.match(r'^[a-z0-9][-a-z0-9]*[a-z0-9]$', ns):
                 raise ValueError(f"Invalid namespace format: {ns}")
 
+        if not 1 <= self.prefix_count <= 99:
+            raise ValueError("prefix_count must be between 1 and 99")
+
+        if self.tpcds_iterations < 1:
+            raise ValueError("tpcds_iterations must be positive")
+
+        if self.zone and not re.match(r'^[a-z]{2}-[a-z]+-\d[a-z]$', self.zone):
+            raise ValueError(f"Invalid zone format: {self.zone}")
+
 
 @events.init_command_line_parser.add_listener
 def on_parser_init(parser):
@@ -69,13 +85,13 @@ def on_parser_init(parser):
         "--spark-template",
         help="Path to SparkApplication template",
         env_var="LOAD_TEST_TEMPLATE_PATH",
-        default="spark-app-template.yaml"
+        default="tpcds-sf30-template.yaml"
     )
     parser.add_argument(
         "--spark-name-prefix",
         help="Prefix for generated names",
         env_var="LOAD_TEST_NAME_PREFIX",
-        default="load-test"
+        default="tpcds"
     )
     parser.add_argument(
         "--spark-name-length",
@@ -109,7 +125,7 @@ def on_parser_init(parser):
         "--spark-namespaces",
         help="Comma-separated list of namespaces (e.g., spark-team-a,spark-team-b)",
         env_var="LOAD_TEST_NAMESPACES",
-        default="default"
+        default="spark-team-a"
     )
     parser.add_argument(
         "--no-spark-cleanup",
@@ -117,6 +133,44 @@ def on_parser_init(parser):
         help="If set, Spark applications will not be deleted after test",
         env_var="LOAD_TEST_NO_CLEANUP",
         default=False
+    )
+    parser.add_argument(
+        "--tpcds-bucket",
+        help="S3 bucket with the TPC-DS source data",
+        env_var="LOAD_TEST_TPCDS_BUCKET",
+        default="spark-scaletest-eks-tpcds-us-west-2"
+    )
+    parser.add_argument(
+        "--tpcds-data-path",
+        help="Path of the TPC-DS data under each prefix (s3a://<bucket>/cNN/<path>)",
+        env_var="LOAD_TEST_TPCDS_DATA_PATH",
+        default="tpcds/sf30"
+    )
+    parser.add_argument(
+        "--results-bucket",
+        help="S3 bucket for the query results",
+        env_var="LOAD_TEST_RESULTS_BUCKET",
+        default="spark-on-eks-spark-logs-344a3629d86dbc9b12395e5b87"
+    )
+    parser.add_argument(
+        "--prefix-count",
+        type=int,
+        help="Number of cNN prefixes (c01 to cNN) in the source and results buckets",
+        env_var="LOAD_TEST_PREFIX_COUNT",
+        default=50
+    )
+    parser.add_argument(
+        "--tpcds-iterations",
+        type=int,
+        help="TPC-DS iterations per application",
+        env_var="LOAD_TEST_TPCDS_ITERATIONS",
+        default=4
+    )
+    parser.add_argument(
+        "--zone",
+        help="Availability Zone for driver and executor pods (for example us-west-2a). Empty: any zone",
+        env_var="LOAD_TEST_ZONE",
+        default=""
     )
 
 
@@ -154,6 +208,11 @@ def validate_spark_name(name: str) -> bool:
     return bool(re.match(pattern, name))
 
 
+# Shared by all users: per-user counters would send the first submission of every
+# user to the same prefix and namespace.
+_submission_counter = itertools.count()
+
+
 class TemplateManager:
 
     def __init__(self, template_path: str):
@@ -177,10 +236,34 @@ class TemplateManager:
 
     def substitute_variables(self, variables: Dict[str, Any]) -> dict:
         template = copy.deepcopy(self.template_content)
-        template["metadata"]["name"] = variables["name"]
-        template["metadata"]["namespace"] = variables["namespace"]
-        template["spec"]["sparkConf"]["spark.kubernetes.executor.podNamePrefix"] = variables["name"]
-        template["spec"]["driver"]["serviceAccount"] = variables["namespace"] # assume namespace and service account match
+        name = variables["name"]
+        namespace = variables["namespace"]
+        prefix = variables["prefix"]
+        spec = template["spec"]
+
+        template["metadata"]["name"] = name
+        template["metadata"]["namespace"] = namespace
+        spec["sparkConf"]["spark.kubernetes.executor.podNamePrefix"] = name
+        # Assumes the service account has the same name as the namespace.
+        spec["driver"]["serviceAccount"] = namespace
+        spec["executor"]["serviceAccount"] = namespace
+
+        # Argument positions are defined by com.k8s.spark.benchmark.BenchmarkSQL.
+        spec["arguments"][0] = f"s3a://{variables['tpcds_bucket']}/{prefix}/{variables['tpcds_data_path']}"
+        spec["arguments"][1] = f"s3a://{variables['results_bucket']}/{prefix}/tpcds-results/{name}"
+        spec["arguments"][5] = str(variables["iterations"])
+
+        if variables.get("zone"):
+            for role in ("driver", "executor"):
+                terms = spec[role]["template"]["spec"]["affinity"]["nodeAffinity"][
+                    "requiredDuringSchedulingIgnoredDuringExecution"]["nodeSelectorTerms"]
+                # Terms are ORed, so the zone must be in every term.
+                for term in terms:
+                    term.setdefault("matchExpressions", []).append({
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [variables["zone"]],
+                    })
         return template
 
 
@@ -189,7 +272,8 @@ class SparkLoadTest(HttpUser):
     host = "http://localhost"
 
     def wait_time(self):
-        return constant(60 / self.config.submission_rate)(self)
+        # Pacing, not a fixed sleep: the submission call time must not lower the rate.
+        return constant_pacing(60 / self.config.submission_rate)(self)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -206,9 +290,7 @@ class SparkLoadTest(HttpUser):
             self.logger.addHandler(handler)
 
         self.template_manager = TemplateManager(self.config.template_path)
-        # self.wait_time = constant(60 / self.config.submission_rate)
         self.failure_count = 0
-        self.namespace_index = 0
         self.application_count = 0
 
         self.k8s_client = KubernetesClient()
@@ -238,11 +320,11 @@ class SparkLoadTest(HttpUser):
             return
 
         submission_start_time = time.time()
-        batch_failures = 0
 
         try:
-            # Select namespace using round-robin
-            namespace = self.config.namespaces[self.namespace_index % len(self.config.namespaces)]
+            n = next(_submission_counter)
+            namespace = self.config.namespaces[n % len(self.config.namespaces)]
+            prefix = f"c{(n % self.config.prefix_count) + 1:02d}"
 
             name = generate_spark_name(
                 prefix=self.config.name_prefix,
@@ -251,13 +333,18 @@ class SparkLoadTest(HttpUser):
 
             spec = self.template_manager.substitute_variables({
                 "name": name,
-                "namespace": namespace
+                "namespace": namespace,
+                "prefix": prefix,
+                "tpcds_bucket": self.config.tpcds_bucket,
+                "tpcds_data_path": self.config.tpcds_data_path,
+                "results_bucket": self.config.results_bucket,
+                "iterations": self.config.tpcds_iterations,
+                "zone": self.config.zone,
             })
 
-            self.logger.info(f"Submitting Spark application: {name} to namespace: {namespace}")
+            self.logger.info(f"Submitting Spark application: {name} to namespace: {namespace} prefix: {prefix}")
             self.k8s_client.create_spark_application(namespace, name, spec["spec"])
             self.application_count += 1
-            self.namespace_index += 1
 
             # TODO need to rework on stats
             submission_response_time = (time.time() - submission_start_time) * 1000
@@ -270,5 +357,12 @@ class SparkLoadTest(HttpUser):
             )
 
         except Exception as e:
-            batch_failures += 1
+            self.failure_count += 1
             self.logger.error(f"Failed to submit Spark application: {str(e)}")
+            self.environment.events.request.fire(
+                request_type="SparkApplication",
+                name="application_created",
+                response_time=(time.time() - submission_start_time) * 1000,
+                response_length=0,
+                exception=e
+            )
