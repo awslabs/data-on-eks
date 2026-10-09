@@ -167,52 +167,52 @@ resource "kubernetes_namespace" "trino" {
 #---------------------------------------------------------------
 # Trino ArgoCD Application
 #---------------------------------------------------------------
-resource "kubectl_manifest" "trino" {
+# resource "kubectl_manifest" "trino" {
 
-  yaml_body = templatefile("${path.module}/argocd-applications/trino.yaml", {
-    user_values_yaml = indent(8, yamlencode(yamldecode(templatefile("${path.module}/helm-values/trino.yaml", {
-      region             = local.region
-      trino_s3_bucket_id = module.trino_s3_bucket.s3_bucket_id
-      exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
-      trino_irsa_arn     = module.trino_pod_identity.iam_role_arn
-      trino_sa           = local.trino_sa
-      trino_namespace    = local.trino_namespace
+#   yaml_body = templatefile("${path.module}/argocd-applications/trino.yaml", {
+#     user_values_yaml = indent(8, yamlencode(yamldecode(templatefile("${path.module}/helm-values/trino.yaml", {
+#       region             = local.region
+#       trino_s3_bucket_id = module.trino_s3_bucket.s3_bucket_id
+#       exchange_bucket_id = module.trino_exchange_bucket.s3_bucket_id
+#       trino_irsa_arn     = module.trino_pod_identity.iam_role_arn
+#       trino_sa           = local.trino_sa
+#       trino_namespace    = local.trino_namespace
 
-      # Polaris Iceberg REST catalog wiring. When enable_polaris is false these
-      # produce no extra catalog and no envFrom, so the rendered values are
-      # identical to before for every other stack.
-      enable_polaris      = var.enable_polaris
-      polaris_namespace   = local.polaris_namespace
-      polaris_catalog     = local.polaris_catalog
-      polaris_secret_name = "trino-polaris-credentials"
-    }))))
-  })
+#       # Polaris Iceberg REST catalog wiring. When enable_polaris is false these
+#       # produce no extra catalog and no envFrom, so the rendered values are
+#       # identical to before for every other stack.
+#       enable_polaris      = var.enable_polaris
+#       polaris_namespace   = local.polaris_namespace
+#       polaris_catalog     = local.polaris_catalog
+#       polaris_secret_name = "trino-polaris-credentials"
+#     }))))
+#   })
 
-  depends_on = [
-    helm_release.argocd,
-    kubernetes_namespace.trino,
-    module.trino_pod_identity,
-    module.trino_s3_bucket,
-    module.trino_exchange_bucket
-  ]
-}
+#   depends_on = [
+#     helm_release.argocd,
+#     kubernetes_namespace.trino,
+#     module.trino_pod_identity,
+#     module.trino_s3_bucket,
+#     module.trino_exchange_bucket
+#   ]
+# }
 
 #---------------------------------------------------------------
 # Trino KEDA Autoscaling ScaledObject (Optional)
 # KEDA operator is deployed via keda.tf (shared across workloads)
 #---------------------------------------------------------------
-resource "kubectl_manifest" "trino_keda_scaledobject" {
+# resource "kubectl_manifest" "trino_keda_scaledobject" {
 
-  yaml_body = templatefile("${path.module}/manifests/trino/keda-scaledobject.yaml", {
-    trino_namespace = local.trino_namespace
-  })
+#   yaml_body = templatefile("${path.module}/manifests/trino/keda-scaledobject.yaml", {
+#     trino_namespace = local.trino_namespace
+#   })
 
-  depends_on = [
-    kubectl_manifest.trino,
-    kubectl_manifest.keda_operator,
-    kubernetes_namespace.trino
-  ]
-}
+#   depends_on = [
+#     kubectl_manifest.trino,
+#     kubectl_manifest.keda_operator,
+#     kubernetes_namespace.trino
+#   ]
+# }
 
 #---------------------------------------------------------------
 # Outputs
