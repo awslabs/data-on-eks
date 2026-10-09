@@ -3,8 +3,6 @@
 # Based on spark-app-without-webhook.yaml. The Spark Operator webhook is disabled, so all
 # pod settings are in spec.driver.template and spec.executor.template.
 #
-# Queries: q4, q24a, q24b, q67 (v2.4), 1 iteration. 1 driver + 30 executors.
-#
 # S3 layout (cNN = c01 to c50, to spread the S3 request load over 50 prefixes):
 #   Source  : s3a://spark-scaletest-eks-tpcds-us-west-2/cNN/tpcds/sf30/
 #   Results : s3a://spark-on-eks-spark-logs-344a3629d86dbc9b12395e5b87/cNN/tpcds-results/<app name>/
@@ -52,7 +50,7 @@ spec:
     # arg[6] optimizeQueries
     - "true"
     # arg[7] Query filter
-    - "q4-v2.4,q24a-v2.4,q24b-v2.4,q67-v2.4"
+    - "q4-v4.0,q24a-v4.0,q24b-v4.0,q67-v4.0"
     # arg[8] Set log level to WARN
     - "true"
 

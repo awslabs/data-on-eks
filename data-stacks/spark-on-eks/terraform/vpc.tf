@@ -16,10 +16,8 @@ locals {
     [for k, v in local.azs : "${var.name}-private-secondary1-${v}"]
   )
 
-  # Extra secondary CIDRs for data node subnets: secondary2 to secondary8 (7 per AZ).
-  # With secondary1, each AZ has 8 /16 data subnets.
-  # Sizing: 10,000 nodes in one AZ. Each node uses 2 /28 prefixes + 1 node IP.
-  additional_node_cidrs = [for i in range(21) : "100.${67 + i}.0.0/16"]
+  # Extra secondary CIDRs for data node subnets: secondary2 to secondary12 (12 per AZ total).
+  additional_node_cidrs = [for i in range(33) : "100.${67 + i}.0.0/16"]
 
   # These subnets are created outside the VPC module (see "Data subnets" below), so each
   # subnet depends on its own CIDR association. Map key = subnet Name tag.
@@ -90,7 +88,7 @@ module "vpc" {
 }
 
 #---------------------------------------------------------------
-# Data subnets (secondary2 to secondary8)
+# Data subnets (secondary2 to secondary12)
 #---------------------------------------------------------------
 resource "aws_vpc_ipv4_cidr_block_association" "data" {
   for_each = local.data_subnets
