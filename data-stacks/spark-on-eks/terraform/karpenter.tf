@@ -34,7 +34,7 @@ locals {
 
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 21.0"
+  version = "21.29.0"
 
   cluster_name = module.eks.cluster_name
   namespace    = "karpenter"
@@ -97,6 +97,9 @@ resource "helm_release" "karpenter" {
       clusterName: ${module.eks.cluster_name}
       clusterEndpoint: ${module.eks.cluster_endpoint}
       interruptionQueue: ${module.karpenter.queue_name}
+      featureGates:
+        # Alpha. Needed for NodePool spec.replicas (nodepool-tpcds-static.yaml).
+        staticCapacity: true
     tolerations:
       - key: CriticalAddonsOnly
         operator: Exists

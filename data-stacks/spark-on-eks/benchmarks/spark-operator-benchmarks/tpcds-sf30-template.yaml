@@ -84,8 +84,13 @@ spec:
           - name: spark-log4j2
             configMap:
               name: spark-log4j2-config
-        # Existing NodePool memory-optimized-graviton (arm64). The pod narrows it to
-        # on-demand r8g/r8gd 8xlarge (32 vCPU, 256 GiB: about 30 pods of 1 vCPU / 5 GiB).
+        # Static pool only: jobs wait for free static nodes instead of adding dynamic nodes.
+        tolerations:
+          - key: dedicated
+            operator: Equal
+            value: tpcds-static
+            effect: NoSchedule
+        # nodeAffinity, not nodeSelector: locustfile.py adds the --zone requirement here.
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -93,13 +98,7 @@ spec:
                 - matchExpressions:
                     - key: karpenter.sh/nodepool
                       operator: In
-                      values: ["memory-optimized-graviton"]
-                    - key: karpenter.sh/capacity-type
-                      operator: In
-                      values: ["on-demand"]
-                    - key: node.kubernetes.io/instance-type
-                      operator: In
-                      values: ["r8g.8xlarge", "r8gd.8xlarge"]
+                      values: ["tpcds-static"]
         containers:
           - name: spark-kubernetes-driver
             env:
@@ -136,7 +135,13 @@ spec:
           - name: spark-log4j2
             configMap:
               name: spark-log4j2-config
-        # Same node constraints as the driver.
+        # Static pool only: jobs wait for free static nodes instead of adding dynamic nodes.
+        tolerations:
+          - key: dedicated
+            operator: Equal
+            value: tpcds-static
+            effect: NoSchedule
+        # nodeAffinity, not nodeSelector: locustfile.py adds the --zone requirement here.
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -144,13 +149,7 @@ spec:
                 - matchExpressions:
                     - key: karpenter.sh/nodepool
                       operator: In
-                      values: ["memory-optimized-graviton"]
-                    - key: karpenter.sh/capacity-type
-                      operator: In
-                      values: ["on-demand"]
-                    - key: node.kubernetes.io/instance-type
-                      operator: In
-                      values: ["r8g.8xlarge", "r8gd.8xlarge"]
+                      values: ["tpcds-static"]
         containers:
           - name: spark-kubernetes-executor
             env:

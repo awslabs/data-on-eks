@@ -1,0 +1,39 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: tpcds-static
+  namespace: karpenter
+spec:
+  # Alpha (feature gate staticCapacity). Fixed node count, independent of pending pods.
+  replicas: 10
+  template:
+    metadata:
+      labels:
+        NodeGroupType: tpcds-static
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: ebs-gp3-1000gi-6000iops-1000tp
+      taints:
+        - key: dedicated
+          value: tpcds-static
+          effect: NoSchedule
+      expireAfter: Never
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["r8g.8xlarge", "r8gd.8xlarge"]
+        # Static nodes do not follow pod zones.
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["us-west-2a"]
+  disruption:
+    # Required by the CRD schema; ignored when replicas is set.
+    consolidateAfter: Never
+    # Drift would replace nodes during a test.
+    budgets:
+      - nodes: "0"
