@@ -24,7 +24,7 @@ locals {
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "5.17.0"
 
   bucket_prefix = "${local.name}-spark-logs-"
 
@@ -56,17 +56,12 @@ resource "aws_s3_object" "this" {
 #tfsec:ignore:*
 module "data_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "5.17.0"
 
   bucket_prefix = "data-on-eks-"
 
   # For example only - please evaluate for your environment
   force_destroy = true
-
-  versioning = {
-    enabled = true
-  }
-
   server_side_encryption_configuration = {
     rule = {
       apply_server_side_encryption_by_default = {

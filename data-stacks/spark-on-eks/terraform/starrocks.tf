@@ -9,7 +9,7 @@ locals {
 module "starrocks_s3_bucket" {
   count   = var.enable_starrocks ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "5.17.0"
 
   bucket_prefix = "${local.name}-starrocks-data-"
   force_destroy = true
@@ -65,7 +65,7 @@ resource "aws_iam_policy" "starrocks_s3_policy" {
 module "starrocks_pod_identity" {
   count   = var.enable_starrocks ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+  version = "2.9.0"
 
   name = "starrocks"
 

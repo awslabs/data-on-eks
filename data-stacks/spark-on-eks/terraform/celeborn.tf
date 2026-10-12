@@ -28,7 +28,7 @@ resource "kubernetes_namespace" "celeborn" {
 module "celeborn_irsa" {
   count   = var.enable_celeborn ? 1 : 0
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
-  version = "~> 6.0"
+  version = "6.8.2"
   name    = "${module.eks.cluster_name}-celeborn"
 
   policies = {

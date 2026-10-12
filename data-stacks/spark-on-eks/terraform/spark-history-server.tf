@@ -35,7 +35,7 @@ resource "kubectl_manifest" "spark_history_server" {
 
 module "spark_history_server_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
-  version = "~> 6.0"
+  version = "6.8.2"
   name    = "${module.eks.cluster_name}-shs"
 
   policies = {

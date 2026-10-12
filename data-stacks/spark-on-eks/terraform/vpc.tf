@@ -38,7 +38,7 @@ locals {
 #---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 6.0"
+  version = "6.7.3"
 
   name = var.name
   cidr = var.vpc_cidr
@@ -173,7 +173,8 @@ resource "aws_security_group" "vpc_endpoint_s3" {
 }
 
 module "vpc_endpoints" {
-  source = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+  source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+  version = "6.7.3"
 
   vpc_id = module.vpc.vpc_id
 

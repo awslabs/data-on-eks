@@ -37,7 +37,7 @@ resource "kubernetes_namespace" "jupyterhub" {
 module "jupyterhub_single_user_pod_identity" {
   count   = var.enable_jupyterhub ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+  version = "2.9.0"
 
   name = "jupyterhub-single-user"
 

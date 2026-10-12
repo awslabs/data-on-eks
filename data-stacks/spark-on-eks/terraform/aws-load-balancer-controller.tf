@@ -15,7 +15,7 @@ locals {
 #---------------------------------------------------------------
 module "aws_load_balancer_controller_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+  version = "2.9.0"
 
   name = "aws-load-balancer-controller"
 

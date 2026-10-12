@@ -107,7 +107,7 @@ resource "kubectl_manifest" "airflow_rbac" {
 module "airflow_scheduler_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+  version = "2.9.0"
 
   name = "${local.airflow_name}-scheduler"
 
@@ -138,7 +138,7 @@ resource "aws_iam_policy" "airflow_scheduler" {
 module "airflow_webserver_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+  version = "2.9.0"
 
   name = "${local.airflow_name}-webserver"
 
@@ -169,7 +169,7 @@ resource "aws_iam_policy" "airflow_webserver" {
 module "airflow_worker_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+  version = "2.9.0"
 
   name = "${local.airflow_name}-worker"
 
@@ -200,7 +200,7 @@ resource "aws_iam_policy" "airflow_worker" {
 module "airflow_dag_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 2.0"
+  version = "2.9.0"
 
   name = "${local.airflow_name}-dag-processor"
 
@@ -224,7 +224,7 @@ module "airflow_dag_pod_identity" {
 module "airflow_s3_bucket" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "5.17.0"
 
   bucket_prefix = "${local.name}-airflow-"
 

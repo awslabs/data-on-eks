@@ -145,7 +145,8 @@ if [ "$DRY_RUN" = "true" ]; then
     # No -upgrade, and the lock file is read-only, so provider versions do not change.
     terraform -chdir="$TERRAFORM_DIR" init -input=false -lockfile=readonly
 else
-    terraform -chdir="$TERRAFORM_DIR" init -upgrade
+    # No -upgrade: versions change only on purpose.
+    terraform -chdir="$TERRAFORM_DIR" init -input=false
 fi
 
 # Karpenter (controller + NodePools + EC2NodeClass) MUST come up before any

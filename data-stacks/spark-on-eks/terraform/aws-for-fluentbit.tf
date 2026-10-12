@@ -29,7 +29,7 @@ resource "aws_cloudwatch_log_group" "aws_for_fluentbit" {
 # We need to us IRSA for this because of problems with IPv6 and Pod Identity in Fluent bit. This needs to be resolved: https://github.com/aws/aws-for-fluent-bit/issues/983
 module "aws_for_fluentbit_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
-  version = "~> 6.0"
+  version = "6.8.2"
   name    = "${module.eks.cluster_name}-fluent-bit"
 
   policies = {
