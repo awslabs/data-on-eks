@@ -1,0 +1,73 @@
+# One-time Job: stage Qwen3-Embedding-0.6B (Apache-2.0, not gated: no HF token)
+# from Hugging Face to s3://<bucket>/models/qwen3-embedding-0.6b/.
+# Runs as agw-model-stager, whose Pod Identity role can write ONLY that prefix.
+# Gemma 4 12B QAT is already staged under models/ and is not re-downloaded.
+#
+#   source env.sh && render ray/00-stage-embedding-model.yaml | kubectl apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agw-demo-stage-embedding-model
+  namespace: agw-demo
+  labels:
+    project: agw-demo
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: agw-demo-model-staging
+        project: agw-demo
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agw-model-stager
+      containers:
+        - name: stage
+          image: python:3.12-slim
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              DEST="s3://__MODELS_BUCKET__/models/__EMBED_MODEL_DIR__"
+              # awscli supports EKS Pod Identity credentials
+              pip install --quiet huggingface_hub awscli
+              if aws s3 ls "$DEST/model.safetensors" >/dev/null 2>&1; then
+                echo "already staged: $DEST"; aws s3 ls "$DEST/" --recursive --human-readable
+                echo "STAGING COMPLETE"; exit 0
+              fi
+              export HF_XET_HIGH_PERFORMANCE=1
+              T0=$(date +%s)
+              # Weights, configs (incl. sentence-transformers 1_Pooling/), tokenizer files
+              hf download "__EMBED_HF_REPO__" --local-dir /scratch/model \
+                --include "*.safetensors" --include "*.json" --include "*.txt" --include "*.jinja"
+              rm -rf /scratch/model/.cache
+              T1=$(date +%s); echo "TIMING hf_download_seconds=$((T1-T0))"
+              du -sh /scratch/model
+              aws s3 sync /scratch/model/ "$DEST/" --no-progress
+              T2=$(date +%s); echo "TIMING s3_upload_seconds=$((T2-T1))"
+              aws s3 ls "$DEST/" --recursive --human-readable
+              echo "STAGING COMPLETE"
+          env:
+            - name: AWS_REGION
+              value: "__AWS_REGION__"
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+              ephemeral-storage: 10Gi
+            limits:
+              memory: 6Gi
+              ephemeral-storage: 20Gi
+          volumeMounts:
+            - name: scratch
+              mountPath: /scratch
+      volumes:
+        - name: scratch
+          emptyDir:
+            sizeLimit: 20Gi
+      nodeSelector:
+        agw-demo/pool: cpu
+      tolerations:
+        - key: agw-demo
+          operator: Exists

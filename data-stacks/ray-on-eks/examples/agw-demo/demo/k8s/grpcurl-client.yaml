@@ -1,0 +1,22 @@
+# In-cluster gRPC client. Team keys come from Secret agw-demo-team-keys as env
+# vars (TEAM_SEARCH_KEY, TEAM_SUPPORT_KEY, TEAM_LABS_KEY); proto from ConfigMap.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: agw-demo-grpcurl
+  namespace: agw-demo
+  labels: {project: agw-demo, app: agw-demo-client}
+spec:
+  nodeSelector: {agw-demo/pool: cpu}
+  tolerations: [{key: agw-demo, operator: Exists}]
+  containers:
+    - name: grpcurl
+      image: fullstorydev/grpcurl:v1.9.3-alpine
+      command: ["sleep", "infinity"]
+      envFrom:
+        - secretRef: {name: agw-demo-team-keys}
+      resources: {requests: {cpu: 50m, memory: 64Mi}}
+      volumeMounts: [{name: proto, mountPath: /proto}]
+  volumes:
+    - name: proto
+      configMap: {name: agw-demo-proto}

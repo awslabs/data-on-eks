@@ -1,0 +1,75 @@
+# One policy for the LLM listener: authentication, per-team limits and the
+# team header live together (separate policies on one target can overwrite
+# each other).
+#
+# Team quotas are enforced PER PROXY POD (local rate limiting): each of the
+# 3 replicas keeps its own counters, so per-pod values = ~1/3 of the team's
+# cluster-wide quota. kubectl port-forward pins you to ONE pod, so the
+# per-pod numbers are exactly what you see in a port-forward demo.
+#
+#   team           tier          req/min/pod  tokens/min/pod  (cluster ~3x)
+#   team-search    production    300          300000
+#   team-support   production    60           60000
+#   team-labs      experimental  10           3000
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: agw-demo-llm
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agw-demo-gw
+      sectionName: http
+  traffic:
+    apiKeyAuthentication:
+      mode: Strict
+      configMapSelector:
+        matchLabels:
+          agw-demo/apikeys: "true"
+    rateLimit:
+      conditional:
+        - condition: apiKey.team == "team-search"
+          policy:
+            local:
+              - requests: 300
+                unit: Minutes
+                key: apiKey.team
+              - tokens: 300000
+                unit: Minutes
+                key: apiKey.team
+        - condition: apiKey.team == "team-support"
+          policy:
+            local:
+              - requests: 60
+                unit: Minutes
+                key: apiKey.team
+              - tokens: 60000
+                unit: Minutes
+                key: apiKey.team
+        - condition: apiKey.team == "team-labs"
+          policy:
+            local:
+              - requests: 10
+                unit: Minutes
+                key: apiKey.team
+              - tokens: 3000
+                unit: Minutes
+                key: apiKey.team
+        # Any other authenticated key: tiny shared bucket.
+        - policy:
+            local:
+              - requests: 5
+                unit: Minutes
+    transformation:
+      request:
+        # Trusted team identity for the backend (overwrites anything the
+        # client sent); the client's API key never reaches Ray.
+        set:
+          - name: x-team-id
+            value: apiKey.team
+        remove:
+          - authorization

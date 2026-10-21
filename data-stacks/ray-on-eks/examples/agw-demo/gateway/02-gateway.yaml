@@ -1,0 +1,38 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: agw-demo-gw
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  gatewayClassName: agentgateway
+  infrastructure:
+    parametersRef:
+      group: agentgateway.dev
+      kind: AgentgatewayParameters
+      name: agw-demo-gw
+  listeners:
+    # OpenAI-compatible LLM paths (/v1/chat/completions, /v1/embeddings,
+    # /v1/models) routed by the "model" field via AgentgatewayModel.
+    - name: http
+      port: 8080
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - group: agentgateway.dev
+            kind: AgentgatewayModel
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
+    # gRPC (HTTP/2 cleartext) for the custom embeddings API.
+    - name: grpc
+      port: 9090
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: GRPCRoute

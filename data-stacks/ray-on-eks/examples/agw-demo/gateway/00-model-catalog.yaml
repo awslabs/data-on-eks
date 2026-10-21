@@ -1,0 +1,36 @@
+# Internal price list for self-hosted models (USD per 1M tokens, strings).
+# Overlay catalog (no metadata.generatedAt), so it layers on top of the
+# built-in public catalog. Lookup key = provider id + model name; models
+# served through provider OpenAI (custom baseURL) use provider id "openai".
+#
+# How the rates are derived (see DEMO.md "cost model"):
+#   rate_output = GPU node spot $/h / output tokens per hour at target load
+#   gemma-12b on g7.2xlarge spot: ~$1.22/h / (310 tok/s * 3600 = 1.12M tok/h)
+#     = ~$1.09 per 1M output tokens; input (prefill) ~10x cheaper = $0.11
+#   qwen3-embedding-0.6b on g7.2xlarge spot: ~$1.22/h / ~120M tok/h = ~$0.01
+# Recalibrated with measured throughput in Phase 7.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agw-demo-model-costs
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+data:
+  catalog.json: |
+    {
+      "providers": {
+        "openai": {
+          "models": {
+            "gemma-12b": {
+              "rates": { "input": "0.11", "output": "1.10", "cacheRead": "0.011" },
+              "tags": ["self-hosted", "ray-serve", "g7-spot"]
+            },
+            "qwen3-embedding-0.6b": {
+              "rates": { "input": "0.01" },
+              "tags": ["self-hosted", "ray-serve", "embedding"]
+            }
+          }
+        }
+      }
+    }

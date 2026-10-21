@@ -24,7 +24,9 @@ locals {
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  # < 5.17.0: 5.17 adds count to internal data sources (implicit moves), which
+  # breaks the -target applies in install.sh. Lift after one untargeted apply.
+  version = "~> 5.0, < 5.17.0"
 
   bucket_prefix = "${local.name}-spark-logs-"
 
@@ -56,7 +58,7 @@ resource "aws_s3_object" "this" {
 #tfsec:ignore:*
 module "data_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "~> 5.0, < 5.17.0"
 
   bucket_prefix = "data-on-eks-"
 

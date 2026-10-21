@@ -224,7 +224,7 @@ module "airflow_dag_pod_identity" {
 module "airflow_s3_bucket" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "~> 5.0, < 5.17.0"
 
   bucket_prefix = "${local.name}-airflow-"
 

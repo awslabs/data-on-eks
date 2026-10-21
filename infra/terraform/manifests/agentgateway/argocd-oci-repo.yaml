@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  name: agentgateway-oci
+  namespace: argocd
+stringData:
+  enableOCI: "true"
+  name: "agentgateway"
+  type: helm
+  url: cr.agentgateway.dev/charts

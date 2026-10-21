@@ -1,0 +1,59 @@
+# Proxy (data plane) settings for Gateway agw-demo-gw. Must exist BEFORE the
+# Gateway: it sets the generated Service to ClusterIP (the default would be
+# type LoadBalancer, which would provision an AWS load balancer).
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: agw-demo-gw
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  logging:
+    format: json
+  # modelCatalog is honoured only on Gateway-level parameters.
+  modelCatalog:
+    sources:
+      - configMap:
+          name: agw-demo-model-costs
+          key: catalog.json
+  resources:
+    requests:
+      cpu: 500m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  service:
+    spec:
+      type: ClusterIP
+  podDisruptionBudget:
+    spec:
+      minAvailable: 2
+  deployment:
+    spec:
+      replicas: 3
+      template:
+        metadata:
+          labels:
+            project: agw-demo
+        spec:
+          nodeSelector:
+            agw-demo/pool: cpu
+          tolerations:
+            - key: agw-demo
+              operator: Exists
+          # One proxy per AZ. minDomains: 3 makes the scheduler wait for a
+          # node in the third AZ (Karpenter adds one) instead of doubling up
+          # in the zones that already have demo CPU nodes.
+          topologySpreadConstraints:
+            - maxSkew: 1
+              minDomains: 3
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: DoNotSchedule
+              labelSelector:
+                matchLabels:
+                  gateway.networking.k8s.io/gateway-name: agw-demo-gw
+              # Count only pods of the current ReplicaSet, so a rolling update
+              # doesn't skew placement around the outgoing pods.
+              matchLabelKeys:
+                - pod-template-hash

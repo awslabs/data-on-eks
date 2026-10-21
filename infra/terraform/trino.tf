@@ -8,7 +8,7 @@ locals {
 #---------------------------------------------------------------
 module "trino_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "~> 5.0, < 5.17.0"
 
   bucket_prefix = "${local.name}-trino-data-"
 
@@ -31,7 +31,7 @@ module "trino_s3_bucket" {
 
 module "trino_exchange_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "~> 5.0, < 5.17.0"
 
   bucket_prefix = "${local.name}-trino-exchange-"
 

@@ -1,0 +1,49 @@
+# Gateway-wide telemetry: structured access-log fields for chargeback, a team
+# label on Prometheus metrics, and OTLP traces to the cluster's ADOT collector
+# (-> AWS X-Ray). No custom code in the gateway.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: agw-demo-telemetry
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agw-demo-gw
+  frontend:
+    accessLog:
+      attributes:
+        add:
+          - name: team
+            expression: apiKey.team
+          - name: tier
+            expression: apiKey.tier
+          - name: llm.request_model
+            expression: llm.requestModel
+          - name: llm.input_tokens
+            expression: llm.inputTokens
+          - name: llm.output_tokens
+            expression: llm.outputTokens
+          - name: llm.cost_usd
+            expression: llm.cost.total
+          - name: llm.max_tokens_sent
+            expression: string(llm.params.max_tokens)
+          # gRPC: token count reported by the embeddings service
+          - name: grpc.prompt_tokens
+            expression: response.headers["x-usage-prompt-tokens"]
+          - name: grpc.prompt_tokens_trailer
+            expression: response.trailers["x-usage-prompt-tokens"]
+          - name: grpc.status
+            expression: response.headers["grpc-status"]
+    metrics:
+      attributes:
+        add:
+          - name: team
+            expression: apiKey.team
+    tracing:
+      url: http://adot-collector.adot-collector.svc.cluster.local:4317
+      protocol: GRPC
+      randomSampling: "1.0"

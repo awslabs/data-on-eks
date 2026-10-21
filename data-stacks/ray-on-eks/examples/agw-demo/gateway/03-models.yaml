@@ -1,0 +1,52 @@
+# Routing by model name: the "model" field in the request body selects the
+# AgentgatewayModel; each points at a Ray Serve Service (OpenAI-compatible).
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: gemma-12b
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agw-demo-gw
+      sectionName: http
+  provider: OpenAI
+  baseURL: http://gemma-12b-serve-svc.agw-demo.svc.cluster.local:8000/v1
+  policies:
+    # Before provider conversion: make streamed responses report usage so the
+    # gateway can count tokens (and charge rate limits / cost) for streams.
+    transformations:
+      - field: stream_options
+        expression: 'has(llmRequest.stream) && llmRequest.stream == true ? {"include_usage": true} : fail("not streaming")'
+    # After conversion. Clients may send max_tokens or max_completion_tokens
+    # (this OpenAI-compatible path passes max_tokens through unchanged), and
+    # vLLM prefers max_completion_tokens when both are set. So set
+    # max_completion_tokens = min(what the client asked for, team cap);
+    # no value at all gets the team cap.
+    finalTransformations:
+      - field: max_completion_tokens
+        expression: >-
+          min(
+            has(llmRequest.max_completion_tokens) ? int(llmRequest.max_completion_tokens) :
+              (has(llmRequest.max_tokens) ? int(llmRequest.max_tokens) : 1000000),
+            apiKey.team == "team-labs" ? 512 : (apiKey.team == "team-support" ? 2048 : 4096)
+          )
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: qwen3-embedding-0.6b
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: agw-demo-gw
+      sectionName: http
+  provider: OpenAI
+  baseURL: http://embeddings-serve-svc.agw-demo.svc.cluster.local:8000/v1

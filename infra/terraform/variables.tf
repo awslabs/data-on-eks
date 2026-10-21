@@ -319,6 +319,12 @@ variable "enable_adot" {
   default     = false
 }
 
+variable "enable_agentgateway" {
+  description = "Enable agentgateway (OSS) via ArgoCD: Gateway API CRDs, agentgateway CRDs and control plane. Gateways/routes/policies are created per data stack."
+  type        = bool
+  default     = false
+}
+
 variable "enable_ray_history_server" {
   description = "Enable the KubeRay History Server, which replays the Ray Dashboard (jobs, tasks, actors, logs) from S3 after a RayCluster is deleted. Requires enable_raydata = true"
   type        = bool

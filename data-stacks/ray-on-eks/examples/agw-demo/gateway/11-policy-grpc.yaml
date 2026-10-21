@@ -1,0 +1,58 @@
+# gRPC embeddings route: same API keys, per-team request limits (per pod),
+# team header for backend metering, limited retries on UNAVAILABLE.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: agw-demo-grpc
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: embeddings-grpc
+  traffic:
+    apiKeyAuthentication:
+      mode: Strict
+      configMapSelector:
+        matchLabels:
+          agw-demo/apikeys: "true"
+    rateLimit:
+      conditional:
+        - condition: apiKey.team == "team-search"
+          policy:
+            local:
+              - requests: 600
+                unit: Minutes
+                key: apiKey.team
+        - condition: apiKey.team == "team-support"
+          policy:
+            local:
+              - requests: 120
+                unit: Minutes
+                key: apiKey.team
+        - condition: apiKey.team == "team-labs"
+          policy:
+            local:
+              - requests: 20
+                unit: Minutes
+                key: apiKey.team
+        - policy:
+            local:
+              - requests: 5
+                unit: Minutes
+    transformation:
+      request:
+        set:
+          - name: x-team-id
+            value: apiKey.team
+        remove:
+          - authorization
+    # Embeddings are idempotent: retry once more on overload/unavailable.
+    # Ray Serve signals backpressure as gRPC UNAVAILABLE (status 14).
+    retry:
+      attempts: 2
+      backoff: 50ms
+      codes: [503]
+      condition: '"grpc-status" in response.headers && response.headers["grpc-status"] == "14"'

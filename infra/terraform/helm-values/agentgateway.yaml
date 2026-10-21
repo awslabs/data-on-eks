@@ -1,0 +1,41 @@
+# agentgateway control plane (chart oci://cr.agentgateway.dev/charts/agentgateway)
+# Proxy (data plane) pods are created per Gateway and configured through
+# AgentgatewayParameters, not through these values.
+
+# Control plane runs with the other cluster add-ons on the core node group.
+nodeSelector:
+  NodeGroupType: core
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+controller:
+  replicaCount: 2
+  podDisruptionBudget:
+    minAvailable: 1
+  # Control plane Service is internal-only (xDS + metrics).
+  service:
+    type: ClusterIP
+
+# Routing by model name (AgentgatewayModel) is on by default in 1.6.
+agentgatewayModels:
+  enabled: true
+
+# kube-prometheus-stack in this repo selects every ServiceMonitor/PodMonitor,
+# and its Grafana sidecar loads ConfigMaps labelled grafana_dashboard=1.
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+  proxy:
+    podMonitor:
+      enabled: true
+  grafanaDashboard:
+    enabled: true
+    labels:
+      grafana_dashboard: "1"

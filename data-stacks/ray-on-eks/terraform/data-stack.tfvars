@@ -6,6 +6,14 @@ enable_raydata       = true
 # GPU support for Ray inference workloads (vLLM on g6e instances)
 enable_nvidia_gpu_operator = true
 
+# agentgateway (OSS) control plane + Gateway API CRDs via ArgoCD
+enable_agentgateway = true
+
+# agentgateway + Ray Serve demo base infra (examples/agw-demo):
+# Karpenter NodePools, ElastiCache Valkey (Ray GCS FT), Pod Identity.
+# Set to false and re-run deploy.sh to remove it.
+enable_agw_demo = false
+
 # Observability
 # - ADOT collector: Ray/node/KSM/GPU metrics -> Amazon Managed Prometheus, OTLP traces -> X-Ray
 # - Amazon Managed Grafana: dashboards on AMP/X-Ray (needs IAM Identity Center)

@@ -1,0 +1,49 @@
+# agw-demo: CPU nodes for Ray heads, agentgateway proxies and demo clients.
+# Own NodeClass only so launched instances carry the demo tags.
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: agw-demo-cpu
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+  # Ray head pulls the ~12 GB ray-llm image; FastImagePull = SOCI parallel pull.
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        iops: 3000
+        throughput: 600
+        encrypted: true
+        deleteOnTermination: true
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      featureGates:
+        FastImagePull: true
+      kubelet:
+        config:
+          serializeImagePulls: false
+          maxParallelImagePulls: 5
+
+    --//--
+  tags:
+    project: agw-demo
+    owner: vara
+    Name: agw-demo-cpu

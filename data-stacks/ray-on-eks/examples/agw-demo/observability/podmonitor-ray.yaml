@@ -1,0 +1,27 @@
+# Scrape Ray head + worker metrics (port "metrics" = 8080) for the demo
+# RayServices into the cluster's kube-prometheus-stack. Brings in:
+#   ray_embed_tokens_total{team,protocol}  gRPC embedding tokens per team (chargeback)
+#   ray_serve_*                            ongoing/queued requests, replica health (overload)
+#   ray_vllm_*                             KV-cache usage, prefix-cache hits, engine latency
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: agw-demo-ray
+  namespace: agw-demo
+  labels:
+    project: agw-demo
+spec:
+  selector:
+    matchLabels:
+      project: agw-demo
+    matchExpressions:
+      - key: ray.io/node-type
+        operator: Exists
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 15s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_label_app]
+          targetLabel: ray_service
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node

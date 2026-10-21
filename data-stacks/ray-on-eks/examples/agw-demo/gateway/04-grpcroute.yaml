@@ -1,0 +1,38 @@
+# Custom gRPC embeddings API, routed by gRPC service name.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: embeddings-grpc
+  namespace: agentgateway-system
+  labels:
+    project: agw-demo
+spec:
+  parentRefs:
+    - name: agw-demo-gw
+      sectionName: grpc
+  rules:
+    - matches:
+        - method:
+            service: embeddings.v1.EmbeddingService
+      backendRefs:
+        - name: embeddings-grpc-svc
+          namespace: agw-demo
+          port: 9000
+---
+# Allow the GRPCRoute (agentgateway-system) to reference the Service in agw-demo.
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-agw-demo-gateway-routes
+  namespace: agw-demo
+  labels:
+    project: agw-demo
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      namespace: agentgateway-system
+  to:
+    - group: ""
+      kind: Service
+      name: embeddings-grpc-svc

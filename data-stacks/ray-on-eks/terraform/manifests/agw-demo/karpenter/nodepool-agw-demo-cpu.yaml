@@ -1,0 +1,42 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: agw-demo-cpu
+spec:
+  template:
+    metadata:
+      labels:
+        agw-demo/pool: cpu
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: agw-demo-cpu
+      # Soft isolation. A NoSchedule taint would also keep out DaemonSets
+      # without blanket tolerations (e.g. aws-for-fluentbit).
+      taints:
+        - key: agw-demo
+          value: "true"
+          effect: PreferNoSchedule
+      requirements:
+        # Ray heads are a single point of failure per RayService: on-demand.
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["m7i", "m7a", "m6i", "m6a"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["large", "xlarge", "2xlarge"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ${ALL_ZONES}
+  limits:
+    cpu: "48"
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 10m

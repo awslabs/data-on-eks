@@ -1,0 +1,42 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: agw-demo-gpu-embed
+spec:
+  template:
+    metadata:
+      labels:
+        agw-demo/pool: gpu-embed
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: agw-demo-gpu
+      taints:
+        - key: nvidia.com/gpu
+          value: "true"
+          effect: NoSchedule
+        - key: agw-demo
+          value: "true"
+          effect: PreferNoSchedule
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot"]
+        # Qwen3-Embedding-0.6B fits any of these. g5/g6 spot scores are low in
+        # usw2, so g7.2xlarge is the fallback Karpenter can always reach.
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["g5.xlarge", "g5.2xlarge", "g6.xlarge", "g6.2xlarge", "g7.2xlarge"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ${GPU_ZONES}
+  # N+1: 2 serving nodes + 1 replacement. With exactly 2, a drained or
+  # drifting node still counts against the limit and Karpenter cannot launch
+  # its replacement (seen in the AZ drill: "exceed limits for nodepool").
+  limits:
+    cpu: "24"
+    nvidia.com/gpu: "3"
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 30m

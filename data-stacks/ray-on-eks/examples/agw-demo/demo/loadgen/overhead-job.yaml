@@ -1,0 +1,28 @@
+# Gateway overhead A/B (direct vs through agentgateway), from one pod in 2a.
+#   kubectl apply -f demo/loadgen/overhead-job.yaml   (after run.sh has created the ConfigMap)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agw-demo-overhead
+  namespace: agw-demo
+  labels: {project: agw-demo, app: agw-demo-overhead}
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 7200
+  template:
+    metadata:
+      labels: {project: agw-demo, app: agw-demo-overhead}
+    spec:
+      restartPolicy: Never
+      nodeSelector: {agw-demo/pool: cpu, topology.kubernetes.io/zone: us-west-2a}
+      tolerations: [{key: agw-demo, operator: Exists}]
+      containers:
+        - name: overhead
+          image: python:3.12-slim
+          command: ["/bin/sh", "-c"]
+          args: ["pip install --quiet --disable-pip-version-check httpx 'grpcio==1.76.0' 'protobuf>=6.31.1,<7' && cd /app && python -u overhead.py"]
+          env: [{name: SAMPLES, value: "200"}]
+          envFrom: [{secretRef: {name: agw-demo-team-keys}}]
+          resources: {requests: {cpu: "1", memory: 512Mi}}
+          volumeMounts: [{name: app, mountPath: /app}]
+      volumes: [{name: app, configMap: {name: agw-demo-loadgen}}]

@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgen-__RUN__-__ZSHORT__
+  namespace: agw-demo
+  labels: {project: agw-demo, app: agw-demo-loadgen, run: "__RUN__"}
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 7200
+  template:
+    metadata:
+      labels: {project: agw-demo, app: agw-demo-loadgen, run: "__RUN__"}
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        agw-demo/pool: cpu
+        topology.kubernetes.io/zone: __ZONE__
+      tolerations: [{key: agw-demo, operator: Exists}]
+      containers:
+        - name: loadgen
+          image: python:3.12-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - pip install --quiet --disable-pip-version-check httpx 'grpcio==1.76.0' 'protobuf>=6.31.1,<7' && cd /app && python -u loadgen.py __ARGS__
+          env:
+            - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+          envFrom:
+            - secretRef: {name: agw-demo-team-keys}
+          resources:
+            requests: {cpu: 500m, memory: 512Mi}
+            limits: {memory: 1Gi}
+          volumeMounts: [{name: app, mountPath: /app}]
+      volumes:
+        - name: app
+          configMap: {name: agw-demo-loadgen}

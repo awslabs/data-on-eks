@@ -110,6 +110,9 @@ $HISTORY_SERVER_OPTIONS
           nodeSelector:
             kubernetes.io/arch: amd64
             karpenter.sh/nodepool: memory-optimized-x86
+            # The head is a single point of failure for the Serve app: keep it
+            # off spot (a spot reclaim takes every replica's endpoint down)
+            karpenter.sh/capacity-type: on-demand
             node.kubernetes.io/instance-type: r6a.2xlarge
     workerGroupSpecs:
       - groupName: gpu-workers

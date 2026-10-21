@@ -1,0 +1,209 @@
+# =============================================================================
+# RayService gemma-12b: Gemma 4 12B-it QAT (w4a16) on vLLM, OpenAI-compatible
+# =============================================================================
+# - 2 GPU workers (one replica each), one per AZ (topology spread on zone)
+# - Head on an on-demand CPU node, num-cpus 0, no volumes (can move AZs)
+# - GCS fault tolerance -> ElastiCache Valkey (TLS + AUTH), own namespace
+# - Bounded queues: overload returns fast 503s instead of unbounded latency
+# - PrefixCacheAffinityRouter: requests sharing a prefix go to the replica
+#   that already has it in KV cache
+# - Serve Service prefers same-AZ endpoints (trafficDistribution)
+#
+#   source env.sh && render ray/gemma-12b.yaml | kubectl apply -f -
+# =============================================================================
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: gemma-12b
+  namespace: agw-demo
+  labels:
+    project: agw-demo
+spec:
+  # A NewCluster upgrade would ask for 2 more GPUs; the NodePool caps at 2.
+  # Serve config changes still apply in place. Cluster changes: delete + apply.
+  upgradeStrategy:
+    type: None
+  excludeHeadPodFromServeSvc: true
+  serveService:
+    metadata:
+      name: gemma-12b-serve-svc
+      labels:
+        project: agw-demo
+    spec:
+      type: ClusterIP
+      # Prefer serve endpoints in the caller's AZ (falls back cross-AZ).
+      trafficDistribution: PreferClose
+      ports:
+        - name: serve
+          port: 8000
+          targetPort: 8000
+          appProtocol: http
+  serveConfigV2: |
+    proxy_location: EveryNode
+    http_options:
+      host: 0.0.0.0
+      port: 8000
+      # Generation can be long; the gateway enforces the client-facing timeout.
+      request_timeout_s: 300
+    applications:
+      - name: llm-app
+        import_path: ray.serve.llm:build_openai_app
+        route_prefix: "/"
+        args:
+          llm_configs:
+            - model_loading_config:
+                model_id: gemma-12b
+                model_source: s3://__MODELS_BUCKET__/models/__GEMMA_MODEL_DIR__
+              engine_kwargs:
+                # runai_streamer stays off: ray-project/ray#64978 (Ray 2.57).
+                dtype: bfloat16
+                max_model_len: 16384
+                gpu_memory_utilization: 0.90
+                kv_cache_dtype: fp8
+                enable_prefix_caching: true
+                enable_chunked_prefill: true
+                max_num_seqs: 64
+                max_num_batched_tokens: 8192
+                # Text-only serving: skips multimodal profiling and memory.
+                limit_mm_per_prompt:
+                  image: 0
+                  audio: 0
+              runtime_env:
+                # Image ships transformers 5.8.0 (predates gemma4_unified);
+                # 5.15+ breaks this vLLM build. Pin exactly.
+                pip:
+                  - "transformers==5.10.4"
+                env_vars:
+                  AWS_REGION: "__AWS_REGION__"
+                  AWS_DEFAULT_REGION: "__AWS_REGION__"
+              deployment_config:
+                autoscaling_config:
+                  min_replicas: 2
+                  max_replicas: 2
+                  target_ongoing_requests: 32
+                # ~= max_num_seqs: what the engine can batch at once
+                max_ongoing_requests: 64
+                # Small queue per replica; beyond it Serve returns 503 fast.
+                max_queued_requests: 16
+                # Default (power-of-two) router. PrefixCacheAffinityRouter was
+                # tried first: under overload its router process grew without
+                # bound (12+ GiB, still growing idle) and stopped forwarding
+                # requests. See NOTES.md (2026-10-21, Phase 5).
+          # OpenAI router (OpenAiIngress) in front of the LLMServer replicas.
+          # Default is ONE replica with no CPU reservation, so it can land on
+          # a GPU worker and becomes a single point of failure. Two replicas,
+          # one per node, 1 CPU each.
+          ingress_deployment_config:
+            autoscaling_config:
+              min_replicas: 2
+              max_replicas: 2
+            max_replicas_per_node: 1
+            ray_actor_options:
+              num_cpus: 1
+  rayClusterConfig:
+    rayVersion: "2.57.0"
+    enableInTreeAutoscaling: false
+    gcsFaultToleranceOptions:
+      redisAddress: "__VALKEY_ADDRESS__"
+      redisPassword:
+        valueFrom:
+          secretKeyRef:
+            name: agw-demo-valkey
+            key: password
+      externalStorageNamespace: gemma-12b
+    headGroupSpec:
+      rayStartParams:
+        num-cpus: "0"
+      template:
+        metadata:
+          labels:
+            project: agw-demo
+            app: gemma-12b
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+        spec:
+          serviceAccountName: agw-ray
+          nodeSelector:
+            agw-demo/pool: cpu
+          tolerations:
+            - key: agw-demo
+              operator: Exists
+          containers:
+            - name: ray-head
+              image: __RAY_LLM_IMAGE__
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: AWS_REGION
+                  value: "__AWS_REGION__"
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: 8Gi
+                limits:
+                  memory: 12Gi
+              ports:
+                - containerPort: 6379
+                  name: gcs
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+                - containerPort: 8000
+                  name: serve
+                - containerPort: 8080
+                  name: metrics
+    workerGroupSpecs:
+      - groupName: gpu-gemma
+        replicas: 2
+        minReplicas: 2
+        maxReplicas: 2
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              project: agw-demo
+              app: gemma-12b
+              agw-demo/role: gemma-worker
+          spec:
+            serviceAccountName: agw-ray
+            nodeSelector:
+              agw-demo/pool: gpu-gemma
+            tolerations:
+              - key: nvidia.com/gpu
+                operator: Exists
+                effect: NoSchedule
+              - key: agw-demo
+                operator: Exists
+            # One worker per AZ. matchLabelKeys scopes the spread to this Ray
+            # cluster (pods of an old/new cluster don't count against it).
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    agw-demo/role: gemma-worker
+                matchLabelKeys:
+                  - ray.io/cluster
+            containers:
+              - name: ray-worker
+                image: __RAY_LLM_IMAGE__
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: AWS_REGION
+                    value: "__AWS_REGION__"
+                resources:
+                  # Fits g7.2xlarge (8 vCPU / 32 GiB) and g7e.2xlarge.
+                  requests:
+                    cpu: "5"
+                    memory: 22Gi
+                    ephemeral-storage: 40Gi
+                    nvidia.com/gpu: "1"
+                  limits:
+                    memory: 26Gi
+                    nvidia.com/gpu: "1"
+                ports:
+                  - containerPort: 8000
+                    name: serve
+                  - containerPort: 8080
+                    name: metrics

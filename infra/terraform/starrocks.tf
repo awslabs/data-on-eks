@@ -9,7 +9,7 @@ locals {
 module "starrocks_s3_bucket" {
   count   = var.enable_starrocks ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 5.0"
+  version = "~> 5.0, < 5.17.0"
 
   bucket_prefix = "${local.name}-starrocks-data-"
   force_destroy = true

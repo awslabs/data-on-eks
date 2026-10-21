@@ -1,0 +1,11 @@
+// Simulates the customer's custom gRPC embeddings API.
+syntax = "proto3";
+package embeddings.v1;
+
+service EmbeddingService {
+  rpc Embed (EmbedRequest) returns (EmbedResponse);
+}
+
+message EmbedRequest  { string model = 1; repeated string texts = 2; }
+message Embedding     { repeated float values = 1; }
+message EmbedResponse { repeated Embedding embeddings = 1; int32 prompt_tokens = 2; string model = 3; }

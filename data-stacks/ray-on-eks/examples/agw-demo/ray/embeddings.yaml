@@ -1,0 +1,214 @@
+# =============================================================================
+# RayService embeddings: custom gRPC EmbeddingService + OpenAI /v1/embeddings
+# =============================================================================
+# - App code (ray/embed_app/embed_app.py) and generated gRPC stubs
+#   (proto/gen/*) are mounted from ConfigMap agw-demo-embed-code on every
+#   Ray node: the Serve gRPC proxy imports the servicer at startup, before
+#   any runtime_env, so the modules must already be on PYTHONPATH.
+# - 2 GPU workers, one per AZ; head on CPU (num-cpus 0); GCS FT -> Valkey.
+# - HTTP: KubeRay's embeddings-serve-svc:8000. gRPC: embeddings-grpc-svc:9000.
+#   KubeRay 1.7.1 keeps only the HTTP serve port on the Serve Service (an extra
+#   9000 entry in serveService is dropped), so gRPC gets a companion Service
+#   with the same readiness-aware selector (ray.io/serve=true).
+#
+#   ray/deploy-embeddings.sh   (creates the ConfigMap, then applies this)
+# =============================================================================
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: embeddings
+  namespace: agw-demo
+  labels:
+    project: agw-demo
+spec:
+  upgradeStrategy:
+    type: None
+  excludeHeadPodFromServeSvc: true
+  serveService:
+    metadata:
+      name: embeddings-serve-svc
+      labels:
+        project: agw-demo
+    spec:
+      type: ClusterIP
+      trafficDistribution: PreferClose
+      ports:
+        - name: serve
+          port: 8000
+          targetPort: 8000
+          appProtocol: http
+  serveConfigV2: |
+    proxy_location: EveryNode
+    http_options:
+      host: 0.0.0.0
+      port: 8000
+      request_timeout_s: 30
+    grpc_options:
+      port: 9000
+      grpc_servicer_functions:
+        - embeddings_pb2_grpc.add_EmbeddingServiceServicer_to_server
+    applications:
+      - name: embeddings
+        import_path: embed_app:app
+        route_prefix: "/"
+        runtime_env:
+          env_vars:
+            EMBED_MODEL_ID: "qwen3-embedding-0.6b"
+            EMBED_MODEL_SOURCE: "s3://__MODELS_BUCKET__/models/__EMBED_MODEL_DIR__"
+            AWS_REGION: "__AWS_REGION__"
+        deployments:
+          - name: Embedder
+            num_replicas: 2
+            max_ongoing_requests: 64
+            max_queued_requests: 64
+            ray_actor_options:
+              num_cpus: 1
+              num_gpus: 1
+  rayClusterConfig:
+    rayVersion: "2.57.0"
+    enableInTreeAutoscaling: false
+    gcsFaultToleranceOptions:
+      redisAddress: "__VALKEY_ADDRESS__"
+      redisPassword:
+        valueFrom:
+          secretKeyRef:
+            name: agw-demo-valkey
+            key: password
+      externalStorageNamespace: embeddings
+    headGroupSpec:
+      rayStartParams:
+        num-cpus: "0"
+      template:
+        metadata:
+          labels:
+            project: agw-demo
+            app: embeddings
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+        spec:
+          serviceAccountName: agw-ray
+          nodeSelector:
+            agw-demo/pool: cpu
+          tolerations:
+            - key: agw-demo
+              operator: Exists
+          containers:
+            - name: ray-head
+              image: __RAY_LLM_IMAGE__
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: AWS_REGION
+                  value: "__AWS_REGION__"
+                - name: PYTHONPATH
+                  value: /home/ray/agw
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: 6Gi
+                limits:
+                  memory: 8Gi
+              ports:
+                - containerPort: 6379
+                  name: gcs
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+                - containerPort: 8000
+                  name: serve
+                - containerPort: 9000
+                  name: grpc
+                - containerPort: 8080
+                  name: metrics
+              volumeMounts:
+                - name: embed-code
+                  mountPath: /home/ray/agw
+          volumes:
+            - name: embed-code
+              configMap:
+                name: agw-demo-embed-code
+    workerGroupSpecs:
+      - groupName: gpu-embed
+        replicas: 2
+        minReplicas: 2
+        maxReplicas: 2
+        rayStartParams: {}
+        template:
+          metadata:
+            labels:
+              project: agw-demo
+              app: embeddings
+              agw-demo/role: embed-worker
+          spec:
+            serviceAccountName: agw-ray
+            nodeSelector:
+              agw-demo/pool: gpu-embed
+            tolerations:
+              - key: nvidia.com/gpu
+                operator: Exists
+                effect: NoSchedule
+              - key: agw-demo
+                operator: Exists
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    agw-demo/role: embed-worker
+                matchLabelKeys:
+                  - ray.io/cluster
+            containers:
+              - name: ray-worker
+                image: __RAY_LLM_IMAGE__
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: AWS_REGION
+                    value: "__AWS_REGION__"
+                  - name: PYTHONPATH
+                    value: /home/ray/agw
+                resources:
+                  # Fits the smallest allowed type, g5.xlarge (4 vCPU / 16 GiB).
+                  requests:
+                    cpu: "3"
+                    memory: 10Gi
+                    ephemeral-storage: 10Gi
+                    nvidia.com/gpu: "1"
+                  limits:
+                    memory: 13Gi
+                    nvidia.com/gpu: "1"
+                ports:
+                  - containerPort: 8000
+                    name: serve
+                  - containerPort: 9000
+                    name: grpc
+                  - containerPort: 8080
+                    name: metrics
+                volumeMounts:
+                  - name: embed-code
+                    mountPath: /home/ray/agw
+            volumes:
+              - name: embed-code
+                configMap:
+                  name: agw-demo-embed-code
+---
+# gRPC endpoint for the custom EmbeddingService. ray.io/serve=true is set by
+# KubeRay only on pods whose Serve proxy is healthy (head excluded).
+apiVersion: v1
+kind: Service
+metadata:
+  name: embeddings-grpc-svc
+  namespace: agw-demo
+  labels:
+    project: agw-demo
+spec:
+  type: ClusterIP
+  trafficDistribution: PreferClose
+  selector:
+    app: embeddings
+    ray.io/serve: "true"
+  ports:
+    - name: grpc
+      port: 9000
+      targetPort: 9000
+      appProtocol: kubernetes.io/h2c
