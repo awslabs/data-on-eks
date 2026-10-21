@@ -59,11 +59,11 @@ flowchart LR
 | **1. Base infra (Terraform)** | In `data-stacks/ray-on-eks/terraform/data-stack.tfvars` set `enable_agentgateway = true` and `enable_agw_demo = true`, then `cd data-stacks/ray-on-eks && ./deploy.sh` | 10–30 min |
 | **2. Demo workloads** | `cd examples/agw-demo && ./setup.sh`: stages the embedding model, deploys both RayServices, the gateway config, the dashboard, then smoke-tests (401 / 200 / 200) | ~10–15 min cold, ~1.5 min if already up (safe to re-run) |
 | **3. Demo** | Sections 0–7 below | 45 min |
-| **4. Tear down** | `./cleanup.sh` (dry run: lists what it would delete) → `./cleanup.sh --yes` → set both flags to `false` → `./deploy.sh` | ~5 min + deploy.sh |
+| **4. Tear down** | Set `enable_agw_demo = false` → `./deploy.sh` (a destroy hook removes the demo's Ray and Gateway objects first). Optional beforehand: `./cleanup.sh` (dry run) → `./cleanup.sh --yes` | deploy.sh (~15 min) |
 
 Re-demoing after a teardown is stages 1 → 2 → 3. Cost while up: about $5.3/hour (4 × g7.2xlarge spot, 3 small on-demand CPU nodes, 2 × cache.t4g.small).
 
-> Teardown order matters: `cleanup.sh` removes the RayServices and Gateway objects **before** Terraform removes the NodePools, namespace and gateway controller, so nothing is orphaned. It never touches pre-existing components or the Gemma 4 weights in S3.
+> Teardown order matters: the RayServices and Gateway objects must go **before** the NodePools, or the node drain hangs (gateway proxies have a PDB and are pinned to the demo nodes, and Ray heads are `do-not-disrupt`). Setting `enable_agw_demo = false` + `deploy.sh` handles this by itself: a Terraform destroy hook deletes those objects first. `cleanup.sh --yes` does the same thing up front and also removes test jobs and dashboards. Neither touches pre-existing components or the Gemma 4 weights in S3.
 
 ---
 

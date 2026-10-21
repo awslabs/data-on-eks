@@ -325,6 +325,55 @@ resource "kubernetes_secret" "agw_demo_valkey" {
   depends_on = [kubectl_manifest.agw_demo_namespace]
 }
 
+#---------------------------------------------------------------
+# Teardown hook: makes `enable_agw_demo = false` safe on its own.
+#
+# The demo's RayServices and Gateway objects are applied with kubectl (from
+# examples/agw-demo), so Terraform doesn't know about them. Without this hook,
+# deleting the NodePools hangs forever: the gateway proxy pods (PDB
+# minAvailable 2, pinned to agw-demo-cpu nodes) and Ray heads
+# (karpenter.sh/do-not-disrupt) can never be evicted.
+#
+# This resource depends on the NodePools, namespace and Valkey, so Terraform
+# destroys it FIRST; its destroy provisioner deletes those kubectl-managed
+# objects, and the nodes then drain normally. Same steps as
+# examples/agw-demo/cleanup.sh --yes (which you can still run beforehand).
+#---------------------------------------------------------------
+resource "terraform_data" "agw_demo_teardown" {
+  count = var.enable_agw_demo ? 1 : 0
+
+  # Destroy provisioners can only read self, so carry what they need here.
+  input = {
+    cluster = local.name
+    region  = local.region
+  }
+
+  provisioner "local-exec" {
+    when        = destroy
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      KC=$(mktemp)
+      aws eks update-kubeconfig --name ${self.input.cluster} --region ${self.input.region} --kubeconfig "$KC" >/dev/null
+      export KUBECONFIG="$KC"
+      echo "agw-demo teardown: removing kubectl-managed demo objects before NodePools are deleted"
+      # Gateway objects (all labelled project=agw-demo); deleting the Gateway removes the proxies + PDB.
+      kubectl -n agentgateway-system delete agentgatewaypolicy,agentgatewaymodel,grpcroute -l project=agw-demo --ignore-not-found || true
+      kubectl -n agentgateway-system delete gateway,agentgatewayparameters -l project=agw-demo --ignore-not-found --wait=true --timeout=180s || true
+      kubectl -n agentgateway-system delete configmap -l project=agw-demo --ignore-not-found || true
+      # Ray: deleting RayServices removes heads (do-not-disrupt) and GPU workers.
+      kubectl -n agw-demo delete rayservice --all --ignore-not-found --wait=true --timeout=300s || true
+      kubectl -n agw-demo delete job,pod --all --ignore-not-found --wait=false || true
+      rm -f "$KC"
+    EOT
+  }
+
+  depends_on = [
+    kubectl_manifest.agw_demo_nodepool,
+    kubectl_manifest.agw_demo_namespace,
+    aws_elasticache_replication_group.agw_demo_valkey,
+  ]
+}
+
 output "agw_demo" {
   description = "agw-demo base infrastructure"
   value = var.enable_agw_demo ? {

@@ -8,6 +8,10 @@
 #   ./cleanup.sh --yes            # delete Kubernetes-side demo resources
 #   ./cleanup.sh --yes --models   # also delete s3://<bucket>/models/qwen3-embedding-0.6b/
 #
+# Optional: enable_agw_demo = false + deploy.sh also runs a destroy hook
+# (agw-demo.tf terraform_data.agw_demo_teardown) that deletes the Ray and
+# Gateway objects before the NodePools, so a plain flag flip is safe too.
+#
 # Then remove the AWS/Karpenter side with Terraform via the stack script:
 #   data-stack.tfvars: enable_agw_demo = false   (NodePools, NodeClasses, Valkey, IAM, namespace)
 #                      enable_agentgateway = false (only if nothing else uses agentgateway)
