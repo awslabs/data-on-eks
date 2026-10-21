@@ -14,9 +14,12 @@ KUBECONFIG_FILE="kubeconfig.yaml"
 # keep this stack's state there (s3://<bucket>/ray-on-eks/terraform.tfstate),
 # so the stack can be managed from more than one machine. Without that bucket,
 # state stays local in terraform/_local as before. Override with TF_STATE_BUCKET.
+# The name is predictable, so only trust a bucket that THIS account owns:
+# --expected-bucket-owner fails if someone else created a bucket with this name.
 if [[ -z "${TF_STATE_BUCKET:-}" ]]; then
-  _state_bucket="terraform-state-$(aws sts get-caller-identity --query Account --output text)-${AWS_REGION}"
-  if aws s3api head-bucket --bucket "$_state_bucket" >/dev/null 2>&1; then
+  _account_id="$(aws sts get-caller-identity --query Account --output text)"
+  _state_bucket="terraform-state-${_account_id}-${AWS_REGION}"
+  if aws s3api head-bucket --bucket "$_state_bucket" --expected-bucket-owner "$_account_id" >/dev/null 2>&1; then
     export TF_STATE_BUCKET="$_state_bucket"
   fi
 fi
