@@ -5,7 +5,8 @@
 #
 # S3 layout (cNN = c01 to c50, to spread the S3 request load over 50 prefixes):
 #   Source  : s3a://spark-scaletest-eks-tpcds-us-west-2/cNN/tpcds/sf30/
-#   Results : s3a://spark-on-eks-spark-logs-344a3629d86dbc9b12395e5b87/cNN/tpcds-results/<app name>/
+#   Results : s3a://<results-bucket>/cNN/tpcds-results/<app name>/
+#             <results-bucket>: terraform -chdir=terraform output -raw s3_bucket_id_spark_history_server
 # This file uses c01. The load test (locustfile.py) will set cNN, the app name, the
 # results path, and the namespace for each SparkApplication.
 #
@@ -27,7 +28,8 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: "public.ecr.aws/data-on-eks/spark-benchmark:tcpds-4-spark-3.5.8-comet-0.15.0-iceberg@sha256:8eb5dcfcc279b65c8a2aa6c0360813fe7774e4f06fe71dd34e0d9c3e3f058830"
+  image: "ecr-public.aws.com/data-on-eks/spark-benchmark:tcpds-4-spark-3.5.8-comet-0.15.0-iceberg@sha256:8eb5dcfcc279b65c8a2aa6c0360813fe7774e4f06fe71dd34e0d9c3e3f058830"
+  # Dual-stack host: IPv6 nodes pull without the NAT gateway. public.ecr.aws is IPv4-only.
   # Pull each image one time per node. "Always" makes a registry call for every pod.
   imagePullPolicy: IfNotPresent
   sparkVersion: "3.5.8"
@@ -38,7 +40,8 @@ spec:
     # arg[0] tpcdsDataDir - root path of the parquet data in S3
     - "s3a://spark-scaletest-eks-tpcds-us-west-2/c01/tpcds/sf30"
     # arg[1] Results location (one path for each application)
-    - "s3a://spark-on-eks-spark-logs-344a3629d86dbc9b12395e5b87/c01/tpcds-results/tpcds-sf30"
+    # Placeholder: the bucket name changes on each deploy. locustfile.py sets it.
+    - "s3a://<results-bucket>/c01/tpcds-results/tpcds-sf30"
     # arg[2] Path to the TPC-DS kit (dsdgen/dsqgen) in the image
     - "/opt/tpcds-kit/tools"
     # arg[3] Data format
@@ -104,6 +107,12 @@ spec:
             env:
               - name: JAVA_HOME
                 value: "/opt/java/openjdk"
+              # IPv6 cluster: s3.<region>.amazonaws.com is IPv4-only, so use the dual-stack name.
+              - name: AWS_USE_DUALSTACK_ENDPOINT
+                value: "true"
+              # Java SDK issue with IMDS over IPv4 in IPv6 pods (fixed in a later SDK release).
+              - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
+                value: "IPv6"
             volumeMounts:
               - name: spark-local-dir-1
                 mountPath: /data1
@@ -155,6 +164,12 @@ spec:
             env:
               - name: JAVA_HOME
                 value: "/opt/java/openjdk"
+              # IPv6 cluster: s3.<region>.amazonaws.com is IPv4-only, so use the dual-stack name.
+              - name: AWS_USE_DUALSTACK_ENDPOINT
+                value: "true"
+              # Java SDK issue with IMDS over IPv4 in IPv6 pods (fixed in a later SDK release).
+              - name: AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE
+                value: "IPv6"
             volumeMounts:
               - name: spark-local-dir-1
                 mountPath: /data1
@@ -209,6 +224,9 @@ spec:
     "spark.kubernetes.driver.connectionTimeout": "120000"
     "spark.kubernetes.driver.requestTimeout": "120000"
     "spark.kubernetes.executor.podNamePrefix": "tpcds-sf30"
+    # IPv6 cluster: the driver Service needs an IPv6 address. Remove for an IPv4 cluster.
+    "spark.kubernetes.driver.service.ipFamilies": "IPv6"
+    "spark.kubernetes.driver.service.ipFamilyPolicy": "SingleStack"
     # Request executors in batches, to limit the pod create rate on the API server.
     "spark.kubernetes.allocation.batch.size": "10"
 
@@ -217,5 +235,6 @@ spec:
     "spark.reducer.maxSizeInFlight": "48m"
 
     # ── GC / logging ─────────────────────────────────────────────────────────
-    "spark.driver.extraJavaOptions": "-Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
-    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
+    # preferIPv6Addresses: without it the JVM picks IPv4 even when AAAA records exist.
+    "spark.driver.extraJavaOptions": "-Djava.net.preferIPv6Addresses=true -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
+    "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -Djava.net.preferIPv6Addresses=true -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"

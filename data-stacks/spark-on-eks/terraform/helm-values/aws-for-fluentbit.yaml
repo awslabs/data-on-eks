@@ -3,6 +3,8 @@ hostNetwork: true
 dnsPolicy: ClusterFirstWithHostNet
 
 image:
+  # Dual-stack host: IPv6 nodes pull without the NAT gateway. public.ecr.aws is IPv4-only.
+  repository: ecr-public.aws.com/aws-observability/aws-for-fluent-bit
   tag: 3.1.0
 
 serviceAccount:
@@ -120,6 +122,10 @@ additionalOutputs: |
       Match                           systempods.*
       region                          ${region}
       bucket                          ${s3_bucket_name}
+%{ if enable_ipv6 ~}
+      # IPv6 cluster: the regional name is IPv4-only (DNS64 would send uploads through NAT64).
+      endpoint                        https://s3.dualstack.${region}.amazonaws.com
+%{ endif ~}
       total_file_size                 100M
       s3_key_format                   /${cluster_name}/system-pod-logs/$TAG[1]/$TAG[3]/$TAG[2]_%H%M%S_$UUID.log
       s3_key_format_tag_delimiters    ..
@@ -132,6 +138,10 @@ additionalOutputs: |
       Match                           spark.*
       region                          ${region}
       bucket                          ${s3_bucket_name}
+%{ if enable_ipv6 ~}
+      # IPv6 cluster: the regional name is IPv4-only (DNS64 would send uploads through NAT64).
+      endpoint                        https://s3.dualstack.${region}.amazonaws.com
+%{ endif ~}
       total_file_size                 5M
       s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[1]/$TAG[3]/%H%M%S_$UUID.log
       s3_key_format_tag_delimiters    ..

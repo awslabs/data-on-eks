@@ -150,7 +150,8 @@ def on_parser_init(parser):
         "--results-bucket",
         help="S3 bucket for the query results",
         env_var="LOAD_TEST_RESULTS_BUCKET",
-        default="spark-on-eks-spark-logs-344a3629d86dbc9b12395e5b87"
+        # No default: the bucket name changes on each deploy (bucket_prefix).
+        required=True
     )
     parser.add_argument(
         "--prefix-count",

@@ -16,8 +16,10 @@ locals {
     [for k, v in local.azs : "${var.name}-private-secondary1-${v}"]
   )
 
-  # Extra secondary CIDRs for data node subnets: secondary2 to secondary12 (12 per AZ total).
-  additional_node_cidrs = [for i in range(33) : "100.${67 + i}.0.0/16"]
+  # Extra data subnets: secondary2 to secondary12 (12 per AZ total) for IPv4 only.
+  # IPv4 nodes use 49 IPv4 addresses each (3 /28 prefixes). IPv6 nodes use 1, so secondary1
+  # (about 65,000 nodes per AZ) is enough.
+  additional_node_cidrs = var.enable_ipv6 ? [] : [for i in range(33) : "100.${67 + i}.0.0/16"]
 
   # These subnets are created outside the VPC module (see "Data subnets" below), so each
   # subnet depends on its own CIDR association. Map key = subnet Name tag.
@@ -70,10 +72,8 @@ module "vpc" {
   private_subnet_ipv6_prefixes = [for i in range(length(local.private_subnet_cidrs)) : i + length(local.azs)]
 
   public_subnet_assign_ipv6_address_on_creation = true
-  # The cluster is IPv4 (var.enable_ipv6 = false), so nodes do not need IPv6 addresses.
-  # Each IPv6 address uses 1 NAU, so this saves 1 NAU per node.
-  # Set this to true if you change the cluster to IPv6 (var.enable_ipv6 = true).
-  private_subnet_assign_ipv6_address_on_creation = false
+  # IPv6 clusters register nodes by IPv6 address. Off for IPv4 saves 1 NAU per node.
+  private_subnet_assign_ipv6_address_on_creation = var.enable_ipv6
 
   public_subnet_tags = merge(var.public_subnet_tags, {
     "kubernetes.io/role/elb" = 1
@@ -107,8 +107,8 @@ resource "aws_subnet" "data" {
 
   ipv6_cidr_block = cidrsubnet(module.vpc.vpc_ipv6_cidr_block, 8, each.value.ipv6_prefix)
   ipv6_native     = false
-  # The cluster is IPv4: nodes do not get IPv6 addresses (saves 1 NAU per node).
-  assign_ipv6_address_on_creation                = false
+  # Same reason as private_subnet_assign_ipv6_address_on_creation in module "vpc".
+  assign_ipv6_address_on_creation                = var.enable_ipv6
   enable_dns64                                   = true
   enable_resource_name_dns_aaaa_record_on_launch = true
   enable_resource_name_dns_a_record_on_launch    = false
@@ -135,40 +135,15 @@ resource "aws_route_table_association" "data" {
 #---------------------------------------------------------------
 # VPC Endpoints
 #---------------------------------------------------------------
-resource "aws_security_group" "vpc_endpoint_s3" {
-  name_prefix = "${var.name}-vpc-endpoint-s3"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = concat([module.vpc.vpc_cidr_block], var.secondary_cidrs, local.additional_node_cidrs)
-  }
-
-  ingress {
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    ipv6_cidr_blocks = [module.vpc.vpc_ipv6_cidr_block]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    ipv6_cidr_blocks = ["::/0"]
-  }
+# Free, and no per-endpoint bandwidth limit, unlike an S3 interface endpoint.
+resource "aws_vpc_endpoint" "s3_gateway" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${local.region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = module.vpc.private_route_table_ids
 
   tags = {
-    Name = "${var.name}-vpc-endpoint-s3"
+    Name = "${var.name}-s3-gateway"
   }
 }
 
@@ -179,20 +154,6 @@ module "vpc_endpoints" {
   vpc_id = module.vpc.vpc_id
 
   endpoints = {
-    s3 = {
-      service            = "s3"
-      subnet_ids         = slice(module.vpc.private_subnets, 0, length(local.azs))
-      security_group_ids = [aws_security_group.vpc_endpoint_s3.id]
-      route_table_ids = concat(
-        module.vpc.private_route_table_ids,
-        module.vpc.public_route_table_ids
-      )
-      ip_address_type = "dualstack"
-      dns_options = {
-        dns_record_ip_type = var.enable_ipv6 ? "dualstack" : "ipv4"
-      }
-      private_dns_enabled = true
-    }
     s3express = {
       service      = "s3express"
       service_type = "Gateway"

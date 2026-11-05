@@ -38,6 +38,8 @@ module "karpenter" {
 
   cluster_name = module.eks.cluster_name
   namespace    = "karpenter"
+  # Attaches the matching AWS CNI policy (IPv4 or IPv6) to the node role.
+  cluster_ip_family = var.enable_ipv6 ? "ipv6" : "ipv4"
 
   # Name needs to match role name passed to the EC2NodeClass
   node_iam_role_use_name_prefix   = false

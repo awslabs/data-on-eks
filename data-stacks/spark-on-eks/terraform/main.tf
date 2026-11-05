@@ -66,19 +66,16 @@ locals {
       preserve                    = true
       resolve_conflicts_on_create = "OVERWRITE"
       configuration_values = jsonencode({
-        env = {
-          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
-          # Prefix delegation: the CNI allocates /28 prefixes (16 IPs each).
-          ENABLE_PREFIX_DELEGATION = "true"
-          # Target about 30 pod IPs per node = 2 prefixes (32 IPs).
-          # MINIMUM_IP_TARGET=30: allocate 2 prefixes when the node starts.
-          # WARM_IP_TARGET=2: allocate a 3rd prefix only when fewer than 2 IPs are free
-          #   (more than 30 pods with IPs on the node).
-          # When WARM_IP_TARGET or MINIMUM_IP_TARGET is set, WARM_PREFIX_TARGET is not used,
-          # so it is not set here.
-          MINIMUM_IP_TARGET = "30"
-          WARM_IP_TARGET    = "2"
-        }
+        # https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+        env = merge(
+          { ENABLE_PREFIX_DELEGATION = "true" },
+          # IPv4 only: about 30 pod IPs per node in 2 /28 prefixes, to save subnet space.
+          # IPv6 nodes get one /80 prefix, so these targets do not apply.
+          var.enable_ipv6 ? {} : {
+            MINIMUM_IP_TARGET = "30"
+            WARM_IP_TARGET    = "2"
+          }
+        )
       })
     }
   }

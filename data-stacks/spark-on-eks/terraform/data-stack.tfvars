@@ -10,7 +10,7 @@ enable_ingress_nginx = false
 # Auto-generated on first deploy — do not edit manually.
 deployment_id              = "rOOMTbDP"
 enable_celeborn            = false
-enable_ipv6                = false
+enable_ipv6                = true
 enable_nvidia_gpu_operator = false # Enable this for Spark RAPIDS on GPUs example
 
 # EKS Provisioned Control Plane (PCP) Tier for high-scale benchmarking
