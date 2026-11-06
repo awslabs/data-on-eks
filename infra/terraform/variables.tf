@@ -93,7 +93,7 @@ variable "private_subnet_tags" {
 variable "eks_cluster_version" {
   description = "Kubernetes `<major>.<minor>` version to use for the EKS cluster (i.e.: `1.31`)"
   type        = string
-  default     = "1.34"
+  default     = "1.37"
 
   validation {
     condition     = can(regex("^[0-9]+\\.[0-9]+$", var.eks_cluster_version))
@@ -189,6 +189,12 @@ variable "enable_celeborn" {
 
 variable "enable_airflow" {
   description = "Enable Apache Airflow for workflow orchestration"
+  type        = bool
+  default     = false
+}
+
+variable "enable_karpenter_static_capacity" {
+  description = "Enable the Karpenter StaticCapacity feature gate (ALPHA) so NodePools can set spec.replicas for a fixed node count"
   type        = bool
   default     = false
 }
