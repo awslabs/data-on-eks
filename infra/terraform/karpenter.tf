@@ -60,6 +60,8 @@ resource "helm_release" "karpenter" {
       clusterName: ${module.eks.cluster_name}
       clusterEndpoint: ${module.eks.cluster_endpoint}
       interruptionQueue: ${module.karpenter.queue_name}
+      featureGates:
+        staticCapacity: ${var.enable_karpenter_static_capacity}
     tolerations:
       - key: CriticalAddonsOnly
         operator: Exists
