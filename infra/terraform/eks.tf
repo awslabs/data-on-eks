@@ -196,7 +196,7 @@ resource "aws_iam_role" "ebs_csi_pod_identity_role" {
 
 # Attach EBS CSI policy to the role
 resource "aws_iam_role_policy_attachment" "ebs_csi_pod_identity_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEBSCSIDriverEKSClusterScopedPolicy"
   role       = aws_iam_role.ebs_csi_pod_identity_role.name
 }
 
