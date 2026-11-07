@@ -1,0 +1,49 @@
+# Dedicated static capacity for the TPC-DS 3TB Iceberg benchmark runs.
+# Requires the Karpenter StaticCapacity feature gate
+# (enable_karpenter_static_capacity = true in data-stack.tfvars, applied via deploy.sh).
+#
+# Only pods that tolerate benchmark=tpcds:NoSchedule and select
+# NodeGroupType=TpcdsBenchmark land here.
+#
+# Scale down after the runs:  kubectl scale nodepool tpcds-benchmark --replicas=0
+# Remove entirely:            kubectl delete -f nodepool-tpcds-benchmark.yaml
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: tpcds-benchmark
+spec:
+  replicas: 4
+  limits:
+    nodes: 5
+  disruption:
+    consolidateAfter: Never
+    budgets:
+      - nodes: "0"
+  template:
+    metadata:
+      labels:
+        NodeGroupType: TpcdsBenchmark
+        benchmark: tpcds
+    spec:
+      expireAfter: Never
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: ebs-gp3-1000gi-6000iops-1000tp
+      taints:
+        - key: benchmark
+          value: tpcds
+          effect: NoSchedule
+      requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["r8gd.12xlarge"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["us-west-2a"] # set your zone; must match BENCH_ZONE in the benchmark manifests
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
