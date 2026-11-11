@@ -24,7 +24,7 @@ dependencies = [
     "locust==2.23.1",
     "markupsafe==3.0.2",
     "msgpack==1.2.1",
-    "oauthlib==3.2.2",
+    "oauthlib==4.0.1",
     "psutil==7.0.0",
     "pyasn1==0.6.3",
     "pyasn1-modules==0.4.1",
