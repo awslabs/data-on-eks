@@ -15,18 +15,25 @@ import PieChart from '@site/src/components/Charts/PieChart';
 This benchmark evaluates Comet's performance on [Amazon EKS](https://aws.amazon.com/eks/) using the [TPC-DS](https://www.tpc.org/tpcds/) 3TB workload.
 
 
-:::info **TL;DR**
-Our TPC-DS 3TB benchmark shows that **Apache DataFusion Comet v1.0.0** delivered:
+:::info[TL;DR]
+**Latest (Iceberg): Apache DataFusion Comet v1.2.0** on Spark 4.1.3 and Iceberg 1.11.0 finished TPC-DS 3TB in **2,195 seconds**. That is **18% less runtime** than Comet v1.0.0 on Spark 3.5.8, a **1.22× speedup**.
+
+- 101 of 103 queries were faster. The best query was 95% faster.
+- The only real regression, q17, is equally slow on Spark 4.1.3 without Comet.
+
+Our previous TPC-DS 3TB benchmark, comparing **Apache DataFusion Comet v1.0.0** with native Spark 3.5.8, delivered:
 
 - **36% less runtime** on **Parquet**, with a **1.57× speedup**. The best query was 69% faster. The largest regression was 36%.
 - **43% less runtime** on **Iceberg**, with a **1.75× speedup**. The best query was 68% faster. The largest regression was 142%.
+
+Parquet has not been re-run with Comet v1.2.0 yet.
 :::
 
 ## TPC-DS 3TB Benchmark Results
 
 ### Summary
 
-The TPC-DS 3TB benchmark ran on Amazon EKS. **Apache DataFusion Comet v1.0.0 reduced total runtime** for both Parquet and Iceberg tables. Query results varied by plan, operator, and input shape.
+The TPC-DS 3TB benchmark ran on Amazon EKS. **Apache DataFusion Comet v1.0.0 reduced total runtime** compared with native Spark for both Parquet and Iceberg tables. **Comet v1.2.0 reduced Iceberg runtime by a further 18%** compared with Comet v1.0.0. Query results varied by plan, operator, and input shape.
 
 <Tabs groupId="format" defaultValue="parquet" values={[
   {label: 'Parquet', value: 'parquet'},
@@ -44,8 +51,13 @@ The TPC-DS 3TB benchmark ran on Amazon EKS. **Apache DataFusion Comet v1.0.0 red
 
 | Name | Completion Time (seconds) | Speedup |
 |------|---------------------------|---------|
-| Native Spark | 4,665.47 | Baseline |
-| Comet v1.0.0 | 2,668.29 | **1.75× (43% less runtime)** |
+| Native Spark 3.5.8 | 4,665.47 | Baseline |
+| Comet v1.0.0 (Spark 3.5.8) | 2,668.29 | **1.75× (43% less runtime)** |
+| Comet v1.2.0 (Spark 4.1.3) | 2,195.29 | **1.22× vs Comet v1.0.0 (18% less runtime)** |
+
+:::note
+Comet v1.2.0 ran on a newer software stack (Spark 4.1.3, Iceberg 1.11.0, EKS 1.37), so its gain over v1.0.0 includes the Spark and Iceberg upgrades. A native Spark 4.1.3 baseline has not been published yet. See [Test Environment and Configuration](#test-environment-and-configuration).
+:::
 
 </TabItem>
 </Tabs>
@@ -53,38 +65,74 @@ The TPC-DS 3TB benchmark ran on Amazon EKS. **Apache DataFusion Comet v1.0.0 red
 
 ### Benchmark Infrastructure
 
-:::info Benchmark Methodology
+:::info[Benchmark Methodology]
 Benchmarks ran sequentially on the same cluster to ensure identical hardware and eliminate resource contention. Native Spark executed first, followed by Comet.
 :::
 
 To ensure an apples-to-apples comparison, both native Spark and Comet jobs ran on identical hardware, storage, and data. Only the execution engine and related Spark settings differed.
 
-#### Test Environment
+#### Test Environment and Configuration
 
-| Component | Configuration |
-|-----------|--------------|
-| **EKS Cluster** | [Amazon EKS](https://aws.amazon.com/eks/) 1.34 |
-| **Node Instance Type** | r8gd.12xlarge (48 vCPUs, 384GB RAM, 1.8TB NVMe SSD) |
-| **Node Group** | 4 nodes dedicated for benchmark workloads |
-| **Executor Configuration** | 23 executors × 5 cores (requests) × 58GB RAM each |
-| **Driver Configuration** | 5 cores × 20GB RAM |
-| **Dataset** | [TPC-DS](https://www.tpc.org/tpcds/) 3TB (Parquet and Iceberg table formats) |
-| **Storage** | [Amazon S3](https://aws.amazon.com/s3/) with optimized S3A connector |
+The Native Spark and Comet v1.0.0 runs shared one environment. The Comet v1.2.0 Iceberg run used the same hardware, executor sizing, and queries on a newer software stack.
 
-#### Spark Configuration Comparison
-
-| Configuration | Native Spark | Comet |
-|---------------|-------------|-------|
-| **Spark Version** | 3.5.8 | 3.5.8 |
-| **Comet Version** | N/A | 1.0.0 |
-| **Java Runtime** | [OpenJDK](https://openjdk.org/) 17 | [OpenJDK](https://openjdk.org/) 17 |
-| **Execution Engine** | JVM-based [Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten) | Rust + JVM hybrid |
-| **Key Plugins** | Standard Spark | `CometPlugin`, `CometShuffleManager` |
-| **Off-heap Memory** | 32GB enabled | 32GB enabled |
-| **Memory Management** | JVM GC | Unified native + JVM |
-| **memoryThrottlingFactor** | `0.7` | `0.7` |
+| Component | Native Spark | Comet v1.0.0 | Comet v1.2.0 (Iceberg) |
+|-----------|--------------|--------------|------------------------|
+| **EKS Cluster** | [Amazon EKS](https://aws.amazon.com/eks/) 1.34 | Amazon EKS 1.34 | Amazon EKS 1.37 |
+| **Node Instance Type** | r8gd.12xlarge (48 vCPUs, 384GB RAM, 3 × 950GB NVMe SSD) | Same | Same |
+| **Nodes** | 4 dedicated benchmark nodes | Same | 4 on-demand nodes in one AZ, dedicated tainted Karpenter static NodePool |
+| **Executor Configuration** | 23 executors × 5 cores (requests) × 58GB RAM each | Same | Same |
+| **Driver Configuration** | 5 cores × 20GB RAM | Same | Same |
+| **Shuffle Storage** | Local NVMe SSD | Local NVMe SSD | Local NVMe SSD (RAID0) |
+| **Dataset** | [TPC-DS](https://www.tpc.org/tpcds/) 3TB, Parquet and Iceberg | Same | TPC-DS 3TB, Iceberg only (second copy with identical row and file counts) |
+| **Storage** | [Amazon S3](https://aws.amazon.com/s3/): S3A for Parquet, Iceberg `S3FileIO` with Glue catalog | Same | Amazon S3: Iceberg `S3FileIO` with Glue catalog |
+| **Iterations** | 5 (median per query) | 5 (median per query) | 5 (median per query) |
+| **Spark Version** | 3.5.8 (Scala 2.12) | 3.5.8 (Scala 2.12) | 4.1.3 (Scala 2.13) |
+| **Comet Version** | N/A | 1.0.0 | 1.2.0 |
+| **Iceberg Version** | 1.10.1 | 1.10.1 | 1.11.0 (`iceberg-spark-runtime-4.0_2.13`) |
+| **Java Runtime** | [OpenJDK](https://openjdk.org/) 17 | OpenJDK 17 | OpenJDK 17.0.19 |
+| **Execution Engine** | JVM-based [Tungsten](https://spark.apache.org/docs/latest/sql-performance-tuning.html#project-tungsten) | Rust + JVM hybrid | Rust + JVM hybrid |
+| **Key Plugins** | Standard Spark | `CometPlugin`, `CometShuffleManager` | `CometPlugin`, `CometShuffleManager` |
+| **Iceberg Scan** | Iceberg Java reader | Comet native Iceberg reader | Comet native Iceberg reader (`CometIcebergNativeScan`) |
+| **Off-heap Memory** | 32GB enabled | 32GB enabled | 32GB enabled |
+| **Memory Management** | JVM GC | Unified native + JVM | Unified native + JVM |
+| **memoryThrottlingFactor** | `0.7` | `0.7` | `0.7` |
 
 #### Critical Comet-Specific Configurations
+
+**Comet v1.2.0 (Iceberg run):**
+
+```yaml
+# Essential Comet Configuration
+"spark.plugins": "org.apache.spark.CometPlugin"
+"spark.shuffle.manager": "org.apache.spark.sql.comet.execution.shuffle.CometShuffleManager"
+"spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,org.apache.comet.CometSparkSessionExtensions"
+
+# Memory Configuration
+"spark.memory.offHeap.enabled": "true"
+"spark.memory.offHeap.size": "32g"
+"spark.comet.exec.memoryPool.fraction": "0.8"
+
+# Comet Execution Settings
+"spark.comet.exec.enabled": "true"
+"spark.comet.shuffle.enabled": "true"
+"spark.comet.explain.fallback.enabled": "true"
+# Native Iceberg scan (iceberg-rust) is on by default: spark.comet.scan.icebergNative.enabled=true
+
+# Iceberg catalog
+"spark.sql.catalog.glue_catalog": "org.apache.iceberg.spark.SparkCatalog"
+"spark.sql.catalog.glue_catalog.catalog-impl": "org.apache.iceberg.aws.glue.GlueCatalog"
+"spark.sql.catalog.glue_catalog.io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
+```
+
+:::note[Configuration changes since Comet v1.0.0]
+- `spark.comet.exec.shuffle.enabled` is now `spark.comet.shuffle.enabled`.
+- `spark.comet.explainFallback.enabled` is now `spark.comet.explain.fallback.enabled`.
+- The default for `spark.comet.scan.icebergNative.dataFileConcurrencyLimit` (Iceberg data files read in parallel per task) changed from 1 in Comet 1.0 to 2 in Comet 1.2 ([1.0 docs](https://datafusion.apache.org/comet/user-guide/1.0/iceberg.html), [1.2 docs](https://datafusion.apache.org/comet/user-guide/1.2/iceberg.html)). Both runs used the default.
+- `spark.comet.exec.shuffle.mode`, `spark.comet.cast.allowIncompatible`, and `spark.comet.dppFallback.enabled` are not in the current [Comet configuration reference](https://datafusion.apache.org/comet/user-guide/latest/configs.html), so they were not set for v1.2.0.
+- Keep the native Iceberg scan enabled. Setting `spark.comet.scan.icebergNative.enabled=false` makes Iceberg reads use the Java reader, and most operators above the scan then run in Spark's JVM instead of Comet. We tried this to enable the S3 Analytics Accelerator, which only works with the Java reader: total runtime was 1.53× longer (3,355 s vs 2,195 s), and only 42% of plan operators ran in Comet.
+:::
+
+**Comet v1.0.0:**
 
 ```yaml
 # Essential Comet Configuration
@@ -364,7 +412,7 @@ The query results show three main effects: plan changes, native operator perform
 
 ### Query Regressions
 
-:::warning Only one query regressed
+:::warning[Only one query regressed]
 Out of 103 TPC-DS query variants, **q50** was the single regression under DataFusion Comet 0.17.0 — running **37% slower** (82.7s → 113.2s, 0.73×). Every other query matched or outperformed native Spark.
 :::
 
@@ -573,7 +621,7 @@ Only three queries showed regressions.
 </details>
 
 <details>
-<summary><b>Datafuison Comet V0.15.0 Results</b></summary>
+<summary><b>DataFusion Comet v0.15.0 Results</b></summary>
 
 ### Overall Performance
 
@@ -751,7 +799,7 @@ Comet's native Rust execution engine excels at CPU-intensive operations
 
 ### Resource Usage Analysis
 
-Both benchmarks ran sequentially on identical hardware to enable direct comparison.
+These resource metrics were captured during the Comet v0.15.0 Parquet run. Both benchmarks ran sequentially on identical hardware to enable direct comparison.
 
 #### CPU Utilization
 
@@ -829,10 +877,154 @@ Storage utilization (IOPS and throughput) showed Comet with higher peak IOPS tha
 </details>
 
 
-**Summary**: Comet uses slightly more memory than Native Spark (higher peak and elevated baseline between queries), while CPU, network, and storage utilization remain comparable. The 11% overall speedup comes without a significant increase in resource consumption. Since Comet performs most compute off-heap in its native Rust engine, operators may be able to reduce on-heap JVM memory per executor and allocate more toward off-heap, potentially improving cost efficiency.
+**Summary**: Comet uses slightly more memory than Native Spark (higher peak and elevated baseline between queries), while CPU, network, and storage utilization remain comparable. The 11% overall speedup in that run came without a significant increase in resource consumption. Since Comet performs most compute off-heap in its native Rust engine, operators may be able to reduce on-heap JVM memory per executor and allocate more toward off-heap, potentially improving cost efficiency.
 
 </TabItem>
 <TabItem value="iceberg">
+
+### DataFusion Comet v1.2.0 vs v1.0.0
+
+Comet v1.2.0 ran on Spark 4.1.3 and Iceberg 1.11.0. The v1.0.0 run used Spark 3.5.8 and Iceberg 1.10.1. Hardware, executor sizing, queries, and iterations were the same. The differences below include the effect of the Spark and Iceberg upgrades, not only the Comet release.
+
+### Overall Performance
+
+<BarChart
+  title="Total Runtime Comparison"
+  data={{
+    labels: ['Native Spark 3.5.8', 'DataFusion Comet 1.0.0 (Spark 3.5.8)', 'DataFusion Comet 1.2.0 (Spark 4.1.3)'],
+    datasets: [{
+      label: 'Runtime (seconds)',
+      data: [4665.47, 2668.29, 2195.29],
+      backgroundColor: ['#95a5a6', '#27ae60', '#27ae60'],
+      borderColor: ['#7f8c8d', '#229954', '#229954'],
+      borderWidth: 2
+    }]
+  }}
+  options={{
+    scales: {
+      y: { title: { display: true, text: 'Runtime (seconds)' } }
+    }
+  }}
+  height="300px"
+/>
+
+| Name | Completion Time (seconds) | Performance |
+|------|---------------------------|-------------|
+| Native Spark 3.5.8 | 4,665.47 | Previous native baseline |
+| DataFusion Comet Iceberg 1.0.0 (Spark 3.5.8) | 2,668.29 | Baseline for this comparison |
+| DataFusion Comet Iceberg 1.2.0 (Spark 4.1.3) | 2,195.29 | **1.22×** (18% less runtime than v1.0.0) |
+
+Per-query, the geometric mean speedup was **1.34×** and the median query speedup was **1.28×**. Comet v1.2.0 was faster on **101 of 103** queries.
+
+### Performance Distribution
+
+<PieChart
+  title="Query Performance Distribution (Comet 1.2.0 vs 1.0.0)"
+  type="doughnut"
+  data={{
+    labels: ['20%+ improvement', '10-20% improvement', '±10%', '10-20% degradation', '20%+ degradation'],
+    datasets: [{
+      data: [57, 36, 9, 0, 1],
+      backgroundColor: ['#27ae60', '#3498db', '#f39c12', '#e67e22', '#e74c3c'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  }}
+/>
+
+| Performance Range | Query Count | Percentage |
+|---|---|---|
+| 20%+ improvement | 57 | 55% |
+| 10-20% improvement | 36 | 35% |
+| ±10% | 9 | 9% |
+| 10-20% degradation | 0 | 0% |
+| 20%+ degradation | 1 | 1% |
+
+### Top 10 Query Improvements
+
+<BarChart
+  title="Top 10 Query Improvements (% faster with DataFusion Comet 1.2.0 vs 1.0.0)"
+  data={{
+    labels: ['q16', 'q85', 'q49', 'q21', 'q19', 'q40', 'q84', 'q70', 'q20', 'q34'],
+    datasets: [
+      {
+        label: 'Improvement %',
+        data: [95, 53, 52, 52, 50, 47, 46, 43, 42, 42],
+        backgroundColor: '#27ae60',
+        borderColor: '#229954',
+        borderWidth: 1
+      }
+    ]
+  }}
+  options={{
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Improvement (%)' }
+      },
+      x: {
+        title: { display: true, text: 'TPC-DS Queries' }
+      }
+    }
+  }}
+  height="400px"
+/>
+
+| Query | DataFusion Comet Iceberg 1.0.0 (s) | DataFusion Comet Iceberg 1.2.0 (s) | Speedup |
+|---|---|---|---|
+| q16-v4.0 | 29.4 | 1.5 | **19.3×** (+95%) |
+| q85-v4.0 | 10.9 | 5.2 | **2.11×** (+53%) |
+| q49-v4.0 | 16.8 | 8.1 | **2.08×** (+52%) |
+| q21-v4.0 | 2.0 | 1.0 | **2.07×** (+52%) |
+| q19-v4.0 | 5.4 | 2.7 | **2.00×** (+50%) |
+| q40-v4.0 | 9.7 | 5.1 | **1.89×** (+47%) |
+| q84-v4.0 | 6.0 | 3.2 | **1.85×** (+46%) |
+| q70-v4.0 | 13.0 | 7.5 | **1.75×** (+43%) |
+| q20-v4.0 | 3.6 | 2.1 | **1.72×** (+42%) |
+| q34-v4.0 | 6.0 | 3.5 | **1.71×** (+42%) |
+
+Most of the total time saved came from the long-running queries:
+
+| Query | DataFusion Comet Iceberg 1.0.0 (s) | DataFusion Comet Iceberg 1.2.0 (s) | Time Saved (s) | Speedup |
+|---|---|---|---|---|
+| q23a-v4.0 | 173.3 | 130.2 | 43.1 | 1.33× |
+| q23b-v4.0 | 216.3 | 183.5 | 32.8 | 1.18× |
+| q16-v4.0 | 29.4 | 1.5 | 27.9 | 19.3× |
+| q9-v4.0 | 183.4 | 155.8 | 27.6 | 1.18× |
+| q24a-v4.0 | 73.7 | 58.6 | 15.1 | 1.26× |
+| q72-v4.0 | 134.1 | 119.3 | 14.8 | 1.12× |
+| q75-v4.0 | 47.5 | 32.8 | 14.7 | 1.45× |
+| q24b-v4.0 | 71.8 | 57.8 | 14.0 | 1.24× |
+| q93-v4.0 | 154.1 | 141.0 | 13.1 | 1.09× |
+| q50-v4.0 | 109.4 | 96.8 | 12.6 | 1.13× |
+
+### Query Regressions
+
+:::warning[Only one query regressed meaningfully]
+Out of 103 TPC-DS query variants, **q17** was the only meaningful regression. It took 25.1 s with Comet v1.2.0 vs 6.5 s with v1.0.0 (0.26×). Spark 4.1.3 without Comet is equally slow on q17, so this regression comes with the Spark 4.1.3 stack, not Comet. q31 was within 1%.
+:::
+
+| Query | DataFusion Comet Iceberg 1.0.0 (s) | DataFusion Comet Iceberg 1.2.0 (s) | Degradation |
+|---|---|---|---|
+| q17-v4.0 | 6.5 | 25.1 | **284%** slower (0.26×) |
+| q31-v4.0 | 9.6 | 9.8 | **1%** slower (0.99×) |
+
+### Performance Analysis
+
+| Query | Result vs v1.0.0 | Main cause | Key evidence |
+|---|---:|---|---|
+| q16 | 19.3× faster | Early empty-result short-circuit | The executed plan ends in `CometEmptyRelation`: adaptive query execution found an empty intermediate result and skipped the remaining joins. Spark 4.1.3 without Comet also runs q16 faster than Spark 3.5.8 (about 19 s vs 63 s), so part of this gain comes with Spark 4.x. |
+| q23a, q23b | 1.33× and 1.18× faster | Faster long-running fact-table joins and aggregations | These two queries saved 76 s combined, the largest share of the 473 s total saving. |
+| q17 | 3.8× slower | Spark 4.1.3 stack, not Comet | Spark 4.1.3 without Comet takes about 25 s on q17, the same as Comet v1.2.0, while native Spark 3.5.8 took 12.9 s. |
+| q72 | 1.12× faster, but still 2.15× slower than native Spark 3.5.8 | Comet-specific regression remains | Comet v1.2.0 took 119.3 s vs 55.5 s for native Spark 3.5.8. Spark 4.1.3 without Comet takes about 50 s, so this gap is specific to Comet. |
+
+The "Spark 4.1.3 without Comet" figures come from a separate run on the same cluster, with the same image minus Comet and with the S3 Analytics Accelerator enabled. They are used here only to tell Spark-version effects apart from Comet effects. That run is not a published native baseline.
+
+In the v1.2.0 run, Comet executed about 100% of plan operators across all 103 queries (5,564 Comet operators vs 11 Spark operators in steady-state iteration 3). All 5 iterations completed with no failed queries.
+
+
+<details>
+<summary><b>DataFusion Comet Iceberg v1.0.0 Results</b></summary>
 
 ### Overall Performance
 
@@ -964,6 +1156,8 @@ Storage utilization (IOPS and throughput) showed Comet with higher peak IOPS tha
 | q50-v4.0 | 96.3 | 109.4 | **14%** slower (0.88×) |
 | q21-v4.0 | 1.9 | 2.0 | **5%** slower (0.95×) |
 
+</details>
+
 <details>
 <summary><b>DataFusion Comet Iceberg v0.17.0 Results</b></summary>
 
@@ -1063,7 +1257,7 @@ Storage utilization (IOPS and throughput) showed Comet with higher peak IOPS tha
 
 ### Query Regressions
 
-:::warning Only one query regressed
+:::warning[Only one query regressed]
 Out of 103 TPC-DS query variants, **q50** was the single regression under DataFusion Comet Iceberg 0.17.0 — running **23% slower** (96.3s → 118.3s, 0.81×). Every other query matched or outperformed native Spark.
 :::
 
@@ -1220,60 +1414,126 @@ Comet may be beneficial for:
 
 - **Broadcast-join workloads** - Queries such as q56 and q58 gained when Comet removed sort-merge joins and sorts.
 - **Native columnar workloads** - q67 gained from the native sort, merge, and aggregate operators.
+- **Iceberg workloads with the native scan** - Comet v1.2.0 ran about 100% of Iceberg plan operators natively when `spark.comet.scan.icebergNative.enabled` stayed at its default (`true`).
 - **Tested query sets** - Test your full query set before deployment.
 
 
 ## Running Benchmarks
 
+The steps below reproduce the Comet v1.2.0 Iceberg run. All files are in `data-stacks/spark-on-eks/benchmarks/datafusion-comet-benchmarks/`.
+
 ### Prerequisites
 
-- EKS cluster with Spark Operator installed
-- S3 bucket with TPC-DS benchmark data
-- Docker registry access (ECR or other)
+- The [Spark on EKS](/data-on-eks/docs/datastacks/processing/spark-on-eks/infra) data stack deployed, with Spark Operator and Karpenter
+- TPC-DS 3TB data as Iceberg tables in an S3 bucket (under `TPCDS-TEST-3TB-ICEBERG/`), registered in an AWS Glue database
+- Read access to the data bucket and write access to a results bucket for the `spark-team-a` service account
+- A container registry (Amazon ECR or another registry)
 
-### Step 1: Build Docker Image
-
-Build the Comet-enabled Spark image:
+### Step 1: Build the Docker Image
 
 ```bash
 cd data-stacks/spark-on-eks/benchmarks/datafusion-comet-benchmarks
 
-# Build and push to your registry
-docker build -t <your-registry>/spark-comet:3.5.8 -f Dockerfile-comet .
-docker push <your-registry>/spark-comet:3.5.8
+# Spark 4.1.3 + Iceberg 1.11.0 + Comet 1.2.0, linux/arm64 (Graviton)
+docker build --platform linux/arm64 --build-arg INCLUDE_COMET=true \
+  -t <your-registry>/spark-comet:4.1.3-iceberg-1.11.0-comet-1.2.0 -f Dockerfile-comet .
+docker push <your-registry>/spark-comet:4.1.3-iceberg-1.11.0-comet-1.2.0
 ```
 
-### Step 2: Install NodeLocal DNS Cache
+Build with `--build-arg INCLUDE_COMET=false` for the native Spark image.
 
-To mitigate the DNS query volume issue, install NodeLocal DNS Cache:
+### Step 2: Create Dedicated Benchmark Nodes
+
+The benchmark runs on a fixed set of 4 × r8gd.12xlarge nodes from a [Karpenter static NodePool](https://karpenter.sh/docs/concepts/nodepools/) (`spec.replicas`). The nodes carry the taint `benchmark=tpcds:NoSchedule`, so only the benchmark pods run on them, and Karpenter doesn't consolidate or replace them during a run.
+
+Static NodePools require Karpenter's `StaticCapacity` feature gate (alpha). Enable it in `data-stacks/spark-on-eks/terraform/data-stack.tfvars` and redeploy:
+
+```hcl
+enable_karpenter_static_capacity = true
+```
+
+```bash
+cd data-stacks/spark-on-eks && ./deploy.sh
+```
+
+Set the availability zone in `nodepool-tpcds-benchmark.yaml` (default `us-west-2a`), then create the NodePool and wait for the 4 nodes:
+
+```bash
+cd benchmarks/datafusion-comet-benchmarks
+kubectl apply -f nodepool-tpcds-benchmark.yaml
+kubectl get nodes -l karpenter.sh/nodepool=tpcds-benchmark -w
+```
+
+Each node fits 6 Spark pods (58GB each), so 4 nodes hold the driver and all 23 executors.
+
+### Step 3: Install NodeLocal DNS Cache (Optional)
+
+To reduce DNS query volume to the Route 53 Resolver, install NodeLocal DNS Cache:
 
 ```bash
 kubectl apply -f node-local-cache.yaml
 ```
 
-This caches DNS results locally on each node, preventing the excessive DNS queries to Route53 Resolver.
+The Comet v1.2.0 run was done without it.
 
-### Step 3: Update Bucket Names
+### Step 4: Run the Benchmark
 
-Update the S3 bucket references in the benchmark manifests:
+Create the Log4j ConfigMap used by the manifests:
 
 ```bash
-# For Comet benchmark
-export S3_BUCKET=your-bucket-name
-envsubst < tpcds-benchmark-comet-parquet.yaml | kubectl apply -f -
-
-# For native Spark baseline
-envsubst < tpcds-benchmark-parquet.yaml | kubectl apply -f -
+kubectl apply -f ../../spark-log4j2-configmap.yaml
 ```
 
-Or manually edit the YAML files and replace `${S3_BUCKET}` with your bucket name.
+Set the variables and submit the Comet Iceberg benchmark. `BENCH_ZONE` must match the zone in the NodePool.
 
-### Step 4: Monitor Benchmark Progress
+```bash
+export RUN_ID=$(date -u +%Y%m%d%H%M)
+export DATA_BUCKET=<bucket-with-TPCDS-TEST-3TB-ICEBERG>
+export LOGS_BUCKET=<bucket-for-results-and-event-logs>
+export ICEBERG_DB=<glue-database-with-tpcds-tables>
+export IMAGE_COMET=<your-registry>/spark-comet:4.1.3-iceberg-1.11.0-comet-1.2.0
+export ITERATIONS=5 EXECUTOR_INSTANCES=23 QUERY_FILTER="" BENCH_ZONE=us-west-2a
+
+envsubst < tpcds-benchmark-spark41-comet-iceberg.yaml | kubectl apply -f -
+```
+
+`tpcds-benchmark-spark41-comet-iceberg-s3-aal.yaml` runs Comet with the S3 Analytics Accelerator. It turns off Comet's native Iceberg scan, which made the run about 1.5× slower in our tests.
+
+Run benchmarks one at a time so they don't compete for nodes. The Parquet benchmarks use `tpcds-benchmark-comet-parquet.yaml` and `tpcds-benchmark-parquet.yaml` with `S3_BUCKET` instead.
+
+### Step 5: Monitor Benchmark Progress
 
 ```bash
 # Check job status
-kubectl get sparkapplications -n spark-team-a
+kubectl get sparkapplications -n spark-team-a -l benchmark=tpcds-3tb-iceberg
 
-# View logs
-kubectl logs -f -n spark-team-a -l spark-app-name=tpcds-benchmark-comet
+# View driver logs
+kubectl logs -f -n spark-team-a -l spark-role=driver,benchmark=tpcds-3tb-iceberg
+```
+
+A full run (103 queries × 5 iterations) takes about 3.5 hours with Comet v1.2.0.
+
+### Step 6: Analyze Results
+
+Each run writes per-query results to `s3://$LOGS_BUCKET/TPCDS-3TB-ICEBERG-RESULTS/`. The `summary.csv` file has one row per query: the median, minimum, and maximum time across iterations. Compare two runs with `analyze-results.py`:
+
+```bash
+aws s3 cp --recursive s3://$LOGS_BUCKET/TPCDS-3TB-ICEBERG-RESULTS/test1-comet/$RUN_ID/ ./results/ \
+  --exclude "*" --include "*summary.csv/*.csv"
+cat results/*/summary.csv/*.csv > comet-iceberg-candidate.csv
+
+python3 ../analyze-results.py \
+  --baseline comet-iceberg-v1.2.0.csv --candidate comet-iceberg-candidate.csv \
+  --baseline-name "Comet 1.2.0" --candidate-name "My run" \
+  -o report.json --markdown report.md
+```
+
+### Step 7: Clean Up
+
+Release the benchmark nodes when you are done:
+
+```bash
+kubectl scale nodepool tpcds-benchmark --replicas=0
+# or remove the NodePool entirely
+kubectl delete -f nodepool-tpcds-benchmark.yaml
 ```

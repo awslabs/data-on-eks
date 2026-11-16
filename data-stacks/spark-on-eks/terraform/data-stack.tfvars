@@ -7,8 +7,10 @@ enable_ingress_nginx = true
 # Unique ID used to tag all AWS resources for this deployment.
 # Enables identification of orphaned resources and cleanup in case of Terraform state loss.
 # Auto-generated on first deploy — do not edit manually.
-deployment_id              = "rOOMTbDP"
+deployment_id              = ""
 enable_celeborn            = false
+# Static Karpenter NodePools (spec.replicas), used by the TPC-DS benchmarks for fixed capacity
+enable_karpenter_static_capacity = true
 enable_ipv6                = false
 enable_nvidia_gpu_operator = false # Enable this for Spark RAPIDS on GPUs example
 
@@ -18,4 +20,4 @@ enable_nvidia_gpu_operator = false # Enable this for Spark RAPIDS on GPUs exampl
 #   2XL : 3400 API concurrency seats  | 283 pods/sec scheduling rate | 16 GB etcd
 #   4XL : 6800 API concurrency seats  | 400 pods/sec scheduling rate | 16 GB etcd
 #   8XL : 13600 API concurrency seats | 400 pods/sec scheduling rate | 16 GB etcd
-# eks_pcp_tier = "4XL"
+eks_pcp_tier = "2XL"
