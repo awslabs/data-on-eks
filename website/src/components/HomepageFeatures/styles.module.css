@@ -48,12 +48,16 @@
   color: var(--doeks-violet);
 }
 
+/* Lead-in paragraph: set in the display face so it reads as part of the heading */
 .introText {
   grid-area: text;
   margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.7;
-  color: var(--doeks-muted);
+  font-family: var(--doeks-font-display);
+  font-weight: 500;
+  font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  color: var(--doeks-text);
 }
 
 /* ---------- Bento ---------- */

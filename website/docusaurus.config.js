@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 /** @type {{onBrokenLinks: string, organizationName: string, plugins: string[], title: string, url: string, onBrokenMarkdownLinks: string, i18n: {defaultLocale: string, locales: string[]}, trailingSlash: boolean, baseUrl: string, presets: [string,Options][], githubHost: string, tagline: string, themeConfig: ThemeConfig & UserThemeConfig & AlgoliaThemeConfig, projectName: string}} */
 const config = {
   title: 'Data on EKS',
-  tagline: 'Data platforms and agentic data on Amazon EKS',
+  tagline: 'Agentic data platforms on Amazon EKS',
   url: 'https://awslabs.github.io',
   baseUrl: '/data-on-eks/',
   trailingSlash: false,
@@ -61,10 +61,14 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      // TEMPORARY: AWS re:Invent 2026 (Nov 30 - Dec 4). Remove after the event and
+      // restore the Analytics on EKS Workshop banner:
+      //   id: 'analytics-workshop-banner-v2',
+      //   content: '<span class="announcement-spark">✨</span> <span class="announcement-text"><strong>Analytics on EKS Workshop</strong> — get hands-on running analytics workloads at scale</span> <a class="announcement-cta" target="_blank" rel="noopener noreferrer" href="https://events.eksworkshop.com/workshops/analytics/">Register now →</a>',
       announcementBar: {
-        id: 'analytics-workshop-banner-v2',
+        id: 'reinvent-2026',
         content:
-          '<span class="announcement-spark">✨</span> <span class="announcement-text"><strong>Analytics on EKS Workshop</strong> — get hands-on running analytics workloads at scale</span> <a class="announcement-cta" target="_blank" rel="noopener noreferrer" href="https://events.eksworkshop.com/workshops/analytics/">Register now →</a>',
+          '<span class="announcement-spark">✨</span> <span class="announcement-text"><strong>AWS re:Invent 2026</strong><span class="announcement-detail"> — Nov 30 – Dec 4, Las Vegas</span></span> <a class="announcement-cta" target="_blank" rel="noopener noreferrer" href="https://aws.amazon.com/events/reinvent/">Register now →</a>',
         textColor: '#ffffff',
         isCloseable: true,
       },
@@ -77,7 +81,7 @@ const config = {
         items: [
           { type: 'doc', docId: 'getting-started', position: 'left', label: 'Launch', className: 'navbar-getting-started' },
           { type: 'doc', docId: 'datastacks/index', position: 'left', label: 'Data Stacks', className: 'navbar-data-stacks' },
-          { type: 'doc', docId: 'ai-ml/index', position: 'left', label: 'AI for Data', className: 'navbar-ai-data' },
+          { type: 'doc', docId: 'ai-ml/index', position: 'left', label: 'Agentic Data', className: 'navbar-ai-data' },
           { type: 'doc', docId: 'benchmarks/index', position: 'left', label: 'Benchmarks', className: 'navbar-benchmarks' },
           { type: 'doc', docId: 'bestpractices/intro', position: 'left', label: 'Best Practices', className: 'navbar-best-practices' },
           { href: 'https://github.com/awslabs/data-on-eks', label: 'GitHub', position: 'right' },

@@ -116,7 +116,7 @@ export default function HomepageFeatures() {
           What is <em>Data on EKS?</em>
         </h2>
         <p className={styles.introText}>
-          Data on EKS is an open-source, enterprise-ready framework for running scalable data platforms on Amazon EKS. It integrates open-source data tools with AWS infrastructure and offers Terraform and ArgoCD templates, proven blueprints, performance benchmarks, and best practices. Built for scale and resilience, it helps teams deploy and operate complex data workloads at thousands of nodes on EKS with confidence. And with agentic data, AI agents work alongside your platform to investigate incidents, diagnose jobs, and keep pipelines healthy.
+          Data on EKS is an open-source project for building agentic data platforms on Amazon EKS. It packages proven open-source data tools and AWS infrastructure as Terraform and ArgoCD blueprints, backed by performance benchmarks and best practices, so teams can run complex workloads across thousands of nodes with confidence. The agentic layer adds AI agents that investigate incidents and diagnose slow jobs, plus MCP servers and semantic layers that give AI structured access to your data.
         </p>
       </div>
 

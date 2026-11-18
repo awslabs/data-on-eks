@@ -1,13 +1,13 @@
 ---
-title: AI for Data
+title: Agentic Data
 sidebar_position: 1
 sidebar_label: Overview
 ---
 
 import '@site/src/css/datastack-tiles.css';
-import AIforDataHero from '@site/src/components/AIforData/AIforDataHero';
+import AgenticDataHero from '@site/src/components/AgenticData/AgenticDataHero';
 
-<AIforDataHero />
+<AgenticDataHero />
 
 This section provides production-ready reference architectures for AI agents built for data platforms and data workloads. Each reference architecture is a working agent you can deploy and run against a real system. The architectures span various data frameworks and distributed databases, including both AWS managed services and open source. On the agent side, we leverage open source agentic frameworks like LangGraph as well as AWS managed services like Bedrock AgentCore. The goal is to give data teams a concrete starting point for building agents that solve their specific operational problems.
 

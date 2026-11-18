@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
@@ -46,7 +45,6 @@ function DeployTerminal() {
 }
 
 function HomepageHeader() {
-  const { siteConfig } = useDocusaurusContext();
   const logoUrl = useBaseUrl('/img/light-logo.png');
 
   return (
@@ -75,15 +73,13 @@ function HomepageHeader() {
           </p>
 
           <h1 className={styles.title}>
-            Data platforms on Amazon EKS,{' '}
-            <em className={styles.titleAccent}>now agentic.</em>
+            <em className={styles.titleAccent}>Agentic</em> data platforms on Amazon EKS.
           </h1>
 
-          <p className={styles.tagline}>{siteConfig.tagline}</p>
           <p className={styles.lede}>
-            The comprehensive set of tools for running data workloads on Amazon EKS,
-            plus production-ready AI agents that investigate, diagnose, and optimize them.
-            Build, deploy, and scale your data infrastructure with confidence.
+            Production-ready blueprints for Spark, Flink, Kafka and Trino, plus the agents,
+            MCP servers and semantic layers that let AI work with your data.
+            Build, deploy, and scale with confidence.
           </p>
 
           <div className={styles.ctaRow}>
@@ -157,11 +153,10 @@ function ClosingCta() {
 }
 
 export default function Home() {
-  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Open-source Terraform and ArgoCD blueprints for running scalable data platforms on Amazon EKS.">
+      title="Agentic Data Platforms on Amazon EKS"
+      description="Open-source blueprints for running agentic data platforms on Amazon EKS: Spark, Flink, Kafka, Trino and more, plus AI agents, MCP servers and semantic layers for your data.">
       <main className={styles.page}>
         <HomepageHeader />
         <WorkshopBanner />

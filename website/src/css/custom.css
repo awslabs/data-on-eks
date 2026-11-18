@@ -878,7 +878,7 @@ code:not([class*="language-"]) {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
-/* AI for Data navbar item with brain icon */
+/* Agentic Data navbar item with brain icon */
 .navbar-ai-data::before {
   content: '';
   display: inline-block;
@@ -1319,5 +1319,11 @@ article .markdown > header > h1,
   .theme-announcement-bar > div[class*='content'] {
     font-size: 0.85rem;
     gap: 0.5rem;
+  }
+
+  /* Keep the ribbon on one line so the CTA stays visible above the navbar */
+  .announcement-spark,
+  .announcement-detail {
+    display: none;
   }
 }

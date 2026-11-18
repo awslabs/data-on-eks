@@ -1,13 +1,13 @@
 import React from 'react';
 import { Brain, Database, Activity, Bot } from 'lucide-react';
 
-export default function AIforDataHero() {
+export default function AgenticDataHero() {
   return (
     <div className="hero-section">
       <div className="hero-content">
         <h1 className="hero-title">
           <Brain size={56} className="inline-block mr-3" strokeWidth={2.5} />
-          AI for Data
+          Agentic Data
         </h1>
         <p className="hero-subtitle">
           Production-ready reference architectures for AI agents that autonomously monitor,
