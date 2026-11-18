@@ -1,281 +1,163 @@
 import React from 'react';
-import Link from '@docusaurus/Link';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './TechMarquee.module.css';
 
-// Organized by Data Stack categories - matching the actual project structure
+/*
+ * Project logos, shown to identify the open source projects the data stacks use.
+ * All names and logos are trademarks of their respective owners (ASF, CNCF, etc.)
+ * and their use here does not imply endorsement.
+ *
+ * Sources:
+ *  - static/img/tech-logos/<slug>.svg: Simple Icons (https://simpleicons.org, CC0),
+ *    simple-icons@16.38.0. Monochrome paths, painted in each brand's official colour.
+ *  - static/img/tech-logos/kubeflow.svg: github.com/kubeflow/website (official logo).
+ *  - static/img/emr.svg: existing Data on EKS asset.
+ *
+ * `mask` logos are single-colour shapes painted with `brand` (and `brandDark` in dark
+ * mode when the brand colour would disappear on the dark background).
+ * `image` logos are full-colour and rendered as-is.
+ */
 const technologies = [
+  // KUBEFLOW
+  { name: 'Kubeflow', url: 'https://www.kubeflow.org/', category: 'Kubeflow', image: 'kubeflow', brand: '#4279f4' },
+  { name: 'Kubeflow Spark Operator', url: 'https://github.com/kubeflow/spark-operator', category: 'Kubeflow', image: 'kubeflow', brand: '#4279f4', badge: 'apachespark', badgeBrand: '#E25A1C' },
+  { name: 'Spark History Server MCP', url: 'https://github.com/kubeflow/mcp-apache-spark-history-server', category: 'Kubeflow', image: 'kubeflow', brand: '#4279f4', badge: 'apachespark', badgeBrand: '#E25A1C' },
+  { name: 'Kubeflow Semantic Operator', url: 'https://github.com/kubeflow/semantic-operator', category: 'Kubeflow', image: 'kubeflow', brand: '#4279f4' },
+
   // PROCESSING
-  {
-    name: "Apache Spark",
-    category: "Processing",
-    gradient: "linear-gradient(135deg, #E25A1C 0%, #FFB84D 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="3" fill="currentColor"/>
-        <path d="M12 2L15 7L12 12L9 7L12 2Z" fill="currentColor" opacity="0.7"/>
-        <path d="M12 22L15 17L12 12L9 17L12 22Z" fill="currentColor" opacity="0.7"/>
-        <path d="M2 12L7 15L12 12L7 9L2 12Z" fill="currentColor" opacity="0.7"/>
-        <path d="M22 12L17 15L12 12L17 9L22 12Z" fill="currentColor" opacity="0.7"/>
-      </svg>
-    )
-  },
-  {
-    name: "Spark Operator",
-    category: "Processing",
-    gradient: "linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="2" fill="currentColor"/>
-        <path d="M12 2L15 7L12 12L9 7L12 2Z" fill="currentColor" opacity="0.5"/>
-        <path d="M12 22L15 17L12 12L9 17L12 22Z" fill="currentColor" opacity="0.5"/>
-        <rect x="10" y="10" width="4" height="4" fill="currentColor"/>
-      </svg>
-    )
-  },
-  {
-    name: "Amazon EMR on EKS",
-    category: "Processing",
-    gradient: "linear-gradient(135deg, #FF9900 0%, #FFBB00 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M12 12L2 7M12 12L22 7M12 12V22" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    )
-  },
-  {
-    name: "Ray Data",
-    category: "Processing",
-    gradient: "linear-gradient(135deg, #2563EB 0%, #60A5FA 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="2" fill="currentColor"/>
-        <line x1="12" y1="12" x2="19" y2="5" stroke="currentColor" strokeWidth="2"/>
-        <line x1="12" y1="12" x2="19" y2="19" stroke="currentColor" strokeWidth="2"/>
-        <line x1="12" y1="12" x2="5" y2="12" stroke="currentColor" strokeWidth="2"/>
-        <circle cx="19" cy="5" r="2" fill="currentColor"/>
-        <circle cx="19" cy="19" r="2" fill="currentColor"/>
-        <circle cx="5" cy="12" r="2" fill="currentColor"/>
-      </svg>
-    )
-  },
+  { name: 'Apache Spark', url: 'https://spark.apache.org/', category: 'Processing', mask: 'apachespark', brand: '#E25A1C' },
+  { name: 'Amazon EMR on EKS', url: 'https://aws.amazon.com/emr/features/eks/', category: 'Processing', mask: 'emr', brand: '#8C4FFF', brandDark: '#B48CFF' },
+  { name: 'Ray', url: 'https://www.ray.io/', category: 'Processing', mask: 'ray', brand: '#028CF0' },
 
   // STREAMING
-  {
-    name: "Apache Kafka",
-    category: "Streaming",
-    gradient: "linear-gradient(135deg, #231F20 0%, #666666 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <circle cx="12" cy="12" r="4" fill="currentColor"/>
-        <path d="M12 4V8M12 16V20M4 12H8M16 12H20" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    )
-  },
-  {
-    name: "Apache Flink",
-    category: "Streaming",
-    gradient: "linear-gradient(135deg, #E6526F 0%, #FF8A9B 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 6L12 2L20 6V12L12 16L4 12V6Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M4 12L12 16L20 12L12 8L4 12Z" fill="currentColor" opacity="0.6"/>
-        <path d="M12 16V22" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    )
-  },
-  {
-    name: "Flink Operator",
-    category: "Streaming",
-    gradient: "linear-gradient(135deg, #F472B6 0%, #DB2777 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 8L12 4L20 8V14L12 18L4 14V8Z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-        <rect x="10" y="10" width="4" height="4" fill="currentColor"/>
-      </svg>
-    )
-  },
+  { name: 'Apache Kafka', url: 'https://kafka.apache.org/', category: 'Streaming', mask: 'apachekafka', brand: '#231F20', brandDark: '#F4F3FF' },
+  { name: 'Apache Flink', url: 'https://flink.apache.org/', category: 'Streaming', mask: 'apacheflink', brand: '#E6526F' },
+  { name: 'Flink Operator', url: 'https://github.com/apache/flink-kubernetes-operator', category: 'Streaming', mask: 'apacheflink', brand: '#E6526F' },
 
   // ORCHESTRATION
-  {
-    name: "Apache Airflow",
-    category: "Orchestration",
-    gradient: "linear-gradient(135deg, #017CEE 0%, #00C7D4 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 12H10M14 12H20M10 6H14M10 18H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <circle cx="10" cy="12" r="2" fill="currentColor"/>
-        <circle cx="14" cy="12" r="2" fill="currentColor"/>
-        <circle cx="10" cy="6" r="1.5" fill="currentColor"/>
-        <circle cx="14" cy="6" r="1.5" fill="currentColor"/>
-        <circle cx="10" cy="18" r="1.5" fill="currentColor"/>
-        <circle cx="14" cy="18" r="1.5" fill="currentColor"/>
-      </svg>
-    )
-  },
-  {
-    name: "Argo Workflows",
-    category: "Orchestration",
-    gradient: "linear-gradient(135deg, #EA580C 0%, #FDBA74 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L22 12L12 22L2 12L12 2Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M12 8L16 12L12 16L8 12L12 8Z" fill="currentColor"/>
-      </svg>
-    )
-  },
-  {
-    name: "Kubeflow",
-    category: "Orchestration",
-    gradient: "linear-gradient(135deg, #326CE5 0%, #00BCD4 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 8V16L12 22L22 16V8L12 2Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <circle cx="12" cy="12" r="3" fill="currentColor"/>
-      </svg>
-    )
-  },
+  { name: 'Apache Airflow', url: 'https://airflow.apache.org/', category: 'Orchestration', mask: 'apacheairflow', brand: '#017CEE', brandDark: '#4AA3FF' },
+  { name: 'Argo Workflows', url: 'https://argoproj.github.io/workflows/', category: 'Orchestration', mask: 'argo', brand: '#EF7B4D' },
 
   // DATABASES
+  { name: 'PostgreSQL', url: 'https://www.postgresql.org/', category: 'Databases', mask: 'postgresql', brand: '#4169E1', brandDark: '#7B9BFF' },
+  { name: 'ClickHouse', url: 'https://clickhouse.com/', category: 'Databases', mask: 'clickhouse', brand: '#E0B000', brandDark: '#FFCC01' },
   {
-    name: "PostgreSQL",
-    category: "Databases",
-    gradient: "linear-gradient(135deg, #336791 0%, #5DA8DC 100%)",
+    name: 'Apache Pinot', url: 'https://pinot.apache.org/',
+    category: 'Databases',
+    brand: '#D9232E',
+    brandDark: '#FF6B73',
+    // No downloadable official logo; keep the simple glyph.
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C8 2 4 4 4 7V17C4 20 8 22 12 22C16 22 20 20 20 17V7C20 4 16 2 12 2Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <ellipse cx="12" cy="7" rx="8" ry="3" fill="currentColor" opacity="0.6"/>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+        <path d="M12 3V12L18 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       </svg>
-    )
-  },
-  {
-    name: "ClickHouse",
-    category: "Databases",
-    gradient: "linear-gradient(135deg, #FFCC01 0%, #F0A000 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 3H21V21H3V3Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M3 9H21M3 15H21M9 3V21M15 3V21" stroke="currentColor" strokeWidth="1.5"/>
-      </svg>
-    )
-  },
-  {
-    name: "Apache Pinot",
-    category: "Databases",
-    gradient: "linear-gradient(135deg, #D9232E 0%, #F57C00 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M12 3V12L18 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    )
+    ),
   },
 
   // QUERY ENGINES
-  {
-    name: "Trino",
-    category: "Query Engines",
-    gradient: "linear-gradient(135deg, #DD00A1 0%, #F06292 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M4 10H20M10 4V20" stroke="currentColor" strokeWidth="2"/>
-        <circle cx="7" cy="7" r="1.5" fill="currentColor"/>
-        <circle cx="13" cy="7" r="1.5" fill="currentColor"/>
-        <circle cx="7" cy="13" r="1.5" fill="currentColor"/>
-        <circle cx="13" cy="13" r="1.5" fill="currentColor"/>
-      </svg>
-    )
-  },
-  {
-    name: "Presto",
-    category: "Query Engines",
-    gradient: "linear-gradient(135deg, #5890FF 0%, #8AB4F8 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2 12L12 2L22 12L12 22L2 12Z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M12 8L16 12L12 16L8 12L12 8Z" fill="currentColor"/>
-      </svg>
-    )
-  },
+  { name: 'Trino', url: 'https://trino.io/', category: 'Query Engines', mask: 'trino', brand: '#DD00A1', brandDark: '#FF4DC4' },
+  { name: 'Presto', url: 'https://prestodb.io/', category: 'Query Engines', mask: 'presto', brand: '#5890FF' },
 
   // BI & VISUALIZATION
-  {
-    name: "Apache Superset",
-    category: "BI & Visualization",
-    gradient: "linear-gradient(135deg, #20A7C9 0%, #63D9EA 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="14" width="4" height="7" fill="currentColor" opacity="0.6"/>
-        <rect x="10" y="8" width="4" height="13" fill="currentColor" opacity="0.8"/>
-        <rect x="17" y="3" width="4" height="18" fill="currentColor"/>
-      </svg>
-    )
-  },
-  {
-    name: "Grafana",
-    category: "BI & Visualization",
-    gradient: "linear-gradient(135deg, #F46800 0%, #FFA500 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 12L7 8L11 14L15 6L19 10L21 8" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="7" cy="8" r="2" fill="currentColor"/>
-        <circle cx="11" cy="14" r="2" fill="currentColor"/>
-        <circle cx="15" cy="6" r="2" fill="currentColor"/>
-      </svg>
-    )
-  },
+  { name: 'Apache Superset', url: 'https://superset.apache.org/', category: 'BI & Visualization', mask: 'apachesuperset', brand: '#20A6C9' },
+  { name: 'Grafana', url: 'https://grafana.com/', category: 'BI & Visualization', mask: 'grafana', brand: '#F46800' },
 
   // NOTEBOOKS & AI
-  {
-    name: "JupyterHub",
-    category: "Notebooks & AI",
-    gradient: "linear-gradient(135deg, #F37726 0%, #FFA500 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="7" r="4" fill="currentColor" opacity="0.6"/>
-        <circle cx="7" cy="17" r="3" fill="currentColor" opacity="0.8"/>
-        <circle cx="17" cy="17" r="3" fill="currentColor"/>
-      </svg>
-    )
-  },
-  {
-    name: "Milvus",
-    category: "Notebooks & AI",
-    gradient: "linear-gradient(135deg, #00BFFF 0%, #1E90FF 100%)",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.6"/>
-        <path d="M12 4V8M12 16V20M4 12H8M16 12H20" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    )
-  }
+  { name: 'JupyterHub', url: 'https://jupyter.org/hub', category: 'Notebooks & AI', mask: 'jupyter', brand: '#F37626' },
+  { name: 'Milvus', url: 'https://milvus.io/', category: 'Notebooks & AI', mask: 'milvus', brand: '#00A1EA' },
 ];
 
+function Logo({ tech }) {
+  const logosBase = useBaseUrl('/img/tech-logos/');
+  const emrUrl = useBaseUrl('/img/emr.svg');
+  const maskUrl = (slug) => (slug === 'emr' ? emrUrl : `${logosBase}${slug}.svg`);
+
+  let mark;
+  if (tech.image) {
+    mark = <img className={styles.logoImg} src={`${logosBase}${tech.image}.svg`} alt="" loading="lazy" />;
+  } else if (tech.mask) {
+    mark = <span className={styles.logoMask} style={{ '--src': `url(${maskUrl(tech.mask)})` }} />;
+  } else {
+    mark = <span className={styles.logoGlyph}>{tech.icon}</span>;
+  }
+
+  return (
+    <span className={styles.logoTile} aria-hidden="true">
+      {mark}
+      {tech.badge && (
+        <span
+          className={styles.badge}
+          style={{ '--src': `url(${maskUrl(tech.badge)})`, '--badge-brand': tech.badgeBrand }}
+        />
+      )}
+    </span>
+  );
+}
+
+// Each chip links to the upstream project. Chips in the duplicate (aria-hidden)
+// copy are taken out of the tab order so keyboard users meet each link once.
+function Chip({ tech, hidden }) {
+  return (
+    <li
+      className={styles.chipItem}
+      style={{ '--brand': tech.brand, '--brand-dark': tech.brandDark || tech.brand }}
+    >
+      <a
+        className={styles.chip}
+        href={tech.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        tabIndex={hidden ? -1 : undefined}
+        title={`${tech.name} (opens in a new tab)`}
+      >
+        <Logo tech={tech} />
+        <span className={styles.techInfo}>
+          <span className={styles.techName}>{tech.name}</span>
+          <span className={styles.techCategory}>{tech.category}</span>
+        </span>
+        <svg className={styles.external} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M5 11 11 5M6.5 5H11v4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </a>
+    </li>
+  );
+}
+
+// Each row renders its list twice; the track slides by exactly one copy for a
+// seamless loop. The second copy is hidden from assistive tech.
+function MarqueeRow({ items, reverse }) {
+  return (
+    <div className={`${styles.row} ${reverse ? styles.reverse : ''}`}>
+      <ul className={styles.track}>
+        {items.map((tech) => (
+          <Chip key={tech.name} tech={tech} />
+        ))}
+      </ul>
+      <ul className={styles.track} aria-hidden="true">
+        {items.map((tech) => (
+          <Chip key={`dup-${tech.name}`} tech={tech} hidden />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function TechMarquee() {
+  const third = Math.ceil(technologies.length / 3);
   return (
     <div className={styles.techShowcase}>
       <div className={styles.showcaseHeader}>
-        <h2 className={styles.showcaseTitle}>Powered by Open Source & AWS</h2>
+        <h3 className={styles.showcaseTitle}>Powered by Open Source &amp; AWS</h3>
         <p className={styles.showcaseSubtitle}>
           Production-ready data stacks on Amazon EKS
         </p>
       </div>
 
-      <div className={styles.techGrid}>
-        {technologies.map((tech, index) => (
-          <div key={index} className={styles.techCard}>
-            <div className={styles.iconWrapper} style={{ background: tech.gradient }}>
-              {tech.icon}
-            </div>
-            <div className={styles.techInfo}>
-              <h3 className={styles.techName}>{tech.name}</h3>
-              <span className={styles.techCategory}>{tech.category}</span>
-            </div>
-          </div>
-        ))}
+      <div className={styles.marquee}>
+        <MarqueeRow items={technologies.slice(0, third)} />
+        <MarqueeRow items={technologies.slice(third, third * 2)} reverse />
+        <MarqueeRow items={technologies.slice(third * 2)} />
       </div>
     </div>
   );

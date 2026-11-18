@@ -4,8 +4,19 @@
  * work well for content-centric websites.
  */
 
+/* ==========================================================================
+   AURORA INK palette
+   Electric violet primary, lime + coral accents, warm paper (light) and
+   deep ink (dark) surfaces. --doeks-* tokens drive the homepage.
+   ========================================================================== */
 :root {
-  --ifm-color-primary: #25c2a0; /* #146ee6; */
+  --ifm-color-primary: #5b3df5;
+  --ifm-color-primary-dark: #4a28f3;
+  --ifm-color-primary-darker: #4220ee;
+  --ifm-color-primary-darkest: #3417c4;
+  --ifm-color-primary-light: #6c52f6;
+  --ifm-color-primary-lighter: #7b66f8;
+  --ifm-color-primary-lightest: #9b8cfa;
   --ifm-menu-color: #525151;
   --ifm-font-color-base: rgba(30, 32, 34, 1);
   --ifm-navbar-background-color: white;
@@ -16,6 +27,28 @@
   --ifm-toc-border-color: #dadde1b8;
   --ifm-font-family-base: 'Amazon Ember', 'Helvetica Neue', Arial, sans-serif;
 
+  /* Aurora Ink design tokens */
+  --doeks-bg: #f7f6f2;
+  --doeks-surface: #ffffff;
+  --doeks-surface-2: #efede7;
+  --doeks-ink: #12111a;
+  --doeks-text: #2a2836;
+  --doeks-muted: #5c5a6b;
+  --doeks-line: rgba(18, 17, 26, 0.1);
+  --doeks-glass: rgba(255, 255, 255, 0.62);
+  --doeks-glass-line: rgba(18, 17, 26, 0.08);
+  --doeks-violet: #5b3df5;
+  --doeks-violet-soft: #ebe7ff;
+  --doeks-lime: #c6f23e;
+  --doeks-lime-ink: #3d5200;
+  --doeks-coral: #c2410c;
+  --doeks-cyan: #0e7490;
+  --doeks-blob-1: #8b7bff;
+  --doeks-blob-2: #5eead4;
+  --doeks-blob-3: #d9f99d;
+  --doeks-blob-4: #fdba74;
+  --doeks-shadow: 0 1px 2px rgba(18, 17, 26, 0.04), 0 12px 32px -12px rgba(18, 17, 26, 0.14);
+
   /* Custom navbar sizing variables - easy to adjust */
   --navbar-item-font-size: 18px;
   --navbar-item-padding-vertical: 12px;
@@ -25,16 +58,58 @@
 }
 
 html[data-theme="dark"] {
-  --ifm-color-primary: #25c2a0;
+  --ifm-color-primary: #a898ff;
+  --ifm-color-primary-dark: #8f7bff;
+  --ifm-color-primary-darker: #826dff;
+  --ifm-color-primary-darkest: #5e43ff;
+  --ifm-color-primary-light: #c1b5ff;
+  --ifm-color-primary-lighter: #cec4ff;
+  --ifm-color-primary-lightest: #f0edff;
   --ifm-menu-color: #e6e6e6;
   --ifm-font-color-base: #e6e6e6;
-  --ifm-navbar-background-color: #141520;
+  --ifm-navbar-background-color: #0b0b14;
   --ifm-navbar-link-color: #e5e7eb;
   --ifm-navbar-height: 5rem;
   --ifm-code-name-highlight: #A972B1;
-  --ifm-toc-border-color: #333;
-  --ifm-background-color: #141520;
+  --ifm-toc-border-color: #2a2a3a;
+  --ifm-background-color: #0b0b14;
   --ifm-font-family-base: 'Amazon Ember', 'Helvetica Neue', Arial, sans-serif;
+
+  --doeks-bg: #0b0b14;
+  --doeks-surface: #13131f;
+  --doeks-surface-2: #1a1a29;
+  --doeks-ink: #f4f3ff;
+  --doeks-text: #d9d8e8;
+  --doeks-muted: #a3a1b8;
+  --doeks-line: rgba(255, 255, 255, 0.09);
+  --doeks-glass: rgba(22, 22, 36, 0.55);
+  --doeks-glass-line: rgba(255, 255, 255, 0.1);
+  --doeks-violet: #a898ff;
+  --doeks-violet-soft: rgba(168, 152, 255, 0.14);
+  --doeks-lime: #c6f23e;
+  --doeks-lime-ink: #c6f23e;
+  --doeks-coral: #ff9a76;
+  --doeks-cyan: #67e8f9;
+  --doeks-blob-1: #5b3df5;
+  --doeks-blob-2: #0e7490;
+  --doeks-blob-3: #4d7c0f;
+  --doeks-blob-4: #9a3412;
+  --doeks-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 48px -16px rgba(0, 0, 0, 0.6);
+}
+
+/* Docs buttons filled with the primary colour: the dark-mode primary is a light
+   violet, so use ink text there to keep WCAG AA contrast. */
+[data-theme='dark'] .datastack-link,
+[data-theme='dark'] .showcase-link,
+[data-theme='dark'] .datastack-link:hover,
+[data-theme='dark'] .showcase-link:hover {
+  color: #12111a;
+}
+
+/* Footer: same deep ink as the homepage in both modes */
+.footer--dark {
+  --ifm-footer-background-color: #0b0b14;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hero__subtitle::after {
@@ -550,9 +625,9 @@ code:not([class*="language-"]) {
 
 [data-theme='dark'] .navbar {
   background: linear-gradient(135deg,
-    rgba(15, 23, 42, 0.95) 0%,
-    rgba(30, 41, 59, 0.98) 100%) !important;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+    rgba(11, 11, 20, 0.86) 0%,
+    rgba(19, 19, 31, 0.9) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.2),
     0 4px 16px rgba(0, 0, 0, 0.1);
@@ -574,14 +649,14 @@ code:not([class*="language-"]) {
 
 .navbar__link:hover {
   background: linear-gradient(135deg,
-    rgba(37, 194, 160, 0.1),
+    rgba(91, 61, 245, 0.1),
     rgba(0, 123, 191, 0.1));
   transform: translateY(-1px);
 }
 
 [data-theme='dark'] .navbar__link:hover {
   background: linear-gradient(135deg,
-    rgba(37, 194, 160, 0.15),
+    rgba(91, 61, 245, 0.15),
     rgba(0, 123, 191, 0.15));
 }
 
@@ -612,30 +687,30 @@ code:not([class*="language-"]) {
 
 .theme-doc-sidebar-item-link:hover {
   background: linear-gradient(135deg,
-    rgba(37, 194, 160, 0.08),
+    rgba(91, 61, 245, 0.08),
     rgba(0, 123, 191, 0.06));
-  border-left-color: rgba(37, 194, 160, 0.4);
+  border-left-color: rgba(91, 61, 245, 0.4);
   transform: translateX(2px);
 }
 
 [data-theme='dark'] .theme-doc-sidebar-item-link:hover {
   background: linear-gradient(135deg,
-    rgba(37, 194, 160, 0.12),
+    rgba(91, 61, 245, 0.12),
     rgba(0, 123, 191, 0.08));
 }
 
 /* Active sidebar item */
 .theme-doc-sidebar-item-link--active {
   background: linear-gradient(135deg,
-    rgba(37, 194, 160, 0.15),
+    rgba(91, 61, 245, 0.15),
     rgba(0, 123, 191, 0.1)) !important;
-  border-left-color: #25c2a0 !important;
+  border-left-color: var(--ifm-color-primary) !important;
   font-weight: 600;
 }
 
 [data-theme='dark'] .theme-doc-sidebar-item-link--active {
   background: linear-gradient(135deg,
-    rgba(37, 194, 160, 0.2),
+    rgba(91, 61, 245, 0.2),
     rgba(0, 123, 191, 0.15)) !important;
 }
 
@@ -672,7 +747,7 @@ code:not([class*="language-"]) {
 }
 
 .breadcrumbs__item--active .breadcrumbs__link {
-  background: linear-gradient(135deg, #25c2a0, #0ea5e9);
+  background: linear-gradient(135deg, #5b3df5, #0e7490);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 600;
@@ -703,13 +778,13 @@ code:not([class*="language-"]) {
 }
 
 .table-of-contents__link:hover {
-  background: rgba(37, 194, 160, 0.1);
-  border-left-color: #25c2a0;
+  background: rgba(91, 61, 245, 0.1);
+  border-left-color: var(--ifm-color-primary);
 }
 
 .table-of-contents__link--active {
-  background: rgba(37, 194, 160, 0.15);
-  border-left-color: #25c2a0;
+  background: rgba(91, 61, 245, 0.15);
+  border-left-color: var(--ifm-color-primary);
   font-weight: 600;
 }
 
@@ -803,7 +878,7 @@ code:not([class*="language-"]) {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
-/* AI for Data navbar item with brain icon */
+/* Agentic Data navbar item with brain icon */
 .navbar-ai-data::before {
   content: '';
   display: inline-block;
@@ -1074,11 +1149,11 @@ code:not([class*="language-"]) {
   /* Animated AWS-themed gradient (overrides the theme's white default) */
   background: linear-gradient(
     100deg,
-    #232f3e 0%,
-    #2b4a6f 25%,
-    #1f6feb 50%,
-    #2b4a6f 75%,
-    #232f3e 100%
+    #12111a 0%,
+    #2e1f8f 25%,
+    #4a2fe0 50%,
+    #2e1f8f 75%,
+    #12111a 100%
   ) !important;
   background-size: 300% 100% !important;
   animation: announcement-gradient 12s ease infinite;
@@ -1129,7 +1204,7 @@ code:not([class*="language-"]) {
   padding: 0.3rem 0.95rem;
   border-radius: 999px;
   background: #ffffff;
-  color: #1f6feb !important;
+  color: #3417c4 !important;
   font-weight: 700;
   text-decoration: none !important;
   white-space: nowrap;
@@ -1139,7 +1214,7 @@ code:not([class*="language-"]) {
 
 .theme-announcement-bar a.announcement-cta:hover {
   transform: translateY(-1px);
-  background: #f0f6ff;
+  background: #f0edff;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
 }
 
@@ -1157,18 +1232,18 @@ code:not([class*="language-"]) {
 html[data-theme='dark'] .theme-announcement-bar {
   background: linear-gradient(
     100deg,
-    #0f1b2d 0%,
-    #1b3556 25%,
-    #1657c4 50%,
-    #1b3556 75%,
-    #0f1b2d 100%
+    #0b0b14 0%,
+    #24186e 25%,
+    #3d26c4 50%,
+    #24186e 75%,
+    #0b0b14 100%
   ) !important;
   background-size: 300% 100% !important;
 }
 
 html[data-theme='dark'] .theme-announcement-bar a.announcement-cta {
-  background: #e8f0ff;
-  color: #1657c4 !important;
+  background: #c6f23e;
+  color: #12111a !important;
 }
 
 /* Respect users who prefer reduced motion */
@@ -1244,5 +1319,11 @@ article .markdown > header > h1,
   .theme-announcement-bar > div[class*='content'] {
     font-size: 0.85rem;
     gap: 0.5rem;
+  }
+
+  /* Keep the ribbon on one line so the CTA stays visible above the navbar */
+  .announcement-spark,
+  .announcement-detail {
+    display: none;
   }
 }

@@ -1,10 +1,15 @@
 /* Import Inter font from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Homepage display faces: Bricolage Grotesque (headlines), Instrument Serif (italic accents), JetBrains Mono (labels) */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Apply Inter font to the entire document */
 :root {
   --ifm-font-family-base: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
   --ifm-heading-font-family: 'Inter', var(--ifm-font-family-base);
+  --doeks-font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  --doeks-font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --doeks-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* Adjust font weights */

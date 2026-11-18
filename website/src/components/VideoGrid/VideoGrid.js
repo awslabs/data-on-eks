@@ -6,6 +6,13 @@ import 'slick-carousel/slick/slick-theme.css';
 
 const videos = [
   {
+    // Opens at 4:33 (t=273s).
+    title: "Kubeflow Graduation: Powering the Next Era of Cloud Native AI With an Open Community",
+    description: "KubeCon + CloudNativeCon North America 2026 keynote on Kubeflow's CNCF graduation. Starts at 4:33.",
+    imageSrc: 'https://i.ytimg.com/vi/J_LdxrqP9yA/maxresdefault.jpg',
+    linkTo: "https://www.youtube.com/watch?v=J_LdxrqP9yA&t=273s",
+  },
+  {
     title: "AWS re:Invent 2023 - Data processing at massive scale on Amazon EKS",
     description: "Data processing at massive scale with Spark on Amazon EKS by Pinterest.",
     imageSrc: 'news/con309.png',
@@ -101,11 +108,11 @@ const VideoGrid = () => {
           <div key={index} className={styles.videoCard}>
             <a href={video.linkTo} target="_blank" rel="noopener noreferrer" className={styles.videoThumbnail}>
               <img src={video.imageSrc} alt={video.title} />
-              <div className={styles.playButton}>▶</div>
+              <div className={styles.playButton} aria-hidden="true">▶</div>
             </a>
             <div className={styles.videoInfo}>
               <h3>{video.title}</h3>
-              <small>{video.date}</small>
+              {video.date && <small>{video.date}</small>}
               <p>{video.description}</p>
             </div>
           </div>
@@ -118,24 +125,28 @@ const VideoGrid = () => {
 const SampleNextArrow = (props) => {
   const { onClick } = props;
   return (
-    <div
+    <button
+      type="button"
+      aria-label="Next video"
       className={`${styles.arrow} ${styles.nextArrow}`}
       onClick={onClick}
     >
       &#10095;
-    </div>
+    </button>
   );
 };
 
 const SamplePrevArrow = (props) => {
   const { onClick } = props;
   return (
-    <div
+    <button
+      type="button"
+      aria-label="Previous video"
       className={`${styles.arrow} ${styles.prevArrow}`}
       onClick={onClick}
     >
       &#10094;
-    </div>
+    </button>
   );
 };
 
