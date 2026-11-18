@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "blinker==1.9.0",
-    "brotli==1.2.0",
+    "brotli==1.2.1",
     "cachetools==5.5.1",
     "certifi==2026.10.19",
     "charset-normalizer==3.4.1",
@@ -39,7 +39,7 @@ dependencies = [
     "six==1.17.0",
     "tomli==2.2.1",
     "typing-extensions==4.12.2",
-    "urllib3==2.7.0",
+    "urllib3==2.8.0",
     "websocket-client==1.8.0",
     "werkzeug==3.1.9",
     "zope-event==5.0",
