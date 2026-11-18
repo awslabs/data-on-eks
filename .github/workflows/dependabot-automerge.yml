@@ -1,21 +1,96 @@
-name: Dependabot auto-merge
+# Merge Dependabot PRs after a maintainer comments "/approve" on the PR.
+#
+# Flow:
+#   1. A maintainer (write/maintain/admin permission) comments "/approve" on a Dependabot PR.
+#   2. This workflow approves the PR as github-actions[bot] and enables auto-merge (squash).
+#   3. GitHub merges the PR as soon as required status checks pass.
+#
+# One-time repo settings (admin):
+#   - Settings > General > Pull Requests > "Allow auto-merge"                      = ON
+#   - Settings > Actions > General > "Allow GitHub Actions to create and approve
+#     pull requests"                                                             = ON
+#   - Branch protection / ruleset on main: require status checks you care about
+#     (e.g. "Test deployment", "Codespell"), otherwise auto-merge merges at once.
+#
+# Security: runs on issue_comment, so the workflow definition always comes from
+# main and never checks out or executes PR code.
+
+name: Dependabot approve and merge
 
 on:
-  pull_request_target:
-    branches: [ main ]
-    types: [ opened, synchronize, reopened ]
+  issue_comment:
+    types: [created]
 
-permissions:
-  pull-requests: write
-  contents: write
+permissions: {}
+
+concurrency:
+  group: dependabot-approve-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
-  enableAutoMerge:
+  approve-and-merge:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    permissions:
+      contents: write       # required by auto-merge
+      pull-requests: write  # approve + enable auto-merge
+    # Cheap pre-filter only; the real authorization happens in the steps below.
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      github.event.issue.user.login == 'dependabot[bot]' &&
+      github.event.comment.body == '/approve'
     steps:
-      - name: Enable auto-merge for Dependabot PRs
-        run: gh pr merge --auto --merge "$PR_URL"
+      - name: Verify commenter is a repo admin or maintainer
         env:
-          PR_URL: ${{github.event.pull_request.html_url}}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          perm=$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${COMMENTER}/permission" --jq .permission)
+          echo "${COMMENTER} has '${perm}' permission"
+          case "$perm" in
+            admin|maintain) ;;
+            *) echo "::error::${COMMENTER} is not allowed to /approve"; exit 1 ;;
+          esac
+
+      - name: Verify PR contains only Dependabot commits and pin head SHA
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          pr=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")
+          head_repo=$(jq -r .head.repo.full_name <<<"$pr")
+          head_ref=$(jq -r .head.ref <<<"$pr")
+          base_ref=$(jq -r .base.ref <<<"$pr")
+          head_sha=$(jq -r .head.sha <<<"$pr")
+          if [ "$head_repo" != "$GITHUB_REPOSITORY" ] || [[ "$head_ref" != dependabot/* ]] || [ "$base_ref" != "main" ]; then
+            echo "::error::Unexpected PR shape: ${head_repo}:${head_ref} -> ${base_ref}"; exit 1
+          fi
+          # Refuse if anyone other than Dependabot pushed commits to the branch.
+          others=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" --paginate \
+            --jq '.[] | select(.author.login != "dependabot[bot]" or .committer.login != "web-flow" and .committer.login != "dependabot[bot]") | .sha')
+          if [ -n "$others" ]; then
+            echo "::error::PR has non-Dependabot commits: ${others}"; exit 1
+          fi
+          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Acknowledge the command
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions" -f content='+1'
+
+      - name: Approve and enable auto-merge for the verified commit only
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          # Approve exactly the commit that was verified above.
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" \
+            -f commit_id="$HEAD_SHA" -f event=APPROVE \
+            -f body="Approved via /approve by ${COMMENTER} at ${HEAD_SHA}"
+          # Auto-merge only if the head is still that commit.
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$HEAD_SHA"
