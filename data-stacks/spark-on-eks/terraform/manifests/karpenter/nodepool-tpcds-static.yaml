@@ -5,7 +5,7 @@ metadata:
   namespace: karpenter
 spec:
   # Alpha (feature gate staticCapacity). Fixed node count, independent of pending pods.
-  replicas: 0
+  replicas: 100
   template:
     metadata:
       labels:
@@ -14,7 +14,7 @@ spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: ebs-gp3-1000gi-6000iops-1000tp
+        name: ebs-gp3-200gi-6000iops-1000tp
       taints:
         - key: dedicated
           value: tpcds-static

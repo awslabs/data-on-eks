@@ -410,6 +410,60 @@ spec:
     --//--
 
 ---
+# TPC-DS static pool. 200Gi, not 1000Gi: the gp3 quota is per region in TiB, and one app needs
+# an estimated 25 to 50 GiB. gp3 keeps 6000 IOPS / 1000 MiB/s at this size.
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: ebs-gp3-200gi-6000iops-1000tp
+  namespace: karpenter
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: "${AMI_ALIAS}"
+
+  role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
+
+  subnetSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-private-secondary*"
+
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${CLUSTER_NAME}-node"
+
+  instanceStorePolicy: RAID0
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        iops: 6000
+        throughput: 1000
+        encrypted: true
+        deleteOnTermination: true
+
+  userData: |
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: application/node.eks.aws
+
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          featureGates:
+            MemoryQoS: true
+          # Same as ebs-gp3-1000gi-6000iops-1000tp.
+          memoryThrottlingFactor: 0.7
+
+    --//--
+
+---
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:

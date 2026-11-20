@@ -50,8 +50,9 @@ spec:
     - "30"
     # arg[5] Iterations
     - "1"
-    # arg[6] optimizeQueries
-    - "true"
+    # arg[6] optimizeQueries. "true" runs ANALYZE on all tables in each app (a full data scan)
+    # before the queries. The statistics are not kept between apps.
+    - "false"
     # arg[7] Query filter
     - "q4-v4.0,q24a-v4.0,q24b-v4.0,q67-v4.0"
     # arg[8] Set log level to WARN

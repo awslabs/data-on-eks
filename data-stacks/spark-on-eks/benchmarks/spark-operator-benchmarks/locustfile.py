@@ -69,6 +69,9 @@ class Configuration:
             if not re.match(r'^[a-z0-9][-a-z0-9]*[a-z0-9]$', ns):
                 raise ValueError(f"Invalid namespace format: {ns}")
 
+        if not self.results_bucket:
+            raise ValueError("results_bucket must not be empty")
+
         if not 1 <= self.prefix_count <= 99:
             raise ValueError("prefix_count must be between 1 and 99")
 

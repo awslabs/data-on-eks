@@ -24,8 +24,11 @@ locals {
   # CoreDNS replicas for a 10,000-node cluster. Each replica runs on a different core node.
   coredns_replicas = 8
 
+  # Pinned: with no version, the EKS module installs the newest build on each apply.
+  # Change these between tests. Find builds: aws eks describe-addon-versions --addon-name <name>
   eks_core_addons = {
     coredns = {
+      addon_version = "v1.14.7-eksbuild.38"
       configuration_values = jsonencode({
         replicaCount = local.coredns_replicas
         resources = {
@@ -57,11 +60,15 @@ locals {
         }
       })
     }
-    kube-proxy = {}
+    kube-proxy = {
+      addon_version = "v1.37.0-eksbuild.40"
+    }
     eks-pod-identity-agent = {
+      addon_version  = "v1.5.0-eksbuild.3"
       before_compute = true
     }
     vpc-cni = {
+      addon_version               = "v1.23.3-eksbuild.1"
       before_compute              = true
       preserve                    = true
       resolve_conflicts_on_create = "OVERWRITE"
@@ -90,6 +97,9 @@ locals {
       # Core add-ons run in the primary CIDR subnets, not in the secondary CIDR subnets for data workloads.
       subnet_ids = local.core_subnet_ids
       ami_type   = "AL2023_x86_64_STANDARD"
+      # Pinned: the default reads the newest AMI from SSM on each apply and replaces the core nodes.
+      use_latest_ami_release_version = false
+      ami_release_version            = "1.37.1-20261112"
       # Sized for a 10,000-node data plane: Karpenter, CoreDNS, Prometheus, and other add-ons.
       # CoreDNS uses required pod anti-affinity (one replica per node), so
       # min_size must be >= the CoreDNS replicaCount (local.coredns_replicas).

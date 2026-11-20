@@ -38,6 +38,10 @@ service:
         Name    kubernetes
         Format  regex
         Regex   ^(?<namespace_name>[^_]+)\.(?<container_name>.+)\.(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)\.(?<docker_id>[a-z0-9]{64})-$
+    [PARSER]
+        Name    kubernetes-spark
+        Format  regex
+        Regex   ^(?<shard>[a-z0-9])\.(?<namespace_name>[^_]+)\.(?<container_name>.+)\.(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)\.(?<docker_id>[a-z0-9]{64})-$
 
 input:
   name: "tail"
@@ -56,14 +60,16 @@ input:
 additionalInputs: |
   [INPUT]
       Name                tail
-      Tag                 spark.<namespace_name>.<container_name>.<spark_app_id>-<driver_or_executor>.<docker_id>-
+      # <shard> (the last character of the app name) starts the S3 key: one shared prefix for all
+      # Spark pods would exceed the S3 PUT rate per prefix at 10,000 nodes. One app gets one shard.
+      Tag                 spark.<shard>.<namespace_name>.<container_name>.<spark_app_id>-<driver_or_executor>.<docker_id>-
       Path                /var/log/containers/*spark-team-*
       DB                  /var/log/flb_spark.db
       multiline.parser    docker, cri
       Mem_Buf_Limit       5MB
       Skip_Long_Lines     On
       Refresh_Interval    10
-      Tag_Regex           (?<spark_app_id>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)-(?<driver_or_executor>(?:driver|exec-[\d]+))_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log
+      Tag_Regex           (?<spark_app_id>[a-z0-9-]*(?<shard>[a-z0-9]))-(?<driver_or_executor>(?:driver|exec-[\d]+))_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log
 
 filter:
   name: "kubernetes"
@@ -99,7 +105,7 @@ additionalFilters: |
       Labels              On
       Buffer_Size         0
       Kube_Tag_Prefix     spark.
-      Regex_Parser        kubernetes
+      Regex_Parser        kubernetes-spark
       Use_Kubelet         true
       Kubelet_Host        ${enable_ipv6 ? "localhost6" : "localhost"}
       Kubelet_Port        10250
@@ -143,13 +149,14 @@ additionalOutputs: |
       endpoint                        https://s3.dualstack.${region}.amazonaws.com
 %{ endif ~}
       total_file_size                 5M
-      s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[1]/$TAG[3]/%H%M%S_$UUID.log
+      s3_key_format                   /${cluster_name}/spark-application-logs/$TAG[1]/$TAG[2]/$TAG[4]/%H%M%S_$UUID.log
       s3_key_format_tag_delimiters    ..
       store_dir                       /home/ec2-user/buffer
       # One PUT for each object (not a 3-request multipart upload). About one object per pod.
       use_put_object                  On
-      # Upload buffered data sooner, so less data is lost when Karpenter removes a node.
-      upload_timeout                  1m
+      # Longer than one app (about 4 min), so most pods need one PUT. Static nodes are not removed
+      # during a test, and the buffer in store_dir is on disk.
+      upload_timeout                  5m
       log_key                         log
 
 env:
