@@ -37,11 +37,12 @@ Every layer is a Terraform + ArgoCD blueprint you can deploy on its own or combi
 |---|---|
 | **Agentic** | Kubeflow Semantic Operator, Spark History Server MCP, StarRocks MCP agents |
 | **Ingest & stream** | Apache Kafka (Strimzi), Apache Flink, Spark Structured Streaming |
-| **Lakehouse** | Amazon S3, S3 Tables, S3 Vectors and Apache Iceberg |
+| **Lakehouse** | Amazon S3, S3 Tables, S3 Vectors and Apache Iceberg, cataloged with AWS Glue Data Catalog, Apache Polaris and DataHub |
 | **Batch** | Kubeflow Spark Operator, EMR on EKS, accelerated with DataFusion Comet, Gluten + Velox and Spark RAPIDS on GPUs |
-| **Query & serve** | Trino, StarRocks, ClickHouse, Apache Pinot, OpenSearch, Apache Superset |
+| **Query & serve** | Trino, StarRocks, ClickHouse, Apache Pinot, OpenSearch, Apache Superset, Valkey |
 | **AI inference** | Ray Data and vLLM on GPUs |
-| **Orchestration & scheduling** | Apache Airflow, Argo Workflows, Apache YuniKorn, Volcano, Kueue |
+| **Develop & orchestrate** | JupyterHub, Apache Airflow, Argo Workflows |
+| **Batch scheduling** | Apache YuniKorn, Volcano, Kueue |
 | **Foundation** | Amazon EKS, Amazon EC2 (Graviton, Spot, GPUs), Karpenter, ArgoCD, Terraform, Prometheus and Grafana |
 
 ## Quick start

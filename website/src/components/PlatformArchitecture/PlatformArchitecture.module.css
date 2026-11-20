@@ -463,7 +463,8 @@
 
 .lakehouse {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 1rem 1.5rem;
   margin-top: 1rem;
   padding: 1rem 1.1rem;
@@ -480,12 +481,14 @@
 }
 
 .lakeHead {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  flex-shrink: 0;
-  min-width: 11rem;
+  gap: 0.25rem 0.75rem;
+}
+
+.lakeHead .stageCaption {
+  margin: 0;
 }
 
 .lakeTag {
@@ -505,8 +508,30 @@
   color: #f4f3ff;
 }
 
-.lakeNodes {
+.lakeRows {
   flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.lakeRow {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lakeRowLabel {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a6e06a;
+}
+
+/* Fixed 4-track grid so the catalog row lines up under the storage row */
+.lakeNodes {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
@@ -531,6 +556,11 @@
   border-radius: 16px;
   background: var(--panel);
   border: 1px solid var(--panel-line);
+}
+
+.band {
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .foundation {
@@ -582,6 +612,11 @@
 
   .lakeNodes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lakeRow {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
   }
 }
 

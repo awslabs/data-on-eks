@@ -11,8 +11,9 @@ import styles from './PlatformArchitecture.module.css';
  *                         \              \               /
  *   Compute         Ingest -> Stream   Batch   Query & serve   AI inference
  *                              |  write  | r/w    ^ read         | r/w
- *   Lakehouse       [ Amazon S3 · S3 Tables · S3 Vectors · Apache Iceberg ]
- *   Control         Orchestration | Batch scheduling
+ *   Lakehouse       storage [ Amazon S3 · S3 Tables · S3 Vectors · Apache Iceberg ]
+ *                   catalog [ AWS Glue Data Catalog · Apache Polaris · DataHub ]
+ *   Control         Develop & orchestrate | Batch scheduling
  *   Foundation      EKS, EC2, Karpenter, ArgoCD, Terraform, observability
  *
  * Boxes are HTML/CSS. The wires are an SVG overlay measured from the boxes'
@@ -102,7 +103,7 @@ const stages = [
   {
     id: 'stage-serve',
     name: 'Query & serve',
-    caption: 'SQL, OLAP, search and BI',
+    caption: 'SQL, OLAP, search, BI and cache',
     nodes: [
       { name: 'Trino', icon: tech('trino'), color: '#ff4dc4', href: 'https://trino.io/' },
       { name: 'StarRocks', icon: mono('SR'), color: '#7aa7ff', href: 'https://www.starrocks.io/' },
@@ -110,6 +111,7 @@ const stages = [
       { name: 'Apache Pinot', icon: mono('Pi'), color: '#ff6b73', href: 'https://pinot.apache.org/' },
       { name: 'OpenSearch', icon: tech('opensearch'), color: '#4fc3f7', href: 'https://opensearch.org/' },
       { name: 'Apache Superset', sub: 'BI dashboards', icon: tech('apachesuperset'), color: '#4fd1ef', href: 'https://superset.apache.org/' },
+      { name: 'Valkey', sub: 'In-memory cache', icon: mono('Vk'), color: '#ff6f61', href: 'https://valkey.io/' },
     ],
     hint: '↑ Reads from the lakehouse',
   },
@@ -126,17 +128,29 @@ const stages = [
   },
 ];
 
-const lakehouse = [
+const lakeStorage = [
   { name: 'Amazon S3', sub: 'Object storage', icon: aws('s3'), color: '#8fd14f', href: 'https://aws.amazon.com/s3/' },
   { name: 'Amazon S3 Tables', sub: 'Managed Iceberg tables', icon: awsLine('s3-tables'), color: '#8fd14f', href: 'https://aws.amazon.com/s3/features/tables/' },
   { name: 'Amazon S3 Vectors', sub: 'Vector storage', icon: awsLine('s3-vectors'), color: '#8fd14f', href: 'https://aws.amazon.com/s3/features/vectors/' },
   { name: 'Apache Iceberg', sub: 'Open table format', icon: mono('Ic'), color: '#7cc7ff', href: 'https://iceberg.apache.org/' },
 ];
 
+const lakeCatalog = [
+  { name: 'AWS Glue Data Catalog', sub: 'Managed catalog', icon: aws('glue'), color: '#a98bff', href: 'https://aws.amazon.com/glue/' },
+  { name: 'Apache Polaris', sub: 'Iceberg REST catalog', icon: mono('Po'), color: '#7cc7ff', href: 'https://polaris.apache.org/' },
+  { name: 'DataHub', sub: 'Discovery and lineage', icon: mono('DH'), color: '#6fb6ff', href: 'https://datahubproject.io/' },
+];
+
+const lakeRows = [
+  { label: 'Storage', nodes: lakeStorage },
+  { label: 'Catalog & metadata', nodes: lakeCatalog },
+];
+
 const bands = [
   {
-    name: 'Orchestration',
+    name: 'Develop & orchestrate',
     nodes: [
+      { name: 'JupyterHub', sub: 'Notebooks', icon: tech('jupyter'), color: '#f37726', href: 'https://jupyter.org/hub' },
       { name: 'Apache Airflow', icon: tech('apacheairflow'), color: '#4aa3ff', href: 'https://airflow.apache.org/' },
       { name: 'Argo Workflows', icon: tech('argo'), color: '#ef7b4d', href: 'https://argoproj.github.io/workflows/' },
     ],
@@ -417,13 +431,20 @@ export default function PlatformArchitecture() {
 
         <div className={styles.lakehouse} data-node="lake">
           <div className={styles.lakeHead}>
-            <span className={styles.lakeTag}>Storage</span>
+            <span className={styles.lakeTag}>Shared data</span>
             <h3 className={styles.lakeName}>Open lakehouse</h3>
-            <p className={styles.stageCaption}>Tables, files and vectors on Amazon S3</p>
+            <p className={styles.stageCaption}>Tables, files and vectors on Amazon S3, governed by one catalog</p>
           </div>
-          <div className={styles.lakeNodes}>
-            {lakehouse.map((n) => (
-              <Node key={n.name} node={n} />
+          <div className={styles.lakeRows}>
+            {lakeRows.map((row) => (
+              <div key={row.label} className={styles.lakeRow}>
+                <span className={styles.lakeRowLabel}>{row.label}</span>
+                <div className={styles.lakeNodes}>
+                  {row.nodes.map((n) => (
+                    <Node key={n.name} node={n} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
