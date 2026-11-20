@@ -18,9 +18,9 @@ const FeatureList = [
   {
     title: 'Data Analytics',
     Svg: require('@site/static/img/green-da.svg').default,
-    description: 'Transform your data with enterprise-grade analytics solutions. Deploy Apache Spark, Ray, Dask, and Jupyter environments with production-ready configurations. Scale from terabytes to petabytes with confidence using battle-tested architectures.',
+    description: 'Transform your data with enterprise-grade analytics solutions. Deploy Apache Spark, Ray, and Jupyter environments with production-ready configurations. Scale from terabytes to petabytes with confidence using battle-tested architectures.',
     link: 'https://awslabs.github.io/data-on-eks/docs/datastacks/processing',
-    tags: ['Spark', 'Ray', 'Dask', 'Jupyter'],
+    tags: ['Spark', 'Ray', 'Jupyter'],
     size: 'hero',
     tone: 'violet',
   },
