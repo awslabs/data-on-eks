@@ -137,9 +137,17 @@
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
-  gap: clamp(2rem, 5vw, 4.5rem);
+  grid-template-areas:
+    'copy logo'
+    'copy terminal';
+  grid-template-rows: auto 1fr;
+  column-gap: clamp(2rem, 5vw, 4.5rem);
+  row-gap: 2rem;
   align-items: center;
 }
+
+.heroCopy { grid-area: copy; }
+.terminal { grid-area: terminal; align-self: start; }
 
 .heroCopy {
   min-width: 0;
@@ -154,12 +162,14 @@
 .logoMark {
   display: block;
   /* light-logo.png is 3380x1270 */
-  height: clamp(64px, 7vw, 92px);
+  grid-area: logo;
+  justify-self: end;
+  align-self: start;
+  height: clamp(80px, 9vw, 128px);
   aspect-ratio: 3380 / 1270;
-  margin-bottom: 2rem;
   background: linear-gradient(100deg, #5b3df5 0%, #8b3dd6 40%, #c2410c 100%);
-  -webkit-mask: var(--logo-url) no-repeat left center / contain;
-  mask: var(--logo-url) no-repeat left center / contain;
+  -webkit-mask: var(--logo-url) no-repeat right center / contain;
+  mask: var(--logo-url) no-repeat right center / contain;
   filter: drop-shadow(0 10px 24px rgba(91, 61, 245, 0.25));
 }
 
@@ -549,6 +559,14 @@
 @media (max-width: 996px) {
   .heroInner {
     grid-template-columns: 1fr;
+    grid-template-areas: 'logo' 'copy' 'terminal';
+    grid-template-rows: auto;
+  }
+
+  .logoMark {
+    justify-self: start;
+    -webkit-mask-position: left center;
+    mask-position: left center;
   }
 
   .terminal {

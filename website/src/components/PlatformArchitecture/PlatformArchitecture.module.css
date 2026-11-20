@@ -1,0 +1,654 @@
+/* End-to-end agentic data platform diagram.
+   The board is an ink surface in both colour modes (like the Agentic Data tile),
+   so node colours are tuned for a dark background only. */
+
+.section {
+  padding: clamp(3.5rem, 8vw, 6.5rem) 1.5rem clamp(1.5rem, 4vw, 3rem);
+  background: var(--doeks-bg);
+}
+
+.head {
+  max-width: 1200px;
+  margin: 0 auto 2.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  grid-template-areas: 'kicker kicker' 'title lede';
+  column-gap: clamp(2rem, 6vw, 5rem);
+  align-items: end;
+}
+
+.kicker {
+  grid-area: kicker;
+  margin: 0 0 0.75rem;
+  font-family: var(--doeks-font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--doeks-violet);
+}
+
+.title {
+  grid-area: title;
+  margin: 0;
+  font-family: var(--doeks-font-display);
+  font-weight: 700;
+  font-size: clamp(2.2rem, 5vw, 3.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  color: var(--doeks-ink);
+}
+
+.title em {
+  font-family: var(--doeks-font-serif);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  color: var(--doeks-violet);
+}
+
+.lede {
+  grid-area: lede;
+  margin: 0;
+  font-family: var(--doeks-font-display);
+  font-weight: 500;
+  font-size: clamp(1.05rem, 1.4vw, 1.2rem);
+  line-height: 1.55;
+  color: var(--doeks-text);
+}
+
+/* ---------- Board ---------- */
+
+.board {
+  --ink: #12111a;
+  --panel: rgba(255, 255, 255, 0.045);
+  --panel-line: rgba(255, 255, 255, 0.1);
+  --txt: #e7e6f5;
+  --muted: #a3a1b8;
+  --lime: #c6f23e;
+  --violet: #a898ff;
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1.2px) 0 0 / 22px 22px,
+    var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 80px -30px rgba(18, 17, 26, 0.55);
+  color: var(--txt);
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(45% 35% at 15% 0%, rgba(91, 61, 245, 0.45), transparent 70%),
+    radial-gradient(40% 40% at 100% 45%, rgba(14, 116, 144, 0.35), transparent 70%),
+    radial-gradient(35% 30% at 40% 100%, rgba(198, 242, 62, 0.12), transparent 70%);
+}
+
+.layerHead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.layerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 0 4px rgba(198, 242, 62, 0.18);
+}
+
+.layerDotData {
+  background: var(--violet);
+  box-shadow: 0 0 0 4px rgba(168, 152, 255, 0.2);
+}
+
+.layerName {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--txt);
+}
+
+.layerRule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--panel-line), transparent);
+}
+
+/* ---------- Agentic layer ---------- */
+
+.agents {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.agent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1.1rem 1.2rem 1.15rem;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(198, 242, 62, 0.07), transparent 70%),
+    var(--panel);
+  border: 1px solid rgba(198, 242, 62, 0.22);
+  color: var(--txt) !important;
+  text-decoration: none !important;
+  transition: border-color 0.25s ease, translate 0.25s ease;
+}
+
+.agent:hover {
+  border-color: var(--lime);
+  translate: 0 -2px;
+}
+
+.agent:focus-visible,
+.node:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+
+.agentTag {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+.agentTitle {
+  margin: 0;
+  font-family: var(--doeks-font-display);
+  font-weight: 700;
+  font-size: 1.12rem;
+  letter-spacing: -0.02em;
+  color: #f4f3ff;
+}
+
+.agentText {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #c4c2d6;
+}
+
+.agentTarget {
+  margin-top: auto;
+  padding-top: 0.35rem;
+  font-family: var(--doeks-font-mono);
+  font-size: 0.68rem;
+  color: #c6f23e;
+}
+
+/* ---------- Wires (SVG overlay, desktop only) ---------- */
+
+.agents,
+.pipeline,
+.lakehouse,
+.layerHead {
+  position: relative;
+  z-index: 1;
+}
+
+.wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wire {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 5 5;
+}
+
+.wire_agent { stroke: #c6f23e; opacity: 0.8; }
+.wire_flow  { stroke: #a898ff; }
+.wire_store { stroke: #8fd14f; opacity: 0.85; }
+
+.wireLabel {
+  position: absolute;
+  z-index: 2;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-family: var(--doeks-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.label_agent {
+  transform: translate(-50%, -50%);
+  color: #c6f23e;
+  background: #1b1d17;
+  border: 1px solid rgba(198, 242, 62, 0.35);
+}
+
+.label_store {
+  transform: translateY(-50%);
+  color: #a6e06a;
+  background: #151a14;
+  border: 1px solid rgba(143, 209, 79, 0.3);
+}
+
+.layerGap {
+  margin-top: 1.4rem;
+}
+
+.wired .layerGap {
+  margin-top: 4.5rem;
+}
+
+/* ---------- Data plane: compute row ---------- */
+
+.pipeline {
+  --gap: 26px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.9rem 0.8rem 0.85rem;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+}
+
+.stageHead {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.45rem;
+  align-items: baseline;
+}
+
+.stageIndex {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.68rem;
+  color: var(--violet);
+}
+
+.stageName {
+  margin: 0;
+  font-family: var(--doeks-font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+  color: #f4f3ff;
+}
+
+.stageCaption {
+  grid-column: 1 / -1;
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.nodes > .node,
+.extra > .node {
+  align-self: stretch;
+}
+
+.or {
+  align-self: center;
+  font-family: var(--doeks-font-serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.42rem 0.5rem;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--txt) !important;
+  text-decoration: none !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.node:hover {
+  border-color: color-mix(in srgb, var(--c) 70%, transparent);
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+.markBare {
+  background: none;
+}
+
+.markTile {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.markMask {
+  width: 15px;
+  height: 15px;
+  background: var(--c);
+  -webkit-mask: var(--src) no-repeat center / contain;
+  mask: var(--src) no-repeat center / contain;
+}
+
+.markImg {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+}
+
+.markMono {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--c);
+}
+
+.nodeText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nodeName {
+  font-family: var(--doeks-font-display);
+  font-weight: 600;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  color: #f4f3ff;
+}
+
+.nodeSub {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+
+.compact {
+  padding: 0.32rem 0.55rem 0.32rem 0.35rem;
+}
+
+.compact .mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.extra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.5rem 0.5rem;
+  border-radius: 13px;
+  border: 1px dashed rgba(247, 201, 72, 0.4);
+  background: rgba(247, 201, 72, 0.05);
+}
+
+.extraLabel {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f7c948;
+}
+
+.note {
+  margin: auto 0 0;
+  padding-top: 0.2rem;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Text stand-in for the storage wires on narrow screens */
+.hint {
+  margin: 0;
+  font-family: var(--doeks-font-mono);
+  font-size: 0.66rem;
+  color: #a6e06a;
+}
+
+.wired .hint {
+  display: none;
+}
+
+/* ---------- Lakehouse ---------- */
+
+.lakehouse {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem 1.5rem;
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(143, 209, 79, 0.14), rgba(124, 199, 255, 0.08) 60%, transparent),
+    var(--panel);
+  border: 1px solid rgba(143, 209, 79, 0.4);
+  box-shadow: 0 18px 40px -24px rgba(122, 161, 22, 0.6);
+}
+
+.wired .lakehouse {
+  margin-top: 4.25rem;
+}
+
+.lakeHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.lakeHead .stageCaption {
+  margin: 0;
+}
+
+.lakeTag {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a6e06a;
+}
+
+.lakeName {
+  margin: 0;
+  font-family: var(--doeks-font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: #f4f3ff;
+}
+
+.lakeRows {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.lakeRow {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lakeRowLabel {
+  font-family: var(--doeks-font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a6e06a;
+}
+
+/* Fixed 4-track grid so the catalog row lines up under the storage row */
+.lakeNodes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+/* ---------- Control bands + foundation ---------- */
+
+.bands {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.4rem;
+}
+
+.band,
+.foundation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.9rem;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+}
+
+.band {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.foundation {
+  margin-top: 0.9rem;
+  background:
+    linear-gradient(90deg, rgba(255, 153, 0, 0.1), transparent 45%),
+    var(--panel);
+  border-color: rgba(255, 153, 0, 0.25);
+}
+
+.bandName {
+  min-width: 7.5rem;
+  font-family: var(--doeks-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bandNodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+/* ---------- Motion ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .wire {
+    animation: flow 1.1s linear infinite;
+  }
+}
+
+@keyframes flow {
+  to { stroke-dashoffset: -10; }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 996px) {
+  .pipeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lakehouse {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lakeNodes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lakeRow {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}
+
+@media (max-width: 860px) {
+  .head {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'kicker' 'title' 'lede';
+    row-gap: 1rem;
+  }
+
+  .agents,
+  .bands {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .board {
+    border-radius: 22px;
+  }
+
+  .pipeline,
+  .lakeNodes {
+    grid-template-columns: 1fr;
+  }
+
+  .bandName {
+    flex-basis: 100%;
+  }
+}

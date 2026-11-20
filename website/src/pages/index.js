@@ -5,6 +5,7 @@ import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import VideoGrid from '@site/src/components/VideoGrid/VideoGrid';
 import WorkshopBanner from '@site/src/components/WorkshopBanner/WorkshopBanner';
+import PlatformArchitecture from '@site/src/components/PlatformArchitecture/PlatformArchitecture';
 import styles from './index.module.css';
 
 const ArrowIcon = () => (
@@ -58,15 +59,15 @@ function HomepageHeader() {
       <div className={styles.gridLines} aria-hidden="true" />
 
       <div className={styles.heroInner}>
-        <div className={styles.heroCopy}>
-          {/* The logo PNG is used as a mask so it takes the site's gradient. */}
-          <span
-            className={styles.logoMark}
-            role="img"
-            aria-label="Data on EKS"
-            style={{ '--logo-url': `url(${logoUrl})` }}
-          />
+        {/* Top-right brand mark. The logo PNG is a mask so it takes the site's gradient. */}
+        <span
+          className={styles.logoMark}
+          role="img"
+          aria-label="Data on EKS"
+          style={{ '--logo-url': `url(${logoUrl})` }}
+        />
 
+        <div className={styles.heroCopy}>
           <p className={styles.eyebrow}>
             <span className={styles.pulse} />
             Open source · Data + AI agents
@@ -160,6 +161,7 @@ export default function Home() {
       <main className={styles.page}>
         <HomepageHeader />
         <WorkshopBanner />
+        <PlatformArchitecture />
         <HomepageFeatures />
         <VideosSection />
         <ClosingCta />
