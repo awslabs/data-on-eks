@@ -15,5 +15,7 @@ resource "kubectl_manifest" "spark_operator" {
   depends_on = [
     helm_release.argocd,
     module.spark_history_server_irsa,
+    # The controller stops if the submitter is not ready within submitter.startupTimeout (5m).
+    kubectl_manifest.spark_submitter,
   ]
 }

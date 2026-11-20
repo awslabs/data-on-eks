@@ -8,9 +8,10 @@ metadata:
 spec:
   project: default
   source:
+    # Released charts before 2.6.0 do not have the RestSubmitter gate or the submitter values.
     repoURL: https://kubeflow.github.io/spark-operator
     chart: spark-operator
-    targetRevision: "2.4.0"
+    targetRevision: "2.6.0"
     helm:
       valuesObject:
         ${user_values_yaml}

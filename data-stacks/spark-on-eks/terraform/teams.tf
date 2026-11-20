@@ -218,8 +218,8 @@ data "aws_iam_policy_document" "spark_jobs" {
     sid    = "TpcdsSourceDataRead"
     effect = "Allow"
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::spark-scaletest-eks-tpcds-us-west-2",
-      "arn:${data.aws_partition.current.partition}:s3:::spark-scaletest-eks-tpcds-us-west-2/*"
+      "arn:${data.aws_partition.current.partition}:s3:::spark-scaletest-eks-tpcds-us-east-1",
+      "arn:${data.aws_partition.current.partition}:s3:::spark-scaletest-eks-tpcds-us-east-1/*"
     ]
 
     actions = [

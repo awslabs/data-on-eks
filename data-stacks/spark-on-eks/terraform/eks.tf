@@ -39,9 +39,8 @@ module "eks" {
   create_cni_ipv6_iam_policy = var.enable_ipv6
 
   vpc_id = module.vpc.vpc_id
-  # Primary CIDR private subnets (one per AZ). The EKS control plane ENIs go here.
-  # The secondary CIDR subnets are only for data workloads (Karpenter nodes).
-  subnet_ids = slice(module.vpc.private_subnets, 0, length(local.azs))
+  # Primary CIDR private subnets. The secondary CIDR subnets are only for data workloads (Karpenter nodes).
+  subnet_ids = local.core_subnet_ids
 
   # Combine root account, current user/role and additional roles to be able to access the cluster KMS key - required for terraform updates
   kms_key_administrators = distinct(concat([

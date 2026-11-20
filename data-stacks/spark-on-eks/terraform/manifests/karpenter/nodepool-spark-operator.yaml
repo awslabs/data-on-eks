@@ -1,7 +1,7 @@
-# Dedicated NodePool for the Spark Operator controller (36 CPU, 50 Gi requests).
-# The label and taint match the controller nodeSelector and toleration in
-# helm-values/spark-operator.yaml. The taint keeps all other pods off this node.
-# Disruption is blocked, so Karpenter does not replace the node during a load test.
+# Dedicated NodePool for the Spark Operator controller (8 CPU) and the REST submitter
+# (3 x 10 CPU, spark-submitter.tf). The label and taint match the nodeSelector and toleration of both.
+# The taint keeps all other pods off these nodes.
+# Disruption is blocked, so Karpenter does not replace the nodes during a load test.
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
@@ -33,13 +33,14 @@ spec:
         - key: karpenter.k8s.aws/instance-family
           operator: In
           values: ["c6a", "c7a", "c7i"]
-        # 12xlarge = 48 vCPU, 96 GiB: room for the 36 CPU / 50 Gi controller and DaemonSets.
+        # 12xlarge = 48 vCPU, 96 GiB.
         - key: karpenter.k8s.aws/instance-size
           operator: In
           values: ["12xlarge"]
-  # One node only (48 vCPU).
+  # Two nodes. During the change from in-controller spark-submit, the old 36 CPU controller and
+  # the submitters do not fit on one node. The second node also keeps submit CPU off the controller.
   limits:
-    cpu: "48"
+    cpu: "96"
   disruption:
     consolidationPolicy: WhenEmpty
     consolidateAfter: Never

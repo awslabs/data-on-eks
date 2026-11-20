@@ -87,9 +87,8 @@ locals {
       partition   = local.partition
       account_id  = local.account_id
       description = "EKS Core node group for hosting system add-ons"
-      # Primary CIDR private subnets (one per AZ). Core add-ons run here, not in the
-      # secondary CIDR subnets, which are only for data workloads (Karpenter nodes).
-      subnet_ids = slice(module.vpc.private_subnets, 0, length(local.azs))
+      # Core add-ons run in the primary CIDR subnets, not in the secondary CIDR subnets for data workloads.
+      subnet_ids = local.core_subnet_ids
       ami_type   = "AL2023_x86_64_STANDARD"
       # Sized for a 10,000-node data plane: Karpenter, CoreDNS, Prometheus, and other add-ons.
       # CoreDNS uses required pod anti-affinity (one replica per node), so

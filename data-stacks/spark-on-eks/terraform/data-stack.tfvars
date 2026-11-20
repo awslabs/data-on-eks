@@ -2,7 +2,7 @@
 # https://awslabs.github.io/data-on-eks/docs/datastacks/processing/spark-on-eks/infra
 
 name                 = "spark-on-eks"
-region               = "us-west-2"
+region               = "us-east-1"
 eks_cluster_version  = "1.37"
 enable_ingress_nginx = false
 # Unique ID used to tag all AWS resources for this deployment.

@@ -4,7 +4,7 @@
 # pod settings are in spec.driver.template and spec.executor.template.
 #
 # S3 layout (cNN = c01 to c50, to spread the S3 request load over 50 prefixes):
-#   Source  : s3a://spark-scaletest-eks-tpcds-us-west-2/cNN/tpcds/sf30/
+#   Source  : s3a://spark-scaletest-eks-tpcds-us-east-1/cNN/tpcds/sf30/
 #   Results : s3a://<results-bucket>/cNN/tpcds-results/<app name>/
 #             <results-bucket>: terraform -chdir=terraform output -raw s3_bucket_id_spark_history_server
 # This file uses c01. The load test (locustfile.py) will set cNN, the app name, the
@@ -38,7 +38,7 @@ spec:
 
   arguments:
     # arg[0] tpcdsDataDir - root path of the parquet data in S3
-    - "s3a://spark-scaletest-eks-tpcds-us-west-2/c01/tpcds/sf30"
+    - "s3a://spark-scaletest-eks-tpcds-us-east-1/c01/tpcds/sf30"
     # arg[1] Results location (one path for each application)
     # Placeholder: the bucket name changes on each deploy. locustfile.py sets it.
     - "s3a://<results-bucket>/c01/tpcds-results/tpcds-sf30"
@@ -93,7 +93,7 @@ spec:
             operator: Equal
             value: tpcds-static
             effect: NoSchedule
-        # nodeAffinity, not nodeSelector: locustfile.py adds the --zone requirement here.
+        # nodeAffinity, not nodeSelector: locustfile.py adds the --zone-id requirement here.
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -150,7 +150,7 @@ spec:
             operator: Equal
             value: tpcds-static
             effect: NoSchedule
-        # nodeAffinity, not nodeSelector: locustfile.py adds the --zone requirement here.
+        # nodeAffinity, not nodeSelector: locustfile.py adds the --zone-id requirement here.
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -191,7 +191,7 @@ spec:
     "spark.sql.adaptive.skewJoin.enabled": "true"
 
     # ── S3A / AWS SDK v2 (EKS Pod Identity) ─────────────────────────────────
-    "spark.hadoop.fs.s3a.endpoint.region": "us-west-2"
+    "spark.hadoop.fs.s3a.endpoint.region": "us-east-1"
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"

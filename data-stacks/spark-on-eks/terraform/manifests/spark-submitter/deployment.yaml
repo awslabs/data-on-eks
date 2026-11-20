@@ -1,0 +1,102 @@
+# Based on submitter/deploy/deployment.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-submitter
+  namespace: spark-submitter
+  labels:
+    app.kubernetes.io/name: spark-submitter
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark-submitter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: spark-submitter
+    spec:
+      serviceAccountName: spark-submitter
+      # Must be longer than --shutdown-timeout, so that open submissions can complete.
+      terminationGracePeriodSeconds: 130
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 185
+        runAsGroup: 185
+        fsGroup: 185
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        NodeGroupType: spark-operator-benchmark
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: spark-operator
+          effect: NoSchedule
+      containers:
+        - name: spark-submitter
+          # Dual-stack host. public.ecr.aws is IPv4-only.
+          image: ecr-public.aws.com/m8u6z8z4/manabu-test:spark-submitter
+          # The tag is reused for each build.
+          imagePullPolicy: Always
+          args:
+            # Must contain every operator job namespace. A missing one fails without a retry.
+            - --namespaces=${job_namespaces}
+            - --max-concurrent-submissions=24
+            # Must be shorter than the operator submitter.requestTimeout (2m).
+            - --submit-timeout=90s
+            - --shutdown-timeout=120s
+            - --work-dir=/tmp/spark-submitter
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            # A fixed heap keeps each spark-submit JVM at about 600Mi.
+            - name: SPARK_SUBMIT_OPTS
+%{ if enable_ipv6 ~}
+              # Not _JAVA_OPTIONS: its "Picked up" stderr line goes into the error classification.
+              value: "-Xmx512m -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Djava.net.preferIPv6Addresses=true"
+            # The same IPv6 settings that the operator used for its own spark-submit.
+            - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION
+              value: "true"
+%{ else ~}
+              value: "-Xmx512m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+%{ endif ~}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: probes
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: probes
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: probes
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            # Memory limit: 24 slots x 600Mi + 2Gi. CPU is below 1 per 2 slots, because only about
+            # 14 spark-submit JVMs run at the same time at 200 apps/min.
+            requests:
+              cpu: "10"
+              memory: 12Gi
+            limits:
+              memory: 17Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # spark-submit, the JVM and the pod template files need a writable /tmp.
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi

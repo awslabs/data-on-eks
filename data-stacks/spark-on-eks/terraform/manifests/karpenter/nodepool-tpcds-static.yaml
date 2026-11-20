@@ -5,7 +5,7 @@ metadata:
   namespace: karpenter
 spec:
   # Alpha (feature gate staticCapacity). Fixed node count, independent of pending pods.
-  replicas: 10
+  replicas: 0
   template:
     metadata:
       labels:
@@ -27,10 +27,10 @@ spec:
         - key: node.kubernetes.io/instance-type
           operator: In
           values: ["r8g.8xlarge", "r8gd.8xlarge"]
-        # Static nodes do not follow pod zones.
-        - key: topology.kubernetes.io/zone
+        # Static nodes do not follow pod zones. Zone ID, because zone names differ per account.
+        - key: topology.k8s.aws/zone-id
           operator: In
-          values: ["us-west-2a"]
+          values: ["use1-az6"]
   disruption:
     # Required by the CRD schema; ignored when replicas is set.
     consolidateAfter: Never

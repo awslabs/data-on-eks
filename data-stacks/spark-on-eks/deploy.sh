@@ -156,8 +156,6 @@ fi
 # schedule, starving the Karpenter install -> full deadlock.
 targets=(
     "module.vpc"
-    # Data subnets outside the VPC module (vpc.tf). EKS and Karpenter nodes need them.
-    "aws_route_table_association.data"
     "module.eks"
     "module.karpenter"
     "helm_release.karpenter"

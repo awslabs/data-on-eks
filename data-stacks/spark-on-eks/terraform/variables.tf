@@ -48,32 +48,6 @@ variable "vpc_cidr" {
   }
 }
 
-variable "secondary_cidrs" {
-  description = "List of secondary CIDR blocks to associate with the VPC"
-  type        = list(string)
-  # Default includes three /16 blocks (one per AZ for a 3-AZ deployment).
-  # Replace these with your own non-overlapping /16 ranges when deploying.
-  default = [
-    "100.64.0.0/16",
-    "100.65.0.0/16",
-    "100.66.0.0/16",
-  ]
-
-  validation {
-    condition = alltrue([
-      for cidr in var.secondary_cidrs : can(cidrhost(cidr, 0))
-    ])
-    error_message = "All secondary CIDRs must be valid IPv4 CIDR blocks."
-  }
-
-  validation {
-    condition = alltrue([
-      for cidr in var.secondary_cidrs : tonumber(split("/", cidr)[1]) >= 16 && tonumber(split("/", cidr)[1]) <= 28
-    ])
-    error_message = "All secondary CIDRs must have a prefix length between /16 and /28."
-  }
-}
-
 variable "public_subnet_tags" {
   description = "Additional tags for the public subnets"
   type        = map(string)

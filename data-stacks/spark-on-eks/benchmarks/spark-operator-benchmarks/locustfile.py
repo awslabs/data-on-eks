@@ -34,7 +34,7 @@ class Configuration:
         self.results_bucket = parsed.results_bucket
         self.prefix_count = parsed.prefix_count
         self.tpcds_iterations = parsed.tpcds_iterations
-        self.zone = parsed.zone
+        self.zone_id = parsed.zone_id
 
         # Validate configuration
         self.validate()
@@ -75,8 +75,8 @@ class Configuration:
         if self.tpcds_iterations < 1:
             raise ValueError("tpcds_iterations must be positive")
 
-        if self.zone and not re.match(r'^[a-z]{2}-[a-z]+-\d[a-z]$', self.zone):
-            raise ValueError(f"Invalid zone format: {self.zone}")
+        if self.zone_id and not re.match(r'^[a-z]+\d-az\d+$', self.zone_id):
+            raise ValueError(f"Invalid zone ID format: {self.zone_id}")
 
 
 @events.init_command_line_parser.add_listener
@@ -138,7 +138,7 @@ def on_parser_init(parser):
         "--tpcds-bucket",
         help="S3 bucket with the TPC-DS source data",
         env_var="LOAD_TEST_TPCDS_BUCKET",
-        default="spark-scaletest-eks-tpcds-us-west-2"
+        default="spark-scaletest-eks-tpcds-us-east-1"
     )
     parser.add_argument(
         "--tpcds-data-path",
@@ -168,9 +168,10 @@ def on_parser_init(parser):
         default=4
     )
     parser.add_argument(
-        "--zone",
-        help="Availability Zone for driver and executor pods (for example us-west-2a). Empty: any zone",
-        env_var="LOAD_TEST_ZONE",
+        "--zone-id",
+        # Zone ID, not zone name: zone names map to different zones in each account.
+        help="Availability Zone ID for driver and executor pods (for example use1-az6). Empty: any zone",
+        env_var="LOAD_TEST_ZONE_ID",
         default=""
     )
 
@@ -254,16 +255,16 @@ class TemplateManager:
         spec["arguments"][1] = f"s3a://{variables['results_bucket']}/{prefix}/tpcds-results/{name}"
         spec["arguments"][5] = str(variables["iterations"])
 
-        if variables.get("zone"):
+        if variables.get("zone_id"):
             for role in ("driver", "executor"):
                 terms = spec[role]["template"]["spec"]["affinity"]["nodeAffinity"][
                     "requiredDuringSchedulingIgnoredDuringExecution"]["nodeSelectorTerms"]
                 # Terms are ORed, so the zone must be in every term.
                 for term in terms:
                     term.setdefault("matchExpressions", []).append({
-                        "key": "topology.kubernetes.io/zone",
+                        "key": "topology.k8s.aws/zone-id",
                         "operator": "In",
-                        "values": [variables["zone"]],
+                        "values": [variables["zone_id"]],
                     })
         return template
 
@@ -340,7 +341,7 @@ class SparkLoadTest(HttpUser):
                 "tpcds_data_path": self.config.tpcds_data_path,
                 "results_bucket": self.config.results_bucket,
                 "iterations": self.config.tpcds_iterations,
-                "zone": self.config.zone,
+                "zone_id": self.config.zone_id,
             })
 
             self.logger.info(f"Submitting Spark application: {name} to namespace: {namespace} prefix: {prefix}")

@@ -1,5 +1,15 @@
 controller:
   replicas: 1
+  # This list replaces the chart default, so it must contain all gates.
+  featureGates:
+    - name: PartialRestart
+      enabled: false
+    - name: LoadSparkDefaults
+      enabled: false
+    - name: RestSubmitter
+      enabled: true
+    - name: DefaultTimeToLive
+      enabled: false
   # -- Tuned for about 200 SparkApplications per minute.
   workers: 50
   kubeAPIQPS: 100
@@ -22,13 +32,15 @@ controller:
       operator: Equal
       value: spark-operator
       effect: NoSchedule
-  # The controller runs one spark-submit JVM for each SparkApplication (CPU bound).
+  # The spark-submit JVMs run in the submitter (spark-submitter.tf), not here.
   resources:
     requests:
-      cpu: "36"
-      memory: 50Gi
+      cpu: "8"
+      memory: 16Gi
     limits:
-      memory: 50Gi
+      memory: 16Gi
+submitter:
+  serviceUrl: http://spark-submitter-svc.spark-submitter.svc.cluster.local:8080/api/v1/spark-submit
 batchScheduler:
   # -- Enable batch scheduler support
   enable: false

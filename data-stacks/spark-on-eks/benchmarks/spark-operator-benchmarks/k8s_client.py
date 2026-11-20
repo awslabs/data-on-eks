@@ -1,7 +1,14 @@
 import logging
+import socket
 from typing import Optional
+
+import urllib3.util.connection
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+
+# An IPv6 EKS cluster endpoint also has AAAA records. On a host with broken IPv6, urllib3 tries
+# them one at a time, and each new connection waits for the OS connect timeout (about 2 min).
+urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
 
 class KubernetesClient:
 

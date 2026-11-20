@@ -1,0 +1,24 @@
+# Keep the same as submitter/deploy/rbac.yaml.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spark-submitter
+  namespace: ${namespace}
+  labels:
+    app.kubernetes.io/name: spark-submitter
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Spark creates on-demand PersistentVolumeClaims before the driver pod.
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # The driver pod template has an owner reference with blockOwnerDeletion=true.
+  # The OwnerReferencesPermissionEnforcement admission plugin requires this permission.
+  - apiGroups: ["sparkoperator.k8s.io"]
+    resources: ["sparkapplications/finalizers"]
+    verbs: ["update"]

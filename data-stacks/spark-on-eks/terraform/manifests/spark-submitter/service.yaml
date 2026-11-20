@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-submitter-svc
+  namespace: spark-submitter
+  labels:
+    app.kubernetes.io/name: spark-submitter
+spec:
+  selector:
+    app.kubernetes.io/name: spark-submitter
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: probes
+      port: 8081
+      targetPort: probes
