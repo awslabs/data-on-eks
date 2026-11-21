@@ -5,7 +5,8 @@ metadata:
   namespace: karpenter
 spec:
   # Alpha (feature gate staticCapacity). Fixed node count, independent of pending pods.
-  replicas: 100
+  # 0 between test runs, because static nodes run (and cost money) without pods.
+  replicas: 0
   template:
     metadata:
       labels:
