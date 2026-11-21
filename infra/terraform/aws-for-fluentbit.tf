@@ -72,6 +72,7 @@ resource "aws_iam_policy" "aws_for_fluentbit" {
         Sid    = "CreateCWLogs"
         Effect = "Allow"
         Resource = [
+          "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:${aws_cloudwatch_log_group.aws_for_fluentbit.name}",
           "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:${aws_cloudwatch_log_group.aws_for_fluentbit.name}:*"
         ]
         Action = [
