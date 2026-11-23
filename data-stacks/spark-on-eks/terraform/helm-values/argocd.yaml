@@ -34,3 +34,8 @@ notifications:
 controller:
   nodeSelector:
     NodeGroupType: core
+
+redis:
+  image:
+    repository: public.ecr.aws/docker/library/redis
+    tag: 8.8-alpine
