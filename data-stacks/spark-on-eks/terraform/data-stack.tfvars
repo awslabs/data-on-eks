@@ -11,6 +11,8 @@ enable_ingress_nginx = false
 deployment_id              = "rOOMTbDP"
 enable_celeborn            = false
 enable_ipv6                = true
+enable_jupyterhub          = false
+enable_yunikorn            = false # The EKS scheduler must place the test pods.
 enable_nvidia_gpu_operator = false # Enable this for Spark RAPIDS on GPUs example
 
 # EKS Provisioned Control Plane (PCP) Tier for high-scale benchmarking

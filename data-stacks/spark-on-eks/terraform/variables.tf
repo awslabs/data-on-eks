@@ -125,6 +125,12 @@ variable "enable_jupyterhub" {
   type        = bool
 }
 
+variable "enable_yunikorn" {
+  description = "Enable Apache YuniKorn. Its admission webhook makes it the scheduler of all pods outside kube-system"
+  type        = bool
+  default     = true
+}
+
 variable "enable_raydata" {
   description = "Enable Ray Data via ArgoCD"
   type        = bool
