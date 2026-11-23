@@ -34,3 +34,10 @@ notifications:
 controller:
   nodeSelector:
     NodeGroupType: core
+
+# Pin a patched Redis image. The argo-cd 8.1.1 chart default (7.2.8-alpine)
+# is flagged by container vulnerability scanners.
+redis:
+  image:
+    repository: public.ecr.aws/docker/library/redis
+    tag: 8.8-alpine
