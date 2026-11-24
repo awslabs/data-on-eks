@@ -1,4 +1,4 @@
-FROM docker.io/library/flink:2.1.0-java17
+FROM docker.io/library/flink:2.1.3-java17
 
 USER root
 RUN apt-get update && \
