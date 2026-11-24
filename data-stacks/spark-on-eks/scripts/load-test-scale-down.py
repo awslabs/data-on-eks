@@ -32,8 +32,11 @@ while True:
         if apps:
             last = max(datetime.strptime(a["metadata"]["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) for a in apps)
             open_apps = [a for a in apps if a.get("status", {}).get("applicationState", {}).get("state") not in FINAL]
+            print(f"{now:%H:%M:%S} apps={len(apps)} open={len(open_apps)} last_created={last:%H:%M:%S}", flush=True)
             if now - last > timedelta(seconds=QUIET_S) and not open_apps:
                 reason = f"run ended: {len(apps)} apps final, last created {last:%H:%M:%S}"
+        else:
+            print(f"{now:%H:%M:%S} apps=0", flush=True)
         if now >= DEADLINE:
             reason = f"deadline {DEADLINE:%H:%M}"
         if reason:
