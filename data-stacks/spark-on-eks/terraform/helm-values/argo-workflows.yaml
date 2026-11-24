@@ -1,4 +1,0 @@
-controller:
-  nodeSelector:
-    kubernetes.io/os: linux
-    NodeGroupType: core

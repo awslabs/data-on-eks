@@ -113,12 +113,6 @@ variable "managed_node_groups" {
   default     = {}
 }
 
-variable "enable_ingress_nginx" {
-  description = "Enable ingress-nginx"
-  type        = bool
-  default     = true
-}
-
 variable "enable_jupyterhub" {
   default     = true
   description = "Enable Jupyter Hub"
@@ -139,12 +133,6 @@ variable "enable_raydata" {
 
 variable "enable_amazon_prometheus" {
   description = "Enable AWS Managed Prometheus service"
-  type        = bool
-  default     = false
-}
-
-variable "enable_datahub" {
-  description = "Enable DataHub for metadata management"
   type        = bool
   default     = false
 }
@@ -199,18 +187,6 @@ variable "enable_emr_on_eks" {
 
 variable "enable_emr_spark_operator" {
   description = "Enable EMR Spark Operator for declarative Spark job management"
-  type        = bool
-  default     = false
-}
-
-variable "enable_emr_flink_operator" {
-  description = "Enable EMR Flink Kubernetes Operator"
-  type        = bool
-  default     = false
-}
-
-variable "enable_starrocks" {
-  description = "Enable StarRocks analytical database"
   type        = bool
   default     = false
 }

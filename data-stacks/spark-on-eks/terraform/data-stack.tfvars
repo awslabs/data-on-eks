@@ -1,10 +1,9 @@
 # Checkout the docs for enabling more addons
 # https://awslabs.github.io/data-on-eks/docs/datastacks/processing/spark-on-eks/infra
 
-name                 = "spark-on-eks"
-region               = "us-east-1"
-eks_cluster_version  = "1.37"
-enable_ingress_nginx = false
+name                = "spark-on-eks"
+region              = "us-east-1"
+eks_cluster_version = "1.37"
 # Unique ID used to tag all AWS resources for this deployment.
 # Enables identification of orphaned resources and cleanup in case of Terraform state loss.
 # Auto-generated on first deploy — do not edit manually.

@@ -26,7 +26,7 @@ resources:
   limits:
     memory: 4Gi
 
-# Survives container restarts, not pod replacement. A new pod sends the last hour of events again.
+# Keeps the disk buffer over container restarts, not over pod replacement.
 extraVolumes:
   - name: state
     emptyDir: {}
@@ -47,15 +47,16 @@ config:
         HTTP_Listen ::
         HTTP_Port 2020
         Health_Check On
+        storage.path /var/fluent-bit/state/buffer
 
   inputs: |
     [INPUT]
         Name          kubernetes_events
         Tag           kube_events.*
-        # Without a saved position, each restart lists and sends the last hour of events again.
-        DB            /var/fluent-bit/state/kube_events.db
-        # Below the container memory limit: the input pauses before the kernel kills the pod.
-        Mem_Buf_Limit 512MB
+        # No DB: with it, throughput fell each minute, to about 120 events/s at 1 core.
+        # Without it, each restart sends the events of the last hour again (duplicates).
+        # Events wait on disk while ClickHouse is unreachable, instead of being dropped.
+        storage.type  filesystem
 
   filters: |
     [FILTER]
@@ -123,3 +124,7 @@ config:
         Header       X-ClickHouse-User $${CLICKHOUSE_USER}
         Header       X-ClickHouse-Key  $${CLICKHOUSE_PASSWORD}
         tls          ${clickhouse_tls}
+        # The default of 1 retry dropped events during short ClickHouse restarts.
+        Retry_Limit  no_limits
+        # Caps the disk buffer. When full, the oldest chunks are dropped.
+        storage.total_limit_size 4G
