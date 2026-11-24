@@ -11,7 +11,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 
-from k8s_api import get, merge_patch
+from k8s_api import FROM_CACHE, get, merge_patch
 
 START = datetime.fromisoformat(sys.argv[1])
 DEADLINE = datetime.fromisoformat(sys.argv[2])
@@ -27,7 +27,7 @@ while True:
     now = datetime.now(timezone.utc)
     reason = None
     try:
-        apps = [a for a in get("/apis/sparkoperator.k8s.io/v1beta2/namespaces/spark-team-a/sparkapplications")["items"]
+        apps = [a for a in get("/apis/sparkoperator.k8s.io/v1beta2/namespaces/spark-team-a/sparkapplications", FROM_CACHE)["items"]
                 if datetime.strptime(a["metadata"]["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) >= START]
         if apps:
             last = max(datetime.strptime(a["metadata"]["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) for a in apps)

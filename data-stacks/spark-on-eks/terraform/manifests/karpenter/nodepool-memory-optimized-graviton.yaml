@@ -19,10 +19,11 @@ spec:
         name: ebs-gp3-1000gi-6000iops-1000tp
 
       requirements:
-        # Capacity type - prefer spot for even better cost optimization
+        # On-demand only: the event store (ClickHouse, one replica) runs here, and its pod spec
+        # comes from the upstream repo, so it cannot select a capacity type itself.
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["spot", "on-demand"]
+          values: ["on-demand"]
 
         # Architecture - ARM64 only
         - key: kubernetes.io/arch
@@ -55,7 +56,9 @@ spec:
           values: ["5"]
 
   disruption:
-    consolidationPolicy: WhenEmptyOrUnderutilized
+    # The event store (ClickHouse, one replica) runs here. Consolidation moved it twice in one
+    # load run, about 1 min of no ingest each time.
+    consolidationPolicy: WhenEmpty
     consolidateAfter: "600s"
 
   # High weight for cost-optimized memory workloads

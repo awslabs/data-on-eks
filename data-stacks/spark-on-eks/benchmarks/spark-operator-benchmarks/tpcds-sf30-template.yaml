@@ -28,6 +28,8 @@ metadata:
 spec:
   type: Scala
   mode: cluster
+  # Keeps the object count flat during a run. Driver logs are in S3 and events are in ClickHouse.
+  timeToLiveSeconds: 300
   image: "ecr-public.aws.com/data-on-eks/spark-benchmark:tcpds-4-spark-3.5.8-comet-0.15.0-iceberg@sha256:8eb5dcfcc279b65c8a2aa6c0360813fe7774e4f06fe71dd34e0d9c3e3f058830"
   # Dual-stack host: IPv6 nodes pull without the NAT gateway. public.ecr.aws is IPv4-only.
   # Pull each image one time per node. "Always" makes a registry call for every pod.

@@ -10,13 +10,15 @@ controller:
       enabled: true
     - name: DefaultTimeToLive
       enabled: false
-  # -- Tuned for about 200 SparkApplications per minute.
-  workers: 50
-  kubeAPIQPS: 100
-  kubeAPIBurst: 200
+  # At 84 running apps the operator sent 128 req/s. Sized for about 1,000 running apps.
+  workers: 100
+  kubeAPIQPS: 2000
+  kubeAPIBurst: 4000
+  # Every Spark pod event takes one token. At 746 nodes this was 118/s, so 100 QPS made the
+  # delay before each reconcile grow by about 0.18 s every second.
   workqueueRateLimiter:
-    bucketQPS: 100
-    bucketSize: 1000
+    bucketQPS: 1000
+    bucketSize: 10000
 %{ if enable_ipv6 ~}
   env:
     - name: _JAVA_OPTIONS

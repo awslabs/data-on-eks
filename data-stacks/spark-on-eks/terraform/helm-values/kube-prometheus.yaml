@@ -16,7 +16,8 @@ prometheus:
       NodeGroupType: core
     resources:
       requests:
-        cpu: "8"
+        # At 10,000 nodes, about 670k parsed samples/s (estimated 7 to 10 cores).
+        cpu: "16"
         memory: 64Gi
       limits:
         memory: 96Gi
@@ -36,7 +37,109 @@ prometheus:
     probeSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
+    # Full per-node metrics from every tpcds-static node need about 180 GB at 10,000 nodes.
+    # Only 1 in 20 of these nodes is scraped in full. The *-static-light jobs below scrape the
+    # other nodes. The relabelings apply to every ServiceMonitor and PodMonitor.
+    scrapeClasses:
+      - name: sample-static-nodes
+        default: true
+        attachMetadata:
+          node: true
+        relabelings:
+          - sourceLabels: [__meta_kubernetes_node_label_karpenter_sh_nodepool]
+            action: replace
+            regex: tpcds-static
+            targetLabel: __tmp_static_node
+            replacement: "true"
+          - sourceLabels: [__meta_kubernetes_node_label_kubernetes_io_hostname]
+            action: hashmod
+            modulus: 20
+            targetLabel: __tmp_node_hash
+          - sourceLabels: [__tmp_static_node, __tmp_node_hash]
+            regex: "true;([1-9]|1[0-9])"
+            action: drop
     additionalScrapeConfigs:
+      # Health series of the tpcds-static nodes that sample-static-nodes does not scrape.
+      # The hash input must stay the same as in sample-static-nodes, so that the two sets do not overlap.
+      - job_name: kubelet-static-light
+        scrape_interval: 2m
+        scrape_timeout: 30s
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_label_karpenter_sh_nodepool]
+            regex: tpcds-static
+            action: keep
+          - source_labels: [__meta_kubernetes_node_label_kubernetes_io_hostname]
+            action: hashmod
+            modulus: 20
+            target_label: __tmp_node_hash
+          - source_labels: [__tmp_node_hash]
+            regex: "0"
+            action: drop
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: kubelet_running_pods|kubelet_pod_start_sli_duration_seconds_(sum|count)|kubelet_pleg_relist_duration_seconds_(sum|count)
+            action: keep
+      - job_name: node-exporter-static-light
+        scrape_interval: 2m
+        scrape_timeout: 30s
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_label_karpenter_sh_nodepool]
+            regex: tpcds-static
+            action: keep
+          - source_labels: [__meta_kubernetes_node_label_kubernetes_io_hostname]
+            action: hashmod
+            modulus: 20
+            target_label: __tmp_node_hash
+          - source_labels: [__tmp_node_hash]
+            regex: "0"
+            action: drop
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+          - source_labels: [__address__]
+            regex: (.+):10250
+            replacement: $1:9100
+            target_label: __address__
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: node_load1|node_memory_MemAvailable_bytes|node_filesystem_avail_bytes|node_ethtool_.*_allowance_exceeded
+            action: keep
+      - job_name: kube-proxy-static-light
+        scrape_interval: 2m
+        scrape_timeout: 30s
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_label_karpenter_sh_nodepool]
+            regex: tpcds-static
+            action: keep
+          - source_labels: [__meta_kubernetes_node_label_kubernetes_io_hostname]
+            action: hashmod
+            modulus: 20
+            target_label: __tmp_node_hash
+          - source_labels: [__tmp_node_hash]
+            regex: "0"
+            action: drop
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+          - source_labels: [__address__]
+            regex: (.+):10250
+            replacement: $1:10249
+            target_label: __address__
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: kubeproxy_sync_proxy_rules_duration_seconds_(sum|count)|kubeproxy_network_programming_duration_seconds_(sum|count)
+            action: keep
       # Scrape metrics for Yunikorn
       - job_name: yunikorn
         honor_labels: true
@@ -102,33 +205,75 @@ prometheus:
             ]
           action: keep
           regex: default;kubernetes;https
-  # Monitors for Spark Jobs
-  additionalPodMonitors:
-    - name: "spark-job-monitoring"
-      jobLabel: "spark-job-monitoring"
-      selector:
-        matchLabels:
-          spark-role: driver
-      namespaceSelector:
-        matchNames:
-          - spark-team-a
-          - spark-team-b
-          - spark-team-c
-          - spark-s3-express
-      podMetricsEndpoints:
-        - port: "spark-ui"
-          interval: 30s
-          path: /metrics/driver/prometheus/
-        - port: "spark-ui"
-          interval: 30s
-          path: /metrics/executors/prometheus/
+
+# Per-pod series of the Spark load generator: 11.6M head series at 100 nodes,
+# so Prometheus runs out of memory at 1,000 nodes. EKS signals do not need them.
+kubelet:
+  serviceMonitor:
+    # Overrides the chart default (false). sample-static-nodes needs the node labels.
+    attachMetadata:
+      node: true
+    # Chart default 10s. cAdvisor was 77% of the parse work per node at 10s.
+    cAdvisorInterval: 30s
+    # This list replaces the chart default, so the first rules copy the default of chart 82.13.3.
+    cAdvisorMetricRelabelings:
+      - sourceLabels: [__name__]
+        action: drop
+        regex: container_cpu_(cfs_throttled_seconds_total|load_average_10s|system_seconds_total|user_seconds_total)
+      - sourceLabels: [__name__]
+        action: drop
+        regex: container_fs_(io_current|io_time_seconds_total|io_time_weighted_seconds_total|reads_merged_total|sector_reads_total|sector_writes_total|writes_merged_total)
+      - sourceLabels: [__name__]
+        action: drop
+        regex: container_memory_(mapped_file|swap)
+      - sourceLabels: [__name__]
+        action: drop
+        regex: container_(file_descriptors|tasks_state|threads_max)
+      - sourceLabels: [__name__, scope]
+        action: drop
+        regex: container_memory_failures_total;hierarchy
+      - sourceLabels: [__name__, interface]
+        action: drop
+        regex: container_network_.*;(cali|cilium|cni|lxc|nodelocaldns|tunl).*
+      - sourceLabels: [__name__]
+        action: drop
+        regex: container_spec.*
+      - sourceLabels: [id, pod]
+        action: drop
+        regex: .+;
+      - sourceLabels: [namespace]
+        action: drop
+        regex: spark-team-a|spark-team-b|spark-team-c|spark-s3-express
+      # Host-network pods see the host side of every pod interface: 2.9M series at 746 nodes.
+      - sourceLabels: [__name__, interface]
+        action: drop
+        regex: container_network_.*;(eni|veth).*
+
+kube-state-metrics:
+  namespacesDenylist: spark-team-a,spark-team-b,spark-team-c,spark-s3-express
+  # About 31,000 pods at 1,000 nodes.
+  resources:
+    requests:
+      cpu: "2"
+      memory: 4Gi
+    limits:
+      memory: 4Gi
 
 # add ethtool metrics to node-exporter https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-network-performance-ena.html
 prometheus-node-exporter:
+  prometheus:
+    monitor:
+      # Overrides the chart default (false). sample-static-nodes needs the node labels.
+      attachMetadata:
+        node: true
   extraArgs:
     - --collector.ethtool
     - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
     - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
+    # Host side of each pod interface: 10.2M series at 746 nodes. Node interfaces are ens*.
+    - --collector.netdev.device-exclude=^(eni|veth).*
+    - --collector.netclass.ignored-devices=^(eni|veth).*
+    - --collector.ethtool.device-exclude=^(eni|veth).*
 
 alertmanager:
   enabled: false

@@ -13,11 +13,12 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from k8s_api import get
+from k8s_api import ACCEPT_METADATA, FROM_CACHE, get
 
 NAMESPACES = ["spark-team-a"]
 APP_PREFIX = "tpcds-"
 INTERVAL = 15
+FINAL = {"COMPLETED", "FAILED", "SUBMISSION_FAILED"}
 OUT = sys.argv[1] if len(sys.argv) > 1 else "monitor.jsonl"
 # Apps created before this time are not part of the run.
 START = datetime.now(timezone.utc) if len(sys.argv) < 3 else datetime.fromisoformat(sys.argv[2])
@@ -60,7 +61,9 @@ def pod_metrics(namespace, selector, port, names):
     return total
 
 
-seen_failed = set()
+# The app TTL deletes final apps, so the run totals are kept here. name -> (state, runtime_min)
+final_apps = {}
+submit_lag = {}
 PROM_QUERY = "/api/v1/namespaces/monitoring/services/prometheus-prometheus:9090/proxy/api/v1/query"
 EKS_QUERIES = {
     "api_req_s": 'sum(rate(apiserver_request_total[1m]))',
@@ -96,49 +99,67 @@ while True:
     try:
         apps = []
         for ns in NAMESPACES:
-            apps += get(f"/apis/sparkoperator.k8s.io/v1beta2/namespaces/{ns}/sparkapplications")["items"]
+            apps += get(f"/apis/sparkoperator.k8s.io/v1beta2/namespaces/{ns}/sparkapplications", FROM_CACHE)["items"]
         apps = [a for a in apps if a["metadata"]["name"].startswith(APP_PREFIX)
                 and ts(a["metadata"]["creationTimestamp"]) >= START]
-        states = collections.Counter(a.get("status", {}).get("applicationState", {}).get("state") or "NEW" for a in apps)
-        submit_lag, runtimes = [], []
+        states = collections.Counter()
         for a in apps:
+            name = a["metadata"]["name"]
             st = a.get("status", {})
+            state = st.get("applicationState", {}).get("state") or "NEW"
             created = ts(a["metadata"]["creationTimestamp"])
             sub = ts(st.get("lastSubmissionAttemptTime"))
+            if sub and name not in submit_lag:
+                submit_lag[name] = (sub - created).total_seconds()
+            if state not in FINAL:
+                states[state] += 1
+                continue
+            if name in final_apps:
+                continue
             end = ts(st.get("terminationTime"))
-            if sub:
-                submit_lag.append((sub - created).total_seconds())
-            if end and st.get("applicationState", {}).get("state") == "COMPLETED":
-                runtimes.append((end - created).total_seconds() / 60)
-            state = st.get("applicationState", {}).get("state")
-            if state in ("FAILED", "SUBMISSION_FAILED") and a["metadata"]["name"] not in seen_failed:
-                seen_failed.add(a["metadata"]["name"])
+            runtime = (end - created).total_seconds() / 60 if end and state == "COMPLETED" else None
+            final_apps[name] = (state, runtime)
+            if state != "COMPLETED":
                 sample.setdefault("new_failures", []).append(
-                    {a["metadata"]["name"]: (state, st.get("applicationState", {}).get("errorMessage", "")[:300])})
+                    {name: (state, st.get("applicationState", {}).get("errorMessage", "")[:300])})
+        states.update(state for state, _ in final_apps.values())
+        lags = list(submit_lag.values())
+        runtimes = [r for _, r in final_apps.values() if r is not None]
         sample["apps"] = dict(states)
-        sample["apps_total"] = len(apps)
-        sample["submit_lag_s_p50_p99_max"] = [pct(submit_lag, 50), pct(submit_lag, 99), max(submit_lag) if submit_lag else None]
+        sample["apps_total"] = sum(states.values())
+        sample["submit_lag_s_p50_p99_max"] = [pct(lags, 50), pct(lags, 99), max(lags) if lags else None]
         sample["runtime_min_p50_p90_max"] = [pct(runtimes, 50), pct(runtimes, 90), round(max(runtimes), 1) if runtimes else None]
 
-        pods = []
+        pod_states = collections.Counter()
+        pending = []
         for ns in NAMESPACES:
-            pods += get(f"/api/v1/namespaces/{ns}/pods")["items"]
-        pod_states = collections.Counter((p["metadata"]["labels"].get("spark-role", "?"), p["status"].get("phase")) for p in pods)
+            path = f"/api/v1/namespaces/{ns}/pods"
+            pending += get(path, {**FROM_CACHE, "fieldSelector": "status.phase=Pending"})["items"]
+            for phase in ("Running", "Succeeded", "Failed"):
+                # A metadata-only list returns "items": null when it is empty.
+                for p in get(path, {**FROM_CACHE, "fieldSelector": f"status.phase={phase}"}, accept=ACCEPT_METADATA)["items"] or []:
+                    pod_states[(p["metadata"].get("labels", {}).get("spark-role", "?"), phase)] += 1
+        for p in pending:
+            pod_states[(p["metadata"].get("labels", {}).get("spark-role", "?"), "Pending")] += 1
         sample["pods"] = {f"{r}/{ph}": n for (r, ph), n in sorted(pod_states.items())}
-        pending_age = [(now - ts(p["metadata"]["creationTimestamp"])).total_seconds()
-                       for p in pods if p["status"].get("phase") == "Pending"]
+        pending_age = [(now - ts(p["metadata"]["creationTimestamp"])).total_seconds() for p in pending]
         sample["pending_oldest_s"] = round(max(pending_age)) if pending_age else 0
         unsched = collections.Counter()
-        for p in pods:
+        for p in pending:
             for c in p["status"].get("conditions", []):
                 if c["type"] == "PodScheduled" and c["status"] == "False":
                     unsched[c.get("reason", "")] += 1
         if unsched:
             sample["unschedulable"] = dict(unsched)
 
-        nodes = get("/api/v1/nodes", {"labelSelector": "karpenter.sh/nodepool=tpcds-static"})["items"]
-        sample["static_nodes_ready"] = sum(
-            1 for n in nodes for c in n["status"]["conditions"] if c["type"] == "Ready" and c["status"] == "True")
+        # NodeClaims, because Node objects are large (image lists) at 1,000 nodes.
+        claims = get("/apis/karpenter.sh/v1/nodeclaims",
+                     {**FROM_CACHE, "labelSelector": "karpenter.sh/nodepool=tpcds-static"})["items"]
+        ready = [c for c in claims
+                 if any(k["type"] == "Ready" and k["status"] == "True" for k in c.get("status", {}).get("conditions", []))]
+        sample["static_nodes_ready"] = len(ready)
+        # The pool mixes instance sizes, so the app capacity follows the vCPU total, not the node count.
+        sample["static_vcpu_ready"] = sum(int(c["status"]["capacity"]["cpu"]) for c in ready)
 
         sm = pod_metrics("spark-submitter", "app.kubernetes.io/name=spark-submitter", 8081, {
             "spark_submit_requests_in_flight", "spark_submit_request_success_count",

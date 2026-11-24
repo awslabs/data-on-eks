@@ -15,7 +15,7 @@ spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: ebs-gp3-200gi-6000iops-1000tp
+        name: ebs-gp3-40gi-6000iops-1000tp
       taints:
         - key: dedicated
           value: tpcds-static
@@ -25,9 +25,21 @@ spec:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["on-demand"]
+        # More types give more EC2 capacity in one AZ. App capacity per node changes with the
+        # type, so set the Locust rate from the total vCPU after the nodes are up.
         - key: node.kubernetes.io/instance-type
           operator: In
-          values: ["r8g.8xlarge", "r8gd.8xlarge"]
+          values:
+            - r6g.4xlarge
+            - r6g.8xlarge
+            - r6g.12xlarge
+            - r7g.4xlarge
+            - r7g.8xlarge
+            - r7g.12xlarge
+            - r8g.4xlarge
+            - r8g.8xlarge
+            - r8g.12xlarge
+            - r8gd.8xlarge
         # Static nodes do not follow pod zones. Zone ID, because zone names differ per account.
         - key: topology.k8s.aws/zone-id
           operator: In
