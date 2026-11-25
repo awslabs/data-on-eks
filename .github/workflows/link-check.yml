@@ -1,0 +1,37 @@
+name: Link check
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  link-check:
+    name: Find broken links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Check links
+        id: lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --no-progress
+            --scheme http
+            --scheme https
+            --max-retries 2
+            --timeout 20
+            --accept 200,201,202,204,206,429
+            --root-dir ${{ github.workspace }}/website
+            --exclude '^file:'
+            --exclude-path website/node_modules
+            --exclude '^https?://localhost'
+            --exclude '^https?://127\.0\.0\.1'
+            --exclude 'example\.com'
+            'README.md' 'website/docs/**/*.md' 'website/docs/**/*.mdx'
+          fail: false
+          jobSummary: true
