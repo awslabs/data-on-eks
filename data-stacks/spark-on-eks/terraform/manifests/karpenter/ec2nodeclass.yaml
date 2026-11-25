@@ -399,6 +399,40 @@ spec:
           # Same as ebs-gp3-1000gi-6000iops-1000tp.
           memoryThrottlingFactor: 0.7
 
+    --//
+    Content-Type: text/cloud-config; charset="us-ascii"
+
+    #cloud-config
+    # The account PatchWeekly association reboots a node when it installs a package. Hold the SSM
+    # agent until the next part patches the node. The runtime mask is removed at reboot.
+    bootcmd:
+      - [sh, -c, "test -e /var/lib/static-node-prepatch.done || systemctl mask --runtime --now amazon-ssm-agent"]
+
+    --//
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
+    #!/bin/bash
+    # Install what the account patch baseline approves (Security, kernel*) and reboot before the
+    # kubelet starts. Patch Manager reboots for any package installed since the last reboot.
+    set -u
+    marker=/var/lib/static-node-prepatch.done
+    test -e "$marker" && exit 0
+    before=$(rpm -qa | sort | md5sum)
+    timeout 300 dnf update -y --releasever=latest system-release
+    timeout 600 dnf upgrade -y --releasever=latest --security
+    timeout 600 dnf upgrade -y --releasever=latest 'kernel*'
+    # The baseline approves kernel*, and the AMI version-locks this package. Patch Manager cannot
+    # upgrade it, and a failed install attempt still makes it reboot.
+    timeout 300 dnf upgrade -y --releasever=latest --disableplugin=versionlock kernel-livepatch-repo-s3
+    after=$(rpm -qa | sort | md5sum)
+    touch "$marker"
+    if [ "$before" != "$after" ]; then
+      systemctl reboot
+      exit 0
+    fi
+    systemctl unmask --runtime amazon-ssm-agent
+    systemctl start --no-block amazon-ssm-agent
+
     --//--
 
 ---
