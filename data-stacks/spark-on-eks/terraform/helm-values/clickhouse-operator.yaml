@@ -1,7 +1,17 @@
-watchNamespaces:
-  - clickhouse
-  - logging
+controller:
+  # Chart 0.0.5 reads only this path. At the top level, the operator watched all namespaces.
+  watchNamespaces:
+    - clickhouse
+    - logging
 
 manager:
   nodeSelector:
     NodeGroupType: core
+  # The 128Mi chart default is OOMKilled at 1,000 nodes (EKS-SCALE-TEST.md section 6.3).
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 10m
+      memory: 64Mi

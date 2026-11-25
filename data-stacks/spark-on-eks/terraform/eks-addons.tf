@@ -15,6 +15,15 @@ resource "aws_eks_addon" "metrics_server" {
 
   cluster_name = module.eks.cluster_name
   addon_name   = "metrics-server"
+
+  # The 400Mi default is OOMKilled at 1,000 nodes (EKS-SCALE-TEST.md section 6.3).
+  configuration_values = jsonencode({
+    nodeSelector = { NodeGroupType = "core" }
+    resources = {
+      requests = { cpu = "100m", memory = "200Mi" }
+      limits   = { memory = "4Gi" }
+    }
+  })
 }
 
 resource "aws_eks_addon" "eks_node_monitoring_agent" {

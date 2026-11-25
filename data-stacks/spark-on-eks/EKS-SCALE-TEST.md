@@ -69,7 +69,7 @@ aws s3api put-bucket-metrics-configuration --bucket "$DATA" \
 ```
 
 Before a run with thousands of applications, ask AWS Support to pre-partition the data bucket on
-the `cNN/` prefixes, and the logs bucket on the results and log prefixes. Section 6.3 gives the
+the `cNN/` prefixes, and the logs bucket on the results and log prefixes. Section 6.4 gives the
 request rates.
 
 ### 2.4 Check the quotas
@@ -83,6 +83,12 @@ Each static node has a 40 GiB gp3 root volume, and the gp3 storage quota is for 
 
 Add the volumes and the vCPU of the other nodes of the cluster. If a quota is too low, Karpenter
 cannot launch all nodes (section 6.2).
+
+In this account, Service Quotas shows 640 for the On-Demand Standard vCPU quota (`L-1216C47A`),
+but EC2 ran 16,369 vCPU in the run of section 6.3. Thus the Service Quotas value is not the limit
+that EC2 enforces. Ask the account owner or AWS Support for the real limit. To see the vCPU in
+use, read the CloudWatch metric `AWS/Usage` `ResourceCount` (`Resource=vCPU`,
+`Class=Standard/OnDemand`).
 
 ## 3. Run the test
 
@@ -101,6 +107,11 @@ value in the file (0).
 
 If some NodeClaims do not become Ready, read the Karpenter log. Set `replicas` to the number of
 Ready nodes, so that Karpenter stops the launch attempts (section 6.2).
+
+An SSM patch setup in this account reboots each new node one time. In the run of section 6.3, the
+reboots continued until about 35 minutes after the launch. A reboot stops the pods on the node,
+and the driver fails with exit code 143. Start Locust after the reboots stop: all static nodes
+are Ready, and no node changed its Ready condition in the last few minutes.
 
 ### 3.2 Calculate the rate
 
@@ -121,7 +132,7 @@ The monitor field `static_vcpu_ready` gives the total vCPU of the Ready static n
 | --- | --- | --- | --- | --- | --- |
 | 100 | r8g.8xlarge | 31 for each node | 100 | 25/min | Tested (section 6.1) |
 | 746 | r6g.4xlarge | 15 for each node | about 360 | 55/min (65/min was too high) | Tested (section 6.2) |
-| 1,000 | r6g.4xlarge | 15 for each node | about 480 | about 75/min | Not tested |
+| 1,000 | r6g.4xlarge | 15 for each node | about 480 | 75/min | Tested (section 6.3) |
 
 Above the capacity, drivers and executors wait for free slots, and the queue grows with no limit.
 
@@ -201,20 +212,21 @@ tail -n 1 run.jsonl | python3 -m json.tool
 The monitor reads these values from Prometheus (namespace `monitoring`, service
 `prometheus-prometheus`, port 9090).
 
-| Field | Prometheus source | 100 nodes (section 6.1) | 746 nodes (section 6.2) | Problem sign |
-| --- | --- | --- | --- | --- |
-| `api_req_s` | `apiserver_request_total` | about 590, peak 734 | about 1,200, peak 3,663 | Grows faster than the pod count |
-| `api_429_s`, `api_5xx_s` | `apiserver_request_total` by `code` | 0 | 0, and one 504 in the run | Any value above 0 |
-| `apf_inqueue`, `apf_rejected_s` | `apiserver_flowcontrol_*` | 0 | 0 rejected, at most 1 in queue | Requests wait or are rejected by API Priority and Fairness |
-| `api_p99_mutating_s` | `apiserver_request_duration_seconds` (POST, PUT, PATCH, DELETE) | 0.025 s | at most 0.04 s | Above about 1 s |
-| `api_p99_list_s` | Same, verb LIST | 0.65 s | at most 0.89 s | Increases during the run |
-| `pod_create_s` | Pod POST requests | about 13 | about 28, peak 159 | Lower than rate x 31 / 60: the load generator is behind |
-| `pod_bind_s` | Pod `binding` POST requests (scheduler placements) | about 13 | about 28, peak 115 | Lower than `pod_create_s` for a long time: the scheduler is behind |
-| `etcd_mb` | `apiserver_storage_size_bytes` | about 1,900 MB | about 1,400 MB | Near the etcd limit of the control plane tier. This value may not show the real etcd size |
-| `coredns_p99_s` | `coredns_dns_request_duration_seconds` | 0.008 s | at most 0.031 s | Above about 0.1 s |
+| Field | Prometheus source | 100 nodes (section 6.1) | 746 nodes (section 6.2) | 1,000 nodes (section 6.3) | Problem sign |
+| --- | --- | --- | --- | --- | --- |
+| `api_req_s` | `apiserver_request_total` | about 590, peak 734 | about 1,200, peak 3,663 | about 1,450, peak 2,394 | Grows faster than the pod count |
+| `api_429_s`, `api_5xx_s` | `apiserver_request_total` by `code` | 0 | 0, and one 504 in the run | 0 | Any value above 0 |
+| `apf_inqueue`, `apf_rejected_s` | `apiserver_flowcontrol_*` | 0 | 0 rejected, at most 1 in queue | 0 rejected, at most 1 in queue | Requests wait or are rejected by API Priority and Fairness |
+| `api_p99_mutating_s` | `apiserver_request_duration_seconds` (POST, PUT, PATCH, DELETE) | 0.025 s | at most 0.04 s | at most 0.045 s | Above about 1 s |
+| `api_p99_list_s` | Same, verb LIST | 0.65 s | at most 0.89 s | at most 0.90 s | Increases during the run |
+| `pod_create_s` | Pod POST requests | about 13 | about 28, peak 159 | about 31, peak 161 | Lower than rate x 31 / 60: the load generator is behind |
+| `pod_bind_s` | Pod `binding` POST requests (scheduler placements) | about 13 | about 28, peak 115 | about 30, peak 60 | Lower than `pod_create_s` for a long time: the scheduler is behind |
+| `etcd_mb` | `apiserver_storage_size_bytes` | about 1,900 MB | about 1,400 MB | about 6,500 MB | Near the etcd limit of the control plane tier. This value may not show the real etcd size |
+| `coredns_p99_s` | `coredns_dns_request_duration_seconds` | 0.008 s | at most 0.031 s | at most 0.031 s | Above about 0.1 s |
 
-The scheduler metrics (`scheduler_*`) may not be available. Use `pod_bind_s` for the scheduling
-throughput and `pending_oldest_s` (section 4.2) for the scheduling delay.
+The scheduler metrics (`scheduler_*`) come from the job `ksh-metrics`. They show data only for
+pods that `default-scheduler` places. Use `pod_bind_s` for the scheduling throughput and
+`pending_oldest_s` (section 4.2) for the scheduling delay.
 
 ### 4.2 Pods and nodes
 
@@ -350,7 +362,7 @@ minutes: 2,581 applications, at most 455 concurrent applications and 10,812 runn
 | Reads | GET 327/s, LIST 13/s, WATCH 59/s. At most 16,885 open watches |
 | Errors | 0 responses with code 429, 0 with code 500, one 504. API Priority and Fairness: 0 rejected, at most 1 in queue |
 | APF seats in use (peak) | system 86, workload-low 44, workload-high 22, global-default 11 |
-| API latency (p99, worst 5 minutes) | mutating 40 ms, GET 20 ms, LIST 0.89 s. LIST of events reached 29.8 s (client not known) |
+| API latency (p99, worst 5 minutes) | mutating 40 ms, GET 20 ms, LIST 0.89 s. LIST of events reached 29.8 s. This is a histogram estimate from very few requests, and it is probably too high (section 6.3) |
 | Pods | 28 creates/s and 28 bindings/s average, 159 creates/s and 115 bindings/s peak. 83,400 pods created |
 | CoreDNS | 649 req/s, p99 31 ms or less, 0 SERVFAIL |
 | Load generator | 2,569 applications completed, 12 failed. 1 failure was `SUBMITTER_OVERLOADED`. The other 11 were not caused by the load. Runtime from submission to end: p50 5.2 min, p90 5.8 min |
@@ -379,7 +391,55 @@ These problems were outside the control plane:
   event ingest for about 1 minute (EBS detach and attach). The NodePool of the event store now
   uses `consolidationPolicy: WhenEmpty` and on-demand capacity only.
 
-### 6.3 Projection for 10,000 nodes (not tested)
+### 6.3 EKS at 1,000 nodes, 75 apps/min
+
+All 1,000 static nodes were r6g.4xlarge (15 pod slots each, 16,000 vCPU). The image was
+`spark-scaletest-eks-tpcds:tcpds-4-spark-3.5.8-comet-1.0.0-iceberg` from private ECR, through
+the dual-stack host `<account>.dkr-ecr.us-east-1.on.aws`. The runs of sections 6.1 and 6.2 used
+the public comet-0.15.0 image. A first pull took 15 s for 1.24 GB (arm64). Locust ran from
+00:28 to 01:10 UTC (`-u 15`, 75 apps/min, 3,000 applications). The last application ended at
+01:18 UTC. Values are averages over the 50 minutes, unless the table gives a peak.
+
+| Area | Result |
+| --- | --- |
+| API requests | 1,530 req/s average, 2,511 req/s peak (1-minute rate), 6 API server instances |
+| Mutating requests | 1,043/s average, 1,975/s peak. About 1,200/s in steady state |
+| Writes by resource | events 263 POST/s and 65 PATCH/s, pods/status 198/s, sparkapplications/status 170/s, leases 105/s, serviceaccounts/token 65/s, pods 63 POST/s and 32 DELETE/s, nodeclaims 23/s |
+| Reads | pods GET 255/s, csinodes GET 101/s, pods LIST 11/s |
+| Errors | 0 responses with code 429, 0 with code 5xx. API Priority and Fairness: 0 rejected, at most 1 in queue |
+| APF seats in use (peak) | system 80 of 1,956, workload-low 58 of 6,510, workload-high 10, global-default 10 |
+| In-flight requests (peak) | 247 mutating, 52 read-only |
+| API latency (p99, worst 5 minutes) | mutating 45 ms, LIST 0.99 s (nodes, nodeclaims, sparkapplications). Cluster-scope LISTs of events took up to 10.8 s (EKS audit log). Prometheus showed 29.8 s, but that value is a histogram estimate from very few requests |
+| Pods | about 38 creates/s, peak 45/s (1-minute rate). `default-scheduler` placed 94,443 pods, 0 unschedulable, attempt p99 13.5 ms. Oldest Pending pod: 30 s or less |
+| CoreDNS | 950 req/s peak, p99 31 ms or less. 46% of the responses are NXDOMAIN (search path) |
+| Load generator | 2,997 applications completed, 3 failed. The 3 drivers ended with exit code 143 because their nodes rebooted (section 3.1). Runtime p50 5.2 min, p90 5.4 min, max 6.9 min. At most 390 concurrent applications and 11,104 running executors. Operator queue depth 3 or less, work queue retries about 265/s (limit 1,000) |
+| Add-on usage (peak) | Prometheus 17.5 GB and 4.4 cores, 4.0 million head series. Spark Operator 3.6 cores and 1.1 GB. Karpenter 8 cores |
+
+The control plane had no errors and low latency. The rate-limiter backlog of section 6.2 did not
+occur. These problems were outside the control plane:
+
+- **metrics-server.** Its pods were OOMKilled 12 to 15 times each during the run (limit 400Mi).
+  The log also shows kubelet scrape timeouts. The same restarts occurred in the run of section 6.2.
+- **ClickHouse operator.** It was OOMKilled 9 times during the run (limit 128Mi). The live
+  Deployment has no `WATCH_NAMESPACE`, so the operator watches all namespaces.
+- **Strimzi operator.** The Deployment was left on the cluster after the component was removed
+  from Terraform. It was in CrashLoopBackOff. It is now deleted, with its CRDs and RBAC.
+- **Submitter balance.** Two of the three submitter pods received almost all requests. The third
+  pod received 0.65 MB and used no CPU. The cause is not verified.
+- **Late reboots.** Nodes rebooted until about 35 minutes after the launch, after Locust had
+  started.
+- **Event collector re-LIST.** Fluent Bit 4.2.3 (`kubernetes_events` input) does a full LIST of
+  `/api/v1/events`, without paging, every 30 to 60 minutes. It does this without a restart, when
+  the API server closes the watch. It then sends again all events that the API server holds. The
+  LIST at 00:48 UTC took 10.8 s and sent about 146,000 events again. For events from 00:35 to
+  00:50 UTC, 29% of the rows in ClickHouse are duplicates. At other times, about 6% are
+  duplicates. With more nodes, the API server holds more events, and an unpaged LIST can time
+  out (HTTP 504). Then the collector loses events.
+- **Event LISTs from users.** A tool of a cluster user made cluster-scope LISTs of events with
+  `fieldSelector=involvedObject.name=...`. Each LIST took 6 to 9 s, because the API server reads
+  all events to apply a field selector (section 7).
+
+### 6.4 Projection for 10,000 nodes (not tested)
 
 These values assume that the load grows linearly with the number of concurrent applications.
 
@@ -396,10 +456,18 @@ fewer applications fill the same node count.
 | --- | --- | --- | --- |
 | 100 nodes | about 84 | about 590 | about 7 |
 | 746 nodes | about 300 to 455 | about 1,200 | about 2.6 to 4 |
+| 1,000 nodes | about 384 | about 1,700 | about 4.4 |
 
 The node leases add 1 write every 10 seconds for each node (1,000/s at 10,000 nodes). A longer
 runtime lowers the creates and the events for each second, but not the status writes for running
 applications.
+
+**Writes.** In section 6.3, the applications made about 2.8 writes/s for each running
+application, and the nodes made about 135 writes/s for each 1,000 nodes. On 10,000 r6g.4xlarge
+nodes at 80% (about 3,870 applications), this gives about 12,000 writes/s with 1 iteration. In
+an earlier test with only events, etcd returned code 429 at about 10,000 writes/s. With 2
+iterations, the pod churn goes down by half, and the writes are probably about 7,000/s. This
+value is an estimate.
 
 **Operator.** The operator rate limiter gets about 1 call for each pod event. At 10,000 nodes,
 calculate the pod event rate and keep it below the rate limiter QPS (now 1,000).
@@ -423,5 +491,8 @@ run, and increase the rate in steps.
   `terraform/manifests/karpenter/nodepool-tpcds-static.yaml`. The Locust `--zone-id` value must
   be the same zone ID.
 - The static NodePool needs the Karpenter feature gate `StaticCapacity=true`.
+- During a run, do not LIST events and do not use `kubectl describe`. `kubectl describe` LISTs the
+  events of the object. A field selector does not make the LIST faster, because the API server
+  reads all events in the scope.
 - Karpenter selects the lowest-price instance type for the static nodes. To get the same
   capacity in each run, limit the instance types in the NodePool.
