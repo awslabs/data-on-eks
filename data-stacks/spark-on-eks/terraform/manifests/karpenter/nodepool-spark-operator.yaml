@@ -21,7 +21,6 @@ spec:
         - key: dedicated
           value: spark-operator
           effect: NoSchedule
-      # No expiry: the node is not replaced after a fixed time.
       expireAfter: Never
       requirements:
         - key: karpenter.sh/capacity-type

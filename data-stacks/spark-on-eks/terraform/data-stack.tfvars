@@ -1,23 +1,17 @@
-# Checkout the docs for enabling more addons
+# To enable more add-ons, refer to
 # https://awslabs.github.io/data-on-eks/docs/datastacks/processing/spark-on-eks/infra
 
 name                = "spark-on-eks"
 region              = "us-east-1"
 eks_cluster_version = "1.37"
-# Unique ID used to tag all AWS resources for this deployment.
-# Enables identification of orphaned resources and cleanup in case of Terraform state loss.
-# Auto-generated on first deploy — do not edit manually.
+# This ID is on the tags of all AWS resources of this deployment. It helps you find
+# orphaned resources after Terraform state loss. The first deploy writes it. Do not change it.
 deployment_id              = "rOOMTbDP"
 enable_celeborn            = false
 enable_ipv6                = true
 enable_jupyterhub          = false
 enable_yunikorn            = false # The EKS scheduler must place the test pods.
-enable_nvidia_gpu_operator = false # Enable this for Spark RAPIDS on GPUs example
+enable_nvidia_gpu_operator = false # Set to true for the Spark RAPIDS GPU example.
 
-# EKS Provisioned Control Plane (PCP) Tier for high-scale benchmarking
-# Tier Limits (EKS v1.30+):
-#   XL  : 1700 API concurrency seats  | 167 pods/sec scheduling rate | 16 GB etcd
-#   2XL : 3400 API concurrency seats  | 283 pods/sec scheduling rate | 16 GB etcd
-#   4XL : 6800 API concurrency seats  | 400 pods/sec scheduling rate | 16 GB etcd
-#   8XL : 13600 API concurrency seats | 400 pods/sec scheduling rate | 16 GB etcd
+# For the tier limits, refer to the eks_pcp_tier description in variables.tf.
 eks_pcp_tier = "8XL"

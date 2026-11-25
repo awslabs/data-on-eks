@@ -1,7 +1,4 @@
-#---------------------------------------------------------------
-# Spark REST submitter (operator feature gate RestSubmitter)
-# Source and design: submitter/README.md
-#---------------------------------------------------------------
+# Spark REST submitter for the operator feature gate RestSubmitter. Design: submitter/README.md.
 locals {
   # The operator sends all job namespaces to the submitter. A namespace that the submitter
   # does not accept fails without a retry, so both lists come from the operator values.

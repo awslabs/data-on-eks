@@ -1,33 +1,28 @@
 #!/bin/bash
 
-# Run from the folder of this script. Terraform runs directly in terraform/ (no _local folder).
+# Relative paths must work from any directory.
 cd "$(dirname "${BASH_SOURCE[0]}")"
 TERRAFORM_DIR="terraform"
 TFVARS_FILE="$TERRAFORM_DIR/data-stack.tfvars"
 TF="terraform -chdir=$TERRAFORM_DIR"
 
 TERRAFORM_COMMAND="$TF destroy -auto-approve"
-# Check if data-stack.tfvars exists and add it to the command if it does.
 # -var-file is relative to TERRAFORM_DIR, because -chdir changes the directory first.
 if [ -f "$TFVARS_FILE" ]; then
   TERRAFORM_COMMAND="$TERRAFORM_COMMAND -var-file=data-stack.tfvars"
 fi
 
-# Get cluster info from terraform output
 CLUSTERNAME=$($TF output -raw cluster_name)
 REGION=$($TF output -raw region 2>/dev/null || true)
 
-# Check if region contains error/warning messages or is empty
 if [[ -z "$REGION" || "$REGION" == *"Warning"* || "$REGION" == *"Error"* || "$REGION" == *"No outputs"* ]]; then
   REGION=""
 fi
 
-# Fallback: get region from tfvars if terraform output fails
 if [ -z "$REGION" ] && [ -f "$TFVARS_FILE" ]; then
   REGION=$(grep -E '^[[:space:]]*region[[:space:]]*=' "$TFVARS_FILE" | sed -E 's/.*=[[:space:]]*"([^"]*)".*/\1/')
 fi
 
-# Final fallback: use AWS CLI default region
 if [ -z "$REGION" ]; then
   REGION=$(aws configure get region 2>/dev/null || true)
 fi
@@ -39,15 +34,12 @@ fi
 
 echo "Destroying Terraform ${CLUSTERNAME:-unknown} in region $REGION"
 
-# Get the deployment_id from terraform output
 DEPLOYMENT_ID=$($TF output -raw deployment_id 2>/dev/null || true)
 
-# Check if deployment_id contains error/warning messages or is empty
 if [[ -z "$DEPLOYMENT_ID" || "$DEPLOYMENT_ID" == *"Warning"* || "$DEPLOYMENT_ID" == *"Error"* || "$DEPLOYMENT_ID" == *"No outputs"* ]]; then
   DEPLOYMENT_ID=""
 fi
 
-# Fallback: get deployment_id from tfvars if terraform output fails
 if [ -z "$DEPLOYMENT_ID" ] && [ -f "$TFVARS_FILE" ]; then
   DEPLOYMENT_ID=$(grep -E '^[[:space:]]*deployment_id[[:space:]]*=' "$TFVARS_FILE" | sed -E 's/.*=[[:space:]]*"([^"]*)".*/\1/')
 fi
@@ -55,10 +47,9 @@ fi
 
 echo "Destroying RayService..."
 
-# Delete the Ingress/SVC before removing the addons
+# Delete the Ray resources before Terraform removes the add-ons.
 TMPFILE=$(mktemp)
 $TF output -raw configure_kubectl > "$TMPFILE"
-# check if TMPFILE contains the string "No outputs found"
 if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
   echo "No outputs found, skipping kubectl delete"
   source "$TMPFILE"
@@ -67,8 +58,8 @@ if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
 fi
 
 
-# Drain nodes before terraform destroy. Terraform deletes VPC routes concurrently
-# with EKS cluster deletion, which can strand nodes without network connectivity.
+# Terraform deletes VPC routes at the same time as the EKS cluster.
+# Nodes that are still running can then lose network access.
 echo "Draining nodes before terraform destroy..."
 if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
   echo "Deleting all nodepools..."
@@ -76,10 +67,8 @@ if [[ ! $(cat $TMPFILE) == *"No outputs found"* ]]; then
   echo "Node drain complete"
 fi
 
-# List of Terraform modules to destroy in sequence
 targets=($($TF state list | grep "kubectl_manifest\." | grep -v "kubectl_manifest.aws_load_balancer_controller"))
 
-# Destroy all kubectl_manifest resources at once (excluding aws_load_balancer_controller)
 if [ ${#targets[@]} -gt 0 ]; then
   echo "Destroying kubectl_manifest resources..."
   target_args=""
@@ -97,8 +86,7 @@ if [ ${#targets[@]} -gt 0 ]; then
 fi
 
 
-## Destroy EKS resources before VPC to ensure NAT gateway and VPC endpoints
-## remain available while nodes drain
+# Destroy EKS before the VPC. The NAT gateway and VPC endpoints must stay available while nodes drain.
 echo "Destroying EKS resources first (preserving VPC for pod cleanup)..."
 destroy_output=$($TERRAFORM_COMMAND -var="region=$REGION" -target=module.eks 2>&1 | tee /dev/tty)
 if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
@@ -108,7 +96,6 @@ else
   exit 1
 fi
 
-## Final destroy to catch any remaining resources
 echo "Destroying remaining resources..."
 destroy_output=$($TERRAFORM_COMMAND -var="region=$REGION" 2>&1 | tee /dev/tty)
 if [[ ${PIPESTATUS[0]} -eq 0 && $destroy_output == *"Destroy complete"* ]]; then
@@ -120,12 +107,10 @@ fi
 
 echo "Cleaning up PVCs and EBS volumes for deployment_id: $DEPLOYMENT_ID"
 
-# Get the list of EBS volumes with the deployment_id tag
 VOLUME_IDS=$(aws ec2 describe-volumes --region "$REGION" --filters "Name=tag:DeploymentId,Values=$DEPLOYMENT_ID" --query "Volumes[].VolumeId" --output text)
 
 if [ -n "$VOLUME_IDS" ]; then
   for volume_id in $VOLUME_IDS; do
-    # Get the PVC name from the volume tags
     PVC_NAME=$(aws ec2 describe-volumes --region "$REGION" --volume-ids "$volume_id" --query "Volumes[0].Tags[?Key=='kubernetes.io/created-for/pvc/name'].Value" --output text)
     PVC_NAMESPACE=$(aws ec2 describe-volumes --region "$REGION" --volume-ids "$volume_id" --query "Volumes[0].Tags[?Key=='kubernetes.io/created-for/pvc/namespace'].Value" --output text)
 

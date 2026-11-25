@@ -8,9 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    # Official Valkey Helm chart (community-maintained by valkey-io).
-    # Repo: https://github.com/valkey-io/valkey-helm
-    # Index: https://valkey.io/valkey-helm/
+    # Official Valkey chart: https://github.com/valkey-io/valkey-helm
     repoURL: https://valkey.io/valkey-helm/
     chart: valkey
     targetRevision: "0.9.4"

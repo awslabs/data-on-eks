@@ -8,7 +8,7 @@ import math
 import re
 from pathlib import Path
 
-# Strip TPC-DS query version suffixes (e.g. q1-v2.4 -> q1, q1-v4.0 -> q1) for chart labels.
+# Removes the query version suffix (q1-v2.4 -> q1, q1-v4.0 -> q1) for chart labels.
 QUERY_VERSION_SUFFIX = re.compile(r'-v\d+(?:\.\d+)*$')
 
 def _strip_version(query):
@@ -89,8 +89,8 @@ def analyze(baseline_path, candidate_path, baseline_name='Native Spark', candida
     per_query = []
     for q in queries:
         b, c = baseline[q]['mean'], candidate[q]['mean']
-        speedup_pct = (b - c) / b * 100  # positive = candidate faster
-        speedup = b / c  # >1 = candidate faster
+        speedup_pct = (b - c) / b * 100  # > 0 means the candidate is faster
+        speedup = b / c  # > 1 means the candidate is faster
         per_query.append({
             'query': q,
             'baseline_mean': round(b, 3),
@@ -102,14 +102,13 @@ def analyze(baseline_path, candidate_path, baseline_name='Native Spark', candida
             'candidate_range': round(candidate[q]['max'] - candidate[q]['min'], 3),
         })
 
-    # Aggregates
     total_baseline = sum(baseline[q]['mean'] for q in queries)
     total_candidate = sum(candidate[q]['mean'] for q in queries)
     overall_speedup = total_baseline / total_candidate
     overall_speedup_pct = (total_baseline - total_candidate) / total_baseline * 100
 
     speedups_pct = [r['speedup_pct'] for r in per_query]
-    # Geometric mean of per-query speedup ratios (T_base / T_cand). >=1 means candidate faster.
+    # Geometric mean of T_base / T_cand for each query. >= 1 means the candidate is faster.
     geo_mean_speedup = math.exp(
         sum(math.log(baseline[q]['mean'] / candidate[q]['mean']) for q in queries) / len(queries)
     )
@@ -118,7 +117,7 @@ def analyze(baseline_path, candidate_path, baseline_name='Native Spark', candida
     sorted_speedups = sorted(r['speedup'] for r in per_query)
     median_speedup = sorted_speedups[len(sorted_speedups) // 2]
 
-    # Distribution buckets (based on % time reduction; thresholds are intuitive in % terms)
+    # Buckets use the % time reduction, because % thresholds are easy to read.
     buckets = {'20%+ improvement': 0, '10-20% improvement': 0, '±10%': 0, '10-20% degradation': 0, '20%+ degradation': 0}
     for s in speedups_pct:
         if s >= 20: buckets['20%+ improvement'] += 1
@@ -170,7 +169,7 @@ def print_report(report):
         'Median query speedup:',
         f'{candidate_name} wins/losses:',
     ]
-    label_width = max(len(lbl) for lbl in labels) + 2  # +2 for spacing before value
+    label_width = max(len(lbl) for lbl in labels) + 2
     print("=" * 60)
     print(f"TPC-DS Benchmark: {candidate_name} vs {baseline_name}")
     print("=" * 60)

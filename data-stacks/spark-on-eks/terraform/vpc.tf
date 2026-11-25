@@ -37,9 +37,6 @@ locals {
   ]
 }
 
-#---------------------------------------------------------------
-# VPC
-#---------------------------------------------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "6.7.3"
@@ -62,7 +59,6 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
 
-  # IPv6 Settings
   enable_ipv6            = true
   create_egress_only_igw = true
 
@@ -80,15 +76,12 @@ module "vpc" {
 
   private_subnet_tags = merge(var.private_subnet_tags, {
     "kubernetes.io/role/internal-elb" = 1
-    # Karpenter discovery tag will be added by the blueprint
+    # The EC2NodeClass selects subnets by the Name tag, not by this tag.
     "karpenter.sh/discovery" = var.name
   })
 
 }
 
-#---------------------------------------------------------------
-# VPC Endpoints
-#---------------------------------------------------------------
 # Free, and no per-endpoint bandwidth limit, unlike an S3 interface endpoint.
 resource "aws_vpc_endpoint" "s3_gateway" {
   vpc_id            = module.vpc.vpc_id

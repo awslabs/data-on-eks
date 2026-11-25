@@ -1,11 +1,5 @@
-# Creates the '${catalog}' Iceberg catalog in Polaris on the real S3 warehouse
-# bucket, via the Polaris management API. Idempotent: exits cleanly if the
-# catalog already exists.
-#
-# stsUnavailable=true: Polaris does not vend credentials. Every engine (Trino)
-# brings its own identity via Pod Identity — the least-privilege posture on EKS.
-#
-# The root secret is read from the Terraform-generated Secret polaris-credentials.
+# Creates the Iceberg catalog in Polaris through the management API. The Job exits with success if the catalog exists.
+# stsUnavailable=true: Polaris does not vend credentials. Each engine uses its own Pod Identity.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -41,11 +35,8 @@ spec:
             - |
               set -eu
               API="http://polaris.${namespace}.svc.cluster.local:8181"
-              # Wait for Polaris to be healthy. In Polaris 1.3.0 the health
-              # endpoint (/q/health) is served ONLY on the management interface
-              # (port 8182), which is exposed by the headless polaris-mgmt
-              # service — NOT on the main API port 8181 (that returns 404) and
-              # NOT on the polaris service (which only publishes 8181).
+              # Polaris 1.3.0 serves /q/health only on the management port 8182 (polaris-mgmt).
+              # Port 8181 returns 404.
               HEALTH="http://polaris-mgmt.${namespace}.svc.cluster.local:8182/q/health"
               until curl -sf -o /dev/null "$HEALTH" 2>/dev/null; do
                 echo "waiting for polaris server..."; sleep 3
@@ -62,10 +53,7 @@ spec:
               if [ "$code" = 200 ]; then
                 echo "CATALOG_EXISTS"
               else
-                # Create the catalog. drop-with-purge is enabled so that
-                # `DROP TABLE` from Trino (which sends purgeRequested=true by
-                # default) succeeds instead of returning HTTP 403 — Polaris
-                # disables purge by default via DROP_WITH_PURGE_ENABLED.
+                # Trino DROP TABLE sends purgeRequested=true. Without drop-with-purge, Polaris returns 403.
                 BODY=$(printf '{"catalog":{"type":"INTERNAL","name":"%s","properties":{"default-base-location":"%s","polaris.config.drop-with-purge.enabled":"true"},"storageConfigInfo":{"storageType":"S3","allowedLocations":["%s"],"stsUnavailable":true,"region":"%s"}}}' \
                   "$CATALOG" "$BASE" "$BASE" "$REGION")
                 code=$(curl -s -o /tmp/cr -w '%%{http_code}' -X POST "$API/api/management/v1/catalogs" \
@@ -74,10 +62,8 @@ spec:
                 echo "CREATE_HTTP=$code"; cat /tmp/cr; echo
                 { [ "$code" = 201 ] || [ "$code" = 200 ]; } || exit 1
               fi
-              # Ensure the catalog_admin catalog-role can manage table content
-              # (create/drop/write). By default it only has MANAGE_ACCESS and
-              # MANAGE_METADATA, so DROP_TABLE_WITH_PURGE returns HTTP 403
-              # without CATALOG_MANAGE_CONTENT. PUT is idempotent.
+              # catalog_admin does not have CATALOG_MANAGE_CONTENT by default, so DROP_TABLE_WITH_PURGE returns 403.
+              # PUT is idempotent.
               code=$(curl -s -o /dev/null -w '%%{http_code}' -X PUT \
                 "$API/api/management/v1/catalogs/$CATALOG/catalog-roles/catalog_admin/grants" \
                 -H "Authorization: Bearer $ACCESS" -H 'Polaris-Realm: POLARIS' \

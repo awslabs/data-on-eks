@@ -8,9 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    # Official Apache Polaris (incubating) Helm chart.
-    # Repo:  https://downloads.apache.org/incubator/polaris/helm-chart/
-    # Chart: https://github.com/apache/polaris/tree/main/helm/polaris
+    # Chart source: https://github.com/apache/polaris/tree/main/helm/polaris
     repoURL: https://downloads.apache.org/incubator/polaris/helm-chart/
     chart: polaris
     targetRevision: "1.3.0-incubating"

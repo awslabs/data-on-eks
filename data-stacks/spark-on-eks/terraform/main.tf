@@ -48,7 +48,6 @@ locals {
               }]
             }
           }
-          # Required: never put two CoreDNS replicas on the same node.
           podAntiAffinity = {
             requiredDuringSchedulingIgnoredDuringExecution = [{
               labelSelector = {
@@ -87,7 +86,6 @@ locals {
     }
   }
 
-  # Define the default core node group configuration
   default_node_groups = {
     core_node_group = {
       name        = "core-node-group"
@@ -110,7 +108,7 @@ locals {
       instance_types = ["m6a.8xlarge"]
 
       iam_role_additional_policies = {
-        # Not required, but used in the example to access the nodes to inspect mounted volumes
+        # Optional. The example uses SSM to connect to the nodes and examine mounted volumes.
         AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
       }
 
@@ -137,9 +135,6 @@ locals {
     }
   }
 
-  # EKS PCP Tier mapping: user-friendly names → AWS EKS API values
-  # These correspond to the EKS Provisioned Control Plane capacity tiers
-  # Ref: terraform-aws-modules/eks/aws v21 control_plane_scaling_config
   pcp_tier_map = {
     "XL"  = "tier-xl"
     "2XL" = "tier-2xl"

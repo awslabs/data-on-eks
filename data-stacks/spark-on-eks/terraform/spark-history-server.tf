@@ -12,12 +12,9 @@ locals {
 }
 
 
-#---------------------------------------------------------------
-# Spark History Server Application
-#---------------------------------------------------------------
 resource "kubectl_manifest" "spark_history_server" {
   yaml_body = templatefile("${path.module}/argocd-applications/spark-history-server.yaml", {
-    # Place under `helm.valuesObject:` at 8 spaces (adjust if your template indent differs)
+    # The indent must match the position of helm.valuesObject in the template.
     user_values_yaml = indent(8, yamlencode(local.spark_history_server_values))
   })
 
@@ -28,10 +25,7 @@ resource "kubectl_manifest" "spark_history_server" {
 }
 
 
-# we need to use IRSA because spark history server image does not support pod identity yet (java sdk 1.x)
-#---------------------------------------------------------------
-# IRSA for Spark History Server
-#---------------------------------------------------------------
+# The Spark History Server image uses Java SDK 1.x, which does not support Pod Identity. Thus it uses IRSA.
 
 module "spark_history_server_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
@@ -39,7 +33,7 @@ module "spark_history_server_irsa" {
   name    = "${module.eks.cluster_name}-shs"
 
   policies = {
-    policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
+    policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Change this policy for the access that you need.
   }
 
   oidc_providers = {

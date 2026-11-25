@@ -28,10 +28,6 @@ variable "deployment_id" {
 }
 
 
-#---------------------------------------------------------------
-# VPC
-#---------------------------------------------------------------
-
 variable "vpc_cidr" {
   description = "The CIDR block for the VPC"
   type        = string
@@ -60,10 +56,6 @@ variable "private_subnet_tags" {
   default     = {}
 }
 
-#---------------------------------------------------------------
-# EKS
-#---------------------------------------------------------------
-
 variable "eks_cluster_version" {
   description = "Kubernetes `<major>.<minor>` version to use for the EKS cluster (i.e.: `1.31`)"
   type        = string
@@ -87,7 +79,6 @@ variable "kms_key_admin_roles" {
   default     = []
 }
 
-# EKS Addons
 variable "enable_cluster_addons" {
   description = <<DESC
 A map of EKS addon names to boolean values that control whether each addon is enabled.
@@ -191,20 +182,6 @@ variable "enable_emr_spark_operator" {
   default     = false
 }
 
-#---------------------------------------------------------------
-# EKS Provisioned Control Plane (PCP) Tier
-# Controls the EKS control plane capacity for high-scale workloads
-#
-# Tier Limits (EKS v1.30+):
-#   XL  : 1700 API seats | 167 pods/sec | 16 GB etcd
-#   2XL : 3400 API seats | 283 pods/sec | 16 GB etcd
-#   4XL : 6800 API seats | 400 pods/sec | 16 GB etcd
-#
-# Key Prometheus Metrics to monitor:
-#   - apiserver_flowcontrol_current_executing_seats
-#   - scheduler_schedule_attempts_total
-#   - apiserver_storage_size_bytes
-#---------------------------------------------------------------
 variable "eks_pcp_tier" {
   description = <<DESC
 EKS Provisioned Control Plane (PCP) scaling tier. Controls the EKS control plane capacity.
@@ -219,27 +196,17 @@ DESC
   default     = null
 
   validation {
-    # contains() will error if the value argument is null, so use coalesce to
-    # convert null into an empty string. The overall condition still allows
-    # null as a valid value.
+    # contains() fails on a null value. coalesce() changes null to an empty string.
     condition     = var.eks_pcp_tier == null || contains(["XL", "2XL", "4XL", "8XL"], coalesce(var.eks_pcp_tier, ""))
     error_message = "eks_pcp_tier must be null or one of: XL, 2XL, 4XL, 8XL"
   }
 }
-
-#---------------------------------------------------------------
-# Valkey
-#---------------------------------------------------------------
 
 variable "enable_valkey" {
   description = "Enable Valkey, an in-memory key/value datastore (Redis fork)"
   type        = bool
   default     = false
 }
-
-#---------------------------------------------------------------
-# Apache Polaris
-#---------------------------------------------------------------
 
 variable "enable_polaris" {
   description = "Enable Apache Polaris (incubating) as an Iceberg REST catalog, with a dedicated S3 warehouse bucket and Trino integration"

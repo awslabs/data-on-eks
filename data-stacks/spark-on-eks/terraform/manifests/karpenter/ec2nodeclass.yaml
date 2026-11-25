@@ -4,28 +4,22 @@ metadata:
   name: default
   namespace: karpenter
 spec:
-  # Use Amazon Linux 2023 for better performance and security
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
 
-  # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
 
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
 
-  # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
 
-  # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
-  # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -34,7 +28,6 @@ spec:
         encrypted: true
         deleteOnTermination: true
 
-  # User data to create Spark directory on existing root volume
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="//"
@@ -48,35 +41,27 @@ spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. It needs cgroup v2, which AL2023 has.
             MemoryQoS: true
-          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          # Kubernetes default. memory.high = request + 0.9 * (limit - request).
           memoryThrottlingFactor: 0.9
 
     --//
     Content-Type: text/x-shellscript; charset="us-ascii"
 
     #!/bin/bash
-    # Create Spark local directory on existing root volume
     mkdir -p /mnt/spark-local
 
-    # Set permissions for Spark (UID 185)
+    # Spark images run as UID 185.
     chown -R 185:185 /mnt/spark-local
     chmod 755 /mnt/spark-local
 
     --//--
 
 ---
-# GPU nodeclass with SOCI parallel image pull (FastImagePull).
-# Large inference images (10GB+ Ray/vLLM, Triton, DLC) are dominated by
-# containerd's single-connection download on fresh nodes. FastImagePull
-# switches to the SOCI snapshotter's parallel pull/unpack mode (20
-# connections, 16MB chunks, 12 concurrent unpacks). See
-# website/docs/bestpractices/analytics/soci-spark-image-pulls.md.
-# The feature gate silently no-ops below 4 vCPU / 7GiB; the gpu nodepool
-# floors at xlarge, so all admitted sizes qualify.
+# GPU node class. FastImagePull (SOCI parallel pull) makes large inference images pull faster.
+# See website/docs/bestpractices/analytics/soci-spark-image-pulls.md.
+# FastImagePull has no effect below 4 vCPU or 7 GiB. The gpu NodePool starts at xlarge.
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
@@ -87,27 +72,21 @@ spec:
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
 
-  # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
 
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
 
-  # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
 
-  # On GPU instances with NVMe instance store (g6e, g6, g5), nodeadm
-  # assembles RAID0 and containerd/kubelet state lands on local NVMe,
-  # so SOCI unpacks to instance store instead of EBS.
+  # On GPU types with NVMe instance store (g6e, g6, g5), SOCI unpacks to NVMe, not to EBS.
   instanceStorePolicy: RAID0
 
-  # Fallback for GPU instance types without instance store: parallel pull
-  # shifts the bottleneck from network to disk, so raise gp3 throughput
-  # past the 125MiB/s default (throughput binds, not IOPS).
+  # For GPU types without instance store. Parallel pull makes disk throughput the limit,
+  # so throughput is above the gp3 default of 125 MiB/s.
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -129,21 +108,16 @@ spec:
     kind: NodeConfig
     spec:
       featureGates:
-        # Experimental: SOCI snapshotter parallel pull/unpack mode.
-        # nodeadm writes the snapshotter config (20 connections, 16MB
-        # chunks, 12 unpacks per image, discard-after-unpack).
+        # Experimental. nodeadm writes the SOCI snapshotter configuration.
         FastImagePull: true
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. It needs cgroup v2, which AL2023 has.
             MemoryQoS: true
-          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          # Kubernetes default. memory.high = request + 0.9 * (limit - request).
           memoryThrottlingFactor: 0.9
-          # Let the large inference image and DaemonSet images (nvidia
-          # device plugin, monitoring) pull concurrently on a fresh node.
+          # Pull the inference image and the DaemonSet images at the same time on a new node.
           serializeImagePulls: false
           maxParallelImagePulls: 5
           registryPullQPS: 50
@@ -158,25 +132,20 @@ metadata:
   name: spark-vertical-ebs-scale
   namespace: karpenter
 spec:
-  # Use Amazon Linux 2023 for better performance and security
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
 
-  # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
 
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
 
-  # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
 
-  # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
   userData: |
@@ -192,12 +161,10 @@ spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. It needs cgroup v2, which AL2023 has.
             MemoryQoS: true
-          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
-          # memory.high = request + 0.7 * (limit - request)
+          # 0.7 starts page cache reclaim earlier. This prevents OOMKills in Spark.
+          # memory.high = request + 0.7 * (limit - request).
           memoryThrottlingFactor: 0.7
 
     --//
@@ -225,48 +192,35 @@ spec:
       yum install -y jq awscli
       TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 3600")
 
-      # Get instance info
       INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
       AVAILABILITY_ZONE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
       REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/[a-z]$//')
 
-      # Get the number of cores available
       CORES=$(nproc --all)
 
-      # Define volume size based on the number of cores and EBS volume size per core
       VOLUME_SIZE=$(expr $CORES \* 10) # 10GB per core. Change as desired
 
-      # Create a volume
       VOLUME_ID=$(aws ec2 create-volume --availability-zone $AVAILABILITY_ZONE --size $VOLUME_SIZE --volume-type gp3 --region $REGION --output text --query 'VolumeId')
 
-      # Check whether the volume is available
       while [ "$(aws ec2 describe-volumes --volume-ids $VOLUME_ID --region $REGION --query "Volumes[*].State" --output text)" != "available" ]; do
         echo "Waiting for volume to become available"
         sleep 5
       done
 
-      # Attach the volume to the instance
       aws ec2 attach-volume --volume-id $VOLUME_ID --instance-id $INSTANCE_ID --device /dev/xvdb --region $REGION
 
-      # Update the state to delete the volume when the node is terminated
       aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --block-device-mappings "[{\"DeviceName\": \"/dev/xvdb\",\"Ebs\":{\"DeleteOnTermination\":true}}]" --region $REGION
 
-      # Wait for the volume to be attached
       while [ "$(aws ec2 describe-volumes --volume-ids $VOLUME_ID --region $REGION --query "Volumes[*].Attachments[*].State" --output text)" != "attached" ]; do
         echo "Waiting for volume to be attached"
         sleep 5
       done
 
-      # Format the volume
       sudo mkfs -t ext4 /dev/xvdb # Improve this to get this value dynamically
-      # Create a mount point
       sudo mkdir /mnt/k8s-disks # Change directory as you like
-      # Mount the volume
       sudo mount /dev/xvdb /mnt/k8s-disks
-      # To mount this EBS volume on every system reboot, you need to add an entry in /etc/fstab
       echo "/dev/xvdb /mnt/k8s-disks ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
 
-      # Adding permissions to the mount
       /usr/bin/chown -hR +999:+1000 /mnt/k8s-disks
     else
       if [ $${DISK_COUNT} -eq 1 ]; then
@@ -293,28 +247,22 @@ metadata:
   name: generic-ebs
   namespace: karpenter
 spec:
-  # Use Amazon Linux 2023 for better performance and security
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
 
-  # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
 
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
 
-  # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
 
-  # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
-  # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -338,11 +286,9 @@ spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. It needs cgroup v2, which AL2023 has.
             MemoryQoS: true
-          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          # Kubernetes default. memory.high = request + 0.9 * (limit - request).
           memoryThrottlingFactor: 0.9
 
     --//--
@@ -354,28 +300,22 @@ metadata:
   name: ebs-gp3-1000gi-6000iops-1000tp
   namespace: karpenter
 spec:
-  # Use Amazon Linux 2023 for better performance and security
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
 
-  # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
 
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
 
-  # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
 
-  # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
-  # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -399,19 +339,17 @@ spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. It needs cgroup v2, which AL2023 has.
             MemoryQoS: true
-          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
-          # memory.high = request + 0.7 * (limit - request)
+          # 0.7 starts page cache reclaim earlier. This prevents OOMKills in Spark.
+          # memory.high = request + 0.7 * (limit - request).
           memoryThrottlingFactor: 0.7
 
     --//--
 
 ---
-# TPC-DS static pool. 40Gi: the gp3 quota is per region in TiB, and a node used about 12 GB
-# (OS, images, one app). gp3 keeps 6000 IOPS / 1000 MiB/s at this size (minimum 12Gi).
+# TPC-DS static pool. The gp3 quota is per Region in TiB. A node uses about 12 GB (OS, images, one app).
+# 40Gi keeps 6000 IOPS and 1000 MiB/s. The minimum gp3 size for these values is 12Gi.
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
@@ -470,28 +408,22 @@ metadata:
   name: ebs-gp3-1000gi-6000iops-1000tp-x86
   namespace: karpenter
 spec:
-  # Use Amazon Linux 2023 for better performance and security
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
 
-  # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
 
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
 
-  # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
 
-  # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
-  # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -515,37 +447,19 @@ spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. It needs cgroup v2, which AL2023 has.
             MemoryQoS: true
-          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
-          # memory.high = request + 0.7 * (limit - request)
+          # 0.7 starts page cache reclaim earlier. This prevents OOMKills in Spark.
+          # memory.high = request + 0.7 * (limit - request).
           memoryThrottlingFactor: 0.7
-          # CPU manager: static policy pins integer-CPU Guaranteed-QoS pods to
-          # exclusive cores. Only Guaranteed-QoS pods with integer cpu
-          # requests==limits get pinned; Burstable/BestEffort pods continue to
-          # use the shared pool.
-          #
-          #   full-pcpus-only: allocate at full-physical-core granularity so
-          #     a pod never shares an SMT (hyperthread) sibling with another
-          #     workload. Relevant on any SMT-enabled CPU. GA in K8s 1.33.
-          #
-          #   prefer-align-cpus-by-uncorecache: prefer cores that share the
-          #     same LLC/uncore-cache slice. Material on chips with split LLC
-          #     domains — notably AMD EPYC and large Intel Sapphire Rapids with
-          #     sub-NUMA clustering. It is a preference, so it is a silent no-op
-          #     on unified-LLC chips
+          # static gives exclusive cores to Guaranteed pods with integer CPU. full-pcpus-only stops
+          # two pods from sharing SMT siblings. Cache alignment helps only on split-LLC CPUs.
           cpuManagerPolicy: static
           cpuManagerPolicyOptions:
             full-pcpus-only: "true"
             prefer-align-cpus-by-uncorecache: "true"
-          # Static CPU manager requires kubeReserved.cpu + systemReserved.cpu > 0,
-          # otherwise kubelet refuses to start. Reserving 2 vCPUs total (== 1
-          # full physical core on SMT-enabled x86 instances) keeps the reserved
-          # set aligned with physical-core boundaries, so full-pcpus-only does
-          # not strand SMT siblings, and ensures the shared pool always has CPU
-          # budget for kubelet/containerd/system daemons.
+          # The static policy needs reserved CPU above 0, or kubelet does not start. 2 vCPUs is one
+          # physical core on SMT x86, so full-pcpus-only does not strand SMT siblings.
           kubeReserved:
             cpu: 1000m
           systemReserved:
@@ -560,28 +474,22 @@ metadata:
   name: streaming-optimized
   namespace: karpenter
 spec:
-  # Use Amazon Linux 2023 for better performance and security
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
 
-  # IAM role for Karpenter nodes - from EKS module output
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
 
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
 
-  # Security group selection - use the node security group
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
 
-  # Instance store optimization - RAID0 handles everything automatically
   instanceStorePolicy: RAID0
 
-  # Block device mappings for additional storage
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
@@ -605,11 +513,9 @@ spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # AL2023 ships with cgroupsv2 — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. It needs cgroup v2, which AL2023 has.
             MemoryQoS: true
-          # 0.9 is the kubernetes default. memory.high = request + 0.9 * (limit - request)
+          # Kubernetes default. memory.high = request + 0.9 * (limit - request).
           memoryThrottlingFactor: 0.9
 
     --//
@@ -619,7 +525,7 @@ spec:
 
     set -ex
 
-    # NETWORK optimizations for Flink streaming (different from Spark)
+    # Network tuning for low-latency Flink streaming.
     echo 'net.core.rmem_max=134217728' >> /etc/sysctl.conf
     echo 'net.core.wmem_max=134217728' >> /etc/sysctl.conf
     echo 'net.ipv4.tcp_rmem=4096 87380 134217728' >> /etc/sysctl.conf
@@ -638,7 +544,7 @@ spec:
     OptimizedFor: low-latency-networking
 
 ---
-# used by the Local Persistence Volume Static Provisioner
+# Node class for the local static provisioner. Each NVMe disk stays a separate volume.
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
@@ -649,17 +555,14 @@ spec:
   amiSelectorTerms:
     - alias: "${AMI_ALIAS}"
   role: "${KARPENTER_NODE_IAM_ROLE_NAME}"
-  # Subnet selection - private secondary subnets
   subnetSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-private-secondary*"
   securityGroupSelectorTerms:
     - tags:
         Name: "${CLUSTER_NAME}-node"
-  # If Raid0 is used, you need to remove the user data below because RAID configuration is handled by karpenter and mounted automatically. You will need to change the mount path to "/mnt/k8s-disks/" in the Local Persistence Volume Static Provisioner helm values.
+  # To use RAID0, remove the userData below. Then set the provisioner mount path to "/mnt/k8s-disks/".
   # instanceStorePolicy: RAID0
-  #
-  # We make individual ephemeral disk available for the Local Persistence Volume Static Provisioner in user data.
   userData: |
     MIME-Version: 1.0
     Content-Type: multipart/mixed; boundary="//"
@@ -667,26 +570,17 @@ spec:
     --//
     Content-Type: application/node.eks.aws
 
-    # AL2023 NodeConfig — applied before kubelet starts
     apiVersion: node.eks.aws/v1alpha1
     kind: NodeConfig
     spec:
       kubelet:
         config:
           featureGates:
-            # MemoryQoS is Alpha and not enabled by default (since K8s 1.22).
-            # Enables cgroupsv2 memory.high soft limit between request and limit.
-            # When a Spark executor approaches memory.high, the kernel evicts page
-            # cache (NVMe shuffle files, s3a read buffers) before sending SIGKILL.
-            # This prevents OOMKills caused by page cache accumulation being
-            # counted against the cgroup limit.
-            # AL2023 ships with cgroupsv2 enabled — no kernel changes needed.
+            # MemoryQoS is alpha and off by default. Near memory.high, the kernel reclaims page cache
+            # (shuffle files, S3A buffers) before an OOMKill. AL2023 has cgroup v2.
             MemoryQoS: true
-          # Spark-tuned: 0.7 triggers page cache eviction earlier to prevent OOMKills
-          # memory.high = request + 0.7 * (limit - request)
-          # For Spark executors with request=80Gi, limit=96Gi:
-          #   memory.high = 80 + 0.7 * (96 - 80) = 91.2Gi  (soft eviction starts here)
-          #   memory.max  = 96Gi                            (hard kill only here)
+          # 0.7 starts page cache reclaim earlier. Example: request 80Gi and limit 96Gi
+          # give memory.high = 80 + 0.7 * (96 - 80) = 91.2Gi.
           memoryThrottlingFactor: 0.7
 
     --//
@@ -706,11 +600,8 @@ spec:
     --//--
 
 ---
-# Dedicated node for the Spark Operator controller (core component).
-# - Primary CIDR subnets only: Name "<cluster>-private-<az>" (for example
-#   spark-on-eks-private-us-west-2a). This pattern does not match the "-private-secondary*"
-#   data subnets.
-# - AMI version: AMI_ALIAS in karpenter.tf (pinned for all EC2NodeClasses).
+# Dedicated node for the Spark Operator controller. The subnet pattern matches only the
+# primary CIDR subnets (for example spark-on-eks-private-us-west-2a), not "-private-secondary*".
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:

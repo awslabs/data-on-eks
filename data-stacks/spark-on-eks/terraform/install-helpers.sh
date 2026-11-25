@@ -1,8 +1,7 @@
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -16,7 +15,6 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check prerequisites
 check_prerequisites() {
     print_status "Checking prerequisites..."
 
@@ -24,24 +22,15 @@ check_prerequisites() {
     command -v kubectl >/dev/null 2>&1 || { print_error "kubectl is required but not installed."; exit 1; }
     command -v aws >/dev/null 2>&1 || { print_error "aws cli is required but not installed."; exit 1; }
 
-    # Check AWS credentials
     aws sts get-caller-identity >/dev/null 2>&1 || { print_error "AWS credentials not configured."; exit 1; }
 
-    # Docker credential helper sanity check.
-    # Several charts (e.g. Karpenter) are pulled by Helm from public OCI
-    # registries such as oci://public.ecr.aws. Even for anonymous pulls, Helm
-    # first invokes the credsStore/credHelper configured in ~/.docker/config.json.
-    # If that helper is missing from PATH (common when Docker Desktop is not
-    # installed/running), the chart download fails with an opaque
-    # "docker-credential-<x>: executable file not found" error. public.ecr.aws
-    # allows anonymous pulls, so we neutralize a broken helper for this run.
     check_docker_creds_helper
 
     print_status "Prerequisites check passed"
 }
 
-# Detect a docker credsStore/credHelper that isn't installed and disable it for
-# this deployment so anonymous public-OCI (public.ecr.aws) chart pulls succeed.
+# Helm calls the Docker credsStore even for anonymous public.ecr.aws chart pulls.
+# A credsStore that is not on PATH makes the pull fail, so this function removes it.
 check_docker_creds_helper() {
     local docker_config="$HOME/.docker/config.json"
     [ -f "$docker_config" ] || return 0
@@ -64,7 +53,6 @@ check_docker_creds_helper() {
     fi
 }
 
-# Verify deployment
 verify_deployment() {
     print_status "Verifying deployment..."
 
@@ -88,7 +76,6 @@ verify_deployment() {
     echo ""
 }
 
-# Print next steps
 print_next_steps() {
     echo ""
     echo "========================================="

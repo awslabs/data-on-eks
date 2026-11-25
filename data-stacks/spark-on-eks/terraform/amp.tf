@@ -1,13 +1,9 @@
-#------------------------------------------
-# Amazon Prometheus
-#------------------------------------------
 locals {
   amp_ingest_service_account = "kube-prometheus-stack-prometheus"
   amp_namespace              = "kube-prometheus-stack"
 }
 
 
-#IAM Policy for Amazon Prometheus & Grafana
 resource "aws_iam_policy" "grafana" {
   count = var.enable_amazon_prometheus ? 1 : 0
 

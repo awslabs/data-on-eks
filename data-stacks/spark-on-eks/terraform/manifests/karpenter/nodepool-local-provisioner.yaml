@@ -1,5 +1,5 @@
 
-# Used by the local storage provisioner to provision PVCs backed by local ephemeral disks.
+# Nodes for PVCs on local NVMe disks (local static provisioner).
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
@@ -17,9 +17,8 @@ spec:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: ephemeral-nvme-local-provisioner
-      # Kubelet eviction — stop scheduling new pods when node free memory drops
-      # below 10Gi. Without this, Karpenter can fill a node to the point where
-      # multiple Spark executors bursting simultaneously tip the node itself into OOM.
+      # Kubelet evicts pods below 10Gi free memory. Without this, bursting Spark executors
+      # can make the node run out of memory.
       kubelet:
         evictionHard:
           memory.available: "10Gi"

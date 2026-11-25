@@ -77,7 +77,7 @@ spec:
         cpu: "16"
         memory: 120Gi
 
-# We use argocd hook rather than terraform because terraform ends up blocking the entire flow while waiting for the job to finish.
+# An Argo CD hook runs this Job. Terraform would block until the Job completes.
 ---
 apiVersion: batch/v1
 kind: Job

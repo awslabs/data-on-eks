@@ -4,14 +4,11 @@ locals {
   celeborn_values = yamldecode(templatefile("${path.module}/helm-values/celeborn.yaml", {
     s3_bucket        = module.data_bucket.s3_bucket_id
     s3_bucket_region = module.data_bucket.s3_bucket_region
-    az               = local.s3_express_zone_name # does NOT need to be the same as local express zone. This is done for convenience only.
+    az               = local.s3_express_zone_name # Any AZ works. This AZ is for convenience only.
     celeborn_role    = try(module.celeborn_irsa[0].arn, "")
   }))
 }
 
-#---------------------------------------------------------------
-# Celeborn Namespace
-#---------------------------------------------------------------
 resource "kubernetes_namespace" "celeborn" {
   count = var.enable_celeborn ? 1 : 0
 
@@ -20,10 +17,7 @@ resource "kubernetes_namespace" "celeborn" {
   }
 }
 
-# we need to use IRSA because celeborn does not support pod identity yet (java sdk 1.x)
-#---------------------------------------------------------------
-# IRSA for Celeborn
-#---------------------------------------------------------------
+# Celeborn uses Java SDK 1.x, which does not support Pod Identity. Thus it uses IRSA.
 
 module "celeborn_irsa" {
   count   = var.enable_celeborn ? 1 : 0
@@ -43,9 +37,6 @@ module "celeborn_irsa" {
   }
 }
 
-#---------------------------------------------------------------
-# IAM Policy for S3 Read/Write Access
-#---------------------------------------------------------------
 resource "aws_iam_policy" "celeborn_s3" {
   count       = var.enable_celeborn ? 1 : 0
   name        = "celeborn-s3-policy"
@@ -71,9 +62,6 @@ resource "aws_iam_policy" "celeborn_s3" {
   })
 }
 
-#---------------------------------------------------------------
-# Celeborn Manifests
-#---------------------------------------------------------------
 resource "kubectl_manifest" "celeborn_manifests" {
   count = var.enable_celeborn ? 1 : 0
   yaml_body = templatefile("${path.module}/manifests/celeborn/storageclass.yaml", {
@@ -94,9 +82,6 @@ resource "kubectl_manifest" "celeborn_volumeattributesclass" {
   ]
 }
 
-#---------------------------------------------------------------
-# Celeborn Application
-#---------------------------------------------------------------
 resource "kubectl_manifest" "celeborn" {
   count = var.enable_celeborn ? 1 : 0
   yaml_body = templatefile("${path.module}/argocd-applications/celeborn.yaml", {

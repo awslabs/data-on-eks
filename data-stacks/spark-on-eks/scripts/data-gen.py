@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 import pyarrow as pa
 
-# Define the schema as a dictionary
 schema_dict = {
     'order_id': pa.int64(),
     'customer_id': pa.int64(),
@@ -13,10 +12,8 @@ schema_dict = {
     'price': pa.float64()
 }
 
-# Convert the dictionary to a PyArrow Schema
 schema = pa.schema(schema_dict)
 
-# Generate sample data
 orders = []
 for i in range(1000):
     order_id = i + 1
@@ -36,8 +33,6 @@ for i in range(1000):
     }
     orders.append(order)
 
-# Create a Pandas DataFrame from the sample data
 df = pd.DataFrame(orders)
 
-# Write the DataFrame to a Parquet file
 df.to_parquet('sample_orders.parquet', schema=schema, index=False)

@@ -1,20 +1,14 @@
-# NVIDIA GPU Operator Helm Values for v25.10.1
-# Optimized for EKS with AL2023 GPU AMI (pre-installed NVIDIA drivers)
-#
-# Full default values reference:
+# NVIDIA GPU Operator v25.10.1. Defaults:
 # https://github.com/NVIDIA/gpu-operator/blob/v25.10.1/deployments/gpu-operator/values.yaml
-#
-# Only customized values are shown below. All other values use chart defaults.
 
-# Disable driver installation - AL2023 GPU AMI has pre-installed NVIDIA drivers
+# The AL2023 GPU AMI includes the NVIDIA driver.
 driver:
   enabled: false
 
-# Disable toolkit - AL2023 GPU AMI has pre-installed NVIDIA Container Toolkit
+# The AL2023 GPU AMI includes the NVIDIA Container Toolkit.
 toolkit:
   enabled: false
 
-# Enable DCGM Exporter with Prometheus ServiceMonitor
 dcgmExporter:
   enabled: true
   serviceMonitor:
@@ -24,11 +18,10 @@ dcgmExporter:
     additionalLabels:
       release: kube-prometheus-stack
 
-# Disable standalone DCGM daemon (use embedded in exporter)
+# The DCGM exporter uses its embedded DCGM.
 dcgm:
   enabled: false
 
-# Disable optional components not needed for basic GPU workloads
 migManager:
   enabled: false
 

@@ -1,14 +1,13 @@
-# ============================================================
 # Spark Operator scale test: TPC-DS v4, scale factor 30 (30 GB), Parquet in S3.
-# Based on spark-app-without-webhook.yaml. The Spark Operator webhook is disabled, so all
-# pod settings are in spec.driver.template and spec.executor.template.
+# The Spark Operator webhook is off. Thus all pod settings are in spec.driver.template
+# and spec.executor.template.
 #
-# S3 layout (cNN = c01 to c50, to spread the S3 request load over 50 prefixes):
-#   Source  : s3a://spark-scaletest-eks-tpcds-us-east-1/cNN/tpcds/sf30/
-#   Results : s3a://<results-bucket>/cNN/tpcds-results/<app name>/
-#             <results-bucket>: terraform -chdir=terraform output -raw s3_bucket_id_spark_history_server
-# This file uses c01. The load test (locustfile.py) will set cNN, the app name, the
-# results path, and the namespace for each SparkApplication.
+# S3 layout. cNN is c01 to c50. The 50 prefixes spread the S3 request load.
+#   Source:  s3a://spark-scaletest-eks-tpcds-us-east-1/cNN/tpcds/sf30/
+#   Results: s3a://<results-bucket>/cNN/tpcds-results/<app name>/
+#   To get <results-bucket>: terraform -chdir=terraform output -raw s3_bucket_id_spark_history_server
+# This file uses c01. For each SparkApplication, locustfile.py sets cNN, the app name,
+# the results path, and the namespace.
 #
 # Prerequisites in the job namespace:
 #   - ConfigMap spark-log4j2-config (../../spark-log4j2-configmap.yaml)
@@ -17,7 +16,6 @@
 # Single run:
 #   kubectl apply -f tpcds-sf30-template.yaml
 #   kubectl get sparkapplication -n spark-team-a tpcds-sf30 -w
-# ============================================================
 ---
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -39,10 +37,10 @@ spec:
   mainApplicationFile: "local:///opt/spark/jars/spark-k8s-benchmarks-assembly-1.0.0.jar"
 
   arguments:
-    # arg[0] tpcdsDataDir - root path of the parquet data in S3
+    # arg[0] tpcdsDataDir: root path of the Parquet data in S3
     - "s3a://spark-scaletest-eks-tpcds-us-east-1/c01/tpcds/sf30"
-    # arg[1] Results location (one path for each application)
-    # Placeholder: the bucket name changes on each deploy. locustfile.py sets it.
+    # arg[1] Results location (one path for each app)
+    # The bucket name changes on each deploy. locustfile.py sets it.
     - "s3a://<results-bucket>/c01/tpcds-results/tpcds-sf30"
     # arg[2] Path to the TPC-DS kit (dsdgen/dsqgen) in the image
     - "/opt/tpcds-kit/tools"
@@ -52,12 +50,12 @@ spec:
     - "30"
     # arg[5] Iterations
     - "1"
-    # arg[6] optimizeQueries. "true" runs ANALYZE on all tables in each app (a full data scan)
-    # before the queries. The statistics are not kept between apps.
+    # arg[6] optimizeQueries. "true" runs ANALYZE (a full data scan) on all tables in each app.
+    # Apps do not share the statistics.
     - "false"
     # arg[7] Query filter
     - "q4-v4.0,q24a-v4.0,q24b-v4.0,q67-v4.0"
-    # arg[8] Set log level to WARN
+    # arg[8] Set the log level to WARN
     - "true"
 
   restartPolicy:
@@ -82,9 +80,8 @@ spec:
           runAsUser: 185
           fsGroup: 185
         volumes:
-          # Spark uses volumes named "spark-local-dir-*" as local dirs (shuffle, spill).
-          # emptyDir is on the node root volume (on NVMe with instanceStorePolicy RAID0).
-          # fsGroup gives UID 185 write access, so no busybox init container is necessary.
+          # Spark uses volumes named "spark-local-dir-*" as local dirs. The emptyDir is on the node root volume.
+          # fsGroup gives UID 185 write access. Thus no busybox init container is necessary.
           - name: spark-local-dir-1
             emptyDir: {}
           - name: spark-log4j2
@@ -180,20 +177,19 @@ spec:
                 mountPath: /opt/spark/log4j2-custom
 
   sparkConf:
-    # ── Event logs: off for the scale test ──────────────────────────────────
     "spark.eventLog.enabled": "false"
+    # The submitter runs spark-submit 4.2, which creates a NetworkPolicy for each app by default.
+    # The CNI does not enforce NetworkPolicy, so these objects only add API writes.
+    "spark.kubernetes.driver.pod.excludedFeatureSteps": "org.apache.spark.deploy.k8s.features.NetworkPolicyFeatureStep"
 
-    # ── Parallelism: 30 executors x 1 core = 30 task slots ─────────────────
     "spark.sql.shuffle.partitions": "120"
     "spark.default.parallelism": "60"
 
-    # ── AQE (Adaptive Query Execution) ──────────────────────────────────────
     "spark.sql.adaptive.enabled": "true"
     "spark.sql.adaptive.localShuffleReader.enabled": "true"
     "spark.sql.adaptive.coalescePartitions.enabled": "true"
     "spark.sql.adaptive.skewJoin.enabled": "true"
 
-    # ── S3A / AWS SDK v2 (EKS Pod Identity) ─────────────────────────────────
     "spark.hadoop.fs.s3a.endpoint.region": "us-east-1"
     "spark.hadoop.fs.s3a.aws.credentials.provider.mapping": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider=software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
     "spark.hadoop.fs.s3a.aws.credentials.provider": "software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider"
@@ -212,14 +208,12 @@ spec:
     "spark.hadoop.fs.s3a.multipart.purge": "false"
     "spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version": "2"
 
-    # ── Prometheus metrics ───────────────────────────────────────────────────
     "spark.ui.prometheus.enabled": "true"
     "spark.executor.processTreeMetrics.enabled": "true"
     "spark.metrics.conf.*.sink.prometheusServlet.class": "org.apache.spark.metrics.sink.PrometheusServlet"
     "spark.metrics.conf.driver.sink.prometheusServlet.path": "/metrics/driver/prometheus/"
     "spark.metrics.conf.executor.sink.prometheusServlet.path": "/metrics/executors/prometheus/"
 
-    # ── Stability ────────────────────────────────────────────────────────────
     "spark.network.timeout": "2000s"
     "spark.executor.heartbeatInterval": "300s"
     "spark.kubernetes.submission.connectionTimeout": "120000"
@@ -233,11 +227,9 @@ spec:
     # Request executors in batches, to limit the pod create rate on the API server.
     "spark.kubernetes.allocation.batch.size": "10"
 
-    # ── Shuffle tuning ───────────────────────────────────────────────────────
     "spark.shuffle.file.buffer": "1m"
     "spark.reducer.maxSizeInFlight": "48m"
 
-    # ── GC / logging ─────────────────────────────────────────────────────────
     # preferIPv6Addresses: without it the JVM picks IPv4 even when AAAA records exist.
     "spark.driver.extraJavaOptions": "-Djava.net.preferIPv6Addresses=true -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"
     "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -Djava.net.preferIPv6Addresses=true -Dlog4j.configurationFile=/opt/spark/log4j2-custom/log4j2.properties"

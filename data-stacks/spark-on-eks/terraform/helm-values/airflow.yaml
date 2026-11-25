@@ -124,15 +124,12 @@ config:
     remote_logging: 'True'
     logging_level: 'INFO'
     remote_base_log_folder: "s3://${s3_bucket_name}/airflow-logs"
-    # aws_s3_conn is the name of the connection that needs to be created using Airflow admin UI once the deployment is complete
-    # Steps can be seen in the docs link here -> https://github.com/apache/airflow/issues/25322
+    # Airflow connection for remote logs. See https://github.com/apache/airflow/issues/25322
     remote_log_conn_id: 'pod_identity'
     delete_worker_pods: 'False'
-    # Use server-side encryption for logs stored in S3
     encrypt_s3_logs: False
   dag_processor:
-    # indentation is important here.
-    # Git bundle is somewhat broken as of 3.1.0: https://github.com/apache/airflow/issues/56165
+    # Keep this indentation. GitDagBundle has known bugs in 3.1.0: https://github.com/apache/airflow/issues/56165
     dag_bundle_config_list: |
       [
               {
@@ -146,7 +143,7 @@ config:
                 }
               }
             ]
-    # S3 sync. broken as of 3.1.0
+    # S3DagBundle does not work in 3.1.0.
     # dag_bundle_config_list: |
     #             [
     #               {

@@ -63,9 +63,6 @@ locals {
   }
 }
 
-#---------------------------------------------------------------
-# Pod Identity for Teams
-#---------------------------------------------------------------
 module "team_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "2.9.0"
@@ -90,9 +87,6 @@ module "team_pod_identity" {
   tags = each.value.tags
 }
 
-#---------------------------------------------------------------
-# Kubernetes Resources for Teams
-#---------------------------------------------------------------
 resource "kubectl_manifest" "team_namespaces" {
   for_each = local.teams
 
@@ -385,9 +379,6 @@ resource "aws_iam_policy" "s3tables" {
   policy      = data.aws_iam_policy_document.s3tables_policy.json
 }
 
-#---------------------------------------------------------------
-# Flink-specific RBAC
-#---------------------------------------------------------------
 resource "kubectl_manifest" "flink_role" {
   yaml_body = templatefile("${path.module}/manifests/flink/role.yaml", {
     team_name = "flink-team-a"

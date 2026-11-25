@@ -3,33 +3,26 @@
 set -e
 set -o pipefail
 
-# This script deploys the stack from the terraform/ folder.
-# It does not copy files from infra/ and it does not use a _local folder.
-# Terraform runs directly in terraform/. The state is in S3 (see the backend block in terraform/versions.tf).
+# Terraform runs directly in terraform/, with no copy to a _local folder.
+# The state is in S3 (see the backend block in terraform/versions.tf).
 
-# Run from the folder of this script, so relative paths work from any directory.
+# Relative paths must work from any directory.
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-# --- Configuration ---
 TERRAFORM_DIR="terraform"
 TFVARS_FILE="$TERRAFORM_DIR/data-stack.tfvars"
 KUBECONFIG_FILE="kubeconfig.yaml"
 
-# Kubernetes API server configuration (JSON object, same shape as
-# `aws eks update-cluster-config --kube-api-server-config`).
-# Default: keep Kubernetes events for 10 minutes (the EKS default is 1h).
-# To override, set the variable. Example:
+# JSON object for `aws eks update-cluster-config --kube-api-server-config`.
+# The default keeps Kubernetes events for 10 minutes. The EKS default is 1 hour.
+# Example:
 #   KUBE_API_SERVER_CONFIG='{"eventTtl":"30m","serviceNodePortRange":{"minPort":30000,"maxPort":32767}}' ./deploy.sh
 # To skip this step, set it to empty: KUBE_API_SERVER_CONFIG='' ./deploy.sh
 # Limits: eventTtl 10m-60m. minPort and maxPort 10260-32767, minPort <= maxPort.
 DEFAULT_KUBE_API_SERVER_CONFIG='{"eventTtl":"10m"}'
 KUBE_API_SERVER_CONFIG="${KUBE_API_SERVER_CONFIG-$DEFAULT_KUBE_API_SERVER_CONFIG}"
 
-# --- Dry run ---
-# Dry run makes no changes to AWS, to Kubernetes, or to local files.
-# It runs "terraform plan" and read-only checks only.
-# Exit code: 0 = no changes, 2 = changes are pending, 1 = error.
-# Use "./deploy.sh --dry-run" or "DRY_RUN=true ./deploy.sh".
+# Dry run (--dry-run or DRY_RUN=true) runs "terraform plan" and read-only checks only.
 DRY_RUN="${DRY_RUN:-false}"
 
 usage() {
@@ -53,7 +46,6 @@ if [ "$DRY_RUN" != "true" ] && [ "$DRY_RUN" != "false" ]; then
 fi
 export DRY_RUN
 
-# --- Helpers ---
 source "$TERRAFORM_DIR/install-helpers.sh"
 
 if [ "$DRY_RUN" = "true" ]; then
@@ -63,10 +55,8 @@ fi
 print_status "Starting deployment from: $(pwd)/$TERRAFORM_DIR"
 check_prerequisites
 
-# --- Remote state check ---
-# The state is in S3. If a local state file exists and the S3 backend is not initialized,
-# the local state was not migrated yet. Stop here, so that "init" does not ask about
-# (or skip) the migration in the middle of a deployment.
+# A local state file without an S3 backend means that the state is not migrated.
+# Stop here, so that "init" does not ask about the migration during a deployment.
 if [ -s "$TERRAFORM_DIR/terraform.tfstate" ] \
     && ! grep -q '"type": *"s3"' "$TERRAFORM_DIR/.terraform/terraform.tfstate" 2>/dev/null; then
     print_error "Local state $TERRAFORM_DIR/terraform.tfstate is not migrated to the S3 backend."
@@ -76,12 +66,9 @@ if [ -s "$TERRAFORM_DIR/terraform.tfstate" ] \
     exit 1
 fi
 
-# --- Deployment ID ---
-# Make sure that a unique deployment_id exists. This ID is used to find and delete
-# AWS resources that Kubernetes operators leave behind.
+# cleanup.sh uses deployment_id to find AWS resources that Kubernetes operators leave behind.
 if [ -f "$TFVARS_FILE" ]; then
     if grep -qE '^[[:space:]]*deployment_id[[:space:]]*=' "$TFVARS_FILE"; then
-        # Replace deployment_id only if it is the default placeholder.
         if grep -qE '^[[:space:]]*deployment_id[[:space:]]*=[[:space:]]*"DO-NOT-EDIT-AUTO-GENERATED"' "$TFVARS_FILE"; then
             if [ "$DRY_RUN" = "true" ]; then
                 print_warning "[DRY RUN] Would replace the default deployment_id in $TFVARS_FILE. No change made."
@@ -105,14 +92,12 @@ else
     print_warning "$TFVARS_FILE not found. Skipping deployment_id update."
 fi
 
-# --- Clear Helm registry credentials ---
 if [ "$DRY_RUN" = "true" ]; then
     print_warning "[DRY RUN] Would run: helm registry logout public.ecr.aws"
 else
     helm registry logout public.ecr.aws || true
 fi
 
-# --- Terraform ---
 export TF_LOG=ERROR
 
 # -var-file is relative to TERRAFORM_DIR, because -chdir changes the directory first.
@@ -121,7 +106,6 @@ if [ -f "$TFVARS_FILE" ]; then
     TF_VAR_FILE_ARGS=(-var-file=data-stack.tfvars)
 fi
 
-# Run "terraform apply" with the given extra arguments. Stop the script if the apply fails.
 terraform_apply() {
     local label="$1"
     shift
@@ -149,11 +133,8 @@ else
     terraform -chdir="$TERRAFORM_DIR" init -input=false
 fi
 
-# Karpenter (controller + NodePools + EC2NodeClass) MUST come up before any
-# workloads. Otherwise the final apply races Karpenter against ~15 wait=true
-# workloads whose pods request Karpenter-provisioned capacity: those pod waits
-# consume terraform's parallelism slots and block forever on pods that can never
-# schedule, starving the Karpenter install -> full deadlock.
+# Karpenter must be ready before the workloads. If not, wait=true workloads use all
+# Terraform parallelism slots on pods that cannot schedule, and Karpenter never installs.
 targets=(
     "module.vpc"
     "module.eks"
@@ -167,8 +148,7 @@ targets=(
 DRY_RUN_EXIT=0
 
 if [ "$DRY_RUN" = "true" ]; then
-    # One full plan shows all changes that the targeted applies and the final apply would make.
-    # "plan" does not write the state file.
+    # One full plan shows the changes of all targeted applies and the final apply.
     print_status "[DRY RUN] Running terraform plan for all resources..."
     plan_rc=0
     terraform -chdir="$TERRAFORM_DIR" plan -input=false -detailed-exitcode "${TF_VAR_FILE_ARGS[@]}" || plan_rc=$?
@@ -182,16 +162,14 @@ else
         terraform_apply "$target" -target="$target"
     done
 
-    # Final apply for all remaining resources.
     terraform_apply "all modules"
 
     print_status "Terraform deployment finished successfully."
 fi
 
-# --- Post-Deployment Steps ---
 print_status "Running stack-specific post-deployment steps..."
 
-# Back up the state file. "state pull" reads the state from the configured backend (S3).
+# "state pull" reads the state from the S3 backend.
 if [ "$DRY_RUN" = "true" ]; then
     print_warning "[DRY RUN] Would save a copy of the remote state to $TERRAFORM_DIR/terraform.tfstate.bak"
 else
@@ -200,11 +178,9 @@ else
     print_status "Saved a copy of the remote state to $TERRAFORM_DIR/terraform.tfstate.bak."
 fi
 
-# --- Kubernetes API server configuration ---
 # The terraform-aws-modules/eks module does not support kube_api_server_config yet.
-# This step sets it with the AWS CLI. Remove this step when the module supports it.
-# Terraform does not track this setting. Setting KUBE_API_SERVER_CONFIG to empty
-# does not reset the cluster. To go back to the defaults, set the default values.
+# Remove this function when the module supports it.
+# Terraform does not track this setting. An empty value does not reset the cluster.
 apply_kube_api_server_config() {
     if [ -z "$KUBE_API_SERVER_CONFIG" ]; then
         print_status "KUBE_API_SERVER_CONFIG is empty. Skipping API server configuration."
@@ -236,7 +212,6 @@ apply_kube_api_server_config() {
     # EKS allows one cluster update at a time.
     aws eks wait cluster-active --name "$cluster_name" --region "$region"
 
-    # Skip the update if the cluster already has all requested values.
     # EKS can reject an update that changes nothing.
     local current
     current=$(aws eks describe-cluster --name "$cluster_name" --region "$region" \
@@ -260,7 +235,6 @@ apply_kube_api_server_config() {
     update_id=$(aws eks update-cluster-config --name "$cluster_name" --region "$region" \
         --kube-api-server-config "$requested" --query 'update.id' --output text)
 
-    # Wait for the update to finish: 60 checks x 20 seconds = 20 minutes.
     local status attempt
     for attempt in $(seq 1 60); do
         status=$(aws eks describe-update --name "$cluster_name" --region "$region" \
@@ -287,7 +261,6 @@ apply_kube_api_server_config() {
 
 apply_kube_api_server_config
 
-# --- Dry run summary ---
 if [ "$DRY_RUN" = "true" ]; then
     print_warning "[DRY RUN] Would write $KUBECONFIG_FILE and add a refresh annotation to all ArgoCD applications."
     if [ "$DRY_RUN_EXIT" -eq 0 ]; then
@@ -298,7 +271,6 @@ if [ "$DRY_RUN" = "true" ]; then
     exit "$DRY_RUN_EXIT"
 fi
 
-# --- Kubeconfig and ArgoCD ---
 setup_kubeconfig
 refresh_argocd_apps
 

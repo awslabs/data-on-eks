@@ -7,9 +7,6 @@ locals {
   })
 }
 
-#---------------------------------------------------------------
-# JupyterHub Application
-#---------------------------------------------------------------
 resource "kubectl_manifest" "jupyterhub" {
   count = var.enable_jupyterhub ? 1 : 0
 
@@ -24,9 +21,6 @@ resource "kubectl_manifest" "jupyterhub" {
   ]
 }
 
-#-----------------------------------------------------------------------------------------
-# JupyterHub Single User Pod Identity Configuration
-#-----------------------------------------------------------------------------------------
 resource "kubernetes_namespace" "jupyterhub" {
   count = var.enable_jupyterhub ? 1 : 0
   metadata {
@@ -72,10 +66,6 @@ resource "kubectl_manifest" "jupyterhub_service_account" {
   ]
 }
 
-#---------------------------------------------------------------------
-# Example IAM policy for accessing S3 Iceberg files from JupyterHub
-#---------------------------------------------------------------------
-
 data "aws_iam_policy_document" "s3_write_jupyter" {
   count = var.enable_jupyterhub ? 1 : 0
 
@@ -105,10 +95,6 @@ resource "aws_iam_policy" "s3_write_jupyter" {
   policy      = data.aws_iam_policy_document.s3_write_jupyter[0].json
   tags        = local.tags
 }
-
-#---------------------------------------------------------------------
-# Example IAM policy for accessing Glue from JupyterHub
-#---------------------------------------------------------------------
 
 data "aws_iam_policy_document" "glue_jupyter" {
   count = var.enable_jupyterhub ? 1 : 0
@@ -145,10 +131,7 @@ resource "aws_iam_policy" "glue_jupyter" {
   policy      = data.aws_iam_policy_document.glue_jupyter[0].json
 }
 
-#---------------------------------------------------------------------
-# Example IAM policy for accessing Bedrock Models from JupyterHub
-# Please modify this policy according to your security requirements.
-#---------------------------------------------------------------------
+# Example policy. Change it for your security requirements.
 data "aws_iam_policy_document" "bedrock_jupyter" {
   count = var.enable_jupyterhub ? 1 : 0
   statement {
@@ -176,10 +159,7 @@ data "aws_iam_policy_document" "bedrock_jupyter" {
   }
 }
 
-#---------------------------------------------------------------------
-# Important prerequisite: Amazon Bedrock models must be enabled in the AWS console first.
-# The IAM policy alone doesn't enable model access - you need to request access to models in the Bedrock console.
-#---------------------------------------------------------------------
+# This policy does not enable model access. Request access to the models in the Bedrock console first.
 resource "aws_iam_policy" "bedrock" {
   count       = var.enable_jupyterhub ? 1 : 0
   description = "IAM role policy for Bedrock model access from JupyterHub pods"

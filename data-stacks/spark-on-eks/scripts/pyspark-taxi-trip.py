@@ -6,7 +6,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql import functions as f
 
-# Logging configuration
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s @ line %(lineno)d: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(logging.INFO)
@@ -24,7 +23,6 @@ def main(args):
     raw_input_folder = args[1]
     transform_output_folder = args[2]
 
-    # Create Spark Session
     spark = SparkSession \
         .builder \
         .appName(AppName + "_" + str(dt_string)) \
@@ -36,7 +34,6 @@ def main(args):
     logger.info("Reading Parquet file from S3")
     ny_taxi_df = spark.read.parquet(raw_input_folder)
 
-    # Add additional columns to the DF
     final_ny_taxi_df = ny_taxi_df.withColumn("current_date", f.lit(datetime.now()))
 
     logger.info("NewYork Taxi data schema preview")
@@ -51,7 +48,6 @@ def main(args):
     final_ny_taxi_df.repartition(2).write.mode("overwrite").parquet(transform_output_folder)
 
     logger.info("Ending spark application")
-    # end spark code
     spark.stop()
 
     return None

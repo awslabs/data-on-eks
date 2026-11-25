@@ -1,7 +1,7 @@
 fullnameOverride: prometheus
 cleanPrometheusOperatorObjectNames: true
 prometheus:
-  # The ClusterRole for Prometheus needs additional permissions for the EKS scheduler/controller metrics https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+  # Prometheus needs these rules to read EKS scheduler and controller manager metrics: https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
   additionalRulesForClusterRole:
   - apiGroups: [ "metrics.eks.amazonaws.com" ]
     resources: [ "kcm/metrics", "ksh/metrics" ]
@@ -32,7 +32,7 @@ prometheus:
           resources:
             requests:
               storage: 500Gi
-    # Find monitors in all namespaces
+    # Select monitors and rules in all namespaces, not only the ones with the Helm release label.
     podMonitorSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
@@ -140,7 +140,6 @@ prometheus:
           - source_labels: [__name__]
             regex: kubeproxy_sync_proxy_rules_duration_seconds_(sum|count)|kubeproxy_network_programming_duration_seconds_(sum|count)
             action: keep
-      # Scrape metrics for Yunikorn
       - job_name: yunikorn
         honor_labels: true
         scrape_interval: 3s
@@ -152,7 +151,6 @@ prometheus:
               - yunikorn-service.yunikorn-system.svc
             type: 'A'
             port: 9080
-      # Scrape metrics for Karpenter
       - job_name: karpenter
         kubernetes_sd_configs:
         - role: endpoints
@@ -165,9 +163,7 @@ prometheus:
           - __meta_kubernetes_endpoint_port_name
           action: keep
           regex: karpenter;http-metrics
-      # Additional EKS Control plane metrics
-      # NOTE: you will need to patch the service account for prometheus as described here:  https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
-      # Scheduler metrics
+      # EKS control plane metrics. They need the ClusterRole rules above.
       - job_name: 'ksh-metrics'
         kubernetes_sd_configs:
         - role: endpoints
@@ -186,7 +182,6 @@ prometheus:
             ]
           action: keep
           regex: default;kubernetes;https
-      # Controller Manager metrics
       - job_name: 'kcm-metrics'
         kubernetes_sd_configs:
         - role: endpoints
@@ -259,7 +254,7 @@ kube-state-metrics:
     limits:
       memory: 4Gi
 
-# add ethtool metrics to node-exporter https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-network-performance-ena.html
+# ethtool metrics show ENA allowance limits: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-network-performance-ena.html
 prometheus-node-exporter:
   prometheus:
     monitor:
@@ -329,14 +324,11 @@ grafana:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/emr-eks-grafana-dashboard.json
       spark-operator-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/kubeflow-spark-operator-dashboard.json
-      # EKS PCP Control Plane monitoring dashboard for Spark/EMR benchmarks
-      # Tracks API concurrency seats, pod scheduling rate, etcd size, and Spark job metrics
       eks-pcp-spark-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/eks-pcp-spark-dashboard.json
       k8s-events-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/k8s-events-dashboard.json
       spark-logs-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/spark-logs-dashboard.json
-      # Ray batch inference: GPU utilization/cost (DCGM) + Ray Data throughput
       ray-batch-inference-dashboard:
         url: https://raw.githubusercontent.com/awslabs/data-on-eks/refs/heads/main/infra/terraform/grafana-dashboards/ray-batch-inference-dashboard.json

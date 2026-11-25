@@ -10,7 +10,6 @@ from pyspark.sql.functions import col
 from pyspark.sql.functions import month
 from pyspark.sql.functions import dayofmonth
 
-# Logging configuration
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s @ line %(lineno)d: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(logging.INFO)
@@ -28,7 +27,6 @@ def main(args):
     raw_input_folder = args[1]
     transform_output_folder = args[2]
 
-    # Create Spark Session
     spark = SparkSession \
         .builder \
         .appName(AppName + "_" + str(dt_string)) \
@@ -40,15 +38,12 @@ def main(args):
     logger.info("Reading Parquet file from S3")
     order_df = spark.read.parquet(raw_input_folder)
 
-    # Add additional columns to the DF
     #final_order_df = order_df.withColumn("current_date", f.lit(datetime.now()))
 
-    # split order date into year month and date columns
     final_order_df = order_df.withColumn('year', year('order_date'))
     final_order_df = final_order_df.withColumn('month', month('order_date'))
     final_order_df = final_order_df.withColumn('day', dayofmonth('order_date'))
 
-    # delete order date column
     final_order_df = final_order_df.drop('order_date')
 
     logger.info("Order data schema preview")
@@ -63,7 +58,6 @@ def main(args):
     final_order_df.repartition(2).write.mode("overwrite").parquet(transform_output_folder)
 
     logger.info("Ending spark application")
-    # end spark code
     spark.stop()
 
     return None

@@ -14,19 +14,14 @@ locals {
   })
 }
 
-#---------------------------------------------------------------
-# CloudWatch Log Group
-#---------------------------------------------------------------
 resource "aws_cloudwatch_log_group" "aws_for_fluentbit" {
   name              = "/aws/eks/${module.eks.cluster_name}/aws-fluentbit-logs"
   retention_in_days = 30
   tags              = var.tags
 }
 
-#---------------------------------------------------------------
-# IRSA for AWS for Fluent Bit
-#---------------------------------------------------------------
-# We need to us IRSA for this because of problems with IPv6 and Pod Identity in Fluent bit. This needs to be resolved: https://github.com/aws/aws-for-fluent-bit/issues/983
+# Fluent Bit has problems with Pod Identity on IPv6, so this uses IRSA.
+# Refer to https://github.com/aws/aws-for-fluent-bit/issues/983.
 module "aws_for_fluentbit_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
   version = "6.8.2"
@@ -48,9 +43,6 @@ data "aws_s3_bucket" "logs" {
   bucket = module.s3_bucket.s3_bucket_id
 }
 
-#---------------------------------------------------------------
-# IAM Policy for CloudWatch Logs and S3
-#---------------------------------------------------------------
 resource "aws_iam_policy" "aws_for_fluentbit" {
   name        = "${local.name}-fluent-bit-policy"
   description = "IAM Policy for AWS Fluentbit"
@@ -103,18 +95,11 @@ resource "aws_iam_policy" "aws_for_fluentbit" {
   })
 }
 
-#---------------------------------------------------------------
-# AWS for Fluent Bit ConfigMap
-#---------------------------------------------------------------
 resource "kubectl_manifest" "aws_for_fluentbit_configmap" {
   yaml_body = templatefile("${path.module}/manifests/aws-for-fluentbit/cm.yaml", {
-    # Add template variables as needed
   })
 }
 
-#---------------------------------------------------------------
-# AWS for Fluent Bit Application
-#---------------------------------------------------------------
 resource "kubectl_manifest" "aws_for_fluentbit" {
   yaml_body = templatefile("${path.module}/argocd-applications/aws-for-fluentbit.yaml", {
     user_values_yaml = indent(8, local.aws_for_fluentbit_values)

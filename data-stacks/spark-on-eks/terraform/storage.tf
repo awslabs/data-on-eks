@@ -18,9 +18,6 @@ locals {
 }
 
 
-#---------------------------------------------------------------
-# S3 bucket for Spark Event Logs and Example Data
-#---------------------------------------------------------------
 #tfsec:ignore:*
 module "s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -28,7 +25,7 @@ module "s3_bucket" {
 
   bucket_prefix = "${local.name}-spark-logs-"
 
-  # For example only - please evaluate for your environment
+  # This value is for test stacks. Examine it before you use it in your environment.
   force_destroy = true
 
   server_side_encryption_configuration = {
@@ -40,19 +37,14 @@ module "s3_bucket" {
   }
 }
 
-# Creating an s3 bucket prefix. Ensure you copy Spark History event logs under this path to visualize the dags
+# Copy the Spark event logs to this prefix. The Spark History Server reads them from here.
 resource "aws_s3_object" "this" {
   bucket       = module.s3_bucket.s3_bucket_id
   key          = "spark-event-logs/"
   content_type = "application/x-directory"
 }
 
-#---------------------------------------------------------------
-# S3 bucket for Data Stacks (Pinot DeepStore, etc.)
-# This bucket is shared across data stacks. Use prefixes to organize data like this: <stack-name>/some-data
-# Example:
-# pinot-on-eks/deepstore
-#---------------------------------------------------------------
+# All data stacks share this bucket. Use one prefix for each stack, for example pinot-on-eks/deepstore.
 #tfsec:ignore:*
 module "data_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -60,7 +52,7 @@ module "data_bucket" {
 
   bucket_prefix = "data-on-eks-"
 
-  # For example only - please evaluate for your environment
+  # This value is for test stacks. Examine it before you use it in your environment.
   force_destroy = true
   server_side_encryption_configuration = {
     rule = {

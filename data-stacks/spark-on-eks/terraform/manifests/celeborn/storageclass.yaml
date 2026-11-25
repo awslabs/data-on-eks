@@ -1,5 +1,4 @@
-# Disk performance is tied to Celeborn's overall performance.
-# You want to make sure it has enough throughput and iops
+# Celeborn performance depends on disk throughput and IOPS.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:

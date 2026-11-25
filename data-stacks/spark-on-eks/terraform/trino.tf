@@ -3,16 +3,13 @@ locals {
   trino_sa        = "trino-sa"
 }
 
-#---------------------------------------------------------------
-# S3 Buckets for Trino
-#---------------------------------------------------------------
 module "trino_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "5.17.0"
 
   bucket_prefix = "${local.name}-trino-data-"
 
-  # For example only - please evaluate for your environment
+  # This value is for test stacks. Examine it before you use it in your environment.
   force_destroy = true
 
   block_public_acls       = true
@@ -35,7 +32,7 @@ module "trino_exchange_bucket" {
 
   bucket_prefix = "${local.name}-trino-exchange-"
 
-  # For example only - please evaluate for your environment
+  # This value is for test stacks. Examine it before you use it in your environment.
   force_destroy = true
 
   block_public_acls       = true
@@ -52,9 +49,6 @@ module "trino_exchange_bucket" {
   }
 }
 
-#---------------------------------------------------------------
-# IAM Policies
-#---------------------------------------------------------------
 data "aws_iam_policy_document" "trino_s3_access" {
 
   statement {
@@ -114,9 +108,6 @@ data "aws_iam_policy_document" "trino_exchange_access" {
   }
 }
 
-#---------------------------------------------------------------
-# IAM policies for Trino
-#---------------------------------------------------------------
 resource "aws_iam_policy" "trino_s3_policy" {
   name        = "${local.name}-trino-s3-policy"
   description = "IAM policy for Trino to access S3 data bucket"
@@ -131,9 +122,6 @@ resource "aws_iam_policy" "trino_exchange_policy" {
   tags        = local.tags
 }
 
-#---------------------------------------------------------------
-# Pod Identity for Trino
-#---------------------------------------------------------------
 module "trino_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "2.9.0"
@@ -155,18 +143,12 @@ module "trino_pod_identity" {
   }
 }
 
-#---------------------------------------------------------------
-# Trino Namespace
-#---------------------------------------------------------------
 resource "kubernetes_namespace" "trino" {
   metadata {
     name = local.trino_namespace
   }
 }
 
-#---------------------------------------------------------------
-# Trino ArgoCD Application
-#---------------------------------------------------------------
 # resource "kubectl_manifest" "trino" {
 
 #   yaml_body = templatefile("${path.module}/argocd-applications/trino.yaml", {
@@ -197,10 +179,7 @@ resource "kubernetes_namespace" "trino" {
 #   ]
 # }
 
-#---------------------------------------------------------------
-# Trino KEDA Autoscaling ScaledObject (Optional)
-# KEDA operator is deployed via keda.tf (shared across workloads)
-#---------------------------------------------------------------
+# This ScaledObject needs the KEDA operator from keda.tf.
 # resource "kubectl_manifest" "trino_keda_scaledobject" {
 
 #   yaml_body = templatefile("${path.module}/manifests/trino/keda-scaledobject.yaml", {
@@ -214,9 +193,6 @@ resource "kubernetes_namespace" "trino" {
 #   ]
 # }
 
-#---------------------------------------------------------------
-# Outputs
-#---------------------------------------------------------------
 output "trino_s3_bucket_id" {
   description = "Trino S3 data bucket ID"
   value       = module.trino_s3_bucket.s3_bucket_id

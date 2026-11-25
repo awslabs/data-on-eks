@@ -26,7 +26,7 @@ controller:
     - name: KUBERNETES_DISABLE_HOSTNAME_VERIFICATION
       value: "true"
 %{ endif ~}
-  # Run on the dedicated Spark Operator node group (c6a.12xlarge, tainted).
+  # The dedicated Spark Operator nodes (c6a.12xlarge) are tainted.
   nodeSelector:
     NodeGroupType: spark-operator-benchmark
   tolerations:
@@ -74,9 +74,7 @@ prometheus:
     portName: metrics
     endpoint: /metrics
     prefix: ""
-  # Prometheus pod monitor for controller pods
-  # Note: The kube-prometheus-stack addon must deploy before the PodMonitor CRD is available.
-  #       This can cause the terraform apply to fail since the addons are deployed in parallel
+  # kube-prometheus-stack must install the PodMonitor CRD first. Parallel add-on installs can make terraform apply fail.
   podMonitor:
     # -- Specifies whether to create pod monitor.
     create: true

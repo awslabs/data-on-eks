@@ -20,7 +20,6 @@ class Configuration:
 
     def __init__(self, environment: env.Environment ):
         parsed = environment.parsed_options
-        # Override defaults with environment variables if present
         self.template_path= parsed.spark_template
         self.name_prefix = parsed.spark_name_prefix
         self.name_suffix_length = parsed.spark_name_length
@@ -36,7 +35,6 @@ class Configuration:
         self.tpcds_iterations = parsed.tpcds_iterations
         self.zone_id = parsed.zone_id
 
-        # Validate configuration
         self.validate()
 
 
@@ -273,7 +271,7 @@ class TemplateManager:
 
 
 class SparkLoadTest(HttpUser):
-    # may not be necessary
+    # Locust HttpUser requires a host. This test does not send HTTP requests.
     host = "http://localhost"
 
     def wait_time(self):
@@ -351,7 +349,7 @@ class SparkLoadTest(HttpUser):
             self.k8s_client.create_spark_application(namespace, name, spec["spec"])
             self.application_count += 1
 
-            # TODO need to rework on stats
+            # TODO: Rework the stats.
             submission_response_time = (time.time() - submission_start_time) * 1000
             self.environment.events.request.fire(
                 request_type="SparkApplication",

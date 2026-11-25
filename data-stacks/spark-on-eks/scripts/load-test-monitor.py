@@ -61,7 +61,7 @@ def pod_metrics(namespace, selector, port, names):
     return total
 
 
-# The app TTL deletes final apps, so the run totals are kept here. name -> (state, runtime_min)
+# The app TTL deletes final apps. This dict keeps the run totals: name -> (state, runtime_min).
 final_apps = {}
 submit_lag = {}
 PROM_QUERY = "/api/v1/namespaces/monitoring/services/prometheus-prometheus:9090/proxy/api/v1/query"
@@ -152,7 +152,7 @@ while True:
         if unsched:
             sample["unschedulable"] = dict(unsched)
 
-        # NodeClaims, because Node objects are large (image lists) at 1,000 nodes.
+        # Read NodeClaims. At 1,000 nodes, Node objects are large because they list all images.
         claims = get("/apis/karpenter.sh/v1/nodeclaims",
                      {**FROM_CACHE, "labelSelector": "karpenter.sh/nodepool=tpcds-static"})["items"]
         ready = [c for c in claims

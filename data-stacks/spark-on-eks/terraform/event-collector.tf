@@ -21,16 +21,10 @@ resource "random_password" "clickhouse" {
   special = false
 }
 
-#---------------------------------------------------------------
-# Event Collector Namespace
-#---------------------------------------------------------------
 resource "kubectl_manifest" "logging_namespace" {
   yaml_body = file("${path.module}/manifests/logging/namespace.yaml")
 }
 
-#---------------------------------------------------------------
-# ClickHouse Password Secret
-#---------------------------------------------------------------
 resource "kubernetes_secret" "clickhouse_password" {
   metadata {
     name      = "clickhouse-password"
@@ -44,9 +38,6 @@ resource "kubernetes_secret" "clickhouse_password" {
   depends_on = [kubectl_manifest.logging_namespace]
 }
 
-#---------------------------------------------------------------
-# ClickHouse Credentials Secret for Fluent Bit
-#---------------------------------------------------------------
 resource "kubernetes_secret" "fluent_bit_clickhouse" {
   metadata {
     name      = "fluent-bit-clickhouse-credentials"
@@ -61,9 +52,6 @@ resource "kubernetes_secret" "fluent_bit_clickhouse" {
   depends_on = [kubectl_manifest.logging_namespace]
 }
 
-#---------------------------------------------------------------
-# ClickHouse Event Store (ArgoCD Application)
-#---------------------------------------------------------------
 resource "kubectl_manifest" "event_store" {
   yaml_body = templatefile("${path.module}/argocd-applications/event-store.yaml", {
     clickhouse_s3_endpoint = local.clickhouse_s3_endpoint
@@ -77,9 +65,6 @@ resource "kubectl_manifest" "event_store" {
   ]
 }
 
-#---------------------------------------------------------------
-# ClickHouse Pod Identity for S3 Access
-#---------------------------------------------------------------
 module "clickhouse_pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "2.9.0"
@@ -123,9 +108,7 @@ resource "aws_iam_policy" "clickhouse_s3" {
   })
 }
 
-#---------------------------------------------------------------
-# ClickHouse Credentials Secret for Fluent Bit (kube-system for DaemonSet)
-#---------------------------------------------------------------
+# The Fluent Bit DaemonSet runs in kube-system, so it needs its own copy of the Secret.
 resource "kubernetes_secret" "fluent_bit_clickhouse_kube_system" {
   metadata {
     name      = "fluent-bit-clickhouse-credentials"
@@ -138,9 +121,6 @@ resource "kubernetes_secret" "fluent_bit_clickhouse_kube_system" {
   }
 }
 
-#---------------------------------------------------------------
-# K8s Event Collector - Fluent Bit (ArgoCD Application)
-#---------------------------------------------------------------
 resource "kubectl_manifest" "event_collector" {
   yaml_body = templatefile("${path.module}/argocd-applications/event-collector.yaml", {
     user_values_yaml = indent(8, local.fluent_bit_values)

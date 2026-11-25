@@ -1,9 +1,5 @@
 
 
-#---------------------------------------------------------------
-# EKS Cluster
-#---------------------------------------------------------------
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.29.0"
@@ -11,21 +7,13 @@ module "eks" {
   name               = local.name
   kubernetes_version = var.eks_cluster_version
 
-  #WARNING: Avoid using this option (cluster_endpoint_public_access = true) in preprod or prod accounts. This feature is designed for sandbox accounts, simplifying cluster deployment and testing.
+  # WARNING: Do not set cluster_endpoint_public_access = true in preprod or prod accounts.
+  # Use it only in sandbox accounts.
   endpoint_public_access = var.cluster_endpoint_public_access
 
-  # Add the IAM identity that terraform is using as a cluster admin
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
 
-  # EKS Provisioned Control Plane (PCP) Scaling Tier
-  # Tier limits (EKS v1.30+):
-  #   XL  : 1700 API concurrency seats | 167 pods/sec scheduling rate | 16 GB etcd
-  #   2XL : 3400 API concurrency seats | 283 pods/sec scheduling rate | 16 GB etcd
-  #   4XL : 6800 API concurrency seats | 400 pods/sec scheduling rate | 16 GB etcd
-  #   8XL : 13600 API concurrency seats | 400 pods/sec scheduling rate | 16 GB etcd
-
-  # Set eks_pcp_tier = null to use the standard default control plane
   control_plane_scaling_config = var.eks_pcp_tier == null ? null : {
     tier = local.pcp_tier_map[var.eks_pcp_tier]
   }
@@ -33,26 +21,22 @@ module "eks" {
   addons = local.eks_core_addons
 
   ip_family = var.enable_ipv6 ? "ipv6" : "ipv4"
-  # Only create CNI IPv6 policy when IPv6 is enabled
-  # Note: This creates a hardcoded policy named "AmazonEKS_CNI_IPv6_Policy" which will conflict
-  # if multiple clusters are deployed in the same AWS account with IPv6 enabled
+  # The policy name "AmazonEKS_CNI_IPv6_Policy" is fixed. Two IPv6 clusters in one
+  # AWS account cause a name conflict.
   create_cni_ipv6_iam_policy = var.enable_ipv6
 
   vpc_id = module.vpc.vpc_id
-  # Primary CIDR private subnets. The secondary CIDR subnets are only for data workloads (Karpenter nodes).
+  # The secondary CIDR subnets are only for Karpenter data nodes.
   subnet_ids = local.core_subnet_ids
 
-  # Combine root account, current user/role and additional roles to be able to access the cluster KMS key - required for terraform updates
+  # Terraform updates need access to the cluster KMS key.
   kms_key_administrators = distinct(concat([
     "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"],
     var.kms_key_admin_roles,
     [data.aws_iam_session_context.current.issuer_arn]
   ))
 
-  #---------------------------------------
-  # Note: This can further restricted to specific required for each Add-on and your application
-  #---------------------------------------
-  # Extend cluster security group rules
+  # These rules are wide to keep the example simple. Restrict them for each add-on and application.
   security_group_additional_rules = {
     ingress_nodes_ephemeral_ports_tcp = {
       description                = "Nodes on ephemeral ports"
@@ -64,7 +48,6 @@ module "eks" {
     }
   }
 
-  # Extend node-to-node security group rules
   node_security_group_additional_rules = {
     ingress_self_all = {
       description = "Node to node all ports/protocols"
@@ -74,9 +57,8 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-    # Allows Control Plane Nodes to talk to Worker nodes on all ports. Added this to simplify the example and further avoid issues with Add-ons communication with Control plane.
-    # This can be restricted further to specific port based on the requirement for each Add-on e.g., metrics-server 4443, spark-operator 8080, karpenter 8443 etc.
-    # Change this according to your security requirements if needed
+    # All ports keep the example simple. For your security requirements, open only the add-on ports,
+    # for example metrics-server 4443, spark-operator 8080, karpenter 8443.
     ingress_cluster_to_node_all_traffic = {
       description                   = "Cluster API to Nodegroup all traffic"
       protocol                      = "-1"
@@ -87,13 +69,8 @@ module "eks" {
     }
   }
 
-  # Merge the default node groups with user-provided node groups
   eks_managed_node_groups = merge(local.default_node_groups, var.managed_node_groups)
 }
-
-#---------------------------------------------------------------
-# GP3 Encrypted Storage Class
-#---------------------------------------------------------------
 
 resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   metadata {
@@ -115,9 +92,6 @@ resource "kubernetes_storage_class" "ebs_csi_encrypted_gp3_storage_class" {
   }
 }
 
-#---------------------------------------------------------------
-# ArgoCD Installation via Terraform
-#---------------------------------------------------------------
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -141,9 +115,6 @@ resource "kubectl_manifest" "quay_io_repo" {
   ]
 }
 
-#---------------------------------------------------------------
-# EKS Amazon CloudWatch Observability Role
-#---------------------------------------------------------------
 resource "aws_iam_role" "cloudwatch_observability_role" {
   name = "${var.name}-eks-cw-agent-role"
 
@@ -169,9 +140,6 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_observability_policy_attac
   role       = aws_iam_role.cloudwatch_observability_role.name
 }
 
-#-------------------------------------------------------
-# EBS CSI Driver Pod Identity Role
-#-------------------------------------------------------
 resource "aws_iam_role" "ebs_csi_pod_identity_role" {
   name = "${var.name}-ebs-csi-pod-identity-role"
 
@@ -192,15 +160,11 @@ resource "aws_iam_role" "ebs_csi_pod_identity_role" {
   })
 }
 
-# Attach EBS CSI policy to the role
 resource "aws_iam_role_policy_attachment" "ebs_csi_pod_identity_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
   role       = aws_iam_role.ebs_csi_pod_identity_role.name
 }
 
-#-------------------------------------------------------
-# Mountpoint for S3 CSI Driver Pod Identity Role
-#-------------------------------------------------------
 resource "aws_iam_role" "s3_csi_pod_identity_role" {
   name = "${var.name}-s3-csi-pod-identity-role"
 
@@ -221,15 +185,11 @@ resource "aws_iam_role" "s3_csi_pod_identity_role" {
   })
 }
 
-# Attach S3 CSI policy to the role
 resource "aws_iam_role_policy_attachment" "s3_csi_pod_identity_policy" {
   policy_arn = aws_iam_policy.s3_csi_access_policy.arn
   role       = aws_iam_role.s3_csi_pod_identity_role.name
 }
 
-#---------------------------------------------------------------
-# S3 CSI Driver Policy (used by Pod Identity)
-#---------------------------------------------------------------
 resource "aws_iam_policy" "s3_csi_access_policy" {
   name        = "${var.name}-S3CSIAccess"
   path        = "/"
@@ -269,10 +229,8 @@ resource "aws_iam_policy" "s3_csi_access_policy" {
   })
 }
 
-#---------------------------------------------------------------
-# CNI IPv6 Policy
-# Used by Karpenter nodes only currently. This will need to used by core node group as well once issues with create_cni_ipv6_iam_policy is resolved.
-#---------------------------------------------------------------
+# Only Karpenter nodes use this policy now. The core node group can use it
+# after the create_cni_ipv6_iam_policy name conflict is fixed.
 resource "aws_iam_policy" "cni_ipv6_policy" {
   name_prefix = "${local.name}-cni-ipv6"
   path        = "/"

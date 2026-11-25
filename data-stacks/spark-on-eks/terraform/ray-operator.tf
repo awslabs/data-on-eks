@@ -1,15 +1,3 @@
-# =============================================================================
-# KubeRay Operator and Ray Data Resources
-# =============================================================================
-# This file contains:
-# 1. KubeRay Operator deployment via ArgoCD
-# 2. Ray Data specific configurations for processing Spark logs
-# 3. IAM policies and Glue resources for Iceberg operations
-# =============================================================================
-
-#---------------------------------------------------------------
-# KubeRay Operator
-#---------------------------------------------------------------
 locals {
   kuberay_operator_values = yamldecode(templatefile("${path.module}/helm-values/kuberay-operator.yaml", {})
   )
@@ -29,11 +17,6 @@ resource "kubectl_manifest" "kuberay_operator" {
   ]
 }
 
-#---------------------------------------------------------------
-# Ray Data IAM and Glue Resources
-#---------------------------------------------------------------
-
-# Only create these resources if Ray Data processing is enabled
 resource "aws_iam_policy" "raydata_iceberg" {
   count = var.enable_raydata ? 1 : 0
 
@@ -43,7 +26,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # Allow reading Spark logs from S3
       {
         Effect = "Allow"
         Action = [
@@ -54,7 +36,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
           "${module.s3_bucket.s3_bucket_arn}/${local.s3_prefix}*"
         ]
       },
-      # Allow writing Iceberg data to S3
       {
         Effect = "Allow"
         Action = [
@@ -68,9 +49,8 @@ resource "aws_iam_policy" "raydata_iceberg" {
           "${module.s3_bucket.s3_bucket_arn}/iceberg-warehouse/*"
         ]
       },
-      # Allow reading/writing model weights and batch inference data
-      # (models/ holds safetensors streamed by vLLM via Run:ai Model Streamer,
-      #  ray-batch-inference/ holds mocked input data and inference results)
+      # vLLM streams safetensors from models/ with the Run:ai Model Streamer.
+      # ray-batch-inference/ holds mock input data and inference results.
       {
         Effect = "Allow"
         Action = [
@@ -85,7 +65,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
           "${module.s3_bucket.s3_bucket_arn}/ray-batch-inference/*"
         ]
       },
-      # Allow listing bucket with prefix restriction
       {
         Effect = "Allow"
         Action = [
@@ -107,7 +86,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
           }
         }
       },
-      # Additional ListBucket permission for exact prefix match
       {
         Effect = "Allow"
         Action = [
@@ -124,7 +102,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
           }
         }
       },
-      # AWS Glue permissions for Iceberg catalog
       {
         Effect = "Allow"
         Action = [
@@ -151,7 +128,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
           "arn:aws:glue:${local.region}:${data.aws_caller_identity.current.account_id}:table/*/*"
         ]
       },
-      # Additional permissions for Iceberg operations
       {
         Effect = "Allow"
         Action = [
@@ -163,7 +139,6 @@ resource "aws_iam_policy" "raydata_iceberg" {
   })
 }
 
-# Attach the Iceberg policy to the raydata team's IAM role
 resource "aws_iam_role_policy_attachment" "raydata_iceberg" {
   count = var.enable_raydata ? 1 : 0
 
@@ -173,7 +148,6 @@ resource "aws_iam_role_policy_attachment" "raydata_iceberg" {
   depends_on = [module.team_pod_identity]
 }
 
-# AWS Glue Database for Iceberg
 resource "aws_glue_catalog_database" "raydata_iceberg" {
   count = var.enable_raydata ? 1 : 0
 

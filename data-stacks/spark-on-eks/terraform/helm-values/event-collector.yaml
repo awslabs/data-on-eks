@@ -53,9 +53,8 @@ config:
     [INPUT]
         Name          kubernetes_events
         Tag           kube_events.*
-        # No DB: with it, throughput fell each minute, to about 120 events/s at 1 core.
-        # Without it, each restart sends the events of the last hour again (duplicates).
-        # Events wait on disk while ClickHouse is unreachable, instead of being dropped.
+        # No DB: with it, throughput fell to about 120 events/s at 1 core. Without it, a restart sends
+        # the last hour of events again. filesystem keeps events on disk while ClickHouse is down.
         storage.type  filesystem
 
   filters: |

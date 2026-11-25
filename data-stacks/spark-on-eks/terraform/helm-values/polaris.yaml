@@ -1,22 +1,8 @@
-# Apache Polaris (incubating) — Iceberg REST catalog.
-#
-# Deployed from the official community Helm chart. This file only overrides
-# what the semantic-on-eks stack needs; every other knob keeps the chart
-# default. Terraform injects namespace, service account, region and the
-# warehouse bucket at render time (see polaris.tf).
-#
-# Persistence is relational-jdbc against the in-cluster Postgres (see
-# manifests/polaris/postgres.yaml). Realm bootstrap (realm POLARIS + root
-# principal) is performed by a one-shot Job (manifests/polaris/bootstrap-job.yaml)
-# because the chart does not bootstrap; the server waits for that schema via the
-# wait-bootstrap init container below before it starts.
-#
-# AWS access is EKS Pod Identity on the ${service_account_name} ServiceAccount —
-# there are no static keys. The catalog is created with stsUnavailable=true, so
-# Polaris never vends credentials: each engine (Trino) brings its own identity.
+# Apache Polaris (Iceberg REST catalog) from the community chart. See polaris.tf.
+# The chart does not bootstrap the realm. manifests/polaris/bootstrap-job.yaml does it.
+# The catalog uses stsUnavailable=true, so each engine uses its own AWS identity.
 
-# Pin the service name to "polaris" so in-cluster clients (Trino, the catalog
-# Job) can hardcode polaris.${namespace}.svc.cluster.local:8181.
+# In-cluster clients use the fixed name polaris.<namespace>.svc.cluster.local:8181.
 fullnameOverride: polaris
 
 image:
@@ -29,8 +15,7 @@ replicaCount: 1
 serviceAccount:
   create: true
   name: ${service_account_name}
-  # Pod Identity needs no SA annotation (unlike IRSA); the association is
-  # created by module.polaris_pod_identity in polaris.tf.
+  # Pod Identity needs no annotation. module.polaris_pod_identity creates the association.
   annotations: {}
 
 persistence:
@@ -48,14 +33,12 @@ realmContext:
     - POLARIS
 
 extraEnv:
-  # Pod Identity supplies the role via the SDK default chain; region only.
   - name: AWS_REGION
     value: ${region}
   - name: JAVA_OPTS_APPEND
     value: "-XX:MaxRAMPercentage=50.0"
 
-# Gate server startup on the bootstrap Job having created the schema. Without
-# this the server crash-loops against an un-bootstrapped database.
+# Without this gate, the server crash-loops until the bootstrap Job creates the schema.
 extraInitContainers:
   - name: wait-bootstrap
     image: postgres:16
@@ -74,9 +57,7 @@ extraInitContainers:
             name: polaris-postgres-credentials
             key: POLARIS_DB_PASSWORD
 
-# Internal only. Reach Polaris with `kubectl port-forward`.
-# For production, front this with an INTERNAL load balancer scoped to your
-# organization's network — never a public/internet-facing endpoint.
+# Internal only. For production, use an internal load balancer, never a public endpoint.
 service:
   type: ClusterIP
   ports:

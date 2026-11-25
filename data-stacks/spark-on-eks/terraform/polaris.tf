@@ -1,27 +1,5 @@
-# =============================================================================
-# Apache Polaris (incubating) on EKS
-#
-# Deploys Apache Polaris as an Iceberg REST catalog via the OFFICIAL community
-# Helm chart (apache/polaris), fronted by ArgoCD like every other addon in this
-# repo. Polaris persists catalog metadata in an in-cluster Postgres and stores
-# table data/metadata on a dedicated, private S3 warehouse bucket.
-#
-# Single Terraform variable: `var.enable_polaris`. When true this file creates:
-#   - a private S3 warehouse bucket (SSE, all public access blocked)
-#   - an IAM policy + EKS Pod Identity for the polaris-sa ServiceAccount
-#     (read/write on the warehouse bucket only — no static keys)
-#   - a Postgres metastore (manifests/polaris/postgres.yaml)
-#   - a one-shot bootstrap Job (realm POLARIS + root principal)
-#   - the Polaris ArgoCD Application (helm-values/polaris.yaml)
-#   - a Job that creates the Iceberg catalog on S3 (stsUnavailable=true)
-#   - Trino wiring: a 'polaris' Iceberg REST catalog + the OAuth credential
-#     Secret, and a policy attachment giving Trino's existing role write access
-#     to the warehouse bucket (Trino writes the data files; Polaris the metadata)
-#
-# The Polaris chart deploys ClusterIP services ONLY. Reach Polaris with
-# `kubectl port-forward`. For production, front it with an INTERNAL load
-# balancer scoped to your organization's network — never a public endpoint.
-# =============================================================================
+# The Polaris chart creates ClusterIP services only. Use `kubectl port-forward`
+# to connect. For production, use an internal load balancer. Do not use a public endpoint.
 
 locals {
   polaris_namespace       = "polaris"
@@ -41,9 +19,6 @@ locals {
   )
 }
 
-#---------------------------------------------------------------
-# Polaris Namespace
-#---------------------------------------------------------------
 resource "kubectl_manifest" "polaris_namespace" {
   count = var.enable_polaris ? 1 : 0
 
@@ -59,10 +34,6 @@ resource "kubectl_manifest" "polaris_namespace" {
   depends_on = [module.eks]
 }
 
-#---------------------------------------------------------------
-# S3 Warehouse Bucket — private, encrypted, no public access.
-# Holds Iceberg table data + metadata under s3://<bucket>/<catalog>/.
-#---------------------------------------------------------------
 module "polaris_warehouse_bucket" {
   count = var.enable_polaris ? 1 : 0
 
@@ -71,7 +42,7 @@ module "polaris_warehouse_bucket" {
 
   bucket_prefix = "${local.name}-polaris-warehouse-"
 
-  # For example only - please evaluate for your environment
+  # This value is for test stacks. Examine it before you use it in your environment.
   force_destroy = true
 
   block_public_acls       = true
@@ -88,9 +59,6 @@ module "polaris_warehouse_bucket" {
   }
 }
 
-#---------------------------------------------------------------
-# IAM — Polaris reads/writes Iceberg metadata on the warehouse bucket.
-#---------------------------------------------------------------
 data "aws_iam_policy_document" "polaris_warehouse_access" {
   count = var.enable_polaris ? 1 : 0
 
@@ -124,11 +92,7 @@ resource "aws_iam_policy" "polaris_warehouse" {
   tags        = local.tags
 }
 
-#---------------------------------------------------------------
-# Pod Identity — associates polaris-sa with the warehouse IAM policy.
-# The chart creates the ServiceAccount (serviceAccount.create=true); this
-# association binds it to the role. No SA annotation needed with Pod Identity.
-#---------------------------------------------------------------
+# The chart creates the ServiceAccount. Pod Identity needs no ServiceAccount annotation.
 module "polaris_pod_identity" {
   count = var.enable_polaris ? 1 : 0
 
@@ -150,13 +114,7 @@ module "polaris_pod_identity" {
   }
 }
 
-#---------------------------------------------------------------
-# Secrets — generated once, stored in Kubernetes Secrets. Password literals
-# never appear in helm-values or manifests.
-#   - polaris-postgres-credentials: superuser + polaris DB role passwords
-#   - polaris-credentials:          root principal client id/secret
-#   - polaris-persistence:          JDBC url/user/pass consumed by the chart
-#---------------------------------------------------------------
+# Terraform generates the passwords so that helm-values and manifests contain no passwords.
 resource "random_password" "polaris_postgres_superuser" {
   count = var.enable_polaris ? 1 : 0
 
@@ -214,8 +172,8 @@ resource "kubernetes_secret" "polaris_credentials" {
   depends_on = [kubectl_manifest.polaris_namespace]
 }
 
-# The Polaris chart's relational-jdbc persistence reads connection details from
-# this Secret (keys: username / password / jdbcUrl — see helm-values/polaris.yaml).
+# The relational-jdbc persistence of the chart reads the keys username, password,
+# and jdbcUrl from this Secret. Refer to helm-values/polaris.yaml.
 resource "kubernetes_secret" "polaris_persistence" {
   count = var.enable_polaris ? 1 : 0
 
@@ -235,9 +193,6 @@ resource "kubernetes_secret" "polaris_persistence" {
   depends_on = [kubectl_manifest.polaris_namespace]
 }
 
-#---------------------------------------------------------------
-# Postgres metastore (Deployment + PVC + Service + init ConfigMap)
-#---------------------------------------------------------------
 resource "kubectl_manifest" "polaris_postgres" {
   for_each = { for idx, manifest in local.polaris_postgres_manifests : idx => manifest if var.enable_polaris }
 
@@ -249,9 +204,6 @@ resource "kubectl_manifest" "polaris_postgres" {
   ]
 }
 
-#---------------------------------------------------------------
-# Bootstrap Job — realm POLARIS + root principal into the metastore.
-#---------------------------------------------------------------
 resource "kubectl_manifest" "polaris_bootstrap" {
   count = var.enable_polaris ? 1 : 0
 
@@ -266,10 +218,7 @@ resource "kubectl_manifest" "polaris_bootstrap" {
   ]
 }
 
-#---------------------------------------------------------------
-# Polaris ArgoCD Application — official apache/polaris chart, ClusterIP only.
-# The server's wait-bootstrap init container gates startup on the bootstrap Job.
-#---------------------------------------------------------------
+# The wait-bootstrap init container stops the server start until the bootstrap Job completes.
 resource "kubectl_manifest" "polaris" {
   count = var.enable_polaris ? 1 : 0
 
@@ -287,9 +236,6 @@ resource "kubectl_manifest" "polaris" {
   ]
 }
 
-#---------------------------------------------------------------
-# Catalog-create Job — creates the '${catalog}' Iceberg catalog on S3.
-#---------------------------------------------------------------
 resource "kubectl_manifest" "polaris_catalog_create" {
   count = var.enable_polaris ? 1 : 0
 
@@ -306,17 +252,8 @@ resource "kubectl_manifest" "polaris_catalog_create" {
   ]
 }
 
-#---------------------------------------------------------------
-# Trino integration
-#
-# 1. Give Trino's existing Pod Identity role write access to the warehouse
-#    bucket. Trino writes the Parquet data files; Polaris writes the Iceberg
-#    metadata. Both need read/write on the same bucket.
-# 2. Publish the Polaris OAuth2 client credential (root:<secret>) into the trino
-#    namespace so the templated 'polaris' catalog can read it via ${ENV:...}.
-#    The catalog itself is wired in helm-values/trino.yaml (gated on the same
-#    variable) and consumed via Trino's chart-level envFrom.
-#---------------------------------------------------------------
+# Trino writes the Parquet data files and Polaris writes the Iceberg metadata.
+# Thus Trino also needs write access to the warehouse bucket.
 resource "aws_iam_role_policy_attachment" "trino_polaris_warehouse" {
   count = var.enable_polaris ? 1 : 0
 
@@ -324,6 +261,7 @@ resource "aws_iam_role_policy_attachment" "trino_polaris_warehouse" {
   policy_arn = aws_iam_policy.polaris_warehouse[0].arn
 }
 
+# The 'polaris' catalog in helm-values/trino.yaml reads this credential with ${ENV:...}.
 resource "kubernetes_secret" "trino_polaris_credentials" {
   count = var.enable_polaris ? 1 : 0
 
@@ -341,9 +279,6 @@ resource "kubernetes_secret" "trino_polaris_credentials" {
   depends_on = [kubernetes_namespace.trino]
 }
 
-#---------------------------------------------------------------
-# Outputs
-#---------------------------------------------------------------
 output "polaris_warehouse_bucket_id" {
   description = "Apache Polaris S3 warehouse bucket ID. Empty when enable_polaris is false."
   value       = try(module.polaris_warehouse_bucket[0].s3_bucket_id, "")

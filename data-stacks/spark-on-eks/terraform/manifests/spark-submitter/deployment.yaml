@@ -35,14 +35,14 @@ spec:
           effect: NoSchedule
       containers:
         - name: spark-submitter
-          # Dual-stack host. public.ecr.aws is IPv4-only.
-          image: ecr-public.aws.com/m8u6z8z4/manabu-test:spark-submitter
-          # The tag is reused for each build.
-          imagePullPolicy: Always
+          # Dual-stack host. dkr.ecr.<region>.amazonaws.com is IPv4-only.
+          image: 953421922360.dkr-ecr.us-east-1.on.aws/spark-scaletest-eks-tpcds:submitter-v0.2.0@sha256:88fd549cd712565376347603e9a02ec5a7c839ac4ba699e667a030defe685193
+          imagePullPolicy: IfNotPresent
           args:
             # Must contain every operator job namespace. A missing one fails without a retry.
             - --namespaces=${job_namespaces}
             - --max-concurrent-submissions=24
+            - --max-requests-per-connection=10
             # Must be shorter than the operator submitter.requestTimeout (2m).
             - --submit-timeout=90s
             - --shutdown-timeout=120s

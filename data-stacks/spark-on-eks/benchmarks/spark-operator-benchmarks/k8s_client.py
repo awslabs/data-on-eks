@@ -118,7 +118,7 @@ class KubernetesClient:
                 name=name
             )
         except ApiException as e:
-            if e.status != 404:  # Ignore if already deleted
+            if e.status != 404:
                 self.logger.error(f"Failed to delete SparkApplication {name}: {str(e)}")
                 raise RuntimeError(f"Failed to delete SparkApplication: {str(e)}")
 
@@ -150,8 +150,7 @@ class KubernetesClient:
         }
 
     def delete_namespace_spark_application(self, namespace):
-        # delete ALL matching objects in the
-        # TODO: this is a bit overkill, we should scope this to only the jobs submitted by this User
+        # TODO: Delete only the SparkApplications that this load test submitted, not all in the namespace.
         return self.custom_api.delete_collection_namespaced_custom_object(
             group="sparkoperator.k8s.io",
             version="v1beta2",

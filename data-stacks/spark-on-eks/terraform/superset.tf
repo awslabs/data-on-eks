@@ -16,9 +16,6 @@ locals {
   )
 }
 
-#---------------------------------------------------------------
-# Superset Namespace
-#---------------------------------------------------------------
 resource "kubernetes_namespace" "superset" {
   count = var.enable_superset ? 1 : 0
 
@@ -27,9 +24,6 @@ resource "kubernetes_namespace" "superset" {
   }
 }
 
-#---------------------------------------------------------------
-# Database Secrets
-#---------------------------------------------------------------
 resource "kubernetes_secret" "superset_postgresql_secrets" {
   count = var.enable_superset ? 1 : 0
 
@@ -58,9 +52,6 @@ resource "random_password" "superset_secret_key" {
   special = false
 }
 
-#---------------------------------------------------------------
-# Redis Deployment and Service
-#---------------------------------------------------------------
 resource "kubectl_manifest" "superset_redis" {
   count = var.enable_superset ? length(local.superset_redis_manifests) : 0
 
@@ -71,9 +62,6 @@ resource "kubectl_manifest" "superset_redis" {
   ]
 }
 
-#---------------------------------------------------------------
-# PostgreSQL StatefulSet and Service
-#---------------------------------------------------------------
 resource "kubectl_manifest" "superset_postgresql" {
   count = var.enable_superset ? length(local.superset_postgresql_manifests) : 0
 
@@ -85,9 +73,6 @@ resource "kubectl_manifest" "superset_postgresql" {
   ]
 }
 
-#---------------------------------------------------------------
-# Apache Superset Application
-#---------------------------------------------------------------
 resource "kubectl_manifest" "superset" {
   count = var.enable_superset ? 1 : 0
 

@@ -1,11 +1,5 @@
-# Postgres 16 — metastore for the Apache Polaris Iceberg REST catalog.
-#
-# Passwords come from the Terraform-generated Secret polaris-postgres-credentials
-# (see polaris.tf); nothing sensitive lives in this file. Storage is a PVC on the
-# cluster's default StorageClass so the catalog metadata survives pod restarts.
-#
-# Resource names are prefixed "polaris-" to stay distinct from DataHub's own
-# "postgresql" StatefulSet, which may run in the same cluster.
+# Postgres 16 metastore for Polaris. Passwords come from the polaris-postgres-credentials Secret.
+# The "polaris-" prefix keeps these names separate from the DataHub "postgresql" StatefulSet.
 apiVersion: v1
 kind: ConfigMap
 metadata:

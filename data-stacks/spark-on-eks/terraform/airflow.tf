@@ -7,10 +7,9 @@ locals {
   airflow_dag_service_account       = "airflow-dag-processor"
   airflow_webserver_secret_name     = "airflow-webserver-secret-key"
 
-  # PostgreSQL in-cluster
   airflow_db_user = "airflow"
   airflow_db_name = "airflow"
-  airflow_db_host = "airflow-postgresql" # Default service name for in-cluster postgres
+  airflow_db_host = "airflow-postgresql" # Must match the Service name in manifests/airflow/postgresql.yaml.
 
   airflow_values = var.enable_airflow ? templatefile("${path.module}/helm-values/airflow.yaml", {
     airflow_db_user           = local.airflow_db_user
@@ -38,9 +37,6 @@ locals {
   )
 }
 
-#---------------------------------------------------------------
-# Airflow Namespace
-#---------------------------------------------------------------
 resource "kubernetes_namespace_v1" "airflow" {
   count = var.enable_airflow ? 1 : 0
   metadata {
@@ -48,9 +44,6 @@ resource "kubernetes_namespace_v1" "airflow" {
   }
 }
 
-#---------------------------------------------------------------
-# PostgreSQL Secrets for in-cluster deployment
-#---------------------------------------------------------------
 resource "random_password" "airflow_postgres_user" {
   count   = var.enable_airflow ? 1 : 0
   length  = 16
@@ -74,9 +67,6 @@ resource "kubernetes_secret" "airflow_postgresql_secrets" {
   depends_on = [kubernetes_namespace_v1.airflow[0]]
 }
 
-#---------------------------------------------------------------
-# PostgreSQL StatefulSet and Service (in-cluster)
-#---------------------------------------------------------------
 resource "kubectl_manifest" "airflow_postgresql" {
   for_each = { for idx, manifest in local.airflow_postgresql_manifests : idx => manifest }
 
@@ -88,9 +78,6 @@ resource "kubectl_manifest" "airflow_postgresql" {
   ]
 }
 
-#---------------------------------------------------------------
-# Airflow RBAC for Spark access
-#---------------------------------------------------------------
 resource "kubectl_manifest" "airflow_rbac" {
   for_each = { for idx, manifest in local.airflow_rbac_manifests : idx => manifest }
 
@@ -101,9 +88,6 @@ resource "kubectl_manifest" "airflow_rbac" {
   ]
 }
 
-#---------------------------------------------------------------
-# Pod Identity for Airflow Scheduler
-#---------------------------------------------------------------
 module "airflow_scheduler_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
@@ -132,9 +116,6 @@ resource "aws_iam_policy" "airflow_scheduler" {
   policy = data.aws_iam_policy_document.airflow_s3_logs[0].json
 }
 
-#---------------------------------------------------------------
-# Pod Identity for Airflow Webserver
-#---------------------------------------------------------------
 module "airflow_webserver_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
@@ -163,9 +144,6 @@ resource "aws_iam_policy" "airflow_webserver" {
   policy = data.aws_iam_policy_document.airflow_s3_logs[0].json
 }
 
-#---------------------------------------------------------------
-# Pod Identity for Airflow Workers
-#---------------------------------------------------------------
 module "airflow_worker_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
@@ -194,9 +172,6 @@ resource "aws_iam_policy" "airflow_worker" {
   policy = data.aws_iam_policy_document.airflow_s3_logs[0].json
 }
 
-#---------------------------------------------------------------
-# Pod Identity for DAG Processors
-#---------------------------------------------------------------
 module "airflow_dag_pod_identity" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/eks-pod-identity/aws"
@@ -218,9 +193,6 @@ module "airflow_dag_pod_identity" {
 }
 
 
-#---------------------------------------------------------------
-# S3 bucket for Airflow
-#---------------------------------------------------------------
 module "airflow_s3_bucket" {
   count   = var.enable_airflow ? 1 : 0
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -246,9 +218,6 @@ resource "aws_s3_object" "dags" {
   content_type = "application/x-directory"
 }
 
-#---------------------------------------------------------------
-# IAM policy document for Airflow S3 logging
-#---------------------------------------------------------------
 data "aws_iam_policy_document" "airflow_s3_logs" {
   count = var.enable_airflow ? 1 : 0
   statement {
@@ -272,9 +241,6 @@ data "aws_iam_policy_document" "airflow_s3_logs" {
   }
 }
 
-#---------------------------------------------------------------
-# Apache Airflow Webserver Secret
-#---------------------------------------------------------------
 resource "random_id" "airflow_webserver_secret_key" {
   count       = var.enable_airflow ? 1 : 0
   byte_length = 16
@@ -297,9 +263,6 @@ resource "kubernetes_secret" "airflow_webserver_secret" {
   depends_on = [kubernetes_namespace_v1.airflow[0]]
 }
 
-#---------------------------------------------------------------
-# Airflow ArgoCD Application
-#---------------------------------------------------------------
 resource "kubectl_manifest" "airflow_argocd_application" {
   count = var.enable_airflow ? 1 : 0
   yaml_body = templatefile("${path.module}/argocd-applications/airflow.yaml", {
@@ -317,9 +280,6 @@ resource "kubectl_manifest" "airflow_argocd_application" {
   ]
 }
 
-#---------------------------------------------------------------
-# Airflow PostgreSQL Connection Secret
-#---------------------------------------------------------------
 resource "kubernetes_secret" "airflow_config_connection" {
   count = var.enable_airflow ? 1 : 0
 
@@ -353,7 +313,7 @@ resource "kubernetes_secret" "airflow_stats_connection" {
   }
 
   data = {
-    # this is the connection string for the pgbouncer container in the same pod.
+    # PgBouncer runs as a container in the same pod, so the host is 127.0.0.1.
     connection = format("postgresql://%s:%s@127.0.0.1:6543/pgbouncer?sslmode=disable",
       local.airflow_db_user,
       random_password.airflow_postgres_user[0].result
@@ -368,9 +328,6 @@ resource "kubernetes_secret" "airflow_stats_connection" {
   ]
 }
 
-#---------------------------------------------------------------
-# Airflow PGBouncer Config Secret
-#---------------------------------------------------------------
 resource "kubernetes_secret" "airflow_pgbouncer_config" {
   count = var.enable_airflow ? 1 : 0
 
@@ -397,9 +354,6 @@ resource "kubernetes_secret" "airflow_pgbouncer_config" {
   ]
 }
 
-#---------------------------------------------------------------
-# Airflow AWS Connection Secret
-#---------------------------------------------------------------
 resource "kubernetes_secret" "airflow_connecton_config" {
   count = var.enable_airflow ? 1 : 0
 
@@ -418,10 +372,6 @@ resource "kubernetes_secret" "airflow_connecton_config" {
     kubernetes_namespace_v1.airflow[0],
   ]
 }
-
-#---------------------------------------------------------------
-# Airflow Fernet Secret
-#---------------------------------------------------------------
 
 resource "random_password" "fernet" {
   count  = var.enable_airflow ? 1 : 0

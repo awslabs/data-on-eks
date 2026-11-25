@@ -21,9 +21,6 @@ locals {
   )
 }
 
-#---------------------------------------------------------------
-# Pinot Namespace
-#---------------------------------------------------------------
 resource "kubectl_manifest" "pinot_namespace" {
   count = var.enable_pinot ? 1 : 0
 
@@ -32,9 +29,6 @@ resource "kubectl_manifest" "pinot_namespace" {
   })
 }
 
-#---------------------------------------------------------------
-# IAM Role for Pinot Service Account
-#---------------------------------------------------------------
 resource "aws_iam_policy" "pinot_s3" {
   count       = var.enable_pinot ? 1 : 0
   name        = "${var.name}-pinot-s3-access"
@@ -96,9 +90,6 @@ resource "aws_iam_role_policy_attachment" "pinot_s3" {
   policy_arn = aws_iam_policy.pinot_s3[0].arn
 }
 
-#---------------------------------------------------------------
-# Zookeeper StatefulSet
-#---------------------------------------------------------------
 resource "kubectl_manifest" "zookeeper" {
   for_each = { for idx, manifest in local.zookeeper_manifests : idx => manifest if var.enable_pinot }
 
@@ -110,9 +101,6 @@ resource "kubectl_manifest" "zookeeper" {
   ]
 }
 
-#---------------------------------------------------------------
-# Pinot Application
-#---------------------------------------------------------------
 resource "kubectl_manifest" "pinot" {
   count = var.enable_pinot ? 1 : 0
 
@@ -127,9 +115,6 @@ resource "kubectl_manifest" "pinot" {
   ]
 }
 
-#---------------------------------------------------------------
-# ServiceMonitors for Prometheus
-#---------------------------------------------------------------
 resource "kubectl_manifest" "pinot_servicemonitor" {
   for_each = { for idx, manifest in local.servicemonitor_manifests : idx => manifest if var.enable_pinot }
 

@@ -21,10 +21,6 @@ locals {
   )
 }
 
-#---------------------------------------------------------------
-# Controller & Node IAM roles, SQS Queue, Eventbridge Rules
-#---------------------------------------------------------------
-
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "21.29.0"
@@ -34,12 +30,11 @@ module "karpenter" {
   # Attaches the matching AWS CNI policy (IPv4 or IPv6) to the node role.
   cluster_ip_family = var.enable_ipv6 ? "ipv6" : "ipv4"
 
-  # Name needs to match role name passed to the EC2NodeClass
+  # The name must match the role name in the EC2NodeClass.
   node_iam_role_use_name_prefix   = false
   node_iam_role_name              = "karpenter-doeks-${local.name}"
   create_pod_identity_association = true
 
-  # Used to attach additional IAM policies to the Karpenter node IAM role
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
     S3TableAccess                = aws_iam_policy.s3tables_policy.arn
@@ -130,11 +125,8 @@ resource "kubectl_manifest" "ec2nodeclass" {
   ]
 }
 
-#---------------------------------------------------------------
-# S3Table IAM policy for Karpenter nodes
-# The S3 tables library does not fully support IRSA and Pod Identity as of this writing.
-# We give the node role access to S3tables to work around this limitation.
-#---------------------------------------------------------------
+# The S3 Tables library does not fully support IRSA or Pod Identity.
+# Thus the node role gets S3 Tables access.
 resource "aws_iam_policy" "s3tables_policy" {
   name_prefix = "${local.name}-s3tables"
   path        = "/"
@@ -177,11 +169,8 @@ resource "aws_iam_policy" "s3tables_policy" {
   })
 }
 
-#---------------------------------------------------------------
-# EBS Volume Management Policy for Karpenter Nodes
-# Required for EC2NodeClass userData scripts that dynamically
-# create and attach EBS volumes (e.g. emr-pcp-benchmark /data1 shuffle dir)
-#---------------------------------------------------------------
+# EC2NodeClass userData scripts create and attach EBS volumes,
+# for example the /data1 shuffle directory of emr-pcp-benchmark.
 resource "aws_iam_policy" "karpenter_ebs_volume_policy" {
   name_prefix = "${local.name}-karpenter-ebs-vol"
   path        = "/"

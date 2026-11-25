@@ -1,14 +1,12 @@
-# The official image is bugged because it's missing the postgresql client binary.
-#
+# The official image does not include the PostgreSQL client binary.
 # https://github.com/apache/superset/discussions/31431
 # https://superset.apache.org/docs/installation/docker-builds/#building-your-own-production-docker-image
-# Dockerfile is available here: data-stacks/workshop/src/superset/Dockerfile
+# Dockerfile: data-stacks/workshop/src/superset/Dockerfile
 image:
   repository: public.ecr.aws/data-on-eks/data-stacks
   tag: superset-v0.0.2
   pullPolicy: IfNotPresent
 
-# Superset node configuration
 supersetNode:
   connections:
     db_host: "postgresql"
@@ -43,7 +41,6 @@ extraEnvRaw:
         key: secret-key
 
 
-# Superset Celery worker configuration
 supersetWorker:
   autoscaling:
     enabled: true
@@ -62,8 +59,7 @@ supersetWorker:
 # init:
 #   loadExamples: true
 
-# We disable postgresql and redis because this chart uses bitnami postgresql and redis charts.
-# The charts and images are no longer maintained.
+# The chart uses the Bitnami PostgreSQL and Redis charts. They are no longer maintained.
 postgresql:
   enabled: false
 

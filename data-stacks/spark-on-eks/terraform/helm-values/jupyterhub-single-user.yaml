@@ -12,7 +12,7 @@ proxy:
     type: ClusterIP
 
 singleuser:
-  # Enabled root access for debugging purposes. Do not enable root access unless it's absolutely necessary.
+  # Root access for debugging. Do not enable it unless it is necessary.
   # extraEnv:
   #   GRANT_SUDO: "yes"
   #   NOTEBOOK_ARGS: "--allow-root"
@@ -26,11 +26,8 @@ singleuser:
           display_name: "Image"
           choices:
             pyspark350:
-              # CAUTION: Unsupported test image
-              # This image is created solely for testing and reference purposes.
-              # Before use, please:
-              # 1. Review the Dockerfile used to create this image (Dockerfile-S3Table-notebook)
-              # 2. Create your own image that meets your organization's security requirements
+              # CAUTION: Unsupported test image. Review Dockerfile-S3Table-notebook,
+              # then build your own image that meets your security requirements.
               display_name: "PySpark 3.5.3 with S3 Tables support"
               default: true
               kubespawner_override:
@@ -57,14 +54,14 @@ singleuser:
   serviceAccountName: ${jupyter_single_user_sa_name}
   uid: 0
   cloudMetadata:
-    # CAUTION: This should be set to true for almost all cases.
-    # This is set to false for s3-tables-catalog to assume the node role, because there is an issue with credentials injections through IRSA in the s3 tables catalog library.
+    # CAUTION: Set this to true in almost all cases. The S3 Tables catalog library cannot use
+    # IRSA credentials, so the pod must reach the node role through instance metadata.
     blockWithIptables: false
   extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
     securityContext:
         fsGroup: 100
 
-# Optimizations configured according to this doc https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+# Settings from https://z2jh.jupyter.org/en/latest/administrator/optimization.html
 scheduling:
   userScheduler:
     enabled: true
@@ -77,7 +74,7 @@ prePuller:
   hook:
     enabled: false
   continuous:
-    # NOTE: if used with Karpenter, also add user-placeholders
+    # With Karpenter, also enable userPlaceholder.
     enabled: false
 
 global:

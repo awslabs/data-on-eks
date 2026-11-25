@@ -1,7 +1,3 @@
-################################################################################
-# Cluster
-################################################################################
-
 output "cluster_arn" {
   description = "The Amazon Resource Name (ARN) of the cluster"
   value       = module.eks.cluster_arn
@@ -26,10 +22,6 @@ output "deployment_id" {
   description = "Deployment ID unique to this stack"
   value       = var.deployment_id
 }
-
-################################################################################
-# Private Subnets
-################################################################################
 
 output "subnet_ids_starting_with_100" {
   description = "Secondary CIDR Private Subnet IDs for EKS Data Plane"
@@ -57,10 +49,6 @@ output "s3_bucket_region_spark_history_server" {
   value       = module.s3_bucket.s3_bucket_region
 }
 
-################################################################################
-# S3 Directory Bucket
-################################################################################
-
 
 output "s3directory_bucket_name" {
   description = "s3 directory bucket name"
@@ -77,15 +65,11 @@ output "s3directory_bucket_zone" {
   value       = local.s3_express_zone_name
 }
 
-################################################################################
-# Ray Data Configuration
-################################################################################
-
 output "raydata_config" {
   description = "Configuration for Ray Data processing"
   value = var.enable_raydata ? {
     namespace         = "raydata"
-    service_account   = "raydata" # Created by spark-team.tf
+    service_account   = "raydata" # Created in teams.tf
     s3_prefix         = local.s3_prefix
     iceberg_database  = local.iceberg_database
     iceberg_warehouse = "s3://${module.s3_bucket.s3_bucket_id}/iceberg-warehouse/"
@@ -98,10 +82,6 @@ output "grafana_password" {
   value       = kubernetes_secret.grafana_admin.data["admin-password"]
   sensitive   = true
 }
-
-################################################################################
-# EMR on EKS
-################################################################################
 
 output "emr_on_eks" {
   description = "EMR on EKS Virtual Cluster configuration"
@@ -118,10 +98,6 @@ output "emr_s3_bucket_name" {
   value       = var.enable_emr_on_eks ? module.s3_bucket.s3_bucket_id : null
 }
 
-################################################################################
-# Data Stacks S3 Bucket
-################################################################################
-
 output "data_bucket_id" {
   description = "Shared S3 bucket for data stacks when data-stack-specific buckets are generally not required. Use prefixes to organize: pinot/segments/, etc."
   value       = module.data_bucket.s3_bucket_id
@@ -132,9 +108,6 @@ output "data_bucket_arn" {
   value       = module.data_bucket.s3_bucket_arn
 }
 
-#---------------------------------------------------------------
-# Outputs
-#---------------------------------------------------------------
 output "valkey_migration_bucket" {
   description = "S3 bucket used as the source for the Valkey restore initContainer (EC2-to-EKS migration). Empty when enable_valkey is false."
   value       = try(aws_s3_bucket.valkey_migration[0].id, "")

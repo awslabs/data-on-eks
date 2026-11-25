@@ -1,30 +1,12 @@
-# =============================================================================
-# Valkey on EKS
-#
-# Deploys Valkey (Redis fork) in replication mode (1 primary + N replicas)
-# via the OFFICIAL valkey-io/valkey-helm chart. Cluster mode (sharded with
-# gossip) is on the chart roadmap as valkey-helm issue #18 and will be
-# adopted here when it ships.
-#
-# Single Terraform variable: `var.enable_valkey`. All per-deployment
-# configuration lives in `helm-values/valkey.yaml`. AWS-side resources
-# (S3 migration bucket, IAM policy, Pod Identity for the restore
-# initContainer) are always provisioned when `enable_valkey = true`, so
-# users can flip `restore.enabled` in helm-values without re-running
-# Terraform.
-#
-# Out of v1 scope: scheduled backup CronJob. Document as a follow-up — the
-# S3 bucket + Pod Identity created here are the foundation a CronJob would
-# attach to.
-# =============================================================================
+# Valkey runs in replication mode. The official chart does not have cluster mode yet
+# (valkey-helm issue #18).
+# The restore AWS resources are always created, so you can set restore.enabled
+# in helm-values/valkey.yaml without a Terraform run.
 
 locals {
   valkey_namespace       = "valkey"
   valkey_service_account = "valkey-sa"
 
-  # Render helm-values/valkey.yaml once. Only namespace, service account,
-  # and region are injected by Terraform — every other knob is plain Helm
-  # values that users edit in the file directly.
   valkey_values_rendered = templatefile("${path.module}/helm-values/valkey.yaml", {
     namespace            = local.valkey_namespace
     service_account_name = local.valkey_service_account
@@ -32,9 +14,6 @@ locals {
   })
 }
 
-#---------------------------------------------------------------
-# Valkey Namespace
-#---------------------------------------------------------------
 resource "kubectl_manifest" "valkey_namespace" {
   count = var.enable_valkey ? 1 : 0
 
@@ -50,14 +29,7 @@ resource "kubectl_manifest" "valkey_namespace" {
   depends_on = [module.eks]
 }
 
-#---------------------------------------------------------------
-# AUTH passwords — generated once, stored in a Kubernetes Secret. The chart
-# reads them via `auth.usersExistingSecret` keyed by ACL username, so the
-# secret holds both the application user (`default`) and the user replicas
-# use to authenticate to the primary (`replication-user`).
-#
-# Password literals never appear in helm-values/valkey.yaml.
-#---------------------------------------------------------------
+# The chart reads the passwords from auth.usersExistingSecret. Each Secret key is an ACL user name.
 resource "random_password" "valkey_default_user" {
   count = var.enable_valkey ? 1 : 0
 
@@ -90,12 +62,8 @@ resource "kubernetes_secret" "valkey_auth" {
   depends_on = [kubectl_manifest.valkey_namespace]
 }
 
-#---------------------------------------------------------------
-# Migration S3 bucket — source for the restore initContainer when migrating
-# Valkey/Redis state from EC2 into EKS. The pre-migration script
-# (data-stacks/valkey-on-eks/examples/migration/ec2-bgsave-to-s3.sh) writes
-# `dump.rdb` here; the restore initContainer reads from here on first boot.
-#---------------------------------------------------------------
+# For a migration from EC2, data-stacks/valkey-on-eks/examples/migration/ec2-bgsave-to-s3.sh
+# writes dump.rdb to this bucket. The restore initContainer reads it at first start.
 resource "aws_s3_bucket" "valkey_migration" {
   count = var.enable_valkey ? 1 : 0
 
@@ -139,10 +107,6 @@ resource "aws_s3_bucket_versioning" "valkey_migration" {
   }
 }
 
-#---------------------------------------------------------------
-# IAM policy — restore initContainer reads RDB snapshots from the migration
-# bucket. Read-only.
-#---------------------------------------------------------------
 resource "aws_iam_policy" "valkey_restore_s3" {
   count = var.enable_valkey ? 1 : 0
 
@@ -171,11 +135,7 @@ resource "aws_iam_policy" "valkey_restore_s3" {
   }
 }
 
-#---------------------------------------------------------------
-# Pod Identity — associates the Valkey StatefulSet ServiceAccount
-# (valkey-sa) with the restore IAM policy. The restore initContainer runs
-# in the same pod and inherits this association.
-#---------------------------------------------------------------
+# The restore initContainer runs in the Valkey pod, so it uses this association.
 module "valkey_restore_pod_identity" {
   count = var.enable_valkey ? 1 : 0
 
@@ -197,10 +157,6 @@ module "valkey_restore_pod_identity" {
   }
 }
 
-#---------------------------------------------------------------
-# Valkey ArgoCD Application — official valkey-io/valkey-helm chart, pinned
-# version, with the rendered helm-values injected into the spec.
-#---------------------------------------------------------------
 resource "kubectl_manifest" "valkey" {
   count = var.enable_valkey ? 1 : 0
 

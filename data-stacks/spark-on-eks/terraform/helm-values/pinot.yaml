@@ -102,8 +102,7 @@ server:
       pinot.server.instance.segment.store.uri=s3://${s3_bucket}/pinot/segments
       pinot.server.instance.enable.split.commit=true
 
-# This configuration option enables bitnami Helm chart and bitnami container image. They are now deprecated and should not be used.
-# We create a zookeeper cluster with manifests instead.
+# The chart ZooKeeper option uses deprecated Bitnami charts and images. Manifests create ZooKeeper instead.
 zookeeper:
   enabled: false
   urlOverride: "zookeeper.pinot.svc.cluster.local:2181"
